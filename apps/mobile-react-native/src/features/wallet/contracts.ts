@@ -14,6 +14,8 @@ export const walletSummary = z.object({
   available: money,
   transactionHeld: money,
   withdrawalHeld: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+  // ADR 0075: leading/won-unpaid auction holds; absent on older servers.
+  auctionHeld: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   total: money,
   serverTime: z.iso.datetime({ offset: true }),
   topupEnabled: z.boolean(),
@@ -41,6 +43,10 @@ export const walletHistoryItem = z.object({
     "ListingFeeSettlement",
     "WithdrawalHold",
     "WithdrawalRefund",
+    // ADR 0075/0087: auction holds, releases and a seller's deposit share.
+    "AuctionBidHold",
+    "AuctionBidRelease",
+    "AuctionDepositSellerShare",
   ]),
   amount: z.number().int().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER),
   balanceAfter: money,

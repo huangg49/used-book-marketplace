@@ -79,3 +79,136 @@ export function AuctionCancel({ item, ...context }: Props) {
     />
   );
 }
+
+type Decision = "Resume" | "Cancel";
+
+// ADR 0080/0084: a held auction is resumed or cancelled, with a reason. A
+// resume gives the paused time back (at least 10 minutes of bidding); the
+// server refuses it while the seller or the leader is still ineligible or
+// once the hold expired. Every pause of an auction fits in 72 hours.
+export function AuctionHoldDecision({ item, ...context }: Props) {
+  const budget = item.pauseBudgetLeftSeconds;
+  const [decision, setDecision] = useState<Decision | null>(null);
+  const [reason, setReason] = useState("");
+  const [problem, setProblem] = useState<"decision" | "reason" | null>(null);
+  const first = useRef<HTMLInputElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const trimmed = reason.trim();
+  const ended = Date.parse(item.endAt) <= Date.now();
+  const resume = decision === "Resume";
+  return (
+    <ActionPanel
+      {...context}
+      label="Xử lý phiên tạm giữ"
+      title="Tiếp tục hoặc hủy phiên tạm giữ."
+      intro={
+        <>
+          {item.holdReason === "Review"
+            ? "Phiên tạm dừng để xem xét một báo cáo."
+            : "Phiên tạm giữ vì người bán hoặc người dẫn giá không còn đủ điều kiện."}
+          {item.holdExpiresAt ? ` Nếu chưa xử lý trước ${new Date(item.holdExpiresAt).toLocaleString("vi-VN")}, phiên tự hủy và hoàn mọi khoản giữ.` : ""}
+          {" Tiếp tục được khi người bán và người dẫn giá đủ điều kiện."}
+          {budget !== undefined ? ` Phiên còn ${Math.floor(budget / 3600)} giờ ${Math.floor((budget % 3600) / 60)} phút tạm dừng (tổng 72 giờ).` : ""}
+        </>
+      }
+      dirty={reason !== "" || decision !== null}
+      fields={(locked) => (
+        <>
+          <fieldset disabled={locked}>
+            <legend>Quyết định</legend>
+            <label className="check">
+              <input
+                ref={first}
+                type="radio"
+                name={`hold-${item.id}`}
+                checked={resume}
+                onChange={() => {
+                  setDecision("Resume");
+                  setProblem(null);
+                }}
+              />
+              Tiếp tục phiên: giữ nguyên lượt trả giá và tiền cọc, cộng lại thời gian tạm dừng
+            </label>
+            <label className="check">
+              <input
+                type="radio"
+                name={`hold-${item.id}`}
+                checked={decision === "Cancel"}
+                onChange={() => {
+                  setDecision("Cancel");
+                  setProblem(null);
+                }}
+              />
+              Hủy phiên: không ai thắng, hoàn mọi khoản giữ và tiền cọc
+            </label>
+          </fieldset>
+          {problem === "decision" && <p className="field-error">Chọn tiếp tục hoặc hủy phiên.</p>}
+          {resume && (
+            <p className="muted">
+              {ended
+                ? "Giờ kết thúc đã qua: phiên không nhận thêm giá và được chốt ngay cho người dẫn giá."
+                : "Thời gian còn lại lúc tạm dừng được cộng lại (ít nhất 10 phút đấu giá, trong tổng 72 giờ tạm dừng); các mốc giờ của phiên lùi theo."}
+            </p>
+          )}
+          <div className="field">
+            <label htmlFor={`hold-reason-${item.id}`}>Lý do</label>
+            <textarea
+              id={`hold-reason-${item.id}`}
+              ref={input}
+              rows={4}
+              maxLength={1000}
+              value={reason}
+              disabled={locked}
+              aria-invalid={problem === "reason"}
+              aria-describedby={`hold-hint-${item.id}`}
+              onChange={(event) => {
+                setReason(event.target.value);
+                if (problem === "reason") setProblem(null);
+              }}
+            />
+          </div>
+          <p id={`hold-hint-${item.id}`} className={problem === "reason" ? "field-error" : "muted"}>
+            {problem === "reason"
+              ? "Nhập lý do từ 10 đến 1.000 ký tự."
+              : resume
+                ? "Bắt buộc, 10–1.000 ký tự. Được ghi vào nhật ký quản trị và gửi kèm thông báo cho người bán, người trả giá và người đăng ký; không ghi thông tin cá nhân."
+                : "Bắt buộc, 10–1.000 ký tự. Được ghi vào nhật ký quản trị."}
+          </p>
+        </>
+      )}
+      validate={() => {
+        if (!decision) {
+          setProblem("decision");
+          first.current?.focus();
+          return false;
+        }
+        const n = [...trimmed].length;
+        if (n >= 10 && n <= 1000) return true;
+        setProblem("reason");
+        input.current?.focus();
+        return false;
+      }}
+      submitLabel={resume ? "Tiếp tục phiên" : "Hủy phiên"}
+      confirmTitle={resume ? "Tiếp tục phiên đấu giá?" : "Hủy phiên đấu giá?"}
+      confirmBody={
+        <>
+          <p>
+            {resume
+              ? `Phiên “${item.title}” tiếp tục với thời gian còn lại lúc tạm dừng. Người bán, người trả giá và người đăng ký được báo kèm lý do dưới đây.`
+              : `Phiên “${item.title}” sẽ kết thúc ngay, không có người thắng. Không hoàn tác được.`}
+          </p>
+          <blockquote className="prose">{trimmed}</blockquote>
+        </>
+      }
+      build={() => ({
+        path: `/operations/auctions/${item.id}/${resume ? "resume" : "cancel"}`,
+        body: { expectedVersion: item.version, reason: trimmed },
+      })}
+      interpret={(receipt) =>
+        receipt.state === "Active"
+          ? { tone: "success", text: `Đã tiếp tục phiên “${item.title}”.`, close: true }
+          : { tone: "success", text: `Đã hủy phiên “${item.title}”. Người bán được báo đến nhận lại sách.`, close: true }
+      }
+    />
+  );
+}

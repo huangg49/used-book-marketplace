@@ -14,3 +14,18 @@ describe('stepKey', () => {
     );
   });
 });
+
+describe('stepKey per worker step (ADR 0083)', () => {
+  const id = '6f1c2a4e-1b2c-4d5e-8f90-1234567890ab';
+  it('gives each step sharing a system actor its own key', () => {
+    const keys = ['close', 'expireRegistration', 'expireHold'].map((s) =>
+      stepKey(id, 3, s),
+    );
+    expect(new Set(keys).size).toBe(3);
+    for (const k of keys) {
+      expect(k).toMatch(new RegExp(UUID_PATTERN));
+      expect(k).not.toBe(stepKey(id, 3));
+    }
+    expect(stepKey(id, 3, 'close')).toBe(stepKey(id, 3, 'close'));
+  });
+});

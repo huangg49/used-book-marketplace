@@ -19,6 +19,7 @@ import {
 import { DraftEditor } from "../drafts/draft-editor";
 import { BackAction, Button, StatePanel } from "../../core/ui";
 import {
+  auctionDepositError,
   auctionErrorText,
   auctionEligible,
   intakePriceErrors,
@@ -26,6 +27,8 @@ import {
   EVIDENCE_MIN_LENGTH,
   auctionStepError,
   type AuctionStep,
+  type BuyNowMode,
+  type AuctionFormat,
 } from "./auctions-model";
 import {
   handoverPoints,
@@ -144,6 +147,15 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const step = customStepOn && !stepError ? digits(customStep)! : presetStep;
   const [buyNowOn, setBuyNowOn] = useState(false);
   const [buyNow, setBuyNow] = useState("");
+  const [buyNowMode, setBuyNowMode] = useState<BuyNowMode>("Challenge");
+  // ADR 0076: format; Dutch adds an opening price and a drop interval.
+  const [auctionType, setAuctionType] = useState<AuctionFormat>("English");
+  const [dutchTop, setDutchTop] = useState("");
+  const [dutchEvery, setDutchEvery] = useState("60");
+  // ADR 0077: registered bidders that open the auction.
+  const [minBidders, setMinBidders] = useState(4);
+  // ADR 0087: the seller's deposit; null follows the 10% default.
+  const [deposit, setDeposit] = useState<number | null>(null);
   const [touched, setTouched] = useState(false);
 
   // 3. Modal & Action states
@@ -171,8 +183,24 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const priceErrors = intakePriceErrors(
     startPrice,
     step,
-    buyNowOn ? (buyNowPrice ?? 0) : null,
+    auctionType === "English" && buyNowOn ? (buyNowPrice ?? 0) : null,
   );
+  const dutchTopPrice = digits(dutchTop);
+  const dutchSeconds = Number(dutchEvery) || 0;
+  const dutchError =
+    auctionType !== "Dutch"
+      ? null
+      : dutchTopPrice === null
+        ? "Nhập giá mở đầu."
+        : startPrice !== null && dutchTopPrice <= startPrice
+          ? "Giá mở đầu phải cao hơn giá sàn."
+          : startPrice !== null && (dutchTopPrice - startPrice) % step !== 0
+            ? "Giá mở đầu phải bằng giá sàn cộng một số bước giá."
+            : dutchSeconds < 10 || dutchSeconds > 3600
+              ? "Mỗi lần giảm cách nhau 10 giây đến 1 giờ."
+              : null;
+
+  const depositError = auctionDepositError(startPrice, deposit);
 
   const formError = !selectedListing
     ? "Vui lòng chọn một sách đấu giá đã được duyệt."
@@ -180,7 +208,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         selectedPoint.availableSlots < 1 ||
         selectedPoint.status !== "Active"
       ? "Vui lòng chọn trạm tiếp nhận còn chỗ tại TP.HCM."
-      : (stepError ?? priceErrors.startPrice ?? priceErrors.buyNowPrice ?? null);
+      : (stepError ?? priceErrors.startPrice ?? priceErrors.buyNowPrice ?? dutchError ?? depositError ?? null);
 
   const locked = busy || Boolean(pending);
 
@@ -244,7 +272,13 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         pointId: selectedPoint.id,
         startPrice,
         step,
-        buyNowPrice,
+        buyNowPrice: auctionType === "English" ? buyNowPrice : null,
+        buyNowMode: auctionType === "English" && buyNowPrice !== null ? buyNowMode : "Challenge",
+        auctionType,
+        minBidders,
+        ...(deposit !== null ? { depositAmount: deposit } : {}),
+        dutchTopPrice: auctionType === "Dutch" ? digits(dutchTop) : null,
+        dutchIntervalSeconds: auctionType === "Dutch" ? Number(dutchEvery) || null : null,
       }),
     });
   };
@@ -431,6 +465,20 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               buyNowPriceText={buyNow}
               onChangeBuyNowPriceText={setBuyNow}
               buyNowPriceError={touched ? priceErrors.buyNowPrice : undefined}
+              buyNowMode={buyNowMode}
+              onChangeBuyNowMode={setBuyNowMode}
+              auctionType={auctionType}
+              onChangeAuctionType={setAuctionType}
+              dutchTopText={dutchTop}
+              onChangeDutchTopText={setDutchTop}
+              dutchEveryText={dutchEvery}
+              onChangeDutchEveryText={setDutchEvery}
+              dutchError={touched ? (dutchError ?? undefined) : undefined}
+              minBidders={minBidders}
+              onChangeMinBidders={setMinBidders}
+              deposit={deposit}
+              onChangeDeposit={setDeposit}
+              depositError={touched ? (depositError ?? undefined) : undefined}
               disabled={locked}
             />
 

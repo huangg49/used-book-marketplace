@@ -23,6 +23,10 @@ export const historyLabels = {
   ListingFeeCharge: "Giữ phí gửi duyệt bài",
   ListingFeeRefund: "Hoàn phí bài bị từ chối",
   ListingFeeSettlement: "Phí bài được duyệt",
+  // ADR 0075/0087: auction holds, their releases and a seller's deposit share.
+  AuctionBidHold: "Đấu giá · Giữ tiền",
+  AuctionBidRelease: "Đấu giá · Trả lại tiền giữ",
+  AuctionDepositSellerShare: "Đấu giá · Nhận một phần tiền cọc",
 } satisfies Record<WalletHistoryItem["type"], string>;
 
 export const topupLabels = {

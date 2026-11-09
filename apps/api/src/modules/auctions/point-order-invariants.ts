@@ -18,8 +18,10 @@ const AUCTION_STATE: Record<PointOrderState, readonly string[]> = {
   ResolutionPending: ['Sold'],
   ReturnPending: ['Sold'],
   Completed: ['Sold'],
-  Cancelled: ['Sold'],
-  PaymentExpired: ['PaymentExpired'],
+  // ADR 0086: an unpaid Order closes Cancelled when a report cancels its
+  // auction; an expired one stays with its auction during a runner-up offer.
+  Cancelled: ['Sold', 'Cancelled'],
+  PaymentExpired: ['PaymentExpired', 'SecondChanceOffered', 'Cancelled'],
 };
 
 export async function checkPointOrder(tx: Tx, orderId: string) {
@@ -74,7 +76,20 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
   )
     fail('order carrier event mismatch');
   const a = await tx.c.auctions.findOne({ _id: o.auctionId });
+  // ADR 0086: an accepted runner-up offer gave the auction a second Order;
+  // the defaulted winner's expired one then only keeps its own fields.
+  const superseded =
+    !!a &&
+    a.defaultedOrderId === o._id &&
+    a.orderId !== o._id &&
+    o.state === 'PaymentExpired';
   if (
+    superseded &&
+    (a.intakeId !== o.intakeId || a.sellerId !== o.sellerId)
+  )
+    fail('order/auction mismatch');
+  if (
+    !superseded && (
     !a ||
     a.orderId !== o._id ||
     a.intakeId !== o.intakeId ||
@@ -82,7 +97,7 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
     a.sellerId !== o.sellerId ||
     a.finalPrice !== o.bookPrice ||
     a.paymentDeadline?.getTime() !== o.paymentDeadline.getTime() ||
-    !AUCTION_STATE[o.state].includes(a.state)
+    !AUCTION_STATE[o.state].includes(a.state))
   )
     fail('order/auction mismatch');
   const active = await tx.c.exclusive_commitments.findOne({
@@ -120,7 +135,8 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
     orderId: o._id,
     outcome: 'Accepted',
   });
-  const cancelled = o.state === 'Cancelled';
+  // ADR 0086: an unpaid Cancelled Order was never paid, so nothing is refunded.
+  const cancelled = o.state === 'Cancelled' && !!o.paidAt;
   const completed = o.state === 'Completed';
   if (
     held !== (o.paidAt && !cancelled && !completed ? o.buyerTotal : 0) ||

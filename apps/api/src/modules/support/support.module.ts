@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CommandsModule } from '../commands/commands.module.js';
+import { AuctionsModule } from '../auctions/auctions.module.js';
 import { SupportService } from './support.service.js';
 import { SupportTargetsService } from './support-targets.service.js';
 import {
@@ -8,7 +9,7 @@ import {
   SupportTargetsController,
 } from './support.controller.js';
 @Module({
-  imports: [CommandsModule],
+  imports: [CommandsModule, AuctionsModule],
   providers: [SupportService, SupportTargetsService],
   controllers: [
     SupportController,

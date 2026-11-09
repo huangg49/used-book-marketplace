@@ -4,7 +4,7 @@ import type { CurrentUser } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
 import { canOperatePoint, canResolve, session } from "../../core/session";
 import { AssignmentNote } from "./assignment-note";
-import { AuctionCancel } from "./auction-actions";
+import { AuctionCancel, AuctionHoldDecision } from "./auction-actions";
 import {
   collectionLabels,
   collectionQueue,
@@ -263,7 +263,7 @@ function AuctionQueueContent() {
     <OperationsQueue
       number="04"
       title="Phiên đang mở hoặc tạm giữ."
-      intro="Theo dõi các phiên còn có thể hủy. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng."
+      intro="Theo dõi các phiên còn có thể hủy. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục (cộng lại thời gian tạm dừng) hoặc hủy; mỗi phiên tạm dừng tối đa 72 giờ."
       order="Xếp theo giờ kết thúc, gần nhất trước."
       unit="phiên"
       result={result}
@@ -273,17 +273,23 @@ function AuctionQueueContent() {
         id: item.id,
         status:
           item.state === "OnHold"
-            ? "Tạm giữ, chờ quyết định"
+            ? `${item.holdReason === "Review" ? "Tạm dừng vì báo cáo" : "Tạm giữ"}, chờ quyết định${item.holdExpiresAt ? ` · tự hủy ${dateText(item.holdExpiresAt)}` : ""}`
             : item.phase === "Scheduled"
               ? `Hẹn mở ${dateText(item.startAt)} · kết thúc ${dateText(item.endAt)}`
               : `Kết thúc ${dateText(item.endAt)}`,
         meta: [item.pointName, `${item.bidderCount} người trả giá`],
         title: item.title,
         detail: `Giá hiện tại ${money(item.currentPrice ?? item.startPrice)} · bước ${money(item.step)}`,
-        action: {
-          label: "Hủy phiên",
-          render: (context) => <AuctionCancel item={item} {...context} />,
-        },
+        action:
+          item.state === "OnHold"
+            ? {
+                label: "Xử lý phiên",
+                render: (context) => <AuctionHoldDecision item={item} {...context} />,
+              }
+            : {
+                label: "Hủy phiên",
+                render: (context) => <AuctionCancel item={item} {...context} />,
+              },
       }))}
       empty={{
         title: "Không có phiên nào cần theo dõi.",

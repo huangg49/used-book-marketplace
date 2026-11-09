@@ -2506,7 +2506,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0047. Seller edits the time of an Active auction before the first bid and before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationSeconds. Live: only durationSeconds (end = startAt + duration, at least 1 hour from now); startAt must be null. expectedVersion is the auction version. */
+        /** @description ADR 0047. Seller edits the time of an Active auction before the first bid and before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationSeconds. Live: only durationSeconds (end = startAt + duration, at least 1 hour from now); startAt must be null. expectedVersion is the auction version. ADR 0081/0082: a registration auction moves its open time (startAt required) at most twice, within publish + 30 days. ADR 0085: once it has enough registrants the new open time must be earlier than the current one (422 otherwise). */
         post: operations["rescheduleAuction"];
         delete?: never;
         options?: never;
@@ -2664,6 +2664,23 @@ export interface paths {
         put?: never;
         /** @description ACTIVE ADMIN independent of seller and bidders cancels an Active or OnHold auction with a reason; never selects a winner. The book moves to reclaim. */
         post: operations["cancelAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auctions/{auctionId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0080/0084. ACTIVE ADMIN independent of the seller, bidders and registrants returns an OnHold auction to Active with a reason, before the hold auto-cancels (holdExpiresAt) and only when the seller and the leader are eligible. Any number of resumes within the pause budget (each hold at most 48 hours, all holds of an auction at most 72 hours). The paused time is given back, at least 10 minutes of bidding within the budget - startAt, endAt, the open time, the Buy Now window and the Dutch clock all move by the same amount. An auction held at or after its end gets no time back and is closed by the worker next. Bids, holds and deposits are kept. ADR 0083 - the reason is quoted in the AuctionResumed notification to the seller, bidders and registrants. */
+        post: operations["resumeAuction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2919,7 +2936,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount must be on the start + n*step grid, at least the minimum bid (no upper ceiling, ADR 0067). The leader cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money is held at bid time. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers this commitment plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
+        /** @description ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount must be on the start + n*step grid, at least the minimum bid (no upper ceiling, ADR 0067). The leader cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money is held at bid time. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers this commitment plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction. */
         post: operations["placeAuctionBid"];
         delete?: never;
         options?: never;
@@ -2935,7 +2952,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the minimum bid; the leader may only raise, which never raises the price. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the new ceiling plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
+        /** @description Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the minimum bid; the leader may only raise, which never raises the price. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the new ceiling plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction. */
         put: operations["setAuctionAutoBid"];
         post?: never;
         delete?: never;
@@ -3225,8 +3242,144 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too and keeps the lead at the Buy Now price. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
+        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too and keeps the lead at the Buy Now price. ADR 0074 — with buyNowMode Instant the auction ends at the Buy Now moment (endAt = now) and the close worker forms the Order within seconds; any bid that reaches the Buy Now price triggers the same end rule in either mode. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction. */
         post: operations["buyAuctionNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/dutch-accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0076 — Dutch auction. Accepts the current descending price; the first member to accept wins and the auction ends at once (buyNowAt = endAt = now), then the close worker forms the Order. `price` is the price the member saw; the server price at decision time must not be higher (it only falls), otherwise 409 InvalidState with the current price. Refused for other types, before the start or after the end. ADR 0075 — the accepted price is held in the wallet. */
+        post: operations["acceptDutchAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/sealed-bid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0076 — sealed-bid auction (first or second price). Places or raises the caller's one hidden bid (≥ start price, on the start + n × step grid, above their own previous bid). The receipt never says whether the caller leads and shows no price while the auction runs. ADR 0075 — the caller's whole bid is held in the wallet until the close; losers are refunded at the close, the winner keeps the price they pay (own bid, or the second bid for second price). */
+        post: operations["placeSealedBid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/registration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0077 — registers the caller for an auction with a refundable deposit (the auction's depositAmount, which the body repeats so a changed amount is refused). The deposit is held in the wallet; bids, Dutch acceptance and sealed bids need a registration, and bidding opens once registeredCount reaches minBidders. Losers and an unmet minimum are refunded at the close; a non-paying winner's deposit is forfeited; the platform keeps it if the runner-up buys, and the Seller receives half if the book ends unsold (ADR 0087). ADR 0083 (POL-41) - 429 RATE_LIMITED when the caller already has 5 open participations (standing registrations, auctions they lead, wins awaiting payment), after 30 registrations or withdrawals in the last minute, or within a minute of withdrawing from this auction. */
+        post: operations["registerForAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/min-bidders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0079 - seller lowers minBidders (never below 4) while waiting and before it was reached. ADR 0081 - reaching it opens the auction at its opensAt, or (ADR 0085) 10 minutes after reaching it when opensAt already passed, moved to 07:00 Vietnam time when that falls between 23:00 and 07:00. ADR 0085 - raising minBidders is allowed only while nobody is registered; the same value is refused (422). */
+        post: operations["setAuctionMinBidders"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0079 - seller closes their auction before it starts (waiting phase only). Cancelled with closeReason SellerClosed; every deposit is refunded and the book is reclaimed. Refused (409) once started. */
+        post: operations["closeAuctionBeforeStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/second-chance/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0086 - the runner-up accepts the one offer made after the winner did not pay, before its deadline: the auction returns to AwaitingWinnerPayment with the caller as winner at the offered price, a ViaPoint Order forms (pay within 24 hours) and the price is held in the wallet (409 when the wallet cannot cover it). expectedVersion is the auction version. */
+        post: operations["acceptAuctionSecondChance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/second-chance/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0086 - the runner-up declines the offer: the auction ends PaymentExpired and the book is reclaimed for the seller. expectedVersion is the auction version. */
+        post: operations["declineAuctionSecondChance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/registration/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0077 — withdraws the caller's registration and refunds the deposit while the caller has not bid and either registeredCount is below minBidders or (ADR 0085) the auction is a full ScheduledGrace auction more than 72 hours before opensAt (see fullWithdrawUntil). A withdrawal that takes a full auction below the minimum returns it to waiting for registrants (startAt = opensAt + 24 h, biddingOpenedAt null) and notifies the seller and the remaining registrants. */
+        post: operations["withdrawAuctionRegistration"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3865,7 +4018,7 @@ export interface paths {
         /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
         get: operations["listMySupportCases"];
         put?: never;
-        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. ADR 0078 auction flags - TransactionIssue may target an Auction only for its seller or a member who registered or bid there; one open case per member and auction (409 InvalidState otherwise). Seller, registrants and bidders are involved, so none of them can handle the case. */
         post: operations["createSupportCase"];
         delete?: never;
         options?: never;
@@ -3952,6 +4105,40 @@ export interface paths {
         put?: never;
         /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
         post: operations["messageSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}/close-auction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0079. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders, closes the reported auction (Active, including past its end until the worker closes it, ADR 0083; or OnHold; ADR 0086 also AwaitingWinnerPayment before the winner paid, whose Order closes Cancelled without payment, and SecondChanceOffered) in one transaction - Cancelled with closeReason Reported, every hold and deposit released (an unpaid winner's deposit is refunded, not forfeited), book reclaimed, message sent to the seller and every participant and recorded as the case answer. */
+        post: operations["closeReportedAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}/freeze-auction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0084. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders, freezes the reported auction for review - Active (waiting, live, or past its end until the worker closes it) with pause budget left becomes OnHold with holdReason Review. Bids, holds and deposits are kept; the message is sent to the seller and every participant and added to the case, which stays open. An Admin then resumes it (paused time given back), closes it from the case, or it auto-cancels at holdExpiresAt. */
+        post: operations["freezeReportedAuction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5137,7 +5324,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
+            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionResumed" | "AuctionSecondChanceOffered" | "AuctionDepositShareReceived" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
@@ -6179,6 +6366,8 @@ export interface components {
             available: number;
             transactionHeld: number;
             withdrawalHeld: number;
+            /** @description ADR 0075. Held while the caller leads auctions (their committed level) or has won and not yet paid; released to available when outbid, cancelled, unsold, expired, or used for the payment. Included in total. Optional for older servers. */
+            auctionHeld?: number;
             total: number;
             /** Format: date-time */
             serverTime: string;
@@ -6228,8 +6417,11 @@ export interface components {
             journalId: string;
             /** Format: uuid */
             topupId: string | null;
-            /** @enum {string} */
-            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund";
+            /**
+             * @description ADR 0075/0087. Auction rows are wallet holds for bids and deposits, their releases, and a Seller's share of a non-paying winner's deposit.
+             * @enum {string}
+             */
+            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare";
             amount: number;
             balanceAfter: number;
             /** Format: date-time */
@@ -6816,7 +7008,7 @@ export interface components {
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "InTransit" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "SecondChanceOffered" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "InTransit" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
             currentPrice: number | null;
             minimumBid: number | null;
             leading: boolean | null;
@@ -6840,6 +7032,11 @@ export interface components {
             /** Format: date-time */
             serverTime: string;
         };
+        /**
+         * @description ADR 0074. Seller's choice at intake, copied to the auction. Challenge (default) keeps the ADR 0043/0070 window (60 s for the leader, 5 min for a rival) after Buy Now; Instant ends the auction at the Buy Now moment, and bids and Auto ceilings may not exceed the Buy Now price. Optional in responses for older servers; absent means Challenge.
+         * @enum {string}
+         */
+        AuctionBuyNowMode: "Challenge" | "Instant";
         CreateAuctionIntake: {
             /** Format: uuid */
             listingId: string;
@@ -6850,6 +7047,16 @@ export interface components {
             /** @description Bid step chosen by the Seller (ADR 0068). */
             step: number;
             buyNowPrice: number | null;
+            buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
+            auctionType?: components["schemas"]["AuctionType"];
+            /** @description ADR 0076. Dutch opening price; startPrice is the floor. Null for other types. */
+            dutchTopPrice?: number | null;
+            /** @description ADR 0076. Seconds between Dutch price drops of one step. Null for other types. */
+            dutchIntervalSeconds?: number | null;
+            /** @description ADR 0077/0079. Registered bidders the auction needs before it opens. Default 4, at least 4; no business maximum (1000 is a technical guard). */
+            minBidders?: number;
+            /** @description ADR 0087. Registration deposit chosen by the Seller. Omitted or null uses the default (10% of startPrice rounded up to 1.000đ, at least 10.000đ). Otherwise from that default up to half of startPrice (never below the default), in whole 1.000đ; outside that range is a 422 on depositAmount. */
+            depositAmount?: number | null;
             /** @description Protective value snapshotted at intake (ADR 0049). Not capped by the auction price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
         };
@@ -6861,7 +7068,7 @@ export interface components {
             expectedVersion: number;
             /**
              * Format: date-time
-             * @description Null starts now; otherwise 5 minutes to 7 days ahead.
+             * @description Null starts now; otherwise 5 minutes to 7 days ahead. ADR 0081 registration auctions - required (null is refused with 422), 5 minutes to 30 days ahead (ADR 0082); publishes ScheduledGrace with this time as opensAt. The auction opens there only when minBidders registered, otherwise as soon as they do within 24 h after it, and is cancelled after that.
              */
             startAt: string | null;
             /** @description Session length in seconds, 1 hour to 7 days (ADR 0069). */
@@ -6872,7 +7079,7 @@ export interface components {
             expectedVersion: number;
             /**
              * Format: date-time
-             * @description Scheduled only; null starts now. Must be null once live.
+             * @description Scheduled only; null starts now. Must be null once live. ADR 0081 registration auctions - the new opensAt, required while waiting and before the current open time, at most publish + 30 days, at most 2 changes per auction (ADR 0082), and not in the last 30 minutes before the current open time; the auction becomes ScheduledGrace. There is no open-now command.
              */
             startAt: string | null;
             /** @description Session length in seconds, 1 hour to 7 days (ADR 0069). */
@@ -6894,6 +7101,11 @@ export interface components {
             expectedVersion: number;
             reason: string;
         };
+        ResumeAuction: {
+            expectedVersion: number;
+            /** @description ADR 0083. Recorded in the audit log and quoted (shortened to fit) in the notification members receive. */
+            reason: string;
+        };
         PlaceAuctionBid: {
             amount: number;
             /** @enum {string} */
@@ -6905,6 +7117,56 @@ export interface components {
             fulfillmentMethod: "SelfCollect";
         };
         DisableAuctionAutoBid: Record<string, never>;
+        RegisterForAuction: {
+            /** @description The depositAmount the caller saw; a different server amount is refused (409). */
+            deposit: number;
+        };
+        WithdrawAuctionRegistration: Record<string, never>;
+        SetAuctionMinBidders: {
+            expectedVersion: number;
+            /** @description ADR 0079/0085. Never below 4; higher than the current value only while nobody is registered. */
+            minBidders: number;
+        };
+        CloseReportedAuction: {
+            /** @description Support case version. */
+            expectedVersion: number;
+            auctionVersion: number;
+            /** @description Sent to the seller and every participant and recorded as the case answer. */
+            message: string;
+        };
+        FreezeReportedAuction: {
+            /** @description Support case version. */
+            expectedVersion: number;
+            auctionVersion: number;
+            /** @description ADR 0084. Quoted (shortened to fit) in the AuctionOnHold notification to the seller and every participant, and added to the case. */
+            message: string;
+        };
+        /**
+         * @description ADR 0077 NotEnoughBidders (Unsold). ADR 0079 cancellations - RegistrationExpired (too few registrants at the start), SellerClosed (seller closed before the start), HoldExpired (OnHold for 48 h), Reported (Admin closed it from a report). Null otherwise.
+         * @enum {string|null}
+         */
+        AuctionCloseReason: "NotEnoughBidders" | "RegistrationExpired" | "SellerClosed" | "HoldExpired" | "Reported" | null;
+        /**
+         * @description ADR 0077. The caller's registration; Applied is a winner's deposit counted in the price held for payment. Null when the caller never registered.
+         * @enum {string|null}
+         */
+        AuctionRegistrationState: "Registered" | "Withdrawn" | "Refunded" | "Applied" | "Forfeited" | null;
+        /**
+         * @description ADR 0076. English (default, proxy bidding with Auto and optional Buy Now); Dutch (descending price, first acceptance wins); SealedFirst / SealedSecond (one hidden bid each, winner pays own bid / second-highest bid or the start price). Absent means English. ADR 0086 - new intakes refuse SealedSecond (422); existing SealedSecond intakes and auctions finish normally.
+         * @enum {string}
+         */
+        AuctionType: "English" | "Dutch" | "SealedFirst" | "SealedSecond";
+        AcceptDutchAuction: {
+            /** @description The descending price the member accepted; the server price must not exceed it. */
+            price: number;
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+        };
+        PlaceSealedBid: {
+            amount: number;
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+        };
         BuyAuctionNow: {
             /** @enum {string} */
             fulfillmentMethod: "SelfCollect";
@@ -6941,6 +7203,16 @@ export interface components {
             /** @description Bid step chosen by the Seller (ADR 0068). */
             step: number;
             buyNowPrice: number | null;
+            buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
+            auctionType?: components["schemas"]["AuctionType"];
+            /** @description ADR 0076. Dutch opening price; startPrice is the floor. Null for other types. */
+            dutchTopPrice?: number | null;
+            /** @description ADR 0076. Seconds between Dutch price drops of one step. Null for other types. */
+            dutchIntervalSeconds?: number | null;
+            /** @description ADR 0077. Registered bidders needed (intakes from before ADR 0079 may hold 2-3; they publish with 4). Optional for older servers. */
+            minBidders?: number;
+            /** @description ADR 0087. Registration deposit the auction will use (the Seller's choice or the default). Optional for older servers. */
+            depositAmount?: number;
             protectiveValue: number;
             /** @enum {string} */
             state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
@@ -7045,11 +7317,61 @@ export interface components {
              * @description ADR 0043. When Buy Now opened the 60-second window; endAt already holds the shortened end. Null without Buy Now. Optional for older servers.
              */
             buyNowAt?: string | null;
+            buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
+            auctionType?: components["schemas"]["AuctionType"];
+            /** @description ADR 0076. Dutch opening price; startPrice is the floor. Null for other types. */
+            dutchTopPrice?: number | null;
+            /** @description ADR 0076. Seconds between Dutch price drops of one step. Null for other types. */
+            dutchIntervalSeconds?: number | null;
+            /** @description ADR 0076. Current Dutch price by server time while live; null otherwise. */
+            dutchPrice?: number | null;
+            /**
+             * Format: date-time
+             * @description ADR 0076. When the Dutch price next falls; null on the floor or when not live.
+             */
+            dutchNextDropAt?: string | null;
+            /** @description ADR 0077. Registered bidders needed before bidding opens (at least 4, ADR 0079). Every auction requires registration (ADR 0082); null only on legacy auctions published before ADR 0077. Optional for older servers. */
+            minBidders?: number | null;
+            /**
+             * @description ADR 0079. WhenReady opens as soon as minBidders registered, at the latest startAt (publish + 24 h); Scheduled opens at startAt (at most publish + 72 h). While waiting (phase Scheduled), too few registrants at startAt cancels the auction. ADR 0081 publishes only ScheduledGrace - it opens at opensAt when minBidders registered, otherwise as soon as they do; until then startAt is the registration deadline (opensAt + 24 h). WhenReady and Scheduled remain on older auctions. Null on auctions without the bounded lifecycle. Optional for older servers.
+             * @enum {string|null}
+             */
+            openMode?: "WhenReady" | "Scheduled" | "ScheduledGrace" | null;
+            /**
+             * Format: date-time
+             * @description ADR 0081. The seller's open time on a ScheduledGrace auction (at most publish + 30 days, ADR 0082); null on other modes. Optional for older servers.
+             */
+            opensAt?: string | null;
+            /**
+             * Format: date-time
+             * @description ADR 0079/0082. Fixed ceiling for a rescheduled open time (publish + 30 days); null without the bounded lifecycle. Optional for older servers.
+             */
+            latestStartAt?: string | null;
+            /**
+             * Format: date-time
+             * @description ADR 0086. While state is SecondChanceOffered, when the runner-up offer expires; null otherwise. Optional for older servers.
+             */
+            secondChanceDeadline?: string | null;
+            /**
+             * Format: date-time
+             * @description ADR 0085. When a ScheduledGrace auction already has enough registrants, a registrant may still withdraw (deposit refunded) until this time, 72 hours before opensAt. Null when the auction is not full or has no open time. Below the minimum a registrant withdraws until it fills. Optional for older servers.
+             */
+            fullWithdrawUntil?: string | null;
+            /**
+             * Format: date-time
+             * @description ADR 0079. OnHold auto-cancels here (held + 48 h); null unless OnHold. Optional for older servers.
+             */
+            holdExpiresAt?: string | null;
+            /** @description ADR 0077. Refundable registration deposit. Every auction requires registration (ADR 0082); null only on legacy auctions published before ADR 0077. */
+            depositAmount?: number | null;
+            /** @description ADR 0077. Members registered (withdrawals excluded). */
+            registeredCount?: number;
+            closeReason?: components["schemas"]["AuctionCloseReason"];
             /** Format: uuid */
             listingId: string;
             title: string;
             /** @enum {string} */
-            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
+            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired" | "SecondChanceOffered";
             startPrice: number;
             /** @description Bid step chosen by the Seller (ADR 0068). */
             step: number;
@@ -7087,6 +7409,19 @@ export interface components {
             /** Format: date-time */
             serverTime: string;
         };
+        AuctionSecondChance: {
+            /** @description The caller's own highest level (English) or sealed bid. */
+            price: number;
+            /** Format: date-time */
+            offeredAt: string;
+            /**
+             * Format: date-time
+             * @description offeredAt + 24 hours; after it the offer expires.
+             */
+            deadline: string;
+            /** @enum {string} */
+            outcome: "Offered" | "Accepted" | "Declined" | "Expired" | "Cancelled";
+        };
         AuctionParticipation: {
             /** Format: uuid */
             auctionId: string;
@@ -7096,10 +7431,17 @@ export interface components {
             mode: "Manual" | "Auto" | null;
             /** @description Own manual amount or own private Auto ceiling. */
             ownLevel: number | null;
+            /** @description ADR 0075. Wallet amount currently held for this auction for the caller (their level while leading, the final price after winning until payment); 0 once outbid or released. Optional for older servers. */
+            heldAmount?: number;
+            registrationState?: components["schemas"]["AuctionRegistrationState"];
+            /** @description ADR 0086. The one offer to the caller as runner-up after the winner did not pay; null when the caller has none. Optional for older servers. */
+            secondChance?: null | components["schemas"]["AuctionSecondChance"];
+            /** @description ADR 0077. The caller's registration deposit; null when not registered. */
+            deposit?: number | null;
             boughtNow: boolean;
             leading: boolean;
             /** @enum {string} */
-            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
+            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired" | "SecondChanceOffered";
             currentPrice: number | null;
             minimumBid: number | null;
             /** @enum {string} */
@@ -7149,6 +7491,23 @@ export interface components {
              * @enum {string}
              */
             phase?: "Scheduled" | "Live" | "Ended";
+            /**
+             * Format: date-time
+             * @description ADR 0079. When an OnHold auction auto-cancels; null otherwise. Optional.
+             */
+            holdExpiresAt?: string | null;
+            /**
+             * Format: date-time
+             * @description ADR 0080. When an Admin last resumed this auction (ADR 0084 - any number of times within the pause budget). Optional.
+             */
+            resumedAt?: string | null;
+            /**
+             * @description ADR 0084. Why it is OnHold - the seller or leader lost eligibility, or the Admin on a report froze it for review. Null unless OnHold. Optional for older servers.
+             * @enum {string|null}
+             */
+            holdReason?: "Eligibility" | "Review" | null;
+            /** @description ADR 0084. Pause time this auction may still use (72 hours in total, given back on resume). Optional for older servers. */
+            pauseBudgetLeftSeconds?: number;
             title: string;
             /** @enum {string} */
             state: "Active" | "OnHold";
@@ -7915,6 +8274,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** @description ADR 0083. Operations reads only - how many other cases about the same target are not Closed (cases involving the reading Admin excluded, as in the queue). Never sent to members, so a reporter cannot tell whether others reported. Absent without a target or on older servers. */
+            otherOpenOnTarget?: number;
         };
         CreateSupportCase: {
             /** @enum {string} */
@@ -11890,7 +12251,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement";
+                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare";
                 topupId?: string;
                 orderId?: string;
                 /** @description Full journal, order, top-up or withdrawal ID, or the first six hexadecimal characters shown on a receipt. Matches only the caller's own history. */
@@ -13237,6 +13598,46 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    resumeAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResumeAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     listAuctions: {
         parameters: {
             query?: {
@@ -14489,6 +14890,326 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    acceptDutchAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptDutchAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    placeSealedBid: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceSealedBid"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    registerForAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterForAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    setAuctionMinBidders: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAuctionMinBidders"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    closeAuctionBeforeStart: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    acceptAuctionSecondChance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    declineAuctionSecondChance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    withdrawAuctionRegistration: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawAuctionRegistration"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     listExchanges: {
         parameters: {
             query?: never;
@@ -15686,6 +16407,9 @@ export interface operations {
                 limit?: number;
                 state?: components["schemas"]["SupportState"];
                 kind?: components["schemas"]["SupportKind"];
+                /** @description ADR 0078. Only cases whose target has this type, e.g. the member's flag on one auction together with targetId. */
+                targetType?: "DirectOrder" | "Exchange" | "PointOrder" | "Auction" | "Listing" | "Review" | "Member";
+                targetId?: string;
             };
             header?: never;
             path?: never;
@@ -15824,6 +16548,9 @@ export interface operations {
                 state?: components["schemas"]["SupportState"];
                 kind?: components["schemas"]["SupportKind"];
                 assignedToMe?: boolean;
+                /** @description ADR 0083. Only cases about this target, with targetId, to see every open report on one auction or listing together. */
+                targetType?: "DirectOrder" | "Exchange" | "PointOrder" | "Auction" | "Listing" | "Review" | "Member";
+                targetId?: string;
             };
             header?: never;
             path?: never;
@@ -15894,6 +16621,82 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SupportMessageCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    closeReportedAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseReportedAuction"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    freezeReportedAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FreezeReportedAuction"];
             };
         };
         responses: {

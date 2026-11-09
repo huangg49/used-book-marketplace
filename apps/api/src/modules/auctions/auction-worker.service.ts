@@ -36,9 +36,12 @@ export class AuctionWorker {
     const ready = { _id: { $nin: blocked } };
     const {
       holds,
+      registrations,
+      expiredHolds,
       dropoffs,
       endings,
       payments,
+      offers,
       decisions,
       collections,
       returns,
@@ -55,7 +58,7 @@ export class AuctionWorker {
           {
             limit: 200,
             sort: { endAt: 1, _id: 1 },
-            projection: { sellerId: 1, leaderId: 1 },
+            projection: { sellerId: 1, leaderId: 1, version: 1 },
           },
         )
         .toArray();
@@ -82,6 +85,39 @@ export class AuctionWorker {
             ineligible.has(a.sellerId) ||
             (a.leaderId !== null && ineligible.has(a.leaderId)),
         ),
+        // ADR 0079 ceilings: the start passed with too few registrants, or
+        // OnHold until holdUntil (ADR 0084). Commands already refuse past these; this records it.
+        registrations: await tx.c.auctions
+          .find(
+            {
+              ...ready,
+              state: 'Active',
+              openMode: { $ne: null },
+              startAt: { $lte: now },
+              $expr: { $lt: ['$registeredCount', '$minBidders'] },
+            },
+            {
+              limit: 100,
+              sort: { startAt: 1, _id: 1 },
+              projection: { _id: 1, version: 1, startAt: 1 },
+            },
+          )
+          .toArray(),
+        expiredHolds: await tx.c.auctions
+          .find(
+            {
+              ...ready,
+              state: 'OnHold',
+              // ADR 0084: each hold stores when it auto-cancels.
+              holdUntil: { $lte: now },
+            },
+            {
+              limit: 100,
+              sort: { holdUntil: 1, _id: 1 },
+              projection: { _id: 1, version: 1, holdUntil: 1 },
+            },
+          )
+          .toArray(),
         dropoffs: await tx.c.auction_intakes
           .find(
             {
@@ -106,6 +142,21 @@ export class AuctionWorker {
               paymentDeadline: { $lte: now },
             },
             { limit: 100, sort: { paymentDeadline: 1, _id: 1 } },
+          )
+          .toArray(),
+        // ADR 0086: runner-up offers nobody answered in 24 h.
+        offers: await tx.c.auctions
+          .find(
+            {
+              ...ready,
+              state: 'SecondChanceOffered',
+              runnerUpDeadline: { $lte: now },
+            },
+            {
+              limit: 100,
+              sort: { runnerUpDeadline: 1, _id: 1 },
+              projection: { _id: 1, version: 1, runnerUpDeadline: 1 },
+            },
           )
           .toArray(),
         // Paid ViaPoint Orders past the report decision / collection deadline.
@@ -165,12 +216,26 @@ export class AuctionWorker {
     });
     const { attempt, result } = this.runner();
     for (const a of holds)
-      await attempt('hold', a._id, () => this.bidding.hold(a._id));
+      await attempt('hold', a._id, () => this.bidding.hold(a._id, a.version));
+    for (const a of registrations)
+      await attempt('registrationExpiry', a._id, () =>
+        this.bidding.expireRegistration(a._id, a.version),
+      );
+    for (const a of expiredHolds)
+      await attempt('holdExpiry', a._id, () =>
+        this.bidding.expireHold(a._id, a.version),
+      );
     for (const a of endings)
-      await attempt('close', a._id, () => this.bidding.close(a._id));
+      await attempt('close', a._id, () =>
+        this.bidding.close(a._id, a.version),
+      );
     for (const a of payments)
       await attempt('paymentExpiry', a._id, () =>
-        this.bidding.expirePayment(a._id),
+        this.bidding.expirePayment(a._id, a.orderId),
+      );
+    for (const a of offers)
+      await attempt('secondChanceExpiry', a._id, () =>
+        this.bidding.expireSecondChance(a._id, a.version),
       );
     for (const i of dropoffs)
       await attempt('dropoffExpiry', i._id, () =>
@@ -183,8 +248,11 @@ export class AuctionWorker {
     for (const o of settlements)
       await attempt('settlement', o._id, () => this.completion.settle(o._id));
     const oldest = [
+      ...registrations.map((a) => a.startAt),
+      ...expiredHolds.map((a) => a.holdUntil!),
       ...endings.map((a) => a.endAt),
       ...payments.map((a) => a.paymentDeadline!),
+      ...offers.map((a) => a.runnerUpDeadline!),
       ...dropoffs.map((i) => i.dropoffDeadline),
       ...decisions.map((o) => o.acceptanceDeadline!),
       ...collections.map((o) => o.collectionDeadline!),
@@ -219,13 +287,19 @@ export class AuctionWorker {
       return tx.c.auctions
         .find(
           { _id: { $nin: blocked }, state: 'Active', endAt: { $lte: now } },
-          { limit: 100, sort: { endAt: 1, _id: 1 }, projection: { _id: 1 } },
+          {
+            limit: 100,
+            sort: { endAt: 1, _id: 1 },
+            projection: { _id: 1, version: 1 },
+          },
         )
         .toArray();
     });
     const { attempt, result } = this.runner();
     for (const a of endings)
-      await attempt('close', a._id, () => this.bidding.close(a._id));
+      await attempt('close', a._id, () =>
+        this.bidding.close(a._id, a.version),
+      );
     return { ...result, backedOff: blocked.length };
   }
 

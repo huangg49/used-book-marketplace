@@ -753,7 +753,9 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
     ).body;
     expect(JSON.stringify(listed)).toContain(f.id);
     expect((await reconcile()).balanced).toBe(true);
-  });
+    // Reconciles all financial history retained by earlier suites, which grows
+    // with them (auction holds/deposits, ADR 0075/0077); same budget as the race.
+  }, 60000);
   it('denies guests, members and generic staff/admin operators', async () => {
     const { event } = await labelled();
     await request(app.getHttpServer())
@@ -942,7 +944,8 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
     await expect(app.get(OrdersService).refund(f.id)).rejects.toThrow();
     expect((await reconcile()).balanced).toBe(true);
     expect((await integrity()).failures).toEqual([]);
-  });
+    // Full-history reconcile and integrity sweep: see the timely pickup case.
+  }, 60000);
   it.each([false, true])(
     'late event opens review and never backdates acceptance; worker already ran=%s',
     async (workerFirst) => {

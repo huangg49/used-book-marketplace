@@ -185,11 +185,31 @@ export class PointOrdersService {
   }
 
   // Caller holds the auction lock: unpaid at the deadline, the commitment
-  // returns to the intake for reclaim. No charge, no runner-up (FR-AU08).
+  // returns to the intake. No charge (FR-AU08); ADR 0086 may offer the book
+  // to the runner-up, who gets an Order of their own.
   async expire(tx: Tx, orderId: string, now: Date, receiptId: string) {
+    return this.closeUnpaid(tx, orderId, now, receiptId, 'PaymentExpired');
+  }
+
+  // ADR 0086: a report closes the auction before the winner paid; the Order
+  // closes Cancelled without any payment or refund.
+  async cancelUnpaid(tx: Tx, orderId: string, now: Date, receiptId: string) {
+    return this.closeUnpaid(tx, orderId, now, receiptId, 'Cancelled');
+  }
+
+  private async closeUnpaid(
+    tx: Tx,
+    orderId: string,
+    now: Date,
+    receiptId: string,
+    state: 'PaymentExpired' | 'Cancelled',
+  ) {
     await tx.lock('point_orders', [orderId]);
     const o = (await tx.c.point_orders.findOne({ _id: orderId }))!;
-    if (o.state !== 'AwaitingPayment' || now < o.paymentDeadline)
+    if (
+      o.state !== 'AwaitingPayment' ||
+      (state === 'PaymentExpired' && now < o.paymentDeadline)
+    )
       throw invalidState();
     const a = (await tx.c.auctions.findOne({ _id: o.auctionId }))!;
     await this.reservations.transfer(
@@ -208,7 +228,7 @@ export class PointOrdersService {
     const next = await tx.c.point_orders.findOneAndUpdate(
       { _id: o._id, version: o.version, state: 'AwaitingPayment' },
       {
-        $set: { state: 'PaymentExpired', closedAt: now, updatedAt: now },
+        $set: { state, closedAt: now, updatedAt: now },
         $inc: { version: 1 },
       },
       { returnDocument: 'after' },
@@ -271,6 +291,16 @@ export class PointOrdersService {
             ? await deliverySnapshot(tx, o, body, now, receiptId)
             : null;
         const outboundFee = delivery?.outboundFee ?? 0;
+        // ADR 0075: the winner's hold returns to available and is paid out
+        // with the fee in this same transaction; never two charges.
+        await this.ledger.setAuctionHold(
+          tx,
+          o.auctionId,
+          o.buyerId,
+          0,
+          receiptId,
+          now,
+        );
         await this.ledger.postOrder(
           tx,
           o._id,

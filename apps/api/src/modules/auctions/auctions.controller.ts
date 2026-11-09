@@ -387,4 +387,170 @@ export class AuctionsController {
       ),
     );
   }
+  // ADR 0076: Dutch acceptance and sealed bids.
+  @Post('auctions/:auctionId/dutch-accept')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  acceptDutch(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.acceptDutch(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AcceptDutchAuction', body),
+        ),
+        res,
+      ),
+    );
+  }
+  @Post('auctions/:auctionId/sealed-bid')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  sealedBid(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.sealedBid(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('PlaceSealedBid', body),
+        ),
+        res,
+      ),
+    );
+  }
+  // ADR 0077: registration with a refundable deposit, and its withdrawal.
+  @Post('auctions/:auctionId/registration')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  register(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.register(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('RegisterForAuction', body),
+        ),
+        res,
+      ),
+    );
+  }
+  @Post('auctions/:auctionId/registration/withdraw')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  withdrawRegistration(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.withdrawRegistration(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('WithdrawAuctionRegistration', body),
+        ),
+        res,
+      ),
+    );
+  }
+  // ADR 0086: the runner-up's answer to the offer made after the winner
+  // did not pay.
+  @Post('auctions/:auctionId/second-chance/accept')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  acceptSecondChance(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.acceptSecondChance(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
+  @Post('auctions/:auctionId/second-chance/decline')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  declineSecondChance(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.declineSecondChance(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
+  // ADR 0079: seller lifecycle command.
+  @Post('auctions/:auctionId/min-bidders')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  setMinBidders(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.setMinBidders(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('SetAuctionMinBidders', body),
+        ),
+        res,
+      ),
+    );
+  }
+  // ADR 0079: seller lifecycle command.
+  @Post('auctions/:auctionId/close')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  closeBeforeStart(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.closeBeforeStart(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
 }

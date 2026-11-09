@@ -5,6 +5,8 @@ import { useSession } from "../../../core/session/session-provider";
 import { AppText, Button, Chip, Notice, Sheet, colors, space } from "../../../core/ui";
 import { auctionReceipt } from "../contracts";
 import {
+  AUCTION_OPEN_GRACE_MS,
+  AUCTION_OPEN_CEILING_MS,
   DURATION_CHOICES,
   auctionErrorText,
   createScheduleCommand,
@@ -21,7 +23,9 @@ const when = (ms: number) =>
 /** ADR 0047: publish a Passed intake, or edit an auction's time before its first bid. */
 export type ScheduleTarget =
   | { kind: "publish"; intakeId: string; version: number }
-  | { kind: "reschedule"; auctionId: string; version: number; live: boolean; startAt: string; endAt: string };
+  | { kind: "reschedule"; auctionId: string; version: number; live: boolean; startAt: string; endAt: string;
+      /** ADR 0079: set for a waiting registration auction (fixed start ceiling). */
+      latestStartAt?: string | null };
 
 export function ScheduleAuctionSheet({
   visible,
@@ -49,7 +53,13 @@ export function ScheduleAuctionSheet({
     target?.kind === "reschedule"
       ? Math.round((Date.parse(target.endAt) - Date.parse(target.startAt)) / 1000)
       : 24 * 3600;
-  const choices = startChoices(now);
+  const lifecycle =
+    target?.kind === "publish"
+      ? { ceiling: now + AUCTION_OPEN_CEILING_MS }
+      : target?.kind === "reschedule" && !target.live && target.latestStartAt
+        ? { ceiling: Date.parse(target.latestStartAt) }
+        : undefined;
+  const choices = startChoices(now, lifecycle);
   const [start, setStart] = useState(0);
   const [seconds, setSeconds] = useState(currentSeconds);
   const [busy, setBusy] = useState(false);
@@ -144,11 +154,15 @@ export function ScheduleAuctionSheet({
         </View>
         <AppText kind="bold" color={allowed ? colors.forest : colors.rustText}>
           {allowed
-            ? `Mở ${live || choices[start]?.at ? when(startAt) : "ngay khi xác nhận"} · kết thúc ${when(startAt + seconds * 1000)}`
+            ? lifecycle
+              ? `Mở ${when(startAt)} nếu đủ người · chưa đủ thì chờ thêm tới ${when(startAt + AUCTION_OPEN_GRACE_MS)}, rồi hủy`
+              : `Mở ${live || choices[start]?.at ? when(startAt) : "ngay khi xác nhận"} · kết thúc ${when(startAt + seconds * 1000)}`
             : "Phiên đang mở phải còn ít nhất 1 giờ. Chọn thời lượng dài hơn."}
         </AppText>
         <AppText kind="small" color={colors.muted}>
-          Bạn đổi được thời gian tối đa 5 lần, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên.
+          {lifecycle
+            ? "Phiên chỉ mở khi đủ người đăng ký: đến giờ mở mà chưa đủ, phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ; hết 24 giờ vẫn chưa đủ thì phiên bị hủy và hoàn cọc. Bạn đổi giờ mở tối đa 2 lần, trong 30 ngày kể từ lúc đăng, trước giờ mở và không trong 30 phút cuối."
+            : "Bạn đổi được thời gian tối đa 5 lần, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên."}
         </AppText>
         {error && <Notice tone="error">{error}</Notice>}
       </View>

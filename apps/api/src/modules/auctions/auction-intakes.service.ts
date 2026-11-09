@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import type {
   AuctionDoc,
@@ -9,6 +10,11 @@ import type {
   ReclaimReason,
 } from '../../database/mongo/documents.js';
 import {
+  AUCTION_DEFAULT_MIN_BIDDERS,
+  AUCTION_MIN_BIDDERS_FLOOR,
+  auctionDeposit,
+  auctionDepositMax,
+  AUCTION_DEPOSIT_UNIT,
   AUCTION_DROPOFF_MS,
   AUCTION_DURATION_MS,
   EVIDENCE_DECISION_MS,
@@ -49,7 +55,11 @@ import {
 import { checkAuction, checkIntake } from './auction-invariants.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { requireUnrestricted } from './member-violations.js';
-import { publishSchedule } from './auction-schedule.js';
+import {
+  lifecyclePublish,
+  publishSchedule,
+  staffLifecycleOpen,
+} from './auction-schedule.js';
 
 // POL-41 counts intakes whose auction has not ended: before opening, or
 // opened and still Active/OnHold. A closed auction (sold, unsold, expired)
@@ -117,7 +127,17 @@ export class AuctionIntakesService {
     private readonly reservations: ReservationsService,
     private readonly points: HandoverPointsService,
     private readonly clock: AuctionClock,
-  ) {}
+    config: ConfigService,
+  ) {
+    // ADR 0077/0082: registration is mandatory on every auction. Only the test
+    // harness (NODE_ENV=test) may switch it off, for suites written before
+    // registration; no seller, Staff or server setting can.
+    this.registration = !(
+      config.get<string>('NODE_ENV') === 'test' &&
+      config.get<string>('AUCTION_REGISTRATION') === 'Off'
+    );
+  }
+  private readonly registration: boolean;
 
   // ------------------------------------------------------------- helpers
   static change(
@@ -376,6 +396,19 @@ export class AuctionIntakesService {
             startPrice: body.startPrice,
             step: body.step,
             buyNowPrice: body.buyNowPrice,
+            // ADR 0076: Dutch acceptance ends at once, like an Instant Buy Now.
+            buyNowMode:
+              (body.auctionType ?? 'English') === 'Dutch'
+                ? 'Instant'
+                : (body.buyNowMode ?? 'Challenge'),
+            auctionType: body.auctionType ?? 'English',
+            dutchTopPrice:
+              body.auctionType === 'Dutch' ? body.dutchTopPrice! : null,
+            dutchIntervalSeconds:
+              body.auctionType === 'Dutch' ? body.dutchIntervalSeconds! : null,
+            minBidders: body.minBidders ?? AUCTION_DEFAULT_MIN_BIDDERS,
+            // ADR 0087: null keeps the 10% default at publish.
+            depositAmount: body.depositAmount ?? null,
             protectiveValue:
               body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice,
             policyCode: 'HCM-AUCTION-v1',
@@ -444,6 +477,24 @@ export class AuctionIntakesService {
     // ADR 0067: no business ceiling, only the exact-integer limit.
     if (body.startPrice < AUCTION_MIN_PRICE || body.startPrice > MONEY_MAX)
       invalidField('startPrice', 'Giá khởi điểm tối thiểu 10.000đ.');
+    // ADR 0087: the seller may raise the registration deposit (never below the
+    // 10% default, at most half the start price, whole 1.000đ).
+    if (body.depositAmount !== undefined && body.depositAmount !== null) {
+      const min = auctionDeposit(body.startPrice);
+      const max = auctionDepositMax(body.startPrice);
+      if (
+        !Number.isSafeInteger(body.depositAmount) ||
+        body.depositAmount % AUCTION_DEPOSIT_UNIT !== 0 ||
+        body.depositAmount < min ||
+        body.depositAmount > max
+      )
+        invalidField(
+          'depositAmount',
+          min === max
+            ? `Tiền cọc của giá khởi điểm này là ${min.toLocaleString('vi-VN')}đ.`
+            : `Tiền cọc từ ${min.toLocaleString('vi-VN')}đ đến ${max.toLocaleString('vi-VN')}đ, theo bội số 1.000đ.`,
+        );
+    }
     if (body.declaredValue !== undefined && body.declaredValue !== null) {
       if (
         body.declaredValue < AUCTION_MIN_PRICE ||
@@ -462,7 +513,34 @@ export class AuctionIntakesService {
           'buyNowPrice',
           'Giá mua ngay phải bằng giá khởi điểm cộng một số bước giá.',
         );
-    }
+    } else if (body.buyNowMode === 'Instant' && (body.auctionType ?? 'English') === 'English')
+      // ADR 0074: the mode only governs Buy Now, so it needs a Buy Now price.
+      invalidField(
+        'buyNowMode',
+        'Chọn "Mua ngay kết thúc ngay" cần nhập giá mua ngay.',
+      );
+    // ADR 0076: only English auctions have Buy Now; Dutch needs its schedule.
+    const type = body.auctionType ?? 'English';
+    // ADR 0086 (C2): a seller's hidden bid could set a second-price winner's
+    // price, and accounts are not linked, so new auctions use other formats.
+    if (type === 'SealedSecond')
+      invalidField(
+        'auctionType',
+        'Đấu giá kín giá thứ hai không còn nhận phiên mới; hãy chọn đấu giá kín giá cao nhất hoặc kiểu khác.',
+      );
+    if (type !== 'English' && body.buyNowPrice !== null)
+      invalidField('buyNowPrice', 'Chỉ đấu giá kiểu Anh (trả giá lên) có mua ngay.');
+    if (type === 'Dutch') {
+      const top = body.dutchTopPrice;
+      if (top == null || top <= body.startPrice || top > MONEY_MAX)
+        invalidField('dutchTopPrice', 'Giá mở đầu phải cao hơn giá sàn (giá khởi điểm).');
+      else if ((top - body.startPrice) % body.step !== 0)
+        invalidField('dutchTopPrice', 'Giá mở đầu phải bằng giá sàn cộng một số bước giá.');
+      const every = body.dutchIntervalSeconds;
+      if (every == null || every < 10 || every > 3600)
+        invalidField('dutchIntervalSeconds', 'Mỗi lần giảm giá cách nhau 10 giây đến 1 giờ.');
+    } else if (body.dutchTopPrice != null || body.dutchIntervalSeconds != null)
+      invalidField('auctionType', 'Giá mở đầu và nhịp giảm chỉ dùng cho đấu giá kiểu Hà Lan.');
   }
 
   cancel(
@@ -494,6 +572,14 @@ export class AuctionIntakesService {
               409,
               'InvalidState',
               'Chỉ rút được phiên đang mở và chưa có lượt trả giá nào.',
+            );
+          // ADR 0079: deposits must be refunded in the same transaction, which
+          // only the auction's own close does (before the start, never after).
+          if (a.minBidders !== null)
+            throw new DomainError(
+              409,
+              'InvalidState',
+              'Phiên có đăng ký đặt cọc: dùng "Đóng phiên" trước giờ mở để hoàn cọc cho người đăng ký.',
             );
           const withdrawn = await tx.c.auctions.findOneAndUpdate(
             { _id: a._id, version: a.version, state: 'Active', bidderCount: 0 },
@@ -775,7 +861,11 @@ export class AuctionIntakesService {
           tx,
           i,
           now,
-          { startAt: now, plannedEndAt: plus(now, AUCTION_DURATION_MS) },
+          // ADR 0079/0081: with registration a Staff open waits for
+          // registrants from now (opens the moment the minimum is reached).
+          this.registration
+            ? staffLifecycleOpen(now, AUCTION_DURATION_MS)
+            : { startAt: now, plannedEndAt: plus(now, AUCTION_DURATION_MS) },
           'Staff',
         ),
       event: 'AuctionOpened',
@@ -810,7 +900,11 @@ export class AuctionIntakesService {
             'Chỉ đăng phiên được sách đã kiểm định đạt và chưa lên phiên.',
           );
         await requireUnrestricted(tx, actor._id, now);
-        const schedule = publishSchedule(body, now);
+        // ADR 0081: a registration auction opens at the seller's time and
+        // never before minBidders registered; there is no "open now".
+        const schedule = this.registration
+          ? lifecyclePublish(body, now)
+          : publishSchedule(body, now);
         const next = await this.startAuction(tx, i, now, schedule, 'Seller');
         return AuctionIntakesService.change(
           next,
@@ -825,7 +919,12 @@ export class AuctionIntakesService {
     tx: Tx,
     i: AuctionIntakeDoc,
     now: Date,
-    schedule: { startAt: Date; plannedEndAt: Date },
+    schedule: {
+      startAt: Date;
+      plannedEndAt: Date;
+      openMode?: AuctionDoc['openMode'];
+      opensAt?: Date;
+    },
     publishedBy: AuctionDoc['publishedBy'],
   ) {
     const listing = await tx.c.listings.findOne({ _id: i.listingId });
@@ -841,6 +940,35 @@ export class AuctionIntakesService {
       startPrice: i.startPrice,
       step: i.step,
       buyNowPrice: i.buyNowPrice,
+      buyNowMode: i.buyNowMode,
+      auctionType: i.auctionType,
+      dutchTopPrice: i.dutchTopPrice,
+      dutchIntervalSeconds: i.dutchIntervalSeconds,
+      // ADR 0077: registration gate copied from the intake, deposit by policy.
+      // ADR 0079: intakes from before the floor of 4 publish with 4.
+      minBidders: this.registration
+        ? Math.max(AUCTION_MIN_BIDDERS_FLOOR, i.minBidders)
+        : null,
+      depositAmount: this.registration
+        ? (i.depositAmount ?? auctionDeposit(i.startPrice))
+        : null,
+      registeredCount: 0,
+      biddingOpenedAt: null,
+      closeReason: null,
+      openMode: this.registration ? (schedule.openMode ?? null) : null,
+      opensAt: this.registration ? (schedule.opensAt ?? null) : null,
+      heldAt: null,
+      resumedAt: null,
+      holdReason: null,
+      holdUntil: null,
+      pausedMs: 0,
+      // ADR 0086: no runner-up offer yet.
+      runnerUpId: null,
+      runnerUpPrice: null,
+      runnerUpOfferedAt: null,
+      runnerUpDeadline: null,
+      runnerUpOutcome: null,
+      defaultedOrderId: null,
       buyNowAt: null,
       startAt: schedule.startAt,
       endAt: schedule.plannedEndAt,
@@ -994,6 +1122,13 @@ export class AuctionIntakesService {
       startPrice: i.startPrice,
       step: i.step as AuctionStep,
       buyNowPrice: i.buyNowPrice,
+      buyNowMode: i.buyNowMode,
+      auctionType: i.auctionType,
+      dutchTopPrice: i.dutchTopPrice,
+      dutchIntervalSeconds: i.dutchIntervalSeconds,
+      minBidders: i.minBidders,
+      // ADR 0087: the deposit bidders will pay (the seller's or the default).
+      depositAmount: i.depositAmount ?? auctionDeposit(i.startPrice),
       protectiveValue: i.protectiveValue,
       state: i.state,
       version: i.version,

@@ -43,6 +43,13 @@ export function supportRelatedState(state: string) {
     Expired: "Đã hết hạn",
     Proposed: "Chờ phản hồi đề xuất",
     Pending: "Chờ phản hồi",
+    // Auction states (ADR 0078 flags).
+    Active: "Phiên đang mở",
+    BuyNowPending: "Đã có người mua ngay",
+    AwaitingWinnerPayment: "Chờ người thắng thanh toán",
+    Sold: "Phiên đã bán",
+    Unsold: "Phiên không bán được",
+    OnHold: "Phiên tạm dừng để xem xét",
   };
   return labels[state] ?? "Xem tình trạng chi tiết tại giao dịch";
 }
@@ -71,6 +78,8 @@ export const supportSummarySchema = z.object({
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+  // ADR 0083: operations reads only.
+  otherOpenOnTarget: z.number().int().nonnegative().optional(),
 });
 export const supportPageSchema = z.object({
   items: z.array(supportSummarySchema),
@@ -269,4 +278,66 @@ export function sendSupportIntent(
   })();
   s.flights.set(scope, run);
   return run;
+}
+
+// ADR 0078: the auction flag. The seller and members who registered or bid send a
+// support case about the auction to the Admin queue; it never changes the auction,
+// the deposits or the holds by itself.
+export const auctionFlagCategories = [
+  {
+    id: "SuspiciousBidding",
+    label: "Nghi ngờ trả giá gian lận",
+    kind: "Violation",
+    hint: "Ví dụ: một tài khoản lạ liên tục đẩy giá, hoặc người bán tự trả giá cho phiên của mình.",
+  },
+  {
+    id: "WrongDescription",
+    label: "Sách hoặc mô tả không đúng",
+    kind: "Violation",
+    hint: "Ảnh, tình trạng hoặc thông tin sách khác với bản đã kiểm tra tại điểm.",
+  },
+  {
+    id: "MoneyIssue",
+    label: "Tiền cọc, khoản giữ hoặc thanh toán",
+    kind: "TransactionIssue",
+    hint: "Tiền chưa được hoàn, bị giữ sai số tiền hoặc thanh toán không được ghi nhận.",
+  },
+  {
+    id: "AppError",
+    label: "Lỗi khi trả giá hoặc hiển thị",
+    kind: "Bug",
+    hint: "Nút không hoạt động, giá hoặc thời gian hiển thị sai so với thực tế.",
+  },
+  {
+    id: "Other",
+    label: "Vấn đề khác",
+    kind: "Feedback",
+    hint: "Mô tả điều bạn gặp và điều bạn cần Admin hỗ trợ.",
+  },
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  kind: SupportCase["kind"];
+  hint: string;
+}[];
+export type AuctionFlagCategory = (typeof auctionFlagCategories)[number];
+export const AUCTION_FLAG_MIN_TEXT = 10;
+export const auctionFlagScope = (auctionId: string) =>
+  `support:auction:${auctionId}`;
+export const auctionFlagCasesPath = (auctionId: string) =>
+  `/me/support-cases?${new URLSearchParams({ targetType: "Auction", targetId: auctionId, limit: "20" })}`;
+/** The member's own case on this auction that is still open, if any. */
+export const openAuctionFlag = (page: SupportPage | undefined) =>
+  page?.items.find((item) => item.state !== "Closed") ?? null;
+export function auctionFlagBody(
+  category: AuctionFlagCategory,
+  auction: { id: string; title: string },
+  description: string,
+): components["schemas"]["CreateSupportCase"] {
+  return {
+    kind: category.kind,
+    title: `${category.label}: ${auction.title}`.slice(0, 160),
+    description: description.trim(),
+    target: { type: "Auction", id: auction.id },
+  };
 }

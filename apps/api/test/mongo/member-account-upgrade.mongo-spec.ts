@@ -43,6 +43,19 @@ const suffix = [
   '0060-wallet-withdrawals',
   '0061-manual-wallet-withdrawals',
   '0062-message-send-limits',
+  '0063-auction-buy-now-mode',
+  '0064-auction-bid-holds',
+  '0065-auction-types',
+  '0066-auction-registration',
+  '0067-auction-lifecycle',
+  '0068-auction-resume',
+  '0069-auction-scheduled-open',
+  '0070-auction-open-month',
+  '0071-support-target-index',
+  '0072-auction-pause-budget',
+  '0073-auction-reached-notice',
+  '0074-auction-second-chance',
+  '0075-auction-deposit-share',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');

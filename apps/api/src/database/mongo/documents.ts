@@ -652,10 +652,14 @@ export interface CommitmentEventDoc {
 
 export interface WalletAccountDoc {
   withdrawalId?: string | null;
+  // ADR 0075: AuctionBidHold accounts name their auction and holder.
+  auctionId?: string | null;
+  holderId?: string | null;
   _id: string;
   ownerId: string | null;
   orderId: string | null;
   purpose:
+    | 'AuctionBidHold'
     | 'WithdrawalHold'
     | 'UserAvailable'
     | 'OrderHold'
@@ -711,9 +715,15 @@ export interface SimulatedPaymentEventDoc {
 }
 export interface LedgerJournalDoc {
   withdrawalId?: string | null;
+  auctionId?: string | null;
   _id: string;
   sequence: number;
   type:
+    | 'AuctionBidHold'
+    | 'AuctionBidRelease'
+    | 'AuctionDepositForfeit'
+    // ADR 0087: platform → seller, the seller's share when the book went unsold.
+    | 'AuctionDepositSellerShare'
     | 'WithdrawalHold'
     | 'WithdrawalPayout'
     | 'WithdrawalRefund'
@@ -980,6 +990,17 @@ export interface AuctionIntakeDoc extends Lockable {
   startPrice: number;
   step: number;
   buyNowPrice: number | null;
+  // ADR 0074: Challenge keeps the ADR 0043/0070 window; Instant ends at Buy Now.
+  buyNowMode: AuctionBuyNowMode;
+  // ADR 0076: format; Dutch keeps its opening price and drop interval here
+  // (startPrice is the Dutch floor). Both null for other formats.
+  auctionType: AuctionFormat;
+  dutchTopPrice: number | null;
+  dutchIntervalSeconds: number | null;
+  // ADR 0077: registered bidders the auction needs (2–10).
+  minBidders: number;
+  // ADR 0087: the seller-set registration deposit; null = the 10% default.
+  depositAmount: number | null;
   protectiveValue: number;
   policyCode: 'HCM-AUCTION-v1';
   state: AuctionIntakeState;
@@ -1066,7 +1087,11 @@ export type AuctionState =
   | 'Unsold'
   | 'OnHold'
   | 'Cancelled'
-  | 'PaymentExpired';
+  | 'PaymentExpired'
+  // ADR 0086: the winner did not pay; the runner-up has 24 h to buy.
+  | 'SecondChanceOffered';
+export type AuctionBuyNowMode = 'Challenge' | 'Instant';
+export type AuctionFormat = 'English' | 'Dutch' | 'SealedFirst' | 'SealedSecond';
 export interface AuctionDoc extends Lockable {
   _id: string;
   intakeId: string;
@@ -1077,6 +1102,60 @@ export interface AuctionDoc extends Lockable {
   startPrice: number;
   step: number;
   buyNowPrice: number | null;
+  // ADR 0074: Challenge keeps the ADR 0043/0070 window; Instant ends at Buy Now.
+  buyNowMode: AuctionBuyNowMode;
+  // ADR 0076: format; Dutch keeps its opening price and drop interval here
+  // (startPrice is the Dutch floor). Both null for other formats.
+  auctionType: AuctionFormat;
+  dutchTopPrice: number | null;
+  dutchIntervalSeconds: number | null;
+  // ADR 0077: registration gate, mandatory on every auction (ADR 0082). Both
+  // null only on legacy pre-0077 rows and in the E2E harness (registration Off).
+  minBidders: number | null;
+  depositAmount: number | null;
+  registeredCount: number;
+  // ADR 0077: when registeredCount first reached minBidders (never before
+  // startAt); the Dutch price clock starts here.
+  biddingOpenedAt: Date | null;
+  closeReason:
+    | 'NotEnoughBidders'
+    // ADR 0079 cancellations: too few at the start, seller closed before the
+    // start, OnHold past 48 h, Admin closed from a report.
+    | 'RegistrationExpired'
+    | 'SellerClosed'
+    | 'HoldExpired'
+    | 'Reported'
+    | null;
+  // ADR 0079: null on auctions without the bounded lifecycle (ADR 0077 rows).
+  // ADR 0081: new registration auctions are ScheduledGrace (no "open now").
+  openMode: 'WhenReady' | 'Scheduled' | 'ScheduledGrace' | null;
+  // ADR 0081: the seller's open time; set exactly on ScheduledGrace. Until the
+  // minimum is reached startAt is the deadline opensAt + 24 h.
+  opensAt: Date | null;
+  // ADR 0079: when the auction was last put OnHold (48 h ceiling).
+  heldAt: Date | null;
+  // ADR 0080: when an Admin last resumed it from OnHold (ADR 0084: any number
+  // of times within the pause budget).
+  resumedAt: Date | null;
+  // ADR 0084: why it is OnHold (null unless OnHold): a party lost eligibility,
+  // or the Admin on a report froze it for review.
+  holdReason: 'Eligibility' | 'Review' | null;
+  // ADR 0084: when this hold auto-cancels (null unless OnHold): heldAt + the
+  // smaller of 48 h and the pause budget left.
+  holdUntil: Date | null;
+  // ADR 0084: total time given back by resumes; every stored time moved by
+  // it, and the fixed ceilings (from publishedAt) grow by it. ≤ 72 h.
+  pausedMs: number;
+  // ADR 0086: the one runner-up offer after the winner did not pay. The
+  // winner fields keep the defaulted winner while it runs; accepting makes
+  // the runner-up the winner (new Order). defaultedOrderId is the first
+  // winner's expired Order. All null when no offer was made.
+  runnerUpId: string | null;
+  runnerUpPrice: number | null;
+  runnerUpOfferedAt: Date | null;
+  runnerUpDeadline: Date | null;
+  runnerUpOutcome: 'Offered' | 'Accepted' | 'Declined' | 'Expired' | 'Cancelled' | null;
+  defaultedOrderId: string | null;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;
@@ -1100,6 +1179,18 @@ export interface AuctionDoc extends Lockable {
   orderId: string | null;
   version: number;
   updatedAt: Date;
+}
+// ADR 0077: _id = `${auctionId}:${userId}`; the deposit lives in the ADR 0075
+// hold account for this auction and member.
+export interface AuctionRegistrationDoc extends Lockable {
+  _id: string;
+  auctionId: string;
+  userId: string;
+  deposit: number;
+  state: 'Registered' | 'Withdrawn' | 'Refunded' | 'Applied' | 'Forfeited';
+  createdAt: Date;
+  updatedAt: Date;
+  version: number;
 }
 // _id = `${auctionId}:${bidderId}`; level is the private commitment ceiling.
 export interface AuctionBidderDoc extends Lockable {
@@ -1407,6 +1498,15 @@ export interface MemberNotificationDoc {
   userId: string;
   kind:
     | 'AuctionOutbid'
+    | 'AuctionFundsHeld'
+    | 'AuctionFundsReleased'
+    | 'AuctionBiddingStarted'
+    | 'AuctionNotEnoughBidders'
+    | 'AuctionDepositForfeited'
+    | 'AuctionRescheduled'
+    | 'AuctionResumed'
+    | 'AuctionSecondChanceOffered'
+    | 'AuctionDepositShareReceived'
     | 'AuctionWon'
     | 'AuctionSold'
     | 'AuctionBoughtNow'

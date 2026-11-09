@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  auctionDepositError,
+  depositChoices,
+  canWithdrawRegistration,
   amountError,
   autoFloor,
   bidOptions,
+  AUCTION_FORMATS,
   createAuctionCommand,
   createOrderCommand,
   auctionEligible,
@@ -18,6 +22,11 @@ import {
   fundsShortfall,
   receiptMessage,
   standingOf,
+  closeReasonText,
+  createSellerCommand,
+  openRuleText,
+  waitingTime,
+  waitingForRegistrants,
 } from "./auctions-model";
 import type { Participation, PublicAuctionSummary } from "./contracts";
 
@@ -258,5 +267,135 @@ describe("ADR 0047 scheduled auctions", () => {
     // Active filter count
     expect(activeFilterCount(DEFAULT_AUCTION_FILTERS)).toBe(0);
     expect(activeFilterCount({ ...DEFAULT_AUCTION_FILTERS, point: "A", buyNow: true })).toBe(2);
+  });
+});
+
+describe("ADR 0079 bounded registration lifecycle", () => {
+  const H = 3_600_000;
+  const now = Date.parse("2026-10-13T00:00:00Z");
+  const waiting = (over: Partial<PublicAuctionSummary> = {}) =>
+    auction({
+      openMode: "WhenReady",
+      minBidders: 4,
+      registeredCount: 1,
+      bidderCount: 0,
+      currentPrice: null,
+      phase: "Scheduled",
+      version: 3,
+      scheduleRevision: 0,
+      startAt: new Date(now + 20 * H).toISOString(),
+      endAt: new Date(now + 44 * H).toISOString(),
+      latestStartAt: new Date(now + 68 * H).toISOString(),
+      ...over,
+    });
+  it("knows a waiting auction and is never open once the server says Ended", () => {
+    expect(waitingForRegistrants(waiting(), now)).toBe(true);
+    expect(waitingForRegistrants(waiting({ openMode: null }), now)).toBe(false);
+    const expired = waiting({ phase: "Ended", startAt: new Date(now - H).toISOString() });
+    expect(isOpen(expired, now)).toBe(false);
+  });
+  it("ADR 0081: publishing and rescheduling only offer times within the ceiling, never now", () => {
+    const publish = startChoices(now, { ceiling: now + 72 * H });
+    expect(publish.some((c) => c.at === null)).toBe(false);
+    expect(publish.every((c) => c.at! <= now + 72 * H)).toBe(true);
+    // ADR 0082: a month-long ceiling offers choices weeks ahead.
+    const month = startChoices(now, { ceiling: now + 30 * 24 * H });
+    expect(month.some((c) => c.at! > now + 20 * 24 * H)).toBe(true);
+    expect(month.every((c) => c.at! <= now + 30 * 24 * H)).toBe(true);
+    const move = startChoices(now, { ceiling: now + 4 * H });
+    expect(move.some((c) => c.at === null)).toBe(false);
+    expect(move.every((c) => c.at! <= now + 4 * H)).toBe(true);
+  });
+  it("reschedule: only while waiting, under 5 changes and outside the last 30 minutes", () => {
+    expect(canReschedule(waiting(), now)).toBe(true);
+    // ADR 0082: the open time changes at most twice.
+    expect(canReschedule(waiting({ scheduleRevision: 1 }), now)).toBe(true);
+    expect(canReschedule(waiting({ scheduleRevision: 2 }), now)).toBe(false);
+    expect(canReschedule(waiting({ startAt: new Date(now + 20 * 60_000).toISOString() }), now)).toBe(false);
+    expect(canReschedule(waiting({ phase: "Live", startAt: new Date(now - H).toISOString() }), now)).toBe(false);
+    // ADR 0081: the open time counts, not the deadline; past it there is no move.
+    const grace = { openMode: "ScheduledGrace" as const, startAt: new Date(now + 26 * H).toISOString() };
+    expect(canReschedule(waiting({ ...grace, opensAt: new Date(now + 2 * H).toISOString() }), now)).toBe(true);
+    expect(canReschedule(waiting({ ...grace, opensAt: new Date(now + 20 * 60_000).toISOString() }), now)).toBe(false);
+    expect(canReschedule(waiting({ ...grace, opensAt: new Date(now - H).toISOString() }), now)).toBe(false);
+  });
+  it("ADR 0081: shows the open time, then the deadline once it passed with too few", () => {
+    const opensAt = new Date(now + 2 * H).toISOString();
+    const deadline = new Date(now + 26 * H).toISOString();
+    const a = waiting({ openMode: "ScheduledGrace", opensAt, startAt: deadline });
+    expect(waitingTime(a, now)).toEqual({ label: "Mở lúc", at: opensAt, endKnown: false });
+    expect(waitingTime(a, now + 3 * H)).toEqual({ label: "Hạn đăng ký", at: deadline, endKnown: false });
+    expect(waitingTime({ ...a, registeredCount: 4, startAt: opensAt }, now)).toEqual({ label: "Mở lúc", at: opensAt, endKnown: true });
+    expect(openRuleText(a, now)).toMatch(/chờ thêm tới/);
+    expect(openRuleText(a, now + 3 * H)).toMatch(/Đã qua giờ mở/);
+    expect(closeReasonText({ ...a, closeReason: "RegistrationExpired" })).toMatch(/trong 24 giờ sau giờ mở/);
+  });
+  it("explains the open rule and every close reason", () => {
+    expect(openRuleText(waiting())).toMatch(/tự mở ngay khi đủ 4 người/);
+    expect(openRuleText(waiting({ openMode: "Scheduled" }))).toMatch(/nếu đủ 4 người/);
+    expect(closeReasonText(waiting({ closeReason: "RegistrationExpired" }))).toMatch(/không đủ 4 người/);
+    expect(closeReasonText(waiting({ closeReason: "SellerClosed" }))).toMatch(/Người bán đã đóng/);
+    expect(closeReasonText(waiting({ closeReason: "HoldExpired" }))).toMatch(/hết thời gian tạm dừng/);
+    expect(closeReasonText(waiting({ closeReason: "Reported" }))).toMatch(/báo cáo/);
+    expect(closeReasonText(waiting())).toBeNull();
+  });
+  it("freezes seller commands with their version and key", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(JSON.parse(createSellerCommand(id, "LowerMin", 3, "k", 4).body)).toEqual({ expectedVersion: 3, minBidders: 4 });
+    expect(createSellerCommand(id, "Close", 3, "k").path).toBe(`/auctions/${id}/close`);
+  });
+});
+
+// ADR 0085 (N1): withdrawing is allowed below the minimum, or from a full
+// auction until 72 h before its open time; never after the member bid.
+describe("canWithdrawRegistration", () => {
+  const now = Date.parse("2026-11-09T03:00:00.000Z");
+  const auction = (over: Partial<PublicAuctionSummary> = {}) =>
+    ({ state: "Active", phase: "Scheduled", minBidders: 4, registeredCount: 3, fullWithdrawUntil: null, ...over }) as PublicAuctionSummary;
+  const me = (over: Partial<Participation> = {}) => ({ registrationState: "Registered", alias: null, ...over }) as Participation;
+  it("is allowed below the minimum", () => {
+    expect(canWithdrawRegistration(auction(), me(), now)).toBe(true);
+  });
+  it("is allowed from a full auction only before fullWithdrawUntil", () => {
+    const full = auction({ registeredCount: 4, fullWithdrawUntil: new Date(now + 60_000).toISOString() });
+    expect(canWithdrawRegistration(full, me(), now)).toBe(true);
+    expect(canWithdrawRegistration(full, me(), now + 60_000)).toBe(false);
+    expect(canWithdrawRegistration(auction({ registeredCount: 4 }), me(), now)).toBe(false);
+  });
+  it("is refused after a bid, when not registered, or once ended", () => {
+    expect(canWithdrawRegistration(auction(), me({ alias: 1 }), now)).toBe(false);
+    expect(canWithdrawRegistration(auction(), me({ registrationState: "Withdrawn" }), now)).toBe(false);
+    expect(canWithdrawRegistration(auction(), null, now)).toBe(false);
+    expect(canWithdrawRegistration(auction({ phase: "Ended" }), me(), now)).toBe(false);
+  });
+});
+
+// ADR 0086: the runner-up's answer carries the auction version it saw.
+describe("second-chance commands", () => {
+  it("accept and decline post the expected version", () => {
+    const a = createAuctionCommand("00000000-0000-4000-8000-000000000001", "SecondChanceAccept", 200_000, "k1", 7);
+    expect(a).toMatchObject({ path: "/auctions/00000000-0000-4000-8000-000000000001/second-chance/accept", method: "POST" });
+    expect(JSON.parse(a.body)).toEqual({ expectedVersion: 7 });
+    const d = createAuctionCommand("00000000-0000-4000-8000-000000000001", "SecondChanceDecline", 200_000, "k2", 7);
+    expect(d.path).toMatch(/second-chance\/decline$/);
+    expect(receiptMessage("SecondChanceDecline", 0, { currentPrice: null, leading: null })).toMatch(/từ chối/);
+  });
+  it("the create form no longer offers second-price sealed auctions", () => {
+    expect(AUCTION_FORMATS.filter((f) => !f.retired).map((f) => f.value)).not.toContain("SealedSecond");
+  });
+});
+
+// ADR 0087: the seller-set deposit mirrors the server bounds.
+describe("seller deposit", () => {
+  it("offers picks from the default to half the start price", () => {
+    expect(depositChoices(200_000).map((c) => c.amount)).toEqual([20_000, 40_000, 60_000, 100_000]);
+    expect(depositChoices(10_000).map((c) => c.amount)).toEqual([10_000]);
+  });
+  it("refuses amounts outside the bounds", () => {
+    expect(auctionDepositError(200_000, null)).toBeNull();
+    expect(auctionDepositError(200_000, 60_000)).toBeNull();
+    expect(auctionDepositError(200_000, 19_000)).toMatch(/20\.000đ đến 100\.000đ/);
+    expect(auctionDepositError(200_000, 101_000)).not.toBeNull();
+    expect(auctionDepositError(200_000, 25_500)).not.toBeNull();
   });
 });

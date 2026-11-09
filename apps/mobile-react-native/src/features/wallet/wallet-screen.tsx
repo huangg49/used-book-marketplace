@@ -254,6 +254,7 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
                 {(
                   [
                     ["Đang giữ cho đơn sách", summary.data.transactionHeld],
+                    ["Đang giữ cho đấu giá", summary.data.auctionHeld ?? 0],
                     ["Tổng số dư", summary.data.total],
                   ] as const
                 ).map(([label, amount]) => (

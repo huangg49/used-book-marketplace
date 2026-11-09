@@ -218,6 +218,14 @@ export const operationsAuction = z.object({
   pointName: z.string(),
   // ADR 0047: Scheduled before startAt; optional for older servers.
   phase: z.enum(["Scheduled", "Live", "Ended"]).optional(),
+  // ADR 0079: when an OnHold auction auto-cancels; optional for older servers.
+  holdExpiresAt: time.nullable().optional(),
+  // ADR 0080/0084: when an Admin last resumed it (any number of times within
+  // the pause budget).
+  resumedAt: time.nullable().optional(),
+  // ADR 0084: why it is held, and the pause time it may still use.
+  holdReason: z.enum(["Eligibility", "Review"]).nullable().optional(),
+  pauseBudgetLeftSeconds: z.number().int().nonnegative().optional(),
 }) satisfies z.ZodType<Schema["OperationsAuctionItem"]>;
 export type OperationsAuction = z.infer<typeof operationsAuction>;
 export const operationsAuctionList = z.object({
@@ -242,6 +250,8 @@ export const commandReceipt = z.object({
     "Unsold",
     "OnHold",
     "PaymentExpired",
+    // ADR 0086
+    "SecondChanceOffered",
     "AwaitingPayment",
     "Fulfilling",
     "ReadyForCollection",

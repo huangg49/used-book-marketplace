@@ -86,9 +86,9 @@ describe('AuctionWorker', () => {
 // ADR 0043: the close-only sweep the worker runs every few seconds.
 describe('AuctionWorker.closeDue', () => {
   const now = new Date('2026-10-19T16:41:00Z');
-  function setup(close: (id: string) => Promise<unknown>) {
+  function setup(close: (id: string, version: number) => Promise<unknown>) {
     const filters: Record<string, unknown>[] = [];
-    const ended = [{ _id: 'broken' }, { _id: 'fine' }];
+    const ended = [{ _id: 'broken', version: 3 }, { _id: 'fine', version: 5 }];
     const auctions = {
       find: (filter: Record<string, unknown>) => {
         filters.push(filter);
@@ -131,7 +131,8 @@ describe('AuctionWorker.closeDue', () => {
       state: 'Active',
       endAt: { $lte: now },
     });
-    expect(vi.mocked(bidding.close).mock.calls).toEqual([['broken'], ['fine']]);
+    // ADR 0080: keyed by the version the sweep read.
+    expect(vi.mocked(bidding.close).mock.calls).toEqual([['broken', 3], ['fine', 5]]);
   });
 
   it('skips a stale 409 and backs off a failing close', async () => {
@@ -146,6 +147,6 @@ describe('AuctionWorker.closeDue', () => {
     ]);
     const second = await worker.closeDue();
     expect(second).toMatchObject({ skipped: 1, failed: 0, backedOff: 1 });
-    expect(vi.mocked(bidding.close).mock.calls.at(-1)).toEqual(['fine']);
+    expect(vi.mocked(bidding.close).mock.calls.at(-1)).toEqual(['fine', 5]);
   });
 });
