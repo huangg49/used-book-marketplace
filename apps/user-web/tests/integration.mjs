@@ -785,11 +785,23 @@ try {
 
   await p.locator("dialog[open]").evaluate(async (node) => {
     await document.fonts.ready;
-    await Promise.all(
-      node.getAnimations().map((animation) => animation.finished),
-    );
+    // Moving focus blurs the last-filled field and starts its border-color
+    // transition, so settle every finite animation in the dialog subtree
+    // after the focus change, before the resting border is sampled below.
     node.querySelector("h2")?.focus();
     node.scrollTo({ top: 0 });
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+    );
+    await Promise.all(
+      node
+        .getAnimations({ subtree: true })
+        .filter(
+          (animation) =>
+            animation.effect?.getComputedTiming().iterations !== Infinity,
+        )
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
   });
   const originBorders = await p
     .locator("dialog[open] input")
