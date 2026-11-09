@@ -1,3 +1,20 @@
+# Đọc chữ bằng AI trực tiếp trên Member web — 09/11/2026
+
+Tiếp nối `d1ad5d42`. Từ `/sell`, chọn ảnh và bấm **Đọc chữ bằng AI** để bỏ
+qua bước tra mã vạch khi đã biết sách không có ISBN. Nút **Đọc thông tin**
+vẫn ưu tiên tra mã vạch. Hai nhánh dùng chung bản nháp, ảnh đã tải và khóa lượt đọc.
+Xem [ADR0048](../adr/0048-listing-photo-autofill.md) để chọn ảnh cho buổi chấm.
+
+Đo NVIDIA trên bốn cuốn do chủ dự án cung cấp cho thấy cả lời dặn dài hơn và
+thang thu ảnh thử nghiệm có ca sai thêm tựa hoặc tác giả. Giữ cấu hình đọc đã
+kiểm ở `d1ad5d42`. Bằng chứng là bộ thử phát triển bốn cuốn, chưa đủ ngưỡng
+nghiệm thu. Ảnh và kết quả thô nằm ngoài Git. Tra công khai theo tựa của bốn cuốn
+chưa thấy kết quả trùng trong phạm vi truy vấn. Chưa gửi bài hoặc duyệt bằng
+tài khoản thật trong lượt này.
+
+Kiểm chứng Member web gồm typecheck/build, 6 unit và 20 ca Chromium ở 390/1440 px.
+Ca đọc trực tiếp ghi nhận 0 lượt ISBN và 1 lượt AI khi bấm liên tiếp.
+
 # Autofill và phục hồi gửi bài trên Member web — 09/11/2026
 
 Gói `codex/autofill-listing-recovery-20261109` trên nền main local `c5c232bd`.

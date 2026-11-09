@@ -130,4 +130,23 @@ theo điều khoản công bố — cần chủ dự án kiểm lại khi lên p
   chiếu danh mục so tác giả bỏ khoảng trắng/dấu chấm (“新海 誠”/“新海誠”, “J. K.”/“J.K.”),
   vốn đã bỏ hoa/thường và dấu — nên “Đề Mèn” hay “Tống Mạc” vẫn khớp đúng đầu sách
   trong danh mục (e2e mới).
-- **NOT RUN**: ảnh chụp điện thoại thật (ngưỡng §5, ≥ 20 cuốn).
+- **NOT RUN**: bộ nghiệm thu ảnh chụp điện thoại thật (ngưỡng §5, ≥ 20 cuốn).
+
+### Bộ ảnh chuẩn bị buổi chấm 09/11
+
+Member web có nút **Đọc chữ bằng AI** ngay sau khi chọn ảnh. Dùng nút này cho
+sách cũ khi biết không có ISBN. **Đọc thông tin** vẫn thử tra mã vạch trước.
+Từ thư mục ảnh chủ dự án cung cấp, đối chiếu trực tiếp chữ in rồi chạy NVIDIA
+với bốn cuốn. Lượt gốc nhận đủ phần tựa của cả bốn nếu bỏ khác biệt dấu nối,
+có hai tác giả đọc sai dấu. Lượt đọc bỏ sót dòng thông tin in ấn ở *Âm thanh
+và cuồng nộ*. Không gợi ý ISBN cho cả bốn cuốn. Hai biến thể lời dặn/thu ảnh sai thêm trường nên không được áp dụng.
+
+| Cuốn | Ảnh đã thử | Khi trình bày |
+| --- | --- | --- |
+| Âm thanh và cuồng nộ | `1.jpg` + `3.jpg` | Ca chính. Nhận đúng tựa và William Faulkner ở cả hai bộ ảnh đã thử. Ảnh 3 in Kinh Thi, lần I, 1972. Lượt đọc có thể bỏ sót dòng này. Ảnh 4 có quảng cáo cuốn khác. |
+| Cao-Lãnh đến 1954 | `1.jpg` + `4.jpg` | Ca sửa tựa in rời. Tựa đủ chữ nhưng có thể thiếu dấu nối. Ảnh 4 có dòng in xong năm 1963. Tác giả chưa đủ rõ để tự điền. |
+| Á-Nam thi tuyển | `1.jpg` + `2.jpg` + `3.jpg` | Đối chiếu dấu trong “tuyển” và tên tác giả trên trang nhan đề. Bỏ ảnh 3 trong lần thử riêng vẫn có lỗi dấu. |
+| 9 đêm | `1.jpg` + `2.jpg` + `3.jpg` | Tựa in là “9 đêm”. Đối chiếu tác giả ở đầu bìa trước. Ảnh chương và lời bìa sau có thể gây nhiễu. Chỉ dùng ảnh 1 trong lần thử riêng vẫn có lỗi dấu. |
+
+Các cuốn này dùng để kiểm phát triển và chọn ca trình bày. Tập nghiệm thu ảnh
+thật ở §5 và việc gửi/duyệt bài bằng tài khoản thật vẫn cần bằng chứng riêng.

@@ -216,7 +216,7 @@ export function PhotoAutofill({
         <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
       </div>
       <p className={styles.help}>
-        Chụp rõ bìa trước, gáy hoặc trang bản quyền. Nếu tựa in rải trên bìa, thêm ảnh cận đủ các phần của tựa. Bạn kiểm tra thông tin trước khi dùng.
+        Chọn bìa trước làm ảnh đầu. Thêm trang nhan đề hoặc trang in ấn nếu cần đọc tác giả, nhà xuất bản hay năm. Với tựa in rải trên bìa, chụp cận đủ cả chữ và số.
       </p>
       {reading ? <p role="status">{readPhase}</p> : null}
       {barcode ? <div className={styles.recovery}>
@@ -277,10 +277,18 @@ export function PhotoAutofill({
         >
           {reading ? "Đang đọc…" : result ? "Đọc lại" : "Đọc thông tin"}
         </button>
+        {files.length > 0 && !barcode && !result && !canSkipIsbn && (
+          <button type="button" className={styles.useAll} disabled={disabled || reading} onClick={() => void read(true)}>
+            Đọc chữ bằng AI
+          </button>
+        )}
         <span className={styles.note}>
           Tối đa {MAX_PHOTOS} ảnh · không gửi thông tin tài khoản
         </span>
       </div>
+      {files.length > 0 && !barcode && !result && !error && !reading && (
+        <p className={styles.help}>Đọc thông tin sẽ tra mã vạch trước. Với sách cũ, bạn có thể đọc chữ bằng AI ngay.</p>
+      )}
       <p className="sr-only" role="status">
         {reading
           ? "Đang tải ảnh và đọc chữ trên sách."

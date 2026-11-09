@@ -18,12 +18,12 @@ const user={id:id(1),displayName:'Bạn đọc QA',email:'reader@example.test',r
 const checks=[];let browser;
 try{
  browser=await chromium.launch();
- for(const width of [390,1440])for(const mode of ['isbn','lookup-fail','ai-lost-ack',...baseline?[]:['lookup-ai-bypass']]){
+ for(const width of [390,1440])for(const mode of ['isbn','lookup-fail','ai-lost-ack',...baseline?[]:['lookup-ai-bypass','ai-direct']]){
   const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'});
   await context.routeWebSocket('**/*',socket=>socket.close());
   const page=await context.newPage(),errors=[],gates=[],aiGates=[],intents=[];
   const counts={draft:0,media:0,bytes:0,finalize:0,isbn:0,ai:0};
-  page.on('pageerror',e=>errors.push(e.message));let holdIsbn=true,failIsbn=mode==='lookup-fail'||mode==='lookup-ai-bypass',holdAi=mode!=='lookup-ai-bypass';
+  page.on('pageerror',e=>errors.push(e.message));let holdIsbn=true,failIsbn=mode==='lookup-fail'||mode==='lookup-ai-bypass',holdAi=mode!=='lookup-ai-bypass'&&mode!=='ai-direct';
   let searchedTitle;
   await context.route('**/*',async route=>{
    const request=route.request(),url=new URL(request.url()),p=url.pathname,m=request.method();
@@ -67,6 +67,17 @@ try{
   const title=page.getByLabel('Tên sách',{exact:true});await title.fill('Tên đang nhập QA');
   const png=Buffer.from(await page.evaluate(()=>{const c=document.createElement('canvas');c.width=80;c.height=120;return c.toDataURL('image/png').split(',')[1]}),'base64');
   await panel.locator('input[type=file]').setInputFiles({name:'qa-book.png',mimeType:'image/png',buffer:png});
+  if(mode==='ai-direct'){
+   await panel.getByRole('button',{name:'Đọc chữ bằng AI',exact:true}).evaluate(button=>{button.click();button.click()});
+   await expect(panel.getByRole('button',{name:'Dùng Tên sách',exact:true})).toBeVisible();
+   await expect(title).toHaveValue('Tên đang nhập QA');
+   assert.deepEqual(counts,{draft:1,media:1,bytes:1,finalize:1,isbn:0,ai:1});
+   assert.deepEqual(errors,[]);
+   checks.push({width,mode,counts,manualDraftPreserved:true});
+   await panel.screenshot({path:path.join(out,`after-ai-direct-${width}.png`)});
+   await context.close();
+   continue;
+  }
   await panel.getByRole('button',{name:'Đọc thông tin',exact:true}).evaluate(button=>{button.click();button.click()});
   await expect.poll(()=>counts.isbn).toBe(baseline?2:1);
   await expect(panel.getByRole('button',{name:'Đang đọc…',exact:true})).toBeDisabled();
