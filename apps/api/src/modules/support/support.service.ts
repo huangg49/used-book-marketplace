@@ -28,7 +28,11 @@ import { AuctionBiddingService } from '../auctions/auction-bidding.service.js';
 import { AuctionClock } from '../auctions/auction-clock.js';
 import { reviewItem } from '../reviews/review-record.js';
 
-const summary = (r: Case): Wire['SupportCaseSummary'] => ({
+const summary = (
+  r: Case,
+  // ADR 0083: operations reads only; never computed for members.
+  otherOpenOnTarget?: number,
+): Wire['SupportCaseSummary'] => ({
   id: r._id,
   kind: r.kind,
   title: r.title,
@@ -40,7 +44,9 @@ const summary = (r: Case): Wire['SupportCaseSummary'] => ({
   version: r.version,
   createdAt: r.createdAt.toISOString(),
   updatedAt: r.updatedAt.toISOString(),
+  ...(otherOpenOnTarget === undefined ? {} : { otherOpenOnTarget }),
 });
+const targetKey = (t: NonNullable<Case['target']>) => `${t.type}:${t.id}`;
 const text = (value: string, path: string, min = 3) => {
   const result = value.trim();
   if (result.length < min)
@@ -105,8 +111,14 @@ export class SupportService {
       const rows = await tx.c.support_cases
         .find({ _id: { $in: page.ids } })
         .toArray();
+      const open = operations
+        ? await this.openOnTargets(tx, rows, actor._id)
+        : null;
       return {
-        items: page.ids.map((id) => summary(rows.find((r) => r._id === id)!)),
+        items: page.ids.map((id) => {
+          const row = rows.find((r) => r._id === id)!;
+          return summary(row, open ? this.others(open, row) : undefined);
+        }),
         nextCursor: page.nextCursor,
         serverTime: page.serverTime,
       };
@@ -141,8 +153,11 @@ export class SupportService {
         operations,
         actor._id,
       );
+      const open = operations
+        ? await this.openOnTargets(tx, [row], actor._id)
+        : null;
       return {
-        case: summary(row),
+        case: summary(row, open ? this.others(open, row) : undefined),
         messages: messages.map((m) => ({
           id: m._id,
           authorId: m.authorId,
@@ -388,6 +403,61 @@ export class SupportService {
       },
     });
   }
+  // ADR 0084 (H2): the assigned, independent Admin freezes the reported
+  // auction for review; the message reaches every participant and is added to
+  // the case, which stays open for the decision (resume or close).
+  freezeAuction(
+    context: CommandContext,
+    id: string,
+    body: Wire['FreezeReportedAuction'],
+  ) {
+    return this.commands.runSupport(context, 'freezeReportedAuction', id, body, {
+      authorize: async (tx, actor) =>
+        this.access(
+          tx,
+          await tx.c.support_cases.findOne({ _id: id }),
+          actor,
+          true,
+        ),
+      mutate: async (tx, actor) => {
+        await tx.lock('support_cases', [id]);
+        const row = await this.access(
+          tx,
+          await tx.c.support_cases.findOne({ _id: id }),
+          actor,
+          true,
+        );
+        this.version(row, body.expectedVersion);
+        if (row.state === 'Closed') throw invalidState('Hồ sơ đã đóng.');
+        if (row.assigneeId !== actor._id)
+          throw invalidState('Nhận phụ trách hồ sơ trước khi tạm dừng phiên.');
+        if (row.target?.type !== 'Auction')
+          throw invalidState('Hồ sơ này không gắn với phiên đấu giá.');
+        const message = text(body.message, 'message', 10);
+        const now = await this.clock.now(tx);
+        await this.auctions.freezeReported(
+          tx,
+          row.target.id,
+          body.auctionVersion,
+          actor._id,
+          message,
+          now,
+        );
+        await this.append(
+          tx,
+          row,
+          actor,
+          `Admin đã tạm dừng phiên đấu giá để xem xét: ${message}`,
+          false,
+          'System',
+          now,
+        );
+        await this.save(tx, row, now);
+        await this.notify(tx, row, now);
+        return this.change(row, now);
+      },
+    });
+  }
   // ADR 0079: the assigned, independent Admin closes the reported auction and
   // answers the case in one transaction; the message reaches every participant.
   closeAuction(
@@ -444,6 +514,37 @@ export class SupportService {
         return this.change(row, now);
       },
     });
+  }
+  // ADR 0083: open (not Closed) cases per target among the given rows'
+  // targets, with the queue's exclusion of cases involving the reading Admin.
+  private async openOnTargets(tx: Tx, rows: Case[], actorId: string) {
+    const targets = [
+      ...new Map(
+        rows.flatMap((r) => (r.target ? [[targetKey(r.target), r.target]] : [])),
+      ).values(),
+    ];
+    const counts = new Map<string, number>();
+    if (!targets.length) return counts;
+    const groups = await tx.c.support_cases
+      .aggregate<{ _id: { type: string; id: string }; n: number }>([
+        {
+          $match: {
+            state: { $ne: 'Closed' },
+            involvedUserIds: { $ne: actorId },
+            $or: targets.map((t) => ({ 'target.type': t.type, 'target.id': t.id })),
+          },
+        },
+        { $group: { _id: { type: '$target.type', id: '$target.id' }, n: { $sum: 1 } } },
+      ])
+      .toArray();
+    for (const g of groups) counts.set(`${g._id.type}:${g._id.id}`, g.n);
+    return counts;
+  }
+  private others(open: Map<string, number>, row: Case) {
+    if (!row.target) return undefined;
+    // The row itself is visible to this Admin, so it is counted when open.
+    const all = open.get(targetKey(row.target)) ?? 0;
+    return Math.max(0, all - (row.state !== 'Closed' ? 1 : 0));
   }
   private version(row: Case, version: number) {
     if (row.version !== version) throw conflict();
@@ -612,6 +713,9 @@ export class SupportService {
             'Unsold',
             'Cancelled',
             'OnHold',
+            // ADR 0086: a report may still close it before the winner paid.
+            'AwaitingWinnerPayment',
+            'SecondChanceOffered',
           ].includes(row.state))
       )
         throw notFound();

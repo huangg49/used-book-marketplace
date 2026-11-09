@@ -121,6 +121,43 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   Web/RN cập nhật trần, số lần còn lại và chữ; RN thêm lựa chọn 1/2/4 tuần.
   Kiểm chứng: unit schedule 19, E2E nhóm đăng ký/vòng đời 33/33, Mongo 61, web 477, RN auctions 22,
   contract/routes PASS. Hộp hẹn giờ trên trình duyệt, full E2E, native NOT RUN. Chưa push.
+- [ADR0083](../adr/0083-auction-phase-a-fixes.md) (09/11, nhánh `fix/auction-phase-a` từ main
+  `c5c232bd`): nhóm A của kế hoạch lỗi đấu giá. Báo cáo đóng được phiên đã qua giờ kết thúc tới
+  lúc worker chốt (hủy Order chờ thanh toán chuyển nhóm D); lý do tiếp tục phiên có trong thông
+  báo cho thành viên; khóa worker có tên bước; đăng ký theo POL-41 (5 phiên, 30 lượt/phút, chờ
+  1 phút để đăng ký lại); Admin thấy và lọc các báo cáo cùng đối tượng (`otherOpenOnTarget`,
+  migration `0071-support-target-index`). Kết quả kiểm chứng ở ADR0083/commit. DB local chính
+  chưa chạy khi làm nên `pnpm db:migrate` (0071) chưa áp dụng ở đó. Chưa push.
+- [ADR0084](../adr/0084-auction-pause-model.md) (09/11, cùng nhánh): nhóm B, một mô hình tạm dừng.
+  Tiếp tục cộng lại thời gian (mọi mốc lùi cùng khoảng, ít nhất 10 phút đấu giá), tiếp tục nhiều lần
+  trong ngân sách 72 giờ (mỗi lần ≤ 48 giờ), Admin trên báo cáo tạm dừng phiên để xem xét
+  (`freezeReportedAuction`). Migration `0072-auction-pause-budget` (`holdReason`, `holdUntil`,
+  `pausedMs`, trần theo `publishedAt` cộng `pausedMs`). 48/72 giờ và 10 phút là mặc định của kế
+  hoạch, chủ dự án chưa chọn khác. Kết quả kiểm chứng ở ADR0084/commit. Chưa push.
+- [ADR0085](../adr/0085-auction-registration-deposits.md) (09/11, cùng nhánh): nhóm C, đăng ký và
+  tiền cọc. Phiên đủ người chỉ dời giờ mở sớm hơn; rút đăng ký khỏi phiên đủ người tới 72 giờ trước
+  giờ mở (dưới tối thiểu thì phiên về chờ, `fullWithdrawUntil`); đủ người sau giờ mở thì mở sau 10
+  phút, khung 23:00–07:00 thì 07:00 (migration `0073-auction-reached-notice`); tăng số tối thiểu khi
+  chưa ai đăng ký; người dẫn giá không bị giữ hai lần (đã đúng, thêm kiểm thử). Mặc định của kế
+  hoạch, chủ dự án chưa chọn khác. Kết quả kiểm chứng ở ADR0085/commit. Chưa push.
+- [ADR0086](../adr/0086-auction-payment-failures.md) (09/11, cùng nhánh): nhóm D. Người thắng không
+  thanh toán thì người trả giá cao thứ hai được mời mua một lần ở giá của họ trong 24 giờ
+  (`SecondChanceOffered`, `acceptAuctionSecondChance`/`declineAuctionSecondChance`, Order thứ hai);
+  báo cáo đóng được phiên chưa thanh toán (Order `Cancelled` không thanh toán, tiền cọc hoàn) và
+  phiên đang mời; ngừng nhận phiên kín giá thứ hai mới. Migration `0074-auction-second-chance`
+  (đổi khóa duy nhất `point_orders` sang `{auctionId, buyerId}`). Quyết định tự chọn, cần chủ dự
+  án xem: tiền cọc mất vẫn về nền tảng (không về người bán, vì đã bỏ liên kết tài khoản) và chọn
+  phương án ngừng kín giá thứ hai. Kết quả kiểm chứng ở ADR0086/commit. Chưa push.
+- [ADR0087](../adr/0087-auction-deposit-share.md) (09/11, cùng nhánh, chủ dự án chọn qua phiên
+  phụ): tiền cọc mất vẫn về nền tảng khi người thứ hai mua; sách không bán được thì người bán nhận
+  50% (bút toán `AuctionDepositSellerShare`, thông báo `AuctionDepositShareReceived`), báo cáo đóng
+  phiên thì không. Người bán chọn tiền cọc khi tạo hồ sơ (mặc định 10% tới một nửa giá khởi điểm,
+  bội số 1.000đ). Sửa kèm lịch sử ví thiếu loại `AuctionBidHold`/`AuctionBidRelease`. Migration
+  `0075-auction-deposit-share`. Thay đổi tiền mô phỏng: cần human review. Chưa push.
+- [ADR0088](../adr/0088-auction-phase-e.md) (09/11, cùng nhánh): nhóm E cuối. M6: phiên đang có
+  người xem và đang trong khung Mua ngay được kiểm thêm mỗi 0,5 giây (lượt đầy đủ vẫn 2 giây). L2:
+  giữ nguyên, báo cáo vẫn tới Admin (cần chủ dự án quyết nếu muốn Staff xem). C1 không làm (đã bỏ).
+  Không migration, không đổi contract.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

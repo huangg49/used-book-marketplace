@@ -43,6 +43,10 @@ export const walletHistoryItem = z.object({
     "ListingFeeSettlement",
     "WithdrawalHold",
     "WithdrawalRefund",
+    // ADR 0075/0087: auction holds, releases and a seller's deposit share.
+    "AuctionBidHold",
+    "AuctionBidRelease",
+    "AuctionDepositSellerShare",
   ]),
   amount: z.number().int().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER),
   balanceAfter: money,

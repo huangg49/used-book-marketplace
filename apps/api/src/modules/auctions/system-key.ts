@@ -5,8 +5,13 @@ import { createHash } from 'node:crypto';
 // would replay the first deadline when the same Order reaches a second one
 // (for example after an Admin reopened collection). Deterministic, so a crashed
 // sweep retried on the same version replays instead of acting twice.
-export function stepKey(id: string, version: number) {
-  const h = createHash('sha256').update(`${id}:${version}`).digest('hex');
+// `step` names the worker step when several share one system actor and
+// operation (ADR 0083: the auction close, registration expiry and hold expiry
+// all run as AuctionClose/closeAuction), so their keys never collide.
+export function stepKey(id: string, version: number, step?: string) {
+  const h = createHash('sha256')
+    .update(step ? `${id}:${version}:${step}` : `${id}:${version}`)
+    .digest('hex');
   const variant = ((parseInt(h[16], 16) & 3) | 8).toString(16);
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-${variant}${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }

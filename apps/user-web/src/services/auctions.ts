@@ -13,7 +13,7 @@ export type AuctionStep = number
 
 const auctionStepSchema = z.number().int().min(AUCTION_STEP_MIN).max(AUCTION_STEP_MAX).multipleOf(AUCTION_STEP_UNIT)
 const money = z.number().int()
-const auctionState = z.enum(['Active', 'BuyNowPending', 'AwaitingWinnerPayment', 'Sold', 'Unsold', 'OnHold', 'Cancelled', 'PaymentExpired'])
+const auctionState = z.enum(['Active', 'BuyNowPending', 'AwaitingWinnerPayment', 'Sold', 'Unsold', 'OnHold', 'Cancelled', 'PaymentExpired', 'SecondChanceOffered'])
 const auctionBookSchema = z.object({
   revisionId: z.string().uuid(), authors: z.array(z.string()), condition: z.enum(['LikeNew', 'Good', 'Fair', 'Worn']),
   pages: z.string(), coverNote: z.string(), notes: z.string(), accessories: z.string(), description: z.string(),
@@ -22,11 +22,12 @@ const auctionBookSchema = z.object({
 export const auctionTypeSchema = z.enum(['English', 'Dutch', 'SealedFirst', 'SealedSecond'])
 export type AuctionType = z.infer<typeof auctionTypeSchema>
 /** ADR 0076: the formats a seller can choose. */
-export const AUCTION_TYPES: { value: AuctionType; label: string; short: string; hint: string }[] = [
+// ADR 0086: SealedSecond is retired for new auctions (a draft keeps its label).
+export const AUCTION_TYPES: { value: AuctionType; label: string; short: string; hint: string; retired?: boolean }[] = [
   { value: 'English', label: 'Trả giá lên', short: 'Kiểu Anh', hint: 'Người mua trả giá tăng dần, có đặt giá tự động và có thể bật mua ngay. Giá cao nhất khi hết giờ thắng.' },
   { value: 'Dutch', label: 'Giá giảm dần', short: 'Kiểu Hà Lan', hint: 'Giá bắt đầu cao và giảm một bước sau mỗi khoảng thời gian tới giá sàn. Người đầu tiên chấp nhận thắng ngay.' },
   { value: 'SealedFirst', label: 'Giá kín · giá thứ nhất', short: 'Kín', hint: 'Mỗi người gửi một giá kín, chỉ được nâng. Giá cao nhất thắng và trả đúng giá đã gửi.' },
-  { value: 'SealedSecond', label: 'Giá kín · giá thứ hai', short: 'Vickrey', hint: 'Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai (hoặc giá khởi điểm nếu chỉ một người).' },
+  { value: 'SealedSecond', label: 'Giá kín · giá thứ hai', short: 'Vickrey', hint: 'Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai (hoặc giá khởi điểm nếu chỉ một người).', retired: true },
 ]
 export const buyNowModeSchema = z.enum(['Challenge', 'Instant'])
 export type BuyNowMode = z.infer<typeof buyNowModeSchema>
@@ -60,6 +61,10 @@ export const auctionSummarySchema = z.object({
   // ADR 0081: the seller's open time; startAt is the deadline until enough register.
   opensAt: z.string().nullish(),
   latestStartAt: z.string().nullish(),
+  // ADR 0086: while the runner-up offer runs.
+  secondChanceDeadline: z.string().nullish(),
+  // ADR 0085: a full auction still refunds a withdrawal until this time.
+  fullWithdrawUntil: z.string().nullish(),
   holdExpiresAt: z.string().nullish(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(['Scheduled', 'Live', 'Ended']).nullish(),
@@ -89,6 +94,11 @@ const participationSchema = z.object({
   // ADR 0077: the caller's registration (absent on older servers).
   registrationState: z.enum(['Registered', 'Withdrawn', 'Refunded', 'Applied', 'Forfeited']).nullish(),
   deposit: money.nullish(),
+  // ADR 0086: the caller's runner-up offer (absent on older servers).
+  secondChance: z.object({
+    price: money, offeredAt: z.string(), deadline: z.string(),
+    outcome: z.enum(['Offered', 'Accepted', 'Declined', 'Expired', 'Cancelled']),
+  }).nullish(),
   boughtNow: z.boolean(), leading: z.boolean(), state: auctionState,
   currentPrice: money.nullable(), minimumBid: money.nullable(), fulfillmentMethod: z.literal('SelfCollect'),
   won: z.boolean(), orderId: z.string().uuid().nullable(), finalPrice: money.nullable(),
@@ -196,6 +206,9 @@ export function placeSealedBid(id: string, amount: number, key: string) { return
 // ADR 0077: registration with the deposit the member saw, and its withdrawal.
 export function registerForAuction(id: string, deposit: number, key: string) { return command(`/auctions/${id}/registration`, key, { deposit }) }
 export function withdrawAuctionRegistration(id: string, key: string) { return command(`/auctions/${id}/registration/withdraw`, key, {}) }
+// ADR 0086: the runner-up's answer to the offer.
+export function acceptSecondChance(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/second-chance/accept`, key, { expectedVersion }) }
+export function declineSecondChance(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/second-chance/decline`, key, { expectedVersion }) }
 // ADR 0079: seller commands while the auction waits for registrants (ADR 0081: no open-now).
 export function setAuctionMinBidders(id: string, expectedVersion: number, minBidders: number, key: string) { return command(`/auctions/${id}/min-bidders`, key, { expectedVersion, minBidders }) }
 export function closeAuctionBeforeStart(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/close`, key, { expectedVersion }) }
@@ -210,9 +223,10 @@ export function openRuleText(a: AuctionSummary) {
   if (a.openMode === 'ScheduledGrace' && a.opensAt) {
     const reached = (a.registeredCount ?? 0) >= need
     if (reached) return `Phiên đã đủ ${need} người đăng ký và mở lúc ${at(a.startAt)}.`
+    // ADR 0085: reached after the open time, it opens after a short notice.
     return Date.parse(a.opensAt) > Date.now()
-      ? `Phiên mở lúc ${at(a.opensAt)} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(a.startAt)} và mở ngay khi đủ; hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
-      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở ngay khi đủ người; tới ${at(a.startAt)} vẫn chưa đủ thì bị hủy và hoàn cọc.`
+      ? `Phiên mở lúc ${at(a.opensAt)} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(a.startAt)} và mở 10 phút sau khi đủ (đủ trong khung 23:00–07:00 thì mở lúc 07:00); hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
+      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở 10 phút sau khi đủ (đủ trong khung 23:00–07:00 thì mở lúc 07:00); tới ${at(a.startAt)} vẫn chưa đủ thì bị hủy và hoàn cọc.`
   }
   return a.openMode === 'WhenReady'
     ? `Phiên tự mở ngay khi đủ ${need} người đăng ký. Hạn đăng ký: ${at(a.startAt)}; quá hạn chưa đủ người thì phiên bị hủy và hoàn cọc.`
@@ -242,10 +256,20 @@ export function closeReasonText(a: AuctionSummary): string | null {
       ? `Phiên không đủ ${a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trong 24 giờ sau giờ mở nên đã bị hủy. Mọi tiền cọc đã về lại ví.`
       : `Phiên không đủ ${a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Mọi tiền cọc đã về lại ví.`
     case 'SellerClosed': return 'Người bán đã đóng phiên trước giờ mở. Mọi tiền cọc đã về lại ví.'
-    case 'HoldExpired': return 'Phiên tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy. Mọi tiền cọc và khoản giữ đã về lại ví.'
+    case 'HoldExpired': return 'Phiên hết thời gian tạm dừng mà chưa được xử lý nên đã tự hủy. Mọi tiền cọc và khoản giữ đã về lại ví.'
     case 'Reported': return 'Quản trị viên đã đóng phiên sau khi xem xét báo cáo. Mọi tiền cọc và khoản giữ đã về lại ví.'
     default: return null
   }
+}
+/**
+ * ADR 0077/0085: a registrant who has not bid may withdraw while the auction
+ * is below its minimum, or while a full auction is more than 72 h before its
+ * open time (fullWithdrawUntil). The server decides at its own clock.
+ */
+export function canWithdrawRegistration(a: AuctionSummary, me: AuctionParticipation | null, nowMs: number) {
+  if (me?.registrationState !== 'Registered' || me.alias != null || a.state !== 'Active' || a.phase === 'Ended') return false
+  if ((a.registeredCount ?? 0) < (a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR)) return true
+  return !!a.fullWithdrawUntil && nowMs < Date.parse(a.fullWithdrawUntil)
 }
 /** ADR 0077: true while a registration gate keeps this member from bidding. */
 export function registrationBlocks(a: AuctionSummary, me: AuctionParticipation | null) {
@@ -313,6 +337,8 @@ const myIntakeSchema = z.object({
   startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(), protectiveValue: money,
   buyNowMode: buyNowModeSchema.nullish(),
   auctionType: auctionTypeSchema.nullish(), dutchTopPrice: money.nullish(), dutchIntervalSeconds: z.number().int().nullish(),
+  // ADR 0087: the deposit bidders will pay (absent on older servers).
+  depositAmount: money.nullish(),
   createdAt: z.string(), dropoffDeadline: z.string(), receivedAt: z.string().nullable(), inspectedAt: z.string().nullable(),
   inspectionOutcome: z.enum(['Pass', 'Fail', 'NeedsEvidence']).nullable(), inspectionNote: z.string().nullable(),
   reclaimReason: z.string().nullable(), closedAt: z.string().nullable(),
@@ -360,6 +386,8 @@ export type CreateIntakeBody = {
   dutchIntervalSeconds?: number | null
   // ADR 0077/0079: registered bidders needed before it opens (at least 4).
   minBidders?: number
+  // ADR 0087: the seller's registration deposit; omitted = the 10% default.
+  depositAmount?: number | null
   declaredValue?: number | null
 }
 // ADR 0079: at least 4, no business maximum (1000 is the server's technical guard).
@@ -376,6 +404,19 @@ export const AUCTION_MAX_OPEN_CHANGES = 2
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000
 /** ADR 0077: the refundable deposit the server will ask for (10%, ≥ 10.000đ). */
 export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000)
+/** ADR 0087: the seller may raise the deposit up to half the start price (whole 1.000đ). */
+export const auctionDepositMaxFor = (startPrice: number) =>
+  Math.max(auctionDepositFor(startPrice), Math.floor(startPrice / 2 / 1000) * 1000)
+/** ADR 0087: client mirror of the server's deposit bounds; the server stays authoritative. */
+export function auctionDepositError(startPrice: number | null, deposit: number | null) {
+  if (deposit === null || startPrice === null) return undefined
+  const min = auctionDepositFor(startPrice), max = auctionDepositMaxFor(startPrice)
+  if (deposit % 1000 !== 0 || deposit < min || deposit > max)
+    return min === max
+      ? `Tiền cọc của giá khởi điểm này là ${min.toLocaleString('vi-VN')}đ.`
+      : `Tiền cọc từ ${min.toLocaleString('vi-VN')}đ đến ${max.toLocaleString('vi-VN')}đ, theo bội số 1.000đ.`
+  return undefined
+}
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {
   return command('/auction-intakes', key, body)
 }

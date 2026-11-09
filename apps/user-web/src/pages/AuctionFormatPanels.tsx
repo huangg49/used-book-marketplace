@@ -11,11 +11,14 @@ import { commandError } from '../lib/auction-errors'
 import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import {
-  AUCTION_MAX_OPEN_CHANGES, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_PRICE_DIGITS, AUCTION_RESCHEDULE_FREEZE_MS, acceptDutch,
-  closeAuctionBeforeStart, openRuleText, openTimeOf, placeSealedBid, registerForAuction, setAuctionMinBidders,
+  AUCTION_MAX_OPEN_CHANGES, AUCTION_MIN_BIDDERS_CAP, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_PRICE_DIGITS, AUCTION_RESCHEDULE_FREEZE_MS, acceptDutch,
+  acceptSecondChance, canWithdrawRegistration, closeAuctionBeforeStart, declineSecondChance, openRuleText, openTimeOf, placeSealedBid, registerForAuction, setAuctionMinBidders,
   withdrawAuctionRegistration, type AuctionParticipation, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
+
+// ADR 0085: a minimum reached after the open time opens after a short notice.
+const lateText = (need: number) => `mở 10 phút sau khi đủ ${need} người đăng ký (khung 23:00–07:00 thì lúc 07:00)`
 
 type PanelProps = {
   auction: AuctionSummary
@@ -71,11 +74,17 @@ function useCommand(onChanged: () => Promise<unknown>) {
 }
 
 // ADR 0077: register with a refundable deposit; bidding opens at minBidders.
-export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
+export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelProps) {
   const deposit = auction.depositAmount ?? 0
   const need = auction.minBidders ?? 2
   const count = auction.registeredCount ?? 0
   const registered = me?.registrationState === 'Registered'
+  const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
+  // ADR 0085: below the minimum, or a full auction until 72 h before it opens.
+  const withdrawable = canWithdrawRegistration(auction, me, Date.now() + offset)
+  const fullUntil = count >= need && auction.fullWithdrawUntil
+    ? new Date(auction.fullWithdrawUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+    : null
   const available = useAvailable(me)
   const [confirming, setConfirming] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -92,7 +101,11 @@ export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
         <progress max={need} value={Math.min(count, need)} aria-label={`${count} trên ${need} người đã đăng ký`} />
         <p>
           {registered
-            ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. Bạn có thể rút đăng ký và nhận lại tiền cọc khi phiên chưa đủ người.`
+            ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. ${withdrawable
+              ? fullUntil
+                ? `Phiên đã đủ người; bạn vẫn rút đăng ký và nhận lại tiền cọc được tới ${fullUntil} (72 giờ trước giờ mở).`
+                : 'Bạn có thể rút đăng ký và nhận lại tiền cọc khi phiên chưa đủ người.'
+              : 'Phiên đã đủ người nên tiền cọc được giữ đến khi phiên kết thúc.'}`
             : `Tiền cọc ${formatVnd(deposit)} được giữ trong ví, hoàn lại khi bạn không thắng hoặc phiên không đủ người. Nếu thắng, tiền cọc tính vào giá phải trả; thắng mà không thanh toán đúng hạn thì không được hoàn.`}
         </p>
       </div>
@@ -103,7 +116,7 @@ export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
         <button type="button" className={styles.primaryBlock} disabled={busy} onClick={() => void unknown()}>
           {busy ? 'Đang thử lại…' : 'Thử lại đúng lệnh vừa rồi'}
         </button>
-      ) : registered ? (
+      ) : registered ? (withdrawable &&
         <button type="button" className={styles.secondaryBlock} disabled={busy}
           onClick={() => void run('withdraw-registration', (key) => withdrawAuctionRegistration(auction.id, key), () => setNotice('Đã rút đăng ký; tiền cọc đã về lại ví.'))}>
           {busy ? 'Đang rút…' : 'Rút đăng ký và nhận lại tiền cọc'}
@@ -117,7 +130,7 @@ export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
         title={`Đặt cọc ${formatVnd(deposit)} để đăng ký?`}
-        description={`Ví giữ ${formatVnd(deposit)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${need} người. Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`}
+        description={`Ví giữ ${formatVnd(deposit)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${need} người (hoặc, khi đã đủ, tới 72 giờ trước giờ mở). Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`}
         confirmText="Đặt cọc và đăng ký"
         isBusy={busy}
         onConfirm={() => void run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {
@@ -125,9 +138,70 @@ export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
           setNotice(count + 1 >= need
             ? auction.openMode === 'Scheduled' || (auction.openMode === 'ScheduledGrace' && Date.parse(openTimeOf(auction)) > Date.now())
               ? 'Đã đăng ký. Phiên đủ người và mở theo giờ đã hẹn.'
-              : 'Đã đăng ký. Phiên đủ người, bạn có thể trả giá.'
+              : 'Đã đăng ký. Phiên đủ người và mở trả giá sau 10 phút (khung 23:00–07:00 thì lúc 07:00).'
             : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
         }).finally(() => setConfirming(false))}
+      />
+    </div>
+  )
+}
+
+/**
+ * ADR 0086: the runner-up's one offer after the winner did not pay. They buy
+ * at their own highest bid (the wallet holds it, 24 h to pay) or decline; the
+ * server checks the deadline, the version and the wallet.
+ */
+export function SecondChancePanel({ auction, me, serverTime, onChanged }: PanelProps) {
+  const offer = me?.secondChance
+  const deadline = useCountdown(offer?.deadline, serverTime)
+  const available = useAvailable(me)
+  const [confirming, setConfirming] = useState<'accept' | 'decline' | null>(null)
+  const { busy, error, unknown, run } = useCommand(onChanged)
+  if (!offer) return null
+  const version = auction.version ?? 0
+  const short = available !== null && offer.price > available
+  const until = new Date(offer.deadline).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+  return (
+    <div className={styles.bidPanel}>
+      <div className={styles.notice}>
+        <strong><Wallet size={16} aria-hidden="true" /> Bạn được mời mua sách này</strong>
+        <p>
+          Người thắng không thanh toán đúng hạn. Bạn có thể mua với giá trả cao nhất của bạn, <b>{formatVnd(offer.price)}</b>,
+          nếu nhận trước <b>{until}</b> (còn {formatRemaining(deadline)}). Khi nhận, ví giữ số tiền này và bạn thanh toán trong 24 giờ.
+          Không nhận thì không có khoản nào bị trừ.
+        </p>
+      </div>
+      <Shortfall available={available} amount={offer.price} />
+      {error && <p className={styles.walletShort} role="alert">{error}</p>}
+      {unknown ? (
+        <button type="button" className={styles.primaryBlock} disabled={busy} onClick={() => void unknown()}>
+          {busy ? 'Đang thử lại…' : 'Thử lại đúng lệnh vừa rồi'}
+        </button>
+      ) : (
+        <>
+          <button type="button" className={styles.continue} disabled={busy || short || deadline <= 0} onClick={() => setConfirming('accept')}>
+            Mua với giá {formatVnd(offer.price)} <ArrowRight size={16} aria-hidden="true" />
+          </button>
+          <button type="button" className={styles.secondaryBlock} disabled={busy || deadline <= 0} onClick={() => setConfirming('decline')}>
+            Không mua
+          </button>
+        </>
+      )}
+      <ConfirmDialog
+        isOpen={confirming !== null}
+        onClose={() => !busy && setConfirming(null)}
+        title={confirming === 'accept' ? `Mua với giá ${formatVnd(offer.price)}?` : 'Từ chối lời mời mua?'}
+        description={confirming === 'accept'
+          ? `Ví giữ ${formatVnd(offer.price)} ngay và bạn thanh toán trong 24 giờ để nhận sách tại ${auction.pointName}. Không thanh toán đúng hạn thì lượt không thanh toán được ghi nhận.`
+          : 'Phiên kết thúc và sách được trả lại người bán. Bạn không thể nhận lại lời mời này.'}
+        confirmText={confirming === 'accept' ? 'Mua sách' : 'Không mua'}
+        isBusy={busy}
+        isDanger={confirming === 'decline'}
+        onConfirm={() => void run(
+          `second-chance:${confirming}:${version}`,
+          (key) => confirming === 'accept' ? acceptSecondChance(auction.id, version, key) : declineSecondChance(auction.id, version, key),
+          () => setConfirming(null),
+        ).finally(() => setConfirming(null))}
       />
     </div>
   )
@@ -286,13 +360,16 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
   // The dialog edits the open time and keeps the chosen length.
   const length = Date.parse(auction.endAt) - Date.parse(auction.startAt)
   const editsLeft = AUCTION_MAX_OPEN_CHANGES - (auction.scheduleRevision ?? 0)
-  const [lower, setLower] = useState(Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1))
+  // ADR 0085 (L5): raise only while nobody is registered; otherwise lower.
+  const canRaise = count === 0
+  const maxMin = canRaise ? AUCTION_MIN_BIDDERS_CAP : need - 1
+  const [lower, setLower] = useState(canRaise ? need : Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1))
   const [editing, setEditing] = useState(false)
   const [closing, setClosing] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const ids = useId()
   const { busy, error, unknown, run } = useCommand(onChanged)
-  const canLower = !reached && need > AUCTION_MIN_BIDDERS_FLOOR
+  const canLower = !reached && (canRaise || need > AUCTION_MIN_BIDDERS_FLOOR)
   return (
     <div className={styles.bidPanel}>
       <div className={styles.notice}>
@@ -313,20 +390,22 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
           </button>
           <p className={styles.muted}>
             {passed
-              ? `Đã qua giờ mở nên không đổi giờ được nữa. Phiên mở ngay khi đủ ${need} người đăng ký.`
-              : frozen ? 'Không đổi giờ trong 30 phút cuối trước giờ mở.' : editsLeft <= 0 ? 'Đã đổi giờ mở tối đa 2 lần.' : `Còn ${editsLeft} lần đổi giờ mở, trong 30 ngày kể từ lúc đăng.`}
+              ? `Đã qua giờ mở nên không đổi giờ được nữa. Phiên ${lateText(need)}.`
+              : frozen ? 'Không đổi giờ trong 30 phút cuối trước giờ mở.' : editsLeft <= 0 ? 'Đã đổi giờ mở tối đa 2 lần.'
+                : `Còn ${editsLeft} lần đổi giờ mở, trong 30 ngày kể từ lúc đăng.${reached ? ' Phiên đã đủ người nên chỉ dời giờ mở sớm hơn.' : ''}`}
           </p>
           {canLower && (
             <div className={styles.lowerRow}>
-              <label htmlFor={`${ids}-min`}>Giảm số người tối thiểu còn</label>
-              <input id={`${ids}-min`} type="number" inputMode="numeric" min={AUCTION_MIN_BIDDERS_FLOOR} max={need - 1} value={lower} disabled={busy || paused}
-                onChange={(e) => setLower(Math.min(need - 1, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Math.trunc(Number(e.target.value) || AUCTION_MIN_BIDDERS_FLOOR))))} />
-              <button type="button" className={styles.secondary} disabled={busy || paused}
-                onClick={() => void run(`min:${version}:${lower}`, (key) => setAuctionMinBidders(auction.id, version, lower, key), () => setNotice(`Đã giảm số người tối thiểu còn ${lower}.`))}>
-                <Minus size={15} aria-hidden="true" />Giảm
+              <label htmlFor={`${ids}-min`}>{canRaise ? 'Đổi số người tối thiểu thành' : 'Giảm số người tối thiểu còn'}</label>
+              <input id={`${ids}-min`} type="number" inputMode="numeric" min={AUCTION_MIN_BIDDERS_FLOOR} max={maxMin} value={lower} disabled={busy || paused}
+                onChange={(e) => setLower(Math.min(maxMin, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Math.trunc(Number(e.target.value) || AUCTION_MIN_BIDDERS_FLOOR))))} />
+              <button type="button" className={styles.secondary} disabled={busy || paused || lower === need}
+                onClick={() => void run(`min:${version}:${lower}`, (key) => setAuctionMinBidders(auction.id, version, lower, key), () => setNotice(lower > need ? `Đã tăng số người tối thiểu lên ${lower}.` : `Đã giảm số người tối thiểu còn ${lower}.`))}>
+                {canRaise ? <Users size={15} aria-hidden="true" /> : <Minus size={15} aria-hidden="true" />}{canRaise ? 'Đổi' : 'Giảm'}
               </button>
             </div>
           )}
+          {canRaise && <p className={styles.muted}>Chưa có ai đăng ký nên bạn còn tăng được số người tối thiểu; khi đã có người đăng ký thì chỉ giảm được.</p>}
           {!canLower && !reached && <p className={styles.muted}>Số người tối thiểu không thấp hơn {AUCTION_MIN_BIDDERS_FLOOR}.</p>}
           {reached && <p className={styles.muted}>Đã đủ người nên số người tối thiểu được giữ nguyên.</p>}
           <button type="button" className={styles.ownerDanger} disabled={busy || paused} onClick={() => setClosing(true)}>
@@ -341,7 +420,9 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
         onDone={onChanged}
         title={auction.title}
         serverTime={serverTime}
-        target={{ kind: 'reschedule', auctionId: auction.id, version, live: false, startAt: openTime, endAt: new Date(Date.parse(openTime) + length).toISOString(), latestStartAt: auction.latestStartAt ?? null }}
+        // ADR 0085 (H4): a full auction only moves earlier than its open time.
+        target={{ kind: 'reschedule', auctionId: auction.id, version, live: false, startAt: openTime, endAt: new Date(Date.parse(openTime) + length).toISOString(),
+          latestStartAt: reached ? new Date(Date.parse(openTime) - 60_000).toISOString() : auction.latestStartAt ?? null }}
       />
       <ConfirmDialog
         isOpen={closing && !paused}

@@ -18,7 +18,7 @@ import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import { invalidateMemberWalletViews } from '../lib/wallet-cache'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, waitingForRegistrants, waitingTime, openRuleText, closeReasonText,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, canWithdrawRegistration, waitingForRegistrants, waitingTime, openRuleText, closeReasonText,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
@@ -32,7 +32,7 @@ import { rowFrames, standingFrames } from '../lib/auction-motion'
 import { commandError } from '../lib/auction-errors'
 import { PointOrderSteps } from './AuctionPointOrder'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
-import { DutchPanel, RegistrationPanel, SealedPanel, WaitingSellerControls } from './AuctionFormatPanels'
+import { DutchPanel, RegistrationPanel, SealedPanel, SecondChancePanel, WaitingSellerControls } from './AuctionFormatPanels'
 
 const HOUR = 3_600_000
 // ADR 0077/0079: headline for an auction that ended for a stated reason.
@@ -49,6 +49,7 @@ const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
   AwaitingWinnerPayment: 'Giá chốt',
   Sold: 'Giá chốt',
   PaymentExpired: 'Giá thắng (chưa thanh toán)',
+  SecondChanceOffered: 'Giá thắng (chưa thanh toán)',
   OnHold: 'Giá khi tạm dừng',
   Cancelled: 'Giá khi hủy',
 }
@@ -69,6 +70,7 @@ const STATE_LABEL: Record<AuctionState, string> = {
   OnHold: 'Tạm dừng',
   Cancelled: 'Đã hủy',
   PaymentExpired: 'Người thắng không thanh toán đúng hạn',
+  SecondChanceOffered: 'Người thắng không thanh toán; đang mời người trả giá cao thứ hai',
 }
 
 function when(iso: string) {
@@ -182,21 +184,27 @@ export function AuctionDetailPage() {
   if (authed && intakes.isPending) action = <p role="status">Đang kiểm tra vai trò của bạn trong phiên…</p>
   else if (authed && intakes.isError && !intakes.data) action = null
   else if (sellerIntake) action = <SellerPanel auction={auction} intake={sellerIntake} open={open} scheduled={scheduled} serverTime={detail.data.serverTime} onChanged={refresh} paused={intakes.isError} />
+  // ADR 0086: the runner-up answers the one offer made after the winner did not pay.
+  else if (auction.state === 'SecondChanceOffered' && me?.secondChance?.outcome === 'Offered')
+    action = <SecondChancePanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
   else if (me?.won) action = <WinnerPanel me={me} auction={auction} ownerId={authed ? session.user.id : undefined} onChanged={refresh} paused={intakes.isError} />
   else if (auction.state === 'OnHold')
     action = (
       <div className={`${styles.standing} ${styles.standingOut}`}>
         <strong>Phiên tạm dừng</strong>
         <span>
-          Quản trị viên đang xem xét vì người bán hoặc người đang dẫn giá không còn đủ điều kiện. Lượt trả giá được giữ
-          nguyên, chưa có người thắng và không có khoản tiền nào bị trừ.
+          Quản trị viên đang xem xét phiên này. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên, chưa có người
+          thắng và không có khoản tiền nào bị trừ. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.
           {auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${when(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ''}
         </span>
       </div>
     )
   // ADR 0077: registration comes first (also while scheduled); the panel stays
   // until enough members registered, then the format's own panel takes over.
-  else if (authed && (scheduled || open) && !participation.isPending && registrationBlocks(auction, me))
+  // ADR 0085: a registrant of a full auction keeps the panel while it still
+  // refunds a withdrawal (until 72 h before the open time).
+  else if (authed && (scheduled || open) && !participation.isPending
+    && (registrationBlocks(auction, me) || (scheduled && canWithdrawRegistration(auction, me, Date.now()))))
     action = <RegistrationPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
   else if (scheduled)
     action = (
@@ -805,6 +813,7 @@ const SELLER_STATE: Partial<Record<AuctionState, string>> = {
   Unsold: 'Phiên kết thúc không có lượt trả giá. Sách được trả lại cho bạn tại điểm.',
   Cancelled: 'Phiên đã hủy. Sách được trả lại cho bạn tại điểm.',
   PaymentExpired: 'Người thắng không thanh toán đúng hạn. Sách được trả lại cho bạn tại điểm.',
+  SecondChanceOffered: 'Người thắng không thanh toán đúng hạn. Người trả giá cao thứ hai được mời mua với giá trả cao nhất của họ trong 24 giờ; nếu họ không nhận, sách được trả lại cho bạn tại điểm.',
   OnHold: 'Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá.',
 }
 
@@ -848,7 +857,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
         <strong><UserRound size={16} aria-hidden="true" />Đây là phiên của bạn</strong>
         <span>
           {waiting
-            ? <>Phiên đang nhận đăng ký và <b>chỉ mở khi đủ người</b>, đúng giờ đã hẹn hoặc ngay khi đủ nếu đã qua giờ đó. Bạn có thể <b>đổi giờ mở</b> trước giờ đó, <b>giảm số người tối thiểu</b> hoặc <b>đóng phiên</b> trước khi phiên mở.</>
+            ? <>Phiên đang nhận đăng ký và <b>chỉ mở khi đủ người</b>, đúng giờ đã hẹn hoặc 10 phút sau khi đủ nếu đã qua giờ đó (không mở trong khung 23:00–07:00). Bạn có thể <b>đổi giờ mở</b> trước giờ đó (khi đã đủ người thì chỉ sớm hơn), <b>đổi số người tối thiểu</b> hoặc <b>đóng phiên</b> trước khi phiên mở.</>
             : auction.minBidders != null && open
             ? <>Phiên đã mở nên bạn <b>không đóng được nữa</b>. Cần hỗ trợ, hãy dùng <b>Báo cáo sự cố cho Admin</b>.</>
             : scheduled

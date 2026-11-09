@@ -10,6 +10,7 @@ import {
   lifecycleReschedule,
   phaseOf,
   publishSchedule,
+  lateOpening,
   reachedFields,
   registrationExpired,
   reschedule,
@@ -218,10 +219,13 @@ describe('scheduled open with a 24 h grace', () => {
     expect(a).toMatchObject({ openMode: 'ScheduledGrace', opensAt, startAt: at(26 * HOUR), plannedEndAt: at(29 * HOUR) });
   });
 
-  it('reached before the open time opens there; reached in the grace opens at once; never reached expires at the deadline', () => {
+  it('reached before the open time opens there; reached in the grace opens after the ADR 0085 notice; never reached expires at the deadline', () => {
     const a = published();
     expect(reachedFields(a, at(HOUR))).toEqual({ startAt: opensAt, endAt: at(5 * HOUR), plannedEndAt: at(5 * HOUR), biddingOpenedAt: opensAt });
-    expect(reachedFields(a, at(10 * HOUR))).toEqual({ startAt: at(10 * HOUR), endAt: at(13 * HOUR), plannedEndAt: at(13 * HOUR), biddingOpenedAt: at(10 * HOUR) });
+    // ADR 0085: 10 minutes after the reach, moved out of 23:00-07:00 Vietnam time.
+    const late = lateOpening(at(10 * HOUR));
+    expect(late.getTime()).toBeGreaterThanOrEqual(at(10 * HOUR + 10 * 60_000).getTime());
+    expect(reachedFields(a, at(10 * HOUR))).toEqual({ startAt: late, endAt: new Date(late.getTime() + 3 * HOUR), plannedEndAt: new Date(late.getTime() + 3 * HOUR), biddingOpenedAt: late });
     expect(phaseOf(a, at(10 * HOUR))).toBe('Scheduled');
     expect(registrationExpired(a, at(26 * HOUR - 1))).toBe(false);
     expect(registrationExpired(a, at(26 * HOUR))).toBe(true);

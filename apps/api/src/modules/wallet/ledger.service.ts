@@ -18,7 +18,10 @@ import {
   OPENING_CAPITAL,
   OPENING_JOURNAL_ID,
 } from '../../database/mongo/migrations/0002-reference-data.js';
-import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../../database/mongo/migrations/auction-constants.js';
+import {
+  PLATFORM_COMMISSION_ACCOUNT_ID,
+  sellerDepositShare,
+} from '../../database/mongo/migrations/auction-constants.js';
 import {
   CAPITAL_INCREASE,
   CAPITAL_INCREASE_JOURNAL_ID,
@@ -58,6 +61,21 @@ export async function balanceOf(tx: Tx, accountId: string) {
     ])
     .toArray();
   return row?.amount ?? 0;
+}
+
+// ADR 0087: what the platform received from this auction's forfeited deposits.
+export async function auctionForfeited(tx: Tx, auctionId: string) {
+  const journals = await tx.c.ledger_journals
+    .find({ auctionId, type: 'AuctionDepositForfeit' }, { projection: { _id: 1 } })
+    .toArray();
+  if (!journals.length) return 0;
+  const entries = await tx.c.ledger_entries
+    .find({
+      journalId: { $in: journals.map((j) => j._id) },
+      accountId: PLATFORM_COMMISSION_ACCOUNT_ID,
+    })
+    .toArray();
+  return entries.reduce((sum, e) => sum + e.debit, 0);
 }
 
 // Commit-time replacement for latlai_check_journal and
@@ -156,6 +174,39 @@ export async function checkJournal(tx: Tx, journalId: string) {
       (await balanceOf(tx, hold._id)) < 0
     )
       throw new Error('Auction deposit forfeit source mismatch');
+  } else if (j.type === 'AuctionDepositSellerShare') {
+    // ADR 0087: once per auction that ended unsold after a non-paying winner,
+    // the seller's share of what was forfeited, from the platform account.
+    const a = await tx.c.auctions.findOne({ _id: j.auctionId! });
+    const seller =
+      a &&
+      accounts.find(
+        (x) => x.ownerId === a.sellerId && x.purpose === 'UserAvailable',
+      );
+    const amount = entries[0].debit + entries[0].credit;
+    const shares = await tx.c.ledger_journals.countDocuments({
+      auctionId: j.auctionId!,
+      type: 'AuctionDepositSellerShare',
+    });
+    if (
+      !a ||
+      !seller ||
+      !j.receiptId ||
+      a.state !== 'PaymentExpired' ||
+      shares !== 1 ||
+      amount <= 0 ||
+      amount !== sellerDepositShare(await auctionForfeited(tx, a._id)) ||
+      !entries.some(
+        (e) =>
+          e.accountId === PLATFORM_COMMISSION_ACCOUNT_ID &&
+          e.credit === amount &&
+          e.debit === 0,
+      ) ||
+      !entries.some(
+        (e) => e.accountId === seller._id && e.debit === amount && e.credit === 0,
+      )
+    )
+      throw new Error('Auction deposit share source mismatch');
   } else if (j.type.startsWith('Withdrawal')) {
     const w = await tx.c.withdrawals.findOne({ _id: j.withdrawalId! });
     const available = w && accounts.find(a => a.ownerId === w.ownerId && a.purpose === 'UserAvailable');
@@ -1086,6 +1137,48 @@ export class LedgerService {
       PLATFORM_COMMISSION_ACCOUNT_ID,
       amount,
     );
+  }
+  /**
+   * ADR 0087: pays the seller their share of the auction's forfeited deposit
+   * (platform → seller wallet) when the book went unsold. One per auction: the
+   * receipt id is derived from the auction, so a retry cannot pay twice.
+   * Caller holds the auction and seller locks. Returns the amount paid.
+   */
+  async payAuctionDepositShare(
+    tx: Tx,
+    auctionId: string,
+    sellerId: string,
+    now: Date,
+  ) {
+    const amount = sellerDepositShare(await auctionForfeited(tx, auctionId));
+    if (amount <= 0) return 0;
+    if (
+      await tx.c.ledger_journals.findOne({
+        auctionId,
+        type: 'AuctionDepositSellerShare',
+      })
+    )
+      return 0;
+    const seller = await this.account(tx, { ownerId: sellerId });
+    await this.lockAccounts(tx, [seller._id, PLATFORM_COMMISSION_ACCOUNT_ID]);
+    if ((await balanceOf(tx, PLATFORM_COMMISSION_ACCOUNT_ID)) < amount)
+      throw invalidState();
+    await this.journal(
+      tx,
+      {
+        type: 'AuctionDepositSellerShare',
+        auctionId,
+        topupId: null,
+        eventId: null,
+        orderId: null,
+        receiptId: auctionHoldReceiptId(`deposit-share:${auctionId}`, sellerId),
+        postedAt: now,
+      },
+      PLATFORM_COMMISSION_ACCOUNT_ID,
+      seller._id,
+      amount,
+    );
+    return amount;
   }
   async postWithdrawal(tx: Tx, row: WithdrawalDoc, type: 'WithdrawalHold' | 'WithdrawalPayout' | 'WithdrawalRefund', receiptId: string, now: Date) {
     const available = await this.account(tx, { ownerId: row.ownerId });

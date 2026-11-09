@@ -34,6 +34,7 @@ const states: Record<string, string> = {
   OnHold: 'Phiên tạm dừng',
   Cancelled: 'Phiên đã hủy',
   PaymentExpired: 'Đã quá hạn thanh toán',
+  SecondChanceOffered: 'Đang mời người trả giá cao thứ hai',
 }
 function AuctionRow({
   item,
