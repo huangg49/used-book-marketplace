@@ -9,6 +9,7 @@ import {
   BackAction,
   Button,
   Chip,
+  Icon,
   Notice,
   Screen,
   StatePanel,
@@ -17,10 +18,21 @@ import {
   presentError,
   radius,
   space,
+  stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { canReschedule, isScheduled, myAuctionsOptions, openTimeOf, type MyAuctionView } from "./auctions-model";
+import {
+  canReschedule,
+  closeReasonText,
+  isSealedFormat,
+  isScheduled,
+  myAuctionsOptions,
+  openTimeOf,
+  waitingTime,
+  type MyAuctionView,
+} from "./auctions-model";
 import { ScheduleAuctionSheet } from "./components";
+import { AuctionCover } from "./components/auction-cover";
 import type { MyAuctionItem } from "./contracts";
 
 const VIEWS: { value: MyAuctionView; label: string }[] = [
@@ -110,50 +122,186 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
 
 function Row({ item, now, onEdit }: { item: MyAuctionItem; now: number; onEdit: () => void }) {
   const { auction } = item;
+  const scheduled = isScheduled(auction, now);
+  const waiting = waitingTime(auction, now);
+  const formatType = auction.auctionType ?? "English";
+  const isDutch = formatType === "Dutch";
+  const isSealed = isSealedFormat(auction);
+
   const status = item.needsPayment
     ? `Cần thanh toán trước ${item.paymentDeadline ? time(item.paymentDeadline) : "hạn"}`
-    : isScheduled(auction, now)
-      ? `Hẹn mở lúc ${time(auction.startAt)}`
-    : item.won
-      ? "Bạn đã thắng"
-      : item.role === "Seller"
-        ? "Sách bạn bán"
-        : auction.state === "Active"
-          ? item.leading
-            ? "Bạn đang dẫn giá"
-            : "Bạn chưa dẫn giá"
-          : "Phiên đã kết thúc";
+    : scheduled
+      ? `${waiting.label} ${time(waiting.at)}`
+      : item.won
+        ? "Bạn đã thắng phiên"
+        : item.role === "Seller"
+          ? auction.state === "Active"
+            ? "Phiên của bạn đang mở"
+            : closeReasonText(auction) ?? "Sách bạn bán"
+          : auction.state === "Active"
+            ? isSealed
+              ? "Đã gửi giá kín"
+              : item.leading
+                ? "Bạn đang dẫn giá"
+                : "Bạn chưa dẫn giá"
+            : closeReasonText(auction) ?? "Phiên đã kết thúc";
+
+  const isLeadOrWon = item.won || (auction.state === "Active" && item.leading);
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${auction.title}. ${status}.`}
       onPress={() => router.push({ pathname: "/auction", params: { id: auction.id } })}
       style={({ pressed }) => ({
-        gap: space.xs,
-        padding: space.lg,
-        borderWidth: 1,
-        borderColor: item.needsPayment ? colors.terracotta : colors.rule,
-        borderRadius: radius.card,
-        backgroundColor: pressed ? colors.paper : colors.surface,
+        gap: space.md,
+        padding: space.md,
+        borderWidth: 1.5,
+        borderColor: item.needsPayment
+          ? colors.terracotta
+          : isLeadOrWon
+            ? stitchTokens.greenBorderSoft
+            : stitchTokens.cardBorder,
+        borderRadius: radius.card * 2,
+        backgroundColor: pressed ? stitchTokens.parchment : stitchTokens.whiteSurface,
+        shadowColor: stitchTokens.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 2,
       })}
     >
-      <AppText kind="label" color={item.needsPayment ? colors.rustText : colors.muted}>
-        {status.toUpperCase()}
-      </AppText>
-      <AppText kind="shelfTitle" color={colors.forest} numberOfLines={2}>
-        {auction.title}
-      </AppText>
-      <AppText kind="small" color={colors.muted}>
-        {/* A Buy Now win has no bid price; never show the start price as paid. */}
-        {auction.currentPrice !== null
-          ? formatVnd(auction.currentPrice)
-          : item.won
-            ? "Mua ngay"
-            : `Khởi điểm ${formatVnd(auction.startPrice)}`}{" "}
-        · {auction.pointName}
-      </AppText>
+      <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+        {/* Book Cover Thumbnail */}
+        <View
+          style={{
+            width: 68,
+            height: 86,
+            borderRadius: 8,
+            overflow: "hidden",
+            backgroundColor: stitchTokens.parchment,
+            borderWidth: 1,
+            borderColor: stitchTokens.cardBorder,
+          }}
+        >
+          <AuctionCover
+            auctionId={auction.id}
+            mediaId={auction.book?.photos[0]?.id}
+            label={auction.title}
+            iconSize={20}
+          />
+        </View>
+
+        {/* Info Column */}
+        <View style={{ flex: 1, gap: 4 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+            <View
+              style={{
+                backgroundColor: item.needsPayment
+                  ? stitchTokens.flashRedBg
+                  : isLeadOrWon
+                    ? stitchTokens.likeNewGreenBg
+                    : item.role === "Seller"
+                      ? stitchTokens.goldLight
+                      : stitchTokens.parchment,
+                borderWidth: 1,
+                borderColor: item.needsPayment
+                  ? stitchTokens.redBorderSoft
+                  : isLeadOrWon
+                    ? stitchTokens.greenBorderSoft
+                    : item.role === "Seller"
+                      ? stitchTokens.goldBorder
+                      : stitchTokens.cardBorder,
+                borderRadius: radius.pill,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+              }}
+            >
+              <AppText
+                kind="small"
+                style={{
+                  fontSize: 10,
+                  fontWeight: "800",
+                  color: item.needsPayment
+                    ? colors.rustText
+                    : isLeadOrWon
+                      ? stitchTokens.likeNewGreen
+                      : stitchTokens.wineDark,
+                }}
+              >
+                {item.role === "Seller" ? "NGƯỜI BÁN" : item.won ? "ĐÃ THẮNG" : "NGƯỜI MUA"}
+              </AppText>
+            </View>
+
+            {(isDutch || isSealed) && (
+              <View
+                style={{
+                  backgroundColor: stitchTokens.roseWarmSurface,
+                  borderRadius: 4,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.peachBorder,
+                }}
+              >
+                <AppText kind="small" style={{ fontSize: 10, fontWeight: "700", color: stitchTokens.wineDark }}>
+                  {isDutch ? "Kiểu Hà Lan" : formatType === "SealedSecond" ? "Kín #2" : "Kín #1"}
+                </AppText>
+              </View>
+            )}
+
+            {auction.minBidders != null && scheduled && (
+              <View
+                style={{
+                  backgroundColor: stitchTokens.parchment,
+                  borderRadius: 4,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.cardBorder,
+                }}
+              >
+                <AppText kind="small" style={{ fontSize: 10, fontWeight: "700", color: stitchTokens.deepCocoa }}>
+                  {`ĐK: ${auction.registeredCount ?? 0}/${auction.minBidders}`}
+                </AppText>
+              </View>
+            )}
+          </View>
+
+          <AppText kind="shelfTitle" color={colors.forest} numberOfLines={2}>
+            {auction.title}
+          </AppText>
+
+          <AppText
+            kind="small"
+            color={item.needsPayment ? colors.rustText : isLeadOrWon ? colors.success : colors.muted}
+            style={{ fontWeight: "700" }}
+          >
+            {status}
+          </AppText>
+
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+            <AppText kind="bold" style={{ color: stitchTokens.wineDark, fontSize: 15 }}>
+              {/* A Buy Now win has no bid price; never show the start price as paid. */}
+              {auction.currentPrice !== null
+                ? formatVnd(auction.currentPrice)
+                : item.won
+                  ? "Mua ngay"
+                  : `Khởi điểm ${formatVnd(auction.startPrice)}`}
+            </AppText>
+
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Icon name="pin" size={11} color={stitchTokens.subtleGray} />
+              <AppText kind="small" color={colors.muted} style={{ fontSize: 11 }}>
+                {auction.pointName}
+              </AppText>
+            </View>
+          </View>
+        </View>
+      </View>
+
       {item.role === "Seller" && canReschedule(auction, now) && (
-        <Button secondary title="Đổi thời gian phiên" onPress={onEdit} />
+        <Button wine secondary title="Đổi thời gian phiên" onPress={onEdit} />
       )}
     </Pressable>
   );
