@@ -431,3 +431,199 @@
     border: 1px solid #bbf7d0;
     font-weight: 500;
 }
+
+/* Packaging Evidence Upload Section */
+.evidenceSection {
+    background: #fdfaf6;
+    border: 1px solid #ebd9c8;
+    border-radius: 6px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.evidenceSectionHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.evidenceSectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #5c0202;
+}
+
+.evidenceSectionBadge {
+    font-size: 11px;
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.evidenceSectionSubtitle {
+    font-size: 12px;
+    color: #716157;
+    margin: 0;
+    line-height: 1.45;
+}
+
+.evidenceGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@media (max-width: 520px) {
+    .evidenceGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.evidenceCard {
+    background: #fff;
+    border: 1px dashed #d1c1b2;
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    transition: all 0.15s ease;
+}
+
+.evidenceCard:hover {
+    border-color: #5c0202;
+    background: #fffdfb;
+}
+
+.evidenceCardFilled {
+    border-style: solid;
+    border-color: #a7f3d0;
+    background: #f0fdf4;
+}
+
+.evidenceCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.evidenceLabel {
+    font-size: 12px;
+    font-weight: 700;
+    color: #281914;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.evidencePreviewBox {
+    width: 100%;
+    height: 120px;
+    background: #1c1917;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.evidencePreviewImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.evidencePreviewVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.evidenceFileDetails {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 11px;
+    color: #166534;
+    font-weight: 600;
+}
+
+.evidenceRemoveBtn {
+    background: transparent;
+    border: none;
+    color: #dc2626;
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 2px 4px;
+}
+
+.evidenceUploadTrigger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 8px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    background: #f8fafc;
+    cursor: pointer;
+    text-align: center;
+}
+
+.evidenceUploadTrigger:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.evidenceUploadText {
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.evidenceUploadHint {
+    font-size: 10px;
+    color: #64748b;
+}
+
+.evidenceQuickPresetRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px solid #ebd9c8;
+}
+
+.evidenceQuickBtn {
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    color: #92400e;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+    text-align: center;
+}
+
+.evidenceQuickBtn:hover {
+    background: #fde68a;
+}
+

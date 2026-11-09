@@ -465,11 +465,17 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
-      <div className={styles.btnGrid}>
-        {blocked ? (
+
+      {blocked ? (
+        <div className={styles.recoverySection}>
           <ExchangeRecoveryPanel id={detail.id} onRead={props.onRetry} />
-        ) : (
-          actions.map((next, index) => {
+          <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
+            Quay lại Trao đổi của tôi
+          </Link>
+        </div>
+      ) : (
+        <div className={styles.btnGrid}>
+          {actions.map((next, index) => {
             const isPrimary =
               index === 0 && next !== "cancel" && next !== "reject";
             const isDanger = next === "cancel" || next === "reject";
@@ -503,12 +509,12 @@ export function ActionCard(props: Props) {
                 {label}
               </button>
             );
-          })
-        )}
-        <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
-          Trao đổi của tôi
-        </Link>
-      </div>
+          })}
+          <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
+            Trao đổi của tôi
+          </Link>
+        </div>
+      )}
 
       {error && !action && (
         <p role="alert" className={styles.errorText} style={{ marginTop: 12 }}>

@@ -179,6 +179,10 @@ export function confirmSent(
     trackingCode?: string;
     meetupLocation?: string;
     notes?: string;
+    packagingPhotoUrl?: string;
+    packagingVideoUrl?: string;
+    packagingPhotoName?: string;
+    packagingVideoName?: string;
   },
 ) {
   return exchangeCommand(`/exchanges/${id}/ship`, {
@@ -191,6 +195,10 @@ export function confirmSent(
           trackingCode: shipment.trackingCode,
           meetupLocation: shipment.meetupLocation,
           notes: shipment.notes,
+          packagingPhotoUrl: shipment.packagingPhotoUrl,
+          packagingVideoUrl: shipment.packagingVideoUrl,
+          packagingPhotoName: shipment.packagingPhotoName,
+          packagingVideoName: shipment.packagingVideoName,
         }
       : {}),
   });
