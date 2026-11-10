@@ -229,10 +229,14 @@ export function AuctionDetailPage() {
   else if (!open)
     action = (
       <div className={styles.notice}>
-        <strong>{ended ? 'Phiên vừa hết giờ' : 'Phiên đã đóng'}</strong>
+        {/* The leader of an auction that just ended (e.g. an Instant Buy Now)
+            is told it is theirs while the worker creates the order. */}
+        <strong>{ended ? (me?.leading ? (me.boughtNow ? 'Bạn đã mua ngay cuốn sách này' : 'Bạn đang dẫn giá khi phiên kết thúc') : 'Phiên vừa hết giờ') : 'Phiên đã đóng'}</strong>
         <p>
           {ended
-            ? 'Hệ thống đang chốt người thắng. Trang sẽ tự cập nhật.'
+            ? me?.leading
+              ? 'Hệ thống đang chốt đơn để bạn thanh toán từ ví. Trang sẽ tự cập nhật.'
+              : 'Hệ thống đang chốt người thắng. Trang sẽ tự cập nhật.'
             : me ? 'Bạn không thắng phiên này. Tiền cọc và khoản giữ (nếu có) đã về lại ví.' : STATE_LABEL[auction.state] + '.'}
         </p>
         <Link className={styles.secondaryBlock} to={ROUTES.auctions}>Xem các phiên khác</Link>
@@ -574,7 +578,9 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
   const ids = useId()
   // ADR 0075: the leader's level is held in the wallet. The amount already held
   // for this auction counts toward a raise; the server stays authoritative.
-  const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000 })
+  // Re-read on open: a top-up made on the wallet page (its own cache key) must
+  // count at once, not after this copy goes stale.
+  const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000, refetchOnMount: 'always' })
   const heldHere = me?.heldAmount ?? 0
   // A rival's bid arrives by push and releases this hold; re-read the wallet
   // so the available amount does not stay at the value cached while leading.

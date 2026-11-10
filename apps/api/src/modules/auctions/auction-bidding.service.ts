@@ -2457,6 +2457,12 @@ export class AuctionBiddingService {
           // ADR 0084: why it is held and the pause time it may still use.
           holdReason: a.state === 'OnHold' ? (a.holdReason ?? null) : null,
           pauseBudgetLeftSeconds: Math.floor(pauseBudgetLeft(a) / 1000),
+          // ADR 0081: a waiting registration auction shows its open time and
+          // registrations; startAt alone is the 24 h deadline there.
+          auctionType: a.auctionType ?? 'English',
+          opensAt: a.opensAt?.toISOString() ?? null,
+          minBidders: a.minBidders ?? null,
+          registeredCount: a.registeredCount ?? 0,
           title: String((item?.snapshot as { title?: string })?.title ?? ''),
           state: a.state as 'Active' | 'OnHold',
           startPrice: a.startPrice,

@@ -166,6 +166,9 @@ export function ActionPanel<R = CommandReceipt>({
     }
   }
   const locked = busy || !!intent;
+  // The one-click answer leads only on an untouched form; once Staff start
+  // their own checklist or outcome, the submit for that answer is primary.
+  const shortcutLeads = !!shortcut && !dirty;
   const submit = () => {
     setOutcome(undefined);
     if (!validate()) return;
@@ -205,7 +208,7 @@ export function ActionPanel<R = CommandReceipt>({
         <div className="actions">
           {shortcut && (
             <Button
-              className="primary"
+              className={shortcutLeads ? "primary" : undefined}
               disabled={locked}
               onClick={() => {
                 setOutcome(undefined);
@@ -217,7 +220,7 @@ export function ActionPanel<R = CommandReceipt>({
             </Button>
           )}
           <Button
-            className={shortcut ? undefined : "primary"}
+            className={shortcutLeads ? undefined : "primary"}
             busy={busy && !confirm}
             disabled={locked}
             onClick={submit}

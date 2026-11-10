@@ -380,6 +380,7 @@ export async function createTestApi({
     }
     // Login throttling is tested by API E2E. Browser fixtures clear only their own database.
     await db.collection("login_attempts").deleteMany({});
+    let clockOffset = 0;
     return {
       // QA only: model changing the server flag across a restart without replacing this fixture DB.
       setLocalDemoCompletion: (enabled) => {
@@ -464,6 +465,31 @@ export async function createTestApi({
         );
         return app.get(ProfileAvatarWorker).cleanup();
       },
+      // QA only: move this fixture's server clock forward. Every API decision
+      // and read takes time from Tx.now()/MongoService.now(), so the whole
+      // server moves together and no auction/order state is written directly.
+      advanceClock: async (ms) => {
+        if (!Number.isFinite(ms) || ms < 0)
+          throw new Error("advanceClock only moves forward");
+        const { Tx } = await load("database/mongo/transaction.js");
+        const { MongoService } = await load("database/mongo/mongo.service.js");
+        for (const type of [Tx, MongoService]) {
+          const proto = type.prototype;
+          if (!proto.__qaClock) {
+            const original = proto.now;
+            proto.__qaClock = { offset: 0 };
+            proto.now = async function () {
+              const real = await original.call(this);
+              return new Date(real.getTime() + proto.__qaClock.offset);
+            };
+          }
+          proto.__qaClock.offset += ms;
+        }
+        clockOffset += ms;
+        return clockOffset;
+      },
+      // The fixture server's current time (real time plus any advanceClock).
+      serverNow: () => new Date(Date.now() + clockOffset),
       // Explicit QA sweep, never a background timer or a production worker.
       processAuctions: async () => {
         const { AuctionWorker } = await load(

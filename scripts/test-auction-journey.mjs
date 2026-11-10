@@ -45,7 +45,7 @@ const report = {
   limits: [
     "Chromium web; not native",
     "Fake storage and simulator funding",
-    "Real server time; no direct auction/order state fixture",
+    "Server clock advanced by a fixture offset to the open time; no direct auction/order state fixture",
     "No GHN/carrier/Driver or fulfillment/settlement",
     "No human review or READINESS closure",
   ],
@@ -103,10 +103,24 @@ async function login(page, origin, route, email) {
         ? `/login?returnUrl=${encodeURIComponent(route)}`
         : route),
   );
+  // A cold Vite server may reload once while optimizing dependencies; fill
+  // the form only after the page settles so the submit is not lost.
+  await page.waitForLoadState("networkidle");
   await page.getByRole("textbox", { name: /^Email(?:\s|$)/ }).fill(email);
   await page.getByLabel(/^Mật khẩu(?:\s|$)/).fill(password);
   await button(page, "Đăng nhập").click();
-  await expect(page.getByLabel(/^Mật khẩu(?:\s|$)/)).toHaveCount(0);
+  try {
+    await expect(page.getByLabel(/^Mật khẩu(?:\s|$)/)).toHaveCount(0, {
+      timeout: 15000,
+    });
+  } catch (error) {
+    // Name the visible refusal (never the form values) in the failure.
+    const alerts = await page.getByRole("alert").allInnerTexts();
+    throw new Error(
+      `Login did not finish on ${origin}${alerts.length ? `: ${alerts.join(" | ")}` : ""}`,
+      { cause: error },
+    );
+  }
 }
 async function capture(page, name, width = 390) {
   // Never capture a credential form, even if a redirect raced the test.
@@ -338,6 +352,25 @@ try {
     "TEST_OPERATOR",
   ]);
   const independent = await actor("auction-staff-2@operations.test", ["STAFF"]);
+  // ADR 0077/0079: a registration auction needs four registered bidders.
+  const reg3 = await actor("auction-bidder-3@operations.test");
+  const reg4 = await actor("auction-bidder-4@operations.test");
+  // Simulator funding only; ADR 0071 bids and deposits need real balances.
+  async function fund(who, amount) {
+    const topup = await api("/me/topups", who.accessToken, { amount });
+    await api("/operations/simulator/topup-events", operator.accessToken, {
+      eventId: randomUUID(),
+      intentId: topup.entityId,
+      recipientId: who.user.id,
+      amount,
+      currency: "VND",
+      outcome: "Succeeded",
+      occurredAt: fixture.serverNow().toISOString(),
+    });
+  }
+  for (const who of [buyer, reg3, reg4]) await fund(who, 500000);
+  // The rival starts short of the Buy Now price on purpose.
+  await fund(challenger, 200000);
   async function refused(route, who, body, expected) {
     const response = await fetch(base + route, {
       method: body ? "POST" : "GET",
@@ -436,6 +469,10 @@ try {
   await selling.getByLabel("Giá khởi điểm", { exact: true }).fill("100000");
   await selling.getByRole("checkbox", { name: /Cho phép mua ngay/ }).check();
   await selling.getByLabel("Giá mua ngay", { exact: true }).fill("300000");
+  await selling
+    .getByRole("group", { name: "Khi có người mua ngay" })
+    .getByRole("button", { name: /^Kết thúc ngay/ })
+    .click();
   const createAck = await loseFirstAck(selling, "**/api/v1/auction-intakes");
   await button(selling, "Giữ chỗ đấu giá").click();
   await selling
@@ -470,7 +507,11 @@ try {
   await refused(
     `/auction-intakes/${intake.id}/publish`,
     seller,
-    { expectedVersion: intake.version, startAt: null, durationHours: 1 },
+    {
+      expectedVersion: intake.version,
+      startAt: new Date(Date.now() + 3600000).toISOString(),
+      durationSeconds: 3600,
+    },
     409,
   );
   await capture(selling, "seller-intake-receipt");
@@ -489,17 +530,21 @@ try {
   const row = desk.locator(`[data-motion-key='${intake.id}']`);
   await row.getByRole("button", { name: "Nhận sách", exact: true }).click();
   await row.getByLabel("Mã kệ", { exact: true }).fill("QA-A01");
+  // The button names the whole action, so receive sends without a dialog and
+  // the inspection panel opens on the same row.
   await row
-    .getByRole("button", { name: "Xác nhận đã nhận sách", exact: true })
+    .getByRole("button", { name: "Nhận vào kệ QA-A01", exact: true })
     .click();
-  await desk
-    .locator("dialog[open]")
-    .getByRole("button", { name: /Xác nhận/ })
-    .click();
-  await expect(
-    row.getByRole("button", { name: "Kiểm tra", exact: true }),
-  ).toBeVisible();
-  await row.getByRole("button", { name: "Kiểm tra", exact: true }).click();
+  const inspectPanel = row.getByRole("region", {
+    name: "Kiểm tra tình trạng sách",
+  });
+  const inspectButton = row.getByRole("button", {
+    name: "Kiểm tra",
+    exact: true,
+  });
+  await expect(inspectPanel.or(inspectButton).first()).toBeVisible();
+  if (!(await inspectPanel.isVisible())) await inspectButton.click();
+  await expect(inspectPanel).toBeVisible();
   for (const label of [
     "Đúng đầu sách và ấn bản",
     "Dấu riêng khớp ảnh đã đăng",
@@ -523,22 +568,33 @@ try {
     "Assigned Staff receives book and records actual checklist Pass via UI",
   );
 
-  phase = "Seller follows exact intake -> publishes -> opens correct auction";
+  phase = "Seller publishes a registration auction at the earliest open time";
   await navigate(selling, `/my-auctions?intakeId=${intake.id}`);
   await button(selling, "Đăng phiên").click();
+  const publishDialog = selling.getByRole("dialog", {
+    name: "Đăng phiên đấu giá",
+  });
+  await expect(publishDialog).toBeVisible();
+  // ADR 0081: a registration auction has no "open now".
+  assert.equal(
+    await publishDialog.getByRole("radio", { name: "Mở ngay" }).count(),
+    0,
+  );
+  await publishDialog.getByRole("button", { name: /^Giờ mở phiên:/ }).click();
+  await button(selling, "Sớm nhất").click();
+  await button(selling, "Xong").click();
+  await publishDialog
+    .getByRole("group", { name: "Chọn nhanh" })
+    .getByRole("button", { name: "1 giờ", exact: true })
+    .click();
   const publishAck = await loseFirstAck(
     selling,
     `**/api/v1/auction-intakes/${intake.id}/publish`,
   );
-  await selling
-    .getByLabel("Thời lượng phiên", { exact: true })
-    .selectOption("1");
-  await selling.getByRole("radio", { name: "Hẹn giờ mở", exact: true }).check();
-  await button(selling, "Hẹn giờ mở phiên").click();
+  await publishDialog
+    .getByRole("button", { name: "Hẹn giờ mở phiên", exact: true })
+    .click();
   await sleep(1500);
-  const publishDialog = selling.getByRole("dialog", {
-    name: "Đăng phiên đấu giá",
-  });
   if (
     (await publishDialog.isVisible()) &&
     (await publishDialog
@@ -561,6 +617,22 @@ try {
     await db.collection("auctions").countDocuments({ intakeId: intake.id }),
     1,
   );
+  const waiting = (await api(`/auctions/${auctionId}`)).auction;
+  const opensAt = Date.parse(waiting.opensAt);
+  assert.equal(waiting.phase, "Scheduled");
+  assert.equal(waiting.minBidders, 4);
+  assert.equal(waiting.registeredCount, 0);
+  assert.equal(waiting.depositAmount, 10000, "Default deposit is 10% of 100.000đ");
+  assert.equal(waiting.buyNowMode, "Instant");
+  // "Sớm nhất" is the first 5-minute slot at least 5 minutes ahead.
+  assert.equal(opensAt % 300000, 0, "Open time is a 5-minute slot");
+  assert.ok(
+    opensAt > Date.now() && opensAt <= Date.now() + 10 * 60_000,
+    "Earliest open time is 5-10 minutes ahead",
+  );
+  // ADR 0081: until enough register, startAt is the deadline opensAt + 24 h.
+  assert.equal(Date.parse(waiting.startAt), opensAt + 24 * 3600000);
+  report.opensAt = waiting.opensAt;
   await capture(selling, "seller-focus-after-publish");
   await expect(
     selling.getByRole("link", { name: "Xem phiên đấu giá", exact: true }),
@@ -571,41 +643,127 @@ try {
   await expect(
     selling.getByText("Đây là phiên của bạn", { exact: true }),
   ).toBeVisible();
+  // ADR 0085: no open-time change in the last 30 minutes before it.
+  await expect(button(selling, "Đổi giờ mở")).toBeDisabled();
+  await refused(
+    `/auctions/${auctionId}/schedule`,
+    seller,
+    {
+      expectedVersion: waiting.version,
+      startAt: new Date(opensAt + 3600000).toISOString(),
+      durationSeconds: 3600,
+    },
+    409,
+  );
+  await refused(
+    `/auctions/${auctionId}/schedule`,
+    seller,
+    {
+      expectedVersion: waiting.version + 1,
+      startAt: new Date(opensAt + 3600000).toISOString(),
+      durationSeconds: 3600,
+    },
+    409,
+  );
   await refused(
     `/auctions/${auctionId}/bids`,
     buyer,
     { amount: 100000, fulfillmentMethod: "SelfCollect" },
     409,
   );
-  const scheduled = await api(`/auctions/${auctionId}`);
-  assert.equal(scheduled.auction.phase, "Scheduled");
   await refused(
-    `/auctions/${auctionId}/schedule`,
+    `/auctions/${auctionId}/registration`,
     seller,
-    {
-      expectedVersion: scheduled.auction.version + 1,
-      startAt: null,
-      durationHours: 1,
-    },
+    { deposit: 10000 },
+    403,
+  );
+  await refused(
+    `/auctions/${auctionId}/registration`,
+    staff,
+    { deposit: 10000 },
+    403,
+  );
+  await refused(
+    `/auctions/${auctionId}/registration`,
+    reg3,
+    { deposit: 20000 },
     409,
   );
-  await button(selling, "Đổi thời gian phiên").click();
-  await selling.getByLabel("Thời lượng phiên", { exact: true }).selectOption("3");
-  await selling.route(ownershipPath, route => route.fulfill({ status: 503, json: { code: "QA_UNAVAILABLE", message: "QA unavailable" } }));
-  await reconnect(selling);
-  await expect(button(selling, "Thử lại kiểm tra vai trò")).toBeVisible();
-  await expect(selling.getByRole("dialog", { name: "Đổi thời gian phiên" })).not.toBeVisible();
-  await selling.unroute(ownershipPath);
-  await button(selling, "Thử lại kiểm tra vai trò").click();
-  await expect(selling.getByLabel("Thời lượng phiên", { exact: true })).toHaveValue("3");
-  await selling.getByRole("radio", { name: "Mở ngay", exact: true }).check();
-  await button(selling, "Lưu thời gian mới").click();
-  await expect(
-    selling.getByRole("dialog", { name: "Đổi thời gian phiên" }),
-  ).not.toBeVisible();
-  assert.equal((await api(`/auctions/${auctionId}`)).auction.phase, "Live");
+  await capture(selling, "seller-waiting-for-registrants", 1440);
   passed(
-    "Exact intake -> scheduled publish/replay -> one auction -> seller opens now; premature bid/stale edit refused",
+    "Exact intake -> earliest-slot publish/replay -> one waiting registration auction; no open-now, frozen reschedule, premature bid, self/staff/wrong-deposit registration refused",
+  );
+
+  phase = "Four bidders register with deposits";
+  await login(buying, web, "/auctions", "auction-buyer@operations.test");
+  await buying.locator(`a[href='/auctions/${auctionId}']`).first().click();
+  await expect(
+    buying.getByText("Đăng ký để tham gia đấu giá", { exact: true }),
+  ).toBeVisible();
+  assert.equal(
+    await buying.getByLabel("Số tiền trả lượt này", { exact: true }).count(),
+    0,
+  );
+  const registerAck = await loseFirstAck(
+    buying,
+    `**/api/v1/auctions/${auctionId}/registration`,
+  );
+  await buying
+    .getByRole("button", { name: /^Đặt cọc 10\.000.* và đăng ký/ })
+    .click();
+  await buying
+    .getByRole("dialog")
+    .getByRole("button", { name: "Đặt cọc và đăng ký", exact: true })
+    .click();
+  await sleep(1500);
+  if (await button(buying, "Thử lại đúng lệnh vừa rồi").isVisible())
+    await button(buying, "Thử lại đúng lệnh vừa rồi").click();
+  await expect(
+    buying.getByText("Bạn đã đăng ký phiên này", { exact: true }),
+  ).toBeVisible();
+  await registerAck.verify();
+  // No bid yet: the standing card must not say "outbid".
+  assert.equal(await buying.getByText("Bạn đã bị vượt giá").count(), 0);
+  assert.equal(
+    await db.collection("auction_registrations").countDocuments({ auctionId }),
+    1,
+  );
+  await capture(buying, "buyer-registered");
+  await login(
+    competing,
+    web,
+    "/auctions",
+    "auction-challenger@operations.test",
+  );
+  await competing.locator(`a[href='/auctions/${auctionId}']`).first().click();
+  await competing
+    .getByRole("button", { name: /^Đặt cọc 10\.000.* và đăng ký/ })
+    .click();
+  await competing
+    .getByRole("dialog")
+    .getByRole("button", { name: "Đặt cọc và đăng ký", exact: true })
+    .click();
+  await expect(
+    competing.getByText("Bạn đã đăng ký phiên này", { exact: true }),
+  ).toBeVisible();
+  for (const who of [reg3, reg4])
+    await api(`/auctions/${auctionId}/registration`, who.accessToken, {
+      deposit: 10000,
+    });
+  const full = (await api(`/auctions/${auctionId}`)).auction;
+  assert.equal(full.registeredCount, 4);
+  assert.equal(full.phase, "Scheduled");
+  assert.ok(Date.now() < opensAt, "Registrations finished before the open time");
+  // Reached before opensAt: it opens exactly at the seller's time.
+  assert.equal(Date.parse(full.startAt), opensAt);
+  assert.equal(Date.parse(full.endAt), opensAt + 3600000);
+  for (const who of [buyer, challenger, reg3, reg4]) {
+    const w = await api("/me/wallet", who.accessToken);
+    assert.equal(w.total, who === challenger ? 200000 : 500000);
+    assert.equal(w.available, w.total - 10000, "Deposit leaves available");
+  }
+  passed(
+    "Registration lost ACK keeps one registration; four deposits held; the auction opens at the seller's time once full",
   );
 
   phase = "RN web exact intake and published auction link";
@@ -656,147 +814,11 @@ try {
       .getByText("Đây là phiên của bạn", { exact: true })
       .filter({ visible: true }),
   ).toBeVisible();
-  assert.equal(
-    await native
-      .getByLabel("Số tiền trả lượt này", { exact: true })
-      .filter({ visible: true })
-      .count(),
-    0,
-  );
   passed(
     "RN web focused intake names the state and opens the exact real auction; not native acceptance",
   );
 
-  await selling.route(ownershipPath, (route) =>
-    route.fulfill({
-      status: 503,
-      json: { code: "QA_UNAVAILABLE", message: "QA unavailable" },
-    }),
-  );
-  await navigate(selling, "/auctions");
-  await selling.locator(`a[href='/auctions/${auctionId}']`).first().click();
-  await expect(button(selling, "Thử lại kiểm tra vai trò")).toBeVisible();
-  assert.equal(
-    await selling.getByLabel("Số tiền trả lượt này", { exact: true }).count(),
-    0,
-  );
-  await selling.unroute(ownershipPath);
-  await button(selling, "Thử lại kiểm tra vai trò").click();
-  await expect(
-    selling.getByText("Đây là phiên của bạn", { exact: true }),
-  ).toBeVisible();
-  passed(
-    "Web and RN ownership-read failure never becomes permission to self-bid; retry restores seller controls",
-  );
-
-  phase = "Buyer bid replay and competitor Buy Now after a bid";
-  await login(buying, web, "/auctions", "auction-buyer@operations.test");
-  await buying.locator(`a[href='/auctions/${auctionId}']`).first().click();
-  // This fault is a revalidation failure after a known role, not a failed
-  // initial lookup (covered above). Wait until the real form is available.
-  await expect(buying.getByLabel("Số tiền trả lượt này", { exact: true })).toBeVisible();
-  await buying.getByRole("button", { name: /Đặt giá tự động/ }).click();
-  await buying.getByLabel("Mức tối đa cho đặt giá tự động", { exact: true }).fill("170000");
-  await buying.route(ownershipPath, route => route.fulfill({ status: 503, json: { code: "QA_UNAVAILABLE", message: "QA unavailable" } }));
-  await reconnect(buying);
-  await expect(button(buying, "Thử lại kiểm tra vai trò")).toBeVisible();
-  await expect(buying.getByRole("dialog", { name: "Đặt giá tự động", exact: true })).not.toBeVisible();
-  await buying.unroute(ownershipPath);
-  await button(buying, "Thử lại kiểm tra vai trò").click();
-  await expect(buying.getByLabel("Mức tối đa cho đặt giá tự động", { exact: true })).toHaveValue("170.000");
-  await buying.getByRole("dialog", { name: "Đặt giá tự động", exact: true }).getByRole("button", { name: "Đóng", exact: true }).click();
-  passed("Schedule and Auto drafts survive ownership revalidation failure; paused dialogs release recovery controls");
-  const bidAck = await loseFirstAck(
-    buying,
-    `**/api/v1/auctions/${auctionId}/bids`,
-  );
-  await buying.route(ownershipPath, route => route.fulfill({ status: 503, json: { code: "QA_UNAVAILABLE", message: "QA unavailable" } }));
-  await buying
-    .getByLabel("Số tiền trả lượt này", { exact: true })
-    .fill("100000");
-  await buying.getByRole("button", { name: /^Tiếp tục trả/ }).click();
-  await buying
-    .getByRole("dialog")
-    .getByRole("button", { name: "Xác nhận trả giá", exact: true })
-    .click();
-  await expect(button(buying, "Thử lại kiểm tra vai trò")).toBeVisible();
-  await expect(button(buying, "Thử lại thao tác vừa rồi")).not.toBeVisible();
-  await buying.unroute(ownershipPath);
-  await button(buying, "Thử lại kiểm tra vai trò").click();
-  await expect(button(buying, "Thử lại thao tác vừa rồi")).toBeVisible();
-  if (await button(buying, "Thử lại thao tác vừa rồi").isVisible())
-    await button(buying, "Thử lại thao tác vừa rồi").click();
-  await expect(
-    buying.getByText("Bạn đang dẫn giá", { exact: true }),
-  ).toBeVisible();
-  await bidAck.verify();
-  const bidState = await api(`/auctions/${auctionId}`);
-  assert.equal(bidState.auction.bidderCount, 1);
-  assert.equal(bidState.auction.currentPrice, 100000);
-  await refused(
-    `/auctions/${auctionId}/bids`,
-    seller,
-    { amount: 110000, fulfillmentMethod: "SelfCollect" },
-    403,
-  );
-  await refused(
-    `/auctions/${auctionId}/bids`,
-    staff,
-    { amount: 110000, fulfillmentMethod: "SelfCollect" },
-    403,
-  );
-  await refused(
-    `/auctions/${auctionId}/schedule`,
-    seller,
-    {
-      expectedVersion: bidState.auction.version,
-      startAt: null,
-      durationHours: 2,
-    },
-    409,
-  );
-  await refused(
-    `/auction-intakes/${intake.id}/cancel`,
-    seller,
-    { expectedVersion: published.version },
-    409,
-  );
-  await login(
-    competing,
-    web,
-    "/auctions",
-    "auction-challenger@operations.test",
-  );
-  await competing.locator(`a[href='/auctions/${auctionId}']`).first().click();
-  await button(competing, "Mua ngay").click();
-  await competing
-    .getByRole("dialog")
-    .getByRole("button", { name: "Mua ngay", exact: true })
-    .click();
-  await expect(
-    competing.getByText("Bạn đang dẫn giá", { exact: true }),
-  ).toBeVisible();
-  const challenge = await api(`/auctions/${auctionId}`);
-  assert.equal(challenge.auction.currentPrice, 300000);
-  assert.equal(challenge.auction.bidderCount, 2);
-  assert.ok(challenge.auction.buyNowAt);
-  assert.ok(
-    Date.parse(challenge.auction.endAt) -
-      Date.parse(challenge.auction.buyNowAt) <=
-      60000,
-  );
-  assert.equal(
-    await db.collection("point_orders").countDocuments({ auctionId }),
-    0,
-  );
-  await capture(competing, "buyer-buy-now-challenge");
-  passed(
-    "Manual bid lost ACK keeps intent; Buy Now after bid opens real 60-second window; prohibited actors/edits refused",
-  );
-
-  phase = "Worker closes real Buy Now window and winner finds payment";
-  // No clock/DB state mutation. Wait in bounded chunks and report why.
-  console.log("Waiting for the real 60-second Buy Now deadline.");
+  phase = "Seller history while waiting for the open time";
   // Build real closed history while the clock runs. This must not hide the
   // first auction's ownership behind the endpoint's newest-50 window.
   for (let n = 0; n < 50; n++) {
@@ -835,11 +857,6 @@ try {
       .items,
     [],
   );
-  await navigate(selling, "/my-auctions?view=selling");
-  await selling.getByRole("link", { name: "Xem phiên", exact: true }).click();
-  await expect(
-    selling.getByText("Đây là phiên của bạn", { exact: true }),
-  ).toBeVisible();
   await navigate(native, `/send-to-auction?intakeId=${intake.id}`);
   await button(native, "Xem phiên đấu giá").click();
   await expect(
@@ -849,14 +866,225 @@ try {
   ).toBeVisible();
   await capture(native, "rn-owner-after-50-intakes");
   passed(
-    "Fifty real create/cancel intakes do not hide the old auction owner; web/RN never offer self bidding",
+    "Fifty real create/cancel intakes do not hide the old auction owner on RN web",
   );
-  for (
-    let remaining = Date.parse(challenge.auction.endAt) - Date.now() + 500;
-    remaining > 0;
-    remaining -= 15000
-  )
-    await sleep(Math.min(remaining, 15000));
+
+  phase = "Server clock reaches the open time";
+  // Fast path: jump the fixture's server clock to the open time instead of
+  // waiting 5-10 real minutes. No auction state is written; the API decides
+  // the phase from its (shifted) clock exactly as it would at that moment.
+  await fixture.advanceClock(Math.max(0, opensAt - Date.now()) + 2000);
+  const opened = (await api(`/auctions/${auctionId}`)).auction;
+  assert.equal(opened.phase, "Live");
+  // The role read is stale by now (last seen while waiting), so this fault
+  // reaches the server; a just-fetched role would be served from cache.
+  await selling.route(ownershipPath, (route) =>
+    route.fulfill({
+      status: 503,
+      json: { code: "QA_UNAVAILABLE", message: "QA unavailable" },
+    }),
+  );
+  await navigate(selling, "/auctions");
+  await selling.locator(`a[href='/auctions/${auctionId}']`).first().click();
+  await expect(button(selling, "Thử lại kiểm tra vai trò")).toBeVisible();
+  assert.equal(
+    await selling.getByLabel("Số tiền trả lượt này", { exact: true }).count(),
+    0,
+  );
+  await selling.unroute(ownershipPath);
+  await button(selling, "Thử lại kiểm tra vai trò").click();
+  await expect(
+    selling.getByText("Đây là phiên của bạn", { exact: true }),
+  ).toBeVisible();
+  assert.equal(
+    await selling.getByLabel("Số tiền trả lượt này", { exact: true }).count(),
+    0,
+  );
+  await navigate(selling, "/my-auctions?view=selling");
+  await selling.getByRole("link", { name: "Xem phiên", exact: true }).click();
+  await expect(
+    selling.getByText("Đây là phiên của bạn", { exact: true }),
+  ).toBeVisible();
+  passed(
+    "Opens at the seller's time with no worker; ownership-read failure never becomes permission to self-bid; retry restores seller controls",
+  );
+
+  phase = "Buyer bid replay while live";
+  await navigate(buying, "/auctions");
+  await buying.locator(`a[href='/auctions/${auctionId}']`).first().click();
+  // This fault is a revalidation failure after a known role, not a failed
+  // initial lookup (covered above). Wait until the real form is available.
+  await expect(
+    buying.getByLabel("Số tiền trả lượt này", { exact: true }),
+  ).toBeVisible();
+  await buying.getByRole("button", { name: /Đặt giá tự động/ }).click();
+  await buying
+    .getByLabel("Mức tối đa cho đặt giá tự động", { exact: true })
+    .fill("170000");
+  await buying.route(ownershipPath, (route) =>
+    route.fulfill({
+      status: 503,
+      json: { code: "QA_UNAVAILABLE", message: "QA unavailable" },
+    }),
+  );
+  await reconnect(buying);
+  await expect(button(buying, "Thử lại kiểm tra vai trò")).toBeVisible();
+  await expect(
+    buying.getByRole("dialog", { name: "Đặt giá tự động", exact: true }),
+  ).not.toBeVisible();
+  await buying.unroute(ownershipPath);
+  await button(buying, "Thử lại kiểm tra vai trò").click();
+  await expect(
+    buying.getByLabel("Mức tối đa cho đặt giá tự động", { exact: true }),
+  ).toHaveValue("170.000");
+  await buying
+    .getByRole("dialog", { name: "Đặt giá tự động", exact: true })
+    .getByRole("button", { name: "Đóng", exact: true })
+    .click();
+  passed(
+    "Auto draft survives ownership revalidation failure; the paused dialog releases recovery controls",
+  );
+  const bidAck = await loseFirstAck(
+    buying,
+    `**/api/v1/auctions/${auctionId}/bids`,
+  );
+  await buying.route(ownershipPath, (route) =>
+    route.fulfill({
+      status: 503,
+      json: { code: "QA_UNAVAILABLE", message: "QA unavailable" },
+    }),
+  );
+  await buying
+    .getByLabel("Số tiền trả lượt này", { exact: true })
+    .fill("100000");
+  await buying.getByRole("button", { name: /^Tiếp tục trả/ }).click();
+  await buying
+    .getByRole("dialog")
+    .getByRole("button", { name: "Xác nhận trả giá", exact: true })
+    .click();
+  await expect(button(buying, "Thử lại kiểm tra vai trò")).toBeVisible();
+  await expect(button(buying, "Thử lại thao tác vừa rồi")).not.toBeVisible();
+  await buying.unroute(ownershipPath);
+  await button(buying, "Thử lại kiểm tra vai trò").click();
+  await expect(button(buying, "Thử lại thao tác vừa rồi")).toBeVisible();
+  if (await button(buying, "Thử lại thao tác vừa rồi").isVisible())
+    await button(buying, "Thử lại thao tác vừa rồi").click();
+  await expect(
+    buying.getByText("Bạn đang dẫn giá", { exact: true }),
+  ).toBeVisible();
+  await bidAck.verify();
+  const bidState = await api(`/auctions/${auctionId}`);
+  assert.equal(bidState.auction.bidderCount, 1);
+  assert.equal(bidState.auction.currentPrice, 100000);
+  // ADR 0075/0077: the leader holds the bid; the deposit counts toward it.
+  const leaderWallet = await api("/me/wallet", buyer.accessToken);
+  assert.equal(leaderWallet.available, 400000);
+  await refused(
+    `/auctions/${auctionId}/bids`,
+    seller,
+    { amount: 110000, fulfillmentMethod: "SelfCollect" },
+    403,
+  );
+  await refused(
+    `/auctions/${auctionId}/bids`,
+    staff,
+    { amount: 110000, fulfillmentMethod: "SelfCollect" },
+    403,
+  );
+  await refused(
+    `/auctions/${auctionId}/schedule`,
+    seller,
+    {
+      expectedVersion: bidState.auction.version,
+      startAt: null,
+      durationSeconds: 7200,
+    },
+    409,
+  );
+  await refused(
+    `/auction-intakes/${intake.id}/cancel`,
+    seller,
+    { expectedVersion: published.version },
+    409,
+  );
+  passed(
+    "Manual bid lost ACK keeps intent; the leader's bid is held; seller/Staff bids and late edits refused",
+  );
+
+  phase = "Rival short of funds, then Instant Buy Now ends the auction";
+  await navigate(competing, "/auctions");
+  await competing.locator(`a[href='/auctions/${auctionId}']`).first().click();
+  await expect(competing.getByText(/^Cần thêm .* để mua ngay\./)).toBeVisible();
+  await expect(button(competing, "Mua ngay")).toBeDisabled();
+  const journalsBefore = await db.collection("ledger_journals").countDocuments();
+  await refused(
+    `/auctions/${auctionId}/buy-now`,
+    challenger,
+    { fulfillmentMethod: "SelfCollect" },
+    409,
+  );
+  assert.equal(
+    await db.collection("ledger_journals").countDocuments(),
+    journalsBefore,
+    "A refused Buy Now changes no ledger",
+  );
+  // The rival follows the page's own top-up link; the wallet page reads the
+  // new balance and the auction page must use it on return.
+  await fund(challenger, 300000);
+  assert.equal((await api("/me/wallet", challenger.accessToken)).total, 500000);
+  const walletReads = [];
+  competing.on("response", async (r) => {
+    if (!/\/api\/v1\/me\/wallet$/.test(new URL(r.url()).pathname)) return;
+    let available = null;
+    try { available = (await r.json()).available; } catch { /* aborted */ }
+    walletReads.push(`${r.status()}:${available}`);
+  });
+  // A live push may already have removed the shortfall link, so open the
+  // wallet page directly rather than racing that link.
+  await navigate(competing, "/wallet");
+  // Let the wallet page render (and read the balance) before going back;
+  // two quick route changes can otherwise collapse into one render.
+  await expect(
+    competing.getByRole("heading", { level: 1, name: "Ví & Ký Quỹ Thư Quán" }),
+  ).toBeVisible();
+  await expect.poll(() => walletReads.some((r) => r.startsWith("200:"))).toBe(true);
+  await navigate(competing, `/auctions/${auctionId}`);
+  try {
+    await expect(button(competing, "Mua ngay")).toBeEnabled();
+  } catch (error) {
+    const why = await competing.locator("[class*='buyNow']").allInnerTexts();
+    throw new Error(`Buy Now still disabled: ${why.join(" | ")}; wallet reads ${walletReads.join(",")}`, { cause: error });
+  }
+  await capture(competing, "buyer-buy-now-instant");
+  await button(competing, "Mua ngay").click();
+  await competing
+    .getByRole("dialog")
+    .getByRole("button", { name: "Mua ngay", exact: true })
+    .click();
+  try {
+    await expect(
+      competing.getByText(/^Bạn đã mua ngay/).first(),
+    ).toBeVisible();
+  } catch (error) {
+    const text = (await competing.locator("main").innerText()).slice(0, 1500);
+    throw new Error(`After Buy Now: ${text}`, { cause: error });
+  }
+  const bought = (await api(`/auctions/${auctionId}`)).auction;
+  assert.equal(bought.phase, "Ended");
+  assert.equal(bought.currentPrice, 300000);
+  assert.equal(bought.bidderCount, 2);
+  assert.ok(bought.buyNowAt);
+  // ADR 0074 Instant: the auction ends at the Buy Now moment.
+  assert.equal(Date.parse(bought.endAt), Date.parse(bought.buyNowAt));
+  assert.equal(
+    await db.collection("point_orders").countDocuments({ auctionId }),
+    0,
+  );
+  passed(
+    "Short wallet disables Buy Now and the API refuses it with no ledger change; Instant Buy Now after a rival bid ends the auction at once",
+  );
+
+  phase = "Worker closes the ended auction and winner finds payment";
   await refused(
     `/auctions/${auctionId}/bids`,
     buyer,
@@ -883,8 +1111,14 @@ try {
   assert.equal(order.amounts.buyerTotal, 300000);
   assert.equal(
     Date.parse(order.paymentDeadline),
-    Date.parse(challenge.auction.endAt) + 24 * 3600000,
+    Date.parse(bought.endAt) + 24 * 3600000,
   );
+  // Losers get their deposits back in full once the auction closes.
+  for (const who of [buyer, reg3, reg4]) {
+    const w = await api("/me/wallet", who.accessToken);
+    assert.equal(w.available, 500000, "Loser fully refunded");
+    assert.equal(w.total, 500000);
+  }
   await refused(`/me/point-orders/${order.id}`, buyer, undefined, 404);
   await refused(
     `/point-orders/${order.id}/pay`,
@@ -899,36 +1133,10 @@ try {
   ).toBeVisible();
   await capture(competing, "buyer-payment-due");
   passed(
-    "End-time refusal before sweep; two worker ticks yield one order; winner payment entry/deadline/ownership",
+    "End-time refusal before sweep; two worker ticks yield one order; losers refunded; winner payment entry/deadline/ownership",
   );
 
-  phase = "Insufficient funds then payment lost ACK -> one hold";
-  await competing.getByRole("button", { name: /^Thanh toán 300/ }).click();
-  await competing
-    .getByRole("dialog")
-    .getByRole("button", { name: "Thanh toán", exact: true })
-    .click();
-  await expect(
-    competing.getByRole("alert").filter({ hasText: /số dư|không đủ/ }),
-  ).toBeVisible();
-  assert.equal(
-    await db
-      .collection("ledger_journals")
-      .countDocuments({ orderId: order.id }),
-    0,
-  );
-  const topup = await api("/me/topups", challenger.accessToken, {
-    amount: 500000,
-  });
-  await api("/operations/simulator/topup-events", operator.accessToken, {
-    eventId: randomUUID(),
-    intentId: topup.entityId,
-    recipientId: challenger.user.id,
-    amount: 500000,
-    currency: "VND",
-    outcome: "Succeeded",
-    occurredAt: new Date().toISOString(),
-  });
+  phase = "Payment lost ACK -> one payment from the held amount";
   const payAck = await loseFirstAck(
     competing,
     `**/api/v1/point-orders/${order.id}/pay`,
@@ -997,7 +1205,7 @@ try {
   await capture(competing, "buyer-paid-hold", 1440);
   await capture(competing, "buyer-paid-hold-mobile", 320);
   passed(
-    "Insufficient funds changes no ledger; payment replay holds money once and retains custody slot; stops before report acceptance",
+    "Payment replay moves the held amount into one order payment and retains the custody slot; stops before report acceptance",
   );
 
   phase = "Seller exact-intake read error and retry";
@@ -1166,6 +1374,7 @@ try {
   report.replay = {
     intake: createAck.attempts.length,
     publish: publishAck.attempts.length,
+    registration: registerAck.attempts.length,
     bid: bidAck.attempts.length,
     payment: payAck.attempts.length,
     evidence: evidenceAck.attempts.length,

@@ -46,6 +46,7 @@
     "test:api:mongo": "pnpm --filter @used-books/api test:mongo",
     "test:public:browser": "node scripts/test-public-shelf.mjs",
     "test:auctions:browser": "node scripts/test-auction-journey.mjs",
+    "test:auctions:branches": "node scripts/test-auction-branches.mjs",
     "test:withdrawals:browser": "node scripts/test-withdrawals.mjs",
     "test:reviews:browser": "node scripts/test-transaction-reviews.mjs",
     "test:journeys:browser": "node scripts/test-transaction-reviews.mjs",

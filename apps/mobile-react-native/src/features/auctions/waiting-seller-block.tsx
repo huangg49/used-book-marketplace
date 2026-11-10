@@ -88,8 +88,10 @@ export function WaitingSellerBlock({
   return (
     <View style={{ gap: space.sm }}>
       <Notice>
-        <AppText kind="bold">{`Đang chờ người đăng ký: ${count}/${need}`}</AppText>
+        {/* Same owner statement as the web; a full auction no longer reads "waiting". */}
+        <AppText kind="bold">Đây là phiên của bạn</AppText>
         {"\n"}
+        {count >= need ? `Đã đủ người đăng ký: ${count}/${need}. ` : `Đang chờ người đăng ký: ${count}/${need}. `}
         {openRuleText(auction, now)}
       </Notice>
       {notice && <Notice tone="success">{notice}</Notice>}
