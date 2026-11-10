@@ -235,13 +235,18 @@ export function evaluate(
   }
   if (!used.length) {
     rules.push(listing.lookupPending ? 'R-LOOKUP-PENDING' : 'R-NEED-SOURCES');
-    missing.push(
-      listing.lookupPending
-        ? 'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.'
-        : sources.some((s) => s.excluded === 'AskingPrice')
-          ? 'Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.'
-          : 'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
-    );
+    if (!book.confirmed) {
+      rules.push('R-NEED-CATALOG-APPROVAL');
+      missing.push('Có thể tra giá trực tuyến sau khi đầu sách được duyệt.');
+    } else {
+      missing.push(
+        listing.lookupPending
+          ? 'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.'
+          : sources.some((s) => s.excluded === 'AskingPrice')
+            ? 'Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.'
+            : 'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
+      );
+    }
   }
   if (missing.length) return answer('NeedsMoreData', 'Insufficient');
 
@@ -332,12 +337,14 @@ export function fingerprint(
   input: PriceInput,
   raw: RawSource[],
   listing: ListingFacts = { hasPhoto: true },
+  catalogConfirmed = true,
 ) {
   return createHash('sha256')
     .update(
       canonicalJson({
         input: { ...input, conditionNote: sanitizeNote(input.conditionNote) },
         listing,
+        catalogConfirmed,
         sources: raw
           .map((s) => ({
             id: s.id,

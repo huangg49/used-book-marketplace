@@ -2,6 +2,7 @@ import { PriceReferencePanel } from './PriceReferencePanel';
 import type { PriceReferenceState } from '@used-books/session-client';
 import { useState } from "react";
 import {
+  currentReference,
   evidenceLabel,
   excludedLabel,
   isStale,
@@ -53,6 +54,12 @@ export function PriceAssistPanel({
         ? state.previous
         : undefined;
   const value = ready?.suggestion;
+  const current = value && !loading && !stale;
+  const awaitingCatalog = !stale && value?.status === "NeedsMoreData" &&
+    value.rules?.includes("R-NEED-CATALOG-APPROVAL");
+  const currentRuleReference = currentReference(reference ?? null, currentKey);
+  const duplicateReference = current && value.status !== "Suggested" &&
+    currentRuleReference?.status === value.status;
   const refreshExpiry = useExpiryRefresh(value?.expiresAt);
   const locked = disabled || loading || stale;
   const canApply = () => {
@@ -72,11 +79,9 @@ export function PriceAssistPanel({
         Tham khảo giá có nguồn và thời điểm rõ ràng. Bạn quyết định giá cuối;
         gợi ý không tự gửi bài đăng.
       </p>
-      {needsCatalog ? (
+      {needsCatalog && !awaitingCatalog ? (
         <p className={styles.note}>
-          Đầu sách mới: bấm yêu cầu sẽ lưu thông tin bạn đã xác nhận thành yêu
-          cầu danh mục chờ duyệt. Chưa có nguồn giá phù hợp thì trợ lý sẽ báo
-          thiếu dữ liệu.
+          Đầu sách mới sẽ được lưu thành yêu cầu danh mục. Có thể tra giá trực tuyến sau khi đầu sách được duyệt.
         </p>
       ) : null}
       {!hasPhoto ? (
@@ -93,11 +98,13 @@ export function PriceAssistPanel({
       >
         {loading
           ? "Đang lấy gợi ý…"
-          : needsCatalog
-            ? "Xác nhận đầu sách và xem gợi ý giá"
-            : state.status === "idle"
-              ? "Xem gợi ý giá bán"
-              : "Xem lại gợi ý giá"}
+          : awaitingCatalog
+            ? "Kiểm tra lại nguồn giá"
+            : needsCatalog
+              ? "Lưu đầu sách và kiểm tra giá"
+              : state.status === "idle"
+                ? "Xem gợi ý giá bán"
+                : "Xem lại gợi ý giá"}
       </button>
       <p role="status" aria-live="polite">
         {loading ? phases[phase] : ""}
@@ -112,12 +119,12 @@ export function PriceAssistPanel({
       {ready?.message ? (
         <p role="alert">{ready.message} Gợi ý trước vẫn được giữ.</p>
       ) : null}
-      <PriceReferencePanel state={reference ?? null} currentKey={currentKey} disabled={disabled || !hasPhoto} onApply={amount => onApplyReference?.(amount)} aiReady={!!value && !loading && !stale} />
+      {!duplicateReference && <PriceReferencePanel state={reference ?? null} currentKey={currentKey} disabled={disabled || !hasPhoto} onApply={amount => onApplyReference?.(amount)} aiReady={!!current} />}
       {value ? (
         <div className={styles.answer}>
           <p className={styles.evidence}>
-            {evidenceLabel[value.evidenceLevel]}
-            {value.cached ? " · Kết quả đã lưu" : ""}
+            {awaitingCatalog ? "Đầu sách đang chờ duyệt" : evidenceLabel[value.evidenceLevel]}
+            {value.cached && !awaitingCatalog ? " · Kết quả đã lưu" : ""}
           </p>
           {value.status === "Suggested" && value.range ? (
             <>
@@ -147,13 +154,13 @@ export function PriceAssistPanel({
             </>
           ) : (
             <p>
-              {value.status === "Refused"
-                ? "Chưa thể gợi ý giá cho tình trạng này."
-                : "Chưa đủ dữ liệu để gợi ý giá."}{" "}
-              Bạn vẫn có thể tự nhập giá.
+              {awaitingCatalog ? "Bạn vẫn có thể tự nhập giá bán." : (
+                <>{value.status === "Refused" ? "Chưa thể gợi ý giá cho tình trạng này." : "Chưa đủ dữ liệu để gợi ý giá."}{" "}
+                  Bạn vẫn có thể tự nhập giá.</>
+              )}
             </p>
           )}
-          <ul>
+          {value.factors.length > 0 && <ul>
             {value.factors.map((f, i) => (
               <li key={i}>
                 {f.text}
@@ -162,7 +169,7 @@ export function PriceAssistPanel({
                   : ""}
               </li>
             ))}
-          </ul>
+          </ul>}
           {value.missing.map((text) => (
             <p key={text}>{text}</p>
           ))}
@@ -200,10 +207,10 @@ export function PriceAssistPanel({
               </ul>
             </details>
           ) : null}
-          <p className={styles.note}>
+          {!awaitingCatalog && <p className={styles.note}>
             Gợi ý tạo {new Date(value.generatedAt).toLocaleString("vi-VN")}; hết
             hiệu lực {new Date(value.expiresAt).toLocaleString("vi-VN")}.
-          </p>
+          </p>}
         </div>
       ) : null}
       <ConfirmDialog

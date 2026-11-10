@@ -51,6 +51,8 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    Khi đổi model chính hoặc phiên bản cách tìm, lần tra cũ thiếu nguồn hoặc bị lỗi
    được phép tra lại. Nguồn đã xác minh giữ thời hạn lưu.
 7. Khi đang tra và chưa có nguồn khác: `NeedsMoreData` với `R-LOOKUP-PENDING`.
+   Khi đầu sách chờ duyệt và chưa có nguồn giá dùng được, trả `NeedsMoreData` cùng
+   `R-NEED-CATALOG-APPROVAL`. Lần yêu cầu mới sau khi duyệt dùng trạng thái danh mục mới.
    `OnlineRetail` là giá sách mới cho băng tình trạng của ADR 0028; giá bìa nhân viên nhập
    được ưu tiên khi có cả hai; quá 3 tháng thì coi là cũ.
 8. Tắt mặc định (`PRICE_LOOKUP_ENABLED=false`). `PRICE_LOOKUP_PROVIDERS=openai,gemini`

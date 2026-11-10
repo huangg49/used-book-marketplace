@@ -55,7 +55,7 @@ try{
    for(const [key,index]of [['readable',0],['hasMissingPages',1],['missingEssentialContent',1]])await page.locator('input[name='+key+']').nth(index).locator('..').click();
    await step(/Bán hoặc đổi/).click();await page.getByLabel('Giá bán (VNĐ)',{exact:true}).fill('50000');
   }
-  await prepare('Sách trước QA');const ask=page.getByRole('button',{name:'Xác nhận đầu sách và xem gợi ý giá',exact:true});await ask.click();
+  await prepare('Sách trước QA');const ask=page.getByRole('button',{name:'Lưu đầu sách và kiểm tra giá',exact:true});await ask.click();
   const oldRange=page.locator('p').filter({hasText:/^40\.000.*60\.000/});
   if(mode==='ready')await expect(oldRange).toBeVisible();else await expect.poll(()=>typeof releaseOld).toBe('function');
   await page.getByRole('radio',{name:'Đổi sách',exact:true}).locator('..').click();await page.getByLabel('Giá trị đổi (VNĐ)',{exact:true}).fill('50000');await step(/Kiểm tra/).click();

@@ -331,6 +331,38 @@ describe('price suggestions through HTTP with MongoDB', () => {
     expect(fake.calls).toBe(0);
   });
 
+  it('reports a pending catalog entry and refreshes the answer after approval', async () => {
+    const created = (await post('/catalog/requests', {
+      metadata: {
+        title: 'Sách chờ duyệt chưa có nguồn giá', authors: ['Tác giả thử'], publisher: null,
+        publicationYear: 2021, language: 'vi', edition: null, category: 'Văn học', isbn: isbn13(),
+      },
+    }, m1).expect(200)).body;
+    const book = created.entityId as string;
+    books.push(book);
+    const l = await listing(m1, book);
+    const config = app.get(ConfigService);
+    config.set('PRICE_LOOKUP_ENABLED', 'true');
+    try {
+      const pending = await ask(l.entityId, m1, { bookId: book }).expect(200);
+      validates('PriceSuggestion', pending.body);
+      expect(pending.body).toMatchObject({ status: 'NeedsMoreData', model: null, sources: [] });
+      expect(pending.body.rules).toContain('R-NEED-CATALOG-APPROVAL');
+      expect(finder.calls).toBe(0);
+      expect(await db.c.price_lookups.findOne({ _id: book })).toBeNull();
+    } finally {
+      config.set('PRICE_LOOKUP_ENABLED', 'false');
+    }
+
+    await post(`/operations/catalog-requests/${book}/decision`, {
+      expectedVersion: created.version, revisionId: created.revisionId, decision: 'Confirm',
+    }, admin).expect(200);
+    const after = await ask(l.entityId, m1, { bookId: book }).expect(200);
+    expect(after.body).toMatchObject({ status: 'NeedsMoreData', model: null, cached: false });
+    expect(after.body.rules).toContain('R-NEED-SOURCES');
+    expect(after.body.rules).not.toContain('R-NEED-CATALOG-APPROVAL');
+  });
+
   it('refuses single-book price assistance for a whole bundle before calling the provider', async () => {
     const created = await post('/listings', { content: {
       ...draft(bookId, 150000),

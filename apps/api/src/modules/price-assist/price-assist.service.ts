@@ -159,7 +159,7 @@ export class PriceAssistService {
       return {
         listingId,
         bookId: input.bookId,
-        inputFingerprint: fingerprint(input, raw, facts),
+        inputFingerprint: fingerprint(input, raw, facts, book.confirmed),
         status: evidence.status === 'Proceed' ? 'Ready' : evidence.status,
         evidenceLevel: evidence.level,
         rules: evidence.rules,
@@ -257,7 +257,7 @@ export class PriceAssistService {
           lookupPending: lookup.running,
         };
         const evidence = evaluate(input, book, raw, now, listingFacts);
-        const fp = fingerprint(input, raw, listingFacts);
+        const fp = fingerprint(input, raw, listingFacts, book.confirmed);
         const cached = await tx.c.price_suggestions.findOne(
           {
             listingId,

@@ -36,6 +36,12 @@ Phát lại bốn URL thật NXB Trẻ của *Mắt biếc* qua service và bộ
 tìm kiếm và bộ lưu giả lập: hai lần tải timeout, hai URL còn lại được bỏ qua, tổng
 khoảng 5 giây và trạng thái nội bộ `PageUnavailable` với hạn thử lại 24 giờ.
 
+Nhánh `codex/price-catalog-feedback` xử lý thông báo khi đầu sách chờ duyệt và
+chưa có nguồn giá. Backend trả `R-NEED-CATALOG-APPROVAL` và cache theo trạng thái
+danh mục. Member web hiện một kết quả, giữ đường nhập giá tay và giữ khoảng
+tham chiếu khi có giá trị. Kiểm 33 unit API, 29 ca HTTP trên Mongo QA riêng và
+Chromium ở 390/1440 px với dữ liệu mẫu.
+
 # Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
 
 Nhánh `codex/sell-step-one-hierarchy` từ `dc5c02e8`. Member web thu gọn khay
