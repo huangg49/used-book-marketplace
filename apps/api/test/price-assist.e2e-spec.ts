@@ -296,9 +296,11 @@ describe('price suggestions through HTTP with MongoDB', () => {
     await app?.close();
   });
   beforeEach(async () => {
+    app.get(ConfigService).set('PRICE_LOOKUP_ENABLED', 'false');
     fake.mode = 'ok';
     finder.calls = secondary.calls = 0;
     finder.error = secondary.error = null;
+    finder.urls = secondary.urls = [];
     finder.scopeUrls = secondary.scopeUrls = [];
     pages.requests = [];
     pages.errors = {};
@@ -331,37 +333,117 @@ describe('price suggestions through HTTP with MongoDB', () => {
     expect(fake.calls).toBe(0);
   });
 
-  it('reports a pending catalog entry and refreshes the answer after approval', async () => {
-    const created = (await post('/catalog/requests', {
-      metadata: {
-        title: 'Sách chờ duyệt chưa có nguồn giá', authors: ['Tác giả thử'], publisher: null,
-        publicationYear: 2021, language: 'vi', edition: null, category: 'Văn học', isbn: isbn13(),
-      },
-    }, m1).expect(200)).body;
+  it('prices an owner’s pending book from verified sources, and refreshes after a corrected edition', async () => {
+    const metadata = {
+      title: 'Sách tìm giá trực tuyến', authors: ['Tác giả thử'], publisher: null,
+      publicationYear: 2021, language: 'vi', edition: null, category: 'Văn học', isbn: isbn13(),
+    };
+    const created = (await post('/catalog/requests', { metadata }, m1).expect(200)).body;
+    const book = created.entityId as string;
+    books.push(book);
+    const l = await listing(m1, book);
+    const another = await listing(m2);
+    const withoutPhoto = await listing(m1, book, false);
+    const modelCalls = fake.calls;
+    const config = app.get(ConfigService);
+    config.set('PRICE_LOOKUP_ENABLED', 'true');
+    let release!: () => void;
+    try {
+      await ask(another.entityId, m2, { bookId: book }).expect(422);
+      const bare = await ask(withoutPhoto.entityId, m1, { bookId: book }).expect(200);
+      expect(bare.body.rules).toContain('R-NEED-PHOTO');
+      expect(finder.calls).toBe(0);
+      finder.gate = new Promise<void>((resolve) => { release = resolve; });
+      const correct = 'https://fahasa.com/correct-edition';
+      const wrong = 'https://fahasa.com/unverified-edition';
+      finder.urls = [wrong, correct];
+      pages.pages = {
+        [correct]: shopPage(metadata.isbn, 100_000),
+        [wrong]: shopPage(null, 20_000) + '<p>Tác giả thử</p>',
+      };
+      const key = randomUUID();
+      const pending = await ask(l.entityId, m1, { bookId: book }, key).expect(200);
+      validates('PriceSuggestion', pending.body);
+      expect(pending.body).toMatchObject({ status: 'NeedsMoreData', model: null, sources: [] });
+      expect(pending.body.rules).toContain('R-LOOKUP-PENDING');
+      expect(finder.calls).toBe(1);
+      release();
+      await waitForLookup(book, created.revisionId);
+
+      const replay = await ask(l.entityId, m1, { bookId: book }, key).expect(200);
+      expect(replay.body).toMatchObject({ id: pending.body.id, status: 'NeedsMoreData', cached: true });
+      const priced = await ask(l.entityId, m1, { bookId: book }).expect(200);
+      expect(priced.body).toMatchObject({ status: 'Suggested', evidenceLevel: 'Limited', sources: [{ url: correct }] });
+      expect(await db.c.catalog_books.findOne({ _id: book })).toMatchObject({ status: 'Pending' });
+
+      const rejected = (await post(`/operations/catalog-requests/${book}/decision`, {
+        expectedVersion: created.version, revisionId: created.revisionId, decision: 'Reject',
+        reason: 'Thông tin ấn bản cần kiểm tra lại.',
+      }, admin).expect(200)).body;
+      const revised = (await post(`/catalog/requests/${book}/resubmit`, {
+        expectedVersion: rejected.version, metadata: { ...metadata, isbn: isbn13() },
+      }, m1).expect(200)).body;
+      const stale = await put(`/listings/${l.entityId}/draft`, {
+        expectedVersion: l.version,
+        content: draft(book, priced.body.range.low),
+        priceAssist: { suggestionId: priced.body.id, applied: true },
+      }, m1).expect(422);
+      expect(stale.body.fieldErrors[0].path).toBe('/priceAssist/suggestionId');
+      const retry = await ask(l.entityId, m1, { bookId: book }).expect(200);
+      expect(retry.body).toMatchObject({ status: 'NeedsMoreData', model: null, sources: [] });
+      expect(retry.body.rules).toContain('R-LOOKUP-PENDING');
+      await waitForLookup(book, revised.revisionId);
+      const empty = await ask(l.entityId, m1, { bookId: book }).expect(200);
+      expect(empty.body).toMatchObject({ status: 'NeedsMoreData', range: null, sources: [] });
+      expect(empty.body.rules).toContain('R-NEED-SOURCES');
+      expect(finder.calls).toBe(2);
+      expect(fake.calls).toBe(modelCalls + 1);
+    } finally {
+      release?.();
+      finder.gate = null;
+      config.set('PRICE_LOOKUP_ENABLED', 'false');
+    }
+  });
+
+  it('starts a pending-book lookup without ISBN and uses only the matching volume', async () => {
+    const metadata = {
+      title: 'Sách tìm giá trực tuyến', authors: ['Tác giả thử'], publisher: null,
+      publicationYear: null, language: 'vi', edition: 'Tập II', category: 'Văn học', isbn: null,
+    };
+    const created = (await post('/catalog/requests', { metadata }, m1).expect(200)).body;
     const book = created.entityId as string;
     books.push(book);
     const l = await listing(m1, book);
     const config = app.get(ConfigService);
+    const disabled = await ask(l.entityId, m1, { bookId: book }).expect(200);
+    expect(disabled.body.rules).toContain('R-LOOKUP-DISABLED');
     config.set('PRICE_LOOKUP_ENABLED', 'true');
     try {
-      const pending = await ask(l.entityId, m1, { bookId: book }).expect(200);
-      validates('PriceSuggestion', pending.body);
-      expect(pending.body).toMatchObject({ status: 'NeedsMoreData', model: null, sources: [] });
-      expect(pending.body.rules).toContain('R-NEED-CATALOG-APPROVAL');
-      expect(finder.calls).toBe(0);
-      expect(await db.c.price_lookups.findOne({ _id: book })).toBeNull();
+      const right = 'https://fahasa.com/volume-2';
+      const wrong = 'https://fahasa.com/volume-20';
+      const page = (volume: number) => shopPage(null, 100_000)
+        .replace(metadata.title, `${metadata.title} - Tập ${volume}`) + '<p>Tác giả: Tác giả thử</p>';
+      finder.urls = [wrong, right];
+      pages.pages = { [right]: page(2), [wrong]: page(20) };
+      const waiting = await ask(l.entityId, m1, { bookId: book }).expect(200);
+      expect(waiting.body.rules).toContain('R-LOOKUP-PENDING');
+      await waitForLookup(book, created.revisionId);
+      const priced = await ask(l.entityId, m1, { bookId: book }).expect(200);
+      expect(priced.body).toMatchObject({ status: 'Suggested', evidenceLevel: 'Limited', sources: [{ url: right }] });
+      expect(finder.calls).toBe(1);
     } finally {
       config.set('PRICE_LOOKUP_ENABLED', 'false');
     }
-
-    await post(`/operations/catalog-requests/${book}/decision`, {
-      expectedVersion: created.version, revisionId: created.revisionId, decision: 'Confirm',
-    }, admin).expect(200);
-    const after = await ask(l.entityId, m1, { bookId: book }).expect(200);
-    expect(after.body).toMatchObject({ status: 'NeedsMoreData', model: null, cached: false });
-    expect(after.body.rules).toContain('R-NEED-SOURCES');
-    expect(after.body.rules).not.toContain('R-NEED-CATALOG-APPROVAL');
   });
+
+  async function waitForLookup(bookId: string, catalogRevisionId: string) {
+    for (let i = 0; i < 50; i++) {
+      const lookup = await db.c.price_lookups.findOne({ _id: bookId, catalogRevisionId });
+      if (lookup?.status === 'Done') return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error('Price lookup did not complete');
+  }
 
   it('refuses single-book price assistance for a whole bundle before calling the provider', async () => {
     const created = await post('/listings', { content: {

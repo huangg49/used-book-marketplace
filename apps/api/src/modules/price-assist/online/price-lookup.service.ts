@@ -1,10 +1,12 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
-import type { OnlinePriceOfferDoc } from '../../../database/mongo/documents.js';
+import type { Filter } from 'mongodb';
+import type { OnlinePriceOfferDoc, PriceLookupDoc } from '../../../database/mongo/documents.js';
 import { MongoService } from '../../../database/mongo/mongo.service.js';
+import type { Tx } from '../../../database/mongo/transaction.js';
 import { costMicroUsd, rateFor } from '../price-model.js';
-import { checkPage, type BookIdentity } from './page-check.js';
+import { checkPage, normalize, type BookIdentity } from './page-check.js';
 import { FinderError, PriceFinder, type FinderBook, type FinderResult } from './price-finder.js';
 import { fetchPage, FetchRejected, shopPageUrl } from './safe-fetch.js';
 
@@ -38,9 +40,21 @@ type CheckedOffer = { host?: string; unavailable?: boolean; offer?: OnlinePriceO
 const isAccessFailure = (reason: string) =>
   reason === 'Timeout' || reason === 'Network' || /^Http(?:401|403|408|429|5[0-9]{2})$/.test(reason);
 
-export type LookupBook = FinderBook & BookIdentity & { id: string };
-export interface LookupState {
-  running: boolean;
+export type LookupBook = Omit<FinderBook, 'edition'> & BookIdentity & {
+  id: string;
+  revisionId: string;
+  confirmed: boolean;
+};
+export type LookupState = 'Disabled' | 'Running' | 'Done' | 'Unavailable' | 'NeedIdentity';
+
+export function activeOnlineOffers(bookId: string, revisionId: string, confirmed: boolean): Filter<OnlinePriceOfferDoc> {
+  const revision = { catalogRevisionId: revisionId };
+  return {
+    bookId,
+    retiredAt: null,
+    // Legacy offers were only written for confirmed, immutable catalog books.
+    ...(confirmed ? { $or: [revision, { catalogRevisionId: { $exists: false } }] } : revision),
+  };
 }
 
 @Injectable()
@@ -62,40 +76,70 @@ export class PriceLookupService {
       .filter(Boolean);
   }
 
-  // Starts a lookup when the book is due and none is running. Returns whether
-  // one is running now (so the caller can say "searching" instead of "no
-  // data"). Never throws: the assistant works without online prices.
-  async ensure(book: LookupBook, now: Date): Promise<LookupState> {
-    if (!this.enabled) return { running: false };
+  // The catalog revision, lease and usage reservation are checked together.
+  // Search only starts once that transaction commits.
+  async ensure(book: LookupBook, now: Date, ownerId: string): Promise<LookupState | undefined> {
+    if (!this.enabled) return 'Disabled';
+    if (!book.confirmed && !book.isbn &&
+      (!normalize(book.title) || !book.authors.some((name) => normalize(name)))) return 'NeedIdentity';
     try {
-      const runId = await this.acquire(book.id, now);
-      if (runId) {
-        void this.run(book, runId);
-        return { running: true };
+      const result = await this.mongo.tx((tx) => this.acquire(tx, book, now, ownerId));
+      if (typeof result === 'object') {
+        void this.run(book, result.runId);
+        return 'Running';
       }
-      const current = await this.mongo.c.price_lookups.findOne({ _id: book.id });
-      return { running: current?.status === 'Running' && current.leaseUntil > now };
+      return result;
     } catch (e) {
-      this.logger.warn(JSON.stringify({ bookId: book.id, step: 'acquire', detail: String(e).slice(0, 200) }));
-      return { running: false };
+      // A concurrent first reservation (including another book's daily usage
+      // row) can win the insert before this transaction commits.
+      if ((e as { code?: number }).code === 11000) {
+        const current = await this.mongo.c.price_lookups.findOne({ _id: book.id }).catch(() => null);
+        if (current?.status === 'Running' && current.leaseUntil > now && this.sameRevision(current, book)) return 'Running';
+      }
+      this.logger.warn(JSON.stringify({ bookId: book.id, step: 'acquire', code: (e as { code?: number }).code }));
+      return 'Unavailable';
     }
   }
 
-  private async acquire(bookId: string, now: Date): Promise<string | null> {
-    const lookups = this.mongo.c.price_lookups;
+  private sameRevision(lookup: PriceLookupDoc, book: LookupBook) {
+    return lookup.catalogRevisionId === book.revisionId || (book.confirmed && !lookup.catalogRevisionId);
+  }
+
+  private async acquire(tx: Tx, book: LookupBook, now: Date, ownerId: string): Promise<LookupState | { runId: string }> {
+    const bookId = book.id;
+    await tx.lock('catalog_books', [bookId]);
+    const catalog = await tx.c.catalog_books.findOne({ _id: bookId });
+    if (catalog?.currentRevisionId !== book.revisionId ||
+      (catalog.status !== 'Confirmed' && !(catalog.status === 'Pending' && catalog.requesterId === ownerId))) return 'Unavailable';
+    const lookups = tx.c.price_lookups;
     const current = await lookups.findOne({ _id: bookId });
-    if (current) {
-      if (current.status === 'Running' && current.leaseUntil > now) return null;
+    if (current && this.sameRevision(current, book)) {
+      if (current.status === 'Running' && current.leaseUntil > now) return 'Running';
       // A previous provider's empty/failed lookup should not mask a new primary.
       const switched = current.status !== 'Running' && current.offersFound === 0 &&
         current.model !== null && current.model !== this.finder!.lookupKey;
-      if (current.nextAt > now && !switched) return null;
+      if (current.nextAt > now && !switched) return current.status === 'Failed' ? 'Unavailable' : 'Done';
     }
-    if (!(await this.withinLimits(now))) return null;
+    const day = now.toISOString().slice(0, 10);
+    const globalKey = `lookup:${day}`;
+    const pendingKey = `lookup-user:${ownerId}:${day}`;
+    const usage = tx.c.price_assist_usage;
+    const daily = await usage.findOne({ _id: globalKey });
+    const global = await usage.findOne({ _id: `global:${day}` });
+    const limit = Number(this.config.get('PRICE_LOOKUP_DAILY_LIMIT') ?? 50);
+    const budget = Number(this.config.get('PRICE_ASSIST_DAILY_BUDGET_USD') ?? 2) * 1e6;
+    if ((daily?.calls ?? 0) >= limit || (global?.costMicroUsd ?? 0) >= budget) return 'Unavailable';
+    const pending = catalog.status === 'Pending';
+    if (pending) {
+      const memberUsage = await usage.findOne({ _id: pendingKey });
+      const userLimit = Number(this.config.get('PRICE_ASSIST_USER_DAILY_LIMIT') ?? 20);
+      if ((memberUsage?.calls ?? 0) >= userLimit) return 'Unavailable';
+    }
     const runId = randomUUID();
     const leaseUntil = new Date(now.getTime() + LEASE_MS);
     const running = {
       status: 'Running' as const,
+      catalogRevisionId: book.revisionId,
       runId,
       leaseUntil,
       nextAt: leaseUntil,
@@ -103,49 +147,26 @@ export class PriceLookupService {
       failure: null,
       updatedAt: now,
     };
-    if (!current) {
-      try {
-        await lookups.insertOne({
-          _id: bookId,
-          ...running,
-          offersFound: 0,
-          model: null,
-          inputTokens: 0,
-          outputTokens: 0,
-          searches: 0,
-          costMicroUsd: 0,
-          createdAt: now,
-        });
-      } catch (e) {
-        if ((e as { code?: number }).code === 11000) return null;
-        throw e;
-      }
-    } else {
-      // Conditional on what was read: two callers cannot both take the lease.
-      const taken = await lookups.updateOne(
-        { _id: bookId, runId: current.runId, updatedAt: current.updatedAt },
-        { $set: running },
-      );
-      if (!taken.modifiedCount) return null;
+    const expiresAt = new Date(Date.parse(day) + 2 * DAY_MS);
+    for (const key of pending ? [globalKey, pendingKey] : [globalKey]) {
+      await usage.updateOne({ _id: key }, { $inc: { calls: 1 }, $setOnInsert: { costMicroUsd: 0, expiresAt } }, { upsert: true });
     }
-    const day = now.toISOString().slice(0, 10);
-    await this.mongo.c.price_assist_usage.updateOne(
-      { _id: `lookup:${day}` },
-      { $inc: { calls: 1 }, $setOnInsert: { costMicroUsd: 0, expiresAt: new Date(Date.parse(day) + 2 * DAY_MS) } },
-      { upsert: true },
-    );
-    return runId;
-  }
-
-  private async withinLimits(now: Date) {
-    const day = now.toISOString().slice(0, 10);
-    const [lookups, global] = await Promise.all([
-      this.mongo.c.price_assist_usage.findOne({ _id: `lookup:${day}` }),
-      this.mongo.c.price_assist_usage.findOne({ _id: `global:${day}` }),
-    ]);
-    const limit = Number(this.config.get('PRICE_LOOKUP_DAILY_LIMIT') ?? 50);
-    const budget = Number(this.config.get('PRICE_ASSIST_DAILY_BUDGET_USD') ?? 2) * 1e6;
-    return (lookups?.calls ?? 0) < limit && (global?.costMicroUsd ?? 0) < budget;
+    if (!current) {
+      await lookups.insertOne({
+        _id: bookId,
+        ...running,
+        offersFound: 0,
+        model: null,
+        inputTokens: 0,
+        outputTokens: 0,
+        searches: 0,
+        costMicroUsd: 0,
+        createdAt: now,
+      });
+    } else {
+      await lookups.updateOne({ _id: bookId }, { $set: running });
+    }
+    return { runId };
   }
 
   // Exposed for tests; production calls it through ensure().
@@ -167,6 +188,7 @@ export class PriceLookupService {
     const identity: FinderBook = {
       title: book.title, authors: book.authors, publisher: book.publisher,
       publicationYear: book.publicationYear, isbn: book.isbn,
+      ...(book.edition ? { edition: book.edition } : {}),
     };
     const addUsage = (provider: PriceFinder, result: Omit<FinderResult, 'urls'>) => {
       const searchUsd = provider.provider === 'openai'
@@ -237,8 +259,8 @@ export class PriceLookupService {
       this.logger.warn(JSON.stringify({ bookId: book.id, step: 'search', failure, model }));
     }
     if (!failure && !offers.length && hadAccessFailure) failure = 'PageUnavailable';
-    await this.finish(book.id, runId, started, offers, usage, failure, model).catch((e) =>
-      this.logger.warn(JSON.stringify({ bookId: book.id, step: 'store', detail: String(e).slice(0, 200) })),
+    await this.finish(book, runId, started, offers, usage, failure, model).catch((e) =>
+      this.logger.warn(JSON.stringify({ bookId: book.id, step: 'store', code: (e as { code?: number }).code })),
     );
   }
 
@@ -247,7 +269,7 @@ export class PriceLookupService {
   ): Promise<CheckedOffer> {
     try {
       const page = await this.pages.fetch(url, this.shops, skipHost);
-      const check = checkPage(page.html, book);
+      const check = checkPage(page.html, { ...book, strictIdentity: !book.confirmed });
       const finalUrl = new URL(page.url);
       const shop = finalUrl.hostname.replace(/^www\./, '');
       if (!check.ok) {
@@ -257,7 +279,7 @@ export class PriceLookupService {
       return {
         host: finalUrl.hostname,
         offer: {
-          _id: randomUUID(), bookId: book.id, runId, shop,
+          _id: randomUUID(), bookId: book.id, catalogRevisionId: book.revisionId, runId, shop,
           url: shopPageUrl(finalUrl).slice(0, 500), amount: check.amount, isbnMatched: check.isbnMatched,
           pageTitle: check.pageTitle?.slice(0, 300) ?? null,
           observedAt: started, retiredAt: null, createdAt: started,
@@ -271,7 +293,7 @@ export class PriceLookupService {
   }
 
   private async finish(
-    bookId: string,
+    book: LookupBook,
     runId: string,
     started: Date,
     offers: OnlinePriceOfferDoc[],
@@ -286,12 +308,21 @@ export class PriceLookupService {
     );
     const day = started.toISOString().slice(0, 10);
     await this.mongo.tx(async (tx) => {
-      // A run whose lease was taken over by a newer run stores nothing.
+      const bookId = book.id;
+      const expiresAt = new Date(Date.parse(day) + 2 * DAY_MS);
+      for (const key of [`lookup:${day}`, `global:${day}`]) {
+        await tx.c.price_assist_usage.updateOne(
+          { _id: key },
+          { $inc: { costMicroUsd: usage.costMicroUsd }, $setOnInsert: { calls: 0, expiresAt } },
+          { upsert: true },
+        );
+      }
+      // A superseded run still incurs costs, but cannot store sources.
       const current = await tx.c.price_lookups.findOne({ _id: bookId });
       if (current?.runId !== runId) return;
       if (offers.length) {
         await tx.c.online_price_offers.updateMany(
-          { bookId, retiredAt: null },
+          activeOnlineOffers(bookId, book.revisionId, book.confirmed),
           { $set: { retiredAt: now } },
         );
         await tx.c.online_price_offers.insertMany(offers);
@@ -312,13 +343,6 @@ export class PriceLookupService {
           $inc: usage,
         },
       );
-      const expiresAt = new Date(Date.parse(day) + 2 * DAY_MS);
-      for (const key of [`global:${day}`, `lookup:${day}`])
-        await tx.c.price_assist_usage.updateOne(
-          { _id: key },
-          { $inc: { costMicroUsd: usage.costMicroUsd }, $setOnInsert: { calls: 0, expiresAt } },
-          { upsert: true },
-        );
     });
   }
 

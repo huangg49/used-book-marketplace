@@ -19,7 +19,7 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    đề xuất `fahasa.com, tiki.vn, nhanam.vn, nxbtre.com.vn, nxbkimdong.com.vn`). Không lấy
    giá rao sách cũ (Shopee, Chợ Tốt): nhiễu và dễ bị đẩy giá.
 2. OpenAI Web Search hoặc Gemini Google Search **chỉ đề xuất URL** trang sản phẩm. Chỉ gửi dữ kiện catalog
-   (tên, tác giả, NXB, năm, ISBN); không gửi gì về người bán hay bài đăng.
+   (tên, tác giả, NXB, năm, tập/ấn bản, ISBN); không gửi gì về người bán hay bài đăng.
    OpenAI tìm bằng tiếng Việt và thử cách viết ISBN phù hợp. Nếu tên NXB khớp duy nhất
    một domain đã cho phép, tìm domain đó trước. Mở rộng một lần sang các nhà sách còn
    lại khi chưa có nguồn xác minh được và còn thời gian tra. Nếu không nhận diện được
@@ -38,7 +38,10 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    ISBN trong thân trang, chỉ dùng khi có duy nhất một ISBN và một sản phẩm có giá.
    Trang không có ISBN thì phải khớp tên sách và có tên tác giả. Bỏ AggregateOffer,
    tiền khác VND, giá ngoài 1.000–10.000.000 đ. Nội dung trang
-   không bao giờ gửi cho model.
+   không bao giờ gửi cho model. Với đầu sách đang chờ duyệt, ISBN đã khai phải được
+   xác minh trên trang. Nếu không khai ISBN, cần khớp tên của sản phẩm có giá và
+   tác giả ghi trên trang. Tập/ấn bản đã khai phải khớp, kể cả khi khác cách ghi
+   số La Mã và số Ả Rập.
 5. Giá đạt kiểm tra lưu ở `online_price_offers` (app được ghi, tách khỏi
    `price_references` chỉ nhân viên ghi) kèm shop, URL, ngày; trả về như nguồn
    `OnlineRetail` có link “Mở trang”. Lần tra mới thay (retire) bộ giá cũ.
@@ -46,13 +49,23 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    kiện), chạy sau request; làm mới sau 30 ngày, 7 ngày nếu không tìm thấy nguồn,
    24 giờ nếu provider lỗi hoặc còn URL chưa xác minh được vì lỗi truy cập.
    Nếu đã có nguồn giá xác minh được, giữ thời hạn lưu thông thường.
-   Chỉ sách catalog đã xác nhận. Tính vào hạn mức tra mỗi ngày và ngân sách chung
+   Từ 10/11/2026, đầu sách đã xác nhận hoặc yêu cầu chờ duyệt của chính người bán
+   được tra giá khi đủ dữ kiện nhận diện và có ảnh bản sách Ready. Tra giá không
+   xác nhận hay công khai đầu sách. Lượt tra và nguồn mới gắn với revision của
+   catalog theo migration `0076-online-price-catalog-revision`. Khi sửa và gửi lại,
+   lượt tra/nguồn của revision trước không áp dụng cho bản mới. Dữ liệu lịch sử
+   chưa có revision chỉ dùng cho đầu sách đã xác nhận.
+   Tính vào hạn mức tra mỗi ngày và ngân sách chung
    (token + phí tìm kiếm theo từng provider, ước tính theo usage provider trả về).
    Khi đổi model chính hoặc phiên bản cách tìm, lần tra cũ thiếu nguồn hoặc bị lỗi
-   được phép tra lại. Nguồn đã xác minh giữ thời hạn lưu.
+   được phép tra lại. Nguồn đã xác minh giữ thời hạn lưu. Lượt tra của đầu sách
+   chờ duyệt còn có hạn mức riêng theo thành viên, dùng ngưỡng
+   `PRICE_ASSIST_USER_DAILY_LIMIT`.
 7. Khi đang tra và chưa có nguồn khác: `NeedsMoreData` với `R-LOOKUP-PENDING`.
-   Khi đầu sách chờ duyệt và chưa có nguồn giá dùng được, trả `NeedsMoreData` cùng
-   `R-NEED-CATALOG-APPROVAL`. Lần yêu cầu mới sau khi duyệt dùng trạng thái danh mục mới.
+   `R-NEED-BOOK-IDENTITY` hướng dẫn bổ sung dữ kiện. `R-LOOKUP-UNAVAILABLE` phân biệt
+   lỗi hoặc hết lượt tra với trường hợp đã tra nhưng chưa có nguồn phù hợp. Người
+   bán nhận `R-LOOKUP-DISABLED` khi tra giá đang tắt hoặc chưa có provider. Người
+   bán vẫn có thể nhập giá. Gợi ý dựa trên đầu sách chờ duyệt luôn có mức `Limited`.
    `OnlineRetail` là giá sách mới cho băng tình trạng của ADR 0028; giá bìa nhân viên nhập
    được ưu tiên khi có cả hai; quá 3 tháng thì coi là cũ.
 8. Tắt mặc định (`PRICE_LOOKUP_ENABLED=false`). `PRICE_LOOKUP_PROVIDERS=openai,gemini`

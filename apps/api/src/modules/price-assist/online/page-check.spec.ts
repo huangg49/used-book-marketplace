@@ -73,6 +73,17 @@ describe('online price page check', () => {
     const page = ld([product({ isbn: undefined }), product({ offers: { price: 45_000 } })]);
     expect(checkPage(page, book)).toMatchObject({ ok: true, isbnMatched: true, amount: 45_000 });
   });
+
+  it('verifies the actual product title and volume for a pending book without an ISBN', () => {
+    const pending = { ...book, isbn: null, edition: 'Tập II', strictIdentity: true };
+    const page = (name: string) => ld(product({ name, isbn: undefined })).replace('Tô Hoài', '<p>Tác giả: Tô Hoài</p>');
+    expect(checkPage(page(`${book.title} (Tập 2)`), pending)).toMatchObject({ ok: true, isbnMatched: false });
+    expect(checkPage(page(`${book.title} (Tập 20)`), pending)).toEqual({ ok: false, reason: 'OtherTitle' });
+    expect(checkPage(page(book.title) + `<p>${book.title} (Tập II)</p>`, pending))
+      .toEqual({ ok: false, reason: 'OtherTitle' });
+    expect(checkPage(page(`${book.title} (Tập 2)`).replace('Tô Hoài', 'Nguyễn Tô Hoài Nam'), pending))
+      .toEqual({ ok: false, reason: 'OtherTitle' });
+  });
 });
 
 describe('safe page fetch', () => {

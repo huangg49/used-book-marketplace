@@ -58,8 +58,6 @@ export function PriceAssistPanel({
         : undefined;
   const value = ready?.suggestion;
   const current = value && !loading && !stale;
-  const awaitingCatalog = !stale && value?.status === "NeedsMoreData" &&
-    value.rules?.includes("R-NEED-CATALOG-APPROVAL");
   const currentRuleReference = currentReference(reference ?? null, currentKey);
   const duplicateReference = current && value.status !== "Suggested" &&
     currentRuleReference?.status === value.status;
@@ -77,25 +75,20 @@ export function PriceAssistPanel({
   const sourceLabels = new Map(value?.sources.map((source) => [source.ref, source.label]));
   const suggestedRange = value?.status === "Suggested" ? value.range : null;
   const lookupPending = !stale && value?.rules?.includes("R-LOOKUP-PENDING");
-  const requiresCatalog = needsCatalog && !current && !awaitingCatalog;
-  const emptyTitle = awaitingCatalog
-    ? "Đầu sách đang chờ duyệt"
-    : lookupPending
-      ? "Đang tìm nguồn giá"
-      : value?.status === "Refused"
-        ? "Chưa thể gợi ý giá cho tình trạng này"
-        : value?.rules?.includes("R-NEED-SOURCES")
-          ? "Chưa có nguồn giá phù hợp"
-          : "Cần bổ sung thông tin";
+  const emptyTitle = value?.status === "Refused" ? "Chưa thể gợi ý giá cho tình trạng này"
+    : lookupPending ? "Đang tìm nguồn giá"
+    : value?.rules?.some((rule) => rule === "R-LOOKUP-UNAVAILABLE" || rule === "R-LOOKUP-DISABLED")
+      ? "Tạm thời chưa tra được giá"
+    : value?.rules?.includes("R-NEED-BOOK-IDENTITY") ? "Cần thêm thông tin để tìm đúng sách"
+    : value?.rules?.includes("R-NEED-SOURCES") ? "Chưa có nguồn giá đã xác minh"
+    : "Cần bổ sung thông tin";
   const buttonLabel = loading
     ? "Đang lấy gợi ý…"
     : lookupPending
-      ? "Kiểm tra lại nguồn giá"
-      : requiresCatalog
-        ? "Lưu đầu sách và kiểm tra giá"
-        : state.status === "idle"
-          ? "Xem gợi ý giá bán"
-          : "Xem lại gợi ý giá";
+      ? "Xem kết quả tra giá"
+      : state.status === "idle"
+        ? "Xem gợi ý giá bán"
+        : "Kiểm tra lại nguồn giá";
   const announcement = loading
     ? phases[phase]
     : value && !stale
@@ -111,30 +104,24 @@ export function PriceAssistPanel({
           </div>
           {!hasPhoto ? (
             <p className={styles.note}>Thêm ít nhất một ảnh bản sách ở bước Ảnh bản sách.</p>
-          ) : !loading && (state.status === "idle" || requiresCatalog) ? (
+          ) : state.status === "idle" ? (
             <p className={styles.note}>
-              {requiresCatalog
-                ? "Bạn có thể tự đặt giá ngay. Yêu cầu gợi ý sẽ lưu đầu sách mới để chờ duyệt."
+              {needsCatalog
+                ? "Hệ thống sẽ lưu thông tin sách và tra giá ngay, không cần chờ duyệt."
                 : "Tham khảo nguồn giá để tự chọn mức bán."}
             </p>
           ) : null}
         </div>
-        {awaitingCatalog && !loading ? (
-          <button className={styles.primary} type="button" disabled={disabled} onClick={onEnterPrice}>
-            Nhập giá bán
-          </button>
-        ) : (
-          <button
-            className={styles.primary}
-            type="button"
-            disabled={disabled || loading || !hasPhoto}
-            onClick={onAsk}
-            aria-busy={loading}
-          >
-            {loading && <LoaderCircle size={15} className={styles.spinner} aria-hidden="true" />}
-            {buttonLabel}
-          </button>
-        )}
+        <button
+          className={styles.primary}
+          type="button"
+          disabled={disabled || loading || !hasPhoto}
+          onClick={onAsk}
+          aria-busy={loading}
+        >
+          {loading && <LoaderCircle size={15} className={styles.spinner} aria-hidden="true" />}
+          {buttonLabel}
+        </button>
       </header>
       <p role="status" className={loading ? styles.status : "sr-only"}>
         {announcement}
@@ -207,12 +194,9 @@ export function PriceAssistPanel({
         <div className={styles.status}>
           <p className={styles.statusTitle}>{emptyTitle}</p>
           {value.missing.map((text) => <p key={text}>{text}</p>)}
-          <p>{awaitingCatalog ? "Nhập giá bán để tiếp tục đăng." : "Bạn vẫn có thể tự nhập giá bán."}</p>
-          {awaitingCatalog && (
-            <button type="button" className={styles.quietAction} disabled={disabled || !hasPhoto} onClick={onAsk}>
-              Kiểm tra lại sau khi duyệt
-            </button>
-          )}
+          <button type="button" className={styles.quietAction} disabled={disabled} onClick={onEnterPrice}>
+            Nhập giá bán
+          </button>
         </div>
       ) : null}
       {!duplicateReference && (

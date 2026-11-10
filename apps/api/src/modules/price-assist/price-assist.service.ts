@@ -27,7 +27,7 @@ import {
   type PriceInput,
   type RawSource,
 } from './evidence.js';
-import { PriceLookupService } from './online/price-lookup.service.js';
+import { activeOnlineOffers, PriceLookupService, type LookupBook } from './online/price-lookup.service.js';
 import { checkOutput, InvalidModelOutput } from './output-check.js';
 import { buildUserPrompt, SYSTEM_PROMPT } from './prompt.js';
 import {
@@ -149,6 +149,7 @@ export class PriceAssistService {
         raw = await this.sources(tx, book, actor._id);
       const now = await tx.now();
       const facts = {
+        catalogRevisionId: book.revisionId,
         hasPhoto:
           (await tx.c.listing_media.countDocuments(
             { listingId, status: 'Ready', purgedAt: null },
@@ -242,19 +243,15 @@ export class PriceAssistService {
         const now = await tx.now();
         // A copy with no uploaded photo is not priced: the condition would be
         // the seller's word only (submission also needs 1-8 Ready photos).
-        // Confirmed books get a background online price lookup when due; while
-        // it runs, "no data" reads as "still searching" (ADR 0029).
-        const lookup =
-          this.lookups && book.confirmed
-            ? await this.lookups.ensure(book, now)
-            : { running: false };
+        const hasPhoto = (await tx.c.listing_media.countDocuments(
+          { listingId, status: 'Ready', purgedAt: null }, { limit: 1 },
+        )) > 0;
         const listingFacts = {
-          hasPhoto:
-            (await tx.c.listing_media.countDocuments(
-              { listingId, status: 'Ready', purgedAt: null },
-              { limit: 1 },
-            )) > 0,
-          lookupPending: lookup.running,
+          hasPhoto,
+          catalogRevisionId: book.revisionId,
+          lookup: hasPhoto && input.readable !== false && input.missingEssentialContent !== true
+            ? await this.lookups?.ensure(book, now, actor._id)
+            : undefined,
         };
         const evidence = evaluate(input, book, raw, now, listingFacts);
         const fp = fingerprint(input, raw, listingFacts, book.confirmed);
@@ -282,6 +279,7 @@ export class PriceAssistService {
           requestHash,
           input: {
             bookId: input.bookId,
+            catalogRevisionId: book.revisionId,
             condition: input.condition,
             readable: input.readable,
             hasMissingPages: input.hasMissingPages,
@@ -470,7 +468,7 @@ export class PriceAssistService {
     tx: Tx,
     bookId: string,
     ownerId: string,
-  ): Promise<BookFacts> {
+  ): Promise<BookFacts & LookupBook> {
     const book = await tx.c.catalog_books.findOne({ _id: bookId });
     if (
       !book ||
@@ -489,6 +487,7 @@ export class PriceAssistService {
     if (!r) throw notFound();
     return {
       id: bookId,
+      revisionId: r._id,
       title: r.title,
       authors: r.authors,
       publisher: r.publisher,
@@ -501,7 +500,7 @@ export class PriceAssistService {
     };
   }
 
-  private async sources(tx: Tx, book: BookFacts, ownerId: string) {
+  private async sources(tx: Tx, book: BookFacts & { revisionId: string }, ownerId: string) {
     const refs = await tx.c.price_references
       .find({ bookId: book.id, retiredAt: null })
       .sort({ observedAt: -1 })
@@ -520,7 +519,7 @@ export class PriceAssistService {
     }));
     // New-book prices read from allowed shop pages by the online lookup.
     const offers = await tx.c.online_price_offers
-      .find({ bookId: book.id, retiredAt: null })
+      .find(activeOnlineOffers(book.id, book.revisionId, book.confirmed))
       .sort({ observedAt: -1 })
       .limit(10)
       .toArray();
@@ -586,11 +585,15 @@ export class PriceAssistService {
     await tx.lock('price_suggestions', [id]);
     const s = await tx.c.price_suggestions.findOne({ _id: id });
     const now = await tx.now();
+    const catalogRevision = saved.bookId && s?.input?.catalogRevisionId
+      ? await tx.c.catalog_books.findOne({ _id: saved.bookId })
+      : null;
     // The suggestion must still be valid and made for what is being saved;
     // otherwise its range says nothing about this price.
     const matches =
       !!s?.input &&
       s.input.bookId === saved.bookId &&
+      (!s.input.catalogRevisionId || s.input.catalogRevisionId === catalogRevision?.currentRevisionId) &&
       s.input.condition === saved.condition &&
       s.input.readable === saved.readable &&
       s.input.hasMissingPages === saved.hasMissingPages &&

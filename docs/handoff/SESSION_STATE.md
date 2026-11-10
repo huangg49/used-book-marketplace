@@ -1,3 +1,24 @@
+# Tra giá cho đầu sách chờ duyệt — 10/11/2026
+
+Nhánh `codex/price-lookup-pending`, base `f9fc82af`, commit subject
+`feat(price-assist): look up verified prices before catalog approval`.
+Member web ở bước 4 tra giá từ đầu sách đã xác nhận hoặc yêu cầu chờ duyệt của
+chính người bán. Khi chưa có kết quả, người bán có thể xem lại hoặc nhập giá.
+Giá từ nhà sách được xác minh theo ISBN hoặc tên sản phẩm, tác giả và tập/ấn bản
+đã khai. Gợi ý cho sách chờ duyệt ở mức tham khảo `Limited`. Lượt tra, nguồn và
+gợi ý theo revision. Sửa ấn bản không dùng lại giá cũ. Xem [ADR0029](../adr/0029-online-price-lookup.md).
+
+Kiểm contract/routes, API và web typecheck/lint, web build, 90 unit giá, 481 unit
+web, 28 ca schema trên Mongo QA. Hai bộ HTTP giá và tự duyệt dùng provider/trang
+giả lập trên Mongo QA. Chromium 390/1440 px kiểm đang tra, chưa có nguồn, nhập tay
+và hết hạn. Live adapter OpenAI tìm hai lượt cho *One Piece Strong Words – Tập II*,
+không có URL để xác minh. Với *Dế Mèn phiêu lưu ký* ISBN `9786042030540`, xác minh
+một giá nhà sách 40.000 đ. Chưa nghiệm thu toàn hành trình với provider thật hoặc native.
+
+Đã áp migration `0076-online-price-catalog-revision` trên Mongo demo local và bật
+OpenAI qua cấu hình riêng của API demo. API cổng 3000 và Member web cổng 5174
+phản hồi sau khi khởi động lại API. Tiếp theo thử bước 4 trên trang Đăng sách.
+
 # Thiết kế lại bước 4 Đăng sách — 10/11/2026
 
 Nhánh `codex/sell-step-four-layout` từ `359e84fa`. Bước 4 tách lựa chọn hình thức,

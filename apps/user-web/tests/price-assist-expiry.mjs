@@ -30,8 +30,8 @@ function App(){const [price,setPrice]=useState(new URLSearchParams(location.sear
  const [applied,setApplied]=useState(0),[requests,setRequests]=useState(0);
  const params=new URLSearchParams(location.search),pending=params.has('catalog-pending'),looking=params.has('lookup-pending');
  const answer=pending||looking?{...value,status:'NeedsMoreData',range:null,evidenceLevel:'Insufficient',model:null,
-  rules:pending?['R-NEED-SOURCES','R-NEED-CATALOG-APPROVAL']:['R-LOOKUP-PENDING'],
-  missing:[pending?'Có thể tra giá trực tuyến sau khi đầu sách được duyệt.':'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.']}:value;
+  rules:pending?['R-NEED-SOURCES']:['R-LOOKUP-PENDING'],
+  missing:pending?[]:['Hệ thống đang đối chiếu giá trên các trang nhà sách.']}:value;
  return <main style={{maxWidth:720,margin:'auto',padding:16}}>
  <label>Giá đang nhập<input id="qa-sale-price" value={price} onChange={e=>setPrice(e.target.value)}/></label>
  <output aria-label="Số lượt áp dụng">{applied}</output>
@@ -74,19 +74,16 @@ try {
     await page.goto(origin+'/.tmp/price-assist-expiry/index.html'+(mode.startsWith('confirm')?'?confirm=1':mode.endsWith('-pending')?`?${mode}=1`:''));
     if(mode.endsWith('-pending')){
       const pending=mode==='catalog-pending';
-      const heading=pending?'Đầu sách đang chờ duyệt':'Đang tìm nguồn giá';
+      const heading=pending?'Chưa có nguồn giá đã xác minh':'Đang tìm nguồn giá';
       await expect(page.getByRole('region',{name:'Gợi ý giá bán',exact:true}).getByRole('status')).toHaveText(heading);
       await expect(page.getByText(heading,{exact:true}).and(page.locator('p:not(.sr-only)'))).toBeVisible();
-      await expect(page.getByText(pending?'Có thể tra giá trực tuyến sau khi đầu sách được duyệt.':'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.',{exact:true})).toHaveCount(1);
+      if(!pending) await expect(page.getByText('Hệ thống đang đối chiếu giá trên các trang nhà sách.',{exact:true})).toHaveCount(1);
       await expect(page.getByText('Khoảng tham chiếu theo quy tắc',{exact:true})).toHaveCount(0);
-      if(pending){
-        await expect(page.getByText('Nhập giá bán để tiếp tục đăng.',{exact:true})).toBeVisible();
-        await page.getByRole('button',{name:'Nhập giá bán',exact:true}).click();
-        await expect(page.getByLabel('Giá đang nhập',{exact:true})).toBeFocused();
-        await expect(page.getByLabel('Số lượt yêu cầu',{exact:true})).toHaveText('0');
-        await page.getByRole('button',{name:'Kiểm tra lại sau khi duyệt',exact:true}).click();
-        await expect(page.getByLabel('Số lượt yêu cầu',{exact:true})).toHaveText('1');
-      }else await expect(page.getByRole('button',{name:'Kiểm tra lại nguồn giá',exact:true})).toBeEnabled();
+      await page.getByRole('button',{name:'Nhập giá bán',exact:true}).click();
+      await expect(page.getByLabel('Giá đang nhập',{exact:true})).toBeFocused();
+      await expect(page.getByLabel('Số lượt yêu cầu',{exact:true})).toHaveText('0');
+      await page.getByRole('button',{name:pending?'Kiểm tra lại nguồn giá':'Xem kết quả tra giá',exact:true}).click();
+      await expect(page.getByLabel('Số lượt yêu cầu',{exact:true})).toHaveText('1');
       await page.getByRole('region',{name:'Gợi ý giá bán',exact:true}).screenshot({path:path.join(out,`${mode}-${width}.png`),animations:'disabled'});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       assert.deepEqual(errors,[]);checks.push({width,mode});await context.close();continue;

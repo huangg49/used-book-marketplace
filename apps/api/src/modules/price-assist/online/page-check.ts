@@ -10,6 +10,8 @@ export interface BookIdentity {
   title: string;
   authors: string[];
   isbn: string | null;
+  edition?: string | null;
+  strictIdentity?: boolean;
 }
 export type PageCheck =
   | { ok: true; amount: number; isbnMatched: boolean; pageTitle: string | null }
@@ -35,12 +37,31 @@ export const normalize = (text: string) =>
 const digits = (value: unknown) => String(value ?? '').replace(/[^0-9Xx]/g, '').toUpperCase();
 const isbnKey = (value: string) => isbn13(value) ?? digits(value);
 
+const romanValue: Record<string, number> = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 };
+const editionTitle = (title: string) => normalize(title).replace(
+  /\b(tap|quyen|phan|volume|vol) ((?=[ivxlcdm]+\b)m{0,3}(?:cm|cd|d?c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3}))\b/g,
+  (_, label: string, roman: string) => {
+    const values = [...roman].map((char) => romanValue[char]!);
+    const number = values.reduce((sum, value, index) => sum + (value < (values[index + 1] ?? 0) ? -value : value), 0);
+    return `${label} ${number}`;
+  },
+);
+
+function matchesEdition(name: string, book: BookIdentity) {
+  const title = editionTitle(book.title);
+  const edition = editionTitle(book.edition ?? '');
+  const expected = edition && title !== edition && !title.endsWith(` ${edition}`)
+    ? `${title} ${edition}` : title;
+  return !!expected && editionTitle(name) === expected;
+}
+
 interface Offer {
   price: number | null;
   currency: string | null;
 }
 interface Product {
   name: string | null;
+  authors: string[];
   isbns: string[];
   offers: Offer[];
 }
@@ -83,6 +104,11 @@ function productsFromJsonLd(html: string): Product[] {
       });
       found.push({
         name: typeof o.name === 'string' ? o.name : null,
+        authors: asArray(o.author).flatMap((author) => {
+          if (typeof author === 'string') return [author];
+          const name = (author as { name?: unknown } | null)?.name;
+          return typeof name === 'string' ? [name] : [];
+        }),
         isbns: [o.isbn, o.gtin13, o.gtin, o.productID, o.sku]
           .map(digits)
           .filter((d) => d.length === 10 || d.length === 13),
@@ -118,6 +144,7 @@ function productFromMeta(html: string): Product | null {
   const title = meta(html, /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
   return {
     name: title,
+    authors: [],
     isbns: [],
     offers: [{ price: toPrice(price), currency: currency ? currency.toUpperCase() : null }],
   };
@@ -153,6 +180,10 @@ export function checkPage(html: string, book: BookIdentity): PageCheck {
   const plain = pageText(html);
   const text = normalize(plain);
   const printed = wantIsbn ? visibleIsbns(plain) : new Set<string>();
+  const printedAuthors = book.strictIdentity && !wantIsbn
+    ? [...plain.matchAll(/(?:tác\s+giả|author)[ \t]*[:：]?[ \t]*(?:\r?\n[ \t]*)?([^\r\n]+)/gi)]
+      .flatMap(([, names]) => names.split(/[;,]/).map(normalize))
+    : [];
   const hasStructuredIsbn = priced.some((p) => p.isbns.length > 0);
   const titleOk = (name: string | null) => {
     const want = normalize(book.title);
@@ -179,6 +210,12 @@ export function checkPage(html: string, book: BookIdentity): PageCheck {
         continue;
       }
       isbnMatched = true;
+    } else if (wantIsbn && book.strictIdentity) {
+      rejection = 'OtherIsbn';
+      continue;
+    } else if (book.strictIdentity) {
+      const authors = [...p.authors.map(normalize), ...(priced.length === 1 ? printedAuthors : [])];
+      if (!matchesEdition(p.name ?? '', book) || !book.authors.some((author) => authors.includes(normalize(author)))) continue;
     } else if (!(titleOk(p.name) && authorOk)) {
       continue;
     }

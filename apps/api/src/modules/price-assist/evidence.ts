@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import type { LookupState } from './online/price-lookup.service.js';
 import { canonicalJson } from '../../common/canonical-json.js';
 import type { Wire } from '../commands/domain-error.js';
 import { originGroups, sourceAliases } from './source-origin.js';
@@ -102,8 +103,8 @@ const roundTo = (value: number, step = 1000) => Math.round(value / step) * step;
 // What the rules need to know about the listing besides the request body.
 export interface ListingFacts {
   hasPhoto: boolean;
-  // An online lookup for this book is running (ADR 0029).
-  lookupPending?: boolean;
+  lookup?: LookupState;
+  catalogRevisionId?: string;
 }
 
 export function evaluate(
@@ -234,21 +235,28 @@ export function evaluate(
     missing.push('Cho biết sách có thiếu nội dung trọng yếu hay không.');
   }
   if (!used.length) {
-    rules.push(listing.lookupPending ? 'R-LOOKUP-PENDING' : 'R-NEED-SOURCES');
-    if (!book.confirmed) {
-      rules.push('R-NEED-CATALOG-APPROVAL');
-      missing.push('Có thể tra giá trực tuyến sau khi đầu sách được duyệt.');
+    if (listing.lookup === 'Running') {
+      rules.push('R-LOOKUP-PENDING');
+      missing.push('Hệ thống đang đối chiếu giá trên các trang nhà sách.');
+    } else if (listing.lookup === 'NeedIdentity') {
+      rules.push('R-NEED-BOOK-IDENTITY');
+      missing.push('Bổ sung ISBN hoặc tên sách và tác giả ở bước Đầu sách.');
     } else {
-      missing.push(
-        listing.lookupPending
-          ? 'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.'
-          : sources.some((s) => s.excluded === 'AskingPrice')
-            ? 'Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.'
-            : 'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
-      );
+      rules.push('R-NEED-SOURCES');
+      if (listing.lookup === 'Unavailable') {
+        rules.push('R-LOOKUP-UNAVAILABLE');
+        missing.push('Thử lại sau nếu bạn vẫn muốn xem giá tham khảo.');
+      } else if (listing.lookup === 'Disabled') {
+        rules.push('R-LOOKUP-DISABLED');
+        missing.push('Tra giá trực tuyến chưa được cấu hình hoặc đang tắt.');
+      } else if (sources.some((s) => s.excluded === 'AskingPrice')) {
+        missing.push('Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.');
+      } else if (listing.lookup !== 'Done') {
+        missing.push('Chưa có dữ liệu giá có nguồn cho đầu sách này.');
+      }
     }
   }
-  if (missing.length) return answer('NeedsMoreData', 'Insufficient');
+  if (!used.length || missing.length) return answer('NeedsMoreData', 'Insufficient');
 
   // With a new-book price, the condition band sets the range. Without one,
   // the bounds come from the used-copy prices (editorial, completed sales).
