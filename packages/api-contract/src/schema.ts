@@ -2707,6 +2707,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/auctions/{auctionId}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN independent of the seller, bidders and registrants opens an Active auction that has not opened yet (phase Scheduled) right now, with a reason. A registration auction must already have its minimum registrants. startAt, the open time and the start of bidding become server time; the planned length is kept (end = now + length). The seller and registrants receive an AuctionBiddingStarted notification quoting the reason. Holds and deposits are kept. */
+        post: operations["startAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions": {
         parameters: {
             query?: never;
@@ -7203,6 +7220,11 @@ export interface components {
         ResumeAuction: {
             expectedVersion: number;
             /** @description ADR 0083. Recorded in the audit log and quoted (shortened to fit) in the notification members receive. */
+            reason: string;
+        };
+        StartAuction: {
+            expectedVersion: number;
+            /** @description Recorded in the audit log and quoted (shortened to fit) in the notification the seller and registrants receive. */
             reason: string;
         };
         PlaceAuctionBid: {
@@ -13773,6 +13795,46 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ResumeAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    startAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartAuction"];
             };
         };
         responses: {

@@ -85,6 +85,7 @@ import {
   holdFields,
   pauseBudgetLeft,
   resumeFields,
+  startNowFields,
 } from './auction-schedule.js';
 import { stepKey } from './system-key.js';
 
@@ -937,6 +938,47 @@ export class AuctionBiddingService {
           reason,
         );
         return this.change(next, now, 'AuctionResumed', actor._id, reason);
+      },
+    });
+  }
+
+  /**
+   * An independent Admin opens an Active auction that has not opened yet,
+   * now. A registration auction must already have its minimum registrants
+   * (it never opens below it). The planned length is kept; the seller and
+   * registrants are told, with the reason.
+   */
+  start(context: CommandContext, id: string, body: Wire['StartAuction']) {
+    return this.commands.runAuction(context, 'startAuction', id, body, {
+      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+      authorize: (tx, actor) => this.independentAdmin(tx, actor, id, 'mở'),
+      mutate: async (tx, actor) => {
+        await tx.lock('auctions', [id]);
+        const a = await this.auction(tx, id);
+        if (a.version !== body.expectedVersion) throw conflict();
+        const now = await this.clock.decision(tx, context.auth);
+        if (phaseOf(a, now) !== 'Scheduled')
+          throw invalidState('Chỉ mở được phiên đang chờ mở.');
+        const reason = body.reason.trim();
+        if (reason.length < 10)
+          invalidField('reason', 'Hãy ghi lý do mở phiên ít nhất 10 ký tự.');
+        const fields = startNowFields(a, now);
+        if (!fields)
+          throw invalidState(
+            `Phiên mới có ${a.registeredCount ?? 0}/${a.minBidders} người đăng ký nên chưa mở được.`,
+          );
+        if (!(await this.partiesEligible(tx, { ...a, leaderId: null })))
+          throw invalidState('Người bán chưa đủ điều kiện nên chưa mở được phiên.');
+        const next = await this.update(tx, a, fields, now);
+        await notifyAuction(
+          tx,
+          next,
+          'AuctionBiddingStarted',
+          [a.sellerId, ...(await this.registrantIds(tx, a))],
+          now,
+          reason,
+        );
+        return this.change(next, now, 'AuctionOpened', actor._id, reason);
       },
     });
   }

@@ -295,4 +295,25 @@ export class AuctionOperationsController {
       ),
     );
   }
+  // An independent Admin opens a scheduled auction now.
+  @Post('auctions/:auctionId/start')
+  @Roles('ADMIN')
+  @HttpCode(200)
+  start(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.start(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('StartAuction', body),
+        ),
+        res,
+      ),
+    );
+  }
 }

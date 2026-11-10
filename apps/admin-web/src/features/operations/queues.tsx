@@ -4,7 +4,7 @@ import type { CurrentUser } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
 import { canOperatePoint, canResolve, session } from "../../core/session";
 import { AssignmentNote } from "./assignment-note";
-import { AuctionCancel, AuctionHoldDecision } from "./auction-actions";
+import { AuctionCancel, AuctionHoldDecision, AuctionScheduledDecision } from "./auction-actions";
 import {
   collectionLabels,
   collectionQueue,
@@ -285,7 +285,7 @@ function AuctionQueueContent() {
     <OperationsQueue
       number="04"
       title="Phiên đang mở hoặc tạm giữ."
-      intro="Theo dõi các phiên còn có thể hủy. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục (cộng lại thời gian tạm dừng) hoặc hủy; mỗi phiên tạm dừng tối đa 72 giờ."
+      intro="Theo dõi các phiên còn có thể hủy. Phiên chờ mở đã đủ người đăng ký có thể mở ngay, kèm lý do. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục (cộng lại thời gian tạm dừng) hoặc hủy; mỗi phiên tạm dừng tối đa 72 giờ."
       order="Xếp theo giờ kết thúc, gần nhất trước."
       unit="phiên"
       result={result}
@@ -317,10 +317,15 @@ function AuctionQueueContent() {
                 label: "Xử lý phiên",
                 render: (context) => <AuctionHoldDecision item={item} {...context} />,
               }
-            : {
-                label: "Hủy phiên",
-                render: (context) => <AuctionCancel item={item} {...context} />,
-              },
+            : item.phase === "Scheduled"
+              ? {
+                  label: "Mở hoặc hủy phiên",
+                  render: (context) => <AuctionScheduledDecision item={item} {...context} />,
+                }
+              : {
+                  label: "Hủy phiên",
+                  render: (context) => <AuctionCancel item={item} {...context} />,
+                },
       }))}
       empty={{
         title: "Không có phiên nào cần theo dõi.",
