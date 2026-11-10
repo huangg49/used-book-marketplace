@@ -51,6 +51,12 @@ dùng dữ liệu giả lập. Bản xem trước local cổng 5175 trả 200 ch
 sách, health và tra danh mục. Chưa nghiệm thu với tài khoản hoặc AI thật.
 Bước 2 là phạm vi tiếp theo sau khi xem lại bước 1.
 
+Nhánh `codex/autofill-photo-guidance` từ `98a15704` gom gợi ý chụp thêm thành
+một cụm nền giấy đậm hơn, ở đầu phần mở rộng các mục chưa đọc. Dòng hướng dẫn
+đi cạnh nhau trên màn rộng, tự xuống dòng trên màn hẹp. Kiểm build/typecheck,
+lint, 2 unit và 16 ca Chromium với API giả lập, gồm bố cục và bàn phím tại 320,
+390 và 1440 px. Dev server cổng 5174 đã phục vụ mã mới.
+
 Đồng bộ `main` tại `86e6b2bb` trong PR #105. Giữ cả hai phần bàn giao khi
 gộp tài liệu. Bản tích hợp dùng nền sáng đã chọn cho Autofill. Sửa lỗi mở
 đề nghị trao đổi mới nhất khi giao dịch đã kết thúc. Ca trao đổi chạy qua

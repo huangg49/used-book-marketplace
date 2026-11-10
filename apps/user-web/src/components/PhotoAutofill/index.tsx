@@ -413,12 +413,15 @@ export function PhotoAutofill({
                 <span>Bổ sung {missingFields.length} mục chưa đọc được</span>
                 <ChevronDown size={16} aria-hidden="true" />
               </summary>
-              <div className={styles.fields}>{missingFields.map((field) => renderField(field, true))}</div>
               {result.missing.length > 0 && (
-                <ul className={styles.missing}>
-                  {result.missing.map((hint) => <li key={hint}>{hint}</li>)}
-                </ul>
+                <div className={styles.photoTips}>
+                  <p className={styles.photoTipsTitle}><Camera size={15} aria-hidden="true" /> Gợi ý chụp thêm</p>
+                  <ul className={`${styles.help} ${styles.photoTipsList}`}>
+                    {result.missing.map((hint) => <li key={hint}>{hint}</li>)}
+                  </ul>
+                </div>
               )}
+              <div className={styles.fields}>{missingFields.map((field) => renderField(field, true))}</div>
             </details>
           )}
           {(readFields.length > 1 || hasEdits) && (
