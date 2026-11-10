@@ -95,11 +95,11 @@ class FakePages extends PageFetcher {
     return { url, html: this.pages[url] };
   }
 }
-const shopPage = (isbn: string, price: number) =>
+const shopPage = (isbn: string | null, price: number) =>
   `<script type="application/ld+json">${JSON.stringify({
     '@type': 'Book',
     name: 'Sách tìm giá trực tuyến',
-    isbn,
+    isbn: isbn ?? undefined,
     offers: { price, priceCurrency: 'VND' },
   })}</script>`;
 
@@ -547,7 +547,7 @@ describe('price suggestions through HTTP with MongoDB', () => {
       pages.pages = {
         'https://fahasa.com/a': shopPage(isbn, 100_000),
         'https://tiki.vn/b': shopPage(isbn, 110_000),
-        'https://fahasa.com/other': shopPage('9780000000002', 20_000),
+        'https://fahasa.com/other': shopPage(null, 20_000) + '<p>ISBN: <strong>978-604-2-18959-0</strong></p>',
       };
       finder.urls = secondary.urls = Object.keys(pages.pages);
       if (fallback) finder.error = new FinderError('Timeout', 'fake', { inputTokens: 5, outputTokens: 2, searches: 1 }, true);

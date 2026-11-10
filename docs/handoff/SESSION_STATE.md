@@ -16,9 +16,12 @@ năm in 1963 ở *Cao Lãnh*. OpenAI đọc thêm Kinh Thi và lần in ở *Âm
 đọc đúng Cảo Thơm ở *Á-Nam thi tuyển*, nhưng nhầm tựa *9 đêm*. Mẫu bốn cuốn chưa đủ
 nghiệm thu. Tra giá mặc định OpenAI không trả URL cho *Dế Mèn phiêu lưu ký* ISBN
 `9786042030540` (hai lượt), Gemini thật trả 429. Truy vấn thử giới hạn vào Kim Đồng
-tìm được trang 45.000 đ, nhưng `checkPage` cũng chấp nhận các ấn bản khác vì ISBN chỉ
-hiện trong thân trang. Cần kiểm ISBN hiển thị trước khi dùng nguồn giá từ các trang
-này để demo. Cấu hình của API đang chạy không được đổi trong lượt thử.
+tìm được trang 45.000 đ, nhưng `checkPage` lúc đó cũng chấp nhận các ấn bản khác vì
+ISBN chỉ hiện trong thân trang. Đã sửa bộ xác minh theo [ADR0029](../adr/0029-online-price-lookup.md).
+Chạy lại cùng 5 trang Kim Đồng qua `SafePageFetcher` và `checkPage`: giữ trang đúng
+ISBN với giá 45.000 đ, loại cả 4 trang sai ISBN. Lượt xác minh trang không gọi lại
+provider, không ghi MongoDB. Cấu hình API đang chạy chưa đổi. Bước tiếp là kiểm lại
+khả năng tìm URL theo cấu hình OpenAI mặc định và hạn mức Gemini.
 
 # Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
 

@@ -25,8 +25,10 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    loopback/link-local, tự theo redirect và kiểm lại từng bước, 5 s, 2 MB, không cookie.
 4. Giá đọc từ dữ liệu có cấu trúc của trang (`page-check.ts`): offer JSON-LD Product/Book,
    hoặc `product:price` / `itemprop="price"`. Không đoán từ chữ trên trang, không dùng số
-   model trả. Chỉ giữ khi cùng ISBN; trang không có ISBN thì phải khớp tên sách và có tên
-   tác giả. Bỏ AggregateOffer, tiền khác VND, giá ngoài 1.000–10.000.000 đ. Nội dung trang
+   model trả. Ưu tiên ISBN trong dữ liệu sản phẩm. Khi thiếu ISBN ở đó, kiểm tra số có nhãn
+   ISBN trong thân trang, chỉ dùng khi có duy nhất một ISBN và một sản phẩm có giá.
+   Trang không có ISBN thì phải khớp tên sách và có tên tác giả. Bỏ AggregateOffer,
+   tiền khác VND, giá ngoài 1.000–10.000.000 đ. Nội dung trang
    không bao giờ gửi cho model.
 5. Giá đạt kiểm tra lưu ở `online_price_offers` (app được ghi, tách khỏi
    `price_references` chỉ nhân viên ghi) kèm shop, URL, ngày; trả về như nguồn

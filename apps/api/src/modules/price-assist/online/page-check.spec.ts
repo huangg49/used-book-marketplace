@@ -47,6 +47,32 @@ describe('online price page check', () => {
     expect(checkPage(meta, book)).toMatchObject({ ok: true, amount: 76_000 });
     expect(normalize('Đất Rừng Phương Nam')).toBe('dat rung phuong nam');
   });
+
+  it('checks the ISBN in visible product details before using a title match', () => {
+    const catalog = { ...book, isbn: '9786042030540' };
+    const page = ld(product({ isbn: undefined }));
+    const withDetails = (details: string) => page.replace('</body>', `${details}</body>`);
+    const same = '<li>ISBN:&nbsp;<strong>978-604-2-03054-0</strong></li>';
+    const other = '<li>ISBN-13: <strong>978-604-2-18959-0</strong></li>';
+    expect(checkPage(withDetails(same), catalog)).toMatchObject({ ok: true, isbnMatched: true });
+    expect(checkPage(withDetails(other), catalog)).toEqual({ ok: false, reason: 'OtherIsbn' });
+    expect(checkPage(withDetails(same + other), catalog)).toEqual({ ok: false, reason: 'OtherIsbn' });
+    expect(checkPage(withDetails(`<template>${other}</template>${same}`), catalog))
+      .toMatchObject({ ok: true, isbnMatched: true });
+  });
+
+  it('does not attach a page-level ISBN to one of several priced products', () => {
+    const bookWithoutIsbn = product({ isbn: undefined });
+    const page = ld([bookWithoutIsbn, { ...bookWithoutIsbn, name: 'Ấn bản khác' }]);
+    const ambiguous = page.replace('</body>', '<p>ISBN: 978-604-2-03054-0</p></body>');
+    expect(checkPage(ambiguous, { ...book, isbn: '9786042030540' }))
+      .toEqual({ ok: false, reason: 'OtherIsbn' });
+  });
+
+  it('prefers the structured ISBN over a title-only match on another product', () => {
+    const page = ld([product({ isbn: undefined }), product({ offers: { price: 45_000 } })]);
+    expect(checkPage(page, book)).toMatchObject({ ok: true, isbnMatched: true, amount: 45_000 });
+  });
 });
 
 describe('safe page fetch', () => {

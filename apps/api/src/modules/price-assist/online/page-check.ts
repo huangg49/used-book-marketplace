@@ -1,3 +1,5 @@
+import { isbn13 } from '../../commands/contract-input.service.js';
+
 // Reads a new-book price from a shop's product page (ADR 0029). The price is
 // taken from the page's own structured data (schema.org JSON-LD, or the
 // product:price / itemprop="price" metadata), never from the search model,
@@ -31,6 +33,7 @@ export const normalize = (text: string) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 const digits = (value: unknown) => String(value ?? '').replace(/[^0-9Xx]/g, '').toUpperCase();
+const isbnKey = (value: string) => isbn13(value) ?? digits(value);
 
 interface Offer {
   price: number | null;
@@ -120,13 +123,24 @@ function productFromMeta(html: string): Product | null {
   };
 }
 
-const pageText = (html: string) =>
-  normalize(
-    html
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<[^>]+>/g, ' '),
-  );
+const pageText = (html: string) => html
+  .replace(/<!--[\s\S]*?-->/g, ' ')
+  .replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
+  .replace(/<\/?(?:br|p|li|dt|dd|div|tr|td|th)\b[^>]*>/gi, '\n')
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&nbsp;|&#160;|&#xa0;/gi, ' ');
+
+function visibleIsbns(text: string): Set<string> {
+  const found = new Set<string>();
+  // Require the ISBN label and keep the number on one line so a product ID,
+  // price or page count from a neighbouring field cannot complete an ISBN.
+  const labels = /\bISBN(?:[ \t-]*(?:10|13))?\b[ \t]*[:：]?\s*([0-9][0-9X \t\u00a0\u2010-\u2013-]*)/gi;
+  for (const [, printed] of text.matchAll(labels)) {
+    const id = digits(printed);
+    if (/^(?:97[89][0-9]{10}|[0-9]{9}[0-9X])$/.test(id)) found.add(isbnKey(id));
+  }
+  return found;
+}
 
 export function checkPage(html: string, book: BookIdentity): PageCheck {
   const products = productsFromJsonLd(html);
@@ -135,8 +149,11 @@ export function checkPage(html: string, book: BookIdentity): PageCheck {
   const priced = products.filter((p) => p.offers.some((o) => o.price !== null));
   if (!priced.length) return { ok: false, reason: 'NoPrice' };
 
-  const wantIsbn = book.isbn ? digits(book.isbn) : null;
-  const text = pageText(html);
+  const wantIsbn = book.isbn ? isbnKey(book.isbn) : null;
+  const plain = pageText(html);
+  const text = normalize(plain);
+  const printed = wantIsbn ? visibleIsbns(plain) : new Set<string>();
+  const hasStructuredIsbn = priced.some((p) => p.isbns.length > 0);
   const titleOk = (name: string | null) => {
     const want = normalize(book.title);
     return !!want && (normalize(name ?? '').includes(want) || text.includes(want));
@@ -150,7 +167,14 @@ export function checkPage(html: string, book: BookIdentity): PageCheck {
   for (const p of priced) {
     let isbnMatched = false;
     if (p.isbns.length && wantIsbn) {
-      if (!p.isbns.includes(wantIsbn)) {
+      if (!p.isbns.some((id) => isbnKey(id) === wantIsbn)) {
+        rejection = 'OtherIsbn';
+        continue;
+      }
+      isbnMatched = true;
+    } else if (wantIsbn && (printed.size || hasStructuredIsbn)) {
+      // Page-wide text is useful only when it points to a single priced product and edition.
+      if (priced.length !== 1 || printed.size !== 1 || !printed.has(wantIsbn)) {
         rejection = 'OtherIsbn';
         continue;
       }
