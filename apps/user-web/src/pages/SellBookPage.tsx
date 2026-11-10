@@ -1702,7 +1702,6 @@ export function SellBookPage() {
                     </div>
                     <span className={styles.draftStamp}>Bản nháp</span>
                   </div>
-                  <p className={styles.stepCount}>Bước {step}/5</p>
                   <h2 ref={heading} tabIndex={-1}>
                     {steps[step - 1]}
                   </h2>

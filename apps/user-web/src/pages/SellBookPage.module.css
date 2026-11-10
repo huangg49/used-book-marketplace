@@ -652,12 +652,6 @@
 .stepBody > h2:focus {
   outline: none;
 }
-.stepCount {
-  margin: 0 0 8px;
-  font-size: 0.75rem;
-  color: var(--shop-muted);
-  font-variant-numeric: tabular-nums;
-}
 .fields {
   min-width: 0;
   border: 0;

@@ -56,6 +56,8 @@ một cụm nền giấy đậm hơn, ở đầu phần mở rộng các mục c
 đi cạnh nhau trên màn rộng, tự xuống dòng trên màn hẹp. Kiểm build/typecheck,
 lint, 2 unit và 16 ca Chromium với API giả lập, gồm bố cục và bàn phím tại 320,
 390 và 1440 px. Dev server cổng 5174 đã phục vụ mã mới.
+Đã bỏ nhãn lặp “Bước n/5” ở đầu nội dung từng bước. Thanh điều hướng vẫn hiển thị
+các bước và đánh dấu bước hiện tại.
 
 Đồng bộ `main` tại `86e6b2bb` trong PR #105. Giữ cả hai phần bàn giao khi
 gộp tài liệu. Bản tích hợp dùng nền sáng đã chọn cho Autofill. Sửa lỗi mở
