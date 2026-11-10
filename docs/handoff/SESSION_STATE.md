@@ -9,8 +9,16 @@ Cấu hình cũ vẫn chạy. Model soạn khoảng giá và pipeline tự duy�
 
 Kiểm 498 unit, 58 ca HTTP qua Mongo QA riêng (`latlai_openai_final_test`), API
 typecheck/build/lint, contract và docs. Provider, ảnh và trang nhà sách trong
-kiểm thử là giả lập. Chưa gọi OpenAI/Gemini thật. Bước tiếp là đặt key trong `.env`
-local của API rồi kiểm cùng ảnh sách thật và một đầu sách có nguồn giá công khai.
+kiểm thử tự động là giả lập.
+
+Chạy thật trên adapter tại `99a3d116`, không ghi MongoDB. OpenAI và NVIDIA cùng đọc
+năm in 1963 ở *Cao Lãnh*. OpenAI đọc thêm Kinh Thi và lần in ở *Âm thanh và cuồng nộ*,
+đọc đúng Cảo Thơm ở *Á-Nam thi tuyển*, nhưng nhầm tựa *9 đêm*. Mẫu bốn cuốn chưa đủ
+nghiệm thu. Tra giá mặc định OpenAI không trả URL cho *Dế Mèn phiêu lưu ký* ISBN
+`9786042030540` (hai lượt), Gemini thật trả 429. Truy vấn thử giới hạn vào Kim Đồng
+tìm được trang 45.000 đ, nhưng `checkPage` cũng chấp nhận các ấn bản khác vì ISBN chỉ
+hiện trong thân trang. Cần kiểm ISBN hiển thị trước khi dùng nguồn giá từ các trang
+này để demo. Cấu hình của API đang chạy không được đổi trong lượt thử.
 
 # Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
 
