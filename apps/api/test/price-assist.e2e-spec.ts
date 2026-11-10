@@ -13,7 +13,7 @@ import {
   type ModelDraft,
 } from '../src/modules/price-assist/price-model.js';
 import { ConfigService } from '@nestjs/config';
-import { FinderError, PriceFinder, type FinderResult } from '../src/modules/price-assist/online/price-finder.js';
+import { FinderError, PriceFinder, type FinderBook, type FinderResult } from '../src/modules/price-assist/online/price-finder.js';
 import { PageFetcher } from '../src/modules/price-assist/online/price-lookup.service.js';
 import { FetchRejected } from '../src/modules/price-assist/online/safe-fetch.js';
 import { validates } from './helpers/contract.js';
@@ -74,6 +74,7 @@ class FakeFinder extends PriceFinder {
   override readonly provider: 'openai' | 'gemini';
   calls = 0;
   urls: string[] = [];
+  scopeUrls: string[] = [];
   gate: Promise<void> | null = null;
   error: FinderError | null = null;
   constructor(provider: 'openai' | 'gemini', fallback?: PriceFinder) {
@@ -81,16 +82,19 @@ class FakeFinder extends PriceFinder {
     this.provider = provider;
     this.model = `fake-${provider}`;
   }
-  async find(): Promise<FinderResult> {
+  async find(_book: FinderBook, _shops: string[], verifyScope?: (urls: string[]) => Promise<boolean>): Promise<FinderResult> {
     this.calls++;
     if (this.gate) await this.gate;
     if (this.error) throw this.error;
+    if (this.scopeUrls.length) await verifyScope?.(this.scopeUrls);
     return { urls: this.urls, inputTokens: 100, outputTokens: 20, searches: 1 };
   }
 }
 class FakePages extends PageFetcher {
   pages: Record<string, string> = {};
+  requests: string[] = [];
   async fetch(url: string) {
+    this.requests.push(url);
     if (!(url in this.pages)) throw new FetchRejected('Http404');
     return { url, html: this.pages[url] };
   }
@@ -292,6 +296,8 @@ describe('price suggestions through HTTP with MongoDB', () => {
     fake.mode = 'ok';
     finder.calls = secondary.calls = 0;
     finder.error = secondary.error = null;
+    finder.scopeUrls = secondary.scopeUrls = [];
+    pages.requests = [];
     await db.c.price_assist_usage.deleteMany({});
   });
 
@@ -546,10 +552,12 @@ describe('price suggestions through HTTP with MongoDB', () => {
       const book = await confirmedBook('Sách tìm giá trực tuyến', isbn);
       pages.pages = {
         'https://fahasa.com/a': shopPage(isbn, 100_000),
+        'https://fahasa.com/a?utm_source=search': shopPage(isbn, 100_000),
         'https://tiki.vn/b': shopPage(isbn, 110_000),
         'https://fahasa.com/other': shopPage(null, 20_000) + '<p>ISBN: <strong>978-604-2-18959-0</strong></p>',
       };
       finder.urls = secondary.urls = Object.keys(pages.pages);
+      finder.scopeUrls = secondary.scopeUrls = ['https://fahasa.com/other'];
       if (fallback) finder.error = new FinderError('Timeout', 'fake', { inputTokens: 5, outputTokens: 2, searches: 1 }, true);
       let release!: () => void;
       finder.gate = new Promise((r) => (release = r));
@@ -577,6 +585,7 @@ describe('price suggestions through HTTP with MongoDB', () => {
       });
       const offers = await db.c.online_price_offers.find({ bookId: book, retiredAt: null }).toArray();
       expect(offers.map((o) => o.amount).sort()).toEqual([100_000, 110_000]);
+      expect(pages.requests.filter((url) => url.endsWith('/other'))).toHaveLength(1);
 
       const priced = await ask(l.entityId, m1, { bookId: book }).expect(200);
       validates('PriceSuggestion', priced.body);

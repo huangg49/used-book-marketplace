@@ -28,6 +28,14 @@ const USER_AGENT = 'LatLaiPriceCheck/1.0 (+https://github.com/huangg49/used-book
 const hostAllowed = (host: string, list: string[]) =>
   list.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
 
+export function shopPageUrl(url: URL): string {
+  url.hash = '';
+  const trackingKeys = Array.from(url.searchParams.keys())
+    .filter((key) => /^(?:utm_.*|gclid|fbclid|msclkid)$/i.test(key));
+  for (const key of trackingKeys) url.searchParams.delete(key);
+  return url.href;
+}
+
 export function isPrivateAddress(ip: string): boolean {
   if (isIP(ip) === 4) {
     const [a, b] = ip.split('.').map(Number);

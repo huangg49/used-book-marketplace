@@ -20,9 +20,15 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    giá rao sách cũ (Shopee, Chợ Tốt): nhiễu và dễ bị đẩy giá.
 2. OpenAI Web Search hoặc Gemini Google Search **chỉ đề xuất URL** trang sản phẩm. Chỉ gửi dữ kiện catalog
    (tên, tác giả, NXB, năm, ISBN); không gửi gì về người bán hay bài đăng.
+   OpenAI tìm bằng tiếng Việt và thử cách viết ISBN phù hợp. Nếu tên NXB khớp duy nhất
+   một domain đã cho phép, tìm domain đó trước. Mở rộng một lần sang các nhà sách còn
+   lại khi chưa có nguồn xác minh được và còn thời gian tra. Nếu không nhận diện được
+   domain NXB, tìm trên danh sách được phép. Chỉ dùng URL có dẫn nguồn từ công cụ tìm.
 3. Server tự tải trang (`safe-fetch.ts`): chỉ https, chỉ domain được phép và tên miền con,
    host chuyển hướng của công cụ tìm kiếm chỉ được ở bước đầu, chặn địa chỉ private/
    loopback/link-local, tự theo redirect và kiểm lại từng bước, 5 s, 2 MB, không cookie.
+   Kiểm tối đa hai trang cùng lúc. Bỏ tham số theo dõi phổ biến để một trang sản phẩm
+   chỉ tính một nguồn. Giữ tham số định danh sản phẩm.
 4. Giá đọc từ dữ liệu có cấu trúc của trang (`page-check.ts`): offer JSON-LD Product/Book,
    hoặc `product:price` / `itemprop="price"`. Không đoán từ chữ trên trang, không dùng số
    model trả. Ưu tiên ISBN trong dữ liệu sản phẩm. Khi thiếu ISBN ở đó, kiểm tra số có nhãn
@@ -37,7 +43,8 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    kiện), chạy sau request; làm mới sau 30 ngày, 7 ngày nếu không tìm thấy, 24 giờ nếu lỗi.
    Chỉ sách catalog đã xác nhận. Tính vào hạn mức tra mỗi ngày và ngân sách chung
    (token + phí tìm kiếm theo từng provider, ước tính theo usage provider trả về).
-   Khi đổi model chính, lần tra cũ thiếu nguồn hoặc bị lỗi được phép tra lại.
+   Khi đổi model chính hoặc phiên bản cách tìm, lần tra cũ thiếu nguồn hoặc bị lỗi
+   được phép tra lại. Nguồn đã xác minh giữ thời hạn lưu.
 7. Khi đang tra và chưa có nguồn khác: `NeedsMoreData` với `R-LOOKUP-PENDING`.
    `OnlineRetail` là giá sách mới cho băng tình trạng của ADR 0028; giá bìa nhân viên nhập
    được ưu tiên khi có cả hai; quá 3 tháng thì coi là cũ.

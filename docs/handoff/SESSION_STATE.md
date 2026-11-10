@@ -20,8 +20,15 @@ tìm được trang 45.000 đ, nhưng `checkPage` lúc đó cũng chấp nhận 
 ISBN chỉ hiện trong thân trang. Đã sửa bộ xác minh theo [ADR0029](../adr/0029-online-price-lookup.md).
 Chạy lại cùng 5 trang Kim Đồng qua `SafePageFetcher` và `checkPage`: giữ trang đúng
 ISBN với giá 45.000 đ, loại cả 4 trang sai ISBN. Lượt xác minh trang không gọi lại
-provider, không ghi MongoDB. Cấu hình API đang chạy chưa đổi. Bước tiếp là kiểm lại
-khả năng tìm URL theo cấu hình OpenAI mặc định và hạn mức Gemini.
+provider, không ghi MongoDB.
+
+Tra OpenAI nay ưu tiên domain khớp tên NXB trong danh sách được phép, mở rộng một lần
+nếu chưa có nguồn qua kiểm tra. Trang có tham số theo dõi chỉ được tính một nguồn.
+Chạy service với OpenAI và các trang thật, dùng bộ lưu giả lập: *Dế Mèn phiêu lưu ký*
+trả đúng một nguồn Kim Đồng, ISBN khớp, giá 45.000 đ, khoảng 7 giây, một lượt tìm.
+*Mắt biếc* đã mở rộng sau khi NXB Trẻ timeout nhưng vẫn thiếu nguồn đã xác minh.
+*Cao Lãnh* không có nguồn. Chưa thử lại hạn mức Gemini hoặc nghiệm thu qua giao diện.
+Cấu hình API đang chạy chưa đổi.
 
 # Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
 

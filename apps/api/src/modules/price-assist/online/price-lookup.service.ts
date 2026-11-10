@@ -6,7 +6,7 @@ import { MongoService } from '../../../database/mongo/mongo.service.js';
 import { costMicroUsd, rateFor } from '../price-model.js';
 import { checkPage, type BookIdentity } from './page-check.js';
 import { FinderError, PriceFinder, type FinderBook, type FinderResult } from './price-finder.js';
-import { fetchPage, FetchRejected } from './safe-fetch.js';
+import { fetchPage, FetchRejected, shopPageUrl } from './safe-fetch.js';
 
 // Online price lookup (ADR 0029). One search per book per refresh period:
 // a lease on price_lookups/<bookId> keeps a single run going across sellers
@@ -18,6 +18,7 @@ const LEASE_MS = 90_000;
 const RETRY_AFTER_FAILURE_MS = DAY_MS;
 const RETRY_AFTER_NOTHING_MS = 7 * DAY_MS;
 const MAX_OFFERS = 5;
+const PAGE_CHECK_CONCURRENCY = 2;
 // The search model's redirect links; allowed only as the first hop.
 const GROUNDING_REDIRECT_HOSTS = ['vertexaisearch.cloud.google.com'];
 
@@ -80,7 +81,7 @@ export class PriceLookupService {
       if (current.status === 'Running' && current.leaseUntil > now) return null;
       // A previous provider's empty/failed lookup should not mask a new primary.
       const switched = current.status !== 'Running' && current.offersFound === 0 &&
-        current.model !== null && current.model !== this.finder!.model;
+        current.model !== null && current.model !== this.finder!.lookupKey;
       if (current.nextAt > now && !switched) return null;
     }
     if (!(await this.withinLimits(now))) return null;
@@ -148,6 +149,8 @@ export class PriceLookupService {
     const finder = this.finder!;
     let model = finder.model;
     const offers: OnlinePriceOfferDoc[] = [];
+    const attempted = new Set<string>();
+    const verified = new Set<string>();
     const identity: FinderBook = {
       title: book.title, authors: book.authors, publisher: book.publisher,
       publicationYear: book.publicationYear, isbn: book.isbn,
@@ -163,10 +166,26 @@ export class PriceLookupService {
       usage.costMicroUsd += costMicroUsd(rate, result.inputTokens, result.outputTokens) +
         Math.ceil(result.searches * searchUsd * 1e6);
     };
+    const verifyUrls = async (urls: string[]) => {
+      const pending = [...new Set(urls)].filter((url) => !attempted.has(url));
+      for (let i = 0; i < pending.length && offers.length < MAX_OFFERS; i += PAGE_CHECK_CONCURRENCY) {
+        const batch = pending.slice(i, i + PAGE_CHECK_CONCURRENCY);
+        const results = await Promise.all(batch.map((url) => {
+          attempted.add(url);
+          return this.checkOffer(book, runId, started, url);
+        }));
+        for (const offer of results) {
+          if (!offer || verified.has(offer.url) || offers.length >= MAX_OFFERS) continue;
+          verified.add(offer.url);
+          offers.push(offer);
+        }
+      }
+      return offers.length > 0;
+    };
     const attempt = async (provider: PriceFinder) => {
       model = provider.model;
       try {
-        const result = await provider.find(identity, this.shops);
+        const result = await provider.find(identity, this.shops, verifyUrls);
         addUsage(provider, result);
         return result;
       } catch (e) {
@@ -180,36 +199,7 @@ export class PriceLookupService {
         this.logger.log(JSON.stringify({ bookId: book.id, step: 'search-fallback', provider: finder.provider, failure: e.kind }));
         return attempt(finder.fallback);
       });
-      const seen = new Set<string>();
-      for (const url of found.urls) {
-        if (offers.length >= MAX_OFFERS) break;
-        try {
-          const page = await this.pages.fetch(url, this.shops);
-          const check = checkPage(page.html, book);
-          const shop = new URL(page.url).hostname.replace(/^www\./, '');
-          if (!check.ok || seen.has(page.url)) {
-            this.logger.log(JSON.stringify({ bookId: book.id, shop, rejected: check.ok ? 'Duplicate' : check.reason }));
-            continue;
-          }
-          seen.add(page.url);
-          offers.push({
-            _id: randomUUID(),
-            bookId: book.id,
-            runId,
-            shop,
-            url: page.url.slice(0, 500),
-            amount: check.amount,
-            isbnMatched: check.isbnMatched,
-            pageTitle: check.pageTitle?.slice(0, 300) ?? null,
-            observedAt: started,
-            retiredAt: null,
-            createdAt: started,
-          });
-        } catch (e) {
-          const reason = e instanceof FetchRejected ? e.reason : 'CheckFailed';
-          this.logger.log(JSON.stringify({ bookId: book.id, rejected: reason }));
-        }
-      }
+      await verifyUrls(found.urls);
     } catch (e) {
       failure = (e as { kind?: string }).kind ?? 'ProviderError';
       this.logger.warn(JSON.stringify({ bookId: book.id, step: 'search', failure, model }));
@@ -217,6 +207,29 @@ export class PriceLookupService {
     await this.finish(book.id, runId, started, offers, usage, failure, model).catch((e) =>
       this.logger.warn(JSON.stringify({ bookId: book.id, step: 'store', detail: String(e).slice(0, 200) })),
     );
+  }
+
+  private async checkOffer(book: LookupBook, runId: string, started: Date, url: string): Promise<OnlinePriceOfferDoc | null> {
+    try {
+      const page = await this.pages.fetch(url, this.shops);
+      const check = checkPage(page.html, book);
+      const finalUrl = new URL(page.url);
+      const shop = finalUrl.hostname.replace(/^www\./, '');
+      if (!check.ok) {
+        this.logger.log(JSON.stringify({ bookId: book.id, shop, rejected: check.reason }));
+        return null;
+      }
+      return {
+        _id: randomUUID(), bookId: book.id, runId, shop,
+        url: shopPageUrl(finalUrl).slice(0, 500), amount: check.amount, isbnMatched: check.isbnMatched,
+        pageTitle: check.pageTitle?.slice(0, 300) ?? null,
+        observedAt: started, retiredAt: null, createdAt: started,
+      };
+    } catch (e) {
+      const reason = e instanceof FetchRejected ? e.reason : 'CheckFailed';
+      this.logger.log(JSON.stringify({ bookId: book.id, rejected: reason }));
+      return null;
+    }
   }
 
   private async finish(
@@ -254,8 +267,8 @@ export class PriceLookupService {
             nextAt,
             offersFound: offers.length,
             failure,
-            // With no offers, keep the primary for the cooldown check even if fallback ran.
-            model: offers.length ? model : this.finder!.model,
+            // Empty/failed results track the primary search configuration for the cooldown.
+            model: offers.length ? model : this.finder!.lookupKey,
             updatedAt: now,
           },
           $inc: usage,
