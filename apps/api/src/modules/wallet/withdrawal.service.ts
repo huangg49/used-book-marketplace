@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import type { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'node:crypto';
 import type { WithdrawalDoc } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -23,6 +25,13 @@ import {
 } from '../commands/domain-error.js';
 import { checkWithdrawal, LedgerService } from './ledger.service.js';
 import { PaymentSimulator } from './payment-simulator.js';
+import { MediaStorage, digest } from '../media/media-storage.js';
+import { processImage, ImageFailure } from '../media/image-processor.js';
+import { ImageUploadSlots } from '../media/image-upload-slots.js';
+import { lockStorageBudget, reservedStorage } from '../media/media.service.js';
+
+const proofOriginalKey = (id: string) => `withdrawal-proof/${id}/original`;
+const proofPreviewKey = (id: string) => `withdrawal-proof/${id}/preview-v1.webp`;
 
 const labels: Record<WithdrawalDoc['state'], string> = {
   Requested: 'Chờ duyệt',
@@ -39,6 +48,9 @@ export class WithdrawalService {
     private readonly commands: MongoCommandService,
     private readonly ledger: LedgerService,
     private readonly simulator: PaymentSimulator,
+    private readonly config: ConfigService,
+    private readonly storage: MediaStorage,
+    private readonly uploadSlots: ImageUploadSlots,
   ) {}
   private enabled() {
     if (!this.simulator.enabled())
@@ -108,6 +120,7 @@ export class WithdrawalService {
       version: row.version,
       approverId: row.approverId,
       payoutRef: row.payoutRef,
+      proofId: row.proofId ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       history: row.history.map((h) => ({ ...h, at: h.at.toISOString() })),
@@ -210,6 +223,7 @@ export class WithdrawalService {
                 note: 'Đã tiếp nhận và giữ tiền chờ duyệt.',
               },
             ],
+            proofId: null,
           };
           await tx.c.withdrawals.insertOne(row);
           await this.ledger.postWithdrawal(
@@ -294,6 +308,127 @@ export class WithdrawalService {
       );
     });
   }
+  createProof(
+    context: CommandContext,
+    id: string,
+    body: Wire['CreateWithdrawalProof'],
+  ) {
+    return this.commands.runWithdrawalProof(context, 'createWithdrawalProof', id, body, {
+      discover: async (tx) => [(await this.owned(tx, id)).ownerId],
+      authorize: async (tx, actor) => {
+        admin(actor);
+        const row = await this.owned(tx, id);
+        this.independent(actor, row);
+        await this.session(tx, context.auth, true);
+        return row;
+      },
+      mutate: async (tx, actor, row, receiptId) => {
+        if (row.state !== 'Requested' || row.proofId) throw invalidState();
+        await lockStorageBudget(tx);
+        const reservedBytes = body.byteSize + 2_000_000;
+        if ((await reservedStorage(tx)) + reservedBytes >
+          this.config.get<number>('MEDIA_STORAGE_BUDGET_BYTES', 800_000_000))
+          throw new DomainError(429, 'MediaQuotaExceeded', 'Kho ảnh đã đạt giới hạn lưu trữ.');
+        const proofId = randomUUID();
+        await tx.c.withdrawal_proofs.insertOne({
+          _id: proofId,
+          withdrawalId: id,
+          uploaderId: actor._id,
+          mimeType: body.mimeType,
+          byteSize: body.byteSize,
+          sha256: body.sha256,
+          reservedBytes,
+          status: 'Pending',
+          version: 1,
+          createdAt: await tx.now(),
+          uploadedAt: null,
+          derivativeBytes: null,
+          width: null,
+          height: null,
+          createReceiptId: receiptId,
+          uploadReceiptId: null,
+        });
+        return {
+          entityType: 'WithdrawalProof',
+          entityId: proofId,
+          version: 1,
+          state: 'Pending',
+          decidedAt: await tx.now(),
+          event: 'WithdrawalProofReserved',
+        };
+      },
+    });
+  }
+  async uploadProof(context: CommandContext, id: string, proofId: string, req: Request) {
+    const proof = await this.commands.readObligation(context.auth, async (tx, actor) => {
+      admin(actor);
+      const row = await this.owned(tx, id);
+      this.independent(actor, row);
+      const value = await tx.c.withdrawal_proofs.findOne({ _id: proofId, withdrawalId: id });
+      if (!value) throw notFound();
+      return value;
+    });
+    if (req.header('content-type')?.split(';')[0] !== proof.mimeType)
+      throw new DomainError(415, 'UnsupportedMediaType', 'Loại ảnh không khớp khai báo.');
+    const release = this.uploadSlots.claim();
+    try {
+      const chunks: Buffer[] = [];
+      let size = 0;
+      for await (const chunk of req) {
+        const part = Buffer.from(chunk);
+        size += part.length;
+        if (size > proof.byteSize) throw new DomainError(413, 'PayloadTooLarge', 'Ảnh vượt dung lượng khai báo.');
+        chunks.push(part);
+      }
+      const bytes = Buffer.concat(chunks);
+      if (size !== proof.byteSize || digest(bytes) !== proof.sha256)
+        throw new DomainError(422, 'VALIDATION_ERROR', 'Ảnh đã thay đổi. Hãy chọn lại ảnh.');
+      let image: Awaited<ReturnType<typeof processImage>>;
+      try { image = await processImage(bytes, proof); }
+      catch (error) {
+        if (error instanceof ImageFailure) throw new DomainError(422, 'VALIDATION_ERROR', 'Ảnh không hợp lệ hoặc vượt giới hạn xử lý.');
+        throw error;
+      }
+      await this.storage.check();
+      await this.storage.put(proofOriginalKey(proofId), bytes, proof.mimeType);
+      await this.storage.put(proofPreviewKey(proofId), image.bytes, 'image/webp');
+      const result = await this.commands.runWithdrawalProof(
+        context, 'uploadWithdrawalProof', id, { proofId, sha256: proof.sha256 }, {
+          discover: async (tx) => [(await this.owned(tx, id)).ownerId],
+          authorize: async (tx, actor) => {
+            admin(actor);
+            const row = await this.owned(tx, id);
+            this.independent(actor, row);
+            return { row, proof: await tx.c.withdrawal_proofs.findOne({ _id: proofId, withdrawalId: id }) };
+          },
+          mutate: async (tx, _actor, value, receiptId) => {
+            if (!value.proof || value.proof.status !== 'Pending' || value.proof.version !== 1) throw invalidState();
+            const now = await tx.now();
+            const updated = await tx.c.withdrawal_proofs.updateOne(
+              { _id: proofId, status: 'Pending', version: 1 },
+              { $set: { status: 'Ready', version: 2, uploadedAt: now, uploadReceiptId: receiptId, derivativeBytes: image.bytes.length, width: image.width, height: image.height } },
+            );
+            if (updated.matchedCount !== 1) throw invalidState();
+            return { entityType: 'WithdrawalProof', entityId: proofId, version: 2, state: 'Ready', decidedAt: now, event: 'WithdrawalProofSubmitted' };
+          },
+        },
+      );
+      return result;
+    } finally { release(); }
+  }
+  readProof(auth: Actor, id: string, proofId: string, requestId: string) {
+    return this.commands.readObligation(auth, async (tx, actor) => {
+      member(actor);
+      const row = await this.owned(tx, id, actor._id);
+      const proof = await tx.c.withdrawal_proofs.findOne({ _id: proofId, withdrawalId: row._id, status: 'Ready' });
+      if (!proof) throw notFound();
+      return proof;
+    }).then(async (proof) => {
+      await this.storage.check();
+      const signed = await this.storage.signedRead(proofPreviewKey(proofId));
+      return { id: proofId, ...signed, width: proof.width!, height: proof.height! };
+    });
+  }
   action(
     context: CommandContext,
     id: string,
@@ -337,6 +472,13 @@ export class WithdrawalService {
               decision.decision === 'Approve' &&
               row.processingMode === 'Manual'
             ) {
+              if (!decision.proofId) throw invalidField('/proofId', 'Cần tải ảnh chứng từ chuyển khoản.');
+              const proof = await tx.c.withdrawal_proofs.findOne({
+                _id: decision.proofId,
+                withdrawalId: row._id,
+                status: 'Ready',
+              });
+              if (!proof) throw invalidState('Ảnh chứng từ chưa tải xong.');
               const payoutRef = randomUUID();
               await this.ledger.postWithdrawal(
                 tx,
@@ -351,7 +493,7 @@ export class WithdrawalService {
                 'Completed',
                 decision.reason,
                 now,
-                { approverId: actor._id, payoutRef },
+                { approverId: actor._id, payoutRef, proofId: decision.proofId },
               );
             }
             if (decision.decision === 'Reject')

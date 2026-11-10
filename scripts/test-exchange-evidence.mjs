@@ -403,7 +403,7 @@ try {
     .first()
     .click();
 
-  await ops.getByText("Xem ảnh & video bằng chứng", { exact: true }).first().click();
+  await ops.getByText(/Xem ảnh & video bằng chứng|Đối soát chứng cứ/).first().click();
   const review = ops.getByRole("region", {
     name: "Bằng chứng riêng của hồ sơ",
     exact: true,

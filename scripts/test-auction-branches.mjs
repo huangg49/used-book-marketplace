@@ -823,8 +823,9 @@ try {
   assert.equal(dutchNow.dutchPrice, 180000);
   await navigate(native, `/auction?id=${dutchId}`);
   await expect(
+    // RN shows the label and price separately; its accept button names both.
     native
-      .getByText(/Giá hiện tại 180\.000/)
+      .getByText(/Chấp nhận mua ngay 180\.000/)
       .filter({ visible: true }),
   ).toBeVisible();
   await capture(native, "rn-dutch-price");

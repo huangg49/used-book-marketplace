@@ -255,6 +255,7 @@ type EvidenceChange = {
   reason?: string;
 };
 export type WithdrawalChange = { entityType: 'Withdrawal'; entityId: string; version: number; state: Wire['WithdrawalState']; decidedAt: Date; event: string; reason?: string };
+type WithdrawalProofChange = { entityType: 'WithdrawalProof'; entityId: string; version: number; state: Wire['WithdrawalProofReceipt']['state']; decidedAt: Date; event: string };
 type CommandChange =
   | EvidenceChange
   | SupportChange
@@ -842,6 +843,14 @@ export class MongoCommandService {
     return this.execute(context, operation, target, body, options, (change, id, now): Wire['WithdrawalReceipt'] => ({
       id, entityType: 'Withdrawal', entityId: change.entityId, version: change.version, state: change.state, serverTime: now.toISOString(), demoOnly: true,
     }));
+  }
+  runWithdrawalProof<C>(context: CommandContext, operation: string, target: string | null, body: unknown, options: Options<C, WithdrawalProofChange>) {
+    return this.execute(context, operation, target, body, options as unknown as Options<C, CommandChange>, (raw, id, now): Wire['WithdrawalProofReceipt'] => {
+      const change = raw as unknown as WithdrawalProofChange;
+      return ({
+      id, entityType: 'WithdrawalProof', entityId: change.entityId, version: change.version, state: change.state, serverTime: now.toISOString(), demoOnly: true,
+      });
+    });
   }
   runWallet<C>(
     context: CommandContext,

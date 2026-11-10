@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { CommandsModule } from '../commands/commands.module.js';
+import { MediaModule } from '../media/media.module.js';
 import { OperationsDashboardController } from './operations-dashboard.controller.js';
 import { OperationsDashboardService } from './operations-dashboard.service.js';
 
 @Module({
-  imports: [CommandsModule],
+  imports: [CommandsModule, MediaModule],
   controllers: [OperationsDashboardController],
   providers: [OperationsDashboardService],
 })

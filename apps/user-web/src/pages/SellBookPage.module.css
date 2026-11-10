@@ -1,5 +1,6 @@
 .root {
   --shop-error: #912b0e;
+  --shop-shelf: #f4eddf;
   position: relative;
   isolation: isolate;
   min-height: 100dvh;
@@ -353,6 +354,146 @@
   transform: rotate(-4deg);
   flex-shrink: 0;
 }
+.bookType {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.typeChoice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+}
+
+.typeChoice button {
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--shop-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.typeChoice button[aria-pressed="true"] {
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+}
+
+.bookEntryHeading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.bookIdentity,
+.editionFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.bookIdentity {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+.bookIdentity > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .bookIdentity,
+  .editionFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stepBody > h2 + form {
+  margin-top: 20px;
+}
+
+.editionFacts {
+  border-top: 1px solid var(--shop-line);
+}
+
+.editionFacts summary,
+.postingLimit summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  min-height: 44px;
+  padding-block: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editionFacts summary::-webkit-details-marker,
+.postingLimit summary::-webkit-details-marker {
+  display: none;
+}
+
+.editionFacts summary svg,
+.postingLimit summary svg {
+  flex: none;
+}
+
+.editionFacts[open] summary svg,
+.postingLimit[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.disclosureHint {
+  margin-inline-start: auto;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.editionFields {
+  padding-block: 4px 8px;
+}
+
+.postingLimit {
+  margin-top: 12px;
+  color: var(--shop-muted);
+}
+
+.postingLimit summary {
+  width: fit-content;
+}
+
+.postingLimit > p {
+  max-width: 66ch;
+  margin-top: 0;
+}
+
+.bookFieldError {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 6px 0 0;
+  color: var(--shop-error);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.bookFieldError svg {
+  flex: none;
+  margin-top: 2px;
+}
+
 .entryChoice {
   display: flex;
   flex-wrap: wrap;
@@ -382,8 +523,16 @@
 }
 .catalogEntry {
   display: grid;
-  gap: 16px;
-  padding: 4px 0 8px;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.catalogEntry [role="status"] {
+  color: var(--shop-muted);
+}
+
+.catalogEntry [role="alert"] {
+  color: var(--shop-error);
 }
 .root .formArea .fields .catalogEntry input {
   min-height: 56px;
@@ -391,27 +540,8 @@
   border-radius: 8px;
   background: var(--shop-paper);
   color: var(--shop-ink);
-  font: 400 1rem/1.5 var(--shop-body);
+  font: 400 0.9375rem/1.5 var(--shop-body);
   padding: 12px 14px 12px 44px;
-}
-.manualHint {
-  font-size: 0.8125rem;
-  color: var(--shop-muted);
-  margin: 0;
-  line-height: 1.7;
-}
-.root .formArea .fields .field.titleField input {
-  min-height: 64px;
-  font-size: 1.375rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  padding: 10px 0;
-  border-width: 0 0 1px;
-  border-radius: 0;
-}
-.titleField input::placeholder {
-  font-weight: 400;
-  font-size: 1.125rem;
 }
 .languageField {
   display: flex;
@@ -422,14 +552,6 @@
 .languageField label {
   font-size: 0.875rem;
   font-weight: 700;
-}
-.marginNote {
-  font-family: "Auth Melody", var(--shop-body);
-  font-size: 1.5rem;
-  color: var(--shop-wine);
-  margin: 8px 0 0;
-  text-align: right;
-  line-height: 1.6;
 }
 .selectedEntry h3 {
   font-size: 1.625rem;
@@ -517,9 +639,6 @@
   .entryChoice svg {
     display: none;
   }
-  .marginNote {
-    text-align: left;
-  }
   .selectedFacts {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -546,6 +665,11 @@
   margin: 0;
   display: grid;
   gap: 24px;
+}
+.bookInfoFields:not([hidden]) {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
 }
 .field {
   min-width: 0;
@@ -1446,8 +1570,14 @@
   padding: 8px 0;
 }
 .classification {
+  --category-detail-background: transparent;
+  --category-detail-border: var(--shop-line);
+  --category-detail-ink: var(--shop-ink);
+  --category-detail-muted: var(--shop-muted);
+  --category-detail-input: var(--shop-paper);
+  --category-detail-control: var(--shop-control);
   min-width: 0;
-  padding: 24px 0 0;
+  padding: 16px 0 0;
   margin: 0;
   border: 0;
   border-top: 1px solid var(--shop-line);
@@ -1574,9 +1704,6 @@
     select
   ):focus-visible {
   box-shadow: inset 0 0 0 1px var(--posting-focus-color, var(--shop-wine));
-}
-.root .formArea .fields .field.titleField input:focus-visible {
-  box-shadow: inset 0 -1px 0 var(--posting-focus-color, var(--shop-wine));
 }
 .root .formArea .fields [aria-invalid="true"] {
   --posting-focus-color: var(--shop-error);

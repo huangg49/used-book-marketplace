@@ -123,8 +123,8 @@ export function SendToAuctionPricing({
         <View style={styles.collapsedPreview}>
           <Icon name="check" size={13} color={stitchTokens.wineDark} />
           <AppText kind="small" numberOfLines={1} style={styles.collapsedPreviewText}>
-            Khởi điểm: {formatVnd(parsedStart)} • Bước {formatVnd(step)}
-            {buyNowOn && parsedBuyNow > 0 ? ` • Mua ngay: ${formatVnd(parsedBuyNow)}` : ""}
+            {AUCTION_FORMATS.find((m) => m.value === auctionType)?.label ?? "Trả giá lên"} • Khởi điểm: {formatVnd(parsedStart)} • Bước {formatVnd(step)} • ĐK ≥ {minBidders} người
+            {auctionType === "English" && buyNowOn && parsedBuyNow > 0 ? ` • Mua ngay: ${formatVnd(parsedBuyNow)}` : ""}
           </AppText>
         </View>
       )}
@@ -278,9 +278,39 @@ export function SendToAuctionPricing({
             );
           })}
         </View>
-        <AppText kind="small" style={styles.infoText}>{AUCTION_FORMATS.find((m) => m.value === auctionType)!.hint}</AppText>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 8,
+            backgroundColor: stitchTokens.whiteAlpha88,
+            borderRadius: 10,
+            padding: 10,
+            borderWidth: 1,
+            borderColor: stitchTokens.goldBorder,
+          }}
+        >
+          <Icon
+            name={auctionType === "Dutch" ? "flame" : auctionType === "English" ? "gavel" : "lock"}
+            size={15}
+            color={stitchTokens.wineDark}
+          />
+          <AppText kind="small" style={[styles.infoText, { color: stitchTokens.deepCocoa }]}>
+            {AUCTION_FORMATS.find((m) => m.value === auctionType)!.hint}
+          </AppText>
+        </View>
         {auctionType === "Dutch" && (
-          <View style={{ gap: 8, marginTop: 8 }}>
+          <View
+            style={{
+              gap: 8,
+              marginTop: 6,
+              backgroundColor: stitchTokens.whiteAlpha70,
+              padding: 12,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: stitchTokens.goldBorder,
+            }}
+          >
             <AppText kind="bold" style={styles.fieldLabel}>Giá mở đầu (cao nhất)</AppText>
             <View style={[styles.inputWrapper, Boolean(dutchError) && styles.inputWrapperError]}>
               <TextInput value={dutchTopText} onChangeText={(t) => onChangeDutchTopText(t.replace(/\D/g, ""))} keyboardType="number-pad"
@@ -302,7 +332,14 @@ export function SendToAuctionPricing({
 
       {/* ADR 0077: minimum registered bidders */}
       <View style={[styles.fieldGroup, { marginTop: 10 }]}>
-        <AppText kind="bold" style={styles.fieldLabel}>Số người đăng ký tối thiểu</AppText>
+        <View style={styles.labelWithHintRow}>
+          <AppText kind="bold" style={styles.fieldLabel}>Số người đăng ký tối thiểu</AppText>
+          <View style={styles.durationPill}>
+            <AppText kind="small" style={styles.durationPillText}>
+              {`Cọc: ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)}`}
+            </AppText>
+          </View>
+        </View>
         <View style={styles.stepGrid} accessibilityRole="radiogroup">
           {MIN_BIDDER_OPTIONS.map((n) => {
             const isSelected = minBidders === n;
@@ -328,23 +365,38 @@ export function SendToAuctionPricing({
             accessibilityLabel="Giảm số người tối thiểu"
             disabled={disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR}
             onPress={() => onChangeMinBidders(Math.max(AUCTION_MIN_BIDDERS_FLOOR, minBidders - 1))}
-            style={[styles.stepButton, { minWidth: 48 }, (disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR) && { opacity: 0.5 }]}
+            style={[styles.stepButton, { minWidth: 48, flexGrow: 0, flexBasis: 48 }, (disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR) && { opacity: 0.5 }]}
           >
             <AppText kind="bold" style={styles.stepButtonText}>−</AppText>
           </Pressable>
-          <AppText kind="bold" accessibilityLiveRegion="polite">{`${minBidders} người`}</AppText>
+          <View
+            style={{
+              flex: 1,
+              height: 42,
+              borderRadius: 10,
+              backgroundColor: stitchTokens.whiteAlpha90,
+              borderWidth: 1,
+              borderColor: stitchTokens.goldBorder,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <AppText kind="bold" style={{ color: stitchTokens.wineDark }} accessibilityLiveRegion="polite">
+              {`Mở khi đủ ${minBidders} người đăng ký`}
+            </AppText>
+          </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Tăng số người tối thiểu"
             disabled={disabled || minBidders >= AUCTION_MIN_BIDDERS_CAP}
             onPress={() => onChangeMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, minBidders + 1))}
-            style={[styles.stepButton, { minWidth: 48 }, disabled && { opacity: 0.5 }]}
+            style={[styles.stepButton, { minWidth: 48, flexGrow: 0, flexBasis: 48 }, disabled && { opacity: 0.5 }]}
           >
             <AppText kind="bold" style={styles.stepButtonText}>+</AppText>
           </Pressable>
         </View>
         <AppText kind="small" style={styles.infoText}>
-          {`Người mua đặt cọc ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)} trước khi trả giá. Phiên mở khi đủ ${minBidders} người (ít nhất ${AUCTION_MIN_BIDDERS_FLOOR}); không đủ trong 24 giờ, hoặc tới giờ mở bạn hẹn (tối đa 72 giờ), thì phiên bị hủy và hoàn cọc. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
+          {`Người mua đặt cọc ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)} trước khi trả giá. Bạn hẹn giờ mở trong vòng 30 ngày; đến giờ mở nếu chưa đủ ${minBidders} người (ít nhất ${AUCTION_MIN_BIDDERS_FLOOR}), phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ, quá hạn thì phiên bị hủy và hoàn cọc. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
         </AppText>
       </View>
 

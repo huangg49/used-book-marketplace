@@ -811,7 +811,7 @@ try {
   ).toBeVisible();
   await expect(
     native
-      .getByText("Đây là phiên của bạn", { exact: true })
+      .getByText("Quản lý phiên của bạn", { exact: true })
       .filter({ visible: true }),
   ).toBeVisible();
   passed(
@@ -861,7 +861,7 @@ try {
   await button(native, "Xem phiên đấu giá").click();
   await expect(
     native
-      .getByText("Đây là phiên của bạn", { exact: true })
+      .getByText("Quản lý phiên của bạn", { exact: true })
       .filter({ visible: true }),
   ).toBeVisible();
   await capture(native, "rn-owner-after-50-intakes");

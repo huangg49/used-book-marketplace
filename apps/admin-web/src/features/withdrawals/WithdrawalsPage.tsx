@@ -26,6 +26,7 @@ import {
   withdrawalPageSchema,
   withdrawalSchema,
   withdrawalReceiptSchema,
+  withdrawalProofReceiptSchema,
   type Withdrawal,
   type CurrentUser,
 } from "@used-books/session-client";
@@ -530,6 +531,9 @@ function ActionDialog({
   const [locked, setLocked] = useState(false);
   const [reason, setReason] = useState("");
   const [outcome, setOutcome] = useState("");
+  const [proofFile, setProofFile] = useState<File>();
+  const proofId = useRef<string | undefined>(undefined);
+  const proofUploaded = useRef(false);
   const [error, setError] = useState("");
   const onPending = useCallback((value: boolean) => setLocked(value), []);
   useEffect(() => {
@@ -616,20 +620,35 @@ function ActionDialog({
         fields={(disabled) => (
           <fieldset className={styles.form} disabled={disabled}>
             {action === "approve" ? (
-              <dl className={styles.approvalRecipient}>
-                <div className={styles.approvalAccount}>
-                  <dt>Số tài khoản</dt>
-                  <dd>{row.recipient.accountNumber}</dd>
-                </div>
-                <div>
-                  <dt>Ngân hàng</dt>
-                  <dd>{row.recipient.bankName}</dd>
-                </div>
-                <div>
-                  <dt>Chủ tài khoản</dt>
-                  <dd>{row.recipient.accountHolder}</dd>
-                </div>
-              </dl>
+              <>
+                <dl className={styles.approvalRecipient}>
+                  <div className={styles.approvalAccount}>
+                    <dt>Số tài khoản</dt>
+                    <dd>{row.recipient.accountNumber}</dd>
+                  </div>
+                  <div>
+                    <dt>Ngân hàng</dt>
+                    <dd>{row.recipient.bankName}</dd>
+                  </div>
+                  <div>
+                    <dt>Chủ tài khoản</dt>
+                    <dd>{row.recipient.accountHolder}</dd>
+                  </div>
+                </dl>
+                <label htmlFor="withdrawal-proof">Ảnh chứng từ chuyển khoản <span aria-hidden="true">*</span></label>
+                <input
+                  id="withdrawal-proof"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) => {
+                    setProofFile(event.target.files?.[0]);
+                    proofId.current = undefined;
+                    proofUploaded.current = false;
+                    setError("");
+                  }}
+                />
+                <small>JPEG, PNG hoặc WebP, tối đa 10 MB. Ảnh sẽ được hiển thị cho người rút tiền.</small>
+              </>
             ) : action === "reject" ? (
               <>
                 <label htmlFor="withdrawal-decision-reason">
@@ -700,10 +719,14 @@ function ActionDialog({
             setError("Chọn kết quả xác minh.");
             return false;
           }
+          if (action === "approve" && !proofFile && !proofId.current) {
+            setError("Tải ảnh chứng từ chuyển khoản trước khi duyệt.");
+            return false;
+          }
           setError("");
           return true;
         }}
-        build={() =>
+        build={async () =>
           action === "event"
             ? {
                 path: "/operations/simulator/withdrawal-events",
@@ -719,18 +742,51 @@ function ActionDialog({
                   outcome,
                 },
               }
-            : {
-                path: `/admin/withdrawals/${row.id}/${action === "approve" || action === "reject" ? "decision" : action}`,
+            : action === "approve"
+              ? await (async () => {
+                  if (!proofUploaded.current) {
+                    if (!proofFile) throw new Error("Tải ảnh chứng từ chuyển khoản trước khi duyệt.");
+                    if (!["image/jpeg", "image/png", "image/webp"].includes(proofFile.type) || proofFile.size > 10_000_000)
+                      throw new Error("Ảnh cần là JPEG, PNG hoặc WebP và không quá 10 MB.");
+                    const bytes = await proofFile.arrayBuffer();
+                    const hash = await crypto.subtle.digest("SHA-256", bytes);
+                    const sha256 = [...new Uint8Array(hash)].map((value) => value.toString(16).padStart(2, "0")).join("");
+                    const reserved = await session.request(
+                      `/admin/withdrawals/${row.id}/proof`,
+                      withdrawalProofReceiptSchema,
+                      {
+                        method: "POST",
+                        headers: { "Idempotency-Key": crypto.randomUUID() },
+                        body: JSON.stringify({ mimeType: proofFile.type, byteSize: proofFile.size, sha256 }),
+                      },
+                    );
+                    proofId.current = reserved.entityId;
+                    await session.request(
+                      `/admin/withdrawals/${row.id}/proof/${proofId.current}/content`,
+                      withdrawalProofReceiptSchema,
+                      {
+                        method: "PUT",
+                        headers: { "Content-Type": proofFile.type, "Idempotency-Key": crypto.randomUUID() },
+                        body: bytes,
+                      },
+                    );
+                    proofUploaded.current = true;
+                  }
+                  return {
+                    path: `/admin/withdrawals/${row.id}/decision`,
+                    key: crypto.randomUUID(),
+                    body: { expectedVersion: row.version, decision: "Approve", reason: "Đã chuyển khoản và đính kèm chứng từ.", proofId: proofId.current },
+                  };
+                })()
+              : {
+                path: `/admin/withdrawals/${row.id}/${action === "reject" ? "decision" : action}`,
                 key: crypto.randomUUID(),
                 body: {
                   expectedVersion: row.version,
-                  ...(["approve", "reject"].includes(action)
+                  ...(["reject"].includes(action)
                     ? {
-                        decision: action === "approve" ? "Approve" : "Reject",
-                        reason:
-                          action === "approve"
-                            ? "Đã xác nhận yêu cầu rút tiền."
-                            : reason,
+                        decision: "Reject",
+                        reason,
                       }
                     : {}),
                 },

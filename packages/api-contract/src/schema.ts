@@ -1170,7 +1170,7 @@ export interface paths {
         put?: never;
         /**
          * requestAutofillSuggestion
-         * @description ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit); not a bundle. ADR 0048. Reads 1-3 of the listing's own Ready photos and proposes catalog text fields (title, authors, publisher, year, language, edition, ISBN) plus matching Confirmed catalog books or the caller's own Pending request. Advisory only: nothing is written to the listing or catalog and every field needs the seller's confirmation. Only the downscaled photos are sent to the provider; no account, listing, address, session or token data. ISBNs failing the checksum are dropped. Same listing + photos + model within 24 h returns the stored suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: same key and body replays that outcome (or its stored failure as 503); same key with another listing/body is 409 IdempotencyConflict. 429 per-user/per-listing limits or a request still running; 503 when disabled, over the shared daily AI budget, timed out or invalid output. Clients keep manual entry in every failure.
+         * @description ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit); not a bundle. ADR 0048. Reads 1-3 of the listing's own Ready photos and proposes catalog text fields (title, authors, publisher, year, language, edition, ISBN) plus matching Confirmed catalog books or the caller's own Pending request. Advisory only: nothing is written to the listing or catalog and every field needs the seller's confirmation. The provider receives downscaled photos and at most one derived close-up from the same photos, with no account, listing, address, session or token data. ISBNs failing the checksum are dropped. Same listing + photos + model + reading instructions and image profile within 24 h returns the stored suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: same key and body replays that outcome (or its stored failure as 503); same key with another listing/body is 409 IdempotencyConflict. 429 per-user/per-listing limits or a request still running; 503 when disabled, over the shared daily AI budget, timed out or invalid output. Clients keep manual entry in every failure.
          */
         post: operations["requestAutofillSuggestion"];
         delete?: never;
@@ -1231,6 +1231,26 @@ export interface paths {
          * @description ACTIVE STAFF/ADMIN only. Snapshot-consistent read, no pagination. Days are calendar days in Asia/Ho_Chi_Minh including today through serverTime. Submitted counts revision submissions, decisions count recorded decisions on their own decidedAt dates; resubmissions count again. Historical activity remains counted when a listing is later removed. Pending listings exclude deleted/Removed and require a submitted current revision, matching the queue. Pending counts are current, independent of the selected period. Catalog counts are null for STAFF without ADMIN and never queried for that caller. No reviewer identity, reasons, money or member details are exposed.
          */
         get: operations["getModerationOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/users/{userId}/avatar/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a user's attached avatar for operations UI
+         * @description ACTIVE STAFF/ADMIN only. Returns a short-lived signed avatar URL.
+         */
+        get: operations["getOperationsUserAvatarRead"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4421,6 +4441,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/withdrawals/{withdrawalId}/proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** createWithdrawalProof */
+        post: operations["createWithdrawalProof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/withdrawals/{withdrawalId}/proof/{proofId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** uploadWithdrawalProof */
+        put: operations["uploadWithdrawalProof"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/withdrawals/{withdrawalId}/proof/{proofId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** readWithdrawalProof */
+        get: operations["readWithdrawalProof"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/withdrawals/{withdrawalId}/process": {
         parameters: {
             query?: never;
@@ -6273,6 +6344,32 @@ export interface components {
             /** @enum {string} */
             decision: "Approve" | "Reject";
             reason: string;
+            /**
+             * Format: uuid
+             * @description Required when approving a manual withdrawal.
+             */
+            proofId?: string | null;
+        };
+        CreateWithdrawalProof: {
+            /** @enum {string} */
+            mimeType: "image/jpeg" | "image/png" | "image/webp";
+            byteSize: number;
+            sha256: string;
+        };
+        WithdrawalProofReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @constant */
+            entityType: "WithdrawalProof";
+            /** Format: uuid */
+            entityId: string;
+            version: number;
+            /** @enum {string} */
+            state: "Pending" | "Ready";
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            demoOnly: true;
         };
         WithdrawalVersion: {
             expectedVersion: number;
@@ -6320,6 +6417,8 @@ export interface components {
             approverId: string | null;
             /** Format: uuid */
             payoutRef: string | null;
+            /** Format: uuid */
+            proofId?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -7600,6 +7699,26 @@ export interface components {
                 /** Format: date-time */
                 postedAt: string;
                 referenceId: string | null;
+            }[];
+            topRevenueAccount: {
+                accountId: string;
+                displayName: string;
+                revenue: number;
+                /** Format: uuid */
+                avatarId: string | null;
+            } | null;
+            highestPricedBooks: {
+                /** @enum {string} */
+                type: "Sale" | "Exchange" | "Auction";
+                label: string;
+                title: string;
+                amount: number;
+                sellerName: string;
+                referenceId: string;
+                /** Format: uuid */
+                listingId: string;
+                /** Format: uuid */
+                mediaId: string | null;
             }[];
         };
         OperationsPoint: {
@@ -10618,6 +10737,37 @@ export interface operations {
             403: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getOperationsUserAvatarRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed avatar URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        url: string;
+                        /** Format: date-time */
+                        expiresAt: string;
+                    };
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
         };
     };
@@ -17262,6 +17412,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WithdrawalReceipt"];
+                };
+            };
+        };
+    };
+    createWithdrawalProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                withdrawalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWithdrawalProof"];
+            };
+        };
+        responses: {
+            /** @description Reserved proof */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalProofReceipt"];
+                };
+            };
+        };
+    };
+    uploadWithdrawalProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                withdrawalId: string;
+                proofId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/jpeg": string;
+                "image/png": string;
+                "image/webp": string;
+            };
+        };
+        responses: {
+            /** @description Uploaded proof */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalProofReceipt"];
+                };
+            };
+        };
+    };
+    readWithdrawalProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                withdrawalId: string;
+                proofId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed proof preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRead"];
                 };
             };
             400: components["responses"]["ListingError"];

@@ -12,11 +12,13 @@ export function AuctionCover({
   mediaId,
   label,
   iconSize = 24,
+  resizeMode = "cover",
 }: {
   auctionId: string;
   mediaId?: string | null;
   label: string;
   iconSize?: number;
+  resizeMode?: "cover" | "contain";
 }) {
   const { client } = useSession();
   const [expired, setExpired] = useState("");
@@ -62,7 +64,7 @@ export function AuctionCover({
       source={{ uri: url }}
       accessibilityLabel={`Ảnh bìa ${label}`}
       style={styles.image}
-      resizeMode="cover"
+      resizeMode={resizeMode}
       onError={() => { if (photo.data) setExpired(photo.data.expiresAt); }}
     />
   );

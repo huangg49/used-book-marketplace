@@ -6,11 +6,13 @@ import { prepareDatabase, testUrl } from './mongo/harness.js';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import sharp from 'sharp';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import type { RoleCode } from '../src/database/mongo/documents.js';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
+import { MediaStorage, digest } from '../src/modules/media/media-storage.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { Gate } from './helpers/mongo-gate.js';
 import { validates } from './helpers/contract.js';
@@ -71,6 +73,29 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
     validates('WithdrawalReceipt', r.body);
     return r.body;
   }
+  async function uploadProof(id: string, uploader = admin) {
+    const bytes = await sharp({
+      create: { width: 40, height: 30, channels: 3, background: '#c2ab85' },
+    }).png().toBuffer();
+    const base = `/admin/withdrawals/${id}/proof`;
+    const reserved = await post(
+      base,
+      { mimeType: 'image/png', byteSize: bytes.length, sha256: digest(bytes) },
+      uploader,
+    ).expect(200);
+    validates('WithdrawalProofReceipt', reserved.body);
+    const proofId: string = reserved.body.entityId;
+    const uploaded = await request(app.getHttpServer())
+      .put(`/api/v1${base}/${proofId}/content`)
+      .set('Authorization', `Bearer ${uploader.token}`)
+      .set('Idempotency-Key', randomUUID())
+      .set('Content-Type', 'image/png')
+      .send(bytes)
+      .expect(200);
+    validates('WithdrawalProofReceipt', uploaded.body);
+    expect(uploaded.body).toMatchObject({ entityId: proofId, state: 'Ready' });
+    return proofId;
+  }
   async function approve(id: string, version = 1) {
     return (
       await post(
@@ -124,6 +149,8 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
     })
       .overrideProvider(MongoService)
       .useValue(new MongoService(new ConfigService({ MONGODB_URL: appUrl })))
+      .overrideProvider(MediaStorage)
+      .useValue({ check: async () => {}, put: async () => {} })
       .compile();
     app = module.createNestApplication();
     // Config validation can snapshot environment before beforeAll runs.
@@ -193,11 +220,16 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
       expect((await read(u, created.body.entityId)).processingMode).toBe(
         'Manual',
       );
-      const decision = {
+      const path = `/admin/withdrawals/${created.body.entityId}/decision`;
+      const withoutProof = {
           expectedVersion: 1,
           decision: 'Approve',
           reason: 'Đã duyệt yêu cầu',
-        },
+      };
+      await post(path, withoutProof, admin).expect(422);
+      expect((await summary(u)).withdrawalHeld).toBe(100000);
+      const proofId = await uploadProof(created.body.entityId);
+      const decision = { ...withoutProof, proofId },
         approvalKey = randomUUID();
       const approved = await post(
         `/admin/withdrawals/${created.body.entityId}/decision`,
@@ -206,6 +238,7 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
         approvalKey,
       ).expect(200);
       expect(approved.body).toMatchObject({ state: 'Completed', version: 2 });
+      expect((await read(u, created.body.entityId)).proofId).toBe(proofId);
       expect(
         (
           await post(
@@ -313,6 +346,7 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
         expectedVersion: 1,
         decision: 'Approve',
         reason: 'Đã kiểm tra',
+        proofId: await uploadProof(w.entityId, a),
       };
     await db.c.auth_sessions.updateOne(
       { _id: a.sessionId },
@@ -502,11 +536,12 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
   it('simultaneous approve/reject yields one decision and one state transition', async () => {
     const u = await funded(),
       w = await create(u),
+      proofId = await uploadProof(w.entityId),
       gate = await Gate.lockUser(db.client, u.id);
     const path = `/admin/withdrawals/${w.entityId}/decision`;
     const a = post(
         path,
-        { expectedVersion: 1, decision: 'Approve', reason: 'Đã đối chiếu' },
+        { expectedVersion: 1, decision: 'Approve', reason: 'Đã đối chiếu', proofId },
         admin,
       ).then((r) => r),
       b = post(
