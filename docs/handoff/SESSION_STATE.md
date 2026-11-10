@@ -8,6 +8,9 @@ gọn. Xem [brief Đăng sách](../../apps/user-web/.impeccable/surfaces/apps-us
 Member web build/typecheck, lint, 20 unit và 45 ca Chromium với API giả lập.
 Kiểm 320/390/1440 px, giữ giá/tiêu chí khi đổi hình thức, chọn địa chỉ, sách bộ,
 đấu giá, trạng thái tra giá và gợi ý hết hạn. Dev server phục vụ mã mới cổng 5174.
+Khi đầu sách chờ duyệt, khung giá đánh dấu Tùy chọn và ưu tiên nút Nhập giá bán
+để đưa focus về ô giá. Kiểm tra lại sau khi duyệt là thao tác phụ. Hai viewport
+Chromium xác nhận Nhập giá bán không phát sinh lượt yêu cầu trợ lý.
 
 # OpenAI cho tra giá online và Autofill — 10/11/2026
 

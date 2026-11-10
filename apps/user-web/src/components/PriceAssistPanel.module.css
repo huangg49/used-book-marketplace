@@ -20,6 +20,12 @@
   flex: 1 1 12rem;
   min-width: 0;
 }
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
 .panel h3,
 .panel p,
 .panel ul {
@@ -67,6 +73,15 @@
 }
 .panel .primary:hover:not(:disabled) {
   background: var(--shop-cream);
+}
+.panel .quietAction {
+  justify-self: start;
+  padding-inline: 0;
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .panel button:disabled {
   opacity: 0.55;

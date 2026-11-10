@@ -31,6 +31,7 @@ export function PriceAssistPanel({
   needsCatalog,
   reference, onApplyReference,
   onAsk,
+  onEnterPrice,
   onApply,
 }: {
   state: AssistState;
@@ -43,6 +44,7 @@ export function PriceAssistPanel({
   reference?: PriceReferenceState;
   onApplyReference?: (amount: number) => void;
   onAsk: () => void;
+  onEnterPrice: () => void;
   onApply: (amount: number) => void;
 }) {
   const [replace, setReplace] = useState<number | null>(null);
@@ -87,7 +89,7 @@ export function PriceAssistPanel({
           : "Cần bổ sung thông tin";
   const buttonLabel = loading
     ? "Đang lấy gợi ý…"
-    : awaitingCatalog || lookupPending
+    : lookupPending
       ? "Kiểm tra lại nguồn giá"
       : requiresCatalog
         ? "Lưu đầu sách và kiểm tra giá"
@@ -103,27 +105,36 @@ export function PriceAssistPanel({
     <section className={styles.panel} aria-labelledby="price-assist-title">
       <header className={styles.panelHead}>
         <div className={styles.panelHeading}>
-          <h3 id="price-assist-title"><Sparkles size={18} aria-hidden="true" /> Gợi ý giá bán</h3>
+          <div className={styles.titleRow}>
+            <h3 id="price-assist-title"><Sparkles size={18} aria-hidden="true" /> Gợi ý giá bán</h3>
+            <span className={styles.note}>Tùy chọn</span>
+          </div>
           {!hasPhoto ? (
             <p className={styles.note}>Thêm ít nhất một ảnh bản sách ở bước Ảnh bản sách.</p>
           ) : !loading && (state.status === "idle" || requiresCatalog) ? (
             <p className={styles.note}>
               {requiresCatalog
-                ? "Đầu sách mới sẽ được lưu để chờ duyệt danh mục."
+                ? "Bạn có thể tự đặt giá ngay. Yêu cầu gợi ý sẽ lưu đầu sách mới để chờ duyệt."
                 : "Tham khảo nguồn giá để tự chọn mức bán."}
             </p>
           ) : null}
         </div>
-        <button
-          className={styles.primary}
-          type="button"
-          disabled={disabled || loading || !hasPhoto}
-          onClick={onAsk}
-          aria-busy={loading}
-        >
-          {loading && <LoaderCircle size={15} className={styles.spinner} aria-hidden="true" />}
-          {buttonLabel}
-        </button>
+        {awaitingCatalog && !loading ? (
+          <button className={styles.primary} type="button" disabled={disabled} onClick={onEnterPrice}>
+            Nhập giá bán
+          </button>
+        ) : (
+          <button
+            className={styles.primary}
+            type="button"
+            disabled={disabled || loading || !hasPhoto}
+            onClick={onAsk}
+            aria-busy={loading}
+          >
+            {loading && <LoaderCircle size={15} className={styles.spinner} aria-hidden="true" />}
+            {buttonLabel}
+          </button>
+        )}
       </header>
       <p role="status" className={loading ? styles.status : "sr-only"}>
         {announcement}
@@ -196,7 +207,12 @@ export function PriceAssistPanel({
         <div className={styles.status}>
           <p className={styles.statusTitle}>{emptyTitle}</p>
           {value.missing.map((text) => <p key={text}>{text}</p>)}
-          <p>Bạn vẫn có thể tự nhập giá bán.</p>
+          <p>{awaitingCatalog ? "Nhập giá bán để tiếp tục đăng." : "Bạn vẫn có thể tự nhập giá bán."}</p>
+          {awaitingCatalog && (
+            <button type="button" className={styles.quietAction} disabled={disabled || !hasPhoto} onClick={onAsk}>
+              Kiểm tra lại sau khi duyệt
+            </button>
+          )}
         </div>
       ) : null}
       {!duplicateReference && (

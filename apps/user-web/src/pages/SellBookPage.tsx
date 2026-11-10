@@ -2644,6 +2644,7 @@ export function SellBookPage() {
                                   hasPhoto={imageFiles.length > 0}
                                   needsCatalog={!selectedBook}
                                   onAsk={() => void askWebPrice()}
+                                  onEnterPrice={() => document.getElementById("salePrice")?.focus()}
                                   onApplyReference={(amount) => {
                                     setFormData((previous) => ({ ...previous, salePrice: String(amount) }));
                                     setAssist(clearAiPriceAttribution);

@@ -26,7 +26,7 @@ function App(){const [price,setPrice]=useState('55000'),[applied,setApplied]=use
  <label>Giá đang nhập<input value={price} onChange={e=>setPrice(e.target.value)}/></label>
  <output aria-label="Số lượt áp dụng">{applied}</output>
  <PriceAssistPanel state={{status:'idle'}} reference={state} currentKey="current" currentPrice={price}
- phase="model" disabled={false} hasPhoto needsCatalog={false} onAsk={()=>{}} onApply={()=>{throw Error('AI apply forbidden')}}
+ phase="model" disabled={false} hasPhoto needsCatalog={false} onAsk={()=>{}} onEnterPrice={()=>{}} onApply={()=>{throw Error('AI apply forbidden')}}
  onApplyReference={amount=>{setPrice(String(amount));setApplied(n=>n+1)}}/>
  </main>}
 createRoot(document.getElementById('root')!).render(<App/>);
