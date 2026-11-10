@@ -30,6 +30,12 @@ trả đúng một nguồn Kim Đồng, ISBN khớp, giá 45.000 đ, khoảng 7 
 *Cao Lãnh* không có nguồn. Chưa thử lại hạn mức Gemini hoặc nghiệm thu qua giao diện.
 Cấu hình API đang chạy chưa đổi.
 
+Đã giới hạn hai lỗi truy cập liên tiếp cho mỗi nhà sách trong một lượt tra. Thiếu
+nguồn do lỗi truy cập thử lại sau 24 giờ, thiếu nguồn bình thường sau 7 ngày.
+Phát lại bốn URL thật NXB Trẻ của *Mắt biếc* qua service và bộ tải trang, với đầu ra
+tìm kiếm và bộ lưu giả lập: hai lần tải timeout, hai URL còn lại được bỏ qua, tổng
+khoảng 5 giây và trạng thái nội bộ `PageUnavailable` với hạn thử lại 24 giờ.
+
 # Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
 
 Nhánh `codex/sell-step-one-hierarchy` từ `dc5c02e8`. Member web thu gọn khay

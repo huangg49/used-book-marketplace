@@ -92,10 +92,13 @@ class FakeFinder extends PriceFinder {
 }
 class FakePages extends PageFetcher {
   pages: Record<string, string> = {};
+  errors: Record<string, string> = {};
   requests: string[] = [];
   async fetch(url: string) {
     this.requests.push(url);
-    if (!(url in this.pages)) throw new FetchRejected('Http404');
+    const host = URL.parse(url)?.hostname;
+    if (this.errors[url]) throw new FetchRejected(this.errors[url], host);
+    if (!(url in this.pages)) throw new FetchRejected('Http404', host);
     return { url, html: this.pages[url] };
   }
 }
@@ -298,6 +301,7 @@ describe('price suggestions through HTTP with MongoDB', () => {
     finder.error = secondary.error = null;
     finder.scopeUrls = secondary.scopeUrls = [];
     pages.requests = [];
+    pages.errors = {};
     await db.c.price_assist_usage.deleteMany({});
   });
 
@@ -634,9 +638,79 @@ describe('price suggestions through HTTP with MongoDB', () => {
         if ((await db.c.price_lookups.findOne({ _id: book }))?.status === 'Done') break;
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      expect(await db.c.price_lookups.findOne({ _id: book })).toMatchObject({ status: 'Done', offersFound: 0 });
+      const empty = await db.c.price_lookups.findOne({ _id: book });
+      expect(empty).toMatchObject({ status: 'Done', offersFound: 0, failure: null });
+      expect(empty!.nextAt.getTime() - empty!.updatedAt.getTime()).toBe(7 * 86_400_000);
       expect(finder.calls).toBe(2);
       expect(secondary.calls).toBe(1);
+    } finally {
+      config.set('PRICE_LOOKUP_ENABLED', 'false');
+    }
+  });
+
+  it.each([false, true])('skips a store after two access failures across scopes (alternative: %s)', async (hasAlternative) => {
+    const config = app.get(ConfigService);
+    config.set('PRICE_LOOKUP_ENABLED', 'true');
+    try {
+      const isbn = isbn13();
+      const book = await confirmedBook('Sách tìm giá trực tuyến', isbn);
+      const l = await listing(m1, book);
+      const first = 'https://fahasa.com/timeout';
+      const second = 'https://www.fahasa.com/unavailable';
+      const skipped = 'https://fahasa.com/third';
+      const alternative = 'https://tiki.vn/available';
+      finder.scopeUrls = [first];
+      finder.urls = [second, skipped, ...(hasAlternative ? [alternative] : [])];
+      pages.errors = { [first]: 'Timeout', [second]: 'Http503' };
+      pages.pages = { [skipped]: shopPage(isbn, 20_000), [alternative]: shopPage(isbn, 100_000) };
+      await ask(l.entityId, m1, { bookId: book }).expect(200);
+      for (let i = 0; i < 50; i++) {
+        if ((await db.c.price_lookups.findOne({ _id: book }))?.status !== 'Running') break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      const record = await db.c.price_lookups.findOne({ _id: book });
+      expect(pages.requests).toEqual([first, second, ...(hasAlternative ? [alternative] : [])]);
+      expect(record).toMatchObject(hasAlternative
+        ? { status: 'Done', offersFound: 1, failure: null }
+        : { status: 'Failed', offersFound: 0, failure: 'PageUnavailable' });
+      const retryDays = hasAlternative ? Number(config.get('PRICE_LOOKUP_TTL_DAYS') ?? 30) : 1;
+      expect(record!.nextAt.getTime() - record!.updatedAt.getTime()).toBe(retryDays * 86_400_000);
+      const offers = await db.c.online_price_offers.find({ bookId: book }).toArray();
+      expect(offers.map((offer) => offer.amount)).toEqual(hasAlternative ? [100_000] : []);
+      if (!hasAlternative) {
+        const suggestion = await ask(l.entityId, m1, { bookId: book }).expect(200);
+        expect(suggestion.body.rules).toContain('R-NEED-SOURCES');
+        expect(finder.calls).toBe(1);
+      }
+    } finally {
+      config.set('PRICE_LOOKUP_ENABLED', 'false');
+    }
+  });
+
+  it('continues checking a store when a reachable page has the wrong ISBN', async () => {
+    const config = app.get(ConfigService);
+    config.set('PRICE_LOOKUP_ENABLED', 'true');
+    try {
+      const isbn = isbn13();
+      const book = await confirmedBook('Sách tìm giá trực tuyến', isbn);
+      const l = await listing(m1, book);
+      const first = 'https://fahasa.com/blocked';
+      const wrong = 'https://fahasa.com/other-isbn';
+      const third = 'https://fahasa.com/timeout';
+      const good = 'https://fahasa.com/same-isbn';
+      finder.scopeUrls = [first];
+      finder.urls = [wrong, third, good];
+      pages.errors = { [first]: 'Http403', [third]: 'Timeout' };
+      pages.pages = { [wrong]: shopPage('9786042189590', 20_000), [good]: shopPage(isbn, 100_000) };
+      await ask(l.entityId, m1, { bookId: book }).expect(200);
+      for (let i = 0; i < 50; i++) {
+        if ((await db.c.price_lookups.findOne({ _id: book }))?.status !== 'Running') break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      expect(pages.requests).toEqual([first, wrong, third, good]);
+      expect(await db.c.price_lookups.findOne({ _id: book })).toMatchObject({ status: 'Done', offersFound: 1 });
+      const offers = await db.c.online_price_offers.find({ bookId: book }).toArray();
+      expect(offers.map((offer) => offer.amount)).toEqual([100_000]);
     } finally {
       config.set('PRICE_LOOKUP_ENABLED', 'false');
     }

@@ -29,6 +29,9 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    loopback/link-local, tự theo redirect và kiểm lại từng bước, 5 s, 2 MB, không cookie.
    Kiểm tối đa hai trang cùng lúc. Bỏ tham số theo dõi phổ biến để một trang sản phẩm
    chỉ tính một nguồn. Giữ tham số định danh sản phẩm.
+   Sau hai lỗi truy cập liên tiếp của cùng nhà sách trong một lượt tra, bỏ các URL
+   còn lại của nhà sách đó, kể cả khi đến qua link chuyển hướng. Trang tải được nhưng
+   sai ISBN hoặc thiếu giá vẫn được xử lý như dữ liệu không phù hợp.
 4. Giá đọc từ dữ liệu có cấu trúc của trang (`page-check.ts`): offer JSON-LD Product/Book,
    hoặc `product:price` / `itemprop="price"`. Không đoán từ chữ trên trang, không dùng số
    model trả. Ưu tiên ISBN trong dữ liệu sản phẩm. Khi thiếu ISBN ở đó, kiểm tra số có nhãn
@@ -40,7 +43,9 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    `price_references` chỉ nhân viên ghi) kèm shop, URL, ngày; trả về như nguồn
    `OnlineRetail` có link “Mở trang”. Lần tra mới thay (retire) bộ giá cũ.
 6. Một lần tra mỗi đầu sách: lease trên `price_lookups/<bookId>` (insert/update có điều
-   kiện), chạy sau request; làm mới sau 30 ngày, 7 ngày nếu không tìm thấy, 24 giờ nếu lỗi.
+   kiện), chạy sau request; làm mới sau 30 ngày, 7 ngày nếu không tìm thấy nguồn,
+   24 giờ nếu provider lỗi hoặc còn URL chưa xác minh được vì lỗi truy cập.
+   Nếu đã có nguồn giá xác minh được, giữ thời hạn lưu thông thường.
    Chỉ sách catalog đã xác nhận. Tính vào hạn mức tra mỗi ngày và ngân sách chung
    (token + phí tìm kiếm theo từng provider, ước tính theo usage provider trả về).
    Khi đổi model chính hoặc phiên bản cách tìm, lần tra cũ thiếu nguồn hoặc bị lỗi

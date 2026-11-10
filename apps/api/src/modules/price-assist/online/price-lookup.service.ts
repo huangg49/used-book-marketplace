@@ -19,17 +19,24 @@ const RETRY_AFTER_FAILURE_MS = DAY_MS;
 const RETRY_AFTER_NOTHING_MS = 7 * DAY_MS;
 const MAX_OFFERS = 5;
 const PAGE_CHECK_CONCURRENCY = 2;
+const SHOP_FAILURE_LIMIT = 2;
 // The search model's redirect links; allowed only as the first hop.
 const GROUNDING_REDIRECT_HOSTS = ['vertexaisearch.cloud.google.com'];
 
 export abstract class PageFetcher {
-  abstract fetch(url: string, allowedHosts: string[]): Promise<{ url: string; html: string }>;
+  abstract fetch(
+    url: string, allowedHosts: string[], skipHost?: (host: string) => boolean,
+  ): Promise<{ url: string; html: string }>;
 }
 export class SafePageFetcher extends PageFetcher {
-  fetch(url: string, allowedHosts: string[]) {
-    return fetchPage(url, { allowedHosts, redirectHosts: GROUNDING_REDIRECT_HOSTS });
+  fetch(url: string, allowedHosts: string[], skipHost?: (host: string) => boolean) {
+    return fetchPage(url, { allowedHosts, redirectHosts: GROUNDING_REDIRECT_HOSTS, skipHost });
   }
 }
+
+type CheckedOffer = { host?: string; unavailable?: boolean; offer?: OnlinePriceOfferDoc };
+const isAccessFailure = (reason: string) =>
+  reason === 'Timeout' || reason === 'Network' || /^Http(?:401|403|408|429|5[0-9]{2})$/.test(reason);
 
 export type LookupBook = FinderBook & BookIdentity & { id: string };
 export interface LookupState {
@@ -151,6 +158,12 @@ export class PriceLookupService {
     const offers: OnlinePriceOfferDoc[] = [];
     const attempted = new Set<string>();
     const verified = new Set<string>();
+    const shopFailures = new Map<string, number>();
+    const shops = this.shops;
+    let hadAccessFailure = false;
+    const shopForHost = (host: string | undefined) => host &&
+      shops.find((shop) => host === shop || host.endsWith(`.${shop}`));
+    const skipHost = (host: string) => (shopFailures.get(shopForHost(host) ?? '') ?? 0) >= SHOP_FAILURE_LIMIT;
     const identity: FinderBook = {
       title: book.title, authors: book.authors, publisher: book.publisher,
       publicationYear: book.publicationYear, isbn: book.isbn,
@@ -167,14 +180,33 @@ export class PriceLookupService {
         Math.ceil(result.searches * searchUsd * 1e6);
     };
     const verifyUrls = async (urls: string[]) => {
-      const pending = [...new Set(urls)].filter((url) => !attempted.has(url));
-      for (let i = 0; i < pending.length && offers.length < MAX_OFFERS; i += PAGE_CHECK_CONCURRENCY) {
-        const batch = pending.slice(i, i + PAGE_CHECK_CONCURRENCY);
-        const results = await Promise.all(batch.map((url) => {
-          attempted.add(url);
-          return this.checkOffer(book, runId, started, url);
-        }));
-        for (const offer of results) {
+      const pending = [...new Set(urls)].filter((url) => !attempted.has(url))
+        .map((url) => ({ url, shop: shopForHost(URL.parse(url)?.hostname) }));
+      let next = 0;
+      while (next < pending.length && offers.length < MAX_OFFERS) {
+        const batch: typeof pending = [];
+        while (next < pending.length && batch.length < PAGE_CHECK_CONCURRENCY) {
+          const candidate = pending[next]!;
+          const streak = shopFailures.get(candidate.shop ?? '') ?? 0;
+          // After one failure, wait for the next result before starting another URL for that store.
+          if (streak < SHOP_FAILURE_LIMIT && batch.length && (!candidate.shop ||
+              (streak === SHOP_FAILURE_LIMIT - 1 && batch.some((item) => item.shop === candidate.shop)))) break;
+          next++;
+          attempted.add(candidate.url);
+          if (streak >= SHOP_FAILURE_LIMIT) continue;
+          batch.push(candidate);
+          // Search redirect links do not identify the final store until fetched.
+          if (!candidate.shop) break;
+        }
+        const results = await Promise.all(batch.map(({ url }) => this.checkOffer(book, runId, started, url, skipHost)));
+        for (const { offer, host, unavailable } of results) {
+          const shop = shopForHost(host);
+          if (unavailable) {
+            hadAccessFailure = true;
+            if (shop) shopFailures.set(shop, (shopFailures.get(shop) ?? 0) + 1);
+          } else if (shop) {
+            shopFailures.delete(shop);
+          }
           if (!offer || verified.has(offer.url) || offers.length >= MAX_OFFERS) continue;
           verified.add(offer.url);
           offers.push(offer);
@@ -185,7 +217,7 @@ export class PriceLookupService {
     const attempt = async (provider: PriceFinder) => {
       model = provider.model;
       try {
-        const result = await provider.find(identity, this.shops, verifyUrls);
+        const result = await provider.find(identity, shops, verifyUrls);
         addUsage(provider, result);
         return result;
       } catch (e) {
@@ -204,31 +236,37 @@ export class PriceLookupService {
       failure = (e as { kind?: string }).kind ?? 'ProviderError';
       this.logger.warn(JSON.stringify({ bookId: book.id, step: 'search', failure, model }));
     }
+    if (!failure && !offers.length && hadAccessFailure) failure = 'PageUnavailable';
     await this.finish(book.id, runId, started, offers, usage, failure, model).catch((e) =>
       this.logger.warn(JSON.stringify({ bookId: book.id, step: 'store', detail: String(e).slice(0, 200) })),
     );
   }
 
-  private async checkOffer(book: LookupBook, runId: string, started: Date, url: string): Promise<OnlinePriceOfferDoc | null> {
+  private async checkOffer(
+    book: LookupBook, runId: string, started: Date, url: string, skipHost: (host: string) => boolean,
+  ): Promise<CheckedOffer> {
     try {
-      const page = await this.pages.fetch(url, this.shops);
+      const page = await this.pages.fetch(url, this.shops, skipHost);
       const check = checkPage(page.html, book);
       const finalUrl = new URL(page.url);
       const shop = finalUrl.hostname.replace(/^www\./, '');
       if (!check.ok) {
         this.logger.log(JSON.stringify({ bookId: book.id, shop, rejected: check.reason }));
-        return null;
+        return { host: finalUrl.hostname };
       }
       return {
-        _id: randomUUID(), bookId: book.id, runId, shop,
-        url: shopPageUrl(finalUrl).slice(0, 500), amount: check.amount, isbnMatched: check.isbnMatched,
-        pageTitle: check.pageTitle?.slice(0, 300) ?? null,
-        observedAt: started, retiredAt: null, createdAt: started,
+        host: finalUrl.hostname,
+        offer: {
+          _id: randomUUID(), bookId: book.id, runId, shop,
+          url: shopPageUrl(finalUrl).slice(0, 500), amount: check.amount, isbnMatched: check.isbnMatched,
+          pageTitle: check.pageTitle?.slice(0, 300) ?? null,
+          observedAt: started, retiredAt: null, createdAt: started,
+        },
       };
     } catch (e) {
       const reason = e instanceof FetchRejected ? e.reason : 'CheckFailed';
       this.logger.log(JSON.stringify({ bookId: book.id, rejected: reason }));
-      return null;
+      return e instanceof FetchRejected ? { host: e.host, unavailable: isAccessFailure(reason) } : {};
     }
   }
 

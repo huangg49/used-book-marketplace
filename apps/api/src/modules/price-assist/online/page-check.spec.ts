@@ -114,6 +114,21 @@ describe('safe page fetch', () => {
     expect(await reason(fetchPage('https://fahasa.com/out', opts))).toBe('HostNotAllowed');
   });
 
+  it('attributes the access failure to the destination and skips a blocked store after redirect', async () => {
+    const first = 'https://vertexaisearch.cloud.google.com/r/a';
+    const destination = 'https://www.fahasa.com/de-men';
+    const requests: string[] = [];
+    const fetcher: typeof fetch = async (url) => {
+      requests.push(String(url));
+      return url === first ? html('', 302, { location: destination }) : html('', 503);
+    };
+    const opts = { allowedHosts: shops, redirectHosts: ['vertexaisearch.cloud.google.com'], fetcher, resolve: publicDns };
+    await expect(fetchPage(first, opts)).rejects.toMatchObject({ reason: 'Http503', host: 'www.fahasa.com' });
+    await expect(fetchPage(first, { ...opts, skipHost: (host) => host === 'www.fahasa.com' }))
+      .rejects.toMatchObject({ reason: 'ShopSkipped' });
+    expect(requests).toEqual([first, destination, first]);
+  });
+
   it('refuses non-HTML and oversized pages', async () => {
     const json = (async () => new Response('{}', { headers: { 'content-type': 'application/json' } })) as unknown as typeof fetch;
     expect(await reason(fetchPage('https://fahasa.com/x', { allowedHosts: shops, fetcher: json, resolve: publicDns }))).toBe('NotHtml');
