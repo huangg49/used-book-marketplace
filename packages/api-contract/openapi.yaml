@@ -22276,6 +22276,29 @@ components:
           maximum: 259200
           description: ADR 0084. Pause time this auction may still use (72 hours in total, given back on
             resume). Optional for older servers.
+        auctionType:
+          $ref: "#/components/schemas/AuctionType"
+        opensAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0081. The seller's open time on a ScheduledGrace registration auction; until
+            minBidders register, startAt is the registration deadline (opensAt + 24 h). Null on other
+            modes. Optional for older servers.
+        minBidders:
+          type:
+            - integer
+            - "null"
+          minimum: 2
+          maximum: 1000
+          description: ADR 0077/0079. Registered bidders needed before bidding opens; null when the auction
+            needs no registration. Optional for older servers.
+        registeredCount:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: ADR 0077. Current registrations. Optional for older servers.
         title:
           type: string
         state:

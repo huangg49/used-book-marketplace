@@ -28,7 +28,9 @@ type PanelProps = {
 }
 
 function useAvailable(me: AuctionParticipation | null) {
-  const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000 })
+  // Re-read on open: a top-up made on the wallet page (its own cache key) must
+  // count at once, not after this copy goes stale.
+  const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000, refetchOnMount: 'always' })
   // The amount already held for this auction counts toward a raise.
   return wallet.data ? wallet.data.available + (me?.heldAmount ?? 0) : null
 }

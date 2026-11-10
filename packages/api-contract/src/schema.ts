@@ -7607,6 +7607,16 @@ export interface components {
             holdReason?: "Eligibility" | "Review" | null;
             /** @description ADR 0084. Pause time this auction may still use (72 hours in total, given back on resume). Optional for older servers. */
             pauseBudgetLeftSeconds?: number;
+            auctionType?: components["schemas"]["AuctionType"];
+            /**
+             * Format: date-time
+             * @description ADR 0081. The seller's open time on a ScheduledGrace registration auction; until minBidders register, startAt is the registration deadline (opensAt + 24 h). Null on other modes. Optional for older servers.
+             */
+            opensAt?: string | null;
+            /** @description ADR 0077/0079. Registered bidders needed before bidding opens; null when the auction needs no registration. Optional for older servers. */
+            minBidders?: number | null;
+            /** @description ADR 0077. Current registrations. Optional for older servers. */
+            registeredCount?: number;
             title: string;
             /** @enum {string} */
             state: "Active" | "OnHold";
