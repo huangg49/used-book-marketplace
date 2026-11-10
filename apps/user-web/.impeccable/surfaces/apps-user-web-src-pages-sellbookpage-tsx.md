@@ -7,6 +7,15 @@ related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-
 
 # Đăng sách —11/10/2026
 
+## Bán hoặc đổi ở bước 4
+
+Thẻ hình thức đang chọn dùng nền wine. Giá bán và giá trị đổi tách theo hình
+thức. Gợi ý giá ở ngay dưới ô giá bán, hiển thị một trạng thái và hành động
+kiểm tra phù hợp. Khoảng giá đã có hiện trước, lý do và nguồn mở riêng khi cần.
+Tiêu chí sách muốn đổi và giới hạn đăng bài thu gọn. Nơi gửi nằm sau điều kiện
+giao dịch, có trạng thái cần chọn hoặc đã chọn, dùng lại hộp thoại địa chỉ.
+Giữ các nhánh sách lẻ, bộ sách và khai báo giá trị cho đấu giá.
+
 ## Phân cấp thông tin ở bước 1 — 10/11/2026
 
 Member web giữ nền giấy, màu wine và năm bước. Bước 1 đặt lựa chọn sách lẻ/bộ

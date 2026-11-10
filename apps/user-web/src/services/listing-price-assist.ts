@@ -32,10 +32,10 @@ export function createListingPriceRequest(attempt: DraftAttempt) {
     // A single Ready photo is sufficient evidence to request a suggestion.
     // Final submission reuses it and uploads the remaining selected photos.
     await uploadOnce(attempt, draft, files[0]!);
+    phase("model");
     if (onReference) {
       try { onReference(await findPriceReference(session, draft.entityId, { ...input, bookId: book.entityId })); } catch { /* AI/manual entry remain available if the fast reference cannot be read. */ }
     }
-    phase("model");
     return {
       listingId: draft.entityId,
       suggestion: await ask(

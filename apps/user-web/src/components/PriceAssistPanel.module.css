@@ -1,12 +1,24 @@
 .panel {
   display: grid;
-  gap: 12px;
-  margin-block: 24px;
-  padding: 20px;
-  border: 1px solid var(--shop-line);
-  border-radius: 12px;
-  background: var(--shop-paper);
+  gap: 10px;
+  margin-top: 4px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--shop-shelf, var(--shop-paper));
   color: var(--shop-ink);
+}
+.panelHead,
+.rangeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.panelHeading {
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 .panel h3,
 .panel p,
@@ -14,8 +26,14 @@
   margin: 0;
 }
 .panel h3 {
-  font-size: 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1rem;
   color: var(--shop-wine);
+}
+.panel h3 svg {
+  flex: none;
 }
 .panel p,
 .panel li {
@@ -36,25 +54,31 @@
   cursor: pointer;
 }
 .panel .primary {
-  justify-self: start;
-  color: var(--shop-paper);
-  background: var(--shop-wine);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 8px 12px;
+  color: var(--shop-wine);
   border-color: var(--shop-wine);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.panel .primary:hover:not(:disabled) {
+  background: var(--shop-cream);
 }
 .panel button:disabled {
   opacity: 0.55;
   cursor: default;
 }
-.panel button:focus-visible,
-.panel summary:focus-visible,
-.panel a:focus-visible {
-  outline: 2px solid var(--shop-wine);
-  outline-offset: 4px;
-}
 .panel summary {
   min-height: 44px;
   padding-block: 10px;
   cursor: pointer;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 .panel a {
   color: var(--shop-wine);
@@ -67,9 +91,34 @@
   font-variant-numeric: tabular-nums;
 }
 .answer,
-.sources {
+.sources,
+.detailsBody {
   display: grid;
-  gap: 12px;
+  gap: 8px;
+}
+.answer,
+.status,
+.disclosure {
+  border-top: 1px solid var(--shop-line);
+}
+.answer,
+.status {
+  padding-top: 10px;
+}
+.status {
+  display: grid;
+  gap: 3px;
+  font-size: 0.875rem;
+}
+.statusTitle {
+  font-weight: 700;
+}
+.spinner {
+  flex: none;
+  animation: price-assist-spin 900ms linear infinite;
+}
+@keyframes price-assist-spin {
+  to { transform: rotate(360deg); }
 }
 .actions {
   display: flex;
@@ -77,17 +126,11 @@
   gap: 10px;
 }
 .note {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--shop-muted);
 }
 .evidence {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
   font-weight: 600;
-}
-@media (max-width: 480px) {
-  .panel {
-    padding: 16px;
-  }
-  .panel .primary {
-    width: 100%;
-  }
 }

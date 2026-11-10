@@ -57,7 +57,11 @@ try{
   }
   await prepare('Sách trước QA');const ask=page.getByRole('button',{name:'Lưu đầu sách và kiểm tra giá',exact:true});await ask.click();
   const oldRange=page.locator('p').filter({hasText:/^40\.000.*60\.000/});
-  if(mode==='ready')await expect(oldRange).toBeVisible();else await expect.poll(()=>typeof releaseOld).toBe('function');
+  if(mode==='ready')await expect(oldRange).toBeVisible();else{
+   await expect.poll(()=>typeof releaseOld).toBe('function');
+   await expect(page.getByRole('region',{name:'Gợi ý giá bán',exact:true}).getByRole('status'))
+    .toHaveText('Đang kiểm tra nguồn giá…');
+  }
   await page.getByRole('radio',{name:'Đổi sách',exact:true}).locator('..').click();await page.getByLabel('Giá trị đổi (VNĐ)',{exact:true}).fill('50000');await step(/Kiểm tra/).click();
   await page.getByLabel('Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.',{exact:true}).check();await page.getByRole('button',{name:'Gửi duyệt',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Đã gửi duyệt',exact:true})).toBeVisible();await page.getByRole('button',{name:'Đăng cuốn khác',exact:true}).click();

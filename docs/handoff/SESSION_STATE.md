@@ -1,3 +1,14 @@
+# Thiết kế lại bước 4 Đăng sách — 10/11/2026
+
+Nhánh `codex/sell-step-four-layout` từ `359e84fa`. Bước 4 tách lựa chọn hình thức,
+giá, tiêu chí đổi và nơi gửi. Khung giá đặt cạnh giá bán, hiển thị tiến độ và
+kết quả trước, mở riêng lý do và nguồn. Tiêu chí đổi và giới hạn đăng bài thu
+gọn. Xem [brief Đăng sách](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-sellbookpage-tsx.md).
+
+Member web build/typecheck, lint, 20 unit và 45 ca Chromium với API giả lập.
+Kiểm 320/390/1440 px, giữ giá/tiêu chí khi đổi hình thức, chọn địa chỉ, sách bộ,
+đấu giá, trạng thái tra giá và gợi ý hết hạn. Dev server phục vụ mã mới cổng 5174.
+
 # OpenAI cho tra giá online và Autofill — 10/11/2026
 
 Nhánh `codex/openai-listing-assist`, base demo `9df78db9` có cùng cây source với

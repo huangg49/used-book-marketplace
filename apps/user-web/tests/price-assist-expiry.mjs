@@ -28,14 +28,15 @@ const value={id,listingId:id,status:'Suggested',range:{low:40000,high:60000},evi
   expiresAt:new Date(Date.now()+60000).toISOString(),cached:false,model:'QA'};
 function App(){const [price,setPrice]=useState(new URLSearchParams(location.search).has('confirm')?'50000':'');
  const [applied,setApplied]=useState(0);
- const pending=new URLSearchParams(location.search).has('catalog-pending');
- const answer=pending?{...value,status:'NeedsMoreData',range:null,evidenceLevel:'Insufficient',model:null,
-  rules:['R-NEED-SOURCES','R-NEED-CATALOG-APPROVAL'],missing:['Có thể tra giá trực tuyến sau khi đầu sách được duyệt.']}:value;
+ const params=new URLSearchParams(location.search),pending=params.has('catalog-pending'),looking=params.has('lookup-pending');
+ const answer=pending||looking?{...value,status:'NeedsMoreData',range:null,evidenceLevel:'Insufficient',model:null,
+  rules:pending?['R-NEED-SOURCES','R-NEED-CATALOG-APPROVAL']:['R-LOOKUP-PENDING'],
+  missing:[pending?'Có thể tra giá trực tuyến sau khi đầu sách được duyệt.':'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.']}:value;
  return <main style={{maxWidth:720,margin:'auto',padding:16}}>
  <label>Giá đang nhập<input value={price} onChange={e=>setPrice(e.target.value)}/></label>
  <output aria-label="Số lượt áp dụng">{applied}</output>
  <PriceAssistPanel state={{status:'ready',key:'current',suggestion:answer,appliedPrice:null}}
- reference={pending?{key:'current',value:answer}:null}
+ reference={pending||looking?{key:'current',value:answer}:null}
  currentKey="current" currentPrice={price} phase="model" disabled={false} hasPhoto needsCatalog={pending}
  onAsk={()=>{}} onApply={amount=>{setPrice(String(amount));setApplied(n=>n+1)}}/>
  </main>}
@@ -52,7 +53,7 @@ const epoch = Date.parse('2026-11-05T05:00:00Z'), checks=[];
 let browser;
 try {
   browser=await chromium.launch();
-  for(const width of [390,1440]) for(const mode of ['direct-expired','confirm-expired','timer-expired','direct-valid','confirm-valid',...baseline?[]:['catalog-pending']]){
+  for(const width of [390,1440]) for(const mode of ['direct-expired','confirm-expired','timer-expired','direct-valid','confirm-valid',...baseline?[]:['catalog-pending','lookup-pending']]){
     const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'});
     await context.routeWebSocket('**/*', socket=>socket.close());
     const page=await context.newPage(),errors=[];
@@ -68,12 +69,16 @@ try {
     });
     if(mode==='timer-expired') await page.clock.install({time:epoch});
     else await page.clock.setFixedTime(epoch);
-    await page.goto(origin+'/.tmp/price-assist-expiry/index.html'+(mode.startsWith('confirm')?'?confirm=1':mode==='catalog-pending'?'?catalog-pending=1':''));
-    if(mode==='catalog-pending'){
-      await expect(page.getByText('Đầu sách đang chờ duyệt',{exact:true})).toBeVisible();
-      await expect(page.getByText('Có thể tra giá trực tuyến sau khi đầu sách được duyệt.',{exact:true})).toHaveCount(1);
+    await page.goto(origin+'/.tmp/price-assist-expiry/index.html'+(mode.startsWith('confirm')?'?confirm=1':mode.endsWith('-pending')?`?${mode}=1`:''));
+    if(mode.endsWith('-pending')){
+      const pending=mode==='catalog-pending';
+      const heading=pending?'Đầu sách đang chờ duyệt':'Đang tìm nguồn giá';
+      await expect(page.getByRole('region',{name:'Gợi ý giá bán',exact:true}).getByRole('status')).toHaveText(heading);
+      await expect(page.getByText(heading,{exact:true}).and(page.locator('p:not(.sr-only)'))).toBeVisible();
+      await expect(page.getByText(pending?'Có thể tra giá trực tuyến sau khi đầu sách được duyệt.':'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.',{exact:true})).toHaveCount(1);
       await expect(page.getByText('Khoảng tham chiếu theo quy tắc',{exact:true})).toHaveCount(0);
       await expect(page.getByRole('button',{name:'Kiểm tra lại nguồn giá',exact:true})).toBeEnabled();
+      await page.getByRole('region',{name:'Gợi ý giá bán',exact:true}).screenshot({path:path.join(out,`${mode}-${width}.png`),animations:'disabled'});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       assert.deepEqual(errors,[]);checks.push({width,mode});await context.close();continue;
     }
