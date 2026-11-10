@@ -14,7 +14,8 @@ export const suites = [
   { id: 'reviews', script: 'scripts/test-transaction-reviews.mjs', mongo: true, rn: true, scope: 'Web/RN web/Staff; real HTTP/Mongo; synthetic Completed fixtures; fake storage; no fulfillment claim' },
   { id: 'work-inbox', script: 'scripts/test-work-inbox.mjs', mongo: true, rn: true, scope: 'Web/RN web/Staff/Admin; real HTTP/Mongo; commands + synthetic paging/intakes; fake storage' },
   { id: 'auction-ui', script: 'apps/user-web/tests/auction-stage.mjs', scope: 'Web auction interface/motion; intercepted fixtures; not cross-role intake/auction fulfillment' },
-  { id: 'auction-journey', script: 'scripts/test-auction-journey.mjs', mongo: true, rn: true, scope: 'Member/Staff web + RN web; real intake/inspection/publish/bid/Buy Now/worker/payment; fake storage; stops at payment hold' },
+  { id: 'auction-journey', script: 'scripts/test-auction-journey.mjs', mongo: true, rn: true, scope: 'Member/Staff web + RN web; real intake/inspection/registration auction publish/deposits/bid/Instant Buy Now/worker/payment; fixture clock jump to the open time; fake storage; stops at payment hold' },
+  { id: 'auction-branches', script: 'scripts/test-auction-branches.mjs', mongo: true, rn: true, scope: 'Member/Staff/Admin web + RN web; Fail and NeedsEvidence inspection, Admin auctions queue/cancel, sealed-bid and Dutch, closed point, counter handover, settlement; fixture clock jumps; fake storage; no carrier' },
   { id: 'listing-ai', script: 'scripts/test-listing-ai-journey.mjs', mongo: true, rn: true, scope: 'Member web/RN web; real HTTP/Mongo/Sharp; AI recovery, explicit choices and same-draft submit; fake AI/storage; not real-camera quality or native' },
 ];
 

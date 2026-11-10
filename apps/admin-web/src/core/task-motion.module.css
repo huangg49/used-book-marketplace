@@ -50,7 +50,6 @@
     border-radius: 4px;
   }
   .panel :global(.operation-panel) {
-    padding: 16px;
     position: static;
   }
 }
@@ -58,7 +57,5 @@
   .panel:global(.row-panel)[data-open="true"] {
     padding: 8px;
   }
-  .panel :global(.operation-panel) {
-    padding: 12px;
-  }
+
 }

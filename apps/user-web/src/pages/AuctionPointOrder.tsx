@@ -3,6 +3,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatRemaining, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
 import { formatVnd } from '../lib/routes'
+import { pointReopensAt } from '../lib/point-hours'
 import {
   acceptPointOrderReport, claimPointOrder, CLAIM_MIN_LENGTH, rejectPointOrderReport, requestCollectionCode,
   type CodeIssued, type PointOrder,
@@ -15,6 +16,8 @@ import styles from './AuctionDetailPage.module.css'
 // every deadline; countdowns here are only a display.
 
 const POINT_HOURS = '09:00–18:00'
+const reopenLabel = (iso: string) =>
+  new Date(iso).toLocaleString('vi-VN', { weekday: 'long', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 function when(iso: string | null) {
   return iso ? new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—'
 }
@@ -219,6 +222,8 @@ function CollectionCode({ order, step, locked }: StepProps) {
   const [issued, setIssued] = useState<{ code: string | null; expiresAt: string | null; serverTime: string } | null>(null)
   const remaining = useCountdown(issued?.expiresAt ?? undefined, issued?.serverTime)
   const live = !!issued?.code && remaining > 0
+  const reopensAt = pointReopensAt(Date.parse(order.serverTime))
+  const closed = useCountdown(reopensAt ?? undefined, order.serverTime) > 0
   const request = async () => {
     await step.run({
       label: 'lấy mã nhận sách', signature: `code:${order.id}:${order.version}`,
@@ -244,10 +249,14 @@ function CollectionCode({ order, step, locked }: StepProps) {
             ? 'Mã đã được tạo nhưng không thể hiển thị lại. Hãy lấy mã mới khi đang ở quầy.'
             : 'Mã đã hết hạn. Hãy lấy mã mới khi đang ở quầy.'}
         </p>
+      ) : closed && reopensAt ? (
+        <p className={styles.fieldHint} role="status">
+          Điểm đang đóng cửa. Quầy mở lại lúc {reopenLabel(reopensAt)}; hãy lấy mã khi bạn đã ở quầy trong giờ {POINT_HOURS}.
+        </p>
       ) : (
         <p className={styles.fieldHint}>Chỉ lấy mã khi bạn đã ở quầy, trong giờ {POINT_HOURS}. Mã có hiệu lực 10 phút; lấy mã mới sẽ hủy mã cũ.</p>
       )}
-      <button type="button" className={live ? styles.secondaryBlock : styles.continue} disabled={locked} onClick={() => setConfirm(true)}>
+      <button type="button" className={live ? styles.secondaryBlock : styles.continue} disabled={locked || (closed && !live)} onClick={() => setConfirm(true)}>
         {issued ? 'Lấy mã mới' : 'Lấy mã nhận sách'}
       </button>
       <ConfirmDialog

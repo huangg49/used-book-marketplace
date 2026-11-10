@@ -226,6 +226,11 @@ export const operationsAuction = z.object({
   // ADR 0084: why it is held, and the pause time it may still use.
   holdReason: z.enum(["Eligibility", "Review"]).nullable().optional(),
   pauseBudgetLeftSeconds: z.number().int().nonnegative().optional(),
+  // ADR 0076/0077/0081: format and registration; optional for older servers.
+  auctionType: z.enum(["English", "Dutch", "SealedFirst", "SealedSecond"]).optional(),
+  opensAt: time.nullable().optional(),
+  minBidders: z.number().int().min(2).nullable().optional(),
+  registeredCount: z.number().int().nonnegative().optional(),
 }) satisfies z.ZodType<Schema["OperationsAuctionItem"]>;
 export type OperationsAuction = z.infer<typeof operationsAuction>;
 export const operationsAuctionList = z.object({

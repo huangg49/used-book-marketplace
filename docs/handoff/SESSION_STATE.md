@@ -1,3 +1,58 @@
+# Kiểm thử đấu giá nhanh: journey viết lại + nhánh còn lại — 10/11/2026
+
+Nhánh `test/auction-journey-registration` (trên `fix/auction-ui-review`). Hai kịch bản trình
+duyệt chạy trên QA `*_test`, storage giả, ví mô phỏng; dời đồng hồ máy chủ của fixture
+(`advanceClock` trong `apps/admin-web/tests/test-api.mjs`, chỉ cộng lệch vào `Tx.now()` /
+`MongoService.now()`, không ghi trạng thái phiên/đơn) thay vì chờ thời gian thật.
+
+- `pnpm test:auctions:browser` (`scripts/test-auction-journey.mjs`), 16 bước, ~75 s: viết lại cho
+  phiên có đăng ký (ADR 0077/0081/0087): đăng phiên giờ "Sớm nhất" (mất ACK), không còn "mở ngay",
+  khóa đổi giờ 30 phút cuối, 4 người đăng ký và đặt cọc (mất ACK), mở đúng giờ người bán, trả giá
+  bị giữ tiền, ví thiếu thì không mua ngay được, mua ngay "Kết thúc ngay", worker chốt, người thua
+  được hoàn đủ, thanh toán từ khoản giữ (mất ACK).
+- `pnpm test:auctions:branches` (`scripts/test-auction-branches.mjs`), 12 bước, ~85 s: Không đạt
+  trên admin (Đạt bị khóa khi lệch) → người bán nhận lại tại quầy; Cần bằng chứng → người yêu cầu
+  không được quyết → nhân viên độc lập ghi Không đạt; hàng đợi admin `/operations/auctions` và
+  Admin hủy phiên (hoàn cọc, trả sách); giá kín (tạo từ web, RN không lộ giá người khác, không hạ
+  giá) và Hà Lan (giảm 2 bước sau 2 khoảng, người chấp nhận đầu thắng); điểm đóng cửa (web khóa
+  nút, quầy từ chối bàn giao dù mã đúng); bàn giao bằng mã (mã sai bị từ chối); hết hạn kiểm tra →
+  worker chi trả người bán trừ 5%.
+- Lỗi đã sửa: hàng đợi admin hiện hạn đăng ký như giờ mở và không có số người đăng ký (thêm
+  `opensAt`/`minBidders`/`registeredCount`/`auctionType` vào `OperationsAuctionItem`, contract +
+  API + admin, e2e ADR 0084 kiểm thêm); RN chủ phiên đang chờ (nay theo thẻ "Quản lý phiên của bạn"
+  từ main); trang phiên dùng số dư cũ tới 15 giây sau khi nạp ví; sau mua ngay
+  "Kết thúc ngay" người mua chỉ thấy "Hệ thống đang chốt người thắng"; admin: khung thao tác lồng
+  hộp, nút tắt "Đạt: mọi mục khớp" vẫn là nút chính sau khi nhân viên đã chọn Không đạt.
+- Kiểm tra: hai kịch bản PASS liên tiếp; vitest user-web 485, admin-web 250 PASS; typecheck
+  API/admin/user-web/RN; e2e `auctions.e2e-spec.ts -t "ADR 0084: a resume"` PASS. RN web export
+  xuất lại với API QA 3009.
+- Còn lại/NOT RUN: native RN; trả sách sau khi từ chối biên bản, khiếu nại sau bàn giao, cơ hội
+  thứ hai, người thắng không trả (mất cọc); tạm giữ/tiếp tục phiên trên admin. Nhãn phiên Hà Lan
+  vẫn ghi "Giá khởi điểm" cho giá sàn; phiên giá kín vẫn hiện "Mua ngay: Không còn". API cho xin mã
+  ngoài giờ (đúng contract); chỉ quầy chặn bàn giao.
+
+# Rà soát trình duyệt luồng đấu giá (Member web) — 10/11/2026
+
+Nhánh `fix/auction-ui-review` từ `origin/main` (`71ba3257`). Đi trọn luồng bằng trình duyệt
+trên QA replica set (`*_test`, storage giả, ví mô phỏng): người bán giữ chỗ → nhân viên nhận và
+kiểm Đạt (admin web) → người bán hẹn giờ → 4 người đăng ký và đặt cọc → trả giá, bị vượt giá
+trực tiếp, mua ngay (chờ thách đấu và kết thúc ngay) → worker chốt → thanh toán → đồng ý biên
+bản → mã nhận sách. Người thua được hoàn đủ cọc; người thắng bị giữ đúng 120.000 đ cho đơn.
+
+- Lỗi đã sửa (user-web): "Sớm nhất" chọn giờ thiếu vài giây so với 5 phút nên hộp thoại tự báo
+  lỗi; Đấu giá của tôi hiện hạn đăng ký (opensAt + 24 giờ) như giờ mở và cho "Đổi thời gian"
+  kiểu cũ với phiên có đăng ký; người đã đăng ký nhưng chưa trả giá thấy "Bạn đã bị vượt giá";
+  số dư khả dụng không làm mới khi bị vượt giá qua push; tiêu đề tab giữ "Đăng nhập" sau khi
+  đăng nhập; lấy được mã nhận sách 10 phút ngoài giờ 09:00–18:00 (nay khóa nút, báo giờ mở lại).
+- UX/nội dung: danh sách hiện ghi chú gọn thay trạng thái trống lớn khi có phiên sắp mở; nhãn
+  cho nhóm chọn hình thức, số người tối thiểu, chế độ mua ngay; quy tắc đăng ký thành danh sách;
+  phiếu xem trước có tiền cọc, hình thức, số người; bỏ chữ "mở ngay"/"24 giờ" lỗi thời (ADR 0081);
+  tiền cọc mất "không được hoàn" (ADR 0087); nút báo cáo đặt sau tác giả; "sau khi mở" không còn
+  Title Case; Đấu giá của tôi ẩn khối người bán với người chỉ mua.
+- Kiểm tra: typecheck; vitest user-web 485 PASS (thêm `lib/point-hours.test.ts`); stage
+  `apps/user-web/tests/auction-stage.mjs` PASS; kiểm lại từng sửa trên trình duyệt 1366/390px.
+  Kịch bản journey và các nhánh còn lại: xem mục "Kiểm thử đấu giá nhanh" ở trên.
+
 # Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
 
 Nhánh `codex/sell-step-one-hierarchy` từ `dc5c02e8`. Member web thu gọn khay

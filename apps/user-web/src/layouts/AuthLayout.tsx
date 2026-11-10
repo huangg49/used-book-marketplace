@@ -81,6 +81,8 @@ export function AuthLayout() {
     disposed.current = false;
     return () => {
       disposed.current = true;
+      // Leaving the auth pages: the next page must not keep "Đăng nhập · Lật lại".
+      document.title = "Lật lại — Mua bán sách cũ";
       animations.current.forEach((animation) => animation.cancel());
       settle();
     };

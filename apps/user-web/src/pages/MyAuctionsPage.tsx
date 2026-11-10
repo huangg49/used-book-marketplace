@@ -13,8 +13,8 @@ import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { useSession } from '../hooks/useSession'
 import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
-  AUCTION_MAX_SCHEDULE_EDITS, EVIDENCE_MIN_LENGTH, auctionPhase, getMyAuctionIntakes, listHandoverPoints, listMyAuctions,
-  submitIntakeEvidence, withdrawIntake, getMyAuctionIntake, type MyAuctionItem, type MyIntake,
+  AUCTION_MAX_SCHEDULE_EDITS, AUCTION_MIN_BIDDERS_FLOOR, EVIDENCE_MIN_LENGTH, auctionPhase, getMyAuctionIntakes, listHandoverPoints, listMyAuctions,
+  submitIntakeEvidence, waitingForRegistrants, waitingTime, withdrawIntake, getMyAuctionIntake, type MyAuctionItem, type MyIntake,
 } from '../services/auctions'
 import { ROUTES, formatVnd } from '../lib/routes'
 import styles from './MyAuctionsPage.module.css'
@@ -48,18 +48,23 @@ function AuctionRow({
   const { auction: a } = item
   const [editing, setEditing] = useState(false)
   const remaining = useCountdown(a.endAt, serverTime)
-  const untilStart = useCountdown(a.startAt, serverTime)
+  // ADR 0081: until enough people register, startAt is the registration
+  // deadline (opensAt + 24 h); the time to show is the seller's open time.
+  const waiting = waitingForRegistrants(a) ? waitingTime(a, Date.parse(serverTime)) : null
+  const untilStart = useCountdown(waiting?.at ?? a.startAt, serverTime)
   const deadline = useCountdown(item.paymentDeadline ?? undefined, serverTime)
   // ADR 0047: a scheduled auction is Active but takes no bids before its start.
   const scheduled = auctionPhase(a, serverTime) === 'Scheduled' && untilStart > 0
   const open = a.state === 'Active' && remaining > 0 && !scheduled
   const payable = item.needsPayment && deadline > 0
   // The seller edits the time only before the first bid (the server rechecks).
-  const editable = item.role === 'Seller' && (open || scheduled) && a.bidderCount === 0 && !a.buyNowAt
+  // Registration auctions change their open time on the detail page instead.
+  const editable = item.role === 'Seller' && a.minBidders == null && (open || scheduled) && a.bidderCount === 0 && !a.buyNowAt
     && a.version != null && (a.scheduleRevision ?? 0) < AUCTION_MAX_SCHEDULE_EDITS
   const status = payable
     ? 'Cần thanh toán'
     : item.needsPayment ? 'Đã hết thời gian thanh toán, đang cập nhật'
+    : scheduled && waiting ? `${waiting.label} ${intakeTime(waiting.at)}`
     : scheduled ? `Hẹn mở lúc ${intakeTime(a.startAt)}`
     : item.role === 'Seller'
       ? open
@@ -97,7 +102,13 @@ function AuctionRow({
           </p>
         )}
         {open && <p>Còn {formatRemaining(remaining)}</p>}
-        {scheduled && <p>Mở sau {formatRemaining(untilStart)} · kéo dài {formatDuration(Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 1000))}</p>}
+        {scheduled && waiting && (
+          <p>
+            Đăng ký {a.registeredCount ?? 0}/{a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người
+            · {waiting.label === 'Mở lúc' ? 'mở sau' : 'hạn còn'} {formatRemaining(untilStart)}
+          </p>
+        )}
+        {scheduled && !waiting && <p>Mở sau {formatRemaining(untilStart)} · kéo dài {formatDuration(Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 1000))}</p>}
       </div>
       <div className={styles.action}>
         <span>
@@ -115,7 +126,9 @@ function AuctionRow({
             ? 'Xem và thanh toán'
             : open && item.role === 'Bidder' && !item.leading
               ? 'Xem để trả tiếp'
-              : 'Xem phiên'}{' '}
+              : waiting && item.role === 'Seller'
+                ? 'Quản lý phiên'
+                : 'Xem phiên'}{' '}
           <ArrowRight size={16} aria-hidden="true" />
         </Link>
         </div>
@@ -155,7 +168,7 @@ const RECLAIM: Record<string, string> = {
   AuctionCancelled: 'Phiên đã bị hủy.',
 }
 const intakeTime = (iso: string) =>
-  new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' })
+  new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 
 // N4-12: the point asked for evidence. One written answer before the deadline;
 // another Staff member decides, and silence never counts as a Pass.
@@ -314,9 +327,12 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
 function SellerIntakes({
   enabled,
   userId,
+  hideWhenEmpty = false,
 }: {
   enabled: boolean;
   userId: string | undefined;
+  // "Tất cả" is for buyers too: show the seller block only when it has books.
+  hideWhenEmpty?: boolean;
 }) {
   const [params, setParams] = useSearchParams();
 
@@ -361,6 +377,7 @@ function SellerIntakes({
       ? [focus.data]
       : []
     : (intakes.data?.items ?? []).filter((i) => WAITING_INTAKE_STATES.has(i.state));
+  if (hideWhenEmpty && !focusId && !waiting.length) return null;
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["my-auction-intakes"] }),
@@ -455,7 +472,7 @@ export function MyAuctionsPage() {
           </button>
         ))}
       </nav>
-      <SellerIntakes userId={userId} enabled={!!userId && (view === 'all' || view === 'selling') && !cursor} />
+      <SellerIntakes userId={userId} enabled={!!userId && (view === 'all' || view === 'selling') && !cursor} hideWhenEmpty={view === 'all'} />
       <div className={styles.results} id="my-auction-results" tabIndex={-1} aria-busy={query.isFetching}>
         {query.isPending && <p role="status">Đang tải các phiên của bạn…</p>}
         {query.isError && (
@@ -468,8 +485,10 @@ export function MyAuctionsPage() {
           </div>
         )}
         {query.data && !query.isError && !query.data.items.length && (
-          <div className={styles.empty}>
-            <AuctionEmptyArt variant={view === 'selling' || view === 'upcoming' ? 'mine' : 'shelf'} />
+          <div className={`${styles.empty} ${view === 'selling' ? styles.emptyCompact : ''}`}>
+            {/* "Phiên của tôi" already shows the books waiting above with their
+                next step; a second full-size illustration reads as "nothing here". */}
+            {view !== 'selling' && <AuctionEmptyArt variant={view === 'upcoming' ? 'mine' : 'shelf'} />}
             <h2>
               {view === 'payment'
                 ? 'Bạn không có phiên cần thanh toán'
