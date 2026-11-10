@@ -23,6 +23,97 @@ bản → mã nhận sách. Người thua được hoàn đủ cọc; người t
 - Chưa làm: bàn giao tại quầy (cần giờ mở cửa), nhánh Không đạt/Cần bằng chứng bằng tay, admin
   `/operations/auctions`, giá kín/Hà Lan, RN/native. Khung nhận sách admin còn hộp lồng hộp.
 
+# Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
+
+Nhánh `codex/sell-step-one-hierarchy` từ `dc5c02e8`. Member web thu gọn khay
+ảnh lúc trống, xếp trường bắt buộc trước thông tin ấn bản và mở riêng quy định
+đăng bài khi cần. Lỗi nằm cạnh trường liên quan. Khi Tiếp tục bị chặn, focus
+tới chỗ sửa đầu tiên và tôn trọng focus người dùng vừa chuyển. Ảnh, kết quả
+đọc và dữ liệu nhập được giữ khi chuyển bước trong cùng bản nháp. Chi tiết ở
+[brief Đăng sách](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-sellbookpage-tsx.md).
+
+Kiểm chứng gồm build/typecheck, 481 unit, lint với cảnh báo sẵn có và 42 ca
+Chromium. Kiểm bố cục/lỗi ở 320, 390 và 1440 px. Các ca API trong browser
+dùng dữ liệu giả lập. Bản xem trước local cổng 5175 trả 200 cho trang Đăng
+sách, health và tra danh mục. Chưa nghiệm thu với tài khoản hoặc AI thật.
+Bước 2 là phạm vi tiếp theo sau khi xem lại bước 1.
+
+Đồng bộ `main` tại `86e6b2bb` trong PR #105. Giữ cả hai phần bàn giao khi
+gộp tài liệu. Bản tích hợp dùng nền sáng đã chọn cho Autofill. Sửa lỗi mở
+đề nghị trao đổi mới nhất khi giao dịch đã kết thúc. Ca trao đổi chạy qua
+API thật trên MongoDB QA, gồm khôi phục khi lỗi tải và ẩn thông tin khi bị
+từ chối truy cập.
+
+# Autofill tự đọc vùng chữ nhỏ — 10/11/2026
+
+Profile `listing-text-v2` dùng cùng thao tác chọn ảnh và bấm đọc. Backend
+tìm cụm chữ nhỏ trong bộ ảnh và gửi tối đa một ảnh cận cùng ảnh toàn trang
+trong lần gọi chính của model mặc định. Cache cũ theo ảnh được phân biệt
+bằng profile và lời dặn mới. Xem kết quả đối chiếu bốn cuốn trong [ADR0048](../adr/0048-listing-photo-autofill.md).
+Kiểm chứng gồm 51 unit, 9 ca HTTP với MongoDB QA, typecheck, build và kiểm
+OpenAPI. Lượt đối chiếu NVIDIA gọi qua bộ đọc ảnh của API, còn kiểm thử HTTP
+dùng provider và ảnh giả. Không dùng hai loại bằng chứng này để đóng gate
+ảnh thật.
+
+# Đọc chữ bằng AI trực tiếp trên Member web — 09/11/2026
+
+Tiếp nối `d1ad5d42`. Từ `/sell`, chọn ảnh và bấm **Đọc chữ bằng AI** để bỏ
+qua bước tra mã vạch khi đã biết sách không có ISBN. Nút **Đọc thông tin**
+vẫn ưu tiên tra mã vạch. Hai nhánh dùng chung bản nháp, ảnh đã tải và khóa lượt đọc.
+Xem [ADR0048](../adr/0048-listing-photo-autofill.md) để chọn ảnh cho buổi chấm.
+
+Đo NVIDIA trên bốn cuốn do chủ dự án cung cấp cho thấy cả lời dặn dài hơn và
+thang thu ảnh thử nghiệm có ca sai thêm tựa hoặc tác giả. Giữ cấu hình đọc đã
+kiểm ở `d1ad5d42`. Bằng chứng là bộ thử phát triển bốn cuốn, chưa đủ ngưỡng
+nghiệm thu. Ảnh và kết quả thô nằm ngoài Git. Tra công khai theo tựa của bốn cuốn
+chưa thấy kết quả trùng trong phạm vi truy vấn. Chưa gửi bài hoặc duyệt bằng
+tài khoản thật trong lượt này.
+
+Kiểm chứng Member web gồm typecheck/build, 6 unit và 20 ca Chromium ở 390/1440 px.
+Ca đọc trực tiếp ghi nhận 0 lượt ISBN và 1 lượt AI khi bấm liên tiếp.
+
+## Bố cục bước 1 Đăng sách — 09/11/2026
+
+Trên `codex/autofill-listing-recovery-20261109`, sau khi đồng bộ main `0a420d5c`.
+Member web gom ảnh, lệnh đọc và tiến độ trên một mặt giấy. Kết quả ngay bên dưới
+cho sửa từng mục, hiện tên ngôn ngữ và hướng dẫn ảnh cần bổ sung. Đối chiếu danh
+mục dùng nội dung đã rà soát và chỉ hiện ứng viên khớp tiêu chí hiện tại. Có thể
+dùng gợi ý để tiếp tục nhập tay khi danh mục chưa có sách. Đổi ảnh khóa kết quả
+cũ, áp dụng lên dữ liệu đang nhập vẫn cần xác nhận. Thay đổi ở Member web.
+
+Kiểm chứng gồm build/typecheck Member web, 20 unit và 30 ca Chromium ở
+390/1440 px, gồm 12 ca đọc/đối chiếu, 8 ca vòng đời ảnh và 10 ca gửi duyệt
+giả lập. Ca gửi từ Autofill dùng đúng tựa đã sửa và mở đúng bài vừa gửi.
+Ảnh, API và kho ảnh trong các ca browser là dữ liệu thử. Chưa chạy lại với AI
+thật hoặc tài khoản người dùng. API demo chưa phản hồi tại thời điểm kiểm.
+
+Tinh chỉnh theo ảnh phản hồi: dải ảnh ngang giữ trọn ảnh, trạng thái đọc xong
+nằm cạnh Đọc lại. Kiểm bố cục với đủ ba ảnh ngang ở 390/1440 px.
+
+Khi chuyển bước trong cùng bản nháp, bước 1 được ẩn để giữ ảnh đọc, gợi ý,
+chỉnh sửa và kết quả tra danh mục. Quay lại dùng đúng dữ liệu của lượt đọc
+trước. Gửi duyệt thành công vẫn kết thúc bản nháp hiện tại.
+
+# Autofill và phục hồi gửi bài trên Member web — 09/11/2026
+
+Gói `codex/autofill-listing-recovery-20261109` trên nền main local `c5c232bd`.
+
+- `/sell` → ảnh sẵn sàng → ISBN hoặc đọc AI → soát và áp dụng → kiểm tra → gửi
+  duyệt → mở đúng bài trên kệ bằng ID. Bỏ qua được lỗi riêng bước tra ISBN.
+  Tựa đã sửa dùng được cả khi không khớp danh mục. Các mục ấn bản có thể sửa hoặc
+  bỏ. Gửi bị từ chối rõ ràng thì đọc lại phiên bản bản nháp để sửa. Mất phản hồi
+  tiếp tục giữ key, body và version của lần gửi.
+- [ADR0048](../adr/0048-listing-photo-autofill.md) cập nhật ảnh đọc tối đa 1536 px
+  trong cùng giới hạn 180 KB và lời dặn ghép tựa in rời. Cache phân biệt lời dặn và
+  cấu hình ảnh. Hai lượt NVIDIA với hai ảnh *Cao-Lãnh đến 1954* đọc đủ phần tựa,
+  bỏ dấu gạch nối, để trống ISBN và năm xuất bản.
+- Kiểm chứng trong gói gồm contract/routes, typecheck API/web, build Member web,
+  66 unit API/eval, 26 unit web, 27 E2E API trên Mongo QA và 18 ca Chromium
+  giả lập ở 390/1440 px. Ca xuyên suốt kiểm tra tựa đã sửa trong yêu cầu tạo đầu sách
+  và mở đúng bài vừa gửi. Suite fast paths bỏ một ca import dữ liệu vùng gửi sách yêu cầu port
+  QA mặc định, vì Windows giữ cổng đó. Native, tập ảnh thật đủ cỡ mẫu và vòng duyệt
+  bằng người thật vẫn cần bằng chứng riêng.
+
 # Chứng cứ đóng gói và đối soát khiếu nại trao đổi sách — 08-09/11/2026
 
 Nhánh `feat/exchange-dispute-resolution` tích hợp cùng `origin/main` (`0a420d5c`).

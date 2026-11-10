@@ -28,11 +28,12 @@ import {
   checkAutofill,
   type CheckedAutofill,
 } from '../../src/modules/autofill-assist/autofill-check.js';
-import { shrinkForModel } from '../../src/modules/autofill-assist/autofill-images.js';
+import { AUTOFILL_IMAGE_PROFILE, prepareAutofillImages } from '../../src/modules/autofill-assist/autofill-images.js';
 import { autofillModelFromConfig } from '../../src/modules/autofill-assist/autofill-model.js';
 import {
   AUTOFILL_SYSTEM,
   AUTOFILL_USER,
+  AUTOFILL_DETAIL_USER,
 } from '../../src/modules/autofill-assist/autofill-prompt.js';
 import { processImage } from '../../src/modules/media/image-processor.js';
 import { digest } from '../../src/modules/media/media-storage.js';
@@ -81,6 +82,7 @@ const arg = (name: string) =>
   args.includes(name) ? args[args.indexOf(name) + 1] : null;
 const dir = arg('--dir') ? resolve(arg('--dir')!) : null;
 const checkOnly = args.includes('--check-only');
+const model = checkOnly ? null : autofillModelFromConfig((key) => process.env[key]);
 if (checkOnly && args.includes('--init'))
   throw new Error('--check-only cannot create a corpus with --init.');
 const only = arg('--only');
@@ -90,7 +92,7 @@ const system = arg('--system-file')
   ? readFileSync(resolve(arg('--system-file')!), 'utf8')
   : AUTOFILL_SYSTEM;
 const promptSha256 = createHash('sha256')
-  .update(system + '\n' + AUTOFILL_USER)
+  .update([system, AUTOFILL_USER, AUTOFILL_DETAIL_USER].join('\n'))
   .digest('hex');
 if (!Number.isFinite(maxUsd) || maxUsd <= 0)
   throw new Error('--max-usd must be a finite positive number.');
@@ -241,7 +243,8 @@ for (const c of file.cases.filter((c) => !only || c.id === only)) {
       );
     hashes.add(hash);
   }
-  prepared.set(c.id, await Promise.all(photos.map((p) => asProvided(p))));
+  const derivatives = await Promise.all(photos.map(asDerivative));
+  prepared.set(c.id, await prepareAutofillImages(derivatives, model?.supportsDetail ?? false));
 }
 if (checkOnly) {
   console.log(
@@ -273,7 +276,6 @@ if (checkOnly) {
   );
   process.exit(0);
 }
-const model = autofillModelFromConfig((key) => process.env[key]);
 if (!model) {
   console.error(
     'BLOCKED: AUTOFILL_ENABLED=true and AUTOFILL_API_KEY are needed in apps/api/.env.',
@@ -281,8 +283,8 @@ if (!model) {
   process.exit(2);
 }
 
-// Same path as an upload: derivative (EXIF stripped, rotated) then the shrink.
-async function asProvided(path: string) {
+// Same derivative as an upload (EXIF stripped, rotated).
+async function asDerivative(path: string) {
   const bytes = readFileSync(path);
   const { format } = await sharp(bytes).metadata();
   const { bytes: derivative } = await processImage(bytes, {
@@ -290,7 +292,7 @@ async function asProvided(path: string) {
     sha256: digest(bytes),
     mimeType: MIME[format ?? ''] ?? 'unsupported',
   });
-  return shrinkForModel(derivative);
+  return derivative;
 }
 
 const results = [];
@@ -312,7 +314,7 @@ for (const c of file.cases) {
     try {
       const draft = await model.read(
         system,
-        AUTOFILL_USER,
+        images.length > c.photos.length ? AUTOFILL_DETAIL_USER : AUTOFILL_USER,
         images,
         useFallback,
       );
@@ -348,7 +350,7 @@ for (const c of file.cases) {
       if (spentMicro >= maxUsd * 1e6) failure = 'BudgetBeforeFallback';
       else {
         usedFallback = true;
-        const second = await call(images, true).catch((e) => {
+        const second = await call(images.slice(0, c.photos.length), true).catch((e) => {
           if (!checked) throw e;
           return null;
         });
@@ -409,6 +411,7 @@ const summary = {
   model: model.model,
   fallback: model.fallback,
   promptSha256,
+  imageProfile: AUTOFILL_IMAGE_PROFILE,
   casesSha256: createHash('sha256')
     .update(readFileSync(casesPath))
     .digest('hex'),

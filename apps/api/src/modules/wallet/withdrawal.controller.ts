@@ -5,6 +5,7 @@ import {
   HttpCode,
   Param,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -88,6 +89,56 @@ export class WithdrawalController {
     );
     res.setHeader('Idempotency-Replayed', String(result.replayed));
     return result.receipt;
+  }
+  @Post('admin/withdrawals/:withdrawalId/proof')
+  @HttpCode(200)
+  @Roles('ADMIN')
+  async createProof(
+    @Param('withdrawalId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.service.createProof(
+      commandContext(this.input, req, res),
+      this.input.uuid(id),
+      this.input.body('CreateWithdrawalProof', body),
+    );
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
+  @Put('admin/withdrawals/:withdrawalId/proof/:proofId/content')
+  @HttpCode(200)
+  @Roles('ADMIN')
+  async uploadProof(
+    @Param('withdrawalId') id: string,
+    @Param('proofId') proofId: string,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.service.uploadProof(
+      commandContext(this.input, req, res),
+      this.input.uuid(id),
+      this.input.uuid(proofId),
+      req,
+    );
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
+  @Get('me/withdrawals/:withdrawalId/proof/:proofId/read')
+  @Roles('MEMBER')
+  readProof(
+    @Param('withdrawalId') id: string,
+    @Param('proofId') proofId: string,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.service.readProof(
+      req.auth,
+      this.input.uuid(id),
+      this.input.uuid(proofId),
+      res.locals.requestId as string,
+    );
   }
   @Post('admin/withdrawals/:withdrawalId/process')
   @HttpCode(200)

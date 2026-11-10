@@ -24,7 +24,7 @@ import {
   type ProbeRow,
 } from './endpoint-probe.js';
 import { processImage } from '../../src/modules/media/image-processor.js';
-import { shrinkForModel } from '../../src/modules/autofill-assist/autofill-images.js';
+import { AUTOFILL_IMAGE_PROFILE, shrinkForModel } from '../../src/modules/autofill-assist/autofill-images.js';
 import {
   costMicroUsd,
   rateFor,
@@ -87,7 +87,7 @@ if (process.argv[2] === '--report') {
     sha256: hash(photo),
     mimeType: 'image/jpeg',
   });
-  const image = await shrinkForModel(derivative.bytes);
+  const image = await shrinkForModel(derivative.bytes, AUTOFILL_IMAGE_PROFILE);
   await mkdir(dir, { recursive: true });
   const lockUrl = new URL('probe.lock', dir);
   const lock = await open(lockUrl, 'wx');

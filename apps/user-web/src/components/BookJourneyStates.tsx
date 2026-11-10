@@ -2,8 +2,9 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, BookOpen } from "lucide-react";
 import styles from "./BookJourneyStates.module.css";
 
-export function ListingSubmissionConfirmation({ title, onPostAnother, auction = false }: {
+export function ListingSubmissionConfirmation({ title, listingId, onPostAnother, auction = false }: {
   title: string;
+  listingId?: string;
   onPostAnother: () => void;
   auction?: boolean;
 }) {
@@ -34,7 +35,7 @@ export function ListingSubmissionConfirmation({ title, onPostAnother, auction = 
         <div className={styles.actions}>
           <button type="button" onClick={onPostAnother}>Đăng cuốn khác
             <ArrowUpRight size={18} aria-hidden="true" /></button>
-          <Link to="/">Về trang chủ</Link>
+          <Link to={listingId ? `/my-books/${listingId}/edit` : "/my-books"}>Xem bài vừa gửi <ArrowUpRight size={18} aria-hidden="true" /></Link>
         </div>
       </div>
     </section>

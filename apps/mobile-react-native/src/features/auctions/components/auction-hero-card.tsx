@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
 import { conditions } from "../../shelf/contracts";
-import { formatRemaining, minimumBidOf } from "../auctions-model";
+import { formatRemaining, isSealedFormat, minimumBidOf } from "../auctions-model";
 import type { PublicAuctionSummary } from "../contracts";
 import { AuctionCover } from "./auction-cover";
 
@@ -20,7 +20,14 @@ export function AuctionHeroCard({
   onQuickBid,
   onOpenLive,
 }: AuctionHeroCardProps) {
-  const currentPrice = auction.currentPrice ?? auction.startPrice;
+  const formatType = auction.auctionType ?? "English";
+  const isDutch = formatType === "Dutch";
+  const isSealed = isSealedFormat(auction);
+  const currentPrice = isDutch
+    ? (auction.dutchPrice ?? auction.dutchTopPrice ?? auction.buyNowPrice ?? auction.startPrice)
+    : isSealed
+      ? auction.startPrice
+      : (auction.currentPrice ?? auction.startPrice);
   const nextBid = minimumBidOf(auction);
   const authors = auction.book?.authors.join(", ");
 
@@ -123,7 +130,13 @@ export function AuctionHeroCard({
                     kind="small"
                     style={{ fontSize: 11, color: stitchTokens.subtleGray }}
                   >
-                    {auction.currentPrice === null ? "Khởi điểm:" : "Giá cao nhất:"}
+                    {isDutch
+                      ? "Giá đang giảm:"
+                      : isSealed
+                        ? "Giá khởi điểm (Kín):"
+                        : auction.currentPrice === null
+                          ? "Khởi điểm:"
+                          : "Giá cao nhất:"}
                   </AppText>
                   <AppText kind="bold" style={styles.heroPriceText}>
                     {formatVnd(currentPrice)}
@@ -144,7 +157,7 @@ export function AuctionHeroCard({
                     }}
                   >
                     <Icon
-                      name="flame"
+                      name={isSealed ? "lock" : "flame"}
                       size={13}
                       color={stitchTokens.flashRed}
                     />
@@ -163,14 +176,14 @@ export function AuctionHeroCard({
                     kind="small"
                     style={{ fontSize: 10, color: stitchTokens.subtleGray }}
                   >
-                    Bước: +{formatVnd(auction.step)}
+                    {isDutch ? `Sàn: ${formatVnd(auction.startPrice)}` : `Bước: +${formatVnd(auction.step)}`}
                   </AppText>
                 </View>
               </View>
             </View>
           </View>
 
-          {auction.buyNowPrice !== null && (
+          {!isDutch && !isSealed && auction.buyNowPrice !== null && (
             <AppText kind="small" style={styles.heroBuyNowText}>
               Mua ngay:{" "}
               <AppText kind="bold" style={styles.heroBuyNowText}>
@@ -183,15 +196,23 @@ export function AuctionHeroCard({
           <View style={styles.heroActionsRow}>
             <Pressable
               accessibilityRole="button"
-              onPress={onQuickBid}
+              onPress={isDutch || isSealed || auction.minBidders != null ? onOpenLive : onQuickBid}
               style={({ pressed }) => [
                 styles.heroQuickBidBtn,
                 pressed && { opacity: 0.9 },
               ]}
             >
-              <Icon name="plus" size={16} color={stitchTokens.wineDark} />
+              <Icon
+                name={isDutch ? "flame" : isSealed ? "lock" : "plus"}
+                size={16}
+                color={stitchTokens.wineDark}
+              />
               <AppText kind="bold" style={styles.heroQuickBidBtnText}>
-                Trả {formatVnd(nextBid)}
+                {isDutch
+                  ? `Mua ${formatVnd(currentPrice)}`
+                  : isSealed
+                    ? "Gửi giá kín"
+                    : `Trả ${formatVnd(nextBid)}`}
               </AppText>
             </Pressable>
 

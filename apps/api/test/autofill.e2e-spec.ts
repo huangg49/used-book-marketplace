@@ -21,12 +21,13 @@ import { MongoFixtures } from './helpers/mongo-fixtures.js';
 class FakeAutofill extends AutofillModel {
   readonly model = 'fake/vision';
   fallback: string | null = null;
-  calls: { images: string[]; fallback: boolean }[] = [];
+  override readonly supportsDetail = true;
+  calls: { images: string[]; fallback: boolean; userPrompt: string }[] = [];
   output: unknown = {};
   fallbackOutput: unknown = {};
   mode: 'ok' | 'timeout' | 'slow' = 'ok';
   async read(_s: string, _u: string, images: string[], useFallback = false): Promise<ModelDraft> {
-    this.calls.push({ images, fallback: useFallback });
+    this.calls.push({ images, fallback: useFallback, userPrompt: _u });
     if (this.mode === 'timeout') throw new PriceModelError('Timeout', 'fake timeout');
     if (this.mode === 'slow') await new Promise((r) => setTimeout(r, 400));
     return {
@@ -39,9 +40,14 @@ class FakeAutofill extends AutofillModel {
 }
 class FakeImages extends AutofillImages {
   keys: string[] = [];
+  detail = false;
   async dataUrl(key: string) {
     this.keys.push(key);
     return `data:image/jpeg;base64,${Buffer.from(key).toString('base64')}`;
+  }
+  override async readingImages(keys: string[], includeDetail: boolean) {
+    const full = await super.readingImages(keys, includeDetail);
+    return this.detail && includeDetail ? [...full, 'data:image/jpeg;base64,ZGV0YWls'] : full;
   }
 }
 
@@ -206,6 +212,7 @@ describe('photo autofill through HTTP with MongoDB', () => {
       missing: [],
     };
     images.keys = [];
+    images.detail = false;
     await db.c.price_assist_usage.deleteMany({});
   });
 
@@ -225,6 +232,7 @@ describe('photo autofill through HTTP with MongoDB', () => {
 
   it('reads the photos once, returns checked fields with catalog matches, then serves the cache', async () => {
     const l = await listing();
+    images.detail = true;
     const first = await ask(l.id, [l.photo], m1).expect(200);
     validates('AutofillSuggestion', first.body);
     expect(first.headers['cache-control']).toBe('no-store');
@@ -240,6 +248,8 @@ describe('photo autofill through HTTP with MongoDB', () => {
       pending: false,
     });
     expect(fake.calls).toHaveLength(1);
+    expect(fake.calls[0]?.images).toHaveLength(2);
+    expect(fake.calls[0]?.userPrompt).toContain('Ảnh cuối phóng cận');
     expect(images.keys).toEqual([`e2e/derived/${l.photo}`]);
     // Nothing is written to the listing itself.
     const revision = await db.c.listing_revisions.findOne({ listingId: l.id });
@@ -311,6 +321,7 @@ describe('photo autofill through HTTP with MongoDB', () => {
 
   it('calls the fallback model once when the first reads no title', async () => {
     const l = await listing();
+    images.detail = true;
     fake.fallback = 'fake/fallback';
     fake.output = { title: null, authors: [] };
     fake.fallbackOutput = { title: bookTitle, authors: ['Nguyễn Nhật Ánh'] };
@@ -318,6 +329,7 @@ describe('photo autofill through HTTP with MongoDB', () => {
     expect(res.body).toMatchObject({ status: 'Suggested', model: 'fake/fallback' });
     expect(res.body.matches[0]).toMatchObject({ book: { id: bookId }, matchedBy: 'TitleAuthor' });
     expect(fake.calls.map((c) => c.fallback)).toEqual([false, true]);
+    expect(fake.calls.map((c) => c.images.length)).toEqual([2, 1]);
   });
 
   it('matches the catalog despite a misread accent, capitals and different name spacing', async () => {

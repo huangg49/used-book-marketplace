@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../auth/auth.guard.js';
 import { Roles } from '../auth/roles.guard.js';
 import { ContractInput } from '../commands/contract-input.service.js';
@@ -25,5 +25,10 @@ export class OperationsDashboardController {
       req.auth,
       this.input.query('getRevenueOverview', query),
     );
+  }
+  @Get('users/:userId/avatar/read')
+  @Roles('STAFF', 'ADMIN')
+  avatar(@Req() req: AuthenticatedRequest, @Param('userId') userId: string) {
+    return this.dashboard.readUserAvatar(req.auth, this.input.uuid(userId));
   }
 }

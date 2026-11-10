@@ -40,6 +40,7 @@ export const withdrawalSchema = z.object({
   version: z.number().int().positive(),
   approverId: z.uuid().nullable(),
   payoutRef: z.uuid().nullable(),
+  proofId: z.uuid().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   history: z.array(
@@ -66,6 +67,22 @@ export const withdrawalReceiptSchema: z.ZodType<
   state: withdrawalStateSchema,
   serverTime: z.iso.datetime(),
   demoOnly: z.literal(true),
+});
+export const withdrawalProofReceiptSchema = z.object({
+  id: z.uuid(),
+  entityType: z.literal("WithdrawalProof"),
+  entityId: z.uuid(),
+  version: z.number().int().positive(),
+  state: z.enum(["Pending", "Ready"]),
+  serverTime: z.iso.datetime(),
+  demoOnly: z.literal(true),
+});
+export const withdrawalProofReadSchema = z.object({
+  id: z.uuid(),
+  url: z.url(),
+  expiresAt: z.iso.datetime(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
 });
 export type Withdrawal = z.infer<typeof withdrawalSchema>;
 export type CreateWithdrawal = components["schemas"]["CreateWithdrawal"];

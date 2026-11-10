@@ -16,6 +16,8 @@ vi.mock("react-router-dom", () => ({
 const data = {
   from: "2026-01-01",
   to: "2026-01-01",
+  timezone: "Asia/Ho_Chi_Minh",
+  serverTime: "2026-01-01T02:00:00.000Z",
   total: 40000,
   orderSettlements: 1,
   daily: [{ date: "2026-01-01", amount: 40000, orderSettlements: 1 }],
@@ -29,6 +31,19 @@ const data = {
     amount: 40000,
     postedAt: "2026-01-01T01:00:00.000Z",
     referenceId: "private-report-reference",
+  }],
+  topRevenueAccount: {
+    accountId: "seller",
+    displayName: "Người bán nổi bật",
+    revenue: 36000,
+  },
+  highestPricedBooks: [{
+    type: "Sale",
+    label: "Mua bán",
+    title: "Sách nổi bật",
+    amount: 40000,
+    sellerName: "Người bán nổi bật",
+    referenceId: "order",
   }],
 };
 const render = (status: number) => {

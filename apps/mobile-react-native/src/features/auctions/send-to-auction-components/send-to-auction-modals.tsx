@@ -17,6 +17,7 @@ export interface SendToAuctionModalsProps {
   readonly startPrice: number | null;
   readonly step: AuctionStep;
   readonly buyNowPrice: number | null;
+  readonly depositAmount?: number | null;
 
   // 2. Withdraw Confirm Modal
   readonly withdrawTarget: MyIntake | null;
@@ -41,6 +42,7 @@ export function SendToAuctionModals({
   startPrice,
   step,
   buyNowPrice,
+  depositAmount,
 
   withdrawTarget,
   onCancelWithdraw,
@@ -124,6 +126,17 @@ export function SendToAuctionModals({
                   {buyNowPrice != null ? ` / ${formatVnd(buyNowPrice)}` : " (không)"}
                 </AppText>
               </View>
+
+              {depositAmount != null && (
+                <View style={styles.overviewRow}>
+                  <AppText kind="small" style={styles.overviewLabel}>
+                    Tiền cọc đăng ký:
+                  </AppText>
+                  <AppText kind="bold" style={styles.overviewValue}>
+                    {formatVnd(depositAmount)}
+                  </AppText>
+                </View>
+              )}
             </View>
 
             {/* Warning Note */}

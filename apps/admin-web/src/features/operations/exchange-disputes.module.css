@@ -6,6 +6,8 @@
   font-size: 0.8125rem;
   margin-top: 0.25rem;
   flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .previewBadge {
@@ -19,12 +21,14 @@
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
   border: 1px solid #fecaca;
-  flex-shrink: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .previewText {
   color: #4a3b32;
-  max-width: 440px;
+  max-width: min(440px, 100%);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
