@@ -13,7 +13,7 @@ import {
   type ModelDraft,
 } from '../src/modules/price-assist/price-model.js';
 import { ConfigService } from '@nestjs/config';
-import { PriceFinder, type FinderResult } from '../src/modules/price-assist/online/price-finder.js';
+import { FinderError, PriceFinder, type FinderResult } from '../src/modules/price-assist/online/price-finder.js';
 import { PageFetcher } from '../src/modules/price-assist/online/price-lookup.service.js';
 import { FetchRejected } from '../src/modules/price-assist/online/safe-fetch.js';
 import { validates } from './helpers/contract.js';
@@ -70,13 +70,21 @@ const draft = (bookId: string | null, salePrice: number | null = null) => ({
 
 // Fake search and pages for the online lookup (ADR 0029): no network.
 class FakeFinder extends PriceFinder {
-  readonly model = 'fake-finder';
+  readonly model: string;
+  override readonly provider: 'openai' | 'gemini';
   calls = 0;
   urls: string[] = [];
   gate: Promise<void> | null = null;
+  error: FinderError | null = null;
+  constructor(provider: 'openai' | 'gemini', fallback?: PriceFinder) {
+    super(fallback);
+    this.provider = provider;
+    this.model = `fake-${provider}`;
+  }
   async find(): Promise<FinderResult> {
     this.calls++;
     if (this.gate) await this.gate;
+    if (this.error) throw this.error;
     return { urls: this.urls, inputTokens: 100, outputTokens: 20, searches: 1 };
   }
 }
@@ -98,7 +106,8 @@ const shopPage = (isbn: string, price: number) =>
 describe('price suggestions through HTTP with MongoDB', () => {
   let app: INestApplication, db: MongoFixtures, passwordHash: string;
   const fake = new FakeModel();
-  const finder = new FakeFinder();
+  const secondary = new FakeFinder('gemini');
+  const finder = new FakeFinder('openai', secondary);
   const pages = new FakePages();
   const users: string[] = [];
   const books: string[] = [];
@@ -281,6 +290,8 @@ describe('price suggestions through HTTP with MongoDB', () => {
   });
   beforeEach(async () => {
     fake.mode = 'ok';
+    finder.calls = secondary.calls = 0;
+    finder.error = secondary.error = null;
     await db.c.price_assist_usage.deleteMany({});
   });
 
@@ -527,7 +538,7 @@ describe('price suggestions through HTTP with MongoDB', () => {
     expect((await db.c.listings.findOne({ _id: l.entityId }))!.version).toBe(l.version);
   });
 
-  it('looks up online prices once per book in the background and prices from checked pages', async () => {
+  it.each([false, true])('prices from checked pages under one lease (fallback %s)', async (fallback) => {
     const config = app.get(ConfigService);
     config.set('PRICE_LOOKUP_ENABLED', 'true');
     try {
@@ -538,7 +549,8 @@ describe('price suggestions through HTTP with MongoDB', () => {
         'https://tiki.vn/b': shopPage(isbn, 110_000),
         'https://fahasa.com/other': shopPage('9780000000002', 20_000),
       };
-      finder.urls = Object.keys(pages.pages);
+      finder.urls = secondary.urls = Object.keys(pages.pages);
+      if (fallback) finder.error = new FinderError('Timeout', 'fake', { inputTokens: 5, outputTokens: 2, searches: 1 }, true);
       let release!: () => void;
       finder.gate = new Promise((r) => (release = r));
       const l = await listing(m1, book);
@@ -557,8 +569,12 @@ describe('price suggestions through HTTP with MongoDB', () => {
         await new Promise((r) => setTimeout(r, 50));
       }
       const lookup = await db.c.price_lookups.findOne({ _id: book });
-      expect(lookup).toMatchObject({ status: 'Done', offersFound: 2, searches: 1 });
-      expect(lookup!.costMicroUsd).toBeGreaterThan(0);
+      expect(lookup).toMatchObject({
+        status: 'Done', offersFound: 2, searches: fallback ? 2 : 1,
+        inputTokens: fallback ? 105 : 100,
+        costMicroUsd: fallback ? 45_860 : 10_800,
+        model: fallback ? secondary.model : finder.model,
+      });
       const offers = await db.c.online_price_offers.find({ bookId: book, retiredAt: null }).toArray();
       expect(offers.map((o) => o.amount).sort()).toEqual([100_000, 110_000]);
 
@@ -572,9 +588,48 @@ describe('price suggestions through HTTP with MongoDB', () => {
       const online = priced.body.sources.filter((s: { kind: string }) => s.kind === 'OnlineRetail');
       expect(online.map((s: { url: string }) => s.url).sort()).toEqual(['https://fahasa.com/a', 'https://tiki.vn/b']);
       expect(finder.calls).toBe(1);
+      expect(secondary.calls).toBe(fallback ? 1 : 0);
     } finally {
       config.set('PRICE_LOOKUP_ENABLED', 'false');
       finder.gate = null;
+    }
+  });
+
+  it('leaves manual pricing usable when both search providers fail', async () => {
+    const config = app.get(ConfigService);
+    config.set('PRICE_LOOKUP_ENABLED', 'true');
+    try {
+      const book = await confirmedBook('Sách thiếu nguồn online', isbn13());
+      const l = await listing(m1, book);
+      finder.error = secondary.error = new FinderError('ProviderError', 'fake', null, true);
+      await ask(l.entityId, m1, { bookId: book }).expect(200);
+      for (let i = 0; i < 50; i++) {
+        if ((await db.c.price_lookups.findOne({ _id: book }))?.status === 'Failed') break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      expect(await db.c.price_lookups.findOne({ _id: book })).toMatchObject({
+        status: 'Failed', offersFound: 0, model: finder.model,
+      });
+      const retry = await ask(l.entityId, m1, { bookId: book }).expect(200);
+      expect(retry.body).toMatchObject({ status: 'NeedsMoreData' });
+      expect(retry.body.rules).toContain('R-NEED-SOURCES');
+      expect(finder.calls).toBe(1);
+      expect(secondary.calls).toBe(1);
+
+      // Simulate the same book's cached failure from the old Gemini-only configuration.
+      await db.c.price_lookups.updateOne({ _id: book }, { $set: { model: secondary.model } });
+      finder.error = null;
+      finder.urls = [];
+      await ask(l.entityId, m1, { bookId: book }).expect(200);
+      for (let i = 0; i < 50; i++) {
+        if ((await db.c.price_lookups.findOne({ _id: book }))?.status === 'Done') break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      expect(await db.c.price_lookups.findOne({ _id: book })).toMatchObject({ status: 'Done', offersFound: 0 });
+      expect(finder.calls).toBe(2);
+      expect(secondary.calls).toBe(1);
+    } finally {
+      config.set('PRICE_LOOKUP_ENABLED', 'false');
     }
   });
 

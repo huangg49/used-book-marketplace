@@ -4,7 +4,7 @@ import { DatabaseModule } from '../../database/database.module.js';
 import { CommandsModule } from '../commands/commands.module.js';
 import { PriceAssistController } from './price-assist.controller.js';
 import { PriceAssistService } from './price-assist.service.js';
-import { GeminiPriceFinder, PriceFinder } from './online/price-finder.js';
+import { PriceFinder, priceFinderFromConfig } from './online/price-finder.js';
 import {
   PageFetcher,
   PriceLookupService,
@@ -31,25 +31,9 @@ const reader = (config: ConfigService) => (key: string) => {
     PriceLookupService,
     { provide: PageFetcher, useClass: SafePageFetcher },
     {
-      // Online lookup needs Google Search grounding: Gemini only, and only
-      // when the assistant itself is enabled with a key (ADR 0029).
       provide: PriceFinder,
       inject: [ConfigService],
-      useFactory: (config: ConfigService): PriceFinder | null => {
-        const get = reader(config);
-        const apiKey = get('PRICE_ASSIST_API_KEY') ?? '';
-        if (
-          !apiKey ||
-          get('PRICE_ASSIST_ENABLED') !== 'true' ||
-          get('PRICE_ASSIST_PROVIDER') !== 'gemini'
-        )
-          return null;
-        return new GeminiPriceFinder({
-          apiKey,
-          model: get('PRICE_ASSIST_MODEL') || 'gemini-3.8-flash',
-          timeoutMs: 25_000,
-        });
-      },
+      useFactory: (config: ConfigService) => priceFinderFromConfig(reader(config)),
     },
   ],
   controllers: [PriceAssistController],

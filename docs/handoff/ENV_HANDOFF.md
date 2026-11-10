@@ -44,16 +44,22 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
    Không tự giảm giới hạn nghiệp vụ hoặc nâng gói trả phí. Xem
    [gói bằng chứng Exchange](../features/EXCHANGE_EVIDENCE_2026_11_02.md).
 6. Trợ lý gợi ý giá ([ADR 0028](../adr/0028-listing-price-assistant.md)) tắt mặc định.
-   Tra giá trực tuyến ([ADR 0029](../adr/0029-online-price-lookup.md)) cần thêm
-   `PRICE_LOOKUP_ENABLED=true` với `PRICE_ASSIST_PROVIDER=gemini`; danh sách shop
-   `PRICE_LOOKUP_SHOPS`, `PRICE_LOOKUP_TTL_DAYS`, `PRICE_LOOKUP_DAILY_LIMIT`,
-   `PRICE_LOOKUP_SEARCH_USD` theo `apps/api/.env.example`. Sau khi pull chạy
-   `pnpm --filter @used-books/api mongo:migrate` (migration 0006, 0007).
    Người giữ key provider đặt `PRICE_ASSIST_ENABLED=true` và `PRICE_ASSIST_API_KEY`
    trong `apps/api/.env` của máy chạy API khi gate/provider/eval được duyệt; giữ `PRICE_ASSIST_DAILY_BUDGET_USD` và
    `PRICE_ASSIST_USER_DAILY_LIMIT` ở mức đã thống nhất. Key chỉ ở backend, không đưa
    vào EXPO_PUBLIC_*/VITE_*, không gửi qua chat. Thiếu key thì lời gọi model trả 503,
    người bán vẫn nhập giá tay.
+   - **Tra nguồn giá online** ([ADR 0029](../adr/0029-online-price-lookup.md)) dùng
+     `PRICE_LOOKUP_ENABLED=true`, `PRICE_LOOKUP_PROVIDERS=openai,gemini`,
+     `PRICE_LOOKUP_OPENAI_API_KEY` và `PRICE_LOOKUP_GEMINI_API_KEY`. Provider thiếu key
+     được bỏ qua. Để trống danh sách nếu tiếp tục dùng cấu hình Gemini qua `PRICE_ASSIST_*`.
+     Danh sách nhà sách, thời hạn lưu và ngân sách tra theo `apps/api/.env.example`.
+     Model soạn khoảng giá vẫn do `PRICE_ASSIST_PROVIDER` chọn.
+   - **Autofill** ([ADR 0048](../adr/0048-listing-photo-autofill.md)) dùng
+     `AUTOFILL_ENABLED=true`, `AUTOFILL_PROVIDER=openai` và `AUTOFILL_OPENAI_API_KEY`.
+     Giữ `AUTOFILL_API_KEY` nếu muốn NVIDIA dự phòng. Nếu cần quay về NVIDIA chính,
+     đặt `AUTOFILL_PROVIDER=nvidia`. Hai luồng OpenAI mặc định `gpt-5.4-mini` và có thể
+     dùng cùng một key backend. Khởi động lại API sau khi cập nhật `.env`.
 7. Với DB đã có, phiên bản hiện tại có15 migration Mongo (registry là nguồn).
    Khi có migration thêm collection: áp `pnpm db:migrate` rồi `pnpm db:bootstrap`
    để cập nhật role như ADR0032; không reset/reseed hoặc sửa migration đã áp dụng.

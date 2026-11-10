@@ -1,3 +1,17 @@
+# OpenAI cho tra giá online và Autofill — 10/11/2026
+
+Nhánh `codex/openai-listing-assist`, base demo `9df78db9` có cùng cây source với
+`main` tại `966e14e5`. Hai luồng chọn provider riêng theo [ENV_HANDOFF](ENV_HANDOFF.md).
+Tra online chọn OpenAI rồi Gemini khi gặp lỗi tạm thời, cùng lease đầu sách, vẫn
+đọc và xác minh giá trên trang nhà sách. Autofill chọn OpenAI rồi NVIDIA khi lỗi
+tạm thời, giữ ảnh cận tự động ở lượt chính và trả ngay kết quả hợp lệ dù thiếu trường.
+Cấu hình cũ vẫn chạy. Model soạn khoảng giá và pipeline tự duyệt giữ cấu hình riêng.
+
+Kiểm 498 unit, 58 ca HTTP qua Mongo QA riêng (`latlai_openai_final_test`), API
+typecheck/build/lint, contract và docs. Provider, ảnh và trang nhà sách trong
+kiểm thử là giả lập. Chưa gọi OpenAI/Gemini thật. Bước tiếp là đặt key trong `.env`
+local của API rồi kiểm cùng ảnh sách thật và một đầu sách có nguồn giá công khai.
+
 # Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
 
 Nhánh `codex/sell-step-one-hierarchy` từ `dc5c02e8`. Member web thu gọn khay

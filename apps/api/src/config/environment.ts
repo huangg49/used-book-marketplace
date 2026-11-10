@@ -188,15 +188,20 @@ export function validatePriceAssist(env: Record<string, unknown>) {
   const effort = String(env.PRICE_ASSIST_EFFORT || 'low');
   if (!['low', 'medium', 'high', 'none'].includes(effort))
     throw new Error('PRICE_ASSIST_EFFORT must be low, medium, high or none.');
-  // Online price lookup (ADR 0029): Gemini with Google Search, off by default.
+  // Online price lookup (ADR 0029), off by default.
   const lookup = String(env.PRICE_LOOKUP_ENABLED ?? 'false');
   if (!['true', 'false'].includes(lookup))
     throw new Error('PRICE_LOOKUP_ENABLED must be true or false.');
+  const lookupProviders = String(env.PRICE_LOOKUP_PROVIDERS ?? '').trim();
+  const lookupOrder = lookupProviders ? lookupProviders.split(',').map((name) => name.trim()) : [];
+  if (lookupOrder.some((name) => name !== 'openai' && name !== 'gemini') ||
+      new Set(lookupOrder).size !== lookupOrder.length)
+    throw new Error('PRICE_LOOKUP_PROVIDERS must list openai and/or gemini once each.');
   const shops = String(env.PRICE_LOOKUP_SHOPS || DEFAULT_LOOKUP_SHOPS)
     .split(',')
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-  if (!shops.length || shops.some((s) => !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s)))
+  if (!shops.length || shops.length > 100 || shops.some((s) => !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s)))
     throw new Error('PRICE_LOOKUP_SHOPS must be a comma-separated list of domains.');
   const searchUsd = Number(env.PRICE_LOOKUP_SEARCH_USD ?? 0.035);
   if (!Number.isFinite(searchUsd) || searchUsd < 0 || searchUsd > 1)
@@ -217,6 +222,11 @@ export function validatePriceAssist(env: Record<string, unknown>) {
     PRICE_ASSIST_INPUT_USD_PER_MTOK: rateOf(env.PRICE_ASSIST_INPUT_USD_PER_MTOK, 'PRICE_ASSIST_INPUT_USD_PER_MTOK'),
     PRICE_ASSIST_OUTPUT_USD_PER_MTOK: rateOf(env.PRICE_ASSIST_OUTPUT_USD_PER_MTOK, 'PRICE_ASSIST_OUTPUT_USD_PER_MTOK'),
     PRICE_LOOKUP_ENABLED: lookup,
+    PRICE_LOOKUP_PROVIDERS: lookupOrder.join(','),
+    PRICE_LOOKUP_OPENAI_API_KEY: optionalProviderKey(env, 'PRICE_LOOKUP_OPENAI_API_KEY'),
+    PRICE_LOOKUP_GEMINI_API_KEY: optionalProviderKey(env, 'PRICE_LOOKUP_GEMINI_API_KEY'),
+    PRICE_LOOKUP_OPENAI_MODEL: optionalProviderModel(env, 'PRICE_LOOKUP_OPENAI_MODEL'),
+    PRICE_LOOKUP_GEMINI_MODEL: optionalProviderModel(env, 'PRICE_LOOKUP_GEMINI_MODEL'),
     PRICE_LOOKUP_SHOPS: shops.join(','),
     PRICE_LOOKUP_TTL_DAYS: intIn(env.PRICE_LOOKUP_TTL_DAYS, 30, 1, 180, 'PRICE_LOOKUP_TTL_DAYS'),
     PRICE_LOOKUP_DAILY_LIMIT: intIn(env.PRICE_LOOKUP_DAILY_LIMIT, 50, 1, 1000, 'PRICE_LOOKUP_DAILY_LIMIT'),
@@ -232,13 +242,28 @@ const DEFAULT_PRICE_MODELS: Record<string, string> = {
 
 const NVIDIA_MODEL = /^[a-z0-9][a-z0-9_.-]{1,39}\/[a-z0-9][a-z0-9_.-]{1,79}$/;
 
-// Photo autofill (ADR 0048): NVIDIA NIM vision model, off unless enabled. The
+function optionalProviderKey(env: Record<string, unknown>, key: string): string {
+  const value = String(env[key] ?? '').trim();
+  if (value.startsWith('replace-')) throw new Error(`${key} still holds the example value.`);
+  return value;
+}
+
+function optionalProviderModel(env: Record<string, unknown>, key: string): string {
+  const value = String(env[key] ?? '').trim();
+  if (value && !/^[a-z0-9][a-z0-9.-]{2,79}$/.test(value)) throw new Error(`${key} is invalid.`);
+  return value;
+}
+
+// Photo autofill (ADR 0048): off unless enabled. The
 // key is read only by the API process; cost counts toward the shared daily
 // price-assist budget.
 export function validateAutofill(env: Record<string, unknown>) {
   const enabled = String(env.AUTOFILL_ENABLED ?? 'false');
   if (!['true', 'false'].includes(enabled))
     throw new Error('AUTOFILL_ENABLED must be true or false.');
+  const provider = String(env.AUTOFILL_PROVIDER || 'nvidia');
+  if (provider !== 'nvidia' && provider !== 'openai')
+    throw new Error('AUTOFILL_PROVIDER must be nvidia or openai.');
   const apiKey = String(env.AUTOFILL_API_KEY ?? '');
   if (apiKey.startsWith('replace-'))
     throw new Error('AUTOFILL_API_KEY still holds the example value.');
@@ -249,6 +274,9 @@ export function validateAutofill(env: Record<string, unknown>) {
     throw new Error('AUTOFILL_FALLBACK_MODEL is invalid.');
   return {
     AUTOFILL_ENABLED: enabled,
+    AUTOFILL_PROVIDER: provider,
+    AUTOFILL_OPENAI_API_KEY: optionalProviderKey(env, 'AUTOFILL_OPENAI_API_KEY'),
+    AUTOFILL_OPENAI_MODEL: optionalProviderModel(env, 'AUTOFILL_OPENAI_MODEL'),
     AUTOFILL_API_KEY: apiKey,
     AUTOFILL_MODEL: model,
     AUTOFILL_FALLBACK_MODEL: fallback,

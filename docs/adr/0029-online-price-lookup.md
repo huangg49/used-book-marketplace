@@ -18,7 +18,7 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
 1. Chỉ giá **sách mới** ở danh sách nhà sách được phép (`PRICE_LOOKUP_SHOPS`, mặc định
    đề xuất `fahasa.com, tiki.vn, nhanam.vn, nxbtre.com.vn, nxbkimdong.com.vn`). Không lấy
    giá rao sách cũ (Shopee, Chợ Tốt): nhiễu và dễ bị đẩy giá.
-2. Gemini với Google Search **chỉ đề xuất URL** trang sản phẩm. Chỉ gửi dữ kiện catalog
+2. OpenAI Web Search hoặc Gemini Google Search **chỉ đề xuất URL** trang sản phẩm. Chỉ gửi dữ kiện catalog
    (tên, tác giả, NXB, năm, ISBN); không gửi gì về người bán hay bài đăng.
 3. Server tự tải trang (`safe-fetch.ts`): chỉ https, chỉ domain được phép và tên miền con,
    host chuyển hướng của công cụ tìm kiếm chỉ được ở bước đầu, chặn địa chỉ private/
@@ -34,12 +34,17 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
 6. Một lần tra mỗi đầu sách: lease trên `price_lookups/<bookId>` (insert/update có điều
    kiện), chạy sau request; làm mới sau 30 ngày, 7 ngày nếu không tìm thấy, 24 giờ nếu lỗi.
    Chỉ sách catalog đã xác nhận. Tính vào hạn mức tra mỗi ngày và ngân sách chung
-   (token + phí mỗi lần tìm `PRICE_LOOKUP_SEARCH_USD`).
+   (token + phí tìm kiếm theo từng provider, ước tính theo usage provider trả về).
+   Khi đổi model chính, lần tra cũ thiếu nguồn hoặc bị lỗi được phép tra lại.
 7. Khi đang tra và chưa có nguồn khác: `NeedsMoreData` với `R-LOOKUP-PENDING`.
    `OnlineRetail` là giá sách mới cho băng tình trạng của ADR 0028; giá bìa nhân viên nhập
    được ưu tiên khi có cả hai; quá 3 tháng thì coi là cũ.
-8. Chỉ provider Gemini (cần Google Search grounding). Tắt mặc định
-   (`PRICE_LOOKUP_ENABLED=false`), cần cả trợ lý bật.
+8. Tắt mặc định (`PRICE_LOOKUP_ENABLED=false`). `PRICE_LOOKUP_PROVIDERS=openai,gemini`
+   chọn OpenAI trước. Dùng Gemini tối đa một lần nếu OpenAI timeout, lỗi kết nối,
+   HTTP 408/429/5xx. Hai lượt chia ngân sách tra 25 giây (15 + 10), dùng cùng lease.
+   Kết quả hợp lệ không có nguồn giữ trạng thái thiếu dữ liệu. Nếu bỏ danh sách,
+   giữ cách cấu hình Gemini cũ qua `PRICE_ASSIST_*`. Cấu hình tra theo danh sách
+   có key riêng và độc lập với model soạn khoảng giá. Xem [ENV_HANDOFF](../handoff/ENV_HANDOFF.md).
 
 ## 3. Không làm
 
