@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
 import * as Crypto from "expo-crypto";
 import {
   autofillLabels,
@@ -18,11 +18,10 @@ import { useSession } from "../../core/session/session-provider";
 import {
   AppText,
   Button,
-  Checkbox,
   ConfirmDialog,
+  Icon,
   Notice,
   TextField,
-  colors,
   space,
   stitchTokens,
 } from "../../core/ui";
@@ -227,17 +226,81 @@ export function PhotoAutofillPanel({
 
   return (
     <View style={styles.container}>
-      <AppText kind="heading">Điền nhanh từ ảnh</AppText>
-      <AppText color={stitchTokens.deepCocoa}>
-        Chọn ảnh bìa, gáy hoặc trang bản quyền. Bạn kiểm tra, sửa trực tiếp từng mục rồi chọn dùng.
-      </AppText>
+      {/* 3D Header Section */}
+      <View style={{ gap: 6 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                backgroundColor: stitchTokens.roseWarmTag,
+                borderWidth: 1,
+                borderColor: stitchTokens.peachBorder,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Icon name="bolt" size={16} color={stitchTokens.wine} />
+            </View>
+            <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 16, lineHeight: 22 }}>
+              Điền nhanh từ ảnh sách
+            </AppText>
+          </View>
+          <View
+            style={{
+              backgroundColor: stitchTokens.goldAlpha20,
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 6,
+              borderWidth: 1,
+              borderColor: stitchTokens.goldBorder,
+            }}
+          >
+            <AppText kind="small" color={stitchTokens.goldBronze} style={{ fontSize: 10, fontWeight: "700" }}>
+              ✨ TRỢ LÝ AI
+            </AppText>
+          </View>
+        </View>
 
-      {busy ? <AppText accessibilityLiveRegion="polite">{readPhase}</AppText> : null}
+        <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 12, lineHeight: 17 }}>
+          Chụp bìa, gáy hoặc trang bản quyền — AI tự động nhận diện tên sách, tác giả và NXB.
+        </AppText>
+      </View>
+
+      {busy ? (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            backgroundColor: stitchTokens.warmIvory,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: stitchTokens.goldBorder,
+          }}
+        >
+          <Icon name="sync" size={14} color={stitchTokens.goldBronze} />
+          <AppText
+            accessibilityLiveRegion="polite"
+            kind="small"
+            color={stitchTokens.wineDark}
+            style={{ fontWeight: "600", fontSize: 11 }}
+          >
+            {readPhase || "Đang nhận diện thông tin qua AI…"}
+          </AppText>
+        </View>
+      ) : null}
 
       {barcode ? (
         <View style={styles.barcodeBox}>
-          <AppText kind="bold">Đối chiếu từ mã vạch ISBN</AppText>
-          <AppText kind="small">
+          <AppText kind="bold" color={stitchTokens.wineDark}>
+            Đối chiếu từ mã vạch ISBN
+          </AppText>
+          <AppText kind="small" color={stitchTokens.subtleGray}>
             Thông tin đầu sách được lấy từ danh mục. Lượt đối chiếu này không gọi AI.
           </AppText>
           {barcode.signature !== signature ? (
@@ -245,7 +308,9 @@ export function PhotoAutofillPanel({
           ) : null}
           {barcode.value.status === "Ambiguous" ? (
             <>
-              <AppText>Có nhiều ISBN trên các ảnh. Chọn mã thuộc cuốn sách đang đăng.</AppText>
+              <AppText kind="small" color={stitchTokens.wineDark}>
+                Có nhiều ISBN trên các ảnh. Chọn mã thuộc cuốn sách đang đăng.
+              </AppText>
               {barcode.value.isbns.map((isbn) => (
                 <Button
                   secondary
@@ -286,52 +351,184 @@ export function PhotoAutofillPanel({
 
       {/* Photo Picker Checkboxes */}
       {ready.length ? (
-        <View style={{ gap: space.sm }}>
-          <AppText kind="label">Ảnh để đọc — tối đa 3</AppText>
-          {ready.map((p, i) => (
-            <Checkbox
-              key={p.id}
-              title={`Đọc ảnh ${i + 1}${i === 0 ? " (ảnh bìa)" : ""}`}
-              checked={ids.includes(p.id)}
-              disabled={disabled || busy || (!ids.includes(p.id) && ids.length >= 3)}
-              onPress={() =>
-                setPicked(
-                  ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id],
-                )
-              }
-            />
-          ))}
+        <View style={{ gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <AppText kind="label" color={stitchTokens.wineDark}>
+              Ảnh chọn đọc ({ids.length}/3)
+            </AppText>
+            <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 10 }}>
+              Tối đa 3 ảnh
+            </AppText>
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {ready.map((p, i) => {
+              const isSelected = ids.includes(p.id);
+              const canSelect = isSelected || ids.length < 3;
+              return (
+                <Pressable
+                  key={p.id}
+                  disabled={disabled || busy || (!canSelect && !isSelected)}
+                  onPress={() =>
+                    setPicked(isSelected ? ids.filter((id) => id !== p.id) : [...ids, p.id])
+                  }
+                  style={({ pressed }) => [
+                    {
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      paddingVertical: 7,
+                      paddingHorizontal: 12,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderBottomWidth: isSelected ? 2.5 : 1,
+                      backgroundColor: isSelected ? stitchTokens.warmIvory : stitchTokens.parchment,
+                      borderColor: isSelected ? stitchTokens.wineDark : stitchTokens.sandBorder,
+                    },
+                    pressed && { opacity: 0.8 },
+                    !canSelect && !isSelected && { opacity: 0.4 },
+                  ]}
+                >
+                  <Icon
+                    name={isSelected ? "check" : "camera"}
+                    size={14}
+                    color={isSelected ? stitchTokens.wine : stitchTokens.subtleGray}
+                  />
+                  <AppText
+                    kind="small"
+                    color={isSelected ? stitchTokens.wineDark : stitchTokens.subtleGray}
+                    style={{ fontSize: 11, fontWeight: isSelected ? "700" : "500" }}
+                  >
+                    {`Ảnh ${i + 1}${i === 0 ? " (bìa)" : ""}`}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       ) : (
-        <AppText kind="small" color={stitchTokens.subtleGray}>
-          {photos.some((p) => p.status === "Processing" || p.status === "Pending")
-            ? "Ảnh đang được xử lý. Chờ ảnh sẵn sàng rồi bấm đọc."
-            : "Chưa có ảnh sẵn sàng. Tải ảnh bản sách để AI đọc thông tin."}
-        </AppText>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            padding: 10,
+            backgroundColor: stitchTokens.parchment,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: stitchTokens.sandBorder,
+          }}
+        >
+          <Icon name="camera" size={18} color={stitchTokens.roseBrown} />
+          <AppText kind="small" color={stitchTokens.roseBrown} style={{ flex: 1, fontSize: 11, lineHeight: 16 }}>
+            {photos.some((p) => p.status === "Processing" || p.status === "Pending")
+              ? "Ảnh đang được xử lý. Chờ ảnh sẵn sàng rồi bấm đọc."
+              : "Chưa có ảnh sẵn sàng. Vui lòng tải ảnh bản sách để AI đọc thông tin."}
+          </AppText>
+        </View>
       )}
 
-      {/* Action Buttons */}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-        <Button
-          secondary
-          title="Thêm ảnh để đọc"
+      {/* 3D Action Buttons */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Thêm ảnh để đọc"
           disabled={disabled || busy || photos.length >= 8}
           onPress={onAddPhoto}
-        />
-        <Button
-          wine
-          title={result ? "Đọc lại thông tin" : "Đọc thông tin từ ảnh"}
-          disabled={disabled || !ids.length}
-          busy={busy}
+          style={({ pressed }) => [
+            {
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              paddingVertical: 9,
+              paddingHorizontal: 14,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderBottomWidth: 2.5,
+              backgroundColor: stitchTokens.whiteSurface,
+              borderColor: stitchTokens.peachBorder,
+              borderBottomColor: stitchTokens.peachBorder,
+            },
+            pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
+            (disabled || busy || photos.length >= 8) && { opacity: 0.5 },
+          ]}
+        >
+          <Icon name="plus" size={14} color={stitchTokens.wineDark} />
+          <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 12 }}>
+            Thêm ảnh để đọc
+          </AppText>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={result ? "Đọc lại thông tin" : "Đọc thông tin từ ảnh"}
+          disabled={disabled || !ids.length || busy}
           onPress={() => void read()}
-        />
+          style={({ pressed }) => {
+            const hasPhotos = ids.length > 0 && !disabled && !busy;
+            return [
+              {
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                paddingVertical: 9,
+                paddingHorizontal: 16,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderBottomWidth: 3,
+                backgroundColor: hasPhotos ? stitchTokens.wine : stitchTokens.canvasMuted,
+                borderColor: hasPhotos ? stitchTokens.wineDark : stitchTokens.borderWarm,
+                borderBottomColor: hasPhotos ? stitchTokens.wineDark : stitchTokens.borderWarm,
+              },
+              pressed && hasPhotos && { opacity: 0.85, transform: [{ translateY: 1 }] },
+            ];
+          }}
+        >
+          <Icon
+            name={result ? "sync" : "bolt"}
+            size={14}
+            color={ids.length && !disabled && !busy ? stitchTokens.white : stitchTokens.subtleGray}
+          />
+          <AppText
+            kind="bold"
+            color={ids.length && !disabled && !busy ? stitchTokens.white : stitchTokens.subtleGray}
+            style={{ fontSize: 12 }}
+          >
+            {result ? "Đọc lại thông tin" : "Đọc thông tin từ ảnh"}
+          </AppText>
+        </Pressable>
+
         {canSkipIsbn ? (
-          <Button
-            secondary
-            title="Đọc chữ bằng AI (Bỏ qua tra ISBN)"
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đọc chữ bằng AI (Bỏ qua tra ISBN)"
             disabled={disabled || busy || !ids.length}
             onPress={() => void read(true)}
-          />
+            style={({ pressed }) => [
+              {
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderBottomWidth: 2,
+                backgroundColor: stitchTokens.goldVeryLight,
+                borderColor: stitchTokens.goldAccent,
+                borderBottomColor: stitchTokens.goldAccent,
+              },
+              pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
+              (disabled || busy || !ids.length) && { opacity: 0.5 },
+            ]}
+          >
+            <Icon name="bolt" size={13} color={stitchTokens.goldBronze} />
+            <AppText kind="bold" color={stitchTokens.goldBronze} style={{ fontSize: 11 }}>
+              Bỏ qua tra ISBN, đọc AI ngay
+            </AppText>
+          </Pressable>
         ) : null}
       </View>
 
@@ -343,15 +540,35 @@ export function PhotoAutofillPanel({
       {/* Result Card: Review and Edit read fields */}
       {result && reviewed ? (
         <View style={styles.resultCard}>
-          <View style={{ gap: 2 }}>
-            <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 16 }}>
-              Rà soát thông tin đọc được từ ảnh
-            </AppText>
-            {result.value.cached ? (
-              <AppText kind="small" color={stitchTokens.subtleGray}>
-                Đã dùng lại kết quả của bộ ảnh này. Thêm hoặc thay ảnh để đọc dữ liệu mới.
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ gap: 2, flex: 1 }}>
+              <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 15 }}>
+                Rà soát thông tin đọc được
               </AppText>
-            ) : null}
+              {result.value.cached ? (
+                <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 11 }}>
+                  Dùng lại kết quả bộ ảnh này. Thêm hoặc thay ảnh để đọc lại.
+                </AppText>
+              ) : null}
+            </View>
+            <View
+              style={{
+                backgroundColor: stitchTokens.likeNewGreenBg,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 4,
+                borderWidth: 1,
+                borderColor: stitchTokens.likeNewGreen,
+              }}
+            >
+              <AppText
+                kind="small"
+                color={stitchTokens.likeNewGreen}
+                style={{ fontSize: 9, fontWeight: "700" }}
+              >
+                ĐÃ ĐỌC XONG
+              </AppText>
+            </View>
           </View>
 
           {/* Read fields editor */}
@@ -364,7 +581,7 @@ export function PhotoAutofillPanel({
               return (
                 <View key={field} style={styles.fieldRow}>
                   <View style={{ flex: 1, gap: 2 }}>
-                    <AppText kind="label" color={stitchTokens.wineDark}>
+                    <AppText kind="label" color={stitchTokens.wineDark} style={{ fontSize: 11 }}>
                       {autofillLabels[field]}
                     </AppText>
                     <TextField
@@ -375,12 +592,35 @@ export function PhotoAutofillPanel({
                       onChangeText={(text) => handleEditField(field, text)}
                     />
                   </View>
-                  <Button
-                    secondary={!isUsed}
-                    title={isUsed ? "✓ Đã dùng" : "Dùng"}
+                  <Pressable
                     disabled={locked || hasYearErr}
                     onPress={() => chooseFields([field])}
-                  />
+                    style={({ pressed }) => [
+                      {
+                        paddingVertical: 9,
+                        paddingHorizontal: 12,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderBottomWidth: 2,
+                        backgroundColor: isUsed ? stitchTokens.likeNewGreenBg : stitchTokens.whiteSurface,
+                        borderColor: isUsed ? stitchTokens.likeNewGreen : stitchTokens.peachBorder,
+                        borderBottomColor: isUsed ? stitchTokens.likeNewGreen : stitchTokens.peachBorder,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginBottom: hasYearErr ? 18 : 2,
+                      },
+                      pressed && { opacity: 0.8 },
+                      (locked || hasYearErr) && { opacity: 0.5 },
+                    ]}
+                  >
+                    <AppText
+                      kind="bold"
+                      color={isUsed ? stitchTokens.likeNewGreen : stitchTokens.wineDark}
+                      style={{ fontSize: 11 }}
+                    >
+                      {isUsed ? "✓ Đã dùng" : "Dùng"}
+                    </AppText>
+                  </Pressable>
                 </View>
               );
             })}
@@ -409,10 +649,10 @@ export function PhotoAutofillPanel({
                     return (
                       <View key={field} style={styles.fieldRow}>
                         <View style={{ flex: 1, gap: 2 }}>
-                          <AppText kind="label" color={stitchTokens.wineDark}>
+                          <AppText kind="label" color={stitchTokens.wineDark} style={{ fontSize: 11 }}>
                             {autofillLabels[field]}
                           </AppText>
-                          <AppText kind="small" color={stitchTokens.subtleGray}>
+                          <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 10 }}>
                             {hint}
                           </AppText>
                           <TextField
@@ -424,12 +664,35 @@ export function PhotoAutofillPanel({
                             onChangeText={(text) => handleEditField(field, text)}
                           />
                         </View>
-                        <Button
-                          secondary={!isUsed}
-                          title={isUsed ? "✓ Đã dùng" : "Dùng"}
+                        <Pressable
                           disabled={locked || !val.trim() || hasYearErr}
                           onPress={() => chooseFields([field])}
-                        />
+                          style={({ pressed }) => [
+                            {
+                              paddingVertical: 9,
+                              paddingHorizontal: 12,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderBottomWidth: 2,
+                              backgroundColor: isUsed ? stitchTokens.likeNewGreenBg : stitchTokens.whiteSurface,
+                              borderColor: isUsed ? stitchTokens.likeNewGreen : stitchTokens.peachBorder,
+                              borderBottomColor: isUsed ? stitchTokens.likeNewGreen : stitchTokens.peachBorder,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginBottom: hasYearErr ? 18 : 2,
+                            },
+                            pressed && { opacity: 0.8 },
+                            (locked || !val.trim() || hasYearErr) && { opacity: 0.5 },
+                          ]}
+                        >
+                          <AppText
+                            kind="bold"
+                            color={isUsed ? stitchTokens.likeNewGreen : stitchTokens.wineDark}
+                            style={{ fontSize: 11 }}
+                          >
+                            {isUsed ? "✓ Đã dùng" : "Dùng"}
+                          </AppText>
+                        </Pressable>
                       </View>
                     );
                   })}
@@ -440,16 +703,36 @@ export function PhotoAutofillPanel({
 
           {/* Batch Apply Button */}
           {unapplied.length > 0 ? (
-            <Button
-              wine
-              title={
-                Object.keys(edits).length > 0
-                  ? "Dùng tất cả thông tin đã rà soát"
-                  : "Dùng tất cả thông tin đọc được"
-              }
+            <Pressable
+              accessibilityRole="button"
               disabled={locked || yearError(edits.publicationYear)}
               onPress={() => chooseFields(unapplied)}
-            />
+              style={({ pressed }) => [
+                {
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderBottomWidth: 3,
+                  backgroundColor: stitchTokens.wine,
+                  borderColor: stitchTokens.wineDark,
+                  borderBottomColor: stitchTokens.wineDark,
+                },
+                pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
+                (locked || yearError(edits.publicationYear)) && { opacity: 0.5 },
+              ]}
+            >
+              <Icon name="check" size={16} color={stitchTokens.white} />
+              <AppText kind="bold" color={stitchTokens.white} style={{ fontSize: 13 }}>
+                {Object.keys(edits).length > 0
+                  ? "Dùng tất cả thông tin đã rà soát"
+                  : "Dùng tất cả thông tin đọc được"}
+              </AppText>
+            </Pressable>
           ) : null}
         </View>
       ) : null}
@@ -483,26 +766,40 @@ export function PhotoAutofillPanel({
 
 const styles = StyleSheet.create({
   container: {
-    gap: space.sm,
-    paddingVertical: space.md,
-    borderBottomWidth: 1,
-    borderColor: colors.rule,
+    gap: 12,
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderBottomWidth: 3.5,
+    borderColor: stitchTokens.peachBorder,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    shadowColor: stitchTokens.shadowSoft,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   barcodeBox: {
-    backgroundColor: stitchTokens.warmIvory,
+    backgroundColor: stitchTokens.goldLight,
     padding: space.md,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderWidth: 1.5,
+    borderBottomWidth: 3,
+    borderColor: stitchTokens.goldAccent,
     gap: space.sm,
   },
   resultCard: {
     backgroundColor: stitchTokens.warmIvory,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: space.md,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderWidth: 1.5,
+    borderBottomWidth: 3.5,
+    borderColor: stitchTokens.goldAccent,
     gap: space.md,
+    shadowColor: stitchTokens.shadowSoft,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   fieldRow: {
     flexDirection: "row",

@@ -125,20 +125,68 @@ export function BookIdentity({
     return (
       <View
         style={{
+          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "center",
-          paddingBottom: space.xs,
-          borderBottomWidth: 1,
-          borderColor: stitchTokens.peachBorder,
+          justifyContent: "space-between",
+          paddingVertical: 10,
+          paddingHorizontal: 14,
+          backgroundColor: stitchTokens.parchment,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderBottomWidth: 2.5,
+          borderColor: stitchTokens.sandBorder,
+          shadowColor: stitchTokens.shadowSoft,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
         }}
       >
-        <AppText
-          kind="heading"
-          color={stitchTokens.wineDark}
-          style={{ textAlign: "center" }}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              backgroundColor: stitchTokens.warmIvory,
+              borderWidth: 1,
+              borderColor: stitchTokens.peachBorder,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <AppText style={{ fontSize: 16 }}>📖</AppText>
+          </View>
+          <View style={{ gap: 2 }}>
+            <AppText
+              kind="bold"
+              color={stitchTokens.wineDark}
+              style={{ fontSize: 14, lineHeight: 18 }}
+            >
+              Thông tin đầu sách
+            </AppText>
+            <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 11 }}>
+              Chọn từ catalog hoặc dùng AI đọc từ ảnh
+            </AppText>
+          </View>
+        </View>
+        <View
+          style={{
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 6,
+            backgroundColor: stitchTokens.roseWarmTag,
+            borderWidth: 1,
+            borderColor: stitchTokens.peachBorder,
+          }}
         >
-          Chưa chọn đầu sách
-        </AppText>
+          <AppText
+            kind="small"
+            color={stitchTokens.wine}
+            style={{ fontSize: 10, fontWeight: "700" }}
+          >
+            Chưa chọn
+          </AppText>
+        </View>
       </View>
     );
   }
