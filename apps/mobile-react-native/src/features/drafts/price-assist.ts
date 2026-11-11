@@ -13,6 +13,10 @@ export {
   evidenceLabel,
   sourceKindLabel,
   excludedLabel,
+  currentReference,
+  findPriceReference,
+  type PriceReference,
+  type PriceReferenceState,
   type AssistState,
   type PriceSuggestion,
 } from "@used-books/session-client";

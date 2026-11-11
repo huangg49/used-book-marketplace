@@ -27,6 +27,8 @@ import {
   openRuleText,
   waitingTime,
   waitingForRegistrants,
+  pointReopensAt,
+  ceilSlot,
 } from "./auctions-model";
 import type { Participation, PublicAuctionSummary } from "./contracts";
 
@@ -397,5 +399,42 @@ describe("seller deposit", () => {
     expect(auctionDepositError(200_000, 19_000)).toMatch(/20\.000đ đến 100\.000đ/);
     expect(auctionDepositError(200_000, 101_000)).not.toBeNull();
     expect(auctionDepositError(200_000, 25_500)).not.toBeNull();
+  });
+});
+
+describe("point hours and ceilSlot", () => {
+  it("pointReopensAt returns null during point working hours (09:00 - 18:00 VN)", () => {
+    // 09:00 VN is 02:00 UTC
+    const at9am = Date.UTC(2026, 9, 15, 2, 0, 0);
+    expect(pointReopensAt(at9am)).toBeNull();
+
+    // 17:59 VN is 10:59 UTC
+    const at1759 = Date.UTC(2026, 9, 15, 10, 59, 59);
+    expect(pointReopensAt(at1759)).toBeNull();
+  });
+
+  it("pointReopensAt returns 09:00 next day when closed after 18:00 VN", () => {
+    // 18:01 VN is 11:01 UTC
+    const at1801 = Date.UTC(2026, 9, 15, 11, 1, 0);
+    const expected = new Date(Date.UTC(2026, 9, 16, 2, 0, 0)).toISOString();
+    expect(pointReopensAt(at1801)).toBe(expected);
+  });
+
+  it("pointReopensAt returns 09:00 same day when before 09:00 VN", () => {
+    // 08:00 VN is 01:00 UTC
+    const at8am = Date.UTC(2026, 9, 15, 1, 0, 0);
+    const expected = new Date(Date.UTC(2026, 9, 15, 2, 0, 0)).toISOString();
+    expect(pointReopensAt(at8am)).toBe(expected);
+  });
+
+  it("pointReopensAt returns null on invalid input", () => {
+    expect(pointReopensAt(NaN)).toBeNull();
+  });
+
+  it("ceilSlot rounds up to the nearest 5-minute slot", () => {
+    const slot = 5 * 60_000;
+    expect(ceilSlot(100)).toBe(slot);
+    expect(ceilSlot(slot)).toBe(slot);
+    expect(ceilSlot(slot + 1)).toBe(slot * 2);
   });
 });

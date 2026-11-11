@@ -30,6 +30,7 @@ import { AuctionCover } from "./components/auction-cover";
 import { conditions as conditionLabels } from "../shelf/contracts";
 import {
   AUCTION_MAX_PRICE,
+  AUCTION_MIN_BIDDERS_FLOOR,
   amountError,
   auctionErrorText,
   auctionOptions,
@@ -795,6 +796,14 @@ function AuctionBody({
             </AppText>
           </View>
         </View>
+
+        {/* ADR 0078: the seller and members who registered or bid flag a problem to Admin.
+            Placed right under book identity so title, author and reporting stay together. */}
+        {memberId && !ownerError && (ownerIntake || me) ? (
+          <View style={{ marginTop: 4 }}>
+            <AuctionFlag auction={auction} owner={memberId} />
+          </View>
+        ) : null}
       </View>
 
       {/* 4. Price & Bid Stats Card (3D Red Ombre) */}
@@ -1147,10 +1156,6 @@ function AuctionBody({
         </Notice>
       )}
       </View>
-      {/* ADR 0078: the seller and members who registered or bid flag a problem to Admin. */}
-      {memberId && !ownerError && (ownerIntake || me) ? (
-        <AuctionFlag auction={auction} owner={memberId} />
-      ) : null}
       <History
         auction={auction}
         open={open}
@@ -1226,6 +1231,11 @@ function BidPanel({
   });
   // ADR 0075: the amount already held for this auction counts toward a raise.
   const heldHere = me?.heldAmount ?? 0;
+  // A rival's bid arrives by push/polling and releases this hold; re-read the wallet
+  // so the available amount does not stay at the value cached while leading.
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+  }, [heldHere, queryClient]);
   const available = wallet.data ? wallet.data.available + heldHere : null;
   const price = auction.currentPrice ?? auction.startPrice;
 
@@ -1628,7 +1638,7 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
     case "Register":
       return {
         title: `Đặt cọc ${formatVnd(amount)} để đăng ký?`,
-        message: `Ví giữ ${formatVnd(amount)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy; bạn có thể rút đăng ký trước khi phiên đủ ${auction.minBidders ?? 2} người. Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`,
+        message: `Ví giữ ${formatVnd(amount)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người (hoặc, khi đã đủ, tới 72 giờ trước giờ mở). Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc không được hoàn.`,
         confirm: "Đặt cọc và đăng ký",
       };
     case "SecondChanceAccept":

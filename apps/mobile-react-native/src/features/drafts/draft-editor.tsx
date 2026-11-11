@@ -1,5 +1,5 @@
 import { clearAiPriceAttribution, findPriceReference, createAssistRequest, type PriceReferenceState } from "@used-books/session-client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, View, type ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "expo-router";
@@ -311,14 +311,102 @@ export function DraftEditor({
     if (!input.bookId) return;
     const token = ++assistToken.current;
     setAssist((s) => startLoading(s, assistKey, token));
+    const readReference = async () => {
+      const value = await findPriceReference(client, base.id, input).catch(() => null);
+      if (value && assistToken.current === token) {
+        setPriceReference({ key: assistKey, value });
+      }
+      return value;
+    };
+    const initialReference = await readReference();
     try {
-      try { const value = await findPriceReference(client, base.id, input); if (assistToken.current === token) setPriceReference({ key: assistKey, value }); } catch { /* Keep the existing AI/manual recovery. */ }
       const result = await askAssist(`/listings/${base.id}/price-suggestions`, priceSuggestion, input, 30000);
       setAssist((s) => finishLoading(s, token, base.id, result));
     } catch (e) {
+      if (initialReference?.status !== "Ready") {
+        await readReference();
+      }
       setAssist((s) => failLoading(s, token, assistError(e)));
     }
   };
+
+  const PRICE_LOOKUP_INTERVAL_MS = 3_000;
+  const PRICE_LOOKUP_MAX_READS = 13;
+
+  const readyAssist =
+    assist.status === "ready" && assist.key === assistKey
+      ? assist
+      : undefined;
+  const pendingLookup =
+    readyAssist && readyAssist.suggestion.rules.includes("R-LOOKUP-PENDING")
+      ? readyAssist.suggestion
+      : null;
+  const watchLookup =
+    Boolean(pendingLookup) &&
+    step === 3 &&
+    !locked &&
+    !auction &&
+    !form.bundle &&
+    (form.mode === "Sale" || form.mode === "Both") &&
+    assist.status === "ready" &&
+    !assist.message;
+
+  const lookupKey = [
+    "listing-price-lookup",
+    state.status === "authenticated" ? state.user.id : null,
+    pendingLookup?.id,
+  ];
+
+  const lookup = useQuery({
+    queryKey: lookupKey,
+    enabled: watchLookup,
+    queryFn: () => {
+      if (!pendingLookup) throw new Error("Missing active price lookup");
+      return findPriceReference(client, base.id, {
+        ...suggestionInput(form),
+        bookId: pendingLookup.bookId,
+      });
+    },
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: (query) =>
+      query.state.status === "success" &&
+      query.state.data?.lookupStatus === "Running" &&
+      query.state.data.status !== "Ready" &&
+      query.state.dataUpdateCount < PRICE_LOOKUP_MAX_READS
+        ? PRICE_LOOKUP_INTERVAL_MS
+        : false,
+  });
+
+  const lookupResult =
+    pendingLookup &&
+    lookup.data &&
+    (lookup.data.status === "Ready" ||
+      (lookup.data.lookupStatus && lookup.data.lookupStatus !== "Running"))
+      ? lookup.data
+      : null;
+
+  const lookupInterrupted =
+    watchLookup &&
+    !lookupResult &&
+    (lookup.isError ||
+      lookup.fetchStatus === "paused" ||
+      (lookup.isSuccess &&
+        (!lookup.data?.lookupStatus ||
+          (cache.getQueryState(lookupKey)?.dataUpdateCount ?? 0) >= PRICE_LOOKUP_MAX_READS)));
+
+  const displayedReference = useMemo<PriceReferenceState>(
+    () =>
+      lookupResult?.status === "Ready" &&
+      (priceReference?.key !== assistKey ||
+        Date.parse(lookupResult.generatedAt) > Date.parse(priceReference.value.generatedAt))
+        ? { key: assistKey, value: lookupResult }
+        : priceReference,
+    [lookupResult, assistKey, priceReference],
+  );
 
   const errors = stillFailing(
     check.errors,
@@ -773,15 +861,48 @@ export function DraftEditor({
           <Notice tone="warning">
             Đang giữ yêu cầu vừa gửi. Hãy kiểm tra kết quả trước khi sửa tiếp.
           </Notice>
-          <Button
-            title={
-              stopped
-                ? "Kiểm tra trạng thái mới nhất"
-                : "Thử lại yêu cầu vừa gửi"
-            }
-            busy={busy}
-            onPress={() => void save(false, true)}
-          />
+          <View style={{ gap: space.xs }}>
+            <Button
+              title={
+                stopped
+                  ? "Kiểm tra trạng thái mới nhất"
+                  : "Thử lại yêu cầu vừa gửi"
+              }
+              busy={busy}
+              onPress={() => void save(false, true)}
+            />
+            {stopped && editable ? (
+              <Button
+                secondary
+                title="Tải bản nháp để sửa (giữ thông tin đang nhập)"
+                disabled={busy}
+                onPress={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    const fresh = await client.request(
+                      `/me/listings/${base.id}`,
+                      privateDraft,
+                    );
+                    if (fresh.state.moderation !== "Draft" && fresh.state.moderation !== "Rejected") {
+                      await reconcile(fresh, true);
+                      setStep(4);
+                      return;
+                    }
+                    // Keep user's active form edits, update base metadata
+                    await reconcile(fresh, false);
+                    setUncertain(false);
+                    intent.current = null;
+                    go(0);
+                  } catch (e) {
+                    setError(photoError(e));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+          </View>
         </>
       ) : null}
       {message ? <Notice tone="success">{message}</Notice> : null}
@@ -1332,7 +1453,10 @@ export function DraftEditor({
 
           {editable && !auction && !form.bundle && (form.mode === "Sale" || form.mode === "Both") ? (
             <PriceSuggestionPanel
-              reference={priceReference}
+              reference={displayedReference}
+              lookupResult={lookupResult}
+              lookupWatching={watchLookup && !lookupResult && !lookupInterrupted}
+              lookupInterrupted={lookupInterrupted}
               onApplyReference={amount => { setForm(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }}
               form={form}
               state={assist}

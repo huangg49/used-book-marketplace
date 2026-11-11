@@ -691,15 +691,43 @@ export function durationLabel(seconds: number) {
  * Start choices for the schedule sheet: now, a few hours ahead, or 09:00 on the
  * next days. Every choice sits inside the 5-minute lead and 7-day horizon.
  */
+// POL-29: points open 09:00–18:00 Asia/Ho_Chi_Minh (UTC+7, no DST), the same
+// rule the API applies at handover (apps/api/.../auctions/point-hours.ts). A
+// pickup code lives 10 minutes and staff hand over only while the point is
+// open, so outside those hours the client shows the next opening instead.
+const VN_OFFSET_MS = 7 * 3_600_000;
+const OPEN_HOUR = 9;
+const CLOSE_HOUR = 18;
+export const POINT_HOURS_LABEL = "09:00–18:00";
+
+/** The next 09:00 (UTC ISO) when the point is closed at `nowMs`, else null. */
+export function pointReopensAt(nowMs: number): string | null {
+  if (!Number.isFinite(nowMs)) return null;
+  const local = new Date(nowMs + VN_OFFSET_MS);
+  const hour = local.getUTCHours();
+  if (hour >= OPEN_HOUR && hour < CLOSE_HOUR) return null;
+  const day = local.getUTCDate() + (hour >= CLOSE_HOUR ? 1 : 0);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), day, OPEN_HOUR) - VN_OFFSET_MS).toISOString();
+}
+
+// 5-minute slots: rounded up so an earliest start never lands seconds short of the 5-minute lead.
+const SLOT_MS = 5 * 60_000;
+export const ceilSlot = (ms: number) => Math.ceil(ms / SLOT_MS) * SLOT_MS;
+
 export function startChoices(
   now: number,
   // ADR 0081/0082: a registration auction always opens at a chosen time
   // before its fixed ceiling (publish + 30 days); there is no "now".
   lifecycle?: { ceiling: number },
 ) {
-  const choices: { label: string; at: number | null }[] = lifecycle ? [] : [{ label: "Mở ngay", at: null }];
+  const choices: { label: string; at: number | null }[] = lifecycle
+    ? []
+    : [
+        { label: "Mở ngay", at: null },
+        { label: "Sớm nhất (sau 5 phút)", at: ceilSlot(now + AUCTION_MIN_LEAD_MS) },
+      ];
   const horizon = lifecycle ? lifecycle.ceiling : now + AUCTION_SCHEDULE_HORIZON_MS;
-  for (const h of [1, 3, 6]) choices.push({ label: `Sau ${h} giờ`, at: now + h * HOUR_MS });
+  for (const h of [1, 3, 6]) choices.push({ label: `Sau ${h} giờ`, at: ceilSlot(now + h * HOUR_MS) });
   for (const days of [1, 2, 3]) {
     const d = new Date(now);
     d.setDate(d.getDate() + days);

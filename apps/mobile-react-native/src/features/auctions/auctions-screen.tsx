@@ -15,6 +15,7 @@ import {
   TopNavbar,
   formatVnd,
   presentError,
+  space,
   stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
@@ -444,13 +445,33 @@ export function AuctionsScreen() {
               />
             </View>
           )}
-          {result.isSuccess && allAuctions.length === 0 && (
+          {result.isSuccess && allAuctions.length === 0 && upcomingAuctions.length > 0 && activeFiltersNum === 0 && search.trim().length === 0 ? (
+            <View
+              style={{
+                backgroundColor: stitchTokens.warmIvory,
+                borderRadius: 12,
+                borderLeftWidth: 3.5,
+                borderLeftColor: stitchTokens.wine,
+                borderWidth: 1,
+                borderColor: stitchTokens.peachBorder,
+                padding: space.md,
+                gap: 4,
+              }}
+            >
+              <AppText kind="bold" style={{ color: stitchTokens.wineDark, fontSize: 14 }}>
+                Chưa có phiên đang mở
+              </AppText>
+              <AppText kind="small" style={{ color: stitchTokens.deepCocoa, lineHeight: 18 }}>
+                {upcomingAuctions.length} phiên sắp mở đang nhận đăng ký; đăng ký và đặt cọc trước để được trả giá khi phiên mở.
+              </AppText>
+            </View>
+          ) : result.isSuccess && allAuctions.length === 0 ? (
             <StatePanel
               title="Chưa có phiên nào đang mở"
               message="Phiên mới xuất hiện sau khi sách được kiểm tra tại điểm giao nhận."
               icon="info"
             />
-          )}
+          ) : null}
           {allAuctions.length > 0 && displayedAuctions.length === 0 && (
             <StatePanel
               title="Không có phiên phù hợp"

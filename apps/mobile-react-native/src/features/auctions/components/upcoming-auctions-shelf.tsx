@@ -29,13 +29,13 @@ export function UpcomingAuctionsShelf({
           </AppText>
           <View style={styles.badgeCount}>
             <AppText kind="small" style={styles.badgeCountText}>
-              {items.length} phiên đang chờ mở
+              {items.length} phiên sắp mở
             </AppText>
           </View>
         </View>
       </View>
       <AppText kind="small" style={styles.subtitle}>
-        Sách đã kiểm định tại điểm giao nhận TP.HCM. Đặt cọc 10% để đăng ký tham gia trước giờ mở phiên.
+        Sách đã qua kiểm định. Đăng ký và đặt cọc để giữ chỗ; phiên mở theo giờ người bán hẹn khi đủ số người tối thiểu. Không đủ người trước hạn thì phiên bị hủy và hoàn cọc.
       </AppText>
 
       <ScrollView
@@ -156,17 +156,17 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   badgeCount: {
-    backgroundColor: stitchTokens.parchment,
+    backgroundColor: stitchTokens.goldLight,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderColor: stitchTokens.goldBorder,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   badgeCountText: {
     fontSize: 11,
-    color: stitchTokens.wine,
-    fontWeight: "600",
+    color: stitchTokens.wineDark,
+    fontWeight: "700",
   },
   subtitle: {
     paddingHorizontal: 16,

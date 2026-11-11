@@ -22,12 +22,15 @@ import {
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
 import {
+  AUCTION_MIN_BIDDERS_FLOOR,
   canReschedule,
   closeReasonText,
+  formatRemaining,
   isSealedFormat,
   isScheduled,
   myAuctionsOptions,
   openTimeOf,
+  waitingForRegistrants,
   waitingTime,
   type MyAuctionView,
 } from "./auctions-model";
@@ -128,25 +131,30 @@ function Row({ item, now, onEdit }: { item: MyAuctionItem; now: number; onEdit: 
   const isDutch = formatType === "Dutch";
   const isSealed = isSealedFormat(auction);
 
+  const isWaiting = scheduled && waitingForRegistrants(auction, now);
+  const waitingUntilMs = waiting.at ? Date.parse(waiting.at) - now : 0;
+
   const status = item.needsPayment
     ? `Cần thanh toán trước ${item.paymentDeadline ? time(item.paymentDeadline) : "hạn"}`
-    : scheduled
-      ? `${waiting.label} ${time(waiting.at)}`
-      : item.won
-        ? "Bạn đã thắng phiên"
-        : auction.state === "SecondChanceOffered"
-          ? "Đang mời người trả giá cao thứ hai"
-          : item.role === "Seller"
-            ? auction.state === "Active"
-              ? "Phiên của bạn đang mở"
-              : closeReasonText(auction) ?? "Sách bạn bán"
-            : auction.state === "Active"
-              ? isSealed
-                ? "Đã gửi giá kín"
-                : item.leading
-                  ? "Bạn đang dẫn giá"
-                  : "Bạn chưa dẫn giá"
-              : closeReasonText(auction) ?? "Phiên đã kết thúc";
+    : isWaiting
+      ? `Đăng ký ${auction.registeredCount ?? 0}/${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người · ${waiting.label === "Mở lúc" ? "mở sau" : "hạn còn"} ${formatRemaining(Math.max(0, waitingUntilMs))}`
+      : scheduled
+        ? `${waiting.label} ${time(waiting.at)}`
+        : item.won
+          ? "Bạn đã thắng phiên"
+          : auction.state === "SecondChanceOffered"
+            ? "Đang mời người trả giá cao thứ hai"
+            : item.role === "Seller"
+              ? auction.state === "Active"
+                ? "Phiên của bạn đang mở"
+                : closeReasonText(auction) ?? "Sách bạn bán"
+              : auction.state === "Active"
+                ? isSealed
+                  ? "Đã gửi giá kín"
+                  : item.leading
+                    ? "Bạn đang dẫn giá"
+                    : "Bạn chưa dẫn giá"
+                : closeReasonText(auction) ?? "Phiên đã kết thúc";
 
   const isLeadOrWon = item.won || (auction.state === "Active" && item.leading);
 
@@ -302,8 +310,16 @@ function Row({ item, now, onEdit }: { item: MyAuctionItem; now: number; onEdit: 
         </View>
       </View>
 
-      {item.role === "Seller" && canReschedule(auction, now) && (
+      {item.role === "Seller" && auction.minBidders == null && canReschedule(auction, now) && (
         <Button wine secondary title="Đổi thời gian phiên" onPress={onEdit} />
+      )}
+      {item.role === "Seller" && waitingForRegistrants(auction, now) && (
+        <Button
+          wine
+          secondary
+          title="Quản lý phiên →"
+          onPress={() => router.push({ pathname: "/auction", params: { id: auction.id } })}
+        />
       )}
     </Pressable>
   );
