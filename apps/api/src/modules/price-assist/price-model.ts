@@ -352,6 +352,8 @@ export function priceModelFromConfig(
 // gemini-3.8-flash: the list price from 2027-01-01 (0.75/3.75 until then), so
 // the budget cap never under-counts. 2.5 models are closed to new API users.
 const KNOWN_RATES: Record<string, [number, number]> = {
+  'gpt-5.4-mini': [0.75, 4.5],
+  'gpt-5.4-mini-2026-03-17': [0.75, 4.5],
   'claude-opus-5-5': [4, 20],
   'claude-sonnet-5-5': [2, 10],
   'claude-haiku-4-5': [1, 5],

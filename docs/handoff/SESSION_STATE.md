@@ -1,3 +1,33 @@
+# Review gợi ý giá sách — 11/11/2026
+
+Nhánh `codex/price-assist-review` từ main `807cef3bff2fd3188f38405b08f67c56e0f26164`.
+Tách phần gợi ý giá từ `codex/price-lookup-pending` (`f36c44b9`) để review riêng,
+giữ luồng đăng sách và sửa đổi đấu giá của main. OpenAPI thêm trường tùy chọn
+`lookupStatus`. Migration `0076-online-price-catalog-revision` gắn nguồn với
+revision và giữ tương thích dữ liệu cũ. Bật tra nguồn qua cấu hình backend theo
+[ENV_HANDOFF](ENV_HANDOFF.md) và [ADR0029](../adr/0029-online-price-lookup.md).
+
+Local PASS: API/web build và lint, contract/routes, 97 unit API, 53 ca HTTP giá
+và tự duyệt trên Mongo QA, 28 ca schema/migration, 486 unit web, 158 unit
+session-client và 12 ca Chromium ở 390/1440 px cho luồng tự đọc kết quả, mất
+phản hồi và đổi bản sách. Cần CI remote và review độc lập trước khi merge.
+
+Chromium 1440 px, Nest/Mongo QA, OpenAI tra nguồn thật, storage giả lập:
+*Dế Mèn phiêu lưu ký* có một nguồn, bước 4 tự hiện khoảng tham chiếu và lưu
+16.000 đ khi xác nhận. *One Piece Tập II* có 0 nguồn, hiện thông báo và lưu
+125.000 đ người bán nhập. Cả hai bài vào `PendingReview`, mỗi bài chỉ có yêu
+cầu gợi ý ban đầu, không ghi áp dụng AI. Fixture QA đã dọn.
+
+Probe OpenAI + đọc trang thật trên bốn cuốn từ tập thử: *Hoàng tử bé* và *Đất
+rừng phương Nam* có ISBN, mỗi cuốn có một nguồn. *Kính vạn hoa Tập 1* và *Số đỏ*
+không có ISBN trong mẫu, không xác minh được nguồn. Các lý do loại gồm khác
+tên/ISBN, trang thiếu giá cấu trúc hoặc chặn truy cập. Mẫu nhỏ chưa đại diện
+thị trường. Eval NVIDIA riêng, 34 ca: đúng trạng thái 33/34, 19/20 lượt gọi
+thật hợp lệ, một ca bị chặn vì khoảng quá rộng, hai lỗi tiêm theo kế hoạch.
+P50 2,8 s, p95 8,3 s, chi phí ước tính 0,015 USD. Chưa có nhãn giá do người
+review nên chưa chấm độ đúng của khoảng giá. Ưu tiên thêm dữ liệu theo ISBN
+và cách đối chiếu tên ấn bản trước khi cân nhắc đổi model.
+
 # Kiểm thử đấu giá nhanh: journey viết lại + nhánh còn lại — 10/11/2026
 
 Nhánh `test/auction-journey-registration` (trên `fix/auction-ui-review`). Hai kịch bản trình

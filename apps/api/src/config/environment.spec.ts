@@ -98,6 +98,13 @@ describe('environment validation', () => {
 });
 
 describe('price assistant provider config', () => {
+  it('validates an independent, ordered lookup config and rejects duplicate providers', () => {
+    expect(validatePriceAssist({
+      PRICE_LOOKUP_PROVIDERS: 'openai, gemini', PRICE_LOOKUP_OPENAI_MODEL: 'gpt-5.4-mini',
+    })).toMatchObject({ PRICE_LOOKUP_PROVIDERS: 'openai,gemini', PRICE_LOOKUP_OPENAI_MODEL: 'gpt-5.4-mini' });
+    for (const PRICE_LOOKUP_PROVIDERS of ['openai,openai', 'anthropic', 'openai,'])
+      expect(() => validatePriceAssist({ PRICE_LOOKUP_PROVIDERS })).toThrow('PRICE_LOOKUP_PROVIDERS');
+  });
   it('accepts nvidia with a publisher-prefixed default model', () => {
     const out = validatePriceAssist({ PRICE_ASSIST_PROVIDER: 'nvidia' });
     expect(out.PRICE_ASSIST_MODEL).toBe('nvidia/nemotron-3.5-lightning-30b-a3b');

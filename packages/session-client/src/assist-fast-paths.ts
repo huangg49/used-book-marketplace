@@ -16,7 +16,10 @@ export const isbnMatches = z.object({
 export type IsbnMatches = z.infer<typeof isbnMatches>;
 export const priceReference = priceSuggestion
   .omit({ id: true, model: true, factors: true, cached: true })
-  .extend({ status: z.enum(["Ready", "NeedsMoreData", "Refused"]) });
+  .extend({
+    status: z.enum(["Ready", "NeedsMoreData", "Refused"]),
+    lookupStatus: z.enum(["Running", "Done", "Unavailable", "Disabled"]).optional(),
+  });
 export type PriceReference = z.infer<typeof priceReference>;
 export type PriceReferenceState = { key: string; value: PriceReference } | null;
 // Manual reference choices must stay manual even when a refresh replays an
