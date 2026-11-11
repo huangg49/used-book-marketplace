@@ -6,6 +6,7 @@ import {
   latestStartAt,
   pauseBudgetLeft,
   resumeFields,
+  startNowFields,
 } from './auction-schedule.js';
 import { dutchPrice } from './auction-types.js';
 
@@ -118,5 +119,36 @@ describe('resumeFields', () => {
   it('grows the 30-day open ceiling by the time given back', () => {
     const a = held({ pausedMs: 5 * H });
     expect(latestStartAt(a).getTime()).toBe(a.publishedAt.getTime() + 30 * 24 * H + 5 * H);
+  });
+});
+
+describe('startNowFields (Admin opens a scheduled auction now)', () => {
+  const scheduled = (over: Partial<AuctionDoc> = {}) =>
+    ({
+      opensAt: at(6 * H),
+      startAt: at(6 * H),
+      plannedEndAt: at(30 * H),
+      minBidders: 4,
+      registeredCount: 4,
+      ...over,
+    }) as AuctionDoc;
+
+  it('opens now and keeps the planned length', () => {
+    expect(startNowFields(scheduled(), t0)).toEqual({
+      startAt: t0,
+      opensAt: t0,
+      biddingOpenedAt: t0,
+      endAt: at(24 * H),
+      plannedEndAt: at(24 * H),
+    });
+  });
+
+  it('never opens below the registration minimum', () => {
+    expect(startNowFields(scheduled({ registeredCount: 3 }), t0)).toBeNull();
+  });
+
+  it('opens an auction without registration and no open time', () => {
+    const r = startNowFields(scheduled({ opensAt: null, minBidders: null, registeredCount: 0 }), t0);
+    expect(r).toEqual({ startAt: t0, biddingOpenedAt: t0, endAt: at(24 * H), plannedEndAt: at(24 * H) });
   });
 });

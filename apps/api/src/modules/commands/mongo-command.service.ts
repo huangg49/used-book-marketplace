@@ -221,6 +221,7 @@ export type AuctionOperation =
   | 'reclaimAuctionIntake'
   | 'cancelAuction'
   | 'resumeAuction'
+  | 'startAuction'
   | 'placeAuctionBid'
   | 'setAuctionAutoBid'
   | 'disableAuctionAutoBid'
