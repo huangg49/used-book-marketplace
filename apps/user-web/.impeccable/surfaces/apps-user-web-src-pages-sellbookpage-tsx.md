@@ -12,8 +12,11 @@ related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-
 Thẻ hình thức đang chọn dùng nền wine. Giá bán và giá trị đổi tách theo hình
 thức. Gợi ý giá ở ngay dưới ô giá bán, hiển thị một trạng thái và hành động
 kiểm tra phù hợp. Khoảng giá đã có hiện trước, lý do và nguồn mở riêng khi cần.
-Đầu sách mới được tra giá khi đang chờ duyệt. Khi chưa có kết quả, người bán có
-thể kiểm tra lại hoặc đưa focus về ô giá bán để nhập tay.
+Đầu sách mới được tra giá khi đang chờ duyệt. Nếu có khoảng tham chiếu còn hiệu
+lực, hiện mức giá và nút chọn ngay cả khi AI đang chạy hoặc báo lỗi. Nguồn giá
+mở riêng. Người bán xác nhận trước khi thay giá, và mức tham chiếu được lưu
+như giá nhập tay. Nếu lượt tra kết thúc mà thiếu nguồn phù hợp, hiện một thông
+báo và nút đưa focus về ô giá bán.
 Tiêu chí sách muốn đổi và giới hạn đăng bài thu gọn. Nơi gửi nằm sau điều kiện
 giao dịch, có trạng thái cần chọn hoặc đã chọn, dùng lại hộp thoại địa chỉ.
 Giữ các nhánh sách lẻ, bộ sách và khai báo giá trị cho đấu giá.

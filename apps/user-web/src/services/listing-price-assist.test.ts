@@ -49,6 +49,40 @@ beforeEach(() => {
   });
 });
 describe("web price assistance shares the submission draft", () => {
+  it("reads the newly verified reference if the model fails after the lookup finishes", async () => {
+    const respond = request.getMockImplementation()!;
+    const reference = {
+      bookId: book,
+      listingId: draft,
+      status: "Ready",
+      range: { low: 16_000, high: 21_000 },
+    };
+    let lookupFinished = false;
+    request.mockImplementation(async (...args) => {
+      const path = String(args[0]);
+      if (path.endsWith("/price-reference")) {
+        return lookupFinished ? reference : {
+          ...reference,
+          status: "NeedsMoreData",
+          range: null,
+        };
+      }
+      if (path.endsWith("/price-suggestions")) {
+        lookupFinished = true;
+        throw new ApiError(503, "AI_ASSIST_FAILED", "QA invalid model result");
+      }
+      return respond(...args);
+    });
+    const onReference = vi.fn();
+    const ask = createListingPriceRequest(createDraftAttempt());
+    await expect(ask(form, catalog, [photo()], () => {}, onReference))
+      .rejects.toMatchObject({ code: "AI_ASSIST_FAILED" });
+    expect(onReference).toHaveBeenCalledTimes(2);
+    expect(onReference).toHaveBeenLastCalledWith(reference);
+    const reads = request.mock.calls.filter(([path]) => path.endsWith("/price-reference"));
+    expect(reads[0]![2]).toEqual(reads[1]![2]);
+  });
+
   it("reuses acknowledged catalog/upload stages and pins the AI intent through a lost ACK", async () => {
     const attempt = createDraftAttempt(),
       file = photo(),

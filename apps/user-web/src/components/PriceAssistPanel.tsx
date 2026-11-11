@@ -57,11 +57,18 @@ export function PriceAssistPanel({
         ? state.previous
         : undefined;
   const value = ready?.suggestion;
-  const current = value && !loading && !stale;
-  const currentRuleReference = currentReference(reference ?? null, currentKey);
-  const duplicateReference = current && value.status !== "Suggested" &&
-    currentRuleReference?.status === value.status;
   const refreshExpiry = useExpiryRefresh(value?.expiresAt);
+  const refreshReferenceExpiry = useExpiryRefresh(reference?.value.expiresAt);
+  const currentRuleReference = currentReference(reference ?? null, currentKey);
+  const referenceReady = currentRuleReference?.status === "Ready" && !!currentRuleReference.range;
+  const referenceExpired = !currentRuleReference &&
+    reference?.key === currentKey && reference.value.status === "Ready";
+  const suggestedRange = value?.status === "Suggested" ? value.range : null;
+  const currentSuggestion = !!suggestedRange && !stale && !loading;
+  const showReference = referenceReady && !currentSuggestion;
+  const error = !loading && !stale
+    ? state.status === "error" ? state.message : ready?.message
+    : undefined;
   const locked = disabled || loading || stale;
   const canApply = () => {
     if (disabled || loading) return false;
@@ -73,27 +80,30 @@ export function PriceAssistPanel({
     return true;
   };
   const sourceLabels = new Map(value?.sources.map((source) => [source.ref, source.label]));
-  const suggestedRange = value?.status === "Suggested" ? value.range : null;
-  const lookupPending = !stale && value?.rules?.includes("R-LOOKUP-PENDING");
+  const lookupPending = !loading && !stale && !error && !referenceReady &&
+    value?.rules.includes("R-LOOKUP-PENDING");
+  const showLookupResult = value && !suggestedRange && !loading && !stale && !error && !referenceReady;
   const emptyTitle = value?.status === "Refused" ? "Chưa thể gợi ý giá cho tình trạng này"
     : lookupPending ? "Đang tìm nguồn giá"
     : value?.rules?.some((rule) => rule === "R-LOOKUP-UNAVAILABLE" || rule === "R-LOOKUP-DISABLED")
       ? "Tạm thời chưa tra được giá"
     : value?.rules?.includes("R-NEED-BOOK-IDENTITY") ? "Cần thêm thông tin để tìm đúng sách"
-    : value?.rules?.includes("R-NEED-SOURCES") ? "Chưa có nguồn giá đã xác minh"
+    : value?.rules?.includes("R-NEED-SOURCES") ? "Chưa tìm được nguồn giá phù hợp"
     : "Cần bổ sung thông tin";
   const buttonLabel = loading
     ? "Đang lấy gợi ý…"
     : lookupPending
       ? "Xem kết quả tra giá"
-      : state.status === "idle"
+      : error && referenceReady
+        ? "Thử lại gợi ý AI"
+        : state.status === "idle"
         ? "Xem gợi ý giá bán"
         : "Kiểm tra lại nguồn giá";
-  const announcement = loading
-    ? phases[phase]
-    : value && !stale
-      ? suggestedRange ? "Đã có khoảng giá gợi ý" : emptyTitle
-      : "";
+  const announcement = currentSuggestion ? "Đã có khoảng giá gợi ý"
+    : showReference ? "Đã có khoảng giá tham chiếu"
+    : loading ? phases[phase]
+    : showLookupResult ? emptyTitle
+    : "";
   return (
     <section className={styles.panel} aria-labelledby="price-assist-title">
       <header className={styles.panelHead}>
@@ -123,17 +133,23 @@ export function PriceAssistPanel({
           {buttonLabel}
         </button>
       </header>
-      <p role="status" className={loading ? styles.status : "sr-only"}>
+      <p role="status" className={showLookupResult ? `${styles.status} ${styles.statusTitle}`
+        : loading && !showReference ? styles.status : "sr-only"}>
         {announcement}
       </p>
-      {stale && !loading && (
+      {stale && !loading && !showReference && (
         <p role="status" className={styles.status}>
           Thông tin sách, ảnh, tình trạng hoặc hạn dùng gợi ý đã thay đổi. Hãy yêu cầu lại.
         </p>
       )}
-      {state.status === "error" && <p role="alert" className={styles.status}>{state.message}</p>}
-      {ready?.message && <p role="alert" className={styles.status}>{ready.message} Gợi ý trước vẫn được giữ.</p>}
-      {value && suggestedRange ? (
+      {error && (
+        <p role="alert" className={showReference ? styles.note : styles.status}>
+          {showReference ? "Gợi ý AI chưa có. Bạn có thể dùng khoảng tham chiếu bên dưới."
+            : currentSuggestion ? `${error} Gợi ý trước vẫn được giữ.`
+            : error}
+        </p>
+      )}
+      {value && suggestedRange && !showReference ? (
         <div className={styles.answer}>
           <div className={styles.rangeHeader}>
             <p className={styles.range}>{formatVnd(suggestedRange.low)} – {formatVnd(suggestedRange.high)}</p>
@@ -190,23 +206,29 @@ export function PriceAssistPanel({
             </div>
           </details>
         </div>
-      ) : value && !stale && !loading ? (
-        <div className={styles.status}>
-          <p className={styles.statusTitle}>{emptyTitle}</p>
-          {value.missing.map((text) => <p key={text}>{text}</p>)}
-          <button type="button" className={styles.quietAction} disabled={disabled} onClick={onEnterPrice}>
-            Nhập giá bán
-          </button>
-        </div>
+      ) : showLookupResult ? (
+        !value.rules.includes("R-NEED-SOURCES") &&
+        value.missing.map((text) => <p key={text} className={styles.note}>{text}</p>)
       ) : null}
-      {!duplicateReference && (
+      {referenceReady && (
         <PriceReferencePanel
           state={reference ?? null}
           currentKey={currentKey}
           disabled={disabled || !hasPhoto}
           onApply={(amount) => onApplyReference?.(amount)}
-          aiReady={!!current}
+          onExpired={refreshReferenceExpiry}
+          prominent={showReference}
         />
+      )}
+      {referenceExpired && !currentSuggestion && !loading && !stale && (
+        <p className={styles.status} role="status">
+          Khoảng tham chiếu không còn hiệu lực. Bạn có thể yêu cầu gợi ý lại hoặc tự nhập giá.
+        </p>
+      )}
+      {(showLookupResult || error || referenceExpired) && !currentSuggestion && !loading && (
+        <button type="button" className={styles.quietAction} disabled={disabled} onClick={onEnterPrice}>
+          Nhập giá bán
+        </button>
       )}
       <ConfirmDialog
         isOpen={replace !== null}

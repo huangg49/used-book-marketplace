@@ -33,17 +33,26 @@ export function createListingPriceRequest(attempt: DraftAttempt) {
     // Final submission reuses it and uploads the remaining selected photos.
     await uploadOnce(attempt, draft, files[0]!);
     phase("model");
-    if (onReference) {
-      try { onReference(await findPriceReference(session, draft.entityId, { ...input, bookId: book.entityId })); } catch { /* AI/manual entry remain available if the fast reference cannot be read. */ }
-    }
-    return {
-      listingId: draft.entityId,
-      suggestion: await ask(
+    const body = { ...input, bookId: book.entityId };
+    const readReference = async () => {
+      if (!onReference) return;
+      const value = await findPriceReference(session, draft.entityId, body).catch(() => null);
+      if (value) onReference(value);
+      return value;
+    };
+    const initialReference = await readReference();
+    try {
+      const suggestion = await ask(
         `/listings/${draft.entityId}/price-suggestions`,
         priceSuggestion,
-        { ...input, bookId: book.entityId },
+        body,
         30_000,
-      ),
-    };
+      );
+      return { listingId: draft.entityId, suggestion };
+    } catch (error) {
+      // A lookup can finish between the first reference read and the model call.
+      if (initialReference?.status !== "Ready") await readReference();
+      throw error;
+    }
   };
 }

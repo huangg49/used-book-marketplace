@@ -1,4 +1,4 @@
-# Tra giá cho đầu sách chờ duyệt — 10/11/2026
+# Tra giá cho đầu sách chờ duyệt — 10–11/11/2026
 
 Nhánh `codex/price-lookup-pending`, base `f9fc82af`, commit subject
 `feat(price-assist): look up verified prices before catalog approval`.
@@ -15,9 +15,38 @@ và hết hạn. Live adapter OpenAI tìm hai lượt cho *One Piece Strong Word
 không có URL để xác minh. Với *Dế Mèn phiêu lưu ký* ISBN `9786042030540`, xác minh
 một giá nhà sách 40.000 đ. Chưa nghiệm thu toàn hành trình với provider thật hoặc native.
 
-Đã áp migration `0076-online-price-catalog-revision` trên Mongo demo local và bật
-OpenAI qua cấu hình riêng của API demo. API cổng 3000 và Member web cổng 5174
-phản hồi sau khi khởi động lại API. Tiếp theo thử bước 4 trên trang Đăng sách.
+Ngày 10/11 đã áp migration `0076-online-price-catalog-revision` trên Mongo demo
+local và bật OpenAI qua cấu hình riêng của API demo. API 3000 và Member web
+5174 phản hồi sau khi khởi động lại lúc đó.
+
+Ngày 11/11 kiểm lại tại `6deb66b5`: API build và contract/routes PASS, 90 unit giá,
+19 ca HTTP giá với adapter giả lập, 61 ca Mongo QA (8 skip import/failover),
+481 unit web và 14 ca Chromium của panel ở 390/1440 px PASS.
+Chromium 1440 px qua bước 1–4 dùng Nest/Mongo QA, ảnh mẫu, storage giả lập,
+OpenAI tìm nguồn thật và NVIDIA soạn khoảng giá. Cả hai sách chờ duyệt đều
+bắt đầu tra ngay và giữ giá người bán đã nhập. *One Piece Strong Words – Tập II*
+kết thúc với 0 nguồn xác minh, báo thiếu nguồn và nút nhập tay đưa focus về ô giá.
+*Dế Mèn phiêu lưu ký* ISBN `9786042030540`: một lượt trả HTTP 503 do đầu ra mô hình
+không đạt kiểm tra. Lượt chạy lại từ fixture mới có nguồn nhà sách 40.000 đ,
+trả khoảng 16.000–21.000 đ mức `Limited`, và áp mức 16.000 đ sau khi xác nhận.
+Chưa kiểm Gemini thật, Supabase thật, native hay gửi duyệt cuối luồng ở lượt
+chạy đầu tiên.
+
+Checkpoint `fix(user-web): keep verified price reference available when AI fails`
+trên `codex/price-lookup-pending`, base `6deb66b5`. Bước 4 hiện khoảng tham chiếu
+còn hiệu lực trước khi AI trả lời, giữ nguồn và nút chọn khi AI lỗi, bỏ thông
+báo đang tra cũ. Đọc lại tham chiếu nếu nguồn có thể xuất hiện giữa lần đọc
+đầu và lúc AI lỗi. Khi tra xong mà thiếu nguồn, hiển thị một thông báo và nút
+đưa focus về ô giá bán. Giá chỉ đổi sau xác nhận, lưu giá tham chiếu như giá nhập tay.
+
+Web build/typecheck, lint (cảnh báo ngoài phạm vi), 482 unit và 32 ca Chromium
+giả lập (16 panel, 12 hết hạn tham chiếu, 4 đăng cuốn tiếp theo) PASS.
+Chromium 1440 px với Nest/Mongo QA, storage giả lập và OpenAI tra nguồn thật:
+*Dế Mèn* có nguồn 40.000 đ. Model soạn được tiêm đầu ra sai, trả HTTP 503.
+Khoảng tham chiếu 16.000–24.000 đ hiện trước và sau lỗi. Xác nhận 16.000 đ rồi
+gửi duyệt thành công. *One Piece Tập II* có 0 nguồn, nhập tay và gửi duyệt
+thành công. Hai bài ở `PendingReview`, không ghi áp dụng giá AI. QA dọn fixture.
+Chưa có review độc lập và tích hợp remote. Bước tiếp: review diff theo base main.
 
 # Thiết kế lại bước 4 Đăng sách — 10/11/2026
 
