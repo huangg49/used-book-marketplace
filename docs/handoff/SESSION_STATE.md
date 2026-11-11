@@ -48,6 +48,22 @@ gửi duyệt thành công. *One Piece Tập II* có 0 nguồn, nhập tay và g
 thành công. Hai bài ở `PendingReview`, không ghi áp dụng giá AI. QA dọn fixture.
 Chưa có review độc lập và tích hợp remote. Bước tiếp: review diff theo base main.
 
+Checkpoint `feat(price-assist): show lookup results automatically on member web`
+trên `codex/price-lookup-pending`, base `af5aa892`. Bước 4 tự đọc tiến độ qua
+`price-reference` sau khi người bán yêu cầu. Khi có nguồn, hiện khoảng tham chiếu
+và cho yêu cầu AI riêng. Nếu thiếu nguồn, báo kết quả và cho nhập tay. Đọc tiến
+độ tối đa 13 lần mỗi yêu cầu, dừng khi có kết quả hoặc rời bước 4. Khi đọc lỗi,
+người bán có thể xem lại thủ công. API đọc đúng revision, qua quyền chủ bài,
+không tạo gợi ý hoặc gọi provider. Xem [ADR0029](../adr/0029-online-price-lookup.md).
+
+API/web build và lint, contract/routes, 90 unit giá, 19 ca HTTP trên Mongo QA,
+482 unit web, 158 unit session-client, 28 ca Chromium giả lập PASS. Chromium
+nối Nest/Mongo QA thật với finder/trang nguồn/storage giả lập: *Dế Mèn* tự hiện
+khoảng tham chiếu rồi gửi duyệt với mức đã xác nhận, *One Piece Tập II* tự báo
+thiếu nguồn rồi gửi duyệt với giá nhập tay. Mỗi bài chỉ có một yêu cầu gợi ý
+ban đầu, không có áp dụng giá AI. Đã dọn fixture; chưa chạy provider thật hoặc
+native ở checkpoint này. Chưa push; cần review độc lập trước tích hợp.
+
 # Thiết kế lại bước 4 Đăng sách — 10/11/2026
 
 Nhánh `codex/sell-step-four-layout` từ `359e84fa`. Bước 4 tách lựa chọn hình thức,

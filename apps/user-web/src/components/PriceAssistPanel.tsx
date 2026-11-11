@@ -1,5 +1,5 @@
 import { PriceReferencePanel } from './PriceReferencePanel';
-import type { PriceReferenceState } from '@used-books/session-client';
+import type { PriceReference, PriceReferenceState } from '@used-books/session-client';
 import { useState } from "react";
 import { LoaderCircle, Sparkles } from "lucide-react";
 import {
@@ -30,6 +30,7 @@ export function PriceAssistPanel({
   hasPhoto,
   needsCatalog,
   reference, onApplyReference,
+  lookupResult, lookupWatching = false, lookupInterrupted = false,
   onAsk,
   onEnterPrice,
   onApply,
@@ -42,6 +43,9 @@ export function PriceAssistPanel({
   hasPhoto: boolean;
   needsCatalog: boolean;
   reference?: PriceReferenceState;
+  lookupResult?: PriceReference | null;
+  lookupWatching?: boolean;
+  lookupInterrupted?: boolean;
   onApplyReference?: (amount: number) => void;
   onAsk: () => void;
   onEnterPrice: () => void;
@@ -80,22 +84,27 @@ export function PriceAssistPanel({
     return true;
   };
   const sourceLabels = new Map(value?.sources.map((source) => [source.ref, source.label]));
-  const lookupPending = !loading && !stale && !error && !referenceReady &&
-    value?.rules.includes("R-LOOKUP-PENDING");
-  const showLookupResult = value && !suggestedRange && !loading && !stale && !error && !referenceReady;
-  const emptyTitle = value?.status === "Refused" ? "Chưa thể gợi ý giá cho tình trạng này"
+  const lookupPending = !lookupResult && !loading && !stale && !error &&
+    !referenceReady && value?.rules.includes("R-LOOKUP-PENDING");
+  const result = lookupResult ?? value;
+  const showLookupResult = result && !suggestedRange && !loading && !stale && !error &&
+    !referenceReady && result.status !== "Ready";
+  const emptyTitle = result?.status === "Refused" ? "Chưa thể gợi ý giá cho tình trạng này"
+    : lookupPending && lookupInterrupted ? "Chưa cập nhật được kết quả tra giá"
     : lookupPending ? "Đang tìm nguồn giá"
-    : value?.rules?.some((rule) => rule === "R-LOOKUP-UNAVAILABLE" || rule === "R-LOOKUP-DISABLED")
+    : result?.rules.some((rule) => rule === "R-LOOKUP-UNAVAILABLE" || rule === "R-LOOKUP-DISABLED")
       ? "Tạm thời chưa tra được giá"
-    : value?.rules?.includes("R-NEED-BOOK-IDENTITY") ? "Cần thêm thông tin để tìm đúng sách"
-    : value?.rules?.includes("R-NEED-SOURCES") ? "Chưa tìm được nguồn giá phù hợp"
+    : result?.rules.includes("R-NEED-BOOK-IDENTITY") ? "Cần thêm thông tin để tìm đúng sách"
+    : result?.rules.includes("R-NEED-SOURCES") ? "Chưa tìm được nguồn giá phù hợp"
     : "Cần bổ sung thông tin";
   const buttonLabel = loading
     ? "Đang lấy gợi ý…"
     : lookupPending
-      ? "Xem kết quả tra giá"
+      ? lookupWatching ? "Đang tra giá…" : "Xem kết quả tra giá"
       : error && referenceReady
         ? "Thử lại gợi ý AI"
+        : lookupResult?.status === "Ready" && referenceReady
+          ? "Xem gợi ý AI"
         : state.status === "idle"
         ? "Xem gợi ý giá bán"
         : "Kiểm tra lại nguồn giá";
@@ -125,11 +134,11 @@ export function PriceAssistPanel({
         <button
           className={styles.primary}
           type="button"
-          disabled={disabled || loading || !hasPhoto}
+          disabled={disabled || loading || lookupWatching || !hasPhoto}
           onClick={onAsk}
-          aria-busy={loading}
+          aria-busy={loading || lookupWatching}
         >
-          {loading && <LoaderCircle size={15} className={styles.spinner} aria-hidden="true" />}
+          {(loading || lookupWatching) && <LoaderCircle size={15} className={styles.spinner} aria-hidden="true" />}
           {buttonLabel}
         </button>
       </header>
@@ -207,8 +216,8 @@ export function PriceAssistPanel({
           </details>
         </div>
       ) : showLookupResult ? (
-        !value.rules.includes("R-NEED-SOURCES") &&
-        value.missing.map((text) => <p key={text} className={styles.note}>{text}</p>)
+        !lookupInterrupted && !result.rules.includes("R-NEED-SOURCES") &&
+        result.missing.map((text) => <p key={text} className={styles.note}>{text}</p>)
       ) : null}
       {referenceReady && (
         <PriceReferencePanel

@@ -148,13 +148,17 @@ export class PriceAssistService {
       const book = await this.book(tx, input.bookId, actor._id),
         raw = await this.sources(tx, book, actor._id);
       const now = await tx.now();
+      const hasPhoto = (await tx.c.listing_media.countDocuments(
+        { listingId, status: 'Ready', purgedAt: null },
+        { limit: 1 },
+      )) > 0;
+      const lookupStatus = hasPhoto && input.readable !== false && input.missingEssentialContent !== true
+        ? await this.lookups?.observe(tx, book, now)
+        : undefined;
       const facts = {
         catalogRevisionId: book.revisionId,
-        hasPhoto:
-          (await tx.c.listing_media.countDocuments(
-            { listingId, status: 'Ready', purgedAt: null },
-            { limit: 1 },
-          )) > 0,
+        hasPhoto,
+        lookup: lookupStatus,
       };
       const evidence = evaluate(input, book, raw, now, facts);
       return {
@@ -162,6 +166,7 @@ export class PriceAssistService {
         bookId: input.bookId,
         inputFingerprint: fingerprint(input, raw, facts, book.confirmed),
         status: evidence.status === 'Proceed' ? 'Ready' : evidence.status,
+        ...(lookupStatus ? { lookupStatus } : {}),
         evidenceLevel: evidence.level,
         rules: evidence.rules,
         range: evidence.bounds,

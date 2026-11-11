@@ -66,6 +66,11 @@ model tự “biết” hoặc tự đọc giá trên mạng thì không kiểm 
    lỗi hoặc hết lượt tra với trường hợp đã tra nhưng chưa có nguồn phù hợp. Người
    bán nhận `R-LOOKUP-DISABLED` khi tra giá đang tắt hoặc chưa có provider. Người
    bán vẫn có thể nhập giá. Gợi ý dựa trên đầu sách chờ duyệt luôn có mức `Limited`.
+   `price-reference` có thể trả `lookupStatus` của lượt tra đã tồn tại cho cùng
+   revision, qua quyền chủ bài hiện hành. Đọc tiến độ không gọi provider, không
+   tạo gợi ý và không tiêu hạn mức. Member web đọc lại có giới hạn ở bước 4.
+   Khi đã có nguồn, hiện khoảng tham chiếu. Khi đọc lỗi hoặc hết lượt tự kiểm
+   tra, cho người bán xem lại thủ công hoặc nhập giá.
    `OnlineRetail` là giá sách mới cho băng tình trạng của ADR 0028; giá bìa nhân viên nhập
    được ưu tiên khi có cả hai; quá 3 tháng thì coi là cũ.
 8. Tắt mặc định (`PRICE_LOOKUP_ENABLED=false`). `PRICE_LOOKUP_PROVIDERS=openai,gemini`

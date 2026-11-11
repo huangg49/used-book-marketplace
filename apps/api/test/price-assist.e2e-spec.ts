@@ -367,8 +367,28 @@ describe('price suggestions through HTTP with MongoDB', () => {
       expect(pending.body).toMatchObject({ status: 'NeedsMoreData', model: null, sources: [] });
       expect(pending.body.rules).toContain('R-LOOKUP-PENDING');
       expect(finder.calls).toBe(1);
+      const reference = (id: string, actor: Reader) => request(app.getHttpServer())
+        .post(`/api/v1/listings/${id}/price-reference`)
+        .set('Authorization', `Bearer ${actor.token}`)
+        .send({
+          bookId: book, condition: 'Good', readable: true,
+          hasMissingPages: false, missingEssentialContent: false,
+        });
+      await reference(l.entityId, m2).expect(404);
+      await reference(another.entityId, m2).expect(422);
+      const observing = await reference(l.entityId, m1).expect(200);
+      validates('ListingPriceReference', observing.body);
+      expect(observing.body).toMatchObject({ lookupStatus: 'Running', status: 'NeedsMoreData' });
+      expect(finder.calls).toBe(1);
       release();
       await waitForLookup(book, created.revisionId);
+      const finished = await reference(l.entityId, m1).expect(200);
+      expect(finished.body).toMatchObject({
+        lookupStatus: 'Done', status: 'Ready', sources: [{ url: correct }],
+      });
+      expect(finder.calls).toBe(1);
+      expect(fake.calls).toBe(modelCalls);
+      expect(await db.c.price_suggestions.countDocuments({ listingId: l.entityId })).toBe(1);
 
       const replay = await ask(l.entityId, m1, { bookId: book }, key).expect(200);
       expect(replay.body).toMatchObject({ id: pending.body.id, status: 'NeedsMoreData', cached: true });
@@ -383,6 +403,9 @@ describe('price suggestions through HTTP with MongoDB', () => {
       const revised = (await post(`/catalog/requests/${book}/resubmit`, {
         expectedVersion: rejected.version, metadata: { ...metadata, isbn: isbn13() },
       }, m1).expect(200)).body;
+      const changedReference = await reference(l.entityId, m1).expect(200);
+      expect(changedReference.body).not.toHaveProperty('lookupStatus');
+      expect(changedReference.body.sources).toEqual([]);
       const stale = await put(`/listings/${l.entityId}/draft`, {
         expectedVersion: l.version,
         content: draft(book, priced.body.range.low),
@@ -393,6 +416,8 @@ describe('price suggestions through HTTP with MongoDB', () => {
       expect(retry.body).toMatchObject({ status: 'NeedsMoreData', model: null, sources: [] });
       expect(retry.body.rules).toContain('R-LOOKUP-PENDING');
       await waitForLookup(book, revised.revisionId);
+      const emptyReference = await reference(l.entityId, m1).expect(200);
+      expect(emptyReference.body).toMatchObject({ lookupStatus: 'Done', status: 'NeedsMoreData', sources: [] });
       const empty = await ask(l.entityId, m1, { bookId: book }).expect(200);
       expect(empty.body).toMatchObject({ status: 'NeedsMoreData', range: null, sources: [] });
       expect(empty.body.rules).toContain('R-NEED-SOURCES');

@@ -1,4 +1,4 @@
-// Publish a book with ready/pending AI assistance, restart, then explicitly ask for the new book.
+// Exercise lookup recovery and listing restart through the real page with a simulated API.
 import assert from 'node:assert/strict';import {createRequire} from 'node:module';import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=fileURLToPath(new URL('../../../',import.meta.url)),require=createRequire(new URL('../../admin-web/package.json',import.meta.url));
@@ -10,10 +10,11 @@ const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0'),user={id:id(1)
 const checks=[];let browser;
 try{
  browser=await chromium.launch();
- for(const width of [390,1440])for(const mode of ['ready','pending']){
+ for(const width of [390,1440])for(const mode of ['ready','pending',...baseline?[]:['lookup-found','lookup-empty','lookup-changed','lookup-error']]){
   const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'});await context.routeWebSocket('**/*',socket=>socket.close());
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  const counts={catalog:0,draft:0,media:0,bytes:0,finalize:0,save:0,submit:0,reference:0,ai:0};let releaseOld,releaseNew;
+  const counts={catalog:0,draft:0,media:0,bytes:0,finalize:0,save:0,submit:0,reference:0,ai:0};let releaseOld,releaseNew,releaseLookup;
+  const lookupMode=mode.startsWith('lookup-');
   const value=(listingId,low,status)=>({id:id(99),listingId,bookId:listingId===id(10)?id(12):id(32),inputFingerprint:'qa',status,evidenceLevel:'Limited',rules:[],
    range:{low,high:low+20000},factors:[],sources:[],missing:[],dataAsOf:null,generatedAt:new Date().toISOString(),expiresAt:new Date(Date.now()+300000).toISOString(),model:'QA',cached:false});
   await context.route('**/*',async route=>{
@@ -26,10 +27,21 @@ try{
    if(p.endsWith('/upload-ticket'))return route.fulfill({json:{path:'/qa-upload',headers:{}}});
    if(p==='/api/v1/qa-upload'&&m==='PUT'){counts.bytes++;return route.fulfill({json:null});}
    if(p.endsWith('/finalize')&&m==='POST'){counts.finalize++;return receipt(p.split('/').at(-2));}
-   if(p.endsWith('/price-reference')&&m==='POST'){counts.reference++;return route.fulfill({json:value(listing,listing===id(10)?30000:65000,'Ready')});}
+   if(p.endsWith('/price-reference')&&m==='POST'){
+    const read=++counts.reference;
+    if(!lookupMode)return route.fulfill({json:value(listing,listing===id(10)?30000:65000,'Ready')});
+    if(mode==='lookup-changed'&&read===2)await new Promise(resolve=>{releaseLookup=resolve});
+    if(mode==='lookup-error'&&read===3)return route.fulfill({status:503,json:{code:'QA_UNAVAILABLE'}});
+    if((mode==='lookup-changed'&&read>1)||(mode==='lookup-found'&&read>=3))
+     return route.fulfill({json:{...value(listing,30000,'Ready'),lookupStatus:'Done'}});
+    const done=read>=3;
+    return route.fulfill({json:{...value(listing,30000,'NeedsMoreData'),range:null,
+     ...(read>1?{lookupStatus:done?'Done':'Running'}:{}),rules:[done?'R-NEED-SOURCES':'R-LOOKUP-PENDING']}});
+   }
    if(p.endsWith('/price-suggestions')&&m==='POST'){
     const at=++counts.ai;if(mode==='pending'&&at===1)await new Promise(resolve=>{releaseOld=resolve});
     if(mode==='pending'&&at===2&&!baseline)await new Promise(resolve=>{releaseNew=resolve});
+    if(lookupMode)return route.fulfill({json:{...value(listing,40000,'NeedsMoreData'),range:null,rules:['R-LOOKUP-PENDING']}});
     return route.fulfill({json:value(listing,at===1?40000:70000,'Suggested')});
    }
    if(p.endsWith('/draft')&&m==='PUT'){counts.save++;return receipt(listing,2);}
@@ -56,6 +68,40 @@ try{
    await step(/Bán hoặc đổi/).click();await page.getByLabel('Giá bán (VNĐ)',{exact:true}).fill('50000');
   }
   await prepare('Sách trước QA');const ask=page.getByRole('button',{name:baseline?'Lưu đầu sách và kiểm tra giá':'Xem gợi ý giá bán',exact:true});await ask.click();
+  if(lookupMode){
+   const panel=page.getByRole('region',{name:'Gợi ý giá bán',exact:true});
+   const price=page.getByLabel('Giá bán (VNĐ)',{exact:true});
+   await expect(panel.getByRole('button',{name:'Đang tra giá…'})).toBeDisabled();
+   await price.fill('61000');
+   if(mode==='lookup-changed'){
+    await expect.poll(()=>typeof releaseLookup).toBe('function');
+    await step(/Tình trạng/).click();
+    await page.getByLabel('Bìa và gáy',{exact:true}).fill('Tình trạng đã sửa');
+    const late=page.waitForResponse(r=>r.url().endsWith('/price-reference'));
+    releaseLookup();
+    await late;
+    await step(/Bán hoặc đổi/).click();
+    await expect(panel.getByText(/Thông tin sách, ảnh, tình trạng hoặc hạn dùng/)).toBeVisible();
+    await expect(panel.getByRole('button',{name:/^Chọn mức tham chiếu/})).toHaveCount(0);
+   }else if(mode==='lookup-found'){
+    await expect(panel.getByRole('button',{name:/^Chọn mức tham chiếu 30/})).toBeVisible();
+    await expect(panel.getByRole('button',{name:'Xem gợi ý AI'})).toBeEnabled();
+   }else if(mode==='lookup-error'){
+    await expect(panel.getByRole('status')).toHaveText('Chưa cập nhật được kết quả tra giá');
+    await expect(panel.getByRole('button',{name:'Xem kết quả tra giá'})).toBeEnabled();
+   }else{
+    await expect(panel.getByRole('status')).toHaveText('Chưa tìm được nguồn giá phù hợp');
+    await panel.getByRole('button',{name:'Nhập giá bán'}).click();
+    await expect(price).toBeFocused();
+   }
+   await expect(price).toHaveValue('61000');
+   assert.equal(counts.ai,1);
+   assert.equal(counts.reference,mode==='lookup-changed'?2:3);
+   assert.deepEqual(errors,[]);
+   checks.push({width,mode,counts});
+   await context.close();
+   continue;
+  }
   const oldRange=page.locator('p').filter({hasText:/^40\.000.*60\.000/});
   if(mode==='ready')await expect(oldRange).toBeVisible();else{
    await expect.poll(()=>typeof releaseOld).toBe('function');

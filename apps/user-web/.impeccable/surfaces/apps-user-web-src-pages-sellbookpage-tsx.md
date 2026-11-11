@@ -17,6 +17,9 @@ lực, hiện mức giá và nút chọn ngay cả khi AI đang chạy hoặc b�
 mở riêng. Người bán xác nhận trước khi thay giá, và mức tham chiếu được lưu
 như giá nhập tay. Nếu lượt tra kết thúc mà thiếu nguồn phù hợp, hiện một thông
 báo và nút đưa focus về ô giá bán.
+Khi lượt tra chạy nền, hiển thị tiến độ ngay trên nút. Bước 4 tự cập nhật
+khoảng tham chiếu hoặc thông báo thiếu nguồn. Nút xem kết quả thủ công xuất hiện
+khi không thể tự cập nhật. Giá bán chỉ đổi khi người bán xác nhận.
 Tiêu chí sách muốn đổi và giới hạn đăng bài thu gọn. Nơi gửi nằm sau điều kiện
 giao dịch, có trạng thái cần chọn hoặc đã chọn, dùng lại hộp thoại địa chỉ.
 Giữ các nhánh sách lẻ, bộ sách và khai báo giá trị cho đấu giá.

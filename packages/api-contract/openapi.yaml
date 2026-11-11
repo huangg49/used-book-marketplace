@@ -2743,7 +2743,7 @@ paths:
       operationId: getListingPriceReference
       tags: [Listings]
       summary: Read a rule-calculated price reference without AI, quota or persistence
-      description: Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+      description: Read-only; current ACTIVE MEMBER owner of an editable single-book listing. Reports an existing lookup for the current catalog revision without starting or retrying it. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
       security:
         - bearerAuth: []
       parameters:
@@ -16914,6 +16914,10 @@ components:
         bookId: { type: string, format: uuid }
         inputFingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
         status: { type: string, enum: [Ready, NeedsMoreData, Refused] }
+        lookupStatus:
+          type: string
+          enum: [Running, Done, Unavailable, Disabled]
+          description: Omitted when there is no observable lookup for the current catalog revision.
         evidenceLevel:
           $ref: "#/components/schemas/PriceEvidenceLevel"
         rules:

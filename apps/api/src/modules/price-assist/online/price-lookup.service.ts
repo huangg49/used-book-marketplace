@@ -105,6 +105,15 @@ export class PriceLookupService {
     return lookup.catalogRevisionId === book.revisionId || (book.confirmed && !lookup.catalogRevisionId);
   }
 
+  async observe(tx: Tx, book: LookupBook, now: Date): Promise<Exclude<LookupState, 'NeedIdentity'> | undefined> {
+    const lookup = await tx.c.price_lookups.findOne({ _id: book.id });
+    if (!lookup || !this.sameRevision(lookup, book)) return undefined;
+    if (lookup.status === 'Done') return 'Done';
+    if (!this.enabled) return 'Disabled';
+    return lookup.status === 'Running' && lookup.leaseUntil > now
+      ? 'Running' : 'Unavailable';
+  }
+
   private async acquire(tx: Tx, book: LookupBook, now: Date, ownerId: string): Promise<LookupState | { runId: string }> {
     const bookId = book.id;
     await tx.lock('catalog_books', [bookId]);

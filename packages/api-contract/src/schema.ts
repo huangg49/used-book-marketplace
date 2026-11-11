@@ -1130,7 +1130,7 @@ export interface paths {
         put?: never;
         /**
          * Read a rule-calculated price reference without AI, quota or persistence
-         * @description Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+         * @description Read-only; current ACTIVE MEMBER owner of an editable single-book listing. Reports an existing lookup for the current catalog revision without starting or retrying it. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
          */
         post: operations["getListingPriceReference"];
         delete?: never;
@@ -5657,6 +5657,11 @@ export interface components {
             inputFingerprint: string;
             /** @enum {string} */
             status: "Ready" | "NeedsMoreData" | "Refused";
+            /**
+             * @description Omitted when there is no observable lookup for the current catalog revision.
+             * @enum {string}
+             */
+            lookupStatus?: "Running" | "Done" | "Unavailable" | "Disabled";
             evidenceLevel: components["schemas"]["PriceEvidenceLevel"];
             rules: string[];
             range: {
