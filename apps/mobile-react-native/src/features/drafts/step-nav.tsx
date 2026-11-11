@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { AppText, Icon, stitchTokens } from "../../core/ui";
 
 export type StepState = "done" | "missing" | "review";
@@ -32,15 +33,36 @@ export function StepNav({
 
   return (
     <View style={styles.container}>
+      {/* SVG Red Ombre 3D Background */}
+      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+        <Defs>
+          <LinearGradient id="stepNavOmbre" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={stitchTokens.ombreStop0} />
+            <Stop offset="30%" stopColor={stitchTokens.ombreStop30} />
+            <Stop offset="70%" stopColor={stitchTokens.ombreStop70} />
+            <Stop offset="100%" stopColor={stitchTokens.ombreStop100} />
+          </LinearGradient>
+          <LinearGradient id="stepNavSpecular" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor={stitchTokens.white} stopOpacity={0.16} />
+            <Stop offset="45%" stopColor={stitchTokens.white} stopOpacity={0.03} />
+            <Stop offset="100%" stopColor={stitchTokens.white} stopOpacity={0} />
+          </LinearGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#stepNavOmbre)" />
+        <Rect width="100%" height="60%" fill="url(#stepNavSpecular)" />
+      </Svg>
+
       {/* Thanh tiến trình tính theo fill của 5 tab */}
       <View style={styles.progressSection}>
         <View style={styles.progressHeader}>
           <AppText kind="small" style={styles.progressTitle}>
             Tiến độ hoàn thành
           </AppText>
-          <AppText kind="small" style={styles.progressStats}>
-            {`${completedCount}/${totalCount} bước (${Math.round(progressPercent)}%)`}
-          </AppText>
+          <View style={styles.progressStatsWrapper}>
+            <AppText kind="small" style={styles.progressStats}>
+              {`${completedCount}/${totalCount} bước (${Math.round(progressPercent)}%)`}
+            </AppText>
+          </View>
         </View>
 
         <View style={styles.progressTrack}>
@@ -50,7 +72,9 @@ export function StepNav({
               {
                 width: `${progressPercent}%`,
                 backgroundColor:
-                  completedCount === totalCount ? stitchTokens.verifiedGreen : stitchTokens.wine,
+                  completedCount === totalCount
+                    ? stitchTokens.verifiedGreen
+                    : stitchTokens.goldAccent,
               },
             ]}
           />
@@ -108,13 +132,18 @@ export function StepNav({
                     styles.circle,
                     isDone ? styles.circleDone : styles.circleMissing,
                     isSelected && styles.circleSelected,
-                    (pressed || disabled) && { opacity: disabled ? 0.6 : 0.8 },
+                    (pressed || disabled) && { opacity: disabled ? 0.6 : 0.85 },
                   ]}
                 >
                   {isDone ? (
                     <Icon name="check" size={13} color={stitchTokens.white} strokeWidth={2.5} />
                   ) : (
-                    <Icon name="close" size={12} color={stitchTokens.flashRed} strokeWidth={2.5} />
+                    <Icon
+                      name="close"
+                      size={12}
+                      color={isSelected ? stitchTokens.goldLight : stitchTokens.whitePinkText}
+                      strokeWidth={2.5}
+                    />
                   )}
                 </Pressable>
               </View>
@@ -151,17 +180,20 @@ export function StepNav({
 const styles = StyleSheet.create({
   container: {
     marginVertical: 4,
-    backgroundColor: stitchTokens.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderBottomWidth: 3.5,
+    borderColor: stitchTokens.peachBorderAlpha40,
+    borderBottomColor: stitchTokens.cardBorderShadowBottom,
     paddingVertical: 14,
-    paddingHorizontal: 10,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    paddingHorizontal: 12,
+    position: "relative",
+    overflow: "hidden",
+    shadowColor: stitchTokens.shadowDeepCrimson,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   progressSection: {
     width: "100%",
@@ -175,18 +207,27 @@ const styles = StyleSheet.create({
   },
   progressTitle: {
     fontSize: 12,
-    fontWeight: "600",
-    color: stitchTokens.warmUmber,
+    fontWeight: "700",
+    color: stitchTokens.whitePinkText,
+    letterSpacing: 0.2,
+  },
+  progressStatsWrapper: {
+    backgroundColor: stitchTokens.whiteAlpha14,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: stitchTokens.whiteAlpha25,
   },
   progressStats: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: stitchTokens.wine,
+    fontSize: 11,
+    fontWeight: "800",
+    color: stitchTokens.goldAccent,
   },
   progressTrack: {
     width: "100%",
     height: 6,
-    backgroundColor: stitchTokens.linenLight,
+    backgroundColor: stitchTokens.blackAlpha45,
     borderRadius: 3,
     overflow: "hidden",
   },
@@ -215,7 +256,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 13,
     height: 3,
-    backgroundColor: stitchTokens.linenRose,
+    backgroundColor: stitchTokens.whiteAlpha25,
     zIndex: 1,
   },
   connectingLineLeft: {
@@ -230,7 +271,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.verifiedGreen,
   },
   connectingLineActive: {
-    backgroundColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.goldAccent,
   },
   circle: {
     width: 28,
@@ -246,16 +287,17 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.verifiedGreen,
   },
   circleMissing: {
-    backgroundColor: stitchTokens.roseIce,
-    borderColor: stitchTokens.coralRed,
+    backgroundColor: stitchTokens.whiteAlpha15,
+    borderColor: stitchTokens.whiteAlpha40,
   },
   circleSelected: {
     borderWidth: 2.5,
-    borderColor: stitchTokens.wine,
-    shadowColor: stitchTokens.wine,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 3,
+    borderColor: stitchTokens.goldAccent,
+    backgroundColor: stitchTokens.whiteAlpha25,
+    shadowColor: stitchTokens.goldAccent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
     elevation: 3,
   },
   label: {
@@ -263,15 +305,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   labelSelected: {
-    color: stitchTokens.wineDark,
-    fontWeight: "700",
+    color: stitchTokens.white,
+    fontWeight: "800",
   },
   labelDone: {
-    color: stitchTokens.verifiedGreen,
-    fontWeight: "600",
+    color: stitchTokens.goldLight,
+    fontWeight: "700",
   },
   labelDefault: {
-    color: stitchTokens.slateWarm,
+    color: stitchTokens.whitePinkText,
     fontWeight: "500",
   },
 });
