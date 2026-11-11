@@ -2618,9 +2618,14 @@ paths:
         range from sourced price references only; never a verified or reference price and never
         written to the listing. Input is the unsaved form; server checks the catalog book (confirmed,
         or the caller's own pending request). A listing with no Ready photo gets NeedsMoreData
-        (R-NEED-PHOTO) without a model call. A book without a recent online price starts one
-        background lookup; while it runs and no other source exists the answer is NeedsMoreData
-        (R-LOOKUP-PENDING). Evidence level and refusal are decided by fixed rules;
+        (R-NEED-PHOTO) without a model call. When online lookup is enabled, confirmed books
+        and the seller's own pending books with sufficient identity can start a background lookup
+        without waiting for catalog approval. Pending books require a matching ISBN, or a matching
+        product title and author with any supplied edition verified. Sources are scoped to the catalog
+        revision. While a lookup runs with no usable source, the answer is NeedsMoreData
+        (R-LOOKUP-PENDING). The answer can also indicate insufficient identity (R-NEED-BOOK-IDENTITY),
+        an unavailable lookup (R-LOOKUP-UNAVAILABLE), or disabled lookup (R-LOOKUP-DISABLED).
+        Evidence level and refusal are decided by fixed rules;
         the model only drafts range/factors, which are checked against the evidence and POL-16.
         Same listing + input + reference set returns the stored suggestion (cached=true) without a
         new model call. Idempotency-Key is one per ask: a retry with the same key and body returns
@@ -2738,7 +2743,7 @@ paths:
       operationId: getListingPriceReference
       tags: [Listings]
       summary: Read a rule-calculated price reference without AI, quota or persistence
-      description: Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+      description: Read-only; current ACTIVE MEMBER owner of an editable single-book listing. Reports an existing lookup for the current catalog revision without starting or retrying it. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
       security:
         - bearerAuth: []
       parameters:
@@ -16980,6 +16985,10 @@ components:
         bookId: { type: string, format: uuid }
         inputFingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
         status: { type: string, enum: [Ready, NeedsMoreData, Refused] }
+        lookupStatus:
+          type: string
+          enum: [Running, Done, Unavailable, Disabled]
+          description: Omitted when there is no observable lookup for the current catalog revision.
         evidenceLevel:
           $ref: "#/components/schemas/PriceEvidenceLevel"
         rules:

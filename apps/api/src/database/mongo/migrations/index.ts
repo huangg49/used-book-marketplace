@@ -11,6 +11,7 @@ import { createAuctionPauseBudgetMigration, withAuctionPauseBudget } from './007
 import { createAuctionReachedNoticeMigration, withAuctionReachedNotice } from './0073-auction-reached-notice.js';
 import { createAuctionSecondChanceMigration, withAuctionSecondChance } from './0074-auction-second-chance.js';
 import { createAuctionDepositShareMigration, withAuctionDepositShare } from './0075-auction-deposit-share.js';
+import { onlinePriceCatalogRevisionMigration, withOnlinePriceCatalogRevision } from './0076-online-price-catalog-revision.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
 import { withdrawalProofReferenceMigration } from './0064-withdrawal-proof-reference.js';
@@ -571,7 +572,9 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals).map(withWithdrawalProofReference), registrationSpec, ...withdrawalProofSpecs];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals).map(withWithdrawalProofReference), registrationSpec, ...withdrawalProofSpecs].map((spec) =>
+  onlinePriceSpecs.some(({ name }) => name === spec.name) ? withOnlinePriceCatalogRevision(spec) : spec,
+);
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -656,3 +659,4 @@ migrations.push(
   ]),
 );
 migrations.push(withdrawalProofMigration, withdrawalProofReferenceMigration);
+migrations.push(onlinePriceCatalogRevisionMigration);

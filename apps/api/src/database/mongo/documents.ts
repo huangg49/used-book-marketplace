@@ -848,6 +848,7 @@ export interface PriceSuggestionOutcome {
 }
 export interface PriceSuggestionInput {
   bookId: string;
+  catalogRevisionId?: string;
   condition: 'LikeNew' | 'Good' | 'Fair' | 'Worn' | null;
   readable: boolean | null;
   hasMissingPages: boolean | null;
@@ -919,6 +920,7 @@ export interface MigrationDoc {
 // Online price lookup (ADR 0029, migration 0007). _id = catalog book id.
 export interface PriceLookupDoc {
   _id: string;
+  catalogRevisionId?: string;
   status: 'Running' | 'Done' | 'Failed';
   runId: string;
   leaseUntil: Date;
@@ -937,6 +939,7 @@ export interface PriceLookupDoc {
 export interface OnlinePriceOfferDoc {
   _id: string;
   bookId: string;
+  catalogRevisionId?: string;
   runId: string;
   shop: string;
   url: string;

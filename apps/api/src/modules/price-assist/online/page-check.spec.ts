@@ -47,6 +47,43 @@ describe('online price page check', () => {
     expect(checkPage(meta, book)).toMatchObject({ ok: true, amount: 76_000 });
     expect(normalize('Đất Rừng Phương Nam')).toBe('dat rung phuong nam');
   });
+
+  it('checks the ISBN in visible product details before using a title match', () => {
+    const catalog = { ...book, isbn: '9786042030540' };
+    const page = ld(product({ isbn: undefined }));
+    const withDetails = (details: string) => page.replace('</body>', `${details}</body>`);
+    const same = '<li>ISBN:&nbsp;<strong>978-604-2-03054-0</strong></li>';
+    const other = '<li>ISBN-13: <strong>978-604-2-18959-0</strong></li>';
+    expect(checkPage(withDetails(same), catalog)).toMatchObject({ ok: true, isbnMatched: true });
+    expect(checkPage(withDetails(other), catalog)).toEqual({ ok: false, reason: 'OtherIsbn' });
+    expect(checkPage(withDetails(same + other), catalog)).toEqual({ ok: false, reason: 'OtherIsbn' });
+    expect(checkPage(withDetails(`<template>${other}</template>${same}`), catalog))
+      .toMatchObject({ ok: true, isbnMatched: true });
+  });
+
+  it('does not attach a page-level ISBN to one of several priced products', () => {
+    const bookWithoutIsbn = product({ isbn: undefined });
+    const page = ld([bookWithoutIsbn, { ...bookWithoutIsbn, name: 'Ấn bản khác' }]);
+    const ambiguous = page.replace('</body>', '<p>ISBN: 978-604-2-03054-0</p></body>');
+    expect(checkPage(ambiguous, { ...book, isbn: '9786042030540' }))
+      .toEqual({ ok: false, reason: 'OtherIsbn' });
+  });
+
+  it('prefers the structured ISBN over a title-only match on another product', () => {
+    const page = ld([product({ isbn: undefined }), product({ offers: { price: 45_000 } })]);
+    expect(checkPage(page, book)).toMatchObject({ ok: true, isbnMatched: true, amount: 45_000 });
+  });
+
+  it('verifies the actual product title and volume for a pending book without an ISBN', () => {
+    const pending = { ...book, isbn: null, edition: 'Tập II', strictIdentity: true };
+    const page = (name: string) => ld(product({ name, isbn: undefined })).replace('Tô Hoài', '<p>Tác giả: Tô Hoài</p>');
+    expect(checkPage(page(`${book.title} (Tập 2)`), pending)).toMatchObject({ ok: true, isbnMatched: false });
+    expect(checkPage(page(`${book.title} (Tập 20)`), pending)).toEqual({ ok: false, reason: 'OtherTitle' });
+    expect(checkPage(page(book.title) + `<p>${book.title} (Tập II)</p>`, pending))
+      .toEqual({ ok: false, reason: 'OtherTitle' });
+    expect(checkPage(page(`${book.title} (Tập 2)`).replace('Tô Hoài', 'Nguyễn Tô Hoài Nam'), pending))
+      .toEqual({ ok: false, reason: 'OtherTitle' });
+  });
 });
 
 describe('safe page fetch', () => {
@@ -86,6 +123,21 @@ describe('safe page fetch', () => {
     expect((await fetchPage('https://vertexaisearch.cloud.google.com/r/1', opts)).url).toBe('https://fahasa.com/de-men');
     expect(await reason(fetchPage('https://vertexaisearch.cloud.google.com/r/2', opts))).toBe('HostNotAllowed');
     expect(await reason(fetchPage('https://fahasa.com/out', opts))).toBe('HostNotAllowed');
+  });
+
+  it('attributes the access failure to the destination and skips a blocked store after redirect', async () => {
+    const first = 'https://vertexaisearch.cloud.google.com/r/a';
+    const destination = 'https://www.fahasa.com/de-men';
+    const requests: string[] = [];
+    const fetcher: typeof fetch = async (url) => {
+      requests.push(String(url));
+      return url === first ? html('', 302, { location: destination }) : html('', 503);
+    };
+    const opts = { allowedHosts: shops, redirectHosts: ['vertexaisearch.cloud.google.com'], fetcher, resolve: publicDns };
+    await expect(fetchPage(first, opts)).rejects.toMatchObject({ reason: 'Http503', host: 'www.fahasa.com' });
+    await expect(fetchPage(first, { ...opts, skipHost: (host) => host === 'www.fahasa.com' }))
+      .rejects.toMatchObject({ reason: 'ShopSkipped' });
+    expect(requests).toEqual([first, destination, first]);
   });
 
   it('refuses non-HTML and oversized pages', async () => {

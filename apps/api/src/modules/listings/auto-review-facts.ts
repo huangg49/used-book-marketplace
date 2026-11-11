@@ -1,5 +1,6 @@
 import type { Collections } from '../../database/mongo/collections.js';
 import { evaluate, type RawSource } from '../price-assist/evidence.js';
+import { activeOnlineOffers } from '../price-assist/online/price-lookup.service.js';
 import type { AutoReviewFacts, AutoReviewSettings } from './auto-review-policy.js';
 import { sellerTextSignals } from './auto-review-signals.js';
 import type { Listing } from './listing-projection.js';
@@ -32,8 +33,8 @@ async function trustedBounds(
 ): Promise<AutoReviewFacts['priceBounds']> {
   const r = l.currentRevision!;
   const bookId = r.bookId;
-  if (!bookId) return null;
-  const book = await c.catalog_revisions.findOne({ _id: r.book?.currentRevisionId ?? '' });
+  if (!bookId || r.book?.status !== 'Confirmed' || !r.book.currentRevisionId) return null;
+  const book = await c.catalog_revisions.findOne({ _id: r.book.currentRevisionId });
   if (!book) return null;
   const refs = await c.price_references
     .find({ bookId, retiredAt: null })
@@ -41,7 +42,7 @@ async function trustedBounds(
     .limit(30)
     .toArray();
   const offers = await c.online_price_offers
-    .find({ bookId, retiredAt: null })
+    .find(activeOnlineOffers(bookId, book._id, true))
     .sort({ observedAt: -1 })
     .limit(10)
     .toArray();
@@ -87,7 +88,7 @@ async function trustedBounds(
       edition: book.edition,
       category: book.category,
       isbn: book.isbn,
-      confirmed: r.book?.status === 'Confirmed',
+      confirmed: true,
     },
     raw,
     now,

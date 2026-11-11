@@ -1,4 +1,4 @@
-import { ApiError, clearAiPriceAttribution, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
+import { ApiError, clearAiPriceAttribution, findPriceReference, isStale, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
 import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
@@ -98,6 +98,9 @@ const addressReceiptSchema = z.object({
   addressId: z.string().uuid(),
   version: z.number().int().positive(),
 });
+
+const PRICE_LOOKUP_INTERVAL_MS = 3_000;
+const PRICE_LOOKUP_MAX_READS = 13;
 
 export function SellBookPage() {
   // ADR 0042: /sell?channel=Auction creates the seller's own auction listing:
@@ -236,6 +239,48 @@ export function SellBookPage() {
     categoryId: classification.categoryId, attributes: classification.attributes, series: classification.series, language,
   };
   const assistKey = JSON.stringify([assistScope, assistCatalog, suggestionInput(assistForm), imageFiles.map(file => [file.name, file.size, file.lastModified, file.type])]);
+  const readyAssist = assist.status === "ready" ? assist
+    : assist.status === "loading" ? assist.previous : undefined;
+  const pendingLookup = session.status === "authenticated" && readyAssist &&
+    !isStale(readyAssist, assistKey) && readyAssist.suggestion.rules.includes("R-LOOKUP-PENDING")
+    ? readyAssist.suggestion : null;
+  const watchLookup = !!pendingLookup && step === 4 && !submitting && !hasAttempt &&
+    !auction && !bundle && formData.mode !== "Exchange" && assist.status === "ready" && !assist.message;
+  const lookupKey = ["listing-price-lookup", session.status === "authenticated" ? session.user.id : null, pendingLookup?.id];
+  const lookup = useQuery({
+    queryKey: lookupKey,
+    enabled: watchLookup,
+    queryFn: () => {
+      if (!pendingLookup) throw new Error("Missing active price lookup");
+      return findPriceReference(apiSession, pendingLookup.listingId, {
+        ...suggestionInput(assistForm), bookId: pendingLookup.bookId,
+      });
+    },
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: (query) => query.state.status === "success" &&
+      query.state.data?.lookupStatus === "Running" &&
+      query.state.data.status !== "Ready" &&
+      query.state.dataUpdateCount < PRICE_LOOKUP_MAX_READS ? PRICE_LOOKUP_INTERVAL_MS : false,
+  });
+  const lookupResult = pendingLookup && lookup.data && (
+    lookup.data.status === "Ready" ||
+    (lookup.data.lookupStatus && lookup.data.lookupStatus !== "Running")
+  )
+    ? lookup.data : null;
+  const lookupInterrupted = watchLookup && !lookupResult && (
+    lookup.isError || lookup.fetchStatus === "paused" ||
+    (lookup.isSuccess && (!lookup.data.lookupStatus ||
+      (queryClient.getQueryState(lookupKey)?.dataUpdateCount ?? 0) >= PRICE_LOOKUP_MAX_READS))
+  );
+  const displayedReference = useMemo<PriceReferenceState>(() =>
+    lookupResult?.status === "Ready" &&
+    (priceReference?.key !== assistKey || Date.parse(lookupResult.generatedAt) > Date.parse(priceReference.value.generatedAt))
+      ? { key: assistKey, value: lookupResult } : priceReference,
+  [lookupResult, assistKey, priceReference]);
   async function askWebPrice() {
     if (priceBusy.current || submitting || hasAttempt || auction || bundle || formData.mode === "Exchange") return;
     priceBusy.current = true;
@@ -3117,7 +3162,9 @@ export function SellBookPage() {
                       )}
                     </fieldset>
                     {!auction && !bundle && formData.mode !== "Exchange" ? <div hidden={step !== 4}>
-                      <PriceAssistPanel reference={priceReference} onApplyReference={amount => { setFormData(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }} state={assist} currentKey={assistKey} currentPrice={formData.salePrice} phase={pricePhase} disabled={submitting || hasAttempt} hasPhoto={imageFiles.length > 0} needsCatalog={!selectedBook} onAsk={() => void askWebPrice()} onApply={amount => {
+                      <PriceAssistPanel reference={displayedReference} lookupResult={lookupResult}
+                        lookupWatching={watchLookup && !lookupResult && !lookupInterrupted} lookupInterrupted={lookupInterrupted}
+                        onEnterPrice={() => document.getElementById("salePrice")?.focus()} onApplyReference={amount => { setFormData(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }} state={assist} currentKey={assistKey} currentPrice={formData.salePrice} phase={pricePhase} disabled={submitting || hasAttempt} hasPhoto={imageFiles.length > 0} needsCatalog={!selectedBook} onAsk={() => void askWebPrice()} onApply={amount => {
                         setFormData(prev => ({ ...prev, salePrice: String(amount) }));
                         setAssist(prev => prev.status === "ready" && prev.key === assistKey ? { ...prev, appliedPrice: amount } : prev);
                       }} />

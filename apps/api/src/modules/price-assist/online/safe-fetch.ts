@@ -7,7 +7,7 @@ import { isIP } from 'node:net';
 // bounded in time and size, no cookies or credentials.
 
 export class FetchRejected extends Error {
-  constructor(readonly reason: string) {
+  constructor(readonly reason: string, readonly host?: string) {
     super(reason);
   }
 }
@@ -16,6 +16,7 @@ export interface SafeFetchOptions {
   allowedHosts: string[];
   // Hosts allowed only as the first hop (the search engine's redirect link).
   redirectHosts?: string[];
+  skipHost?: (host: string) => boolean;
   timeoutMs?: number;
   maxBytes?: number;
   maxRedirects?: number;
@@ -27,6 +28,14 @@ const USER_AGENT = 'LatLaiPriceCheck/1.0 (+https://github.com/huangg49/used-book
 
 const hostAllowed = (host: string, list: string[]) =>
   list.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+
+export function shopPageUrl(url: URL): string {
+  url.hash = '';
+  const trackingKeys = Array.from(url.searchParams.keys())
+    .filter((key) => /^(?:utm_.*|gclid|fbclid|msclkid)$/i.test(key));
+  for (const key of trackingKeys) url.searchParams.delete(key);
+  return url.href;
+}
 
 export function isPrivateAddress(ip: string): boolean {
   if (isIP(ip) === 4) {
@@ -66,6 +75,7 @@ export async function fetchPage(rawUrl: string, options: SafeFetchOptions): Prom
   const maxBytes = options.maxBytes ?? 2_000_000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 5_000);
+  let requestHost: string | undefined;
   try {
     let url = rawUrl;
     for (let hop = 0; hop <= (options.maxRedirects ?? 3); hop++) {
@@ -81,6 +91,8 @@ export async function fetchPage(rawUrl: string, options: SafeFetchOptions): Prom
       const viaRedirect = hop === 0 && hostAllowed(host, options.redirectHosts ?? []);
       if (!viaRedirect && !hostAllowed(host, options.allowedHosts))
         throw new FetchRejected('HostNotAllowed');
+      if (!viaRedirect && options.skipHost?.(host)) throw new FetchRejected('ShopSkipped');
+      requestHost = host;
       if (isIP(host) || (await resolve(host)).some(isPrivateAddress))
         throw new FetchRejected('PrivateAddress');
       const response = await fetcher(parsed.toString(), {
@@ -96,9 +108,9 @@ export async function fetchPage(rawUrl: string, options: SafeFetchOptions): Prom
         continue;
       }
       if (viaRedirect) throw new FetchRejected('HostNotAllowed');
-      if (!response.ok) throw new FetchRejected(`Http${response.status}`);
+      if (!response.ok) throw new FetchRejected(`Http${response.status}`, host);
       const type = response.headers.get('content-type') ?? '';
-      if (!/text\/html|application\/xhtml/i.test(type)) throw new FetchRejected('NotHtml');
+      if (!/text\/html|application\/xhtml/i.test(type)) throw new FetchRejected('NotHtml', host);
       const declared = Number(response.headers.get('content-length') ?? 0);
       if (declared > maxBytes) throw new FetchRejected('TooLarge');
       return { url: parsed.toString(), html: await readCapped(response, maxBytes) };
@@ -106,7 +118,7 @@ export async function fetchPage(rawUrl: string, options: SafeFetchOptions): Prom
     throw new FetchRejected('TooManyRedirects');
   } catch (e) {
     if (e instanceof FetchRejected) throw e;
-    throw new FetchRejected(controller.signal.aborted ? 'Timeout' : 'Network');
+    throw new FetchRejected(controller.signal.aborted ? 'Timeout' : 'Network', requestHost);
   } finally {
     clearTimeout(timer);
   }

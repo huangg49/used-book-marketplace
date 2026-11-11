@@ -1,7 +1,9 @@
 import { PriceReferencePanel } from './PriceReferencePanel';
-import type { PriceReferenceState } from '@used-books/session-client';
+import type { PriceReference, PriceReferenceState } from '@used-books/session-client';
 import { useState } from "react";
+import { LoaderCircle, Sparkles } from "lucide-react";
 import {
+  currentReference,
   evidenceLabel,
   excludedLabel,
   isStale,
@@ -15,9 +17,9 @@ import { useExpiryRefresh } from "../hooks/useExpiryRefresh";
 import type { PricePhase } from "../services/listing-price-assist";
 import styles from "./PriceAssistPanel.module.css";
 const phases: Record<PricePhase, string> = {
-  catalog: "Đang xác nhận đầu sách…",
-  upload: "Đang tải và xử lý ảnh bản sách…",
-  model: "Đang kiểm tra nguồn và tạo gợi ý giá…",
+  catalog: "Đang đối chiếu hoặc lưu đầu sách…",
+  upload: "Đang chuẩn bị ảnh bản sách…",
+  model: "Đang kiểm tra nguồn giá…",
 };
 export function PriceAssistPanel({
   state,
@@ -28,7 +30,9 @@ export function PriceAssistPanel({
   hasPhoto,
   needsCatalog,
   reference, onApplyReference,
+  lookupResult, lookupWatching = false, lookupInterrupted = false,
   onAsk,
+  onEnterPrice,
   onApply,
 }: {
   state: AssistState;
@@ -39,8 +43,12 @@ export function PriceAssistPanel({
   hasPhoto: boolean;
   needsCatalog: boolean;
   reference?: PriceReferenceState;
+  lookupResult?: PriceReference | null;
+  lookupWatching?: boolean;
+  lookupInterrupted?: boolean;
   onApplyReference?: (amount: number) => void;
   onAsk: () => void;
+  onEnterPrice: () => void;
   onApply: (amount: number) => void;
 }) {
   const [replace, setReplace] = useState<number | null>(null);
@@ -54,6 +62,17 @@ export function PriceAssistPanel({
         : undefined;
   const value = ready?.suggestion;
   const refreshExpiry = useExpiryRefresh(value?.expiresAt);
+  const refreshReferenceExpiry = useExpiryRefresh(reference?.value.expiresAt);
+  const currentRuleReference = currentReference(reference ?? null, currentKey);
+  const referenceReady = currentRuleReference?.status === "Ready" && !!currentRuleReference.range;
+  const referenceExpired = !currentRuleReference &&
+    reference?.key === currentKey && reference.value.status === "Ready";
+  const suggestedRange = value?.status === "Suggested" ? value.range : null;
+  const currentSuggestion = !!suggestedRange && !stale && !loading;
+  const showReference = referenceReady && !currentSuggestion;
+  const error = !loading && !stale
+    ? state.status === "error" ? state.message : ready?.message
+    : undefined;
   const locked = disabled || loading || stale;
   const canApply = () => {
     if (disabled || loading) return false;
@@ -64,148 +83,162 @@ export function PriceAssistPanel({
     }
     return true;
   };
-  const sourceLabels = new Map(value?.sources.map((s) => [s.ref, s.label]));
+  const sourceLabels = new Map(value?.sources.map((source) => [source.ref, source.label]));
+  const lookupPending = !lookupResult && !loading && !stale && !error &&
+    !referenceReady && value?.rules.includes("R-LOOKUP-PENDING");
+  const result = lookupResult ?? value;
+  const showLookupResult = result && !suggestedRange && !loading && !stale && !error &&
+    !referenceReady && result.status !== "Ready";
+  const emptyTitle = result?.status === "Refused" ? "Chưa thể gợi ý giá cho tình trạng này"
+    : lookupPending && lookupInterrupted ? "Chưa cập nhật được kết quả tra giá"
+    : lookupPending ? "Đang tìm nguồn giá"
+    : result?.rules.some((rule) => rule === "R-LOOKUP-UNAVAILABLE" || rule === "R-LOOKUP-DISABLED")
+      ? "Tạm thời chưa tra được giá"
+    : result?.rules.includes("R-NEED-BOOK-IDENTITY") ? "Cần thêm thông tin để tìm đúng sách"
+    : result?.rules.includes("R-NEED-SOURCES") ? "Chưa tìm được nguồn giá phù hợp"
+    : "Cần bổ sung thông tin";
+  const buttonLabel = loading
+    ? "Đang lấy gợi ý…"
+    : lookupPending
+      ? lookupWatching ? "Đang tra giá…" : "Xem kết quả tra giá"
+      : error && referenceReady
+        ? "Thử lại gợi ý AI"
+        : lookupResult?.status === "Ready" && referenceReady
+          ? "Xem gợi ý AI"
+        : state.status === "idle"
+        ? "Xem gợi ý giá bán"
+        : "Kiểm tra lại nguồn giá";
+  const announcement = currentSuggestion ? "Đã có khoảng giá gợi ý"
+    : showReference ? "Đã có khoảng giá tham chiếu"
+    : loading ? phases[phase]
+    : showLookupResult ? emptyTitle
+    : "";
   return (
     <section className={styles.panel} aria-labelledby="price-assist-title">
-      <h3 id="price-assist-title">Gợi ý giá bán</h3>
-      <p>
-        Tham khảo giá có nguồn và thời điểm rõ ràng. Bạn quyết định giá cuối;
-        gợi ý không tự gửi bài đăng.
-      </p>
-      {needsCatalog ? (
-        <p className={styles.note}>
-          Đầu sách mới: bấm yêu cầu sẽ lưu thông tin bạn đã xác nhận thành yêu
-          cầu danh mục chờ duyệt. Chưa có nguồn giá phù hợp thì trợ lý sẽ báo
-          thiếu dữ liệu.
-        </p>
-      ) : null}
-      {!hasPhoto ? (
-        <p>
-          Thêm ít nhất một ảnh bản sách ở bước Ảnh bản sách trước khi yêu cầu.
-        </p>
-      ) : null}
-      <button
-        className={styles.primary}
-        type="button"
-        disabled={disabled || loading || !hasPhoto}
-        onClick={onAsk}
-        aria-busy={loading}
-      >
-        {loading
-          ? "Đang lấy gợi ý…"
-          : needsCatalog
-            ? "Xác nhận đầu sách và xem gợi ý giá"
-            : state.status === "idle"
-              ? "Xem gợi ý giá bán"
-              : "Xem lại gợi ý giá"}
-      </button>
-      <p role="status" aria-live="polite">
-        {loading ? phases[phase] : ""}
-      </p>
-      {stale ? (
-        <p role="status">
-          Thông tin sách, ảnh, tình trạng hoặc hạn dùng gợi ý đã thay đổi. Gợi ý
-          cũ không được áp dụng; hãy yêu cầu lại.
-        </p>
-      ) : null}
-      {state.status === "error" ? <p role="alert">{state.message}</p> : null}
-      {ready?.message ? (
-        <p role="alert">{ready.message} Gợi ý trước vẫn được giữ.</p>
-      ) : null}
-      <PriceReferencePanel state={reference ?? null} currentKey={currentKey} disabled={disabled || !hasPhoto} onApply={amount => onApplyReference?.(amount)} aiReady={!!value && !loading && !stale} />
-      {value ? (
-        <div className={styles.answer}>
-          <p className={styles.evidence}>
-            {evidenceLabel[value.evidenceLevel]}
-            {value.cached ? " · Kết quả đã lưu" : ""}
-          </p>
-          {value.status === "Suggested" && value.range ? (
-            <>
-              <p className={styles.range}>
-                {formatVnd(value.range.low)} – {formatVnd(value.range.high)}
-              </p>
-              <div className={styles.actions}>
-                {pricePoints(value.range).map((amount) => (
-                  <button
-                    type="button"
-                    key={amount}
-                    disabled={locked}
-                    onClick={() => {
-                      if (!canApply()) return;
-                      if (
-                        currentPrice.trim() &&
-                        Number(currentPrice) !== amount
-                      )
-                        setReplace(amount);
-                      else onApply(amount);
-                    }}
-                  >
-                    Dùng {formatVnd(amount)}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p>
-              {value.status === "Refused"
-                ? "Chưa thể gợi ý giá cho tình trạng này."
-                : "Chưa đủ dữ liệu để gợi ý giá."}{" "}
-              Bạn vẫn có thể tự nhập giá.
+      <header className={styles.panelHead}>
+        <div className={styles.panelHeading}>
+          <div className={styles.titleRow}>
+            <h3 id="price-assist-title"><Sparkles size={18} aria-hidden="true" /> Gợi ý giá bán</h3>
+            <span className={styles.note}>Tùy chọn</span>
+          </div>
+          {!hasPhoto ? (
+            <p className={styles.note}>Thêm ít nhất một ảnh bản sách ở bước Ảnh bản sách.</p>
+          ) : state.status === "idle" ? (
+            <p className={styles.note}>
+              {needsCatalog
+                ? "Hệ thống sẽ lưu thông tin sách và tra giá ngay, không cần chờ duyệt."
+                : "Tham khảo nguồn giá để tự chọn mức bán."}
             </p>
-          )}
-          <ul>
-            {value.factors.map((f, i) => (
-              <li key={i}>
-                {f.text}
-                {f.sourceRefs.length
-                  ? ` (${f.sourceRefs.map((ref) => (ref === "condition" ? "Tình trạng bạn khai" : (sourceLabels.get(ref) ?? ref))).join("; ")})`
-                  : ""}
-              </li>
-            ))}
-          </ul>
-          {value.missing.map((text) => (
-            <p key={text}>{text}</p>
-          ))}
-          {value.sources.length ? (
-            <details>
-              <summary>
-                Nguồn giá và nguồn bị loại ({value.sources.length})
-              </summary>
-              <ul className={styles.sources}>
-                {value.sources.map((source) => (
-                  <li key={source.ref}>
-                    <strong>{source.label}</strong> ·{" "}
-                    {sourceKindLabel[source.kind]} · {formatVnd(source.amount)}
-                    <br />
-                    Ghi nhận{" "}
-                    {new Date(source.observedAt).toLocaleDateString("vi-VN")}
-                    {source.excluded
-                      ? ` · ${excludedLabel[source.excluded]}`
-                      : ""}
-                    {source.url ? (
-                      <>
-                        {" "}
-                        ·{" "}
-                        <a
-                          href={source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Mở nguồn
-                        </a>
-                      </>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </details>
           ) : null}
-          <p className={styles.note}>
-            Gợi ý tạo {new Date(value.generatedAt).toLocaleString("vi-VN")}; hết
-            hiệu lực {new Date(value.expiresAt).toLocaleString("vi-VN")}.
-          </p>
         </div>
+        <button
+          className={styles.primary}
+          type="button"
+          disabled={disabled || loading || lookupWatching || !hasPhoto}
+          onClick={onAsk}
+          aria-busy={loading || lookupWatching}
+        >
+          {(loading || lookupWatching) && <LoaderCircle size={15} className={styles.spinner} aria-hidden="true" />}
+          {buttonLabel}
+        </button>
+      </header>
+      <p role="status" className={showLookupResult ? `${styles.status} ${styles.statusTitle}`
+        : loading && !showReference ? styles.status : "sr-only"}>
+        {announcement}
+      </p>
+      {stale && !loading && !showReference && (
+        <p role="status" className={styles.status}>
+          Thông tin sách, ảnh, tình trạng hoặc hạn dùng gợi ý đã thay đổi. Hãy yêu cầu lại.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className={showReference ? styles.note : styles.status}>
+          {showReference ? "Gợi ý AI chưa có. Bạn có thể dùng khoảng tham chiếu bên dưới."
+            : currentSuggestion ? `${error} Gợi ý trước vẫn được giữ.`
+            : error}
+        </p>
+      )}
+      {value && suggestedRange && !showReference ? (
+        <div className={styles.answer}>
+          <div className={styles.rangeHeader}>
+            <p className={styles.range}>{formatVnd(suggestedRange.low)} – {formatVnd(suggestedRange.high)}</p>
+            <p className={styles.evidence}>{evidenceLabel[value.evidenceLevel]}{value.cached ? " · Đã lưu" : ""}</p>
+          </div>
+          <div className={styles.actions}>
+            {pricePoints(suggestedRange).map((amount) => (
+              <button
+                type="button"
+                key={amount}
+                disabled={locked}
+                onClick={() => {
+                  if (!canApply()) return;
+                  if (currentPrice.trim() && Number(currentPrice) !== amount) setReplace(amount);
+                  else onApply(amount);
+                }}
+              >
+                Dùng {formatVnd(amount)}
+              </button>
+            ))}
+          </div>
+          <details className={styles.disclosure}>
+            <summary>Vì sao có khoảng giá này?</summary>
+            <div className={styles.detailsBody}>
+              {value.factors.length > 0 && (
+                <ul>
+                  {value.factors.map((factor, index) => (
+                    <li key={index}>
+                      {factor.text}
+                      {factor.sourceRefs.length
+                        ? ` (${factor.sourceRefs.map((ref) => ref === "condition" ? "Tình trạng bạn khai" : (sourceLabels.get(ref) ?? ref)).join("; ")})`
+                        : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {value.sources.length > 0 && (
+                <ul className={styles.sources}>
+                  {value.sources.map((source) => (
+                    <li key={source.ref}>
+                      <strong>{source.label}</strong> · {sourceKindLabel[source.kind]} · {formatVnd(source.amount)}
+                      <br />
+                      Ghi nhận {new Date(source.observedAt).toLocaleDateString("vi-VN")}
+                      {source.excluded ? ` · ${excludedLabel[source.excluded]}` : ""}
+                      {source.url && <> · <a href={source.url} target="_blank" rel="noopener noreferrer">Mở nguồn</a></>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className={styles.note}>
+                Tạo {new Date(value.generatedAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
+                {" · "}Hết hạn {new Date(value.expiresAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
+              </p>
+            </div>
+          </details>
+        </div>
+      ) : showLookupResult ? (
+        !lookupInterrupted && !result.rules.includes("R-NEED-SOURCES") &&
+        result.missing.map((text) => <p key={text} className={styles.note}>{text}</p>)
       ) : null}
+      {referenceReady && (
+        <PriceReferencePanel
+          state={reference ?? null}
+          currentKey={currentKey}
+          disabled={disabled || !hasPhoto}
+          onApply={(amount) => onApplyReference?.(amount)}
+          onExpired={refreshReferenceExpiry}
+          prominent={showReference}
+        />
+      )}
+      {referenceExpired && !currentSuggestion && !loading && !stale && (
+        <p className={styles.status} role="status">
+          Khoảng tham chiếu không còn hiệu lực. Bạn có thể yêu cầu gợi ý lại hoặc tự nhập giá.
+        </p>
+      )}
+      {(showLookupResult || error || referenceExpired) && !currentSuggestion && !loading && (
+        <button type="button" className={styles.quietAction} disabled={disabled} onClick={onEnterPrice}>
+          Nhập giá bán
+        </button>
+      )}
       <ConfirmDialog
         isOpen={replace !== null}
         onClose={() => setReplace(null)}
