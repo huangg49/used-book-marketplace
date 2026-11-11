@@ -784,17 +784,96 @@ export function DraftEditor({
           <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontWeight: "600" }}>
             {`Bước ${step + 1}/5`}
           </AppText>
-          <AppText
-            kind="heading"
-            color={stitchTokens.wineDark}
-            accessibilityRole="header"
-            style={{ fontSize: 20 }}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: space.sm,
+            }}
           >
-            {labels[step]}
-          </AppText>
-          <AppText kind="small" color={stitchTokens.warmUmber} style={{ fontSize: 12 }}>
-            {help[step]}
-          </AppText>
+            <AppText
+              kind="heading"
+              color={stitchTokens.wineDark}
+              accessibilityRole="header"
+              style={{ fontSize: 20, flexShrink: 1 }}
+            >
+              {labels[step]}
+            </AppText>
+
+            {step === 0 &&
+            !auction &&
+            base.state.moderation === "Draft" &&
+            !base.currentRevision.content.bundle ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={form.bundle ? "Chuyển sang sách lẻ" : "Đăng bộ sách"}
+                disabled={locked}
+                onPress={() => {
+                  if (form.bundle) {
+                    setSwitchToSingle(true);
+                    return;
+                  }
+                  singleTerms.current = {
+                    mode: form.mode,
+                    salePrice: form.salePrice,
+                    exchangeValue: form.exchangeValue,
+                    condition: form.condition,
+                  };
+                  const bundle = savedBundle.current ?? blankBundle();
+                  setDeclared(false);
+                  setForm((f) => ({
+                    ...f,
+                    bundle,
+                    mode: "Sale",
+                    salePrice: bundlePrice.current,
+                    exchangeValue: "",
+                    condition: bundleCondition(bundle),
+                  }));
+                }}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingVertical: 7,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderBottomWidth: 2.5,
+                    backgroundColor: form.bundle ? stitchTokens.whiteSurface : stitchTokens.goldLight,
+                    borderColor: form.bundle ? stitchTokens.peachBorder : stitchTokens.goldDark,
+                    borderBottomColor: form.bundle ? stitchTokens.peachBorder : stitchTokens.goldDark,
+                    shadowColor: stitchTokens.shadowSoft,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 2,
+                    elevation: 1,
+                  },
+                  pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
+                  locked && { opacity: 0.5 },
+                ]}
+              >
+                <Icon
+                  name={form.bundle ? "arrow" : "plus"}
+                  size={13}
+                  color={stitchTokens.wineDark}
+                />
+                <AppText
+                  kind="bold"
+                  color={stitchTokens.wineDark}
+                  style={{ fontSize: 12 }}
+                >
+                  {form.bundle ? "Bán sách lẻ" : "Đăng bộ sách"}
+                </AppText>
+              </Pressable>
+            ) : null}
+          </View>
+          {step === 0 ? null : (
+            <AppText kind="small" color={stitchTokens.warmUmber} style={{ fontSize: 12 }}>
+              {help[step]}
+            </AppText>
+          )}
         </View>
       </View>
 
@@ -915,136 +994,6 @@ export function DraftEditor({
       {/* STEP 0 (01: Thông tin đầu sách) */}
       <View style={{ display: step === 0 ? "flex" : "none" }}>
         <View style={styles.formWhiteCard}>
-          {!auction && base.state.moderation === "Draft" && !base.currentRevision.content.bundle ? (
-            <View
-              style={{
-                backgroundColor: form.bundle ? stitchTokens.roseWarmSurface : stitchTokens.goldLight,
-                borderRadius: 16,
-                borderWidth: 1.5,
-                borderBottomWidth: 3.5,
-                borderColor: form.bundle ? stitchTokens.peachBorder : stitchTokens.goldDark,
-                padding: 14,
-                gap: 12,
-                shadowColor: stitchTokens.shadowSoft,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 5,
-                elevation: 2,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    backgroundColor: form.bundle ? stitchTokens.terracottaSoft : stitchTokens.goldVeryLight,
-                    borderWidth: 1,
-                    borderColor: form.bundle ? stitchTokens.peachBorder : stitchTokens.goldAccent,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon name="book" size={20} color={stitchTokens.wineDark} />
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <AppText
-                      kind="bold"
-                      color={stitchTokens.wineDark}
-                      style={{ fontSize: 14, lineHeight: 18 }}
-                    >
-                      {form.bundle ? "Đang đăng bán bộ sách" : "Bán theo bộ sách"}
-                    </AppText>
-                    <View
-                      style={{
-                        backgroundColor: form.bundle ? stitchTokens.roseWarmTag : stitchTokens.goldAlpha20,
-                        paddingHorizontal: 6,
-                        paddingVertical: 1,
-                        borderRadius: 6,
-                      }}
-                    >
-                      <AppText
-                        kind="small"
-                        color={form.bundle ? stitchTokens.wine : stitchTokens.goldBronze}
-                        style={{ fontSize: 9, fontWeight: "700" }}
-                      >
-                        {form.bundle ? "2–50 CUỐN" : "COMBO"}
-                      </AppText>
-                    </View>
-                  </View>
-                  <AppText
-                    kind="small"
-                    color={stitchTokens.warmUmber}
-                    style={{ fontSize: 11, lineHeight: 15 }}
-                  >
-                    {form.bundle
-                      ? "Gộp 2–50 cuốn vào 1 tin bán, đặt giá chung thuận tiện."
-                      : "Gộp 2–50 cuốn bán chung 1 tin, không ghép tin đã đăng."}
-                  </AppText>
-                </View>
-              </View>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={form.bundle ? "Chuyển sang sách lẻ" : "Đăng bộ sách"}
-                disabled={locked}
-                onPress={() => {
-                  if (form.bundle) {
-                    setSwitchToSingle(true);
-                    return;
-                  }
-                  singleTerms.current = {
-                    mode: form.mode,
-                    salePrice: form.salePrice,
-                    exchangeValue: form.exchangeValue,
-                    condition: form.condition,
-                  };
-                  const bundle = savedBundle.current ?? blankBundle();
-                  setDeclared(false);
-                  setForm((f) => ({
-                    ...f,
-                    bundle,
-                    mode: "Sale",
-                    salePrice: bundlePrice.current,
-                    exchangeValue: "",
-                    condition: bundleCondition(bundle),
-                  }));
-                }}
-                style={({ pressed }) => [
-                  {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    paddingVertical: 10,
-                    paddingHorizontal: 16,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderBottomWidth: 3,
-                    backgroundColor: form.bundle ? stitchTokens.whiteSurface : stitchTokens.wine,
-                    borderColor: form.bundle ? stitchTokens.peachBorder : stitchTokens.wineDark,
-                    borderBottomColor: form.bundle ? stitchTokens.peachBorder : stitchTokens.wineDark,
-                  },
-                  pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
-                  locked && { opacity: 0.5 },
-                ]}
-              >
-                <Icon
-                  name={form.bundle ? "arrow" : "plus"}
-                  size={15}
-                  color={form.bundle ? stitchTokens.wineDark : stitchTokens.white}
-                />
-                <AppText
-                  kind="bold"
-                  color={form.bundle ? stitchTokens.wineDark : stitchTokens.white}
-                  style={{ fontSize: 13 }}
-                >
-                  {form.bundle ? "Chuyển về đăng sách lẻ" : "Chuyển sang đăng bộ sách"}
-                </AppText>
-              </Pressable>
-            </View>
-          ) : null}
           {form.bundle ? <View ref={anchor("bundle")}>
             <BundleEditor value={form.bundle} disabled={locked} error={errors.bundle} onChange={bundle => {
               setDeclared(false);
