@@ -632,18 +632,6 @@ export function SearchScreen() {
           </View>
         </View>
 
-        {/* Search Summary Status ("Đã tải X cuốn") below both buttons */}
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryLeft}>
-            <Icon name="explore" size={15} color={stitchTokens.wine} />
-            <AppText kind="small" style={styles.summaryText} accessibilityLiveRegion="polite">
-              {result.isPending ? "Đang tìm sách…" : result.isError
-                ? "Chưa cập nhật được kết quả"
-                : `Đã tải ${displayItems.length} cuốn${result.hasNextPage ? " · Còn kết quả" : ""}`}
-            </AppText>
-          </View>
-        </View>
-
         {/* 3. Filter Panel Styled Matching Web (Chỉ hiện khi bấm vào "Bộ lọc") */}
         {filterPanelOpen ? (
           <View style={styles.webFilterPanel}>
@@ -1838,31 +1826,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 14,
     paddingTop: 8,
-    paddingBottom: 4,
+    paddingBottom: 8,
     gap: 8,
   },
   sortGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingTop: 2,
-    paddingBottom: 6,
-  },
-  summaryLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flexShrink: 1,
-  },
-  summaryText: {
-    fontSize: 14,
-    flexShrink: 1,
-    color: stitchTokens.mediumMuted,
   },
   filterToggleBtn: {
     minHeight: 48,
