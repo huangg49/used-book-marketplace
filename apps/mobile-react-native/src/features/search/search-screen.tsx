@@ -567,8 +567,12 @@ export function SearchScreen() {
           </ScrollView>
         </View>
 
-        {/* Red Divider Line between Mode Tabs and Filter/Sort Bar */}
-        <View style={styles.redDividerLine} />
+        {/* Red Editorial Divider between Mode Tabs and Filter/Sort Bar */}
+        <View style={styles.ornamentDivider}>
+          <View style={styles.dividerWing} />
+          <View style={styles.dividerDiamond} />
+          <View style={styles.dividerWing} />
+        </View>
 
         {/* 2. Filter Button (Left) & Sort Dropdown (Right) in One Row */}
         <View style={styles.filterSortRow}>
@@ -600,38 +604,58 @@ export function SearchScreen() {
                   styles.filterToggleTextActive,
               ]}
             >
-              Bộ lọc ({filterCount})
+              Bộ lọc
             </AppText>
-            {filterCount > 0 && !filterPanelOpen ? (
-              <View style={styles.filterDot} />
+            {filterCount > 0 ? (
+              <View
+                style={[
+                  styles.filterCountBadge,
+                  filterPanelOpen && styles.filterCountBadgeActive,
+                ]}
+              >
+                <AppText
+                  kind="small"
+                  style={[
+                    styles.filterCountBadgeText,
+                    filterPanelOpen && styles.filterCountBadgeTextActive,
+                  ]}
+                >
+                  {filterCount}
+                </AppText>
+              </View>
             ) : null}
           </Pressable>
 
           {/* Sort Dropdown on the Right */}
-          <View style={styles.sortGroup}>
-            <AppText kind="small" style={styles.sortBarLabel}>
-              Sắp xếp
-            </AppText>
-            <View ref={sortTriggerRef} collapsable={false}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Sắp xếp: ${currentSort.title}`}
-                onPress={handleOpenSortDropdown}
-                style={[
-                  styles.sortDropdownTrigger,
-                  sortDropdownOpen && styles.sortDropdownTriggerActive,
-                ]}
-              >
-                <AppText kind="bold" style={styles.sortDropdownTriggerText}>
-                  {currentSort.title}
-                </AppText>
-                <Icon
-                  name="chevronDown"
-                  size={14}
-                  color={stitchTokens.wine}
-                />
-              </Pressable>
-            </View>
+          <View ref={sortTriggerRef} collapsable={false}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Sắp xếp: ${currentSort.title}`}
+              onPress={handleOpenSortDropdown}
+              style={[
+                styles.sortDropdownTrigger,
+                sortDropdownOpen && styles.sortDropdownTriggerActive,
+              ]}
+            >
+              <Icon
+                name="swap"
+                size={14}
+                color={
+                  sortDropdownOpen ? stitchTokens.wineDark : stitchTokens.wine
+                }
+              />
+              <AppText kind="small" style={styles.sortTriggerPrefix}>
+                Sắp xếp:
+              </AppText>
+              <AppText kind="bold" style={styles.sortDropdownTriggerText}>
+                {currentSort.title}
+              </AppText>
+              <Icon
+                name="chevronDown"
+                size={13}
+                color={stitchTokens.wine}
+              />
+            </Pressable>
           </View>
         </View>
 
@@ -1795,40 +1819,59 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modeTabsScroll: {
-    paddingTop: 10,
-    paddingBottom: 4,
-    gap: 6,
+    paddingTop: 8,
+    paddingBottom: 6,
+    gap: 8,
   },
   modeTab: {
-    minHeight: 48,
+    minHeight: 38,
     justifyContent: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
   },
   modeTabSelected: {
     backgroundColor: stitchTokens.wine,
+    borderColor: stitchTokens.wineDark,
+    shadowColor: stitchTokens.wine,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
     elevation: 2,
   },
   modeTabUnselected: {
-    backgroundColor: stitchTokens.canvasMuted,
+    backgroundColor: stitchTokens.parchment,
+    borderColor: stitchTokens.peachBorder,
   },
   modeTabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
   modeTabTextSelected: {
     color: stitchTokens.gold,
   },
   modeTabTextUnselected: {
-    color: stitchTokens.darkTaupe,
+    color: stitchTokens.charcoalBrown,
   },
-  redDividerLine: {
-    height: 1.5,
+  ornamentDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginVertical: 8,
+    gap: 10,
+  },
+  dividerWing: {
+    flex: 1,
+    height: 1,
     backgroundColor: stitchTokens.wine,
-    marginHorizontal: 14,
-    marginVertical: 4,
-    borderRadius: 1,
+    opacity: 0.35,
+  },
+  dividerDiamond: {
+    width: 6,
+    height: 6,
+    backgroundColor: stitchTokens.wine,
+    transform: [{ rotate: "45deg" }],
     opacity: 0.85,
   },
   filterSortRow: {
@@ -1836,74 +1879,91 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 14,
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 8,
-    gap: 8,
-  },
-  sortGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
   filterToggleBtn: {
-    minHeight: 48,
+    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: stitchTokens.creamMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: stitchTokens.borderWarm,
+    gap: 6,
+    backgroundColor: stitchTokens.parchment,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1.2,
+    borderColor: stitchTokens.peachBorder,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filterToggleBtnActive: {
     backgroundColor: stitchTokens.wine,
     borderColor: stitchTokens.wine,
   },
   filterToggleText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: stitchTokens.charcoalBrown,
   },
   filterToggleTextActive: {
     color: stitchTokens.warmIvory,
   },
-  filterDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: stitchTokens.flashRed,
+  filterCountBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: stitchTokens.wine,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
   },
-  sortBarLabel: {
-    fontSize: 13,
-    color: stitchTokens.mediumMuted,
-    fontWeight: "500",
+  filterCountBadgeActive: {
+    backgroundColor: stitchTokens.gold,
+  },
+  filterCountBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: stitchTokens.warmIvory,
+    lineHeight: 12,
+  },
+  filterCountBadgeTextActive: {
+    color: stitchTokens.wineDark,
   },
   sortDropdownTrigger: {
-    minHeight: 48,
+    minHeight: 40,
     maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
+    gap: 6,
     backgroundColor: stitchTokens.parchment,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.wine,
-    borderRadius: 8,
+    borderWidth: 1.2,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    minWidth: 140,
+    paddingVertical: 6,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sortDropdownTriggerActive: {
     backgroundColor: stitchTokens.warmIvory,
     borderColor: stitchTokens.wine,
   },
+  sortTriggerPrefix: {
+    fontSize: 12,
+    color: stitchTokens.roseBrown,
+    fontWeight: "500",
+  },
   sortDropdownTriggerText: {
-    fontSize: 14,
-    flexShrink: 1,
+    fontSize: 13,
     color: stitchTokens.charcoalBrown,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   sortModalBackdrop: {
     flex: 1,
