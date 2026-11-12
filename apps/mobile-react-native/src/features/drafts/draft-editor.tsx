@@ -623,6 +623,7 @@ export function DraftEditor({
     }
   };
 
+  const isApprovedView = base.state.moderation === "Approved" && !editingApproved;
   const ids = form.mediaIds;
   const navLocked = busy || uncertain || lifecyclePending;
   const canSave = editable && !approvedEdit;
@@ -744,20 +745,27 @@ export function DraftEditor({
             <View
               style={{
                 borderWidth: 1,
-                borderColor: stitchTokens.darkRed,
+                borderColor: isApprovedView ? stitchTokens.greenBorderSoft : stitchTokens.darkRed,
+                backgroundColor: isApprovedView ? colors.successSurface : "transparent",
                 paddingHorizontal: 8,
                 paddingVertical: 2,
                 borderRadius: 4,
-                transform: [{ rotate: "-2deg" }],
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                transform: [{ rotate: isApprovedView ? "0deg" : "-2deg" }],
               }}
             >
+              {isApprovedView ? (
+                <Icon name="check" size={10} color={stitchTokens.verifiedGreen} />
+              ) : null}
               <AppText
                 kind="small"
                 style={{
-                  color: stitchTokens.darkRed,
+                  color: isApprovedView ? stitchTokens.verifiedGreen : stitchTokens.darkRed,
                   fontSize: 10,
                   fontWeight: "800",
-                  letterSpacing: 1,
+                  letterSpacing: 0.8,
                 }}
               >
                 {base.state.moderation === "Draft"
@@ -768,23 +776,25 @@ export function DraftEditor({
           </View>
         </View>
 
-        {/* 5-Step Stepper Tabs */}
-        <StepNav
-          labels={labels}
-          short={auction ? auctionShortLabels : form.bundle ? bundleShortLabels : undefined}
-          current={step}
-          states={labels.map((_, i) => {
-            if (i === 4) {
-              if (base.state.moderation === "Approved") return "done";
-              if (base.state.moderation === "PendingReview") return "review";
-              if (base.state.moderation === "Rejected") return "missing";
-              return declared ? "done" : "missing";
-            }
-            return stepComplete(form, photoList, i) ? "done" : "missing";
-          })}
-          disabled={navLocked}
-          onSelect={go}
-        />
+        {/* 5-Step Stepper Tabs - Hide when viewing an approved listing */}
+        {!isApprovedView ? (
+          <StepNav
+            labels={labels}
+            short={auction ? auctionShortLabels : form.bundle ? bundleShortLabels : undefined}
+            current={step}
+            states={labels.map((_, i) => {
+              if (i === 4) {
+                if (base.state.moderation === "Approved") return "done";
+                if (base.state.moderation === "PendingReview") return "review";
+                if (base.state.moderation === "Rejected") return "missing";
+                return declared ? "done" : "missing";
+              }
+              return stepComplete(form, photoList, i) ? "done" : "missing";
+            })}
+            disabled={navLocked}
+            onSelect={go}
+          />
+        ) : null}
 
         {/* Step Indicator & Headings */}
         <View style={{ gap: 2, marginTop: space.xs }}>
@@ -802,7 +812,7 @@ export function DraftEditor({
               accessibilityRole="header"
               style={{ fontSize: 20, flexShrink: 1 }}
             >
-              {labels[step]}
+              {isApprovedView ? "Chi tiết bài đăng" : labels[step]}
             </AppText>
 
             {step === 0 &&
@@ -873,7 +883,7 @@ export function DraftEditor({
               </Pressable>
             ) : null}
           </View>
-          {step === 0 ? null : (
+          {isApprovedView || step === 0 ? null : (
             <AppText kind="small" color={stitchTokens.warmUmber} style={{ fontSize: 12 }}>
               {help[step]}
             </AppText>
@@ -896,33 +906,83 @@ export function DraftEditor({
           trong lúc chờ duyệt.
         </Notice>
       ) : null}
-      {base.state.moderation === "Approved" &&
-      base.state.visibility !== "Removed" ? (
+
+      {/* Unified Hero Status & Action Card for Approved Listings */}
+      {isApprovedView && base.state.visibility !== "Removed" ? (
+        <View style={styles.approvedHeroCard}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.sm }}>
+            <View style={styles.approvedHeroIcon}>
+              <Icon name="check" size={18} color={stitchTokens.verifiedGreen} />
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <AppText kind="heading" color={stitchTokens.wineDark} style={{ fontSize: 16 }}>
+                  Đã được duyệt
+                </AppText>
+                <View style={styles.approvedLiveBadge}>
+                  <View style={styles.liveDot} />
+                  <AppText kind="small" style={styles.liveBadgeText}>
+                    CÔNG KHAI
+                  </AppText>
+                </View>
+              </View>
+              <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 12, lineHeight: 17 }}>
+                {auction
+                  ? "Sách đấu giá đã được duyệt và sẵn sàng tại điểm tiếp nhận."
+                  : "Ấn bản đã được xác thực và sẵn sàng kết nối cùng người đọc trên Lật Lại."}
+              </AppText>
+            </View>
+          </View>
+
+          {base.state.trade === "Available" &&
+          state.status === "authenticated" &&
+          state.user.status === "ACTIVE" ? (
+            <View
+              style={{
+                marginTop: space.sm,
+                borderTopWidth: 1,
+                borderColor: stitchTokens.greenBorderSoft,
+                paddingTop: space.sm,
+                flexDirection: "row",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Sửa bài đã duyệt"
+                disabled={busy || uncertain || lifecyclePending}
+                onPress={() => {
+                  setEditingApproved(true);
+                  setDeclared(false);
+                  go(0);
+                }}
+                style={({ pressed }) => [
+                  styles.editApprovedBtn,
+                  pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
+                  (busy || uncertain || lifecyclePending) && { opacity: 0.5 },
+                ]}
+              >
+                <Icon name="tune" size={14} color={stitchTokens.wineDark} />
+                <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+                  Chỉnh sửa bài đăng
+                </AppText>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      ) : !isApprovedView &&
+        base.state.moderation === "Approved" &&
+        base.state.visibility !== "Removed" ? (
         <Notice tone="success">
           Bài đăng đã được duyệt. Sách chỉ hiện trên kệ khi bài đang mở, còn khả
           dụng và tài khoản của bạn đủ điều kiện.
         </Notice>
       ) : null}
+
       {base.state.visibility === "Hidden" ? (
         <Notice tone="info">
           Bài đang ẩn khỏi kệ. Duyệt bản sửa không tự mở lại bài.
         </Notice>
-      ) : null}
-      {base.state.moderation === "Approved" &&
-      base.state.visibility !== "Removed" &&
-      base.state.trade === "Available" &&
-      state.status === "authenticated" &&
-      state.user.status === "ACTIVE" &&
-      !editingApproved ? (
-        <Button
-          title="Sửa bài đã duyệt"
-          disabled={busy || uncertain || lifecyclePending}
-          onPress={() => {
-            setEditingApproved(true);
-            setDeclared(false);
-            go(0);
-          }}
-        />
       ) : null}
       {approvedEdit ? (
         <Notice tone="warning">
@@ -1426,10 +1486,10 @@ export function DraftEditor({
         </View>
       ) : null}
 
-      {/* STEP 4 (05: Kiểm tra) */}
+      {/* STEP 4 (05: Kiểm tra / Chi tiết bài đăng) */}
       {step === 4 ? (
-        <View style={styles.formWhiteCard}>
-          {base.state.moderation !== "Draft" ? (
+        <View style={{ gap: space.md }}>
+          {base.state.moderation !== "Draft" && !isApprovedView ? (
             <View
               style={{
                 backgroundColor: stitchTokens.warmIvory,
@@ -1476,27 +1536,41 @@ export function DraftEditor({
               </AppText>
             </View>
           ) : null}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700" }}>
-              1. THÔNG TIN ĐẦU SÁCH
-            </AppText>
-            {editable ? (
-              <Button secondary title="Chỉnh sửa" onPress={() => go(0)} />
-            ) : null}
-          </View>
-          <BundleManifest bundle={form.bundle}/>
-          <BookIdentity id={form.bookId} />
 
-          {/* Photos Preview */}
-          <View style={{ gap: space.sm }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <AppText
-                kind="label"
-                color={stitchTokens.wine}
-                style={{ fontWeight: "700", letterSpacing: 0.5 }}
-              >
-                2. ẢNH BẢN SÁCH ({ids.length}/8)
-              </AppText>
+          {/* Bento Card 1: Thông tin đầu sách */}
+          <View style={styles.bentoCard}>
+            <View style={styles.bentoHeader}>
+              <View style={styles.bentoTitleGroup}>
+                <View style={styles.bentoIconBadge}>
+                  <Icon name="book" size={14} color={stitchTokens.wine} />
+                </View>
+                <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700", letterSpacing: 0.5 }}>
+                  {isApprovedView ? "THÔNG TIN ĐẦU SÁCH" : "1. THÔNG TIN ĐẦU SÁCH"}
+                </AppText>
+              </View>
+              {editable ? (
+                <Button secondary title="Chỉnh sửa" onPress={() => go(0)} />
+              ) : null}
+            </View>
+            <BundleManifest bundle={form.bundle}/>
+            <BookIdentity id={form.bookId} />
+          </View>
+
+          {/* Bento Card 2: Ảnh bản sách */}
+          <View style={styles.bentoCard}>
+            <View style={styles.bentoHeader}>
+              <View style={styles.bentoTitleGroup}>
+                <View style={styles.bentoIconBadge}>
+                  <Icon name="camera" size={14} color={stitchTokens.wine} />
+                </View>
+                <AppText
+                  kind="label"
+                  color={stitchTokens.wine}
+                  style={{ fontWeight: "700", letterSpacing: 0.5 }}
+                >
+                  {isApprovedView ? `ẢNH BẢN SÁCH (${ids.length}/8)` : `2. ẢNH BẢN SÁCH (${ids.length}/8)`}
+                </AppText>
+              </View>
               {editable ? (
                 <Button secondary title="Chỉnh sửa" onPress={() => go(1)} />
               ) : null}
@@ -1526,126 +1600,129 @@ export function DraftEditor({
             </View>
           </View>
 
-          {/* Overview Specs Table */}
-          <View style={{ gap: space.xs }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700" }}>
-                3. TÌNH TRẠNG BẢN SÁCH
-              </AppText>
+          {/* Bento Card 3: Tình trạng & Lời nhắn */}
+          <View style={styles.bentoCard}>
+            <View style={styles.bentoHeader}>
+              <View style={styles.bentoTitleGroup}>
+                <View style={styles.bentoIconBadge}>
+                  <Icon name="bookmark" size={14} color={stitchTokens.wine} />
+                </View>
+                <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700", letterSpacing: 0.5 }}>
+                  {isApprovedView ? "TÌNH TRẠNG & LỜI NHẮN" : "3. TÌNH TRẠNG BẢN SÁCH"}
+                </AppText>
+              </View>
               {editable ? (
                 <Button secondary title="Chỉnh sửa" onPress={() => go(2)} />
               ) : null}
             </View>
+
             <View
               style={{
                 backgroundColor: stitchTokens.warmIvory,
-                borderRadius: 14,
+                borderRadius: 12,
                 borderWidth: 1,
                 borderColor: stitchTokens.borderWarm,
                 padding: space.md,
-                gap: space.sm,
+                gap: space.xs,
               }}
             >
-            {[
-              [
-                "Tình trạng",
-                form.condition ? conditionLabels[form.condition] : "Chưa chọn",
-              ],
-              ["Ruột sách", form.pages],
-              ["Bìa và gáy", form.coverNote],
-              ["Ghi chú", form.notes],
-              ["Phụ kiện", form.accessories],
-              [
-                "Đọc rõ nội dung",
-                form.readable === null
-                  ? "Chưa trả lời"
-                  : form.readable
-                    ? "Có, đọc rõ"
-                    : "Không",
-              ],
-              [
-                "Thiếu trang",
-                form.hasMissingPages === null
-                  ? "Chưa trả lời"
-                  : form.hasMissingPages
-                    ? "Có thiếu trang"
-                    : "Không thiếu",
-              ],
-              [
-                "Thiếu nội dung trọng yếu",
-                form.missingEssentialContent === null
-                  ? "Chưa trả lời"
-                  : form.missingEssentialContent
-                    ? "Có thiếu"
-                    : "Không thiếu",
-              ],
-            ].map(([lbl, val]) => (
-              <View
-                key={lbl}
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  paddingVertical: 4,
-                  borderBottomWidth: 1,
-                  borderColor: stitchTokens.parchment,
-                }}
-              >
-                <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontWeight: "600" }}>
-                  {lbl}
-                </AppText>
-                <AppText
-                  kind="small"
-                  color={stitchTokens.wineDark}
-                  style={{ fontWeight: "700", maxWidth: "60%", textAlign: "right" }}
+              {[
+                [
+                  "Tình trạng",
+                  form.condition ? conditionLabels[form.condition] : "Chưa chọn",
+                ],
+                ["Ruột sách", form.pages],
+                ["Bìa và gáy", form.coverNote],
+                ["Ghi chú", form.notes],
+                ["Phụ kiện", form.accessories],
+                [
+                  "Đọc rõ nội dung",
+                  form.readable === null
+                    ? "Chưa trả lời"
+                    : form.readable
+                      ? "Có, đọc rõ"
+                      : "Không",
+                ],
+                [
+                  "Thiếu trang",
+                  form.hasMissingPages === null
+                    ? "Chưa trả lời"
+                    : form.hasMissingPages
+                      ? "Có thiếu trang"
+                      : "Không thiếu",
+                ],
+                [
+                  "Thiếu nội dung trọng yếu",
+                  form.missingEssentialContent === null
+                    ? "Chưa trả lời"
+                    : form.missingEssentialContent
+                      ? "Có thiếu"
+                      : "Không thiếu",
+                ],
+              ].map(([lbl, val]) => (
+                <View
+                  key={lbl}
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    paddingVertical: 5,
+                    borderBottomWidth: 1,
+                    borderColor: stitchTokens.parchment,
+                  }}
                 >
-                  {val || "Chưa điền"}
-                </AppText>
-              </View>
-            ))}
+                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontWeight: "600" }}>
+                    {lbl}
+                  </AppText>
+                  <AppText
+                    kind="small"
+                    color={stitchTokens.wineDark}
+                    style={{ fontWeight: "700", maxWidth: "60%", textAlign: "right" }}
+                  >
+                    {val || "Chưa điền"}
+                  </AppText>
+                </View>
+              ))}
+            </View>
+
+            {/* Description / Note */}
+            <View style={styles.quoteBox}>
+              <AppText
+                kind="small"
+                color={stitchTokens.wine}
+                style={{ fontWeight: "800", letterSpacing: 0.5, fontSize: 11 }}
+              >
+                LỜI NHẮN GỬI NGƯỜI ĐỌC SAU
+              </AppText>
+              <AppText color={stitchTokens.wineDark} style={{ fontSize: 13, lineHeight: 19 }}>
+                {form.description || "Chưa có lời nhắn về cuốn sách."}
+              </AppText>
             </View>
           </View>
 
-          {/* Description */}
-          <View
-            style={{
-              backgroundColor: stitchTokens.warmIvory,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: stitchTokens.borderWarm,
-              padding: space.md,
-              gap: space.xs,
-            }}
-          >
-            <AppText
-              kind="label"
-              color={stitchTokens.wine}
-              style={{ fontWeight: "700" }}
-            >
-              LỜI NHẮN GỬI NGƯỜI ĐỌC SAU
-            </AppText>
-            <AppText color={stitchTokens.wineDark}>
-              {form.description || "Chưa có lời nhắn về cuốn sách."}
-            </AppText>
-          </View>
-
-          {/* Pricing & Fulfillment */}
-          <View style={{ gap: space.xs }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700" }}>
-                4. PHƯƠNG THỨC & GIAO NHẬN
-              </AppText>
+          {/* Bento Card 4: Phương thức & Giao nhận */}
+          <View style={styles.bentoCard}>
+            <View style={styles.bentoHeader}>
+              <View style={styles.bentoTitleGroup}>
+                <View style={styles.bentoIconBadge}>
+                  <Icon name="tag" size={14} color={stitchTokens.wine} />
+                </View>
+                <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700", letterSpacing: 0.5 }}>
+                  {isApprovedView ? "PHƯƠNG THỨC & GIAO NHẬN" : "4. PHƯƠNG THỨC & GIAO NHẬN"}
+                </AppText>
+              </View>
               {editable ? (
                 <Button secondary title="Chỉnh sửa" onPress={() => go(3)} />
               ) : null}
             </View>
+
             <View
               style={{
                 backgroundColor: stitchTokens.warmIvory,
-                borderRadius: 14,
+                borderRadius: 12,
                 borderWidth: 1,
                 borderColor: stitchTokens.borderWarm,
                 padding: space.md,
-                gap: space.sm,
+                gap: space.xs,
               }}
             >
               {[
@@ -1702,7 +1779,7 @@ export function DraftEditor({
                   style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
-                    paddingVertical: 4,
+                    paddingVertical: 5,
                     borderBottomWidth: 1,
                     borderColor: stitchTokens.parchment,
                   }}
@@ -1720,17 +1797,17 @@ export function DraftEditor({
                 </View>
               ))}
             </View>
-          </View>
 
-          {/* ADR 0042: auction books go through the point; no delivery origin. */}
-          {auction ? null : (
-            <FulfillmentFields
-              value={form.fulfillment}
-              disabled
-              summary
-              onChange={() => {}}
-            />
-          )}
+            {/* ADR 0042: auction books go through the point; no delivery origin. */}
+            {auction ? null : (
+              <FulfillmentFields
+                value={form.fulfillment}
+                disabled
+                summary
+                onChange={() => {}}
+              />
+            )}
+          </View>
 
           {base.catalogStatus === "Pending" ? (
             <Notice tone="info">
@@ -1739,11 +1816,13 @@ export function DraftEditor({
             </Notice>
           ) : null}
 
-          <Notice tone="info">
-            Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên
-            trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt
-            nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn.
-          </Notice>
+          {!isApprovedView ? (
+            <Notice tone="info">
+              Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên
+              trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt
+              nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn.
+            </Notice>
+          ) : null}
 
           {/* Stitch Section 5: Trust Commitment Checkbox */}
           {editable ? (
@@ -2047,5 +2126,113 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
+  },
+  bentoCard: {
+    backgroundColor: stitchTokens.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    padding: space.md,
+    gap: space.sm,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 1.5,
+  },
+  bentoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bentoTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  bentoIconBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quoteBox: {
+    backgroundColor: stitchTokens.warmIvory,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    borderLeftWidth: 3,
+    borderLeftColor: stitchTokens.goldMedal,
+    padding: space.sm,
+    gap: 4,
+    marginTop: space.xs,
+  },
+  approvedHeroCard: {
+    backgroundColor: colors.successSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.greenBorderSoft,
+    padding: space.md,
+    gap: space.xs,
+    shadowColor: stitchTokens.shadowSoft,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  approvedHeroIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.greenBorderSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  approvedLiveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.whiteSurface,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.greenBorderSoft,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: stitchTokens.verifiedGreen,
+  },
+  liveBadgeText: {
+    color: stitchTokens.verifiedGreen,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  editApprovedBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderBottomWidth: 2,
+    borderColor: stitchTokens.peachBorder,
+    borderBottomColor: stitchTokens.warmBorder,
+    shadowColor: stitchTokens.shadowSoft,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
 });
