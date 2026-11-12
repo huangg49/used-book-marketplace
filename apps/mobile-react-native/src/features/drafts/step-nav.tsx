@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { AppText, Icon, stitchTokens } from "../../core/ui";
@@ -27,14 +28,21 @@ export function StepNav({
   disabled: boolean;
   onSelect: (step: number) => void;
 }) {
+  const [layout, setLayout] = useState<{ width: number; height: number } | null>(null);
   const completedCount = states.filter((s) => s === "done").length;
   const totalCount = labels.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={(e) => setLayout(e.nativeEvent.layout)}>
       {/* SVG Red Ombre 3D Background */}
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+      <Svg
+        style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
+        width={layout ? layout.width : "100%"}
+        height={layout ? layout.height : "100%"}
+        viewBox={layout ? `0 0 ${layout.width} ${layout.height}` : undefined}
+        preserveAspectRatio="none"
+      >
         <Defs>
           <LinearGradient id="stepNavOmbre" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor={stitchTokens.ombreStop0} />
@@ -48,8 +56,16 @@ export function StepNav({
             <Stop offset="100%" stopColor={stitchTokens.white} stopOpacity={0} />
           </LinearGradient>
         </Defs>
-        <Rect width="100%" height="100%" fill="url(#stepNavOmbre)" />
-        <Rect width="100%" height="60%" fill="url(#stepNavSpecular)" />
+        <Rect
+          width={layout ? layout.width : "100%"}
+          height={layout ? layout.height : "100%"}
+          fill="url(#stepNavOmbre)"
+        />
+        <Rect
+          width={layout ? layout.width : "100%"}
+          height={layout ? layout.height * 0.6 : "60%"}
+          fill="url(#stepNavSpecular)"
+        />
       </Svg>
 
       {/* Thanh tiến trình tính theo fill của 5 tab */}
@@ -185,7 +201,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3.5,
     borderColor: stitchTokens.peachBorderAlpha40,
     borderBottomColor: stitchTokens.cardBorderShadowBottom,
-    paddingVertical: 14,
+    backgroundColor: stitchTokens.ombreStop70,
+    paddingTop: 14,
+    paddingBottom: 16,
     paddingHorizontal: 12,
     position: "relative",
     overflow: "hidden",
