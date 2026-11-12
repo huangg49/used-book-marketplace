@@ -8,6 +8,7 @@ import {
   AppModal,
   AppText,
   Button,
+  Icon,
   Notice,
   StatePanel,
   TextField,
@@ -74,21 +75,160 @@ export function FulfillmentFields({
   );
   const current =
     !!selected && selected.version === value?.originAddressVersion;
+
+  if (summary) {
+    if (book.isPending) {
+      return (
+        <View
+          style={{
+            marginTop: space.xs,
+            padding: space.sm,
+            borderRadius: 12,
+            backgroundColor: stitchTokens.warmIvory,
+            borderWidth: 1,
+            borderColor: stitchTokens.borderWarm,
+          }}
+        >
+          <AppText kind="small" color={stitchTokens.slateWarm}>
+            Đang tải thông tin nơi gửi...
+          </AppText>
+        </View>
+      );
+    }
+
+    if (!value || !current || book.isError) {
+      return (
+        <View
+          style={{
+            marginTop: space.xs,
+            padding: space.sm,
+            borderRadius: 12,
+            backgroundColor: stitchTokens.warmIvory,
+            borderWidth: 1,
+            borderColor: stitchTokens.borderWarm,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.sm,
+          }}
+        >
+          <Icon name="truck" size={16} color={stitchTokens.subtleGray} />
+          <AppText kind="small" color={stitchTokens.slateWarm} style={{ flex: 1, fontSize: 12 }}>
+            {value && !current
+              ? "Nơi gửi đã được cập nhật hoặc thay đổi trong sổ địa chỉ."
+              : "Chưa thiết lập nơi gửi sách (giao dịch chưa mở)."}
+          </AppText>
+        </View>
+      );
+    }
+
+    return (
+      <View
+        style={{
+          marginTop: space.xs,
+          padding: space.sm,
+          borderRadius: 12,
+          backgroundColor: stitchTokens.warmIvory,
+          borderWidth: 1,
+          borderColor: stitchTokens.borderWarm,
+          gap: 6,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Icon name="truck" size={15} color={stitchTokens.wine} />
+            <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+              Nơi gửi sách (Lấy hàng)
+            </AppText>
+          </View>
+          <View
+            style={{
+              paddingHorizontal: 7,
+              paddingVertical: 2,
+              borderRadius: 8,
+              backgroundColor: stitchTokens.parchment,
+              borderWidth: 1,
+              borderColor: stitchTokens.peachBorder,
+            }}
+          >
+            <AppText kind="small" color={stitchTokens.wineDark} style={{ fontSize: 10, fontWeight: "700" }}>
+              Giao trực tiếp
+            </AppText>
+          </View>
+        </View>
+
+        <View style={{ paddingLeft: 21, gap: 2 }}>
+          <AppText kind="bold" color={stitchTokens.darkWood} style={{ fontSize: 13 }}>
+            {selected.recipientName}
+          </AppText>
+          <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 12 }}>
+            {selected.detail}
+          </AppText>
+          <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 11, marginTop: 2 }}>
+            ⚡ Cam kết giao cho shipper trong 48h khi có đơn · Địa chỉ bảo mật nội bộ
+          </AppText>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View
       style={{
         gap: space.md,
-        paddingVertical: space.lg,
+        paddingTop: space.md,
         borderTopWidth: 1,
-        borderColor: colors.rule,
+        borderColor: stitchTokens.parchment,
       }}
     >
-      <AppText kind="heading">Sách sẽ đi từ đâu?</AppText>
-      <AppText>
-        Chọn nơi bạn sẽ gửi cuốn sách. Tên, số điện thoại và địa chỉ chi tiết
-        chỉ hiển thị trong sổ của bạn.
-      </AppText>
+      <View style={{ gap: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <AppText kind="heading" color={stitchTokens.wineDark} style={{ fontSize: 17 }}>
+            Sách sẽ đi từ đâu?
+          </AppText>
+          {value && current ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 12,
+                backgroundColor: colors.successSurface,
+                borderWidth: 1,
+                borderColor: stitchTokens.greenBorderSoft,
+              }}
+            >
+              <Icon name="check" size={11} color={stitchTokens.verifiedGreen} />
+              <AppText kind="small" color={stitchTokens.verifiedGreen} style={{ fontSize: 10, fontWeight: "700" }}>
+                Đã chọn nơi gửi
+              </AppText>
+            </View>
+          ) : (
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 12,
+                backgroundColor: stitchTokens.parchment,
+                borderWidth: 1,
+                borderColor: stitchTokens.peachBorder,
+              }}
+            >
+              <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 10, fontWeight: "600" }}>
+                Chưa chọn
+              </AppText>
+            </View>
+          )}
+        </View>
+
+        <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 12 }}>
+          Chọn địa chỉ để đối tác vận chuyển đến nhận sách khi có người đặt mua.
+        </AppText>
+      </View>
+
       {book.isPending ? <StatePanel loading title="Đang tải nơi gửi" /> : null}
+
       {book.isError ? (
         <>
           <Notice tone="error">
@@ -102,79 +242,173 @@ export function FulfillmentFields({
           />
         </>
       ) : null}
+
       {value && book.data && !book.isError && !current ? (
         <Notice tone="warning">
-          Nơi gửi đã được sửa hoặc xóa. Chọn lại địa chỉ trước khi lưu hoặc gửi
-          duyệt; bản đã lưu không tự đổi theo sổ địa chỉ.
+          Nơi gửi đã được sửa hoặc xóa. Chọn lại địa chỉ trước khi lưu hoặc gửi duyệt; bản đã lưu không tự đổi theo sổ địa chỉ.
         </Notice>
       ) : null}
-      {!value ? (
-        <AppText color={colors.muted}>
-          Chưa khai báo nơi gửi. Bạn vẫn có thể hoàn thiện bài đăng; giao dịch
-          chưa mở.
-        </AppText>
-      ) : null}
-      {current && !book.isError ? (
-        <View style={{ gap: space.xs }}>
-          <AppText kind="bold">
-            Nơi gửi đã chọn · {selected.recipientName}
-          </AppText>
-          <AppText>{selected.detail}</AppText>
-          <AppText kind="small">
-            Giao trực tiếp · TP.HCM · khu vực mô phỏng
-          </AppText>
-        </View>
-      ) : null}
+
       {!summary && !disabled && book.data && !book.isError ? (
-        <>
+        <View style={{ gap: space.sm }}>
           {!book.data.items.length ? (
             <StatePanel
               title="Sổ địa chỉ còn trống"
               message="Thêm nơi gửi sách để người giao hàng đến lấy sách của bạn."
             />
           ) : null}
-          {/* Default first and labelled; choosing stays explicit, never automatic. */}
+
+          {/* Address Cards */}
           {[...book.data.items]
             .sort((x, y) => Number(y.isDefault) - Number(x.isDefault))
-            .map((a) => (
-              <Button
-                key={a.id}
-                secondary
-                selected={value?.originAddressId === a.id && current}
-                title={`${value?.originAddressId === a.id && current ? "Đã chọn" : "Chọn nơi gửi"}: ${a.recipientName} · ${a.detail}${a.isDefault ? " · Mặc định" : ""}`}
-                disabled={book.isFetching}
-                onPress={() =>
-                  onChange({
-                    originAddressId: a.id,
-                    originAddressVersion: a.version,
-                    method: "DirectDelivery",
-                  })
-                }
-              />
-            ))}
-          {value ? (
-            <Button
-              secondary
-              title="Bỏ lựa chọn nơi gửi"
-              onPress={() => onChange(null)}
-            />
-          ) : null}
-        </>
-      ) : null}
-      {!summary && !disabled ? (
-        <View style={{ gap: space.sm }}>
-          <Button
-            secondary
-            title="+ Thêm nơi gửi sách mới"
-            disabled={disabled}
-            onPress={() => setCreateOpen(true)}
-          />
-          <Button
-            secondary
-            title="Quản lý sổ địa chỉ"
-            disabled={disabled}
-            onPress={() => router.push("./addresses")}
-          />
+            .map((a) => {
+              const isSelected = value?.originAddressId === a.id && current;
+
+              return (
+                <Pressable
+                  key={a.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${isSelected ? "Đã chọn nơi gửi" : "Chọn nơi gửi"}: ${a.recipientName} · ${a.detail}${a.isDefault ? " · Mặc định" : ""}`}
+                  disabled={book.isFetching || disabled}
+                  onPress={() =>
+                    onChange({
+                      originAddressId: a.id,
+                      originAddressVersion: a.version,
+                      method: "DirectDelivery",
+                    })
+                  }
+                  style={({ pressed }) => [
+                    {
+                      padding: space.md,
+                      borderRadius: 14,
+                      backgroundColor: isSelected ? stitchTokens.roseWarmSurface : stitchTokens.warmIvory,
+                      borderWidth: isSelected ? 2 : 1,
+                      borderColor: isSelected ? stitchTokens.wine : stitchTokens.borderWarm,
+                      gap: 6,
+                      shadowColor: isSelected ? stitchTokens.wine : stitchTokens.black,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: isSelected ? 0.08 : 0.03,
+                      shadowRadius: 3,
+                      elevation: isSelected ? 2 : 1,
+                    },
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      {/* Radio Circle Indicator */}
+                      <View
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          borderWidth: isSelected ? 5 : 2,
+                          borderColor: isSelected ? stitchTokens.wine : stitchTokens.borderWarm,
+                          backgroundColor: stitchTokens.white,
+                        }}
+                      />
+                      <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 14 }}>
+                        {a.recipientName}
+                      </AppText>
+                      {a.isDefault ? (
+                        <View
+                          style={{
+                            paddingHorizontal: 6,
+                            paddingVertical: 1.5,
+                            borderRadius: 6,
+                            backgroundColor: stitchTokens.goldLight,
+                            borderWidth: 1,
+                            borderColor: stitchTokens.goldDark,
+                          }}
+                        >
+                          <AppText kind="small" color={stitchTokens.wineDark} style={{ fontSize: 9.5, fontWeight: "700" }}>
+                            Mặc định
+                          </AppText>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {isSelected ? (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Icon name="check" size={13} color={stitchTokens.verifiedGreen} />
+                        <AppText kind="small" color={stitchTokens.verifiedGreen} style={{ fontSize: 11, fontWeight: "700" }}>
+                          Đang chọn
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={{ paddingLeft: 26, gap: 2 }}>
+                    <AppText kind="small" color={stitchTokens.darkWood} style={{ fontSize: 12.5 }}>
+                      {a.detail}
+                    </AppText>
+                    <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 11 }}>
+                      {a.phone ? `${a.phone} · ` : ""}TP.HCM · Giao trực tiếp
+                    </AppText>
+                  </View>
+                </Pressable>
+              );
+            })}
+
+          {/* Action Row */}
+          <View style={{ gap: space.sm, marginTop: 4 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="+ Thêm nơi gửi sách mới"
+              disabled={disabled}
+              onPress={() => setCreateOpen(true)}
+              style={({ pressed }) => [
+                {
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderStyle: "dashed",
+                  borderColor: stitchTokens.wine,
+                  backgroundColor: stitchTokens.parchment,
+                },
+                pressed && { opacity: 0.8, backgroundColor: stitchTokens.roseWarmSurface },
+              ]}
+            >
+              <Icon name="plus" size={15} color={stitchTokens.wine} />
+              <AppText kind="bold" color={stitchTokens.wine} style={{ fontSize: 13 }}>
+                Thêm nơi gửi sách mới
+              </AppText>
+            </Pressable>
+
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 2 }}>
+              {value ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Bỏ lựa chọn nơi gửi"
+                  onPress={() => onChange(null)}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <AppText kind="small" color={colors.rustText} style={{ fontWeight: "600", fontSize: 12 }}>
+                    Bỏ chọn nơi gửi
+                  </AppText>
+                </Pressable>
+              ) : <View />}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Quản lý sổ địa chỉ"
+                disabled={disabled}
+                onPress={() => router.push("./addresses")}
+                style={({ pressed }) => [
+                  { flexDirection: "row", alignItems: "center", gap: 4 },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <AppText kind="small" color={stitchTokens.wine} style={{ fontWeight: "600", fontSize: 12 }}>
+                  Quản lý sổ địa chỉ →
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
         </View>
       ) : null}
 
@@ -353,12 +587,8 @@ export function FulfillmentFields({
       </AppModal>
 
       <Notice tone="info">
-        Người mua có thể Mua ngay theo giá bạn niêm yết. Khi thanh toán thành công, đơn được chốt và bạn cam kết bàn giao sách trong 48 giờ, không có bước duyệt lại.
+        Người mua có thể Mua ngay theo giá bạn niêm yết (cam kết giao sách trong 48 giờ). Địa chỉ chi tiết và số điện thoại chỉ dùng cho giao nhận nội bộ.
       </Notice>
-
-      <AppText kind="small" color={colors.muted}>
-        Địa chỉ chi tiết và số điện thoại chỉ dùng cho giao nhận nội bộ; người mua chỉ thấy khu vực luân chuyển.
-      </AppText>
     </View>
   );
 }
