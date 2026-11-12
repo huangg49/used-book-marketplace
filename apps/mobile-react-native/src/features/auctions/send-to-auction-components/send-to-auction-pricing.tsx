@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import { AUCTION_FORMATS, auctionDepositFor, auctionDepositMaxFor, depositChoices, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_CAP, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
+import { AUCTION_FORMATS, auctionDepositFor, depositChoices, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_CAP, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -131,343 +131,34 @@ export function SendToAuctionPricing({
 
       {expanded && (
         <>
-
-      {/* 1. Bid Increment (Bước giá) */}
-      <View style={styles.fieldGroup}>
-        <AppText kind="bold" style={styles.fieldLabel}>
-          Bước giá tối thiểu (Mỗi lượt ra giá)
-        </AppText>
-        <View style={styles.stepGrid}>
-          {AUCTION_STEPS.map((val) => {
-            const isSelected = !customStepOn && step === val;
-            return (
-              <Pressable
-                key={val}
-                accessibilityRole="button"
-                accessibilityLabel={`Bước ${formatVnd(val)}`}
-                disabled={disabled}
-                onPress={() => onSelectStep(val)}
-                style={[
-                  styles.stepButton,
-                  isSelected && styles.stepButtonActive,
-                  disabled && { opacity: 0.6 },
-                ]}
-              >
-                <Icon
-                  name={isSelected ? "check" : "radio_button_unchecked" as any}
-                  size={14}
-                  color={isSelected ? stitchTokens.gold : stitchTokens.subtleGray}
-                />
-                <AppText
-                  kind="bold"
-                  style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}
-                >
-                  Bước {formatVnd(val)}
+          {/* 1. Bid Increment (Bước giá) */}
+          <View style={styles.subCard}>
+            <View style={styles.subCardHeader}>
+              <View style={styles.subCardTitleGroup}>
+                <View style={styles.subCardIconBadge}>
+                  <Icon name="tag" size={13} color={stitchTokens.wineDark} />
+                </View>
+                <AppText kind="bold" style={styles.fieldLabel}>
+                  Bước giá tối thiểu
                 </AppText>
-              </Pressable>
-            );
-          })}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tự nhập bước giá"
-            accessibilityState={{ selected: customStepOn }}
-            disabled={disabled}
-            onPress={onSelectCustomStep}
-            style={[
-              styles.stepButton,
-              styles.stepButtonWide,
-              customStepOn && styles.stepButtonActive,
-              disabled && { opacity: 0.6 },
-            ]}
-          >
-            <Icon
-              name={customStepOn ? "check" : "radio_button_unchecked" as any}
-              size={14}
-              color={customStepOn ? stitchTokens.gold : stitchTokens.subtleGray}
-            />
-            <AppText
-              kind="bold"
-              style={[styles.stepButtonText, customStepOn && styles.stepButtonTextActive]}
-            >
-              Tự nhập bước giá
-            </AppText>
-          </Pressable>
-        </View>
-        {customStepOn && (
-          <>
-            <View style={[styles.inputWrapper, Boolean(customStepError) && styles.inputWrapperError]}>
-              <TextInput
-                value={customStepText}
-                onChangeText={(text) =>
-                  onChangeCustomStepText(text.replace(/\D/g, "").slice(0, String(AUCTION_STEP_MAX).length))
-                }
-                keyboardType="number-pad"
-                editable={!disabled}
-                placeholder="0"
-                placeholderTextColor={stitchTokens.subtleGray}
-                accessibilityLabel="Bước giá tự nhập"
-                style={styles.textInput}
-              />
-              <AppText kind="bold" style={styles.currencySuffix}>
-                VNĐ
-              </AppText>
+              </View>
+              <View style={styles.hintPill}>
+                <AppText kind="small" style={styles.hintPillText}>
+                  Mỗi lượt ra giá
+                </AppText>
+              </View>
             </View>
-            <AppText kind="small" style={customStepError ? styles.errorText : styles.helpText}>
-              {customStepError ?? "Bội số của 1.000đ, từ 1.000đ đến 10.000.000đ."}
-            </AppText>
-          </>
-        )}
-      </View>
 
-      {/* 2. Starting Price (Giá khởi điểm) */}
-      <View style={styles.fieldGroup}>
-        <View style={styles.labelWithHintRow}>
-          <AppText kind="bold" style={styles.fieldLabel}>
-            Giá khởi điểm
-          </AppText>
-          <AppText kind="small" style={styles.hintSub}>
-            Khuyên dùng: 50.000 đ - 500.000 đ
-          </AppText>
-        </View>
-
-        <View style={[styles.inputWrapper, Boolean(startPriceError) && styles.inputWrapperError]}>
-          <TextInput
-            value={startPriceText}
-            onChangeText={(text) => onChangeStartPriceText(text.replace(/\D/g, ""))}
-            keyboardType="number-pad"
-            editable={!disabled}
-            placeholder="0"
-            placeholderTextColor={stitchTokens.subtleGray}
-            style={styles.textInput}
-          />
-          <AppText kind="bold" style={styles.currencySuffix}>
-            VNĐ
-          </AppText>
-        </View>
-
-        {Boolean(startPriceError) ? (
-          <AppText kind="small" style={styles.errorText}>
-            {startPriceError}
-          </AppText>
-        ) : (
-          <AppText kind="small" style={styles.helpText}>
-            Phạm vi hợp lệ: Từ {formatVnd(10000)} trở lên
-          </AppText>
-        )}
-      </View>
-
-      {/* ADR 0076: auction format */}
-      <View style={[styles.fieldGroup, { marginTop: 10 }]}>
-        <AppText kind="bold" style={styles.fieldLabel}>Kiểu đấu giá</AppText>
-        <View style={styles.stepGrid} accessibilityRole="radiogroup">
-          {AUCTION_FORMATS.filter((m) => !m.retired || m.value === auctionType).map((m) => {
-            const isSelected = auctionType === m.value;
-            return (
-              <Pressable
-                key={m.value}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected, disabled }}
-                accessibilityLabel={`${m.label}. ${m.hint}`}
-                disabled={disabled}
-                onPress={() => onChangeAuctionType(m.value)}
-                style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
-              >
-                <Icon name={isSelected ? "check" : "radio_button_unchecked" as any} size={14} color={isSelected ? stitchTokens.gold : stitchTokens.subtleGray} />
-                <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{m.label}</AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "flex-start",
-            gap: 8,
-            backgroundColor: stitchTokens.whiteAlpha88,
-            borderRadius: 10,
-            padding: 10,
-            borderWidth: 1,
-            borderColor: stitchTokens.goldBorder,
-          }}
-        >
-          <Icon
-            name={auctionType === "Dutch" ? "flame" : auctionType === "English" ? "gavel" : "lock"}
-            size={15}
-            color={stitchTokens.wineDark}
-          />
-          <AppText kind="small" style={[styles.infoText, { color: stitchTokens.deepCocoa }]}>
-            {AUCTION_FORMATS.find((m) => m.value === auctionType)!.hint}
-          </AppText>
-        </View>
-        {auctionType === "Dutch" && (
-          <View
-            style={{
-              gap: 8,
-              marginTop: 6,
-              backgroundColor: stitchTokens.whiteAlpha70,
-              padding: 12,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: stitchTokens.goldBorder,
-            }}
-          >
-            <AppText kind="bold" style={styles.fieldLabel}>Giá mở đầu (cao nhất)</AppText>
-            <View style={[styles.inputWrapper, Boolean(dutchError) && styles.inputWrapperError]}>
-              <TextInput value={dutchTopText} onChangeText={(t) => onChangeDutchTopText(t.replace(/\D/g, ""))} keyboardType="number-pad"
-                editable={!disabled} placeholder="0" placeholderTextColor={stitchTokens.subtleGray} style={styles.textInput} accessibilityLabel="Giá mở đầu" />
-              <AppText kind="bold" style={styles.currencySuffix}>VNĐ</AppText>
-            </View>
-            <AppText kind="bold" style={styles.fieldLabel}>Giảm một bước sau mỗi</AppText>
-            <View style={[styles.inputWrapper, Boolean(dutchError) && styles.inputWrapperError]}>
-              <TextInput value={dutchEveryText} onChangeText={(t) => onChangeDutchEveryText(t.replace(/\D/g, "").slice(0, 4))} keyboardType="number-pad"
-                editable={!disabled} placeholder="60" placeholderTextColor={stitchTokens.subtleGray} style={styles.textInput} accessibilityLabel="Số giây giữa hai lần giảm giá" />
-              <AppText kind="bold" style={styles.currencySuffix}>giây</AppText>
-            </View>
-            <AppText kind="small" style={dutchError ? styles.errorText : styles.infoText}>
-              {dutchError ?? "Giá khởi điểm phía trên là giá sàn. Mỗi lần giảm một bước giá, 10 giây đến 1 giờ."}
-            </AppText>
-          </View>
-        )}
-      </View>
-
-      {/* ADR 0077: minimum registered bidders */}
-      <View style={[styles.fieldGroup, { marginTop: 10 }]}>
-        <View style={styles.labelWithHintRow}>
-          <AppText kind="bold" style={styles.fieldLabel}>Số người đăng ký tối thiểu</AppText>
-          <View style={styles.durationPill}>
-            <AppText kind="small" style={styles.durationPillText}>
-              {`Cọc: ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)}`}
-            </AppText>
-          </View>
-        </View>
-        <View style={styles.stepGrid} accessibilityRole="radiogroup">
-          {MIN_BIDDER_OPTIONS.map((n) => {
-            const isSelected = minBidders === n;
-            return (
-              <Pressable
-                key={n}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected, disabled }}
-                accessibilityLabel={`Tối thiểu ${n} người đăng ký`}
-                disabled={disabled}
-                onPress={() => onChangeMinBidders(n)}
-                style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
-              >
-                <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{`${n} người`}</AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-        {/* ADR 0079: any number from 4 up beside the quick choices. */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 }}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Giảm số người tối thiểu"
-            disabled={disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR}
-            onPress={() => onChangeMinBidders(Math.max(AUCTION_MIN_BIDDERS_FLOOR, minBidders - 1))}
-            style={[styles.stepButton, { minWidth: 48, flexGrow: 0, flexBasis: 48 }, (disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR) && { opacity: 0.5 }]}
-          >
-            <AppText kind="bold" style={styles.stepButtonText}>−</AppText>
-          </Pressable>
-          <View
-            style={{
-              flex: 1,
-              height: 42,
-              borderRadius: 10,
-              backgroundColor: stitchTokens.whiteAlpha90,
-              borderWidth: 1,
-              borderColor: stitchTokens.goldBorder,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <AppText kind="bold" style={{ color: stitchTokens.wineDark }} accessibilityLiveRegion="polite">
-              {`Mở khi đủ ${minBidders} người đăng ký`}
-            </AppText>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tăng số người tối thiểu"
-            disabled={disabled || minBidders >= AUCTION_MIN_BIDDERS_CAP}
-            onPress={() => onChangeMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, minBidders + 1))}
-            style={[styles.stepButton, { minWidth: 48, flexGrow: 0, flexBasis: 48 }, disabled && { opacity: 0.5 }]}
-          >
-            <AppText kind="bold" style={styles.stepButtonText}>+</AppText>
-          </Pressable>
-        </View>
-        <AppText kind="small" style={styles.infoText}>
-          {`Người mua đặt cọc ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)} trước khi trả giá. Bạn hẹn giờ mở trong vòng 30 ngày; đến giờ mở nếu chưa đủ ${minBidders} người (ít nhất ${AUCTION_MIN_BIDDERS_FLOOR}), phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ, quá hạn thì phiên bị hủy và hoàn cọc. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
-        </AppText>
-      </View>
-
-      {/* ADR 0087: the seller may raise the registration deposit. */}
-      {parsedStart >= 10_000 && onChangeDeposit && (
-        <View style={[styles.fieldGroup, { marginTop: 10 }]}>
-          <AppText kind="bold" style={styles.fieldLabel}>Tiền cọc đăng ký</AppText>
-          <View style={styles.stepGrid} accessibilityRole="radiogroup">
-            {depositChoices(parsedStart).map((c) => {
-              const current = deposit ?? auctionDepositFor(parsedStart);
-              const isSelected = current === c.amount;
-              return (
-                <Pressable
-                  key={c.amount}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: isSelected, disabled }}
-                  accessibilityLabel={`Tiền cọc ${c.amount.toLocaleString("vi-VN")} đồng, ${c.label}`}
-                  disabled={disabled}
-                  onPress={() => onChangeDeposit(c.amount === auctionDepositFor(parsedStart) ? null : c.amount)}
-                  style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
-                >
-                  <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{`${c.amount.toLocaleString("vi-VN")}đ`}</AppText>
-                  <AppText kind="small" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{c.label}</AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-          <AppText kind="small" style={depositError ? { color: stitchTokens.flashRed } : styles.infoText}>
-            {depositError ??
-              `Mặc định ${auctionDepositFor(parsedStart).toLocaleString("vi-VN")}đ (10% giá khởi điểm), tăng được tới ${auctionDepositMaxFor(parsedStart).toLocaleString("vi-VN")}đ (một nửa giá khởi điểm). Cọc cao có thể làm ít người đăng ký hơn. Người không thắng được hoàn cọc; người thắng không thanh toán thì mất cọc, và nếu sách không bán được bạn nhận một nửa số đó.`}
-          </AppText>
-        </View>
-      )}
-
-      {/* 3. Buy Now Option (Mua ngay) */}
-      {auctionType === "English" && (
-      <View style={styles.buyNowSection}>
-        <View style={styles.buyNowToggleRow}>
-          <View style={{ flex: 1, marginRight: 10 }}>
-            <AppText kind="bold" style={styles.buyNowTitle}>
-              Cho phép mua ngay
-            </AppText>
-            <AppText kind="small" style={styles.buyNowSubtitle}>
-              Còn dùng được sau lượt trả giá khi giá hiện tại thấp hơn giá mua ngay. Lượt trả giá chạm giá mua ngay cũng tính như mua ngay.
-            </AppText>
-          </View>
-          <Switch
-            value={buyNowOn}
-            onValueChange={onToggleBuyNow}
-            disabled={disabled}
-            trackColor={{ false: stitchTokens.switchTrackFalse, true: stitchTokens.wineDark }}
-            thumbColor={buyNowOn ? stitchTokens.gold : stitchTokens.white}
-          />
-        </View>
-
-        {buyNowOn && (
-          <View style={[styles.fieldGroup, { marginTop: 10 }]}>
-            <AppText kind="bold" style={styles.fieldLabel}>
-              Khi có người mua ngay
-            </AppText>
-            <View style={styles.stepGrid} accessibilityRole="radiogroup">
-              {BUY_NOW_MODES.map((m) => {
-                const isSelected = buyNowMode === m.value;
+            <View style={styles.stepGrid}>
+              {AUCTION_STEPS.map((val) => {
+                const isSelected = !customStepOn && step === val;
                 return (
                   <Pressable
-                    key={m.value}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: isSelected, disabled }}
-                    accessibilityLabel={`${m.label}. ${m.hint}`}
+                    key={val}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Bước ${formatVnd(val)}`}
                     disabled={disabled}
-                    onPress={() => onChangeBuyNowMode(m.value)}
+                    onPress={() => onSelectStep(val)}
                     style={[
                       styles.stepButton,
                       isSelected && styles.stepButtonActive,
@@ -483,28 +174,85 @@ export function SendToAuctionPricing({
                       kind="bold"
                       style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}
                     >
-                      {m.label}
+                      Bước {formatVnd(val)}
                     </AppText>
                   </Pressable>
                 );
               })}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tự nhập bước giá"
+                accessibilityState={{ selected: customStepOn }}
+                disabled={disabled}
+                onPress={onSelectCustomStep}
+                style={[
+                  styles.stepButton,
+                  styles.stepButtonWide,
+                  customStepOn && styles.stepButtonActive,
+                  disabled && { opacity: 0.6 },
+                ]}
+              >
+                <Icon
+                  name={customStepOn ? "check" : "radio_button_unchecked" as any}
+                  size={14}
+                  color={customStepOn ? stitchTokens.gold : stitchTokens.subtleGray}
+                />
+                <AppText
+                  kind="bold"
+                  style={[styles.stepButtonText, customStepOn && styles.stepButtonTextActive]}
+                >
+                  Tự nhập bước giá
+                </AppText>
+              </Pressable>
             </View>
-            <AppText kind="small" style={[styles.infoText, { marginBottom: 10 }]}>
-              {BUY_NOW_MODES.find((m) => m.value === buyNowMode)!.hint}
-            </AppText>
-            <AppText kind="bold" style={styles.fieldLabel}>
-              Giá mua ngay
-            </AppText>
+            {customStepOn && (
+              <>
+                <View style={[styles.inputWrapper, Boolean(customStepError) && styles.inputWrapperError]}>
+                  <TextInput
+                    value={customStepText}
+                    onChangeText={(text) =>
+                      onChangeCustomStepText(text.replace(/\D/g, "").slice(0, String(AUCTION_STEP_MAX).length))
+                    }
+                    keyboardType="number-pad"
+                    editable={!disabled}
+                    placeholder="0"
+                    placeholderTextColor={stitchTokens.subtleGray}
+                    accessibilityLabel="Bước giá tự nhập"
+                    style={styles.textInput}
+                  />
+                  <AppText kind="bold" style={styles.currencySuffix}>
+                    VNĐ
+                  </AppText>
+                </View>
+                <AppText kind="small" style={customStepError ? styles.errorText : styles.helpText}>
+                  {customStepError ?? "Bội số của 1.000đ, từ 1.000đ đến 10.000.000đ."}
+                </AppText>
+              </>
+            )}
+          </View>
 
-            <View
-              style={[
-                styles.inputWrapper,
-                Boolean(buyNowPriceError) && styles.inputWrapperError,
-              ]}
-            >
+          {/* 2. Starting Price (Giá khởi điểm) */}
+          <View style={styles.subCard}>
+            <View style={styles.subCardHeader}>
+              <View style={styles.subCardTitleGroup}>
+                <View style={styles.subCardIconBadge}>
+                  <Icon name="wallet" size={13} color={stitchTokens.wineDark} />
+                </View>
+                <AppText kind="bold" style={styles.fieldLabel}>
+                  Giá khởi điểm
+                </AppText>
+              </View>
+              <View style={styles.hintPill}>
+                <AppText kind="small" style={styles.hintPillText}>
+                  Gợi ý: 50.000 đ – 500.000 đ
+                </AppText>
+              </View>
+            </View>
+
+            <View style={[styles.inputWrapper, Boolean(startPriceError) && styles.inputWrapperError]}>
               <TextInput
-                value={buyNowPriceText}
-                onChangeText={(text) => onChangeBuyNowPriceText(text.replace(/\D/g, ""))}
+                value={startPriceText}
+                onChangeText={(text) => onChangeStartPriceText(text.replace(/\D/g, ""))}
                 keyboardType="number-pad"
                 editable={!disabled}
                 placeholder="0"
@@ -516,22 +264,320 @@ export function SendToAuctionPricing({
               </AppText>
             </View>
 
-            {Boolean(buyNowPriceError) ? (
+            {Boolean(startPriceError) ? (
               <AppText kind="small" style={styles.errorText}>
-                {buyNowPriceError}
+                {startPriceError}
               </AppText>
             ) : (
-              <View style={styles.infoRow}>
-                <Icon name="info" size={13} color={stitchTokens.wine} />
-                <AppText kind="small" style={styles.infoText}>
-                  Giá mua ngay phải bằng giá khởi điểm cộng thêm ít nhất một bước giá.
+              <AppText kind="small" style={styles.helpText}>
+                Phạm vi hợp lệ: Từ {formatVnd(10000)} trở lên
+              </AppText>
+            )}
+          </View>
+
+          {/* 3. ADR 0076: auction format */}
+          <View style={styles.subCard}>
+            <View style={styles.subCardHeader}>
+              <View style={styles.subCardTitleGroup}>
+                <View style={styles.subCardIconBadge}>
+                  <Icon name="gavel" size={13} color={stitchTokens.wineDark} />
+                </View>
+                <AppText kind="bold" style={styles.fieldLabel}>
+                  Kiểu đấu giá
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.stepGrid} accessibilityRole="radiogroup">
+              {AUCTION_FORMATS.filter((m) => !m.retired || m.value === auctionType).map((m) => {
+                const isSelected = auctionType === m.value;
+                return (
+                  <Pressable
+                    key={m.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected, disabled }}
+                    accessibilityLabel={`${m.label}. ${m.hint}`}
+                    disabled={disabled}
+                    onPress={() => onChangeAuctionType(m.value)}
+                    style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
+                  >
+                    <Icon name={isSelected ? "check" : "radio_button_unchecked" as any} size={14} color={isSelected ? stitchTokens.gold : stitchTokens.subtleGray} />
+                    <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{m.label}</AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-start",
+                gap: 8,
+                backgroundColor: stitchTokens.whiteAlpha88,
+                borderRadius: 10,
+                padding: 10,
+                borderWidth: 1,
+                borderColor: stitchTokens.goldBorderAlpha35,
+              }}
+            >
+              <Icon
+                name={auctionType === "Dutch" ? "flame" : auctionType === "English" ? "gavel" : "lock"}
+                size={15}
+                color={stitchTokens.wineDark}
+              />
+              <AppText kind="small" style={[styles.infoText, { color: stitchTokens.deepCocoa }]}>
+                {AUCTION_FORMATS.find((m) => m.value === auctionType)!.hint}
+              </AppText>
+            </View>
+
+            {auctionType === "Dutch" && (
+              <View
+                style={{
+                  gap: 8,
+                  marginTop: 6,
+                  backgroundColor: stitchTokens.whiteAlpha70,
+                  padding: 12,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.goldBorder,
+                }}
+              >
+                <AppText kind="bold" style={styles.fieldLabel}>Giá mở đầu (cao nhất)</AppText>
+                <View style={[styles.inputWrapper, Boolean(dutchError) && styles.inputWrapperError]}>
+                  <TextInput value={dutchTopText} onChangeText={(t) => onChangeDutchTopText(t.replace(/\D/g, ""))} keyboardType="number-pad"
+                    editable={!disabled} placeholder="0" placeholderTextColor={stitchTokens.subtleGray} style={styles.textInput} accessibilityLabel="Giá mở đầu" />
+                  <AppText kind="bold" style={styles.currencySuffix}>VNĐ</AppText>
+                </View>
+                <AppText kind="bold" style={styles.fieldLabel}>Giảm một bước sau mỗi</AppText>
+                <View style={[styles.inputWrapper, Boolean(dutchError) && styles.inputWrapperError]}>
+                  <TextInput value={dutchEveryText} onChangeText={(t) => onChangeDutchEveryText(t.replace(/\D/g, "").slice(0, 4))} keyboardType="number-pad"
+                    editable={!disabled} placeholder="60" placeholderTextColor={stitchTokens.subtleGray} style={styles.textInput} accessibilityLabel="Số giây giữa hai lần giảm giá" />
+                  <AppText kind="bold" style={styles.currencySuffix}>giây</AppText>
+                </View>
+                <AppText kind="small" style={dutchError ? styles.errorText : styles.infoText}>
+                  {dutchError ?? "Giá khởi điểm phía trên là giá sàn. Mỗi lần giảm một bước giá, 10 giây đến 1 giờ."}
                 </AppText>
               </View>
             )}
           </View>
-        )}
-      </View>
-      )}
+
+          {/* 4. ADR 0077: minimum registered bidders */}
+          <View style={styles.subCard}>
+            <View style={styles.subCardHeader}>
+              <View style={styles.subCardTitleGroup}>
+                <View style={styles.subCardIconBadge}>
+                  <Icon name="person" size={13} color={stitchTokens.wineDark} />
+                </View>
+                <AppText kind="bold" style={styles.fieldLabel}>
+                  Số người đăng ký tối thiểu
+                </AppText>
+              </View>
+              <View style={styles.durationPill}>
+                <AppText kind="small" style={styles.durationPillText}>
+                  {`Cọc: ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)}`}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.stepGrid} accessibilityRole="radiogroup">
+              {MIN_BIDDER_OPTIONS.map((n) => {
+                const isSelected = minBidders === n;
+                return (
+                  <Pressable
+                    key={n}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected, disabled }}
+                    accessibilityLabel={`Tối thiểu ${n} người đăng ký`}
+                    disabled={disabled}
+                    onPress={() => onChangeMinBidders(n)}
+                    style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
+                  >
+                    <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{`${n} người`}</AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* ADR 0079: any number from 4 up beside the quick choices. */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 2 }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Giảm số người tối thiểu"
+                disabled={disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR}
+                onPress={() => onChangeMinBidders(Math.max(AUCTION_MIN_BIDDERS_FLOOR, minBidders - 1))}
+                style={[styles.stepButton, { minWidth: 48, flexGrow: 0, flexBasis: 48 }, (disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR) && { opacity: 0.5 }]}
+              >
+                <AppText kind="bold" style={styles.stepButtonText}>−</AppText>
+              </Pressable>
+              <View
+                style={{
+                  flex: 1,
+                  height: 42,
+                  borderRadius: 10,
+                  backgroundColor: stitchTokens.white,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.goldBorderAlpha35,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <AppText kind="bold" style={{ color: stitchTokens.wineDark }} accessibilityLiveRegion="polite">
+                  {`Mở khi đủ ${minBidders} người đăng ký`}
+                </AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tăng số người tối thiểu"
+                disabled={disabled || minBidders >= AUCTION_MIN_BIDDERS_CAP}
+                onPress={() => onChangeMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, minBidders + 1))}
+                style={[styles.stepButton, { minWidth: 48, flexGrow: 0, flexBasis: 48 }, disabled && { opacity: 0.5 }]}
+              >
+                <AppText kind="bold" style={styles.stepButtonText}>+</AppText>
+              </Pressable>
+            </View>
+
+            <AppText kind="small" style={styles.infoText}>
+              {`Người mua đặt cọc ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)} trước khi trả giá. Bạn hẹn giờ mở trong vòng 30 ngày; đến giờ mở nếu chưa đủ ${minBidders} người (ít nhất ${AUCTION_MIN_BIDDERS_FLOOR}), phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ, quá hạn thì phiên bị hủy và hoàn cọc. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
+            </AppText>
+
+            {/* ADR 0087: deposit selector */}
+            {parsedStart >= 10_000 && onChangeDeposit && (
+              <View style={{ gap: 8, marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: stitchTokens.goldBorderAlpha35 }}>
+                <AppText kind="bold" style={styles.fieldLabel}>Tùy chỉnh tiền cọc</AppText>
+                <View style={styles.stepGrid} accessibilityRole="radiogroup">
+                  {depositChoices(parsedStart).map((c) => {
+                    const current = deposit ?? auctionDepositFor(parsedStart);
+                    const isSelected = current === c.amount;
+                    return (
+                      <Pressable
+                        key={c.amount}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected, disabled }}
+                        accessibilityLabel={`Tiền cọc ${c.amount.toLocaleString("vi-VN")} đồng, ${c.label}`}
+                        disabled={disabled}
+                        onPress={() => onChangeDeposit(c.amount === auctionDepositFor(parsedStart) ? null : c.amount)}
+                        style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
+                      >
+                        <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{`${c.amount.toLocaleString("vi-VN")}đ`}</AppText>
+                        <AppText kind="small" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{c.label}</AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <AppText kind="small" style={depositError ? { color: stitchTokens.flashRed } : styles.infoText}>
+                  {depositError ??
+                    `Mặc định ${auctionDepositFor(parsedStart).toLocaleString("vi-VN")}đ (10% giá khởi điểm).`}
+                </AppText>
+              </View>
+            )}
+          </View>
+
+          {/* 5. Buy Now Option (Mua ngay) */}
+          {auctionType === "English" && (
+            <View style={styles.subCard}>
+              <View style={styles.buyNowToggleRow}>
+                <View style={{ flex: 1, marginRight: 10, gap: 2 }}>
+                  <View style={styles.subCardTitleGroup}>
+                    <View style={styles.subCardIconBadge}>
+                      <Icon name="bolt" size={13} color={stitchTokens.wineDark} />
+                    </View>
+                    <AppText kind="bold" style={styles.buyNowTitle}>
+                      Cho phép mua ngay
+                    </AppText>
+                  </View>
+                  <AppText kind="small" style={styles.buyNowSubtitle}>
+                    Chốt mua ngay khi thanh toán đủ giá niêm yết
+                  </AppText>
+                </View>
+                <Switch
+                  value={buyNowOn}
+                  onValueChange={onToggleBuyNow}
+                  disabled={disabled}
+                  trackColor={{ false: stitchTokens.switchTrackFalse, true: stitchTokens.wineDark }}
+                  thumbColor={buyNowOn ? stitchTokens.gold : stitchTokens.white}
+                />
+              </View>
+
+              {buyNowOn && (
+                <View style={[styles.fieldGroup, { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: stitchTokens.goldBorderAlpha35 }]}>
+                  <AppText kind="bold" style={styles.fieldLabel}>
+                    Khi có người mua ngay
+                  </AppText>
+                  <View style={styles.stepGrid} accessibilityRole="radiogroup">
+                    {BUY_NOW_MODES.map((m) => {
+                      const isSelected = buyNowMode === m.value;
+                      return (
+                        <Pressable
+                          key={m.value}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: isSelected, disabled }}
+                          accessibilityLabel={`${m.label}. ${m.hint}`}
+                          disabled={disabled}
+                          onPress={() => onChangeBuyNowMode(m.value)}
+                          style={[
+                            styles.stepButton,
+                            isSelected && styles.stepButtonActive,
+                            disabled && { opacity: 0.6 },
+                          ]}
+                        >
+                          <Icon
+                            name={isSelected ? "check" : "radio_button_unchecked" as any}
+                            size={14}
+                            color={isSelected ? stitchTokens.gold : stitchTokens.subtleGray}
+                          />
+                          <AppText
+                            kind="bold"
+                            style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}
+                          >
+                            {m.label}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <AppText kind="small" style={[styles.infoText, { marginBottom: 6 }]}>
+                    {BUY_NOW_MODES.find((m) => m.value === buyNowMode)!.hint}
+                  </AppText>
+                  <AppText kind="bold" style={styles.fieldLabel}>
+                    Giá mua ngay
+                  </AppText>
+
+                  <View
+                    style={[
+                      styles.inputWrapper,
+                      Boolean(buyNowPriceError) && styles.inputWrapperError,
+                    ]}
+                  >
+                    <TextInput
+                      value={buyNowPriceText}
+                      onChangeText={(text) => onChangeBuyNowPriceText(text.replace(/\D/g, ""))}
+                      keyboardType="number-pad"
+                      editable={!disabled}
+                      placeholder="0"
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      style={styles.textInput}
+                    />
+                    <AppText kind="bold" style={styles.currencySuffix}>
+                      VNĐ
+                    </AppText>
+                  </View>
+
+                  {Boolean(buyNowPriceError) ? (
+                    <AppText kind="small" style={styles.errorText}>
+                      {buyNowPriceError}
+                    </AppText>
+                  ) : (
+                    <View style={styles.infoRow}>
+                      <Icon name="info" size={13} color={stitchTokens.wine} />
+                      <AppText kind="small" style={styles.infoText}>
+                        Giá mua ngay phải bằng giá khởi điểm cộng thêm ít nhất một bước giá.
+                      </AppText>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
         </>
       )}
     </View>
@@ -613,6 +659,52 @@ const styles = StyleSheet.create({
   fieldGroup: {
     gap: 6,
   },
+  subCard: {
+    backgroundColor: stitchTokens.whiteAlpha90,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorderAlpha35,
+    padding: 12,
+    gap: 10,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  subCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  subCardTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  subCardIconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorderAlpha35,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hintPill: {
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorderAlpha35,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  hintPillText: {
+    fontSize: 10.5,
+    color: stitchTokens.wineDark,
+    fontWeight: "600",
+  },
   fieldLabel: {
     fontSize: 13,
     color: stitchTokens.wineDark,
@@ -642,9 +734,9 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 42,
     borderRadius: 10,
-    backgroundColor: stitchTokens.whiteAlpha90,
+    backgroundColor: stitchTokens.white,
     borderWidth: 1,
-    borderColor: stitchTokens.goldBorder,
+    borderColor: stitchTokens.goldBorderAlpha35,
   },
   stepButtonWide: {
     flexBasis: "100%",
@@ -663,7 +755,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: stitchTokens.whiteAlpha90,
+    backgroundColor: stitchTokens.white,
     borderWidth: 1,
     borderColor: stitchTokens.goldBorder,
     borderRadius: 10,

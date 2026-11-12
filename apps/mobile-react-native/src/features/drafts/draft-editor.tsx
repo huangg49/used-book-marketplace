@@ -1829,29 +1829,114 @@ export function DraftEditor({
             <View
               ref={anchor("ownershipDeclared")}
               style={{
-                backgroundColor: stitchTokens.warmIvory,
-                borderRadius: 14,
-                borderWidth: 1,
+                backgroundColor: declared
+                  ? colors.successSurface
+                  : stitchTokens.goldLight,
+                borderRadius: 16,
+                borderWidth: 1.5,
                 borderColor: errors.ownershipDeclared
                   ? colors.rustText
-                  : stitchTokens.peachBorder,
+                  : declared
+                    ? stitchTokens.greenBorderSoft
+                    : stitchTokens.goldAccent,
+                borderLeftWidth: 4,
+                borderLeftColor: errors.ownershipDeclared
+                  ? colors.rustText
+                  : declared
+                    ? stitchTokens.verifiedGreen
+                    : stitchTokens.goldMedal,
                 padding: space.md,
                 gap: space.xs,
+                shadowColor: declared ? stitchTokens.verifiedGreen : stitchTokens.goldDark,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: declared ? 0.12 : 0.08,
+                shadowRadius: 5,
+                elevation: 2,
               }}
             >
+              {/* Trust Badge Header */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 2,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      backgroundColor: declared ? stitchTokens.verifiedGreen : stitchTokens.wine,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Icon
+                      name={declared ? "check" : "shield"}
+                      size={12}
+                      color={stitchTokens.goldLight}
+                    />
+                  </View>
+                  <AppText
+                    kind="bold"
+                    color={declared ? stitchTokens.verifiedGreen : stitchTokens.wineDark}
+                    style={{ fontSize: 12, letterSpacing: 0.5 }}
+                  >
+                    {declared ? "ĐÃ XÁC NHẬN CAM KẾT" : "BẢO CHỨNG BỒI HOÀN LẬT LẠI"}
+                  </AppText>
+                </View>
+
+                <View
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: 10,
+                    backgroundColor: declared ? stitchTokens.whiteSurface : stitchTokens.goldVeryLight,
+                    borderWidth: 1,
+                    borderColor: declared ? stitchTokens.greenBorderSoft : stitchTokens.goldDark,
+                  }}
+                >
+                  <AppText
+                    kind="small"
+                    color={declared ? stitchTokens.verifiedGreen : stitchTokens.wineDark}
+                    style={{ fontSize: 10, fontWeight: "800" }}
+                  >
+                    {declared ? "CHÍNH THỨC" : "100% BẢO HỘ"}
+                  </AppText>
+                </View>
+              </View>
+
+              {/* Checkbox */}
               <Checkbox
-                title={form.bundle ? "Tôi sở hữu toàn bộ các cuốn đã liệt kê, không đăng chúng đồng thời ở tin khác và mô tả đúng tình trạng từng cuốn." : "Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại."}
+                title={
+                  form.bundle
+                    ? "Tôi sở hữu toàn bộ các cuốn đã liệt kê, không đăng chúng đồng thời ở tin khác và mô tả đúng tình trạng từng cuốn."
+                    : "Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại."
+                }
                 checked={declared}
                 disabled={locked}
                 onPress={() => setDeclared((v) => !v)}
               />
-              <AppText
-                kind="small"
-                color={stitchTokens.subtleGray}
-                style={{ marginLeft: 32, fontSize: 11 }}
-              >
-                Được bảo chứng bồi hoàn nếu sách không đúng mô tả.
-              </AppText>
+
+              {/* Trust Footer Note */}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 32, marginTop: 2 }}>
+                <Icon
+                  name="shield"
+                  size={11}
+                  color={declared ? stitchTokens.verifiedGreen : stitchTokens.goldDark}
+                />
+                <AppText
+                  kind="small"
+                  color={declared ? stitchTokens.forestDeep : stitchTokens.slateWarm}
+                  style={{ fontSize: 11, fontWeight: "500", flex: 1 }}
+                >
+                  Được bảo chứng bồi hoàn nếu sách không đúng mô tả. Người mua an tâm chốt đơn.
+                </AppText>
+              </View>
+
               {errors.ownershipDeclared ? (
                 <Notice tone="error">{errors.ownershipDeclared}</Notice>
               ) : null}
