@@ -31,6 +31,7 @@ import { executeLifecycle, lifecycleIntent } from "./lifecycle-command";
 import { MemberNavigation } from "../navigation/member-navigation";
 import { useLocalSearchParams, router } from "expo-router";
 import { ApiError } from "@used-books/session-client";
+import { AutumnThemeBackground } from "./autumn-theme-background";
 
 export function DraftsScreen() {
   const { client, state } = useSession(),
@@ -159,6 +160,8 @@ export function DraftsScreen() {
     <Screen
       footer={<MemberNavigation current="/drafts" />}
       footerAppearance="navigation"
+      background={<AutumnThemeBackground />}
+      canvasColor="transparent"
     >
       {/* DangSachHome Header */}
       <View
