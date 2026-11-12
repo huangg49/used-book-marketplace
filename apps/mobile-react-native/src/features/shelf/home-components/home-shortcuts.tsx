@@ -133,9 +133,9 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: stitchTokens.white,
     marginHorizontal: 12,
-    marginTop: 8,
+    marginTop: 0,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: stitchTokens.canvasWhite,
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
-    rowGap: 14,
+    rowGap: 10,
   },
   itemCell: {
     width: "25%",
@@ -160,9 +160,9 @@ const styles = StyleSheet.create({
   },
   iconBox: {
     position: "relative",
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: stitchTokens.inkBrown,
-    marginTop: 6,
+    marginTop: 4,
     textAlign: "center",
   },
 });
