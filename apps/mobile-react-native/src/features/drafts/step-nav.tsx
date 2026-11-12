@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   nodeWrapper: {
     width: "100%",
-    height: 30,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -272,18 +272,20 @@ const styles = StyleSheet.create({
   },
   connectingLine: {
     position: "absolute",
-    top: 13,
-    height: 3,
+    top: 15,
+    height: 2.5,
     backgroundColor: stitchTokens.whiteAlpha25,
     zIndex: 1,
   },
   connectingLineLeft: {
     left: 0,
     right: "50%",
+    marginRight: 16,
   },
   connectingLineRight: {
     left: "50%",
     right: 0,
+    marginLeft: 16,
   },
   connectingLineDone: {
     backgroundColor: stitchTokens.verifiedGreen,
@@ -305,13 +307,13 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.verifiedGreen,
   },
   circleMissing: {
-    backgroundColor: stitchTokens.whiteAlpha15,
-    borderColor: stitchTokens.whiteAlpha40,
+    backgroundColor: stitchTokens.wineDark,
+    borderColor: stitchTokens.peachBorderAlpha40,
   },
   circleSelected: {
     borderWidth: 2.5,
     borderColor: stitchTokens.goldAccent,
-    backgroundColor: stitchTokens.whiteAlpha25,
+    backgroundColor: stitchTokens.wineDeep,
     shadowColor: stitchTokens.goldAccent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
