@@ -73,6 +73,7 @@ import {
 import { PriceSuggestionPanel } from "./price-suggestion-panel";
 import { BundleEditor } from "../bundles/bundle-editor";
 import { BundleManifest } from "../bundles/bundle-manifest";
+import { AutumnDraftBackground } from "./autumn-draft-background";
 import { blankBundle, bundleCondition, type BookBundle } from "../bundles/book-bundle";
 
 const stepLabels = [
@@ -682,7 +683,12 @@ export function DraftEditor({
     ) : undefined;
 
   return (
-    <Screen scrollRef={scroll} footer={footer}>
+    <Screen
+      scrollRef={scroll}
+      footer={footer}
+      background={<AutumnDraftBackground />}
+      canvasColor="transparent"
+    >
       {/* Top Header & Dismiss Bar */}
       <View style={{ gap: space.sm }}>
         <BackAction
@@ -781,9 +787,6 @@ export function DraftEditor({
 
         {/* Step Indicator & Headings */}
         <View style={{ gap: 2, marginTop: space.xs }}>
-          <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontWeight: "600" }}>
-            {`Bước ${step + 1}/5`}
-          </AppText>
           <View
             style={{
               flexDirection: "row",
