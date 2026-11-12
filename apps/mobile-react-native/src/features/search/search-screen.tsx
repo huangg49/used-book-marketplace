@@ -567,16 +567,8 @@ export function SearchScreen() {
           </ScrollView>
         </View>
 
-        {/* 2. Search Summary & Advanced Filter Toggle */}
-        <View style={styles.summaryBar}>
-          <View style={styles.summaryLeft}>
-            <Icon name="explore" size={16} color={stitchTokens.wine} />
-            <AppText kind="small" style={styles.summaryText} accessibilityLiveRegion="polite">
-              {result.isPending ? "Đang tìm sách…" : result.isError
-                ? "Chưa cập nhật được kết quả"
-                : `Đã tải ${displayItems.length} cuốn${result.hasNextPage ? " · Còn kết quả" : ""}`}
-            </AppText>
-          </View>
+        {/* 2. Filter Button (Left) & Sort Dropdown (Right) in One Row */}
+        <View style={styles.filterSortRow}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${filterPanelOpen ? "Đóng" : "Mở"} bộ lọc (${filterCount})`}
@@ -611,32 +603,44 @@ export function SearchScreen() {
               <View style={styles.filterDot} />
             ) : null}
           </Pressable>
+
+          {/* Sort Dropdown on the Right */}
+          <View style={styles.sortGroup}>
+            <AppText kind="small" style={styles.sortBarLabel}>
+              Sắp xếp
+            </AppText>
+            <View ref={sortTriggerRef} collapsable={false}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Sắp xếp: ${currentSort.title}`}
+                onPress={handleOpenSortDropdown}
+                style={[
+                  styles.sortDropdownTrigger,
+                  sortDropdownOpen && styles.sortDropdownTriggerActive,
+                ]}
+              >
+                <AppText kind="bold" style={styles.sortDropdownTriggerText}>
+                  {currentSort.title}
+                </AppText>
+                <Icon
+                  name="chevronDown"
+                  size={14}
+                  color={stitchTokens.wine}
+                />
+              </Pressable>
+            </View>
+          </View>
         </View>
 
-        {/* Dedicated Sort Bar (Khung dropdown đẹp theo thiết kế) */}
-        <View style={styles.sortBar}>
-          <AppText kind="small" style={styles.sortBarLabel}>
-            Sắp xếp
-          </AppText>
-          <View ref={sortTriggerRef} collapsable={false}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Sắp xếp: ${currentSort.title}`}
-              onPress={handleOpenSortDropdown}
-              style={[
-                styles.sortDropdownTrigger,
-                sortDropdownOpen && styles.sortDropdownTriggerActive,
-              ]}
-            >
-              <AppText kind="bold" style={styles.sortDropdownTriggerText}>
-                {currentSort.title}
-              </AppText>
-              <Icon
-                name="chevronDown"
-                size={14}
-                color={stitchTokens.wine}
-              />
-            </Pressable>
+        {/* Search Summary Status ("Đã tải X cuốn") below both buttons */}
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryLeft}>
+            <Icon name="explore" size={15} color={stitchTokens.wine} />
+            <AppText kind="small" style={styles.summaryText} accessibilityLiveRegion="polite">
+              {result.isPending ? "Đang tìm sách…" : result.isError
+                ? "Chưa cập nhật được kết quả"
+                : `Đã tải ${displayItems.length} cuốn${result.hasNextPage ? " · Còn kết quả" : ""}`}
+            </AppText>
           </View>
         </View>
 
@@ -1828,14 +1832,26 @@ const styles = StyleSheet.create({
   modeTabTextUnselected: {
     color: stitchTokens.darkTaupe,
   },
-  summaryBar: {
+  filterSortRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  sortGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingTop: 2,
+    paddingBottom: 6,
   },
   summaryLeft: {
     flexDirection: "row",
@@ -1877,15 +1893,6 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: stitchTokens.flashRed,
-  },
-  sortBar: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    gap: 10,
   },
   sortBarLabel: {
     fontSize: 13,
