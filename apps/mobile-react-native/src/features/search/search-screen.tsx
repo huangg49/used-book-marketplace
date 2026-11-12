@@ -567,6 +567,9 @@ export function SearchScreen() {
           </ScrollView>
         </View>
 
+        {/* Red Divider Line between Mode Tabs and Filter/Sort Bar */}
+        <View style={styles.redDividerLine} />
+
         {/* 2. Filter Button (Left) & Sort Dropdown (Right) in One Row */}
         <View style={styles.filterSortRow}>
           <Pressable
@@ -1819,6 +1822,14 @@ const styles = StyleSheet.create({
   },
   modeTabTextUnselected: {
     color: stitchTokens.darkTaupe,
+  },
+  redDividerLine: {
+    height: 1.5,
+    backgroundColor: stitchTokens.wine,
+    marginHorizontal: 14,
+    marginVertical: 4,
+    borderRadius: 1,
+    opacity: 0.85,
   },
   filterSortRow: {
     flexDirection: "row",
