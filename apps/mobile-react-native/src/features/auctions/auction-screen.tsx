@@ -85,6 +85,11 @@ const STATE_LABEL: Record<AuctionState, string> = {
   PaymentExpired: "Người thắng không thanh toán đúng hạn",
   SecondChanceOffered: "Người thắng không thanh toán; đang mời người trả giá cao thứ hai",
 };
+
+const STATE_BADGE_LABEL: Partial<Record<AuctionState, string>> = {
+  SecondChanceOffered: "Cơ hội thứ hai",
+  PaymentExpired: "Quá hạn thanh toán",
+};
 // Same wording as user-web: only a won or bought auction has a final price.
 const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
   BuyNowPending: "Giá mua ngay",
@@ -480,7 +485,11 @@ function AuctionBody({
                 ? stitchTokens.wineDark
                 : scheduled
                   ? stitchTokens.wineAlpha85
-                  : stitchTokens.subtleGray,
+                  : auction.state === "SecondChanceOffered"
+                    ? stitchTokens.orangeBurned
+                    : auction.state === "PaymentExpired"
+                      ? stitchTokens.darkRed
+                      : stitchTokens.subtleGray,
               paddingHorizontal: 10,
               paddingVertical: 5,
               borderRadius: 6,
@@ -508,7 +517,7 @@ function AuctionBody({
               }}
               numberOfLines={1}
             >
-              {STATE_LABEL[auction.state].toUpperCase()}
+              {(STATE_BADGE_LABEL[auction.state] ?? STATE_LABEL[auction.state]).toUpperCase()}
             </AppText>
           </View>
 
@@ -707,6 +716,18 @@ function AuctionBody({
         open={open}
         now={now}
       />
+
+      {/* Warning Notice for Special Auction States */}
+      {auction.state === "SecondChanceOffered" && (
+        <Notice tone="warning">
+          Người thắng không thanh toán; đang mời người trả giá cao thứ hai.
+        </Notice>
+      )}
+      {auction.state === "PaymentExpired" && (
+        <Notice tone="warning">
+          Người thắng không thanh toán đúng hạn.
+        </Notice>
+      )}
 
       {/* 3. Title & Author & Condition & Format Pills */}
       <View style={{ gap: space.xs }}>
@@ -1152,7 +1173,9 @@ function AuctionBody({
         <Notice>
           {auction.state === "OnHold"
             ? `Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.${auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${time(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ""}`
-            : closeReasonText(auction) ?? "Phiên không còn nhận trả giá."}
+            : auction.state === "SecondChanceOffered"
+              ? "Người thắng không thanh toán; đang mời người trả giá cao thứ hai."
+              : closeReasonText(auction) ?? "Phiên không còn nhận trả giá."}
         </Notice>
       )}
       </View>

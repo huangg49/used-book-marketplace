@@ -28,6 +28,7 @@ import {
 import { mediaPage, privateDraft, type Draft, type Media } from "./contracts";
 import { photoError, useForeground } from "./draft-media";
 import { DraftCoverPhoto } from "./draft-cover-photo";
+import { DraftCoverCrop } from "./draft-cover-crop";
 import {
   fromContent,
   toContent,
@@ -1109,152 +1110,22 @@ export function DraftEditor({
               </View>
 
               {ids.length > 0 ? (
-                <View
-                  style={{
-                    backgroundColor: stitchTokens.warmIvory,
-                    borderRadius: 14,
-                    borderWidth: 1.5,
-                    borderColor: stitchTokens.wine,
-                    padding: space.sm,
-                    gap: space.sm,
-                  }}
-                >
-                  <Pressable
-                    onPress={() => setViewerIndex(0)}
-                    accessibilityLabel="Xem ảnh bìa lớn"
-                    style={{
-                      width: "100%",
-                      height: 220,
-                      borderRadius: 10,
-                      overflow: "hidden",
-                      backgroundColor: stitchTokens.parchment,
-                    }}
-                  >
-                    <DraftCoverPhoto
-                      listingId={base.id}
-                      mediaId={ids[0]}
-                      label="Ảnh bìa bản sách"
-                      mediaStatus={photoList.find((photo) => photo.id === ids[0])?.status}
-                    />
-                  </Pressable>
-
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      gap: space.xs,
-                      marginTop: space.xs,
-                    }}
-                  >
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Xem ảnh bìa lớn"
-                      onPress={() => setViewerIndex(0)}
-                      style={({ pressed }) => [
-                        {
-                          flex: 1,
-                          minHeight: 38,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6,
-                          paddingHorizontal: space.xs,
-                          paddingVertical: 8,
-                          borderRadius: 8,
-                          borderWidth: 1,
-                          borderColor: stitchTokens.borderWarm,
-                          backgroundColor: stitchTokens.whiteSurface,
-                        },
-                        pressed && { opacity: 0.7 },
-                      ]}
-                    >
-                      <Icon name="eye" size={16} color={stitchTokens.wineDark} />
-                      <AppText
-                        kind="bold"
-                        color={stitchTokens.wineDark}
-                        style={{ fontSize: 12 }}
-                      >
-                        Xem lớn
-                      </AppText>
-                    </Pressable>
-
-                    {editable ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Thay ảnh bìa"
-                        disabled={locked || retryAvailable}
-                        onPress={() => void send(false, undefined, true)}
-                        style={({ pressed }) => [
-                          {
-                            flex: 1,
-                            minHeight: 38,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 6,
-                            paddingHorizontal: space.xs,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                            borderWidth: 1,
-                            borderColor: stitchTokens.peachBorder,
-                            backgroundColor: stitchTokens.roseWarmSurface,
-                            opacity: locked || retryAvailable ? 0.5 : 1,
-                          },
-                          pressed && { opacity: 0.7 },
-                        ]}
-                      >
-                        <Icon name="camera" size={16} color={stitchTokens.wine} />
-                        <AppText
-                          kind="bold"
-                          color={stitchTokens.wine}
-                          style={{ fontSize: 12 }}
-                        >
-                          Thay ảnh
-                        </AppText>
-                      </Pressable>
-                    ) : null}
-
-                    {editable ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Xóa ảnh bìa"
-                        disabled={locked}
-                        onPress={() =>
-                          setForm((f) => ({
-                            ...f,
-                            mediaIds: f.mediaIds.slice(1),
-                          }))
-                        }
-                        style={({ pressed }) => [
-                          {
-                            flex: 1,
-                            minHeight: 38,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 6,
-                            paddingHorizontal: space.xs,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                            borderWidth: 1,
-                            borderColor: stitchTokens.flashRedBg,
-                            backgroundColor: stitchTokens.flashRedBg,
-                            opacity: locked ? 0.5 : 1,
-                          },
-                          pressed && { opacity: 0.7 },
-                        ]}
-                      >
-                        <Icon name="trash" size={16} color={stitchTokens.darkRed} />
-                        <AppText
-                          kind="bold"
-                          color={stitchTokens.darkRed}
-                          style={{ fontSize: 12 }}
-                        >
-                          Xóa bìa
-                        </AppText>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                </View>
+                <DraftCoverCrop
+                  listingId={base.id}
+                  mediaId={ids[0]}
+                  mediaStatus={photoList.find((photo) => photo.id === ids[0])?.status}
+                  editable={editable}
+                  locked={locked}
+                  retryAvailable={retryAvailable}
+                  onOpenViewer={() => setViewerIndex(0)}
+                  onChangeCover={() => void send(false, undefined, true)}
+                  onRemoveCover={() =>
+                    setForm((f) => ({
+                      ...f,
+                      mediaIds: f.mediaIds.slice(1),
+                    }))
+                  }
+                />
               ) : (
                 <Pressable
                   disabled={locked || retryAvailable || !editable}
