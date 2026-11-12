@@ -27,65 +27,58 @@ export function AuctionSearchBar({
 }: AuctionSearchBarProps) {
   return (
     <View style={styles.container}>
-      {/* 1. Khung đăng sách rút gọn & tích hợp nút (?) hướng dẫn */}
+      {/* 1. Khung đăng sách & Quản lý phiên đấu giá */}
       {onSendToAuctionPress && (
         <View style={styles.sellerBanner}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đấu giá sách của bạn"
-            onPress={onSendToAuctionPress}
-            style={styles.sellerBannerLeft}
-          >
-            <View style={styles.sellerBannerIconCircle}>
-              <Icon name="gavel" size={15} color={stitchTokens.whiteSurface} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                <AppText kind="bold" style={styles.sellerBannerTitle}>
-                  Đấu giá sách của bạn
-                </AppText>
-                <View style={styles.badgeHcm}>
-                  <AppText kind="small" style={styles.badgeHcmText}>
-                    TP.HCM
-                  </AppText>
-                </View>
-                {onGuidePress && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Hướng dẫn tham gia đấu giá"
-                    hitSlop={8}
-                    onPress={onGuidePress}
-                    style={styles.guideHelpBtn}
-                  >
-                    <AppText kind="bold" style={styles.guideHelpText}>
-                      ?
-                    </AppText>
-                  </Pressable>
-                )}
+          {/* Header Row: Tiêu đề & Thông tin trạm */}
+          <View style={styles.sellerBannerTopRow}>
+            <View style={styles.sellerBannerTitleGroup}>
+              <View style={styles.sellerBannerIconCircle}>
+                <Icon name="gavel" size={14} color={stitchTokens.whiteSurface} />
               </View>
-              <AppText kind="small" numberOfLines={1} style={styles.sellerBannerSubtitle}>
-                Gửi sách tại điểm TP.HCM • Nhân viên kiểm định • Mở sàn
+              <AppText kind="bold" style={styles.sellerBannerTitle}>
+                Đấu giá sách của bạn
               </AppText>
+              <View style={styles.badgeHcm}>
+                <AppText kind="small" style={styles.badgeHcmText}>
+                  TP.HCM
+                </AppText>
+              </View>
             </View>
-          </Pressable>
 
-          <View style={styles.sellerBannerActions}>
+            {onGuidePress && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Hướng dẫn tham gia đấu giá"
+                hitSlop={8}
+                onPress={onGuidePress}
+                style={styles.guideHelpBtn}
+              >
+                <AppText kind="bold" style={styles.guideHelpText}>
+                  ?
+                </AppText>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Action Buttons Row: 2 nút chia đều, rõ ràng, không bao giờ bị đè */}
+          <View style={styles.sellerBannerActionsRow}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Xem phiên của bạn"
               onPress={onHistoryPress}
               style={({ pressed }) => [
-                styles.sellerBannerHistoryBtn,
+                styles.bannerBtnHistory,
                 pressed && { opacity: 0.85 },
               ]}
             >
               <Icon name="gavel" size={13} color={stitchTokens.gold} />
-              <AppText kind="bold" style={styles.sellerBannerHistoryText}>
+              <AppText kind="bold" style={styles.bannerBtnHistoryText}>
                 Phiên của bạn
               </AppText>
               {historyCount > 0 && (
-                <View style={styles.sellerBannerHistoryBadge}>
-                  <AppText kind="small" style={styles.sellerBannerHistoryBadgeText}>
+                <View style={styles.bannerBadgeCount}>
+                  <AppText kind="small" style={styles.bannerBadgeCountText}>
                     {historyCount}
                   </AppText>
                 </View>
@@ -94,15 +87,16 @@ export function AuctionSearchBar({
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Đăng sách ngay"
+              accessibilityLabel="Đăng sách đấu giá ngay"
               onPress={onSendToAuctionPress}
               style={({ pressed }) => [
-                styles.sellerBannerCta,
+                styles.bannerBtnCreate,
                 pressed && { opacity: 0.85 },
               ]}
             >
-              <AppText kind="bold" style={styles.sellerBannerCtaText}>
-                Đăng sách
+              <Icon name="plus" size={13} color={stitchTokens.wineDark} />
+              <AppText kind="bold" style={styles.bannerBtnCreateText}>
+                Đăng sách mới
               </AppText>
               <Icon name="chevronRight" size={12} color={stitchTokens.wineDark} />
             </Pressable>
@@ -173,15 +167,12 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   sellerBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: stitchTokens.wineDark,
     borderWidth: 1.5,
     borderColor: stitchTokens.wineLight,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingVertical: 10,
     gap: 8,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
@@ -189,16 +180,21 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  sellerBannerLeft: {
-    flex: 1,
+  sellerBannerTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
+  },
+  sellerBannerTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
   },
   sellerBannerIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: stitchTokens.whiteAlpha25,
     borderWidth: 1,
     borderColor: stitchTokens.whiteAlpha40,
@@ -206,7 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sellerBannerTitle: {
-    fontSize: 12.5,
+    fontSize: 13,
     color: stitchTokens.whiteSurface,
   },
   badgeHcm: {
@@ -222,8 +218,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   guideHelpBtn: {
-    width: 17,
-    height: 17,
+    width: 18,
+    height: 18,
     borderRadius: 9,
     backgroundColor: stitchTokens.whiteAlpha25,
     borderWidth: 1,
@@ -237,63 +233,67 @@ const styles = StyleSheet.create({
     color: stitchTokens.whiteSurface,
     lineHeight: 13,
   },
-  sellerBannerSubtitle: {
-    fontSize: 10.5,
-    color: stitchTokens.whiteAlpha85,
-    marginTop: 1,
-  },
-  sellerBannerCta: {
+
+  // Actions Row (2 buttons)
+  sellerBannerActionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    backgroundColor: stitchTokens.whiteSurface,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: stitchTokens.goldLight,
+    gap: 8,
   },
-  sellerBannerCtaText: {
-    fontSize: 10.5,
-    color: stitchTokens.wineDark,
-  },
-  sellerBannerActions: {
+  bannerBtnHistory: {
+    flex: 1,
+    height: 32,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  sellerBannerHistoryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    gap: 5,
     backgroundColor: stitchTokens.whiteAlpha25,
     borderWidth: 1,
     borderColor: stitchTokens.whiteAlpha40,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 8,
     position: "relative",
+    paddingHorizontal: 6,
   },
-  sellerBannerHistoryText: {
-    fontSize: 10.5,
+  bannerBtnHistoryText: {
+    fontSize: 11.5,
     fontWeight: "700",
     color: stitchTokens.whiteSurface,
   },
-  sellerBannerHistoryBadge: {
+  bannerBadgeCount: {
     position: "absolute",
     top: -5,
-    right: -5,
-    minWidth: 15,
-    height: 15,
+    right: -4,
+    minWidth: 16,
+    height: 16,
     borderRadius: 8,
     backgroundColor: stitchTokens.flashRed,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: stitchTokens.wineDark,
   },
-  sellerBannerHistoryBadgeText: {
-    fontSize: 8.5,
+  bannerBadgeCountText: {
+    fontSize: 9,
     fontWeight: "800",
     color: stitchTokens.white,
+  },
+  bannerBtnCreate: {
+    flex: 1,
+    height: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldLight,
+    paddingHorizontal: 6,
+  },
+  bannerBtnCreateText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
   },
 });

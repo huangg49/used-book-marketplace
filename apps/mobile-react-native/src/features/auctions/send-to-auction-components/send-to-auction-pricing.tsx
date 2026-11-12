@@ -77,6 +77,40 @@ export function SendToAuctionPricing({
   defaultExpanded = true,
 }: SendToAuctionPricingProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [prevMinBidders, setPrevMinBidders] = useState(minBidders);
+  const [biddersInput, setBiddersInput] = useState(String(minBidders));
+
+  if (prevMinBidders !== minBidders) {
+    setPrevMinBidders(minBidders);
+    setBiddersInput(String(minBidders));
+  }
+
+  const isInvalidBidders = Boolean(
+    biddersInput &&
+      (Number(biddersInput) < AUCTION_MIN_BIDDERS_FLOOR ||
+        Number(biddersInput) > AUCTION_MIN_BIDDERS_CAP)
+  );
+
+  const handleBiddersTextChange = (text: string) => {
+    const digits = text.replace(/\D/g, "");
+    setBiddersInput(digits);
+    if (!digits) return;
+    const n = Number(digits);
+    if (n >= AUCTION_MIN_BIDDERS_FLOOR && n <= AUCTION_MIN_BIDDERS_CAP) {
+      onChangeMinBidders(n);
+    }
+  };
+
+  const handleBiddersBlur = () => {
+    const n = Number(biddersInput);
+    if (!biddersInput || isNaN(n) || n < AUCTION_MIN_BIDDERS_FLOOR) {
+      setBiddersInput(String(AUCTION_MIN_BIDDERS_FLOOR));
+      onChangeMinBidders(AUCTION_MIN_BIDDERS_FLOOR);
+    } else if (n > AUCTION_MIN_BIDDERS_CAP) {
+      setBiddersInput(String(AUCTION_MIN_BIDDERS_CAP));
+      onChangeMinBidders(AUCTION_MIN_BIDDERS_CAP);
+    }
+  };
 
   const handleToggle = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -369,7 +403,7 @@ export function SendToAuctionPricing({
                   <Icon name="person" size={13} color={stitchTokens.wineDark} />
                 </View>
                 <AppText kind="bold" style={styles.fieldLabel}>
-                  Số người đăng ký tối thiểu
+                  Số người đăng ký
                 </AppText>
               </View>
               <View style={styles.durationPill}>
@@ -389,7 +423,10 @@ export function SendToAuctionPricing({
                     accessibilityState={{ checked: isSelected, disabled }}
                     accessibilityLabel={`Tối thiểu ${n} người đăng ký`}
                     disabled={disabled}
-                    onPress={() => onChangeMinBidders(n)}
+                    onPress={() => {
+                      onChangeMinBidders(n);
+                      setBiddersInput(String(n));
+                    }}
                     style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
                   >
                     <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{`${n} người`}</AppText>
@@ -398,42 +435,71 @@ export function SendToAuctionPricing({
               })}
             </View>
 
-            {/* ADR 0079: any number from 4 up beside the quick choices. */}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 2 }}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Giảm số người tối thiểu"
-                disabled={disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR}
-                onPress={() => onChangeMinBidders(Math.max(AUCTION_MIN_BIDDERS_FLOOR, minBidders - 1))}
-                style={[styles.stepButton, { minWidth: 48, flexGrow: 0, flexBasis: 48 }, (disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR) && { opacity: 0.5 }]}
-              >
-                <AppText kind="bold" style={styles.stepButtonText}>−</AppText>
-              </Pressable>
-              <View
-                style={{
-                  flex: 1,
-                  height: 42,
-                  borderRadius: 10,
-                  backgroundColor: stitchTokens.white,
-                  borderWidth: 1,
-                  borderColor: stitchTokens.goldBorderAlpha35,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <AppText kind="bold" style={{ color: stitchTokens.wineDark }} accessibilityLiveRegion="polite">
-                  {`Mở khi đủ ${minBidders} người đăng ký`}
-                </AppText>
+            {/* Direct input with stepper buttons */}
+            <View style={{ gap: 6, marginTop: 2 }}>
+              <View style={styles.biddersInputRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Giảm số người tối thiểu"
+                  disabled={disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR}
+                  onPress={() => {
+                    const next = Math.max(AUCTION_MIN_BIDDERS_FLOOR, minBidders - 1);
+                    onChangeMinBidders(next);
+                    setBiddersInput(String(next));
+                  }}
+                  style={[
+                    styles.stepperBtn,
+                    (disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR) && { opacity: 0.4 },
+                  ]}
+                >
+                  <AppText kind="bold" style={styles.stepperBtnText}>−</AppText>
+                </Pressable>
+
+                <View style={[styles.biddersInputContainer, isInvalidBidders && styles.inputWrapperError]}>
+                  <TextInput
+                    value={biddersInput}
+                    onChangeText={handleBiddersTextChange}
+                    onBlur={handleBiddersBlur}
+                    keyboardType="number-pad"
+                    editable={!disabled}
+                    placeholder="4"
+                    placeholderTextColor={stitchTokens.subtleGray}
+                    accessibilityLabel="Số người đăng ký tối thiểu"
+                    style={styles.biddersTextInput}
+                    maxLength={4}
+                  />
+                  <AppText kind="bold" style={styles.biddersSuffix}>
+                    người đăng ký
+                  </AppText>
+                </View>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Tăng số người tối thiểu"
+                  disabled={disabled || minBidders >= AUCTION_MIN_BIDDERS_CAP}
+                  onPress={() => {
+                    const next = Math.min(AUCTION_MIN_BIDDERS_CAP, minBidders + 1);
+                    onChangeMinBidders(next);
+                    setBiddersInput(String(next));
+                  }}
+                  style={[
+                    styles.stepperBtn,
+                    (disabled || minBidders >= AUCTION_MIN_BIDDERS_CAP) && { opacity: 0.4 },
+                  ]}
+                >
+                  <AppText kind="bold" style={styles.stepperBtnText}>+</AppText>
+                </Pressable>
               </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Tăng số người tối thiểu"
-                disabled={disabled || minBidders >= AUCTION_MIN_BIDDERS_CAP}
-                onPress={() => onChangeMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, minBidders + 1))}
-                style={[styles.stepButton, { minWidth: 48, flexGrow: 0, flexBasis: 48 }, disabled && { opacity: 0.5 }]}
-              >
-                <AppText kind="bold" style={styles.stepButtonText}>+</AppText>
-              </Pressable>
+
+              {isInvalidBidders ? (
+                <AppText kind="small" style={styles.errorText}>
+                  Số người đăng ký phải từ {AUCTION_MIN_BIDDERS_FLOOR} người trở lên (tối đa {AUCTION_MIN_BIDDERS_CAP}).
+                </AppText>
+              ) : (
+                <AppText kind="small" style={styles.helpText}>
+                  Ràng buộc: Tối thiểu từ {AUCTION_MIN_BIDDERS_FLOOR} người trở lên để mở phiên đấu giá.
+                </AppText>
+              )}
             </View>
 
             <AppText kind="small" style={styles.infoText}>
@@ -676,11 +742,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
+    flexWrap: "wrap",
   },
   subCardTitleGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    flexShrink: 1,
   },
   subCardIconBadge: {
     width: 24,
@@ -704,6 +773,50 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: stitchTokens.wineDark,
     fontWeight: "600",
+  },
+  biddersInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  stepperBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.white,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorderAlpha35,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperBtnText: {
+    fontSize: 18,
+    color: stitchTokens.wineDark,
+    lineHeight: 22,
+  },
+  biddersInputContainer: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.white,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorderAlpha35,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+  },
+  biddersTextInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    paddingVertical: 0,
+    textAlign: "center",
+  },
+  biddersSuffix: {
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    opacity: 0.8,
   },
   fieldLabel: {
     fontSize: 13,
@@ -824,5 +937,5 @@ const styles = StyleSheet.create({
 // ADR 0077: the deposit the server will ask for (10% of the start price, ≥ 10.000đ).
 function startPriceDeposit(text: string) {
   const n = Number(text.replace(/\D/g, ""));
-  return n > 0 ? `${auctionDepositFor(n).toLocaleString("vi-VN")}đ` : "10% giá khởi điểm";
+  return n > 0 ? `${auctionDepositFor(n).toLocaleString("vi-VN")}đ` : "10% khởi điểm";
 }
