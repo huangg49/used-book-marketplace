@@ -38,6 +38,23 @@
     line-height: 1.5;
 }
 .card[data-handover] .deadlineRow time { font-variant-numeric: tabular-nums; }
+.demoAdvance {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px dashed var(--shop-control);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--shop-wine);
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+.demoAdvance:hover:not(:disabled) { background: var(--shop-shelf); }
+.demoAdvance:disabled { opacity: .6; cursor: wait; }
 .card[data-handover] .btnGrid {
     display: flex;
     flex-wrap: wrap;

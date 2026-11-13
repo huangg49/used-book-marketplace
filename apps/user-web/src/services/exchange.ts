@@ -33,6 +33,7 @@ const date = z.string().nullable().optional();
 export const exchangeSchema = z.object({
   returnResolution: exchangeReturnResolutionSchema.optional(),
   canStartReturnResolution: z.boolean().optional(),
+  demoShippingAdvanceAvailable: z.boolean().optional(),
   outboundDeliveryVerification: z.object({
     verifiedAt: z.iso.datetime({ offset: true }),
     note: z.string(),
@@ -458,7 +459,7 @@ export function exchangeCommand(path: string, body: object) {
       exchangeSchema,
     );
   const match =
-    /^\/exchanges\/([^/]+)\/(accept|reject|counter|funding|cancel|ship|receive|complete|dispute|return-resolution)$/.exec(
+    /^\/exchanges\/([^/]+)\/(accept|reject|counter|funding|cancel|ship|receive|complete|dispute|return-resolution|demo-advance-shipping)$/.exec(
       path,
     );
   if (!match) throw new Error("Thao tác trao đổi không hợp lệ.");

@@ -206,6 +206,16 @@ export class ExchangesController {
     ), res);
   }
 
+  @Post(':id/demo-advance-shipping')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  advanceDemoExchangeShipping(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(this.exchanges.advanceDemoShipping(
+      commandContext(this.input, req, res), this.input.uuid(id),
+      this.input.body('VersionCommand', body),
+    ), res);
+  }
+
   @Post(':id/dispute')
   @ExistingObligation()
   @Roles('MEMBER')

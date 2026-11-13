@@ -2215,6 +2215,54 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
   describe('one-sided Exchange return', () => {
     const hour = 3_600_000;
 
+    it('advances only the configured demo deadline, once, without changing delivery evidence or funds', async () => {
+      const ex = await preparedExchange(100000, 300000);
+      const path = '/exchanges/' + ex.id;
+      const endpoint = path + '/demo-advance-shipping';
+      const config = app.get(ConfigService);
+      const keys = ['DEMO_EXCHANGE_SHIPPING_ENABLED', 'DEMO_EXCHANGE_SHIPPING_IDS'] as const;
+      const previous = keys.map(key => config.get<string>(key));
+      const key = randomUUID();
+      const before = await reconcile();
+      try {
+        config.set(keys[0], 'false');
+        await post(endpoint, { expectedVersion: ex.revision }, user1).expect(404);
+        config.set(keys[0], 'true');
+        config.set(keys[1], ex.id);
+        const sent = (await post(path + '/ship', {
+          expectedVersion: ex.revision, method: 'direct', meetupLocation: 'Điểm hẹn QA',
+        }, user1).expect(200)).body;
+        const body = { expectedVersion: sent.revision };
+        const outsider = await reader();
+        expect((await get(path, user1).expect(200)).body.demoShippingAdvanceAvailable).toBe(true);
+        expect((await get(path, user2).expect(200)).body.demoShippingAdvanceAvailable).toBeUndefined();
+        await post(endpoint, body, user2).expect(403);
+        await post(endpoint, body, outsider).expect(404);
+        await post(endpoint, { expectedVersion: ex.revision }, user1).expect(409);
+        const [first, second] = await Promise.all([
+          post(endpoint, body, user1, key).expect(200),
+          post(endpoint, body, user1, key).expect(200),
+        ]);
+        expect(first.body).toEqual(second.body);
+        expect(first.body).toMatchObject({
+          status: 'ResolutionPending',
+          revision: sent.revision + 1,
+          initiatorShippedAt: sent.initiatorShippedAt,
+          recipientShippedAt: null,
+          recipientReceivedAt: null,
+          canVerifyOutboundDelivery: true,
+        });
+        expect(first.body.shippingDeadline).toBe(first.body.disputedAt);
+        expect(Date.parse(first.body.shippingDeadline)).toBeLessThan(Date.parse(ex.shippingDeadline));
+        expect(await reconcile()).toEqual(before);
+        expect((await get('/operations/exchanges/' + ex.id + '/dispute', admin).expect(200)).body.status).toBe('ResolutionPending');
+        expect((await get(path, user1).expect(200)).body.demoShippingAdvanceAvailable).toBeUndefined();
+        await post(endpoint, { expectedVersion: first.body.revision }, user1).expect(409);
+      } finally {
+        keys.forEach((name, index) => config.set(name, previous[index] ?? ''));
+      }
+    });
+
     it('lets only the assigned Admin verify an unacknowledged delivery from case evidence', async () => {
       const ex = await preparedExchange(100000, 300000);
       const sent = (await post('/exchanges/' + ex.id + '/ship', {

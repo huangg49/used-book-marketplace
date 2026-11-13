@@ -37,6 +37,7 @@ import {
   completeExchange,
   counterExchange,
   reportIssue,
+  advanceDemoShipping,
 } from "../services/exchangeDetail";
 import type { CounterOfferData } from "../components/exchange/CounterDialog";
 import { type ShipmentData } from "../services/exchangeShipment";
@@ -389,6 +390,10 @@ function ExchangeDetailContent({
         onConfirmReceived={handleConfirmReceived}
         onComplete={handleComplete}
         onDispute={handleDispute}
+        onAdvanceDemoShipping={async () => {
+          await advanceDemoShipping(id!, detail.revision!);
+          invalidate();
+        }}
       />
       {detail.outboundDeliveryVerification && (
         <section className={styles.deliveryVerification} aria-label="Xác minh giao sách">

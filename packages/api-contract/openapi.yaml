@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.76.0
+  version: 0.77.0
 
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
@@ -11080,6 +11080,47 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/demo-advance-shipping:
+    post:
+      operationId: advanceDemoExchangeShipping
+      tags: [Exchanges]
+      description: Simulate expiration of the shipping deadline on an explicitly enabled local demo exchange with exactly one recorded outbound shipment. The sender can invoke the standard dispute transition.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionCommand"
+      responses:
+        "200":
+          description: Demo exchange moved to the dispute queue.
           content:
             application/json:
               schema:
@@ -23353,6 +23394,9 @@ components:
       properties:
         returnResolution:
           $ref: '#/components/schemas/ExchangeReturnResolution'
+        demoShippingAdvanceAvailable:
+          type: boolean
+          description: The current member can simulate this local demo exchange's shipping deadline.
         canStartReturnResolution:
           type: boolean
           description: One book was sent and received, the other party missed the shipping deadline, and both sides funded.

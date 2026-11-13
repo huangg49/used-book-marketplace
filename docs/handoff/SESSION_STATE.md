@@ -1,3 +1,17 @@
+# Nút tua hạn gửi trên phiếu trao đổi demo — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `89901a49`. Phiếu Member web
+hiện **Qua hạn gửi sách · Demo** dưới hạn gửi của đối tác. Chỉ người đã ghi
+nhận giao trực tiếp trên phiếu đủ cọc, đã được bật riêng trong cấu hình local,
+thấy nút. Lệnh API0.77 dùng cùng đường mở tranh chấp với worker hết hạn. Lệnh
+giữ nguyên thông tin gửi/nhận, tiền và sách, có receipt/audit và phục hồi đúng key.
+
+Phiếu `a4650f66` trên DB local chính đã ghi nhận An gửi mô phỏng, Bình chưa
+bấm nhận và chưa gửi. Nút còn sẵn cho người dùng. Chromium local đã bấm từ An
+trên phiếu kiểm thử `2dedff0a` và kiểm hai tài khoản chuyển tới hồ sơ sự cố.
+Kiểm thêm nút ở 390/1440 px, 4 ca HTTP một chiều trên Mongo QA và 158 unit
+session-client. Xem [cách bật](ENV_HANDOFF.md). Tua hạn tại các bước Admin còn mở.
+
 # Admin xác minh giao sách khi người nhận im lặng — 13/11/2026
 
 Nhánh `codex/exchange-progress-web`, base `65641555`. API0.76 và

@@ -26,6 +26,7 @@ export interface ExchangeDetail {
   revision?: number;
   rawStatus?: string;
   returnResolution?: ExchangeReturnResolution;
+  demoShippingAdvanceAvailable?: boolean;
   outboundDeliveryVerification?: { verifiedAt: string; note: string };
   lastProposedById?: string | null;
   canViewerAccept?: boolean;

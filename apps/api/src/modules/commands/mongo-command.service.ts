@@ -647,6 +647,7 @@ export class MongoCommandService {
       | 'receiveExchange'
       | 'completeExchange'
       | 'disputeExchange'
+      | 'advanceDemoExchangeShipping'
       | 'resolveExchangeDispute'
       | 'actOnOwnExchangeReturn'
       | 'actOnOperationsExchangeReturn',

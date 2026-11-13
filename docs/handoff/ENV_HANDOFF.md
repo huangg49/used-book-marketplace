@@ -106,3 +106,11 @@ không gửi key/password/URL ký riêng tư.
 Setup đầy đủ: [START_HERE](START_HERE.md), [media setup](../features/SUPABASE_MEDIA_SETUP.md),
 [Android](../ANDROID_QUALITY.md). Việc chuyển key do chủ dự án thực hiện qua kênh
 riêng; agent không tự gửi các file chứa secret cho người khác.
+## Nút tua hạn gửi sách trên phiếu demo
+
+Trong `apps/api/.env`, đặt `DEMO_EXCHANGE_SHIPPING_ENABLED=true` và điền
+`DEMO_EXCHANGE_SHIPPING_IDS` bằng các ID phiếu demo, ngăn bằng dấu phẩy.
+Khởi động lại API để nạp cấu hình. Nút chỉ khả dụng trong môi trường
+development/test dùng Mongo loopback và ví mô phỏng, cho người đã ghi nhận
+giao trực tiếp trên phiếu đủ cọc và đang chờ chiều còn lại. Giá trị mặc định
+là tắt. Xem [ADR0089](../adr/0089-one-sided-exchange-return.md).

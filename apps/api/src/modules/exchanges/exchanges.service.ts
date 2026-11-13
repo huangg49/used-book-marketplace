@@ -598,7 +598,11 @@ export class ExchangesService {
       member(actor);
       const row = await this.exchange(tx, id);
       this.participant(row, actor._id);
-      return this.view(row);
+      const view = this.view(row);
+      return actor.status === 'ACTIVE' && this.demoShippingEnabled(id) &&
+        this.demoShippingEligible(row, actor._id, await tx.now())
+        ? { ...view, demoShippingAdvanceAvailable: true }
+        : view;
     });
   }
 
@@ -2144,6 +2148,73 @@ export class ExchangesService {
     );
   }
 
+  private demoShippingEnabled(id: string) {
+    if (!['development', 'test'].includes(this.config.get<string>('NODE_ENV', 'development')) ||
+      !this.config.get<string>('PAYMENT_SIMULATOR_SECRET') ||
+      this.config.get<string>('DEMO_EXCHANGE_SHIPPING_ENABLED') !== 'true' ||
+      !this.config.get<string>('DEMO_EXCHANGE_SHIPPING_IDS', '').split(',').map((value) => value.trim()).includes(id)) {
+      return false;
+    }
+    try {
+      const url = new URL(this.config.get<string>('MONGODB_URL', ''));
+      return url.protocol === 'mongodb:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    } catch {
+      return false;
+    }
+  }
+
+  private demoShippingEligible(row: ExchangeDoc, senderId: string, now: Date) {
+    const initiator = senderId === row.initiatorId;
+    const sent = initiator ? row.initiatorShippedAt : row.recipientShippedAt;
+    const otherSent = initiator ? row.recipientShippedAt : row.initiatorShippedAt;
+    const shipment = initiator ? row.initiatorShipment : row.recipientShipment;
+    return row.status === 'Preparing' && !hasExchangeDispute(row) &&
+      Boolean(row.initiatorFundedAt && row.recipientFundedAt &&
+        sent && sent < now && !otherSent && row.shippingDeadline && row.shippingDeadline > now) &&
+      shipment?.method === 'direct' && !shipment.trackingCode &&
+      (!shipment.carrierCode || shipment.carrierCode === 'DIRECT');
+  }
+
+  advanceDemoShipping(context: CommandContext, id: string, body: Wire['VersionCommand']) {
+    return this.commands.runExchange(context, 'advanceDemoExchangeShipping', id, body, {
+      discover: async (tx) => {
+        if (!this.demoShippingEnabled(id)) throw notFound();
+        const row = await this.exchange(tx, id);
+        return [row.initiatorId, row.recipientId];
+      },
+      authorize: async (tx, actor) => {
+        member(actor, true);
+        if (!this.demoShippingEnabled(id)) throw notFound();
+        await tx.lock('exchanges', [id]);
+        const row = await this.exchange(tx, id);
+        this.participant(row, actor._id);
+        if ((row.initiatorShippedAt ? row.initiatorId : row.recipientId) !== actor._id)
+          throw new DomainError(403, 'FORBIDDEN', 'Chỉ người đã gửi sách được tua hạn phiếu demo.');
+        return row;
+      },
+      mutate: async (tx, actor, row) => {
+        if (row.revision !== body.expectedVersion) throw conflict();
+        const now = await tx.now();
+        if (!this.demoShippingEligible(row, actor._id, now))
+          throw invalidState('Phiếu demo chưa đủ điều kiện tua hạn gửi.');
+        const next = await this.openShippingDispute(tx, row, now, true);
+        if (!next) throw conflict();
+        return {
+          entityType: 'Exchange',
+          entityId: id,
+          initiatorListingId: next.initiatorListingId,
+          version: next.revision,
+          state: next.status,
+          decidedAt: now,
+          event: 'ExchangeDemoShippingAdvanced',
+          reason: 'Tua hạn gửi trên phiếu demo local.',
+          before: { shippingDeadline: row.shippingDeadline?.toISOString() },
+          exchange: this.view(next),
+        };
+      },
+    });
+  }
+
   async expireShipping(id: string, nowOverride?: Date) {
     return this.mongo.tx(async (tx) => {
       await tx.lock('exchanges', [id]);
@@ -2181,46 +2252,54 @@ export class ExchangesService {
         return { exchange: this.view(next), escalated: false };
       }
 
-      // Case B: One party shipped, but the other did not -> Escalate to ResolutionPending
-      const delinquentParty = hasInitShipped ? 'Người nhận' : 'Người khởi tạo';
-      const disputeReason = `Hết thời hạn gửi sách (72 giờ): ${delinquentParty} không gửi hàng. Hệ thống tạm khóa để quản trị viên xử lý hoàn tiền / bảo hộ hàng hóa.`;
-
-      const next = await tx.c.exchanges.findOneAndUpdate(
-        { _id: exchange._id, revision: exchange.revision, status: 'Preparing' },
-        {
-          $set: {
-            status: 'ResolutionPending',
-            disputedAt: now,
-            disputeReason,
-            disputedBy: 'System',
-            updatedAt: now,
-          },
-          $inc: { revision: 1 },
-        },
-        { returnDocument: 'after' },
-      );
+      const next = await this.openShippingDispute(tx, exchange, now);
       if (!next) return null;
-
-      await notifyExchange(
-        tx,
-        next,
-        'ExchangeDisputed',
-        [next.initiatorId, next.recipientId],
-        now,
-        { reason: disputeReason },
-      );
 
       this.logger.log(
         JSON.stringify({
           event: 'exchangeShippingExpiredOneSent',
           exchangeId: exchange._id,
           status: 'ResolutionPending',
-          disputeReason,
         }),
       );
 
       return { exchange: this.view(next), escalated: true };
     });
+  }
+
+  private async openShippingDispute(tx: Tx, exchange: ExchangeDoc, now: Date, demo = false) {
+    const delinquentParty = exchange.initiatorShippedAt ? 'Người nhận' : 'Người khởi tạo';
+    const disputeReason = demo
+      ? `[Demo local] Hết hạn gửi sách: ${delinquentParty} chưa gửi. Tiền và sách vẫn được giữ trong lúc xử lý.`
+      : `Hết thời hạn gửi sách (72 giờ): ${delinquentParty} không gửi hàng. Hệ thống tạm khóa để quản trị viên xử lý hoàn tiền / bảo hộ hàng hóa.`;
+
+    const next = await tx.c.exchanges.findOneAndUpdate(
+      { _id: exchange._id, revision: exchange.revision, status: 'Preparing' },
+      {
+        $set: {
+          ...(demo ? { shippingDeadline: now } : {}),
+          status: 'ResolutionPending',
+          disputedAt: now,
+          disputeReason,
+          disputedBy: 'System',
+          updatedAt: now,
+        },
+        $inc: { revision: 1 },
+      },
+      { returnDocument: 'after' },
+    );
+    if (!next) return null;
+
+    await notifyExchange(
+      tx,
+      next,
+      'ExchangeDisputed',
+      [next.initiatorId, next.recipientId],
+      now,
+      { reason: disputeReason },
+    );
+
+    return next;
   }
 
   async expireTransit(id: string, nowOverride?: Date) {

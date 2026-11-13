@@ -3611,6 +3611,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/demo-advance-shipping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Simulate expiration of the shipping deadline on an explicitly enabled local demo exchange with exactly one recorded outbound shipment. The sender can invoke the standard dispute transition. */
+        post: operations["advanceDemoExchangeShipping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchanges/{id}/messages": {
         parameters: {
             query?: never;
@@ -8016,6 +8033,8 @@ export interface components {
         };
         Exchange: {
             returnResolution?: components["schemas"]["ExchangeReturnResolution"];
+            /** @description The current member can simulate this local demo exchange's shipping deadline. */
+            demoShippingAdvanceAvailable?: boolean;
             /** @description One book was sent and received, the other party missed the shipping deadline, and both sides funded. */
             canStartReturnResolution?: boolean;
             /** @description An assigned Admin can review delivery evidence for the original one-sided shipment. */
@@ -15864,6 +15883,40 @@ export interface operations {
         };
         responses: {
             /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    advanceDemoExchangeShipping: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Demo exchange moved to the dispute queue. */
             200: {
                 headers: {
                     [name: string]: unknown;

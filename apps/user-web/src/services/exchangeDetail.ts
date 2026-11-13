@@ -36,6 +36,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     status: mapExchangeStatus(ex, actor.id),
     rawStatus: ex.status,
     returnResolution: ex.returnResolution,
+    demoShippingAdvanceAvailable: ex.demoShippingAdvanceAvailable,
     outboundDeliveryVerification: ex.outboundDeliveryVerification,
     hasAgreementSnapshot: Boolean(ex.agreement),
     lastProposedById: ex.lastProposedById ?? ex.initiatorId,
@@ -209,6 +210,11 @@ export function confirmSent(
 }
 export function confirmReceived(id: string, revision: number) {
   return exchangeCommand(`/exchanges/${id}/receive`, {
+    expectedVersion: revision,
+  });
+}
+export function advanceDemoShipping(id: string, revision: number) {
+  return exchangeCommand(`/exchanges/${id}/demo-advance-shipping`, {
     expectedVersion: revision,
   });
 }

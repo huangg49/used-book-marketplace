@@ -52,7 +52,8 @@ type Action =
   | "received"
   | "retry"
   | "complete"
-  | "dispute";
+  | "dispute"
+  | "advanceDemoShipping";
 
 interface Props {
   compact?: boolean;
@@ -73,6 +74,7 @@ interface Props {
   onRetry: () => Promise<void>;
   onComplete: () => Promise<void>;
   onDispute?: (reason: string) => Promise<void>;
+  onAdvanceDemoShipping?: () => Promise<void>;
 }
 
 const labels: Record<Action, string> = {
@@ -86,6 +88,7 @@ const labels: Record<Action, string> = {
   retry: "Thử lại thao tác trước",
   complete: "Xác nhận đã kiểm tra",
   dispute: "Báo sự cố / Khiếu nại",
+  advanceDemoShipping: "Qua hạn gửi sách · Demo",
 };
 
 /** The card shows an expiry flag, so it only needs to update at the deadline. */
@@ -222,6 +225,9 @@ export function ActionCard(props: Props) {
       detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
 
     if (detail.partnerShipping.sentAt && !detail.viewerShipping.receivedAt) actions.push("received");
+    if (!expired && detail.demoShippingAdvanceAvailable && props.onAdvanceDemoShipping) {
+      actions.push("advanceDemoShipping");
+    }
     if (expired && props.onDispute && Boolean(detail.viewerShipping.sentAt) !== Boolean(detail.partnerShipping.sentAt)) {
       actions.push("dispute");
     }
@@ -373,7 +379,7 @@ export function ActionCard(props: Props) {
 
   async function confirm() {
     if (!action || busy) return;
-    if ((action === "dispute" || action === "complete") && !actions.includes(action)) return;
+    if ((action === "dispute" || action === "complete" || action === "advanceDemoShipping") && !actions.includes(action)) return;
     if (action === "fund" && fundDisabled) return;
     if (action === "reject") {
       if (reason.trim().length < 5 || reason.trim().length > 300) {
@@ -406,6 +412,7 @@ export function ActionCard(props: Props) {
         received: props.onConfirmReceived,
         retry: props.onRetry,
         complete: props.onComplete,
+        advanceDemoShipping: async () => props.onAdvanceDemoShipping?.(),
         dispute: () =>
           props.onDispute
             ? props.onDispute(finalDisputeReason)
@@ -441,7 +448,15 @@ export function ActionCard(props: Props) {
   ) : undefined;
   const otherRequestedCancellation = Boolean(detail.cancellationRequestedBy &&
     detail.cancellationRequestedBy !== (detail.viewerRole === "proposer" ? "Initiator" : "Recipient"));
-  const visibleActions = props.handover ? actions.filter(next => next !== "sent" && next !== "received") : actions;
+  const visibleActions = props.handover
+    ? actions.filter(next => next !== "sent" && next !== "received" && next !== "advanceDemoShipping")
+    : actions;
+  const demoAdvance = !blocked && actions.includes("advanceDemoShipping") && (
+    <button type="button" className={styles.demoAdvance} disabled={busy}
+      onClick={() => void open("advanceDemoShipping")}>
+      {labels.advanceDemoShipping}
+    </button>
+  );
   const handoverAction = (next: "sent" | "received") => {
     if (blocked || !actions.includes(next)) return null;
     const expanded = next === "sent" && shipmentOpen;
@@ -542,7 +557,7 @@ export function ActionCard(props: Props) {
       {props.handover && (
         <ShippingTrackingCard detail={detail} {...props.handover}
           canSend={!blocked && actions.includes("sent")} shippingExpired={preparing && expired}
-          sendDeadline={shippingDeadline}
+          sendDeadline={<>{shippingDeadline}{demoAdvance}</>}
           sendAction={handoverAction("sent")} receiveAction={handoverAction("received")}
           sendForm={preparing && (
             <ShipmentDialog
@@ -711,6 +726,9 @@ export function ActionCard(props: Props) {
         isOpen={!!action}
         onClose={() => setAction(undefined)}
         maxWidth={action === "dispute" ? "640px" : undefined}
+        description={action === "advanceDemoShipping"
+          ? "Phiếu demo sẽ chuyển sang xử lý vì đối tác chưa gửi sách. Tiền cọc và tiền bù vẫn được giữ."
+          : undefined}
         title={
           action === "cancel" && detail.status === "FUNDING"
             ? "Hủy trao đổi"
@@ -746,7 +764,7 @@ export function ActionCard(props: Props) {
           action === "cancel" || action === "reject" || action === "dispute"
         }
         confirmDisabled={(fundingDialog && fundDisabled) ||
-          ((action === "dispute" || action === "complete") && !actions.includes(action))}
+          ((action === "dispute" || action === "complete" || action === "advanceDemoShipping") && !actions.includes(action))}
         onConfirm={() => void confirm()}
       >
         {fundingDialog && (
