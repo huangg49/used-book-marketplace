@@ -12841,10 +12841,17 @@ paths:
               - PointOrder
         - in: query
           name: q
+          description: Search by book title, participant name, or the transaction code.
           required: false
           schema:
             type: string
             maxLength: 120
+        - in: query
+          name: view
+          description: Current or closed transactions. Omit to include both. Archived demo exchanges are always excluded.
+          schema:
+            type: string
+            enum: [Current, History]
         - in: query
           name: cursor
           required: false
@@ -24893,6 +24900,18 @@ components:
             - type: string
               maxLength: 180
             - type: "null"
+        booksToGive:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+            maxLength: 500
+        booksToReceive:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+            maxLength: 500
         partnerName:
           anyOf:
             - type: string

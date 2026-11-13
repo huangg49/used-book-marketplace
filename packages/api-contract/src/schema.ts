@@ -8644,6 +8644,8 @@ export interface components {
             target: components["schemas"]["SupportTarget"];
             label: string;
             description: string | null;
+            booksToGive?: string[];
+            booksToReceive?: string[];
             partnerName: string | null;
             createdAt: string | null;
             state: string | null;
@@ -17316,7 +17318,10 @@ export interface operations {
         parameters: {
             query: {
                 type: "DirectOrder" | "Exchange" | "PointOrder";
+                /** @description Search by book title, participant name, or the transaction code. */
                 q?: string;
+                /** @description Current or closed transactions. Omit to include both. Archived demo exchanges are always excluded. */
+                view?: "Current" | "History";
                 cursor?: string;
                 limit?: number;
             };

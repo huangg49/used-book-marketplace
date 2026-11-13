@@ -177,7 +177,7 @@ try {
   await button(member, "Gửi yêu cầu").click();
   await expect(button(member, "Thử lại yêu cầu đã gửi")).toBeVisible();
   await member
-    .getByRole("link", { name: "← Yêu cầu của tôi", exact: true })
+    .getByRole("link", { name: "Yêu cầu của tôi", exact: true })
     .click();
   await member.waitForURL(memberOrigin + "/support");
   await expect(
@@ -397,6 +397,30 @@ try {
   const originalExchange = await fixture.db
     .collection("exchanges")
     .findOne({ _id: exchangeId });
+  const currentId = randomUUID();
+  const archivedId = randomUUID();
+  const bookSnapshot = (listingId, ownerId, title) => ({
+    listingId, ownerId, listingVersion: 1, revisionId: randomUUID(),
+    ownerDisplayName: "Bạn đọc QA", bookId: randomUUID(), catalogRevisionId: randomUUID(),
+    book: { title, authors: ["Tác giả QA"], publisher: null, publicationYear: null,
+      language: "vi", edition: null, category: "Văn học", isbn: null },
+    condition: "Good", description: "", pages: "", coverNote: "", notes: "",
+    accessories: "", readable: true, hasMissingPages: false, missingEssentialContent: false,
+    exchangeValue: 100000, mediaIds: [randomUUID()],
+  });
+  for (const id of [currentId, archivedId]) {
+    const initiatorListingId = randomUUID(), recipientListingId = randomUUID();
+    await fixture.db.collection("exchanges").insertOne({
+      ...originalExchange, _id: id, initiatorListingId, recipientListingId,
+      initiatorOrderId: randomUUID(), recipientOrderId: randomUUID(),
+      status: "Proposed", completedAt: null, createdAt: now, updatedAt: now,
+      agreement: {
+        initiatorBooks: [bookSnapshot(initiatorListingId, owner, "Khu vườn mùa hạ")],
+        recipientBook: bookSnapshot(recipientListingId, otherId, "Những lá thư bên sông"),
+      },
+      ...(id === archivedId ? { demoArchivedAt: now } : {}),
+    });
+  }
   for (let index = 0; index < 11; index++)
     await fixture.db.collection("exchanges").insertOne({
       ...originalExchange,
@@ -420,26 +444,33 @@ try {
   await member
     .getByLabel("Đối tượng liên quan", { exact: true })
     .selectOption("Exchange");
-  await expect(member.getByRole("radio")).toHaveCount(10);
+  const search = member.getByLabel("Tìm theo tên sách, người giao dịch hoặc mã", { exact: true });
+  const currentCode = "#" + currentId.slice(0, 8).toUpperCase();
+  const archivedCode = "#" + archivedId.slice(0, 8).toUpperCase();
+  await expect(member.getByRole("radio")).toHaveCount(1);
+  await expect(member.getByRole("radio", { name: /Bạn gửi Khu vườn mùa hạ Bạn nhận Những lá thư bên sông/ })).toBeVisible();
+  await search.fill("Những lá thư bên sông");
+  await search.press("Enter");
+  await expect(member.getByText(currentCode, { exact: true })).toBeVisible();
+  await search.fill(archivedCode);
+  await search.press("Enter");
+  await expect(member.getByText("Không có giao dịch khớp tìm kiếm trong mục này.", { exact: true })).toBeVisible();
+  const archived = await fetch(base + "/me/support-targets/Exchange/" + archivedId, {
+    headers: { Authorization: "Bearer " + fixture.member.accessToken },
+  });
+  assert.equal(archived.status, 404);
+  await search.fill(currentCode);
+  await search.press("Enter");
+  await expect(member.getByText(currentCode, { exact: true })).toBeVisible();
+  await expect(member.getByText(archivedCode, { exact: true })).toHaveCount(0);
+  await search.clear();
+  await button(member, "Lịch sử").click();
+  await expect(member.getByRole("radio")).toHaveCount(6);
   await button(member, "Xem thêm giao dịch").click();
   await expect(member.getByRole("radio")).toHaveCount(12);
-  await member
-    .getByLabel("Tìm theo tên người trao đổi", { exact: true })
-    .fill("Không có tên này");
-  await button(member, "Tìm giao dịch").click();
-  await expect(
-    member.getByText(
-      "Không có giao dịch khớp tìm kiếm. Thử tên khác hoặc xóa từ khóa.",
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await member
-    .getByLabel("Tìm theo tên người trao đổi", { exact: true })
-    .fill("Đối tác đánh giá QA");
-  await member
-    .getByLabel("Tìm theo tên người trao đổi", { exact: true })
-    .press("Enter");
-  await expect(member.getByRole("radio")).toHaveCount(10);
+  await search.fill("Đối tác đánh giá QA");
+  await search.press("Enter");
+  await expect(member.getByRole("radio")).toHaveCount(6);
   await shot(member, "member-target-options-desktop");
   await member.getByRole("radio").first().click();
   await expect(
@@ -451,7 +482,7 @@ try {
   await expect(
     member.getByRole("button", { name: "Chọn giao dịch khác", exact: true }),
   ).toBeFocused();
-  await expect(member.getByText(/Với Đối tác đánh giá QA/)).toBeVisible();
+  await expect(member.getByText("Trao đổi với Đối tác đánh giá QA", { exact: true })).toBeVisible();
   await member
     .getByLabel("Tiêu đề", { exact: true })
     .fill("QA: Phản ánh từ giao dịch đã chọn");

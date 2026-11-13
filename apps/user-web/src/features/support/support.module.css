@@ -240,3 +240,254 @@
     width: 100%;
   }
 }
+
+.compose {
+  max-width: 1100px;
+  padding: clamp(16px, 3vw, 34px) clamp(12px, 3vw, 32px) 56px;
+}
+
+.compose .backLink,
+.composeAside a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  min-height: 44px;
+}
+
+.compose .composeHeader {
+  padding: 10px 0 24px;
+  border: 0;
+}
+
+.composeHeader h1 {
+  margin: 0 0 8px;
+}
+
+.composeHeader p {
+  margin: 0;
+  color: var(--shop-muted);
+}
+
+.composeLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.35fr);
+  gap: clamp(16px, 2.7vw, 28px);
+  align-items: start;
+}
+
+.compose .form {
+  max-width: none;
+  padding: 0;
+  min-width: 0;
+  border: 1px solid var(--shop-line);
+  border-radius: 14px;
+  background: var(--shop-paper);
+}
+
+.compose .form fieldset {
+  gap: 0;
+}
+
+.composeSection {
+  display: grid;
+  gap: 16px;
+  padding: clamp(16px, 2.5vw, 26px);
+}
+
+.composeSection + .composeSection,
+.composeFooter {
+  border-top: 1px solid var(--shop-line);
+}
+
+.composeSection h2,
+.composeAside h2 {
+  margin: 0;
+  color: var(--shop-wine);
+  line-height: 1.35;
+}
+
+.contextFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.compose :is(input, select, textarea) {
+  min-width: 0;
+  width: 100%;
+  font-weight: 400;
+}
+
+.composeFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px clamp(16px, 2.5vw, 26px);
+}
+
+.composeFooter .primary {
+  align-items: center;
+  gap: 9px;
+}
+
+.composeAside {
+  padding: 18px 0 0;
+  border-top: 1px solid var(--shop-control);
+  color: var(--shop-wine);
+}
+
+.composeAside h2 {
+  margin-top: 10px;
+}
+
+.composeAside p {
+  margin-block: 10px 4px;
+  font-size: .875rem;
+  color: var(--shop-muted);
+}
+
+.composeAside .composeHelp {
+  border-top: 1px solid var(--shop-line);
+  padding-top: 14px;
+}
+
+.compose .selectedTarget {
+  gap: 13px;
+  border-radius: 10px;
+}
+
+.attached,
+.compose .changeTarget,
+.targetSearch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.attached {
+  color: var(--shop-wine);
+  font-size: .875rem;
+  font-weight: 650;
+}
+
+.targetViews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.compose .targetViews button[aria-pressed="true"] {
+  color: var(--shop-cream);
+  background: var(--shop-wine);
+  border-color: var(--shop-wine);
+}
+
+.compose button:not(:disabled) {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.compose button:not(:disabled):hover {
+  border-color: var(--shop-wine);
+}
+
+.compose .targetSearch input {
+  width: auto;
+}
+
+.compose .targetOptions:not(:empty) {
+  gap: 0;
+  border: 1px solid var(--shop-line);
+  border-radius: 10px;
+}
+
+.compose .targetOption {
+  gap: 10px;
+  border: 0;
+  border-radius: 0;
+  padding: 12px;
+  transition: background-color 150ms ease;
+}
+
+.compose .targetOption:first-child {
+  border-start-start-radius: 10px;
+  border-start-end-radius: 10px;
+}
+
+.compose .targetOption:last-child {
+  border-end-start-radius: 10px;
+  border-end-end-radius: 10px;
+}
+
+.compose .targetOption + .targetOption {
+  border-top: 1px solid var(--shop-line);
+}
+
+.compose .targetOption:hover,
+.compose .targetOption:focus-within {
+  background: var(--shop-shelf);
+}
+
+.targetDescription,
+.compose .targetOption .targetDescription {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.compose .targetIdentity,
+.compose .targetMeta,
+.compose .bookPair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 12px;
+}
+
+.targetIdentity {
+  justify-content: space-between;
+}
+
+.targetIdentity strong {
+  min-width: 0;
+}
+
+.targetCode,
+.targetMeta {
+  color: var(--shop-muted);
+  font-size: .8125rem;
+  font-weight: 500;
+}
+
+.targetCode {
+  font-variant-numeric: tabular-nums;
+}
+
+.targetState {
+  padding: 2px 7px;
+  border: 1px solid var(--shop-line);
+  border-radius: 5px;
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+}
+
+.bookPair > span {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 125px;
+  min-width: 0;
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+@media (max-width: 1140px) {
+  .composeLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .contextFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

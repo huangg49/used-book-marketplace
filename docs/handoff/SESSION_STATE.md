@@ -1,3 +1,18 @@
+# Trang gửi yêu cầu hỗ trợ — 13/11/2026
+
+Nhánh `codex/support-request-redesign`, base `16ba9585`. Member web tách phần
+chọn giao dịch và phần mô tả. Bộ chọn có hai mục Đang diễn ra và Lịch sử,
+tìm theo tên sách, đối tác hoặc mã. Phiếu trao đổi hiện sách gửi/nhận từ bản
+chụp. API hỗ trợ loại phiếu demo đã lưu trữ khỏi danh sách và liên kết mới.
+Đọc Mongo local xác nhận giữa hai tài khoản demo có một phiếu đang diễn ra,
+sáu phiếu lưu trữ và không có phiếu đã đóng còn hiển thị.
+
+Chromium với Mongo QA riêng đã qua tìm sách/mã, phân trang lịch sử, từ chối
+phiếu đã lưu trữ và lưu đúng giao dịch. Kiểm ở 1440 px và 320 px chữ 130%.
+API/Member web build và OpenAPI qua kiểm tra. Member web unit 485/486, ca
+ShippingTrackingCard hiện hành còn lệch câu hiển thị. API demo port 3000
+còn chạy bản cũ do lệnh restart bị môi trường chặn.
+
 # Tua thời hạn trao đổi trên phiếu và hồ sơ Admin — 13/11/2026
 
 Nhánh `codex/exchange-progress-web`, base `d6885a54`. OpenAPI 0.79.0 và

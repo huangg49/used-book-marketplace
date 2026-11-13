@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowUpRight, MessageSquare, Send } from "lucide-react";
 import { usePagedCollection } from "../../components/Pagination/usePagedCollection";
 import { CollectionPager } from "../../components/Pagination/CollectionPager";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -244,7 +245,9 @@ function NewSupportForm({
     if (!pending) {
       if (
         draft.kind === "TransactionIssue" &&
-        !["DirectOrder", "Exchange", "PointOrder", "Auction"].includes(draft.targetType)
+        !["DirectOrder", "Exchange", "PointOrder", "Auction"].includes(
+          draft.targetType,
+        )
       ) {
         setError(
           "Phản ánh giao dịch cần chọn đơn mua bán, trao đổi, đơn thắng đấu giá hoặc phiên đấu giá bạn tham gia.",
@@ -304,13 +307,15 @@ function NewSupportForm({
     }
   }
   return (
-    <div className={styles.page}>
-      <Link to="/support">← Yêu cầu của tôi</Link>
-      <header>
+    <div className={`${styles.page} ${styles.compose}`}>
+      <Link className={styles.backLink} to="/support">
+        <ArrowLeft size={16} aria-hidden="true" /> Yêu cầu của tôi
+      </Link>
+      <header className={styles.composeHeader}>
         <h1>Gửi yêu cầu</h1>
         <p>
-          Cho Admin biết vấn đề bạn gặp. Phản hồi và lịch sử xử lý được lưu
-          trong hồ sơ riêng của bạn.
+          Chọn giao dịch hoặc nội dung liên quan, rồi cho nhóm hỗ trợ biết
+          chuyện gì đã xảy ra.
         </p>
       </header>
       {!active ? (
@@ -332,92 +337,127 @@ function NewSupportForm({
           </button>
         </div>
       ) : null}
-      <form className={styles.form} onSubmit={submit}>
-        <fieldset disabled={busy || pending || !active}>
-          <label>
-            Loại yêu cầu
-            <select
-              aria-label="Loại yêu cầu"
-              value={draft.kind}
-              onChange={(e) =>
-                update({ kind: e.target.value as SupportDraft["kind"] })
-              }
+      <div className={styles.composeLayout}>
+        <form className={styles.form} onSubmit={submit}>
+          <fieldset disabled={busy || pending || !active}>
+            <section
+              className={styles.composeSection}
+              aria-labelledby="support-context-title"
             >
-              {Object.entries(supportKinds).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Tiêu đề
-            <input
-              required
-              minLength={3}
-              maxLength={160}
-              aria-label="Tiêu đề"
-              value={draft.title}
-              onChange={(e) => update({ title: e.target.value })}
-            />
-          </label>
-          <label>
-            Đối tượng liên quan
-            <select
-              aria-label="Đối tượng liên quan"
-              value={draft.targetType}
-              onChange={(e) =>
-                update({
-                  targetType: e.target.value as SupportDraft["targetType"],
-                  targetId: "",
-                })
-              }
+              <h2 id="support-context-title">Yêu cầu này liên quan đến đâu?</h2>
+              <div className={styles.contextFields}>
+                <label>
+                  Loại yêu cầu
+                  <select
+                    aria-label="Loại yêu cầu"
+                    value={draft.kind}
+                    onChange={(e) =>
+                      update({ kind: e.target.value as SupportDraft["kind"] })
+                    }
+                  >
+                    {Object.entries(supportKinds).map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Đối tượng liên quan
+                  <select
+                    aria-label="Đối tượng liên quan"
+                    value={draft.targetType}
+                    onChange={(e) =>
+                      update({
+                        targetType: e.target
+                          .value as SupportDraft["targetType"],
+                        targetId: "",
+                      })
+                    }
+                  >
+                    <option value="">Không có đối tượng cụ thể</option>
+                    {Object.entries(supportTargets).map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {draft.targetType ? (
+                <SupportTargetPicker
+                  key={draft.targetType}
+                  type={draft.targetType}
+                  id={draft.targetId}
+                  active={active}
+                  onSelect={(targetId) => update({ targetId })}
+                />
+              ) : null}
+            </section>
+            <section
+              className={styles.composeSection}
+              aria-labelledby="support-details-title"
             >
-              <option value="">Không có đối tượng cụ thể</option>
-              {Object.entries(supportTargets).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </label>
-          {draft.targetType ? (
-            <SupportTargetPicker
-              key={draft.targetType}
-              type={draft.targetType}
-              id={draft.targetId}
-              active={active}
-              onSelect={(targetId) => update({ targetId })}
-            />
-          ) : null}
-          <label>
-            Nội dung
-            <textarea
-              rows={7}
-              required
-              minLength={10}
-              maxLength={5000}
-              aria-label="Nội dung"
-              value={draft.description}
-              onChange={(e) => update({ description: e.target.value })}
-            />
-            <small>
-              Mô tả sự việc, mốc thời gian và thông tin đối chiếu. Không gửi mật
-              khẩu, OTP hoặc thông tin thẻ.
-            </small>
-          </label>
-          {draft.kind === "TransactionIssue" ? (
-            <p className={styles.notice}>
-              Phản ánh hỗ trợ không tự giữ hoặc hoàn tiền. Dùng chức năng khiếu
-              nại của giao dịch nếu có; Admin sẽ đối chiếu trạng thái tiền và
-              sách trước khi hướng dẫn tiếp.
+              <h2 id="support-details-title">Chuyện gì đã xảy ra?</h2>
+              <label>
+                Tiêu đề
+                <input
+                  placeholder="Ví dụ: Chưa nhận được sách đã hẹn"
+                  required
+                  minLength={3}
+                  maxLength={160}
+                  aria-label="Tiêu đề"
+                  value={draft.title}
+                  onChange={(e) => update({ title: e.target.value })}
+                />
+              </label>
+              <label>
+                Nội dung
+                <textarea
+                  rows={5}
+                  placeholder="Mô tả điều đã xảy ra và bạn cần hỗ trợ gì."
+                  required
+                  minLength={10}
+                  maxLength={5000}
+                  aria-label="Nội dung"
+                  value={draft.description}
+                  onChange={(e) => update({ description: e.target.value })}
+                />
+                <small>
+                  Nếu có, thêm thời điểm xảy ra sự việc. Giữ riêng mật khẩu, mã
+                  OTP và thông tin thẻ.
+                </small>
+              </label>
+            </section>
+            <div className={styles.composeFooter}>
+              <button className={styles.primary} type="submit">
+                <Send size={17} aria-hidden="true" />{" "}
+                {busy ? "Đang gửi…" : "Gửi yêu cầu"}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+        <aside
+          className={styles.composeAside}
+          aria-labelledby="support-next-title"
+        >
+          <MessageSquare size={24} aria-hidden="true" />
+          <h2 id="support-next-title">Theo dõi phản hồi</h2>
+          <p>
+            Nhóm hỗ trợ sẽ phản hồi trong hồ sơ riêng của bạn sau khi tiếp nhận
+            yêu cầu.
+          </p>
+          <Link to="/support">
+            Xem yêu cầu của tôi <ArrowUpRight size={15} aria-hidden="true" />
+          </Link>
+          {draft.kind === "TransactionIssue" && (
+            <p className={styles.composeHelp}>
+              Nếu cần khiếu nại hoặc yêu cầu hoàn tiền, hãy dùng chức năng khiếu
+              nại trên giao dịch khi có.
             </p>
-          ) : null}
-          <button className={styles.primary} type="submit">
-            {busy ? "Đang gửi…" : "Gửi yêu cầu"}
-          </button>
-        </fieldset>
-      </form>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
