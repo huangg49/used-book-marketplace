@@ -52,6 +52,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: devApiOrigin,
           changeOrigin: true,
+          xfwd: true,
           rewrite: (path) => path.replace(/^\/api/, '/api'),
         },
         '/socket.io': {

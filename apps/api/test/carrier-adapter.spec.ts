@@ -27,7 +27,7 @@ describe('Carrier Adapter Pattern & GHN Integration (Giai đoạn 2 & 3)', () =>
     expect(fee).toBe(22000);
   });
 
-  it('nên tạo vận đơn với mã GHN và trạng thái ban đầu IN_TRANSIT', async () => {
+  it('tạo vận đơn mô phỏng ở trạng thái chờ lấy sách', async () => {
     const shipment = await service.createShipment({
       orderId: 'exchange-order-01',
       carrierCode: 'SIMULATOR',
@@ -35,11 +35,11 @@ describe('Carrier Adapter Pattern & GHN Integration (Giai đoạn 2 & 3)', () =>
       receiver: { recipientName: 'Nguyễn Tú', phone: '0907654321', district: 'Q3', detail: '456 Võ Văn Tần' },
     });
 
-    expect(shipment.trackingCode).toMatch(/^GHN\d+VN$/);
+    expect(shipment.trackingCode).toMatch(/^DEMO\d+VN$/);
     expect(shipment.fee).toBe(22000);
 
     const tracking = await service.getTrackingStatus(shipment.trackingCode);
-    expect(tracking.status).toBe('IN_TRANSIT');
+    expect(tracking.status).toBe('READY_TO_PICK');
     expect(tracking.trackingCode).toBe(shipment.trackingCode);
   });
 

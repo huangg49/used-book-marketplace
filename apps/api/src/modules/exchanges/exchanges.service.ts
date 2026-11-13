@@ -27,6 +27,7 @@ import {
 import {
   conflict,
   DomainError,
+  invalidField,
   invalidState,
   notFound,
   type Wire,
@@ -182,7 +183,7 @@ export class ExchangesService {
         reasonText = 'Hết thời hạn chờ phản hồi đề xuất';
       } else if (reason === 'ShippingExpired') {
         notifyRecipients = [next.initiatorId, next.recipientId];
-        reasonText = 'Hết thời hạn gửi sách (72 giờ) nhưng không bên nào gửi hàng';
+        reasonText = 'Hết hạn giao nhận và chưa có kiện nào được bàn giao.';
       }
     }
 
@@ -285,6 +286,7 @@ export class ExchangesService {
             packagingVideoUrl: row.initiatorShipment.packagingVideoUrl ?? null,
             packagingPhotoName: row.initiatorShipment.packagingPhotoName ?? null,
             packagingVideoName: row.initiatorShipment.packagingVideoName ?? null,
+            registeredAt: row.initiatorShipment.registeredAt?.toISOString() ?? null,
             shippedAt: row.initiatorShipment.shippedAt
               ? new Date(row.initiatorShipment.shippedAt).toISOString()
               : null,
@@ -306,6 +308,7 @@ export class ExchangesService {
             packagingVideoUrl: row.recipientShipment.packagingVideoUrl ?? null,
             packagingPhotoName: row.recipientShipment.packagingPhotoName ?? null,
             packagingVideoName: row.recipientShipment.packagingVideoName ?? null,
+            registeredAt: row.recipientShipment.registeredAt?.toISOString() ?? null,
             shippedAt: row.recipientShipment.shippedAt
               ? new Date(row.recipientShipment.shippedAt).toISOString()
               : null,
@@ -1449,12 +1452,24 @@ export class ExchangesService {
         this.participant(current, actor._id);
         return current;
       },
-      mutate: async (tx, actor, exchange) => {
+      mutate: async (tx, actor, current) => {
         member(actor);
-        this.participant(exchange, actor._id);
+        this.participant(current, actor._id);
+        await tx.lock('exchanges', [id]);
+        const exchange = await this.exchange(tx, id);
 
         const isInitiator = exchange.initiatorId === actor._id;
+        const ownShipment = isInitiator ? exchange.initiatorShipment : exchange.recipientShipment;
+        const partnerShipment = isInitiator ? exchange.recipientShipment : exchange.initiatorShipment;
+        const trackingCode = body.trackingCode?.trim().toUpperCase();
+        const carrier = body.method === 'carrier' || (body.method !== 'direct' && Boolean(trackingCode));
+        if (carrier && !trackingCode) throw invalidField('/trackingCode', 'Nhập mã vận đơn.');
+        if (carrier && trackingCode === partnerShipment?.trackingCode?.toUpperCase())
+          throw invalidField('/trackingCode', 'Hai chiều giao cần hai mã vận đơn riêng.');
+        if (partnerShipment && (carrier ? partnerShipment.method === 'direct' : Boolean(partnerShipment.registeredAt)))
+          throw invalidState('Hai bên cần dùng cùng phương thức giao nhận cho phiếu này.');
         if (
+          ownShipment ||
           (isInitiator && exchange.initiatorShippedAt) ||
           (!isInitiator && exchange.recipientShippedAt)
         ) {
@@ -1477,28 +1492,29 @@ export class ExchangesService {
           throw invalidState('Đã hết hạn gửi sách. Hãy xem trạng thái mới trong phiếu trao đổi.');
         const setFields: Record<string, unknown> = { updatedAt: now };
         const shipmentSnapshot: ExchangeShipmentSnapshot = {
-          method: (body.method as 'carrier' | 'direct') ?? 'carrier',
+          method: carrier ? 'carrier' : 'direct',
           carrierCode: body.carrierCode ?? null,
           carrierName: body.carrierName ?? null,
-          trackingCode: body.trackingCode ?? null,
+          trackingCode: carrier ? trackingCode! : null,
           meetupLocation: body.meetupLocation ?? null,
           notes: body.notes ?? null,
           packagingPhotoUrl: body.packagingPhotoUrl ?? null,
           packagingVideoUrl: body.packagingVideoUrl ?? null,
           packagingPhotoName: body.packagingPhotoName ?? null,
           packagingVideoName: body.packagingVideoName ?? null,
-          shippedAt: now,
+          ...(carrier ? { registeredAt: now } : {}),
+          shippedAt: carrier ? null : now,
         };
 
         if (isInitiator) {
-          setFields.initiatorShippedAt = now;
+          if (!carrier) setFields.initiatorShippedAt = now;
           setFields.initiatorShipment = shipmentSnapshot;
         } else {
-          setFields.recipientShippedAt = now;
+          if (!carrier) setFields.recipientShippedAt = now;
           setFields.recipientShipment = shipmentSnapshot;
         }
 
-        if (exchange.cancellationRequestedBy) {
+        if (!carrier && exchange.cancellationRequestedBy) {
           setFields.cancellationRequestedBy = null;
           setFields.cancellationRequestedAt = null;
         }
@@ -1507,7 +1523,7 @@ export class ExchangesService {
           (isInitiator
             ? exchange.recipientShippedAt
             : exchange.initiatorShippedAt) != null;
-        if (willBeBothShipped && exchange.status === 'Preparing') {
+        if (!carrier && willBeBothShipped && exchange.status === 'Preparing') {
           setFields.status = 'InTransit';
         }
 
@@ -1521,9 +1537,7 @@ export class ExchangesService {
         const otherUserId = isInitiator
           ? exchange.recipientId
           : exchange.initiatorId;
-        await notifyExchange(tx, next, 'ExchangeShipped', [otherUserId], now, {
-          trackingCode: body.trackingCode ?? undefined,
-        });
+        if (!carrier) await notifyExchange(tx, next, 'ExchangeShipped', [otherUserId], now);
 
         return {
           entityType: 'Exchange',
@@ -1532,7 +1546,7 @@ export class ExchangesService {
           version: next.revision,
           state: next.status as Wire['ExchangeStatus'],
           decidedAt: now,
-          event: 'ExchangeShipped',
+          event: carrier ? 'ExchangeCarrierLabelRegistered' : 'ExchangeShipped',
           exchange: this.view(next),
         };
       },

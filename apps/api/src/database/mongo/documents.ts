@@ -1456,6 +1456,7 @@ export interface ExchangeShipmentSnapshot {
   packagingVideoUrl?: string | null;
   packagingPhotoName?: string | null;
   packagingVideoName?: string | null;
+  registeredAt?: Date | null;
   shippedAt?: Date | null;
   lastEvent?: string | null;
   lastEventAt?: Date | null;

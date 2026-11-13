@@ -3552,7 +3552,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Participant confirms they have shipped their book. */
+        /** @description Register a carrier label without recording pickup, or record direct handover. Requests omitting both the method and tracking code retain the legacy manual handover behavior. */
         post: operations["shipExchange"];
         delete?: never;
         options?: never;
@@ -3757,7 +3757,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Reset exchange and shipment state for live interactive demo. */
+        /**
+         * @deprecated
+         * @description Retained for compatibility. Rewinding an exchange is disabled.
+         */
         post: operations["resetShipmentOrderForDemo"];
         delete?: never;
         options?: never;
@@ -3774,7 +3777,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Automatically advance simulation of exchange delivery stages. */
+        /** @description Advance local simulated delivery for a funded exchange with two registered carrier labels and eligible pickup state. */
         post: operations["autoSimulateExchangeShipment"];
         delete?: never;
         options?: never;
@@ -3791,7 +3794,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Seed demo exchange order ready for carrier delivery testing. */
+        /**
+         * @deprecated
+         * @description Retained for compatibility. Seeding pre-funded demo orders is disabled.
+         */
         post: operations["seedDemoShipmentOrder"];
         delete?: never;
         options?: never;
@@ -3808,7 +3814,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Receive webhook events from carrier partners. */
+        /** @description Local driver simulator events. Pickup requires both registered carrier labels before the shipping deadline. Delivery requires a prior pickup. */
         post: operations["carrierWebhookCallback"];
         delete?: never;
         options?: never;
@@ -8124,6 +8130,11 @@ export interface components {
             carrierCode?: string | null;
             carrierName?: string | null;
             trackingCode?: string | null;
+            /**
+             * Format: date-time
+             * @description When the carrier label was registered. A label alone does not indicate pickup.
+             */
+            registeredAt?: string | null;
             meetupLocation?: string | null;
             notes?: string | null;
             packagingPhotoUrl?: string | null;
@@ -16155,15 +16166,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     autoSimulateExchangeShipment: {
@@ -16186,6 +16190,8 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     seedDemoShipmentOrder: {
@@ -16197,15 +16203,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     carrierWebhookCallback: {
@@ -16232,6 +16231,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
         };
     };
     getExchangeReviews: {

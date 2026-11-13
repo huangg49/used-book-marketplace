@@ -254,23 +254,6 @@
   line-height: 1.4;
 }
 
-.resetDemoBtn {
-  margin-top: 10px;
-  background-color: var(--shop-wine, #5c0202);
-  border: none;
-  color: #ffffff;
-  border-radius: 8px;
-  padding: 7px 14px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.resetDemoBtn:hover {
-  background-color: #7c2320;
-}
-
 /* Order Card */
 .orderCard {
   background-color: #ffffff;
@@ -615,24 +598,6 @@
   background-color: #fee2e2;
 }
 
-/* Mini Seed Button in Chips bar */
-.seedMiniBtn {
-  background-color: var(--shop-cream, #fcf8db);
-  border: 1px dashed var(--shop-wine, #5c0202);
-  color: var(--shop-wine, #5c0202);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.seedMiniBtn:hover:not(:disabled) {
-  background-color: #f7edd0;
-  border-style: solid;
-}
-
 /* 1-Click Auto Simulate Button */
 .autoSimulateBtn {
   width: 100%;
@@ -661,25 +626,6 @@
 .autoSimulateBtn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-}
-
-/* Big Seed Button for Empty State */
-.seedBigBtn {
-  background-color: var(--shop-wine, #5c0202);
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(92, 2, 2, 0.2);
-  transition: all 0.2s;
-}
-
-.seedBigBtn:hover:not(:disabled) {
-  background-color: #7c2320;
-  transform: translateY(-1px);
 }
 
 .loadingBox {

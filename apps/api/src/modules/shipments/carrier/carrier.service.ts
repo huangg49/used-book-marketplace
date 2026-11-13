@@ -1,7 +1,9 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { MongoService } from '../../../database/mongo/mongo.service.js';
+import { canStartCarrierPickup, hasCarrierLabels } from '../../exchanges/exchange-carrier-pickup.js';
+import { EXCHANGE_INSPECTION_MS, inspectionDeadlines } from '../../exchanges/exchange-inspection.js';
+import { invalidState, notFound } from '../../commands/domain-error.js';
 import { notifyExchange } from '../../exchanges/exchange-notifications.js';
 import type {
   CarrierAddress,
@@ -58,6 +60,10 @@ export class CarrierService {
   async createShipment(
     order: ShipmentOrderInput,
   ): Promise<{ trackingCode: string; fee: number }> {
+    if (this.mongo && order.carrierCode?.toUpperCase() === 'GHN' &&
+      await this.mongo.c.exchanges.findOne({ _id: order.orderId }, { projection: { _id: 1 } })) {
+      throw invalidState('Tạo đơn hãng trực tiếp chưa hỗ trợ điều phối lấy hai kiện cho phiếu đổi sách.');
+    }
     const adapter = this.getAdapter(order.carrierCode);
     return adapter.createShipment(order);
   }
@@ -70,177 +76,116 @@ export class CarrierService {
     return adapter.getTrackingStatus(trackingCode);
   }
 
-  /**
-   * Xử lý webhook cập nhật trạng thái bưu kiện từ GHN/GHTK hoặc Simulator
-   * Tự động cập nhật receivedAt và kích hoạt mốc nghiệm thu 48h khi giao thành công (DELIVERED)
-   */
+  requireLocalDriver(
+    remoteAddress: string | undefined,
+    browserSources: Array<string | undefined>,
+    forwardedFor?: string,
+  ) {
+    const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+    if (!this.config || !['development', 'test'].includes(this.config.get('NODE_ENV', 'development')) ||
+      !this.config.get('PAYMENT_SIMULATOR_SECRET') ||
+      !loopback.includes(remoteAddress ?? '') ||
+      forwardedFor?.split(',').some(address => !loopback.includes(address.trim()))) throw notFound();
+    const mongo = new URL(this.config.getOrThrow<string>('MONGODB_URL'));
+    if (mongo.protocol !== 'mongodb:' || !['127.0.0.1', 'localhost', '[::1]'].includes(mongo.hostname))
+      throw notFound();
+    for (const source of browserSources) {
+      if (source === undefined) continue;
+      const url = URL.parse(source.includes('://') ? source : `http://${source}`);
+      if (!url || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) throw notFound();
+    }
+  }
+
   async processWebhook(event: {
     trackingCode: string;
-    status: string;
+    status: CarrierStatusCode;
     description?: string;
-  }): Promise<{
-    success: boolean;
-    trackingCode: string;
-    exchangeUpdated?: boolean;
-    nextStatus?: string;
-  }> {
-    this.logger.log(`[CarrierWebhook] Nhận sự kiện cho mã ${event.trackingCode}: ${event.status}`);
-
-    const statusCode: CarrierStatusCode =
-      event.status === 'DELIVERED'
-        ? 'DELIVERED'
-        : event.status === 'PICKING'
-          ? 'PICKING'
-          : event.status === 'READY_TO_PICK'
-            ? 'READY_TO_PICK'
-            : 'IN_TRANSIT';
-
-    if (this.simulatorAdapter) {
-      this.simulatorAdapter.setShipmentStatus(event.trackingCode, statusCode, event.description);
+  }) {
+    const { trackingCode, status, description } = event;
+    if (!this.mongo) {
+      if (!this.simulatorAdapter.setShipmentStatus(trackingCode, status, description)) throw notFound();
+      return { success: true, exchangeUpdated: false };
     }
-    if (this.ghnAdapter) {
-      this.ghnAdapter.setShipmentStatus(event.trackingCode, statusCode, event.description);
-    }
+    const next = await this.mongo.tx(async (tx) => {
+      const matches = await tx.c.exchanges.find({
+        $or: [
+          { 'initiatorShipment.trackingCode': trackingCode },
+          { 'recipientShipment.trackingCode': trackingCode },
+        ],
+        status: { $in: ['Preparing', 'InTransit', 'Delivered'] },
+      }).limit(2).toArray();
+      if (matches.length !== 1) throw invalidState('Không xác định được đúng kiện đang giao.');
+      const [{ _id: id }] = matches;
+      await tx.lock('exchanges', [id]);
+      const row = await tx.c.exchanges.findOne({ _id: id });
+      if (!row || !['Preparing', 'InTransit', 'Delivered'].includes(row.status) || !hasCarrierLabels(row))
+        throw invalidState('Phiếu cần đủ hai mã vận đơn và còn ở bước giao nhận.');
 
-    let exchangeUpdated = false;
-    let nextStatus: string | undefined;
-
-    if (this.mongo) {
-      try {
-        await this.mongo.tx(async (tx) => {
-          const exchange = await tx.c.exchanges.findOne({
-            $or: [
-              { 'initiatorShipment.trackingCode': event.trackingCode },
-              { 'recipientShipment.trackingCode': event.trackingCode },
-            ],
-          });
-
-          if (!exchange) return;
-
-          await tx.lock('exchanges', [exchange._id]);
-          const ex = await tx.c.exchanges.findOne({ _id: exchange._id });
-          if (!ex || ex.status === 'Cancelled' || ex.status === 'Completed') {
-            return;
-          }
-
-          const now = await tx.now();
-          const isInitiatorLeg = ex.initiatorShipment?.trackingCode === event.trackingCode;
-          const isRecipientLeg = ex.recipientShipment?.trackingCode === event.trackingCode;
-
-          if (statusCode === 'DELIVERED') {
-            const setFields: Record<string, unknown> = { updatedAt: now };
-            let notifiedUser: string | null = null;
-
-            if (event.description) {
-              if (isInitiatorLeg) {
-                setFields['initiatorShipment.lastEvent'] = event.description;
-                setFields['initiatorShipment.lastEventAt'] = now;
-              } else if (isRecipientLeg) {
-                setFields['recipientShipment.lastEvent'] = event.description;
-                setFields['recipientShipment.lastEventAt'] = now;
-              }
-            }
-
-            const inspectionHours = Math.max(
-              Number(this.config?.get('EXCHANGE_INSPECTION_HOURS') ?? 72),
-              72,
-            );
-
-            if (isInitiatorLeg && !ex.recipientReceivedAt) {
-              setFields.recipientReceivedAt = now;
-              setFields.recipientInspectionDeadline = new Date(
-                now.getTime() + inspectionHours * 3_600_000,
-              );
-            } else if (isRecipientLeg && !ex.initiatorReceivedAt) {
-              setFields.initiatorReceivedAt = now;
-              setFields.initiatorInspectionDeadline = new Date(
-                now.getTime() + inspectionHours * 3_600_000,
-              );
-            }
-
-            const nextInitiatorReceived = isRecipientLeg ? now : (ex.initiatorReceivedAt ?? null);
-            const nextRecipientReceived = isInitiatorLeg ? now : (ex.recipientReceivedAt ?? null);
-            const willBeBothReceived = Boolean(nextInitiatorReceived && nextRecipientReceived);
-
-            if (willBeBothReceived) {
-              setFields.status = 'Delivered';
-              setFields.inspectionDeadline = new Date(
-                now.getTime() + inspectionHours * 3_600_000,
-              );
-            }
-
-            const updated = await tx.c.exchanges.findOneAndUpdate(
-              { _id: ex._id, revision: ex.revision },
-              { $set: setFields, $inc: { revision: 1 } },
-              { returnDocument: 'after' },
-            );
-
-            if (updated) {
-              exchangeUpdated = true;
-              nextStatus = updated.status;
-              this.logger.log(
-                `[CarrierWebhook] Đã tự động cập nhật Exchange ${updated._id} sang ${updated.status} (receivedAt=${now.toISOString()}) theo sự kiện DELIVERED từ bưu tá.`,
-              );
-              await notifyExchange(
-                tx,
-                updated,
-                'ExchangeReceived',
-                [ex.initiatorId, ex.recipientId],
-                now,
-              );
-            }
-          } else if (statusCode === 'IN_TRANSIT' || statusCode === 'PICKING') {
-            const setFields: Record<string, unknown> = { updatedAt: now };
-
-            if (event.description) {
-              if (isInitiatorLeg) {
-                setFields['initiatorShipment.lastEvent'] = event.description;
-                setFields['initiatorShipment.lastEventAt'] = now;
-              } else if (isRecipientLeg) {
-                setFields['recipientShipment.lastEvent'] = event.description;
-                setFields['recipientShipment.lastEventAt'] = now;
-              }
-            }
-
-            if (statusCode === 'PICKING') {
-              if (isInitiatorLeg && !ex.initiatorShippedAt) {
-                setFields.initiatorShippedAt = now;
-                setFields['initiatorShipment.shippedAt'] = now;
-              }
-              if (isRecipientLeg && !ex.recipientShippedAt) {
-                setFields.recipientShippedAt = now;
-                setFields['recipientShipment.shippedAt'] = now;
-              }
-            }
-
-            if (ex.status === 'Preparing') {
-              const willBeBothShipped =
-                Boolean(isInitiatorLeg ? now : ex.initiatorShippedAt) &&
-                Boolean(isRecipientLeg ? now : ex.recipientShippedAt);
-              if (willBeBothShipped) {
-                setFields.status = 'InTransit';
-              }
-            }
-
-            const updated = await tx.c.exchanges.findOneAndUpdate(
-              { _id: ex._id, revision: ex.revision },
-              { $set: setFields, $inc: { revision: 1 } },
-              { returnDocument: 'after' },
-            );
-            if (updated) {
-              exchangeUpdated = true;
-              nextStatus = updated.status;
-            }
-          }
-        });
-      } catch (err) {
-        this.logger.error(
-          `[CarrierWebhook] Lỗi khi cập nhật trạng thái Exchange qua Webhook: ${err instanceof Error ? err.message : String(err)}`,
-        );
+      const initiator = row.initiatorShipment?.trackingCode === trackingCode;
+      const leg = initiator ? row.initiatorShipment : row.recipientShipment;
+      if (leg?.trackingCode !== trackingCode) throw invalidState();
+      const sentAt = initiator ? row.initiatorShippedAt : row.recipientShippedAt;
+      const otherSentAt = initiator ? row.recipientShippedAt : row.initiatorShippedAt;
+      const receivedAt = initiator ? row.recipientReceivedAt : row.initiatorReceivedAt;
+      const otherReceivedAt = initiator ? row.initiatorReceivedAt : row.recipientReceivedAt;
+      const now = await tx.now();
+      const pickup = status === 'PICKING';
+      if ((pickup && sentAt) || (status === 'DELIVERED' && receivedAt))
+        return { status: row.status, changed: false };
+      if (row.status === 'Delivered' || receivedAt || (pickup
+        ? !canStartCarrierPickup(row, now)
+        : !sentAt || !['IN_TRANSIT', 'DELIVERED'].includes(status))) {
+        throw invalidState('Chỉ lấy sách khi đủ hai đơn và còn hạn. Kiện phải được lấy trước khi giao.');
       }
-    }
 
-    return { success: true, trackingCode: event.trackingCode, exchangeUpdated, nextStatus };
+      const shipmentKey = initiator ? 'initiatorShipment' : 'recipientShipment';
+      const changes: Partial<typeof row> = {
+        updatedAt: now,
+        [shipmentKey]: {
+          ...leg,
+          ...(pickup ? { shippedAt: now } : {}),
+          lastEvent: description || (pickup ? 'Bưu tá đã lấy sách' : status === 'DELIVERED' ? 'Đã giao sách' : 'Đang vận chuyển'),
+          lastEventAt: now,
+        },
+      };
+      if (pickup) {
+        if (initiator) changes.initiatorShippedAt = now;
+        else changes.recipientShippedAt = now;
+        changes.cancellationRequestedBy = null;
+        changes.cancellationRequestedAt = null;
+        if (otherSentAt) changes.status = 'InTransit';
+      }
+      if (status === 'DELIVERED') {
+        const deadline = new Date(+now + EXCHANGE_INSPECTION_MS);
+        if (initiator) {
+          changes.recipientReceivedAt = now;
+          changes.recipientInspectionDeadline = deadline;
+        } else {
+          changes.initiatorReceivedAt = now;
+          changes.initiatorInspectionDeadline = deadline;
+        }
+        if (otherReceivedAt) {
+          changes.status = 'Delivered';
+          changes.inspectionDeadline = inspectionDeadlines({ ...row, ...changes }).all;
+        }
+      }
+      const updated = await tx.c.exchanges.findOneAndUpdate(
+        { _id: id, revision: row.revision },
+        { $set: changes, $inc: { revision: 1 } },
+        { returnDocument: 'after' },
+      );
+      if (!updated) throw invalidState();
+      if (pickup) {
+        await notifyExchange(tx, updated, 'ExchangeShipped',
+          [initiator ? row.recipientId : row.initiatorId], now, { trackingCode });
+      } else if (status === 'DELIVERED') {
+        await notifyExchange(tx, updated, 'ExchangeReceived',
+          [row.initiatorId, row.recipientId], now);
+      }
+      return { status: updated.status, changed: true };
+    });
+    if (next.changed) this.simulatorAdapter.setShipmentStatus(trackingCode, status, description);
+    return { success: true, exchangeUpdated: next.changed, nextStatus: next.status };
   }
 
   private async getBookTitle(listingId?: string): Promise<string | null> {
@@ -316,9 +261,7 @@ export class CarrierService {
 
     if (!exchange) return null;
 
-    const isBothCreated =
-      Boolean(exchange.initiatorShipment?.trackingCode) &&
-      Boolean(exchange.recipientShipment?.trackingCode);
+    const isBothCreated = hasCarrierLabels(exchange);
 
     const isWaitingPartner = !isBothCreated;
 
@@ -411,7 +354,9 @@ export class CarrierService {
       carrierCode: currentLeg.carrierCode,
       carrierName: currentLeg.carrierName,
       status: isWaitingPartner ? 'WAITING_PARTNER_SHIPMENT' : exchange.status,
-      readyForPickup: !isWaitingPartner,
+      readyForPickup: canStartCarrierPickup(exchange, new Date()) ||
+        (isBothCreated && exchange.status === 'InTransit') ||
+        (isBothCreated && exchange.status === 'Preparing' && Boolean(currentLeg.shippedAt)),
       bothDelivered,
       inspectionDeadline: exchange.inspectionDeadline || null,
       sender: currentLeg.sender,
@@ -449,226 +394,60 @@ export class CarrierService {
     }));
   }
 
-  /**
-   * Đặt lại trạng thái đơn trao đổi về InTransit để phục vụ demo / test lặp lại
-   */
-  async resetForDemo(exchangeId: string) {
-    if (!this.mongo) return { success: false, message: 'No Mongo instance' };
-    const now = new Date();
-    const result = await this.mongo.c.exchanges.findOneAndUpdate(
-      { _id: exchangeId },
-      {
-        $set: {
-          status: 'InTransit',
-          initiatorShippedAt: now,
-          recipientShippedAt: now,
-          initiatorReceivedAt: null,
-          recipientReceivedAt: null,
-          initiatorInspectionDeadline: null,
-          recipientInspectionDeadline: null,
-          inspectionDeadline: null,
-          'initiatorShipment.lastEvent': null,
-          'initiatorShipment.lastEventAt': null,
-          'recipientShipment.lastEvent': null,
-          'recipientShipment.lastEventAt': null,
-          updatedAt: now,
-        },
-      },
-      { returnDocument: 'after' },
-    );
-    return { success: Boolean(result), exchange: result };
+  async resetForDemo() {
+    throw invalidState('Dùng phiếu mẫu mới để diễn tập lại. Lịch sử lấy và nhận sách đã ghi được giữ nguyên.');
   }
 
   /**
    * Tự động chạy mô phỏng nhanh toàn bộ quy trình giao nhận 2 chiều (Dành cho Demo / Thuyết trình)
-   * Tự động hoàn tất cả 2 kiện hàng và kích hoạt mốc nghiệm thu 48h trên sàn Lật Lại
+   * Ghi nhận lấy và giao cả hai kiện trên một phiếu đủ điều kiện.
    */
   async autoSimulateExchange(exchangeId: string) {
     if (!this.mongo) return { success: false, message: 'No Mongo instance' };
-    let updatedExchange: any = null;
-
-    await this.mongo.tx(async (tx) => {
-      const ex = await tx.c.exchanges.findOne({ _id: exchangeId });
-      if (!ex) return;
-      await tx.lock('exchanges', [ex._id]);
-
+    const next = await this.mongo.tx(async (tx) => {
+      await tx.lock('exchanges', [exchangeId]);
+      const row = await tx.c.exchanges.findOne({ _id: exchangeId });
+      if (!row) throw notFound();
       const now = await tx.now();
-      const inspectionHours = Math.max(
-        Number(this.config?.get('EXCHANGE_INSPECTION_HOURS') ?? 72),
-        72,
-      );
-      const deadline = new Date(now.getTime() + inspectionHours * 3_600_000);
+      if (!hasCarrierLabels(row) || !(canStartCarrierPickup(row, now) || row.status === 'InTransit'))
+        throw invalidState('Phiếu cần đủ hai mã vận đơn và còn ở bước giao nhận.');
 
-      const trackingA = ex.initiatorShipment?.trackingCode || `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
-      const trackingB = ex.recipientShipment?.trackingCode || `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
-
-      const setFields: Record<string, unknown> = {
-        status: 'Delivered',
-        initiatorShippedAt: ex.initiatorShippedAt || now,
-        recipientShippedAt: ex.recipientShippedAt || now,
-        initiatorReceivedAt: now,
-        recipientReceivedAt: now,
-        initiatorInspectionDeadline: deadline,
-        recipientInspectionDeadline: deadline,
-        inspectionDeadline: deadline,
-        'initiatorShipment.lastEvent': `Giao kiện ${trackingA} tận tay thành công kèm ký nhận POD`,
-        'initiatorShipment.lastEventAt': now,
-        'recipientShipment.lastEvent': `Giao kiện ${trackingB} tận tay thành công kèm ký nhận POD`,
-        'recipientShipment.lastEventAt': now,
-        updatedAt: now,
-      };
-
+      const existingDeadlines = inspectionDeadlines(row);
+      const deadline = new Date(+now + EXCHANGE_INSPECTION_MS);
+      const initiatorDeadline = existingDeadlines.initiator ?? deadline;
+      const recipientDeadline = existingDeadlines.recipient ?? deadline;
+      const firstPickup = row.initiatorShippedAt ?? now;
+      const secondPickup = row.recipientShippedAt ?? now;
       const updated = await tx.c.exchanges.findOneAndUpdate(
-        { _id: ex._id, revision: ex.revision },
-        { $set: setFields, $inc: { revision: 1 } },
+        { _id: exchangeId, revision: row.revision },
+        {
+          $set: {
+            status: 'Delivered',
+            initiatorShippedAt: firstPickup,
+            recipientShippedAt: secondPickup,
+            initiatorReceivedAt: row.initiatorReceivedAt ?? now,
+            recipientReceivedAt: row.recipientReceivedAt ?? now,
+            initiatorInspectionDeadline: initiatorDeadline,
+            recipientInspectionDeadline: recipientDeadline,
+            inspectionDeadline: new Date(Math.max(+initiatorDeadline, +recipientDeadline)),
+            initiatorShipment: { ...row.initiatorShipment, shippedAt: firstPickup, lastEvent: 'Đã giao sách · Demo', lastEventAt: now },
+            recipientShipment: { ...row.recipientShipment, shippedAt: secondPickup, lastEvent: 'Đã giao sách · Demo', lastEventAt: now },
+            cancellationRequestedBy: null,
+            cancellationRequestedAt: null,
+            updatedAt: now,
+          },
+          $inc: { revision: 1 },
+        },
         { returnDocument: 'after' },
       );
-
-      if (updated) {
-        updatedExchange = updated;
-        await notifyExchange(
-          tx,
-          updated,
-          'ExchangeReceived',
-          [ex.initiatorId, ex.recipientId],
-          now,
-        );
-      }
+      if (!updated) throw invalidState();
+      await notifyExchange(tx, updated, 'ExchangeReceived', [row.initiatorId, row.recipientId], now);
+      return updated;
     });
-
-    return { success: Boolean(updatedExchange), exchange: updatedExchange };
+    return { success: true, status: next.status };
   }
 
-  /**
-   * Tạo nhanh đơn trao đổi mẫu (Seed Demo Order) để phục vụ test ngay khi DB trống
-   */
-  async seedDemoOrder() {
-    if (!this.mongo) return { success: false, message: 'No Mongo instance' };
-
-    let createdId: string | null = null;
-    let createdTracking: string | null = null;
-
-    await this.mongo.tx(async (tx) => {
-      // Tìm 2 user thực tế trong hệ thống
-      const users = await tx.c.users.find({}).limit(10).toArray();
-      const userA = users.find(u => u.displayName?.includes('Đại')) || users[0] || {
-        _id: randomUUID(),
-        displayName: 'Nguyễn Đại (Bên A)',
-        username: 'nguyendai',
-      };
-      const userB = users.find(u => u.displayName?.includes('Tú')) || users[1] || {
-        _id: randomUUID(),
-        displayName: 'Nguyễn Tú (Bên B)',
-        username: 'nguyentu',
-      };
-
-      // Tìm 2 listing sách có gắn tác phẩm catalog thực tế
-      const candidateListings = await tx.c.listings
-        .find({ currentRevisionId: { $ne: null } })
-        .limit(10)
-        .toArray();
-      const listingAId = candidateListings[0]?._id || '45e2bff0-2bcc-444e-8326-031bad8890af';
-      const listingBId = candidateListings[1]?._id || '7fdf4c33-1d20-4a67-9885-4dc4bd6a1561';
-
-      const trackingA = `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
-      const trackingB = `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
-      const now = await tx.now();
-      const newId = randomUUID();
-
-      const newExchange: any = {
-        _id: newId,
-        initiatorId: userA._id,
-        recipientId: userB._id,
-        initiatorListingId: listingAId,
-        initiatorListingIds: [listingAId],
-        recipientListingId: listingBId,
-        status: 'InTransit',
-        revision: 1,
-        initiatorDeposit: 50000,
-        recipientDeposit: 50000,
-        diffAmount: 0,
-        diffPayerId: null,
-        initiatorOrderId: randomUUID(),
-        recipientOrderId: randomUUID(),
-        fundingDeadline: null,
-        initiatorFundedAt: now,
-        recipientFundedAt: now,
-        proposalExpiresAt: null,
-        rejectionReason: null,
-        cancelReason: null,
-        cancelledBy: null,
-        cancelledAt: null,
-        shippingDeadline: null,
-        initiatorShippedAt: now,
-        recipientShippedAt: now,
-        initiatorReceivedAt: null,
-        recipientReceivedAt: null,
-        initiatorInspectionDeadline: null,
-        recipientInspectionDeadline: null,
-        inspectionDeadline: null,
-        completedAt: null,
-        initiatorCompletedAt: null,
-        recipientCompletedAt: null,
-        disputedAt: null,
-        disputeReason: null,
-        disputedBy: null,
-        resolutionDecision: null,
-        resolutionReason: null,
-        resolvedBy: null,
-        resolvedAt: null,
-        cancellationRequestedBy: null,
-        cancellationRequestedAt: null,
-        lastProposedById: null,
-        initiatorAddress: {
-          recipientName: userA.displayName || 'Nguyễn Đại (Bên A)',
-          phone: '0901234567',
-          detail: '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
-          localityCode: 'DEMO-A',
-          serviceAreaCode: 'HCM-DEMO-v1',
-        },
-        recipientAddress: {
-          recipientName: userB.displayName || 'Nguyễn Tú (Bên B)',
-          phone: '0373916690',
-          detail: '120 Yên Lãng, Đống Đa, TP.HCM',
-          localityCode: 'DEMO-B',
-          serviceAreaCode: 'HCM-DEMO-v1',
-        },
-        initiatorShipment: {
-          method: 'carrier',
-          carrierCode: 'GHN',
-          carrierName: 'Giao Hàng Nhanh (GHN Express)',
-          trackingCode: trackingA,
-          meetupLocation: null,
-          notes: null,
-          shippedAt: now,
-          lastEvent: 'Bưu tá Lê Hoàng Nam đã tiếp nhận kiện sách tại bưu cục TP.HCM',
-          lastEventAt: now,
-        },
-        recipientShipment: {
-          method: 'carrier',
-          carrierCode: 'GHN',
-          carrierName: 'Giao Hàng Nhanh (GHN Express)',
-          trackingCode: trackingB,
-          meetupLocation: null,
-          notes: null,
-          shippedAt: now,
-          lastEvent: 'Bưu tá Lê Hoàng Nam đã tiếp nhận kiện sách tại bưu cục TP.HCM',
-          lastEventAt: now,
-        },
-        createdAt: now,
-        updatedAt: now,
-        lockSeq: 0,
-      };
-
-      await tx.c.exchanges.insertOne(newExchange);
-      createdId = newId;
-      createdTracking = trackingA;
-    });
-
-    return {
-      success: Boolean(createdId),
-      exchangeId: createdId,
-      trackingCode: createdTracking,
-    };
+  seedDemoOrder() {
+    throw invalidState('Hãy tạo đề nghị và đặt cọc bằng hai tài khoản trước khi mô phỏng giao sách.');
   }
 }

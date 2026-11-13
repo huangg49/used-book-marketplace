@@ -4,6 +4,7 @@
 
 ## Quy trình
 
+- Khi gửi qua hãng, lưu mã vận đơn chỉ đăng ký kiện. Chỉ mở lấy kiện khi đủ hai mã riêng và còn trong hạn 72 giờ. Nếu hết hạn trước khi lấy bất kỳ kiện nào, hủy phiếu và hoàn các khoản đã nộp. Nếu đã lấy một kiện, áp dụng nhánh tranh chấp bên dưới. Hai bên dùng cùng phương thức giao nhận trên phiếu mới. Trình mô phỏng local thực thi điều phối; tích hợp lấy kiện thực tế cần cơ chế xác thực và điều phối của hãng. Các mốc gửi cũ giữ nguyên để tránh hoàn tiền nhầm.
 - Chỉ xử lý hai bài sách lẻ đã nộp đủ cọc và tiền bù. Một chiều được ghi nhận gửi trong hạn và đã có mốc nhận. Chiều kia chưa ghi nhận gửi khi mở tranh chấp sau hạn. Member báo sự cố trên phiếu, hoặc worker mở khi quá hạn. Chặng đến có thể được bên nhận xác nhận riêng trước khi cả hai cùng gửi.
 - Khi người nhận im lặng và phiếu thiếu mốc nhận, Admin được phân công có thể xác minh giao ban đầu trong hồ sơ quá hạn. Chọn tệp đã tải xong của đúng hồ sơ, từ thời điểm gửi trở đi, và ghi căn cứ đối chiếu đúng kiện, người nhận và bàn giao. Lưu người xác minh, thời điểm, tệp và lý do riêng với mốc tự xác nhận của Member. Phiếu tiếp tục giữ tiền và sách. Quy trình trả chỉ bắt đầu ở bước yêu cầu bổ sung bằng chứng; các hạn và quyền quyết định áp dụng như trước. Ảnh đóng gói hoặc mã vận đơn riêng lẻ không chứng minh đã giao.
 - Dùng phân công bằng chứng đang có. Người phụ trách độc lập gửi yêu cầu cho cả hai, mở 48 giờ bổ sung. Member gửi giải trình và bằng chứng qua phiếu. Hệ thống tiếp tục giữ toàn bộ khoản giữ của Exchange.

@@ -139,24 +139,28 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
   const { sentAt } = outgoing ? detail.viewerShipping : detail.partnerShipping;
   const { receivedAt } = outgoing ? detail.partnerShipping : detail.viewerShipping;
   const inspectionDeadline = outgoing ? detail.partnerInspectionDeadline : detail.viewerInspectionDeadline;
-  const shipment = sentAt ? (outgoing ? detail.viewerShipment : detail.partnerShipment) : undefined;
+  const shipment = outgoing ? detail.viewerShipment : detail.partnerShipment;
+  const registered = shipment?.method === "carrier" && Boolean(shipment.trackingCode);
+  const otherShipment = outgoing ? detail.partnerShipment : detail.viewerShipment;
+  const bothRegistered = registered && otherShipment?.method === "carrier" && Boolean(otherShipment.trackingCode);
   const closed = detail.status === "CANCELLED" || detail.status === "EXPIRED" || detail.status === "REJECTED";
   const address = closed ? undefined : outgoing ? detail.partnerAddress : detail.viewerAddress;
   const books = outgoing ? detail.giveBooks : detail.receiveBooks;
   const carrier = CARRIERS.find(item => item.code === shipment?.carrierCode);
   const trackingCode = shipment?.trackingCode;
   const trackingUrl = getTrackingUrl(carrier?.code, trackingCode ?? undefined);
-  const hasJourney = Boolean(address || sentAt || receivedAt);
+  const hasJourney = Boolean(address || registered || sentAt || receivedAt);
   const expired = shippingExpired && !sentAt;
   const inTransit = detail.status === "WAITING_YOU_CONFIRM" || detail.status === "DELIVERING";
   const status = receivedAt ? (outgoing ? "Đối tác đã nhận" : "Bạn đã nhận sách")
     : sentAt ? (!outgoing && action ? "Chờ bạn xác nhận đã nhận"
       : shipment?.method === "direct" ? "Đã ghi nhận điểm hẹn"
-      : inTransit ? "Đang giao nhận" : trackingCode ? "Đã ghi nhận vận đơn" : "Đã xác nhận gửi")
-    : expired ? (outgoing ? "Đã hết hạn gửi" : "Đối tác chưa gửi đúng hạn")
+      : inTransit ? "Đang giao nhận" : trackingCode ? "Shipper đã lấy sách" : "Đã xác nhận gửi")
+    : expired ? (registered ? "Chưa được lấy đúng hạn" : outgoing ? "Đã hết hạn gửi" : "Đối tác chưa gửi đúng hạn")
+    : registered ? (bothRegistered ? "Chờ shipper lấy sách" : "Đã tạo đơn · Chờ đủ hai đơn")
     : outgoing ? (canSend ? "Chờ bạn tạo đơn" : "Chưa gửi sách") : "Chờ đối tác gửi";
   const Icon = outgoing ? ArrowUpRight : ArrowDownLeft;
-  const hasTracking = Boolean(sentAt || receivedAt);
+  const hasTracking = Boolean(registered || sentAt || receivedAt);
   const DetailIcon = hasTracking ? Route : MapPin;
 
   return (
@@ -201,7 +205,7 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
           </summary>
           <div className={styles.journeyBody}>
             {address && <DeliveryAddress address={address} outgoing={outgoing} open={journeyOpen} />}
-            {(sentAt || receivedAt) && (
+            {hasTracking && (
               <div className={styles.tracking}>
                 <h3>{shipment?.method === "direct" ? "Giao trực tiếp" : shipment?.carrierName || carrier?.name || "Thông tin giao nhận"}</h3>
                 {shipment?.meetupLocation && <p>{shipment.meetupLocation}</p>}
@@ -213,8 +217,9 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
                   </div>
                 )}
                 <ol className={styles.timeline}>
-                  {sentAt && <li><span>{shipment?.method === "direct" ? "Đã ghi nhận điểm hẹn" : "Đã ghi nhận gửi sách"}</span><HandoverTime value={sentAt} /></li>}
-                  {shipment?.lastEvent && <li><span>{shipment.lastEvent}</span>{shipment.lastEventAt && <HandoverTime value={shipment.lastEventAt} />}</li>}
+                  {shipment?.registeredAt && <li><span>Đã tạo đơn</span><HandoverTime value={shipment.registeredAt} /></li>}
+                  {sentAt && <li><span>{shipment?.method === "direct" ? "Đã ghi nhận điểm hẹn" : shipment?.registeredAt ? "Shipper đã lấy sách" : "Đã ghi nhận gửi sách"}</span><HandoverTime value={sentAt} /></li>}
+                  {shipment?.lastEvent && shipment.lastEventAt !== sentAt && <li><span>{shipment.lastEvent}</span>{shipment.lastEventAt && <HandoverTime value={shipment.lastEventAt} />}</li>}
                   {receivedAt && <li><span>{outgoing ? "Đối tác đã nhận sách" : "Bạn đã nhận sách"}</span><HandoverTime value={receivedAt} /></li>}
                 </ol>
                 {shipment?.notes && <p className={styles.notes}>{shipment.notes}</p>}
@@ -248,7 +253,7 @@ export function ShippingTrackingCard({ detail, sendAction, sendForm, sendDeadlin
         canSend={canSend} shippingExpired={shippingExpired}
         targeted={target === exchangeHandoverAnchor.outgoing} navigationKey={navigationKey} />
       <ShippingLeg detail={detail} direction="incoming" action={receiveAction}
-        deadline={detail.viewerShipping.sentAt ? sendDeadline : undefined}
+        deadline={detail.viewerShipping.sentAt || detail.viewerShipment?.registeredAt ? sendDeadline : undefined}
         shippingExpired={shippingExpired}
         targeted={target === exchangeHandoverAnchor.incoming} navigationKey={navigationKey} />
     </div>

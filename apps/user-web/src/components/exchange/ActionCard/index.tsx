@@ -240,16 +240,19 @@ export function ActionCard(props: Props) {
         instructions = expired
           ? "Đã hết hạn gửi sách. Hệ thống đang cập nhật phiếu."
           : "Hai bên đã đặt cọc. Bạn có thể chuẩn bị gửi sách.";
-        if (!expired) actions.push("sent");
+        if (!expired && !detail.viewerShipment) actions.push("sent");
         if (!expired && !detail.partnerShipping.sentAt) {
           actions.push("cancel");
         }
       } else if (detail.cancellationRequestedBy === myRole) {
         instructions = `Bạn đã gửi yêu cầu hủy trao đổi trước khi gửi sách. Đang chờ đối tác phản hồi. Nếu đối tác đồng thuận, 100% tiền cọc và tiền bù sẽ được hoàn lại về ví của cả hai bên.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
-        if (!expired) actions.push("sent");
+        if (!expired && !detail.viewerShipment) actions.push("sent");
       } else if (detail.cancellationRequestedBy === partnerRole) {
         instructions = `Đối tác đã đề nghị hủy trao đổi trước khi gửi sách. Nếu bạn đồng ý hủy, toàn bộ tiền cọc và tiền bù của cả hai bên sẽ được hoàn trả 100% về ví. Nếu bạn muốn tiếp tục giao dịch, hãy từ chối yêu cầu hủy hoặc tạo đơn gửi sách.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
-        if (!expired) actions.push("sent", "cancel", "reject");
+        if (!expired) {
+          if (!detail.viewerShipment) actions.push("sent");
+          actions.push("cancel", "reject");
+        }
       }
     }
   } else if (detail.status === "WAITING_YOU_CONFIRM") {
@@ -289,6 +292,8 @@ export function ActionCard(props: Props) {
         ? `Giao dịch đã hủy theo phán quyết của Quản trị viên: "${detail.resolutionReason}". Toàn bộ tiền cọc và tiền bù đã được hoàn lại 100% về ví của bạn.`
         : detail.cancelReason === "MutualAgreement"
           ? "Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ 100% tiền cọc và tiền bù đã được hoàn lại về ví của hai bên và sách đã được mở lại trên kệ."
+          : detail.cancelReason === "ShippingExpired"
+            ? "Phiếu đã hủy do hết hạn và chưa có kiện nào được bàn giao. Tiền đã về ví và sách được mở lại."
           : detail.status === "REJECTED"
             ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
             : detail.status === "EXPIRED"
@@ -436,7 +441,7 @@ export function ActionCard(props: Props) {
   const shippingDeadline = preparing && detail.shippingDeadline ? (
     <p className={styles.deadlineRow}>
       <span>
-        {detail.viewerShipping.sentAt ? "Hạn gửi của đối tác" : "Hạn gửi sách"}{" "}
+        {detail.viewerShipping.sentAt ? "Hạn gửi của đối tác" : "Hạn chuẩn bị và lấy sách"}{" "}
         <time dateTime={detail.shippingDeadline}>
           {new Date(detail.shippingDeadline).toLocaleString("vi-VN", {
             hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
@@ -572,6 +577,8 @@ export function ActionCard(props: Props) {
               senderAddress={detail.viewerAddress}
               receiverAddress={detail.partnerAddress}
               bookTitle={detail.giveBooks[0]?.title}
+              partnerMethod={detail.partnerShipment?.method === 'direct' || detail.partnerShipment?.registeredAt
+                ? detail.partnerShipment.method : undefined}
             />
           )} />
       )}

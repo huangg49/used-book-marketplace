@@ -88,6 +88,9 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       .set('Idempotency-Key', key)
       .send(body);
 
+  const carrierEvent = (code: string, status = 'PICKING') =>
+    request(app.getHttpServer()).post('/api/v1/webhooks/carrier').send({ trackingCode: code, status });
+
   const put = (
     id: string,
     body: object,
@@ -680,7 +683,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       },
       user1,
     ).expect(200);
-    expect(ship1Res.body.initiatorShippedAt).toBeDefined();
+    expect(ship1Res.body.initiatorShippedAt).toBeNull();
     expect(ship1Res.body.initiatorShipment).toMatchObject({
       method: 'carrier',
       carrierCode: 'GHN',
@@ -701,19 +704,23 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       },
       user2,
     ).expect(200);
-    expect(ship2Res.body.recipientShippedAt).toBeDefined();
+    expect(ship2Res.body.recipientShippedAt).toBeNull();
     expect(ship2Res.body.recipientShipment).toMatchObject({
       method: 'carrier',
       carrierCode: 'GHTK',
       trackingCode: 'GHTK777888',
     });
-    expect(ship2Res.body.status).toBe('InTransit');
+    expect(ship2Res.body.status).toBe('Preparing');
+    await carrierEvent('GHN888999').expect(200);
+    await carrierEvent('GHTK777888').expect(200);
+    const inTransit = (await get('/exchanges/' + exchangeId, user1).expect(200)).body;
+    expect(inTransit.status).toBe('InTransit');
 
     // 6. Receiving
     // User1 receives -> status remains InTransit until both sides receive
     const rec1Res = await post(
       `/exchanges/${exchangeId}/receive`,
-      { expectedVersion: ship2Res.body.revision },
+      { expectedVersion: inTransit.revision },
       user1,
     ).expect(200);
     expect(rec1Res.body.initiatorReceivedAt).toBeDefined();
@@ -1948,8 +1955,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         `/exchanges/${created.id}/ship`,
         {
           expectedVersion: fund2Res.body.revision,
-          method: 'carrier',
-          trackingCode: 'EXP_TEST_123',
+          method: 'direct',
         },
         user1,
       ).expect(200);
@@ -2160,7 +2166,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         ).expect(200)
       ).body;
 
-      const inTransitRes = (
+      const secondLabel = (
         await post(
           `/exchanges/${created.id}/ship`,
           {
@@ -2174,6 +2180,10 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         ).expect(200)
       ).body;
 
+      expect(secondLabel.status).toBe('Preparing');
+      await carrierEvent('GHN-TRANSIT-1').expect(200);
+      await carrierEvent('GHN-TRANSIT-2').expect(200);
+      const inTransitRes = (await get('/exchanges/' + created.id, user1).expect(200)).body;
       expect(inTransitRes.status).toBe('InTransit');
 
       // User1 marks received, but User2 never confirms receipt!
@@ -2214,6 +2224,59 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
 
   describe('one-sided Exchange return', () => {
     const hour = 3_600_000;
+
+    it('refunds a carrier label-only exchange after the deadline and rejects pickup', async () => {
+      const ex = await preparedExchange();
+      const path = '/exchanges/' + ex.id;
+      const label = (await post(path + '/ship', {
+        expectedVersion: ex.revision, method: 'carrier', carrierCode: 'SIMULATOR', trackingCode: 'DEMO-ONE-LABEL',
+      }, user1).expect(200)).body;
+      expect(label).toMatchObject({ status: 'Preparing', initiatorShippedAt: null,
+        initiatorShipment: { trackingCode: 'DEMO-ONE-LABEL', registeredAt: expect.any(String), shippedAt: null } });
+      await post(path + '/receive', { expectedVersion: label.revision }, user2).expect(409);
+      await carrierEvent('DEMO-ONE-LABEL').expect(409);
+      await carrierEvent('DEMO-ONE-LABEL', 'DELIVERED').expect(409);
+      await carrierEvent('DEMO-ONE-LABEL', 'UNKNOWN').expect(422);
+      await request(app.getHttpServer()).get('/api/v1/shipments/carrier/orders/recent')
+        .set('X-Forwarded-Host', 'example.com').expect(404);
+      await request(app.getHttpServer()).post('/api/v1/shipments/carrier/seed-demo-order').expect(409);
+      await request(app.getHttpServer()).post('/api/v1/shipments/carrier/orders/' + ex.id + '/auto-simulate').expect(409);
+      const deadline = new Date(label.shippingDeadline);
+      await worker.tick(new Date(+deadline + 1));
+      await worker.tick(new Date(+deadline + 2));
+      expect((await get(path, user1).expect(200)).body).toMatchObject({ status: 'Cancelled', cancelReason: 'ShippingExpired' });
+      for (const id of [ex.l1.listingId, ex.l2.listingId])
+        expect(await db.c.listings.findOne({ _id: id })).toMatchObject({ trade: 'Available' });
+      const row = await db.c.exchanges.findOne({ _id: ex.id });
+      expect(await db.c.ledger_journals.countDocuments({
+        orderId: { $in: [row!.initiatorOrderId, row!.recipientOrderId] }, type: 'OrderRefund',
+      })).toBe(2);
+      expect((await reconcile()).balanced).toBe(true);
+      await carrierEvent('DEMO-ONE-LABEL').expect(409);
+    });
+
+    it('keeps the money and both listings reserved when only one registered parcel was picked up', async () => {
+      const ex = await preparedExchange();
+      const path = '/exchanges/' + ex.id;
+      const label = (await post(path + '/ship', {
+        expectedVersion: ex.revision, method: 'carrier', trackingCode: 'DEMO-PICKUP-A',
+      }, user1).expect(200)).body;
+      await post(path + '/ship', { expectedVersion: label.revision, method: 'direct' }, user2).expect(409);
+      await post(path + '/ship', {
+        expectedVersion: label.revision, method: 'carrier', trackingCode: 'DEMO-PICKUP-B',
+      }, user2).expect(200);
+      await carrierEvent('DEMO-PICKUP-A', 'DELIVERED').expect(409);
+      const results = await Promise.all([carrierEvent('DEMO-PICKUP-A').expect(200), carrierEvent('DEMO-PICKUP-A').expect(200)]);
+      expect(results[0].body.nextStatus).toBe('Preparing');
+      const picked = (await get(path, user1).expect(200)).body;
+      expect(picked).toMatchObject({ revision: label.revision + 2, initiatorShippedAt: expect.any(String), recipientShippedAt: null });
+      const before = await reconcile();
+      await worker.tick(new Date(Date.parse(picked.shippingDeadline) + 1));
+      expect((await get(path, user1).expect(200)).body.status).toBe('ResolutionPending');
+      for (const id of [ex.l1.listingId, ex.l2.listingId])
+        expect(await db.c.listings.findOne({ _id: id })).toMatchObject({ trade: 'Reserved' });
+      expect(await reconcile()).toEqual(before);
+    });
 
     it('advances only the configured demo deadline, once, without changing delivery evidence or funds', async () => {
       const ex = await preparedExchange(100000, 300000);
@@ -2333,7 +2396,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       });
       try {
         const sent = (await post('/exchanges/' + ex.id + '/ship', {
-          expectedVersion: ex.revision, trackingCode: 'QA-OUTBOUND',
+          expectedVersion: ex.revision, method: 'direct',
         }, user1).expect(200)).body;
         await post('/exchanges/' + ex.id + '/receive', { expectedVersion: sent.revision }, user1).expect(409);
         const received = (await post('/exchanges/' + ex.id + '/receive', {
@@ -2415,7 +2478,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         } else {
           clock = new Date(+clock + 48 * hour);
           await act(memberPath, user1, version, 'ReportDispatch', { trackingCode: 'QA-RETURN' }).expect(409);
-          await act(memberPath, user2, version, 'ReportDispatch', { trackingCode: 'QA-OUTBOUND' }).expect(422);
+          await act(memberPath, user2, version, 'ReportDispatch', { trackingCode: 'ABC' }).expect(422);
           const sentBack = (await act(memberPath, user2, version, 'ReportDispatch', { trackingCode: 'QA-RETURN' }).expect(200)).body;
           await act(memberPath, user2, sentBack.revision, 'AcknowledgeReturn').expect(409);
           await act(opsPath, admin, sentBack.revision, 'Settle').expect(409);
@@ -2742,16 +2805,13 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
           `/exchanges/${created.id}/ship`,
           {
             expectedVersion: req.revision,
-            method: 'carrier',
-            carrierCode: 'GHN',
-            carrierName: 'Giao Hàng Nhanh',
-            trackingCode: 'GHN-MUTUAL-1',
+            method: 'direct',
           },
           user2,
         ).expect(200)
       ).body;
 
-      expect(shipped.recipientShippedAt).toBeDefined();
+      expect(shipped.recipientShippedAt).toEqual(expect.any(String));
       expect(shipped.cancellationRequestedBy).toBeNull();
 
       // Once shipped, neither party can cancel

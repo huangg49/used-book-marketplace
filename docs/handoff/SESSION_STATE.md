@@ -1,3 +1,20 @@
+# Chờ đủ hai vận đơn trước khi shipper lấy sách — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `807c899a`, OpenAPI 0.78.0. API tách
+`registeredAt` khỏi `shippedAt`. Member web hiện **Chờ đủ hai đơn** hoặc **Chờ
+shipper lấy sách**. Trình mô phỏng `/driver` chỉ ghi lấy kiện mới khi hai bên
+đã lưu mã riêng và còn trong hạn 72 giờ. Worker hủy và hoàn các khoản nếu chưa
+lấy kiện nào, hoặc mở hồ sơ giữ tiền và sách khi mới lấy một kiện. Giao trực
+tiếp vẫn ghi nhận theo từng chiều. Mốc gửi cũ giữ nguyên. Xem
+[ADR0089](../adr/0089-one-sided-exchange-return.md).
+
+Chromium trên HTTP/Mongo QA với media giả đã kiểm từ lưu hai mã đến nút lấy
+sách và trạng thái trên phiếu Member. Mongo QA qua 61 ca trao đổi, gồm hết
+hạn, hoàn qua sổ cái, giữ sách khi đã lấy một kiện và chặn lệnh gửi lặp. API/Member web local
+đã kiểm HTTP. Phiên demo Windows có tiến trình quét riêng hạn gửi; cài đặt
+chuẩn dùng `pnpm dev:orders`. Nghiệm thu người thật, native và điều phối hãng
+thật chưa chạy.
+
 # Nút tua hạn gửi trên phiếu trao đổi demo — 13/11/2026
 
 Nhánh `codex/exchange-progress-web`, base `89901a49`. Phiếu Member web
