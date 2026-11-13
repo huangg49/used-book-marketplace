@@ -30,14 +30,14 @@ it("local-only shipment never replaces a server confirmation", () => {
     hasViewerReviewed: false,
   };
   expect(
-    renderToStaticMarkup(<ShippingTrackingCard detail={detail} />),
+    renderToStaticMarkup(<ShippingTrackingCard detail={detail} canSend />),
   ).toContain("Chờ bạn tạo đơn");
   saveExchangeShipment(detail.id, "initiator", {
     method: "carrier",
     carrierCode: "OTHER",
     trackingCode: "AUDIT-NOT-SERVER-CONFIRMED",
   });
-  const html = renderToStaticMarkup(<ShippingTrackingCard detail={detail} />);
+  const html = renderToStaticMarkup(<ShippingTrackingCard detail={detail} canSend />);
   expect(html).toContain("Chờ bạn tạo đơn");
   expect(html).not.toContain("AUDIT-NOT-SERVER-CONFIRMED");
   expect(detail.viewerShipping.sentAt).toBeUndefined();
@@ -50,6 +50,6 @@ it("local-only shipment never replaces a server confirmation", () => {
   const confirmed = renderToStaticMarkup(
     <ShippingTrackingCard detail={detail} />,
   );
-  expect(confirmed).toContain("Đã tạo đơn · Chờ bưu tá lấy");
+  expect(confirmed).toContain("Đã ghi nhận vận đơn");
   expect(confirmed).toContain("SERVER-CONFIRMED");
 });

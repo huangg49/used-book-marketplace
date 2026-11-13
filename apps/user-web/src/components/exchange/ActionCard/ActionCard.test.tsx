@@ -23,7 +23,7 @@ const base: ExchangeDetail = {
   partnerInspectionDeadline: "2099-01-02T00:00:00Z",
   inspectionDeadline: "2099-01-02T00:00:00Z",
 };
-function render(changes: Partial<ExchangeDetail>) {
+function render(changes: Partial<ExchangeDetail>, handover = false) {
   const cache = new QueryClient();
   const noop = async () => {};
   const html = renderToStaticMarkup(
@@ -31,6 +31,9 @@ function render(changes: Partial<ExchangeDetail>) {
       <QueryClientProvider client={cache}>
         <ActionCard
           detail={{ ...base, ...changes }}
+          compact={handover}
+          standaloneSheet={handover}
+          handover={handover ? { navigationKey: "qa" } : undefined}
           onCancel={noop}
           onAccept={noop}
           onReject={noop}
@@ -71,5 +74,32 @@ describe("merged Exchange inspection semantics", () => {
     });
     expect(html).toContain("200.000");
     expect(html).toContain("Đặt cọc mô phỏng");
+  });
+});
+
+describe("Exchange handover actions", () => {
+  it("puts sending and receiving in their respective directions", () => {
+    const preparing = render({
+      status: "WAITING_YOU_SEND", viewerShipping: {}, partnerShipping: {},
+      shippingDeadline: "2099-01-01T00:00:00Z",
+    }, true);
+    const incomingStart = preparing.indexOf('id="nhan-sach"');
+    expect(preparing.slice(0, incomingStart)).toContain("Tạo đơn gửi sách");
+    expect(preparing).not.toContain("Xác nhận đã nhận sách");
+    const inTransit = render({
+      status: "WAITING_YOU_CONFIRM",
+      viewerShipping: { sentAt: base.createdAt }, partnerShipping: { sentAt: base.createdAt },
+    }, true);
+    expect(inTransit.slice(inTransit.indexOf('id="nhan-sach"'))).toContain("Xác nhận đã nhận sách");
+    expect(inTransit).not.toContain("Tạo đơn gửi sách");
+  });
+
+  it("never offers to send after the deadline even with an open cancellation request", () => {
+    const html = render({
+      status: "WAITING_YOU_SEND", viewerShipping: {}, partnerShipping: {},
+      shippingDeadline: "2020-01-01T00:00:00Z", cancellationRequestedBy: "Recipient",
+    }, true);
+    expect(html).toContain("Đã hết hạn gửi");
+    expect(html).not.toContain("Tạo đơn gửi sách");
   });
 });

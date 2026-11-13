@@ -1,546 +1,206 @@
-import { useState } from 'react';
-import {
-    Truck,
-    Package,
-    Copy,
-    Check,
-    ExternalLink,
-    MapPin,
-    Calendar,
-    Clock,
-    AlertCircle,
-    ShieldCheck,
-    ArrowUpRight,
-    ArrowDownLeft,
-    CheckCircle2,
-    BookOpen
-} from 'lucide-react';
-import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
-import {
-    getTrackingUrl,
-    CARRIERS,
-    type ShipmentData
-} from '../../../services/exchangeShipment';
-import styles from './ShippingTrackingCard.module.css';
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock, Copy, ExternalLink } from "lucide-react";
+import { exchangeHandoverAnchor, type HandoverNavigation } from "../../../lib/exchange-handover";
+import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
+import { CARRIERS, getTrackingUrl } from "../../../services/exchangeShipment";
+import { BookCover } from "../../BookCover";
+import styles from "./ShippingTrackingCard.module.css";
 
-function BarcodeSvg({ value }: { value: string }) {
-    const clean = value.replace(/[^A-Za-z0-9]/g, '');
-    const bars: { x: number; width: number }[] = [];
-    let currentX = 6;
-    for (let i = 0; i < clean.length; i++) {
-        const code = clean.charCodeAt(i);
-        const w1 = (code % 3) + 1;
-        const space = ((code >> 1) % 2) + 1;
-        const w2 = ((code >> 2) % 3) + 1;
-        bars.push({ x: currentX, width: w1 });
-        currentX += w1 + space;
-        bars.push({ x: currentX, width: w2 });
-        currentX += w2 + 2;
-    }
-    return (
-        <svg viewBox={`0 0 ${currentX + 6} 44`} className={styles.barcodeSvg} preserveAspectRatio="none">
-            {bars.map((b, i) => (
-                <rect key={i} x={b.x} y={2} width={b.width} height={40} fill="#1a1a1a" />
-            ))}
-        </svg>
-    );
+type Direction = "outgoing" | "incoming";
+
+interface Props extends Partial<HandoverNavigation> {
+  detail: ExchangeDetail;
+  sendAction?: ReactNode;
+  receiveAction?: ReactNode;
+  canSend?: boolean;
+  shippingExpired?: boolean;
 }
 
-interface ShippingTrackingCardProps {
-    detail: ExchangeDetail;
-    onRefresh?: () => void;
+const dateFormat = new Intl.DateTimeFormat("vi-VN", {
+  hour: "2-digit",
+  minute: "2-digit",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+function HandoverTime({ value }: { value: string }) {
+  return <time dateTime={value}>{dateFormat.format(new Date(value))}</time>;
 }
 
-export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
-    const [copiedCode, setCopiedCode] = useState<string | null>(null);
-    const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
-
-    // Only the server may confirm a shipment; a saved local draft is not evidence.
-
-    const serverViewerShipment: ShipmentData | null = detail.viewerShipment
-        ? {
-            method: detail.viewerShipment.method,
-            carrierCode: (detail.viewerShipment.carrierCode as any) ?? 'OTHER',
-            carrierName: detail.viewerShipment.carrierName ?? undefined,
-            trackingCode: detail.viewerShipment.trackingCode ?? undefined,
-            meetupLocation: detail.viewerShipment.meetupLocation ?? undefined,
-            notes: detail.viewerShipment.notes ?? undefined,
-            shippedAt: detail.viewerShipment.shippedAt ?? undefined,
-            lastEvent: detail.viewerShipment.lastEvent ?? undefined,
-            lastEventAt: detail.viewerShipment.lastEventAt ?? undefined,
+function CopyValue({ value, label }: { value: string; label: string }) {
+  const [feedback, setFeedback] = useState<"copied" | "error">();
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = window.setTimeout(() => setFeedback(undefined), 2500);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+  return (
+    <span className={styles.copy}>
+      <button type="button" aria-label={label} title={label} onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setFeedback("copied");
+        } catch {
+          setFeedback("error");
         }
-        : null;
+      }}>
+        {feedback === "copied" ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+      </button>
+      <span role="status">{feedback === "copied" ? "Đã sao chép" : feedback === "error" ? "Sao chép thất bại" : ""}</span>
+    </span>
+  );
+}
 
-    const serverPartnerShipment: ShipmentData | null = detail.partnerShipment
-        ? {
-            method: detail.partnerShipment.method,
-            carrierCode: (detail.partnerShipment.carrierCode as any) ?? 'OTHER',
-            carrierName: detail.partnerShipment.carrierName ?? undefined,
-            trackingCode: detail.partnerShipment.trackingCode ?? undefined,
-            meetupLocation: detail.partnerShipment.meetupLocation ?? undefined,
-            notes: detail.partnerShipment.notes ?? undefined,
-            shippedAt: detail.partnerShipment.shippedAt ?? undefined,
-            lastEvent: detail.partnerShipment.lastEvent ?? undefined,
-            lastEventAt: detail.partnerShipment.lastEventAt ?? undefined,
-        }
-        : null;
+function ShippingLeg({ detail, direction, action, canSend, shippingExpired, navigationKey, targeted }: {
+  detail: ExchangeDetail;
+  direction: Direction;
+  action: ReactNode;
+  canSend?: boolean;
+  shippingExpired?: boolean;
+  navigationKey?: string;
+  targeted: boolean;
+}) {
+  const row = useRef<HTMLElement>(null);
+  const journey = useRef<HTMLDetailsElement>(null);
+  const outgoing = direction === "outgoing";
+  const id = exchangeHandoverAnchor[direction];
 
-    const viewerShipment: ShipmentData | null = serverViewerShipment;
-    const partnerShipment: ShipmentData | null = serverPartnerShipment;
+  useEffect(() => {
+    if (!targeted) return;
+    const frame = requestAnimationFrame(() => {
+      if (journey.current) journey.current.open = true;
+      row.current?.focus({ preventScroll: true });
+      row.current?.scrollIntoView({ block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [targeted, navigationKey]);
 
-    const viewerSentAt = detail.viewerShipping.sentAt;
-    const partnerSentAt = detail.partnerShipping.sentAt;
-    const partnerReceivedAt = detail.partnerShipping.receivedAt;
-    const viewerReceivedAt = detail.viewerShipping.receivedAt;
+  const { sentAt } = outgoing ? detail.viewerShipping : detail.partnerShipping;
+  const { receivedAt } = outgoing ? detail.partnerShipping : detail.viewerShipping;
+  const inspectionDeadline = outgoing ? detail.partnerInspectionDeadline : detail.viewerInspectionDeadline;
+  const shipment = sentAt ? (outgoing ? detail.viewerShipment : detail.partnerShipment) : undefined;
+  const address = outgoing ? detail.partnerAddress : detail.viewerAddress;
+  const books = outgoing ? detail.giveBooks : detail.receiveBooks;
+  const addressText = address ? [address.detail, address.localityCode].filter(Boolean).join(", ") : "";
+  const carrier = CARRIERS.find(item => item.code === shipment?.carrierCode);
+  const trackingCode = shipment?.trackingCode;
+  const trackingUrl = getTrackingUrl(carrier?.code, trackingCode ?? undefined);
+  const hasJourney = Boolean(address || sentAt || receivedAt);
+  const expired = outgoing && shippingExpired && !sentAt;
+  const inTransit = detail.status === "WAITING_YOU_CONFIRM" || detail.status === "DELIVERING";
+  const status = receivedAt ? (outgoing ? "Đối tác đã nhận" : "Bạn đã nhận sách")
+    : sentAt ? (shipment?.method === "direct" ? "Đã ghi nhận điểm hẹn"
+      : inTransit ? "Đang giao nhận" : trackingCode ? "Đã ghi nhận vận đơn" : "Đã xác nhận gửi")
+    : expired ? "Đã hết hạn gửi"
+    : outgoing ? (canSend ? "Chờ bạn tạo đơn" : "Chưa gửi sách") : "Chờ đối tác gửi";
+  const Icon = outgoing ? ArrowUpRight : ArrowDownLeft;
 
-    const copyTracking = (code: string) => {
-        navigator.clipboard.writeText(code);
-        setCopiedCode(code);
-        setTimeout(() => setCopiedCode(null), 2000);
-    };
-
-    const copyAddressText = (text: string) => {
-        navigator.clipboard.writeText(text);
-        setCopiedAddress(text);
-        setTimeout(() => setCopiedAddress(null), 2000);
-    };
-
-    // Only render when exchange is active or past funding
-    if (['PENDING', 'FUNDING', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(detail.status)) {
-        return null;
-    }
-
-    const bothSent = Boolean(viewerSentAt && partnerSentAt);
-    const bothReceived = Boolean(viewerReceivedAt && partnerReceivedAt);
-
-    const renderLegCard = ({
-        direction,
-        title,
-        sentAt,
-        receivedAt,
-        shipment,
-        address,
-        books
-    }: {
-        direction: 'outgoing' | 'incoming';
-        title: string;
-        sentAt?: string;
-        receivedAt?: string;
-        shipment?: ShipmentData | null;
-        address?: { recipientName: string; phone: string; detail: string; localityCode?: string | null };
-        books: typeof detail.giveBooks;
-    }) => {
-        const isSent = Boolean(sentAt);
-        const isReceived = Boolean(receivedAt);
-        const trackingCode = shipment?.trackingCode;
-        const trackingUrl = getTrackingUrl(shipment?.carrierCode, trackingCode);
-        const carrier = CARRIERS.find(c => c.code === shipment?.carrierCode);
-        const isOutgoing = direction === 'outgoing';
-
-        const addressFullText = address
-            ? `${address.recipientName} - ${address.phone}, ${address.detail}${address.localityCode ? `, ${address.localityCode}` : ''}`
-            : '';
-
-        return (
-            <div className={`${styles.legCard} ${isOutgoing ? styles.legCardOutgoing : styles.legCardIncoming} ${isSent ? styles.legCardSent : ''}`}>
-                {/* Header with balanced 2-row layout */}
-                <div className={styles.legHeader}>
-                    <div className={styles.legTopRow}>
-                        <div className={`${styles.directionPill} ${isOutgoing ? styles.pillOutgoing : styles.pillIncoming}`}>
-                            {isOutgoing ? (
-                                <>
-                                    <ArrowUpRight size={13} className={styles.directionIcon} />
-                                    <span>Chiều đi · Bạn gửi</span>
-                                </>
-                            ) : (
-                                <>
-                                    <ArrowDownLeft size={13} className={styles.directionIcon} />
-                                    <span>Chiều về · Bạn nhận</span>
-                                </>
-                            )}
-                        </div>
-                        <div className={styles.legStatusWrap}>
-                            {isReceived ? (
-                                <span className={styles.badgeSuccess}>
-                                    <CheckCircle2 size={13} /> {isOutgoing ? 'Đối tác đã nhận' : 'Bạn đã nhận sách'}
-                                </span>
-                            ) : isSent ? (
-                                <span className={bothSent ? styles.badgeShipping : styles.badgePending}>
-                                    {bothSent ? <Truck size={13} /> : <Clock size={13} />}
-                                    {bothSent
-                                        ? (isOutgoing ? 'Đang giao tới đối tác' : 'Đang giao tới bạn')
-                                        : (isOutgoing ? 'Đã tạo đơn · Chờ bưu tá lấy' : 'Đối tác đã tạo đơn')}
-                                </span>
-                            ) : (
-                                <span className={styles.badgePending}>
-                                    <Clock size={13} /> {isOutgoing ? 'Chờ bạn tạo đơn' : 'Chờ đối tác tạo đơn'}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    <h4 className={styles.legTitle}>{title}</h4>
-                </div>
-
-                {/* Book summary bar */}
-                {books && books.length > 0 && (
-                    <div className={styles.bookSummaryBox}>
-                        <div className={styles.bookSummaryTitle}>
-                            <BookOpen size={13} />
-                            <span>Gói gồm <strong>{books.length}</strong> cuốn sách:</span>
-                        </div>
-                        <div className={styles.bookChipList}>
-                            {books.map(b => (
-                                <span key={b.id} className={styles.bookChip}>
-                                    <span className={styles.bookChipTitle}>{b.title}</span>
-                                    {b.condition && <span className={styles.bookChipCondition}>{b.condition}</span>}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* 3-Step Mini Stepper */}
-                <div className={styles.stepperContainer} aria-label="Tiến trình bưu phẩm">
-                    <div className={`${styles.stepperStep} ${isSent ? styles.stepCompleted : styles.stepActive}`}>
-                        <div className={styles.stepMarker}>
-                            {isSent ? <Check size={11} strokeWidth={3} /> : <span className={styles.markerDot} />}
-                        </div>
-                        <span className={styles.stepLabel}>
-                            {isSent ? 'Đã tạo đơn' : (isOutgoing ? 'Chờ tạo đơn' : 'Chờ gửi')}
-                        </span>
-                    </div>
-
-                    <div className={`${styles.stepperLine} ${bothSent ? styles.lineCompleted : ''}`} />
-
-                    <div className={`${styles.stepperStep} ${isReceived ? styles.stepCompleted : bothSent ? styles.stepActive : styles.stepPending}`}>
-                        <div className={styles.stepMarker}>
-                            {isReceived ? <Check size={11} strokeWidth={3} /> : bothSent ? <span className={styles.markerDot} /> : 2}
-                        </div>
-                        <span className={styles.stepLabel}>Đang giao</span>
-                    </div>
-
-                    <div className={`${styles.stepperLine} ${isReceived ? styles.lineCompleted : ''}`} />
-
-                    <div className={`${styles.stepperStep} ${isReceived ? styles.stepCompleted : styles.stepPending}`}>
-                        <div className={styles.stepMarker}>
-                            {isReceived ? <Check size={11} strokeWidth={3} /> : 3}
-                        </div>
-                        <span className={styles.stepLabel}>
-                            {isOutgoing ? 'Đối tác nhận' : 'Đồng kiểm 72h'}
-                        </span>
-                    </div>
-                </div>
-
-                <div className={styles.legBody}>
-                    {/* Destination Address Card */}
-                    {address && (
-                        <div className={styles.destinationAddressBox}>
-                            <div className={styles.destHeader}>
-                                <div className={styles.destLabel}>
-                                    <MapPin size={13} />
-                                    <span>{isOutgoing ? `Địa chỉ nhận của @${detail.partner.username}:` : 'Địa chỉ nhận của bạn:'}</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    className={styles.copyAddressBtn}
-                                    onClick={() => copyAddressText(addressFullText)}
-                                    title="Sao chép địa chỉ"
-                                >
-                                    {copiedAddress === addressFullText ? (
-                                        <>
-                                            <Check size={11} className={styles.iconGreen} /> Đã chép
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy size={11} /> Sao chép
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                            <div className={styles.destText}>
-                                <div className={styles.destRecipient}>
-                                    <span className={styles.recipientName}>{address.recipientName}</span>
-                                    <span className={styles.recipientPhone}>{address.phone}</span>
-                                </div>
-                                <div className={styles.addressLine}>
-                                    {address.detail}{address.localityCode ? `, ${address.localityCode}` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Sent Details or Empty Prompt */}
-                    {isSent ? (
-                        <div className={styles.shipmentDetailsBox}>
-                            <div className={styles.shipmentMetaGrid}>
-                                <div className={styles.metaCol}>
-                                    <span className={styles.metaLabel}>Thời gian gửi:</span>
-                                    <span className={styles.metaValue}>
-                                        {new Date(sentAt!).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · {new Date(sentAt!).toLocaleDateString('vi-VN')}
-                                    </span>
-                                </div>
-                                <div className={styles.metaCol}>
-                                    <span className={styles.metaLabel}>Hình thức vận chuyển:</span>
-                                    <span className={styles.metaValue}>
-                                        {shipment?.method === 'direct' ? (
-                                            <span className={styles.methodBadgeDirect}>
-                                                <MapPin size={12} /> Trực tiếp tại TP.HCM
-                                            </span>
-                                        ) : (
-                                            <span className={styles.methodBadgeCarrier}>
-                                                <Truck size={12} /> {shipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)'}
-                                            </span>
-                                        )}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {shipment?.method === 'direct' ? (
-                                <div className={styles.meetupDetails}>
-                                    {shipment.meetupLocation && (
-                                        <div className={styles.infoRow}>
-                                            <span className={styles.infoLabel}>Địa điểm hẹn:</span>
-                                            <span className={styles.infoValueLocation}>
-                                                <MapPin size={13} /> {shipment.meetupLocation}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {shipment.meetupTime && (
-                                        <div className={styles.infoRow}>
-                                            <span className={styles.infoLabel}>Thời gian hẹn:</span>
-                                            <span className={styles.infoValue}>
-                                                <Calendar size={13} /> {shipment.meetupTime}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <>
-                                    {trackingCode ? (
-                                        <div className={styles.trackingBox}>
-                                            <div className={styles.trackingMain}>
-                                                <span className={styles.trackingLabel}>Mã vận đơn bưu cục</span>
-                                                <span className={styles.trackingNumber}>{trackingCode}</span>
-                                            </div>
-                                            <div className={styles.trackingActions}>
-                                                <button
-                                                    type="button"
-                                                    className={styles.copyBtn}
-                                                    onClick={() => copyTracking(trackingCode)}
-                                                    title="Sao chép mã vận đơn"
-                                                >
-                                                    {copiedCode === trackingCode ? (
-                                                        <>
-                                                            <Check size={12} className={styles.iconGreen} /> Đã chép
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Copy size={12} /> Sao chép
-                                                        </>
-                                                    )}
-                                                </button>
-                                                {trackingUrl && (
-                                                    <a
-                                                        href={trackingUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={styles.trackLink}
-                                                        title="Tra cứu bưu phẩm trên website vận chuyển"
-                                                    >
-                                                        <ExternalLink size={12} /> Tra cứu
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className={styles.infoRow}>
-                                            <span className={styles.infoLabel}>Mã vận đơn:</span>
-                                            <span className={styles.infoMuted}>Đã xác nhận gửi (chưa có mã chi tiết)</span>
-                                        </div>
-                                    )}
-
-                                    {trackingCode && (
-                                        <div className={styles.barcodeBox}>
-                                            <div className={styles.barcodeHeader}>
-                                                <span className={styles.barcodeTag}>PHIẾU VẬN ĐƠN ĐIỆN TỬ</span>
-                                                <span className={styles.carrierTag}>
-                                                    {shipment?.carrierCode === 'GHN' || shipment?.carrierName?.includes('GHN')
-                                                        ? 'GHN Express'
-                                                        : (shipment?.carrierName || 'GHN Express')}
-                                                </span>
-                                            </div>
-                                            <div className={styles.barcodeGraphic}>
-                                                <BarcodeSvg value={trackingCode} />
-                                            </div>
-                                            <div className={styles.barcodeCode}>{trackingCode}</div>
-                                        </div>
-                                    )}
-
-                                    {shipment?.lastEvent && (
-                                        <div className={styles.liveTrackingEventBox}>
-                                            <div className={styles.liveTrackingHeader}>
-                                                <Truck size={14} className={styles.liveTrackingIcon} />
-                                                <span className={styles.liveTrackingTag}>Cập nhật từ bưu tá:</span>
-                                                {shipment.lastEventAt && (
-                                                    <span className={styles.liveTrackingTime}>
-                                                        {new Date(shipment.lastEventAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className={styles.liveTrackingText}>{shipment.lastEvent}</p>
-                                        </div>
-                                    )}
-
-                                    {carrier?.hotline && (
-                                        <div className={styles.carrierHotline}>
-                                            Tổng đài hỗ trợ {carrier.name}: <strong>{carrier.hotline}</strong>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-
-                            {shipment?.notes && (
-                                <div className={styles.notesBox}>
-                                    <span className={styles.notesLabel}>Ghi chú gửi hàng:</span>
-                                    <p className={styles.notesContent}>"{shipment.notes}"</p>
-                                </div>
-                            )}
-
-                            {!isOutgoing && !isReceived && (
-                                <div className={styles.receiveReminderBox}>
-                                    <p>
-                                        💡 Khi bưu tá giao kiện sách tới, hãy mở kiểm tra kỹ sách và bấm <strong>"Xác nhận đã nhận sách"</strong> ở bảng <strong>Hành động tiếp theo</strong> bên dưới để kích hoạt thời gian đồng kiểm.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className={styles.emptyLegNotice}>
-                            {isOutgoing ? (
-                                <div className={styles.emptyNoticeContent}>
-                                    <div className={styles.emptyNoticeHeader}>
-                                        <Package size={16} className={styles.emptyNoticeIcon} />
-                                        <span>Chưa tạo đơn gửi sách</span>
-                                    </div>
-                                    <p>
-                                        Vui lòng đóng gói cẩn thận các cuốn sách trong danh sách và sử dụng nút <strong>"Tạo đơn vận chuyển"</strong> ở bảng <strong>Hành động tiếp theo</strong> bên dưới để hoàn tất gửi sách.
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className={styles.emptyNoticeContent}>
-                                    <div className={styles.emptyNoticeHeader}>
-                                        <Clock size={16} className={styles.emptyNoticeIcon} />
-                                        <span>Chờ đối tác gửi sách</span>
-                                    </div>
-                                    <p>
-                                        Đối tác đang chuẩn bị sách để gửi. Bạn sẽ nhận được thông báo và mã vận đơn theo dõi ngay khi đối tác hoàn tất gửi sách.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    return (
-        <section className={styles.container} aria-label="Tiến trình giao nhận 2 chiều">
-            {/* Header */}
-            <div className={styles.cardHeader}>
-                <div className={styles.titleIconGroup}>
-                    <div className={styles.titleIcon}>
-                        <Truck size={22} />
-                    </div>
-                </div>
-                <div className={styles.titleInfo}>
-                    <div className={styles.categoryBadge}>
-                        <span>Mô hình giao nhận 2 chiều độc lập</span>
-                    </div>
-                    <h3 className={styles.cardTitle}>Tiến trình giao nhận 2 chiều</h3>
-                    <p className={styles.cardSubtitle}>
-                        Mỗi bên chủ động đóng gói và gửi sách của chiều mình. Hệ thống không thu phí giao hàng.
-                    </p>
-                </div>
-            </div>
-
-            {/* Overall status banner */}
-            <div className={styles.overviewStatusBanner}>
-                {bothReceived ? (
-                    <div className={`${styles.statusPillLarge} ${styles.statusCompleted}`}>
-                        <CheckCircle2 size={16} />
-                        <span>Cả 2 gói sách đã được giao nhận thành công · Đang trong thời gian kiểm định 72h (POL-08)</span>
-                    </div>
-                ) : bothSent ? (
-                    <div className={`${styles.statusPillLarge} ${styles.statusShipping}`}>
-                        <Truck size={16} />
-                        <span>Cả 2 gói sách đang trên đường vận chuyển · Hãy chú ý điện thoại bưu tá</span>
-                    </div>
-                ) : viewerSentAt && !partnerSentAt ? (
-                    <div className={`${styles.statusPillLarge} ${styles.statusPartial}`}>
-                        <Clock size={16} />
-                        <span>Bạn đã tạo đơn · Đang chờ đối tác @{detail.partner.username} tạo đơn để bưu tá cùng lấy sách</span>
-                    </div>
-                ) : !viewerSentAt && partnerSentAt ? (
-                    <div className={`${styles.statusPillLarge} ${styles.statusPartial}`}>
-                        <Clock size={16} />
-                        <span>Đối tác đã tạo đơn · Bạn cần tạo đơn để bưu tá cùng đến lấy sách cả 2 bên</span>
-                    </div>
-                ) : (
-                    <div className={`${styles.statusPillLarge} ${styles.statusWaiting}`}>
-                        <Clock size={16} />
-                        <span>Chờ cả 2 bên hoàn tất đóng gói và tạo đơn vận chuyển</span>
-                    </div>
-                )}
-            </div>
-
-            {bothSent && !bothReceived && (
-                <div className={styles.bothSentBanner}>
-                    <AlertCircle size={18} className={styles.bannerIcon} />
-                    <div>
-                        <strong>Cả 2 gói sách đang trên đường giao nhận!</strong>
-                        <p>
-                            Khi bạn nhận được bưu phẩm từ bưu tá, hãy mở kiểm tra kỹ tình trạng sách và bấm <em>"Xác nhận đã nhận sách"</em> ở bảng thao tác bên dưới để mở thời gian đồng kiểm 72 giờ.
-                        </p>
-                    </div>
-                </div>
+  return (
+    <section ref={row} id={id} className={styles.leg} data-direction={direction}
+      tabIndex={-1} aria-labelledby={`${id}-title`}>
+      <div className={styles.legMain}>
+        <div className={styles.direction}>
+          <Icon size={23} aria-hidden="true" />
+          <div>
+            <h2 id={`${id}-title`}>{outgoing ? "Bạn gửi" : "Bạn nhận"}</h2>
+            <p>{books.length ? `${books.length} cuốn` : "Sách trong phiếu"}</p>
+          </div>
+        </div>
+        <div className={styles.books}>
+          {books.length ? (
+            <ul className={styles.visibleBooks} aria-label={outgoing ? "Sách bạn gửi" : "Sách bạn nhận"}>
+              {books.slice(0, 2).map((book, index) => (
+                <li className={styles.book} key={book.id}>
+                  <div aria-hidden="true"><BookCover title={book.title} index={index} coverUrl={book.coverUrl} className={styles.cover} /></div>
+                  <div className={styles.bookText}>
+                    <strong dir="auto" title={book.title}>{book.title}</strong>
+                    {book.author && <span dir="auto" title={book.author}>{book.author}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : <p className={styles.muted}>Chưa có thông tin sách.</p>}
+          {books.length > 2 && (
+            <details className={styles.moreBooks}>
+              <summary>Xem {books.length - 2} cuốn còn lại <ChevronDown size={15} aria-hidden="true" /></summary>
+              <ul>
+                {books.slice(2).map(book => <li key={book.id} title={book.title} dir="auto">{book.title}</li>)}
+              </ul>
+            </details>
+          )}
+        </div>
+        <div className={styles.next}>
+          <p className={styles.status} data-state={receivedAt ? "received" : expired ? "expired" : sentAt ? "sent" : "waiting"}>
+            {receivedAt ? <Check size={16} aria-hidden="true" /> : <Clock size={15} aria-hidden="true" />}
+            {status}
+          </p>
+          {action}
+          {receivedAt && inspectionDeadline && (
+            <p className={styles.muted}>{outgoing ? "Hạn kiểm tra của đối tác " : "Hạn kiểm tra "}<HandoverTime value={inspectionDeadline} /></p>
+          )}
+        </div>
+      </div>
+      {hasJourney && (
+        <details ref={journey} className={styles.journey}>
+          <summary>{!sentAt && !receivedAt ? "Xem địa chỉ nhận" : "Xem hành trình"} <ChevronDown size={16} aria-hidden="true" /></summary>
+          <div className={styles.journeyBody}>
+            {address && (
+              <div className={styles.address}>
+                <h3>{outgoing ? "Địa chỉ nhận của đối tác" : "Địa chỉ nhận của bạn"}</h3>
+                <p>{address.recipientName} · {address.phone}</p>
+                <p>{addressText}</p>
+                <CopyValue value={`${address.recipientName} · ${address.phone}, ${addressText}`} label="Sao chép địa chỉ" />
+              </div>
             )}
+            {(sentAt || receivedAt) && (
+              <div className={styles.tracking}>
+                <h3>{shipment?.method === "direct" ? "Giao trực tiếp" : shipment?.carrierName || carrier?.name || "Thông tin giao nhận"}</h3>
+                {shipment?.meetupLocation && <p>{shipment.meetupLocation}</p>}
+                {trackingCode && (
+                  <div className={styles.trackingCode}>
+                    <div><span>Mã vận đơn</span><strong>{trackingCode}</strong></div>
+                    <CopyValue value={trackingCode} label="Sao chép mã vận đơn" />
+                    {trackingUrl && <a href={trackingUrl} target="_blank" rel="noreferrer">Tra cứu tại hãng <ExternalLink size={14} aria-hidden="true" /></a>}
+                  </div>
+                )}
+                <ol className={styles.timeline}>
+                  {sentAt && <li><span>{shipment?.method === "direct" ? "Đã ghi nhận điểm hẹn" : "Đã ghi nhận gửi sách"}</span><HandoverTime value={sentAt} /></li>}
+                  {shipment?.lastEvent && <li><span>{shipment.lastEvent}</span>{shipment.lastEventAt && <HandoverTime value={shipment.lastEventAt} />}</li>}
+                  {receivedAt && <li><span>{outgoing ? "Đối tác đã nhận sách" : "Bạn đã nhận sách"}</span><HandoverTime value={receivedAt} /></li>}
+                </ol>
+                {shipment?.notes && <p className={styles.notes}>{shipment.notes}</p>}
+                {carrier?.hotline && <p className={styles.muted}>Tổng đài vận chuyển {carrier.hotline}</p>}
+              </div>
+            )}
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
 
-            {/* Two-Way Grid / Flow */}
-            <div className={styles.legsGrid}>
-                {renderLegCard({
-                    direction: 'outgoing',
-                    title: `Sách bạn gửi cho @${detail.partner.username}`,
-                    sentAt: viewerSentAt,
-                    receivedAt: partnerReceivedAt,
-                    shipment: viewerShipment,
-                    address: detail.partnerAddress,
-                    books: detail.giveBooks
-                })}
+export function ShippingTrackingCard({ detail, sendAction, receiveAction, canSend, shippingExpired, target, navigationKey }: Props) {
+  const overview = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (target !== exchangeHandoverAnchor.overview) return;
+    const frame = requestAnimationFrame(() => {
+      overview.current?.focus({ preventScroll: true });
+      overview.current?.scrollIntoView({ block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [target, navigationKey]);
 
-                {renderLegCard({
-                    direction: 'incoming',
-                    title: `Sách @${detail.partner.username} gửi cho bạn`,
-                    sentAt: partnerSentAt,
-                    receivedAt: viewerReceivedAt,
-                    shipment: partnerShipment,
-                    address: detail.viewerAddress,
-                    books: detail.receiveBooks
-                })}
-            </div>
+  if (["PENDING", "FUNDING", "CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)) return null;
 
-            {/* Escrow POL-14 Guarantee Card */}
-            <div className={styles.rulesCallout}>
-                <div className={styles.rulesShieldIcon}>
-                    <ShieldCheck size={20} />
-                </div>
-                <div className={styles.rulesCalloutText}>
-                    <h5 className={styles.rulesTitle}>Bảo chứng an toàn giao dịch Lật Lại (POL-14)</h5>
-                    <p className={styles.rulesDesc}>
-                        Toàn bộ số tiền đặt cọc <strong>({detail.viewerFundingAmount ? `${detail.viewerFundingAmount.toLocaleString('vi-VN')} đ` : 'cọc bảo chứng'})</strong> và tiền bù chênh lệch đang được hệ thống giữ an toàn trong quỹ ký quỹ (escrow). Mỗi bên có <strong>72 giờ</strong> kiểm tra từ lúc xác nhận nhận sách. Xác nhận đã kiểm tra không hoàn cọc sớm; hệ thống chỉ tất toán sau cả hai hạn nếu không có tranh chấp.
-                    </p>
-                </div>
-            </div>
-        </section>
-    );
+  return (
+    <div ref={overview} id={exchangeHandoverAnchor.overview} className={styles.legs}
+      role="region" aria-label="Giao nhận hai chiều" tabIndex={-1}>
+      <ShippingLeg detail={detail} direction="outgoing" action={sendAction}
+        canSend={canSend} shippingExpired={shippingExpired}
+        targeted={target === exchangeHandoverAnchor.outgoing} navigationKey={navigationKey} />
+      <ShippingLeg detail={detail} direction="incoming" action={receiveAction}
+        targeted={target === exchangeHandoverAnchor.incoming} navigationKey={navigationKey} />
+    </div>
+  );
 }

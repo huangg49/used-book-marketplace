@@ -82,7 +82,7 @@ try {
     const results = [];
     for (const [status, label] of [
       ['AcceptedAwaitingFunding', 'Hạn đặt cọc:'],
-      ['Preparing', 'Hạn gửi sách (72h):'],
+      ['Preparing', baseline ? 'Hạn gửi sách (72h):' : 'Hạn gửi sách'],
       ['Delivered', 'Hạn kiểm tra chung (72 giờ):'],
     ]) {
       state = status;

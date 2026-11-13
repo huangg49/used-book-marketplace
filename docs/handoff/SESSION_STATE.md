@@ -1,3 +1,25 @@
+# Giao nhận hai chiều trên phiếu trao đổi Member web — 13/11/2026
+
+Nhánh `codex/exchange-handover-web`, base `10cab58a`. Phiếu đã đủ cọc mở
+màn **Giao nhận sách** với hai chiều **Bạn gửi** và **Bạn nhận**. Mỗi chiều có
+sách, số cuốn, trạng thái và phần mở địa chỉ hoặc hành trình. Tạo đơn và xác
+nhận nhận sách nằm ngay tại chiều tương ứng, dùng lệnh và phục hồi hiện có.
+Xác nhận nhận kiện mở hạn kiểm tra riêng của người nhận. Tin nhắn, thỏa thuận,
+hỗ trợ và thao tác báo sự cố vẫn mở được từ phiếu.
+
+Thông báo đối tác đã gửi mở chiều **Bạn nhận** của đúng phiếu. Sự kiện nhận
+sách hiện dùng chung cho lệnh người dùng và cập nhật vận chuyển có thể báo cả
+hai thành viên, nên thông báo đó mở tổng quan hai chiều. Sau khi cả hai nhận,
+phiếu chuyển sang phần kiểm tra đang có.
+
+Build, typecheck, 484 unit Member web và Chromium ở 320/390/768/1440 px qua.
+Chromium dùng API giả lập để thử cả hai vai, phiếu 3 đổi 1, thông báo mở đúng
+chiều, xác nhận bằng bàn phím và chuyển sang kiểm tra. Hai ca NestJS qua trên
+Mongo QA riêng, bao gồm vòng đời trao đổi và hai hạn kiểm tra độc lập. Phiếu
+local `717a774f` được đọc qua API, đang chờ hai bên đặt cọc. Chưa nghiệm thu
+người dùng, giao nhận thật hoặc Admin. Bước tiếp theo là màn kiểm tra sách và
+điểm vào báo sự cố từ phía người nhận.
+
 # Gợi ý sách theo mong muốn khi gửi đề nghị — 13/11/2026
 
 Member web xếp sách trong kệ theo số tiêu chí tác giả/thể loại khớp với bài

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { ArrowLeftRight, Clock, AlertCircle, ShieldAlert } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, Check, Clock, AlertCircle, ShieldAlert } from "lucide-react";
 import { BrandIcon } from "../../BrandIcon";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { session } from "../../../lib/session";
@@ -21,6 +21,8 @@ import {
   exchangeAcknowledged,
 } from "../../../services/exchange";
 import type { ShipmentData } from "../../../services/exchangeShipment";
+import type { HandoverNavigation } from "../../../lib/exchange-handover";
+import { ShippingTrackingCard } from "../ShippingTrackingCard";
 import styles from "./ActionCard.module.css";
 
 const addressBookSchema = z.object({
@@ -54,6 +56,7 @@ type Action =
 interface Props {
   compact?: boolean;
   standaloneSheet?: boolean;
+  handover?: HandoverNavigation;
   detail: ExchangeDetail;
   onCancel: () => Promise<void>;
   onAccept: (
@@ -76,7 +79,7 @@ const labels: Record<Action, string> = {
   counter: "Đề xuất sách thay thế",
   reject: "Từ chối đề nghị",
   fund: "Đặt cọc mô phỏng",
-  sent: "Tạo đơn vận chuyển",
+  sent: "Tạo đơn gửi sách",
   received: "Xác nhận đã nhận sách",
   retry: "Thử lại thao tác trước",
   complete: "Xác nhận đã kiểm tra",
@@ -225,17 +228,18 @@ export function ActionCard(props: Props) {
         }
       } else if (detail.cancellationRequestedBy === myRole) {
         instructions = `Bạn đã gửi yêu cầu hủy trao đổi trước khi gửi sách. Đang chờ đối tác phản hồi. Nếu đối tác đồng thuận, 100% tiền cọc và tiền bù sẽ được hoàn lại về ví của cả hai bên.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
-        actions.push("sent");
+        if (!expired) actions.push("sent");
       } else if (detail.cancellationRequestedBy === partnerRole) {
         instructions = `Đối tác đã đề nghị hủy trao đổi trước khi gửi sách. Nếu bạn đồng ý hủy, toàn bộ tiền cọc và tiền bù của cả hai bên sẽ được hoàn trả 100% về ví. Nếu bạn muốn tiếp tục giao dịch, hãy từ chối yêu cầu hủy hoặc tạo đơn gửi sách.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
-        actions.push("sent", "cancel", "reject");
+        if (!expired) actions.push("sent");
+        actions.push("cancel", "reject");
       }
     }
   } else if (detail.status === "WAITING_YOU_CONFIRM") {
     instructions = detail.viewerShipping.receivedAt
       ? "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận nhận sách để cùng bước vào giai đoạn kiểm tra sách (72 giờ)."
       : "Hai bên đã gửi sách. Chỉ xác nhận khi bạn đã nhận bưu phẩm và kiểm tra kỹ sách.";
-    if (!detail.viewerShipping.receivedAt) actions.push("received");
+    if (!detail.viewerShipping.receivedAt && detail.partnerShipping.sentAt) actions.push("received");
     actions.push("dispute");
   } else if (detail.status === "DELIVERING") {
     instructions = detail.viewerShipping.receivedAt
@@ -411,8 +415,22 @@ export function ActionCard(props: Props) {
     }
   }
 
+  const preparing = detail.status === "WAITING_YOU_SEND";
+  const otherRequestedCancellation = Boolean(detail.cancellationRequestedBy &&
+    detail.cancellationRequestedBy !== (detail.viewerRole === "proposer" ? "Initiator" : "Recipient"));
+  const visibleActions = props.handover ? actions.filter(next => next !== "sent" && next !== "received") : actions;
+  const handoverAction = (next: "sent" | "received") => {
+    if (blocked || !actions.includes(next)) return null;
+    const Icon = next === "sent" ? ArrowUpRight : Check;
+    return (
+      <button type="button" className={styles.btnPrimary} disabled={busy}
+        onClick={() => void open(next)}>
+        <Icon size={17} aria-hidden="true" /> {labels[next]}
+      </button>
+    );
+  };
   return (
-    <div className={styles.card} data-compact={props.compact || undefined} data-sheet={props.standaloneSheet || undefined} data-funding={detail.status === "FUNDING" || undefined} data-proposal-actions={detail.status === "PENDING" || undefined}>
+    <div className={styles.card} data-compact={props.compact || undefined} data-sheet={props.standaloneSheet || undefined} data-handover={Boolean(props.handover) || undefined} data-funding={detail.status === "FUNDING" || undefined} data-proposal-actions={detail.status === "PENDING" || undefined}>
       {!props.compact && <div className={styles.headerRow}>
         <h2 className={styles.cardTitle}>
           <BrandIcon size={18} />
@@ -435,7 +453,7 @@ export function ActionCard(props: Props) {
         </span>
       </div>
       }
-      {(!props.standaloneSheet || detail.status === "WAITING_YOU_SEND" || (expired && detail.status === "PENDING")) && (
+      {!props.handover && (!props.standaloneSheet || (expired && detail.status === "PENDING")) && (
         <div className={styles.calloutBox}>
           <p className={styles.instructions}>{instructions}</p>
         </div>
@@ -493,21 +511,33 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
-      {detail.status === "WAITING_YOU_SEND" && detail.shippingDeadline && (
+      {preparing && detail.shippingDeadline && (
         <p className={styles.deadlineRow}>
-          <Clock size={14} className={styles.iconGold} />
+          <Clock size={14} className={styles.iconGold} aria-hidden="true" />
           <span>
-            Hạn gửi sách (72h):{" "}
+            Hạn gửi sách{" "}
             <time dateTime={detail.shippingDeadline}>
-              {new Date(detail.shippingDeadline).toLocaleString("vi-VN")}
+              {new Date(detail.shippingDeadline).toLocaleString("vi-VN", {
+                hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
+              })}
             </time>
             {expired
-              ? " · Đã hết hạn (hệ thống sẽ tự động quét hoàn tiền hoặc chuyển giải quyết)"
+              ? " · Đã hết hạn, đang chờ cập nhật"
               : ""}
           </span>
         </p>
       )}
-      {(detail.viewerInspectionDeadline || detail.partnerInspectionDeadline) && <details className={styles.inspectionDetails}>
+      {props.handover && (
+        <ShippingTrackingCard detail={detail} {...props.handover}
+          canSend={!blocked && actions.includes("sent")} shippingExpired={preparing && expired}
+          sendAction={handoverAction("sent")} receiveAction={handoverAction("received")} />
+      )}
+      {props.handover && preparing && detail.cancellationRequestedBy && (
+        <p className={styles.cancellationNotice} role="status">
+          {otherRequestedCancellation ? "Đối tác đã đề nghị hủy." : "Bạn đã đề nghị hủy. Đang chờ đối tác trả lời."}
+        </p>
+      )}
+      {(!props.handover && (detail.viewerInspectionDeadline || detail.partnerInspectionDeadline)) && <details className={styles.inspectionDetails}>
         <summary>Hạn kiểm tra của từng bên</summary>
       {detail.viewerInspectionDeadline && (
         <p className={styles.deadlineRow}>
@@ -540,7 +570,7 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
-      {pending && !props.standaloneSheet && (
+      {pending && !props.standaloneSheet && !props.handover && (
         <p role="status" className={styles.pendingRow}>
           <AlertCircle size={15} />
           <span>
@@ -556,17 +586,17 @@ export function ActionCard(props: Props) {
             Quay lại Trao đổi của tôi
           </Link>
         </div>
-      ) : (
+      ) : (visibleActions.length > 0 || (!props.standaloneSheet && !props.handover)) && (
         <div className={styles.btnGrid}>
-          {actions.map((next, index) => {
+          {visibleActions.map((next, index) => {
             const isPrimary =
-              index === 0 && next !== "cancel" && next !== "reject";
+              !props.handover && index === 0 && next !== "cancel" && next !== "reject";
             const isDanger = next === "cancel" || next === "reject";
             const partnerRole =
               detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
             let label = next === "fund" && props.standaloneSheet ? fundLabel
               : next === "cancel" && detail.status === "FUNDING" ? "Hủy trao đổi"
-              : labels[next];
+              : next === "dispute" && props.handover ? "Báo sự cố" : labels[next];
             if (detail.status === "WAITING_YOU_SEND") {
               if (next === "cancel") {
                 label =
@@ -596,7 +626,7 @@ export function ActionCard(props: Props) {
               </button>
             );
           })}
-          {!props.standaloneSheet && <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
+          {!props.standaloneSheet && !props.handover && <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
             Trao đổi của tôi
           </Link>}
         </div>
@@ -653,13 +683,12 @@ export function ActionCard(props: Props) {
       />
 
       {/* Receive Modal */}
-      <ReceiveDialog
-        isOpen={receiveOpen}
+      {receiveOpen && <ReceiveDialog
         onClose={() => setReceiveOpen(false)}
         onConfirm={handleReceiveConfirm}
         isBusy={busy}
-        bookTitle={detail.receiveBooks[0]?.title}
-      />
+        books={detail.receiveBooks}
+      />}
 
       {/* Generic Confirmation Modal for Reject/Cancel/Fund/Complete/Dispute */}
       <ConfirmDialog

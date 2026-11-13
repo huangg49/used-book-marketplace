@@ -6,6 +6,7 @@ import {
 import { ExchangeContext } from "../components/conversation/ExchangeContext";
 import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinanceSummary";
 import { exchangeStage } from "../lib/transaction-stage";
+import { exchangeHandoverTarget, isExchangeHandover } from "../lib/exchange-handover";
 import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
 import { useEffect, useState } from "react";
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from "lucide-react";
@@ -83,6 +84,7 @@ function ExchangeDetailContent({
   useExchangeRecovery();
   const chatTransition = useConversationTransition("/chat");
   const location = useLocation();
+  const handoverTarget = exchangeHandoverTarget(location.hash);
   const transitioning = !embedded && chatTransition;
   const { id: routeId } = useParams<{ id: string }>();
   const id = exchangeId ?? routeId;
@@ -226,8 +228,6 @@ function ExchangeDetailContent({
   const linked = conversations.data?.find((room) =>
     room.terms?.exchangeIds.includes(id ?? ""),
   );
-  if (!embedded && linked)
-    return <Navigate replace to={`/chat/${linked.id}`} />;
   if (auth.status !== "authenticated") {
     return (
       <div className={styles.authContainer}>
@@ -239,7 +239,7 @@ function ExchangeDetailContent({
         {auth.status !== "loading" && (
           <Link
             className={styles.loginBtn}
-            to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ""}`)}`}
+            to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ""}${location.hash}`)}`}
           >
             Đăng nhập
           </Link>
@@ -357,8 +357,11 @@ function ExchangeDetailContent({
 
   const proposal = detail.status === "PENDING";
   const funding = detail.status === "FUNDING";
-  const preparing = detail.status === "WAITING_YOU_SEND";
-  const standaloneSheet = !embedded && (proposal || funding || preparing);
+  const handover = isExchangeHandover(detail.status);
+  if (!embedded && linked && !handoverTarget && !handover && detail.status !== "INSPECTING")
+    return <Navigate replace to={`/chat/${linked.id}`} />;
+  const standaloneSheet = !embedded && (proposal || funding || handover);
+  const handoverNavigation = { target: handoverTarget, navigationKey: location.key };
   const actionSection = (
     <section
       id="exchange-actions"
@@ -368,7 +371,8 @@ function ExchangeDetailContent({
     >
       <ActionCard
         compact={embedded || standaloneSheet}
-        standaloneSheet={standaloneSheet}
+        standaloneSheet={standaloneSheet || handover}
+        handover={handover ? handoverNavigation : undefined}
         detail={detail}
         onCancel={handleCancel}
         onAccept={handleAccept}
@@ -427,6 +431,12 @@ function ExchangeDetailContent({
       unavailable={messagesDenied}
     />
   );
+  const chatDrawer = (
+    <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
+      partnerName={detail.partner.username} latest={messagePages?.[0]?.items ?? []}>
+      {open => renderChat(true, open)}
+    </ExchangeChatDrawer>
+  );
   if (embedded)
     return (
       <div
@@ -459,22 +469,15 @@ function ExchangeDetailContent({
           {actionSection}
           <ReviewCard detail={detail} />
           {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
-          {(!["PENDING", "FUNDING", "REJECTED", "EXPIRED"].includes(
+          {(!handover && !["PENDING", "FUNDING", "REJECTED", "EXPIRED"].includes(
             detail.status,
           ) &&
             !(
               detail.status === "CANCELLED" &&
               detail.cancelReason !== "DisputeResolvedRefund"
             )) && (
-            <TransactionDisclosure
-              title="Theo dõi giao nhận hai chiều"
-              open={[
-                "WAITING_YOU_SEND",
-                "DELIVERING",
-                "WAITING_YOU_CONFIRM",
-              ].includes(detail.status)}
-            >
-              <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
+            <TransactionDisclosure title="Theo dõi giao nhận hai chiều">
+              <ShippingTrackingCard detail={detail} />
             </TransactionDisclosure>
           )}
           {workspaceNavigation}
@@ -485,13 +488,43 @@ function ExchangeDetailContent({
       </div>
     );
 
+  if (handover) {
+    return (
+      <div className={styles.handoverPage}>
+        <nav className={styles.handoverNav} aria-label="Điều hướng phiếu trao đổi">
+          <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>
+            <ArrowLeft size={17} aria-hidden="true" /> Trao đổi của tôi
+          </Link>
+          <span className={styles.proposalCode}>Phiếu #{detail.transactionCode}</span>
+        </nav>
+        <header className={styles.handoverHeader}>
+          <div>
+            <h1>Giao nhận sách</h1>
+            <p>Đổi sách với <strong dir="auto" title={detail.partner.username}>{detail.partner.username}</strong></p>
+          </div>
+          {linked ? <Link to={`/chat/${linked.id}`}>Mở hội thoại</Link> : chatDrawer}
+        </header>
+        {actionSection}
+        <ReviewCard detail={detail} />
+        <div className={styles.handoverFooter}>
+          <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" />
+          <TransactionDisclosure title="Xem lại thỏa thuận">
+            <ExchangeContext detail={detail} />
+          </TransactionDisclosure>
+          <TransactionDisclosure title="Hướng dẫn đóng gói và giao nhận">
+            <SafetyTipsCard />
+          </TransactionDisclosure>
+        </div>
+      </div>
+    );
+  }
+
   if (standaloneSheet) {
     const waitingForViewer = detail.canViewerAccept ?? detail.viewerRole === "recipient";
     const updatedProposal = proposal && (detail.revision ?? 0) > 1 && !!detail.lastProposedById;
     const multipleBooks = detail.giveBooks.length > 1 || detail.receiveBooks.length > 1;
     const title = funding
       ? detail.viewerFundedAt ? "Bạn đã đặt cọc" : "Đặt cọc đổi sách"
-      : preparing ? "Chuẩn bị gửi sách"
       : updatedProposal ? waitingForViewer ? "Đề nghị đã cập nhật" : "Đã gửi đề nghị mới"
       : waitingForViewer ? "Đề nghị đổi sách" : "Đã gửi đề nghị";
     return (
@@ -524,10 +557,7 @@ function ExchangeDetailContent({
           <div className={funding ? styles.fundingControls : proposal ? styles.proposalControls : undefined}>
             <div className={funding ? styles.fundingPanel : proposal ? styles.proposalActions : undefined}>{actionSection}</div>
             <div className={styles.proposalContact}>
-              <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
-                partnerName={detail.partner.username} latest={messagePages?.[0]?.items ?? []}>
-                {open => renderChat(true, open)}
-              </ExchangeChatDrawer>
+              {chatDrawer}
               <SupportLink type="Exchange" id={detail.id} label={funding ? "Cần hỗ trợ" : undefined} />
             </div>
           </div>
@@ -582,9 +612,6 @@ function ExchangeDetailContent({
               </dl>
               <p className={styles.proposalAmountNote}>Chưa giữ sách hay trừ tiền.</p>
             </section>}
-            {preparing && <TransactionDisclosure title="Theo dõi giao nhận">
-              <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
-            </TransactionDisclosure>}
           </div>
         </div>
       </div>
@@ -679,7 +706,7 @@ function ExchangeDetailContent({
             </div>
           )}
           <BookInfoCard detail={detail} compact={embedded} />
-          <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
+          <ShippingTrackingCard detail={detail} {...handoverNavigation} />
           {actionSection}
           <ReviewCard detail={detail} />
           <details className={styles.safetyDetails}>
