@@ -72,6 +72,8 @@
     margin-top: 8px;
 }
 .handoverFooter > a { justify-self: start; }
+.handoverFooter[data-shipping] { margin-top: 2px; }
+.handoverFooter[data-shipping] > details { margin: 0; }
 .proposalLayout {
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);

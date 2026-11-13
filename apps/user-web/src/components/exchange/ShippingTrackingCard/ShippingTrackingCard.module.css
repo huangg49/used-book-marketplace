@@ -1,18 +1,26 @@
 .legs {
-    container: handover / inline-size;
     min-width: 0;
     display: grid;
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 365px), 1fr));
+    gap: 14px;
 }
 
+.legs:has(.leg details[open], [id="exchange-shipment-form"]:not([hidden])) { align-items: start; }
+
 .leg {
+    container: handover / inline-size;
     --leg-ink: var(--shop-wine);
     --leg-tint: var(--shop-shelf, #f4eddf);
     border: 1px solid var(--shop-line);
     border-radius: 12px;
     background: var(--shop-paper);
     min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
+
+.leg[data-actionable] { border-color: color-mix(in srgb, var(--leg-ink) 32%, var(--shop-line)); }
+.legs:has(.leg[data-actionable] .nextFacts time) .next { min-height: 68px; }
 
 .leg[data-direction="incoming"] {
     --leg-ink: var(--shop-exchange-ink, #254337);
@@ -25,16 +33,14 @@
     outline-offset: 0;
 }
 
-.legMain {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-}
-
 .direction {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: 10px;
-    padding: 13px 16px;
+    padding: 14px clamp(14px, 4cqi, 22px);
+    border-bottom: 1px solid var(--shop-line);
     border-radius: 11px 11px 0 0;
     color: var(--leg-ink);
     background: var(--leg-tint);
@@ -48,12 +54,20 @@
 }
 
 .direction h2 {
-    margin: 0 0 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
     color: inherit;
-    font: 700 1.08rem/1.25 var(--shop-body);
+    font: 700 1.15rem/1.25 var(--shop-body);
 }
 
-.direction p,
+.count {
+    font-size: .8125rem;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+
 .leg .muted {
     margin: 0;
     color: var(--shop-muted);
@@ -62,9 +76,9 @@
 }
 
 .books {
-    align-self: center;
     min-width: 0;
-    padding: 12px 16px;
+    flex: 1 0 auto;
+    padding: 14px clamp(14px, 4cqi, 22px);
 }
 
 .books ul,
@@ -76,13 +90,13 @@
 
 .book {
     display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
+    gap: 11px;
 }
 
 .book + .book {
-    margin-top: 8px;
+    margin-top: 10px;
 }
 
 .cover {
@@ -123,16 +137,21 @@
 
 .next {
     min-width: 0;
-    align-self: center;
-    display: grid;
-    gap: 8px;
-    padding: 10px 16px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 11px clamp(14px, 4cqi, 22px);
     border-top: 1px solid var(--shop-line);
+    background: color-mix(in srgb, var(--leg-tint) 39%, var(--shop-paper));
 }
 
-.next > button { width: 100%; min-height: 44px; }
+.next:last-child { border-radius: 0 0 11px 11px; }
+.nextFacts { flex: 1 1 158px; min-width: 0; }
+.leg .next > button { flex: 0 1 auto; width: auto; max-width: 100%; min-height: 44px; }
 .trackingPreview {
-    margin: 0;
+    margin: 3px 0 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -154,9 +173,10 @@
 .leg .status[data-state="received"] { color: var(--shop-exchange-ink, #254337); }
 .leg .status[data-state="sent"] { color: var(--shop-ink); }
 .leg .status[data-state="expired"] { color: var(--shop-error, #912b0e); }
+.leg[data-actionable] .status { color: var(--leg-ink); }
 
 .journey {
-    padding-inline: 16px;
+    padding-inline: clamp(14px, 4cqi, 22px);
     border-top: 1px solid var(--shop-line);
 }
 
@@ -176,12 +196,12 @@
 
 .journey summary::-webkit-details-marker,
 .moreBooks summary::-webkit-details-marker { display: none; }
+.journey summary > span { display: inline-flex; align-items: center; gap: 8px; }
 .journey summary:hover,
 .moreBooks summary:hover { text-decoration: underline; text-underline-offset: 3px; }
-.journey[open] summary svg,
+.journey[open] summary > svg,
 .moreBooks[open] summary svg { transform: rotate(180deg); }
-.moreBooks ul { padding-bottom: 4px; }
-.moreBooks li + li { margin-top: 6px; }
+.moreBooks ul { padding-block: 2px 6px; }
 
 .journeyBody {
     display: grid;
@@ -261,38 +281,17 @@
 .timeline time { color: var(--shop-muted); font-size: .8125rem; }
 .notes { white-space: pre-wrap; }
 
-@container handover (min-width: 560px) {
-    .legMain {
-        grid-template-columns: minmax(124px, .68fr) minmax(0, 1.8fr) minmax(180px, 1.05fr);
-        min-height: 108px;
-    }
-
-    .direction {
-        align-items: flex-start;
-        padding: 20px 14px;
-        border-radius: 11px 0 0 11px;
-    }
-
-    .leg:has(.journey) .direction { border-bottom-left-radius: 0; }
-    .books { padding: 14px 16px; }
-    .next {
-        border-top: 0;
-        border-inline-start: 1px solid var(--shop-line);
-        padding-block: 4px;
-    }
-    .journey { padding-inline: 18px; }
+@container handover (min-width: 520px) {
+    .visibleBooks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .visibleBooks > .book:only-child { grid-column: 1 / -1; }
+    .visibleBooks > .book + .book { margin-top: 0; }
+    .book { grid-template-columns: 54px minmax(0, 1fr); }
     .journeyBody:has(.address + .tracking) {
         grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
-        gap: 24px;
+        gap: 16px;
     }
 }
 
-@container handover (min-width: 800px) {
-    .legMain { grid-template-columns: 165px minmax(0, 1fr) 240px; }
-    .direction, .books, .next { padding-inline: 20px; }
-    .journey { padding-inline: 20px; }
-    .visibleBooks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .visibleBooks > .book:only-child { grid-column: 1 / -1; }
-    .visibleBooks > .book + .book { margin-top: 0; }
-    .book { grid-template-columns: 44px minmax(0, 1fr); }
+@container handover (max-width: 420px) {
+    .leg .next > button { width: 100%; }
 }

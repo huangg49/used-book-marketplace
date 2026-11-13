@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock, Copy, ExternalLink } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock, Copy, ExternalLink, MapPin, Route } from "lucide-react";
 import { exchangeHandoverAnchor, type HandoverNavigation } from "../../../lib/exchange-handover";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { CARRIERS, getTrackingUrl } from "../../../services/exchangeShipment";
@@ -12,6 +12,7 @@ interface Props extends Partial<HandoverNavigation> {
   detail: ExchangeDetail;
   sendAction?: ReactNode;
   sendForm?: ReactNode;
+  sendDeadline?: ReactNode;
   receiveAction?: ReactNode;
   history?: boolean;
   canSend?: boolean;
@@ -54,11 +55,32 @@ function CopyValue({ value, label }: { value: string; label: string }) {
   );
 }
 
-function ShippingLeg({ detail, direction, action, form, canSend, shippingExpired, navigationKey, targeted }: {
+function BookList({ books, start = 0, label }: {
+  books: ExchangeDetail["giveBooks"];
+  start?: number;
+  label?: string;
+}) {
+  return (
+    <ul className={styles.visibleBooks} aria-label={label}>
+      {books.map((book, index) => (
+        <li className={styles.book} key={book.id}>
+          <div aria-hidden="true"><BookCover title={book.title} index={start + index} coverUrl={book.coverUrl} className={styles.cover} /></div>
+          <div className={styles.bookText}>
+            <strong dir="auto" title={book.title}>{book.title}</strong>
+            {book.author && <span dir="auto" title={book.author}>{book.author}</span>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ShippingLeg({ detail, direction, action, form, deadline, canSend, shippingExpired, navigationKey, targeted }: {
   detail: ExchangeDetail;
   direction: Direction;
   action: ReactNode;
   form?: ReactNode;
+  deadline?: ReactNode;
   canSend?: boolean;
   shippingExpired?: boolean;
   navigationKey?: string;
@@ -99,57 +121,49 @@ function ShippingLeg({ detail, direction, action, form, canSend, shippingExpired
     : expired ? "Đã hết hạn gửi"
     : outgoing ? (canSend ? "Chờ bạn tạo đơn" : "Chưa gửi sách") : "Chờ đối tác gửi";
   const Icon = outgoing ? ArrowUpRight : ArrowDownLeft;
+  const hasTracking = Boolean(sentAt || receivedAt);
+  const DetailIcon = hasTracking ? Route : MapPin;
 
   return (
     <section ref={row} id={id} className={styles.leg} data-direction={direction}
+      data-actionable={Boolean(action) || undefined}
       tabIndex={-1} aria-labelledby={`${id}-title`}>
-      <div className={styles.legMain}>
-        <div className={styles.direction}>
-          <Icon size={23} aria-hidden="true" />
-          <div>
-            <h2 id={`${id}-title`}>{outgoing ? "Bạn gửi" : "Bạn nhận"}</h2>
-            <p>{books.length ? `${books.length} cuốn` : "Sách trong phiếu"}</p>
-          </div>
-        </div>
+      <header className={styles.direction}>
+        <h2 id={`${id}-title`}><Icon size={21} aria-hidden="true" />{outgoing ? "Bạn gửi" : "Bạn nhận"}</h2>
+        {books.length > 0 && <span className={styles.count}>{books.length} cuốn</span>}
+      </header>
         <div className={styles.books}>
           {books.length ? (
-            <ul className={styles.visibleBooks} aria-label={outgoing ? "Sách bạn gửi" : "Sách bạn nhận"}>
-              {books.slice(0, 2).map((book, index) => (
-                <li className={styles.book} key={book.id}>
-                  <div aria-hidden="true"><BookCover title={book.title} index={index} coverUrl={book.coverUrl} className={styles.cover} /></div>
-                  <div className={styles.bookText}>
-                    <strong dir="auto" title={book.title}>{book.title}</strong>
-                    {book.author && <span dir="auto" title={book.author}>{book.author}</span>}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <BookList books={books.slice(0, 2)} label={outgoing ? "Sách bạn gửi" : "Sách bạn nhận"} />
           ) : <p className={styles.muted}>Chưa có thông tin sách.</p>}
           {books.length > 2 && (
             <details className={styles.moreBooks}>
               <summary>Xem {books.length - 2} cuốn còn lại <ChevronDown size={15} aria-hidden="true" /></summary>
-              <ul>
-                {books.slice(2).map(book => <li key={book.id} title={book.title} dir="auto">{book.title}</li>)}
-              </ul>
+              <BookList books={books.slice(2)} start={2} />
             </details>
           )}
         </div>
         <div className={styles.next}>
-          <p className={styles.status} data-state={receivedAt ? "received" : expired ? "expired" : sentAt ? "sent" : "waiting"}>
-            {receivedAt ? <Check size={16} aria-hidden="true" /> : <Clock size={15} aria-hidden="true" />}
-            {status}
-          </p>
+          <div className={styles.nextFacts}>
+            <p className={styles.status} data-state={receivedAt ? "received" : expired ? "expired" : sentAt ? "sent" : "waiting"}>
+              {receivedAt ? <Check size={16} aria-hidden="true" /> : <Clock size={15} aria-hidden="true" />}
+              {status}
+            </p>
+            {deadline}
+            {trackingCode && <p className={styles.trackingPreview} title={trackingCode}>{trackingCode}</p>}
+            {receivedAt && inspectionDeadline && (
+              <p className={styles.muted}>{outgoing ? "Hạn kiểm tra của đối tác " : "Hạn kiểm tra "}<HandoverTime value={inspectionDeadline} /></p>
+            )}
+          </div>
           {action}
-          {trackingCode && <p className={styles.trackingPreview} title={trackingCode}>{trackingCode}</p>}
-          {receivedAt && inspectionDeadline && (
-            <p className={styles.muted}>{outgoing ? "Hạn kiểm tra của đối tác " : "Hạn kiểm tra "}<HandoverTime value={inspectionDeadline} /></p>
-          )}
         </div>
-      </div>
       {form}
       {hasJourney && (
         <details ref={journey} className={styles.journey}>
-          <summary>{!sentAt && !receivedAt ? "Xem địa chỉ nhận" : "Xem hành trình"} <ChevronDown size={16} aria-hidden="true" /></summary>
+          <summary>
+            <span><DetailIcon size={16} aria-hidden="true" />{hasTracking ? "Xem hành trình" : "Xem địa chỉ nhận"}</span>
+            <ChevronDown size={16} aria-hidden="true" />
+          </summary>
           <div className={styles.journeyBody}>
             {address && (
               <div className={styles.address}>
@@ -186,7 +200,7 @@ function ShippingLeg({ detail, direction, action, form, canSend, shippingExpired
   );
 }
 
-export function ShippingTrackingCard({ detail, sendAction, sendForm, receiveAction, history, canSend, shippingExpired, target, navigationKey }: Props) {
+export function ShippingTrackingCard({ detail, sendAction, sendForm, sendDeadline, receiveAction, history, canSend, shippingExpired, target, navigationKey }: Props) {
   const overview = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (target !== exchangeHandoverAnchor.overview) return;
@@ -202,7 +216,7 @@ export function ShippingTrackingCard({ detail, sendAction, sendForm, receiveActi
   return (
     <div ref={overview} id={exchangeHandoverAnchor.overview} className={styles.legs}
       role="region" aria-label="Giao nhận hai chiều" tabIndex={-1}>
-      <ShippingLeg detail={detail} direction="outgoing" action={sendAction} form={sendForm}
+      <ShippingLeg detail={detail} direction="outgoing" action={sendAction} form={sendForm} deadline={sendDeadline}
         canSend={canSend} shippingExpired={shippingExpired}
         targeted={target === exchangeHandoverAnchor.outgoing} navigationKey={navigationKey} />
       <ShippingLeg detail={detail} direction="incoming" action={receiveAction}

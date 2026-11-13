@@ -28,24 +28,35 @@
 .card[data-sheet] .btnGrid button { width: auto; }
 .card[data-handover] { gap: 12px; }
 .card[data-handover] .deadlineRow {
-    margin: 0;
-    align-self: flex-start;
+    margin: 4px 0 0;
+    color: var(--shop-muted);
     font-size: .8125rem;
+    line-height: 1.5;
 }
+.card[data-handover] .deadlineRow time { font-variant-numeric: tabular-nums; }
 .card[data-handover] .btnGrid {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
 .card[data-handover] .btnGrid > button { min-height: 44px; }
-.card[data-handover] .btnDanger:only-child {
+.handoverSupport { margin-inline-start: auto; }
+.handoverSupport > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--shop-wine);
+    text-underline-offset: 4px;
+}
+.handoverSupport > a:hover { text-decoration: underline; }
+.card[data-handover] .btnDanger:only-of-type {
     border-color: transparent;
     background: transparent;
     color: var(--shop-muted);
     padding-inline: 0;
     text-underline-offset: 4px;
 }
-.card[data-handover] .btnDanger:only-child:hover:not(:disabled) {
+.card[data-handover] .btnDanger:only-of-type:hover:not(:disabled) {
     color: var(--shop-wine);
     text-decoration: underline;
 }

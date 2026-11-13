@@ -65,12 +65,12 @@
     grid-column: 1 / -1;
 }
 
-@container handover (min-width: 580px) {
+@container handover (min-width: 490px) {
     .body,
     .methodCards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@container handover (max-width: 520px) {
+@container handover (max-width: 489px) {
     .evidenceSection .evidenceGrid { grid-template-columns: minmax(0, 1fr); }
 }
 

@@ -28,6 +28,12 @@ hiện tổng, thời điểm ghi nhận và các khoản theo từng bên. Chro
 320/390/768/1440 kiểm cả hai vai trên phiếu local `285a732a` ở chế độ đọc,
 cùng ca giả lập tiêu đề dài và chỉ một bên đặt cọc. Build và 484 unit qua.
 
+Màn Giao nhận đặt hai chiều cạnh nhau trên desktop và xếp dọc khi hẹp.
+Hạn gửi nằm cùng trạng thái và nút tạo đơn. Địa chỉ, hành trình, hỗ trợ và
+đề nghị hủy vẫn mở từ phiếu. Chromium 320–1440 kiểm phiếu local của cả
+hai vai, địa chỉ bằng bàn phím và giữ bản nháp. Ca giả lập kiểm gửi, nhận
+lỗi lưu, thử lại, thông báo và chuyển bước. Build và 484 unit qua.
+
 # Giao nhận hai chiều trên phiếu trao đổi Member web — 13/11/2026
 
 Nhánh `codex/exchange-handover-web`, base `10cab58a`. Phiếu đã đủ cọc mở

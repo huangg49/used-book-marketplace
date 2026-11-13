@@ -369,6 +369,7 @@ function ExchangeDetailContent({
         compact={embedded || standaloneSheet || handover}
         standaloneSheet={standaloneSheet || handover}
         handover={handover ? handoverNavigation : undefined}
+        handoverSupport={handover && !embedded ? <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" /> : undefined}
         detail={detail}
         onCancel={handleCancel}
         onAccept={handleAccept}
@@ -565,11 +566,10 @@ function ExchangeDetailContent({
             {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
             {actionSection}
             <ReviewCard detail={detail} />
-            <div className={styles.handoverFooter}>
-              <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" />
-              {handover && <TransactionDisclosure title="Hướng dẫn đóng gói và giao nhận">
+            <div className={styles.handoverFooter} data-shipping={handover || undefined}>
+              {handover ? <TransactionDisclosure title="Hướng dẫn đóng gói và giao nhận">
                 <SafetyTipsCard />
-              </TransactionDisclosure>}
+              </TransactionDisclosure> : <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" />}
             </div>
           </>
         ))}

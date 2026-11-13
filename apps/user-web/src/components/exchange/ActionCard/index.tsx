@@ -57,6 +57,7 @@ interface Props {
   compact?: boolean;
   standaloneSheet?: boolean;
   handover?: HandoverNavigation;
+  handoverSupport?: React.ReactNode;
   detail: ExchangeDetail;
   onCancel: () => Promise<void>;
   onAccept: (
@@ -419,6 +420,19 @@ export function ActionCard(props: Props) {
   }
 
   const preparing = detail.status === "WAITING_YOU_SEND";
+  const shippingDeadline = preparing && detail.shippingDeadline ? (
+    <p className={styles.deadlineRow}>
+      <span>
+        Hạn gửi sách{" "}
+        <time dateTime={detail.shippingDeadline}>
+          {new Date(detail.shippingDeadline).toLocaleString("vi-VN", {
+            hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
+          })}
+        </time>
+        {expired && " · Đã hết hạn, đang chờ cập nhật"}
+      </span>
+    </p>
+  ) : undefined;
   const otherRequestedCancellation = Boolean(detail.cancellationRequestedBy &&
     detail.cancellationRequestedBy !== (detail.viewerRole === "proposer" ? "Initiator" : "Recipient"));
   const visibleActions = props.handover ? actions.filter(next => next !== "sent" && next !== "received") : actions;
@@ -518,25 +532,11 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
-      {preparing && detail.shippingDeadline && (
-        <p className={styles.deadlineRow}>
-          <Clock size={14} className={styles.iconGold} aria-hidden="true" />
-          <span>
-            Hạn gửi sách{" "}
-            <time dateTime={detail.shippingDeadline}>
-              {new Date(detail.shippingDeadline).toLocaleString("vi-VN", {
-                hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
-              })}
-            </time>
-            {expired
-              ? " · Đã hết hạn, đang chờ cập nhật"
-              : ""}
-          </span>
-        </p>
-      )}
+      {!props.handover && shippingDeadline}
       {props.handover && (
         <ShippingTrackingCard detail={detail} {...props.handover}
           canSend={!blocked && actions.includes("sent")} shippingExpired={preparing && expired}
+          sendDeadline={shippingDeadline}
           sendAction={handoverAction("sent")} receiveAction={handoverAction("received")}
           sendForm={preparing && (
             <ShipmentDialog
@@ -607,8 +607,9 @@ export function ActionCard(props: Props) {
           <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
             Quay lại Trao đổi của tôi
           </Link>
+          {props.handoverSupport && <div className={styles.handoverSupport}>{props.handoverSupport}</div>}
         </div>
-      ) : (visibleActions.length > 0 || (!props.standaloneSheet && !props.handover)) && (
+      ) : (visibleActions.length > 0 || props.handoverSupport || (!props.standaloneSheet && !props.handover)) && (
         <div className={styles.btnGrid}>
           {visibleActions.map((next, index) => {
             const isPrimary =
@@ -651,6 +652,7 @@ export function ActionCard(props: Props) {
           {!props.standaloneSheet && !props.handover && <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
             Trao đổi của tôi
           </Link>}
+          {props.handoverSupport && <div className={styles.handoverSupport}>{props.handoverSupport}</div>}
         </div>
       )}
 
