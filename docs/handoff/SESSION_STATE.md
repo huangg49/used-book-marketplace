@@ -7,9 +7,10 @@ hộp trên mobile. Phiếu giữ cùng ID, đổi lượt phản hồi và hi�
 API. Danh sách Trao đổi của tôi hiện nhãn Chờ bạn phản hồi theo lượt thực tế.
 Dùng command counter, revision và đối soát mất phản hồi hiện có.
 
-Tên sách trong hộp thay thế có vùng cố định hai dòng ở cả ba phần: sách trên
-phiếu, kệ chọn sách và đề nghị mới. Tên dài hiện dấu ba chấm, hover xem tên đầy
-đủ. Chromium đã kiểm tên dài và bố cục ở 320/390/768/1440 px.
+Tên sách trong hộp thay thế chiếm đúng số dòng thực tế, tối đa hai, ở cả ba phần:
+sách trên phiếu, kệ chọn sách và đề nghị mới. Giá hoặc tác giả nằm sát tên một
+dòng. Tên dài hiện dấu ba chấm, hover xem tên đầy đủ. Chromium đã kiểm tên ngắn,
+tên dài và bố cục ở 320/390/768/1440 px, đã xem phiếu demo local ở 390/1440 px.
 
 Đã kiểm trên Member web local 5174 bằng An/Bình đến bước xem số tiền của sách
 thay thế. Phiếu demo mới trong Mongo local chính còn chờ Bình gửi, kèm ba bài

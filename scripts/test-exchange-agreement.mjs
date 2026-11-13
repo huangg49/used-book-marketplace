@@ -117,18 +117,25 @@ try {
     const books = counter.getByText(longTitle, { exact: true });
     const titles = await books.evaluateAll(elements => elements.map(element => {
       const style = getComputedStyle(element);
-      return {
+      const long = {
         lineClamp: style.webkitLineClamp,
         height: element.getBoundingClientRect().height,
         lineHeight: parseFloat(style.lineHeight),
         clips: element.scrollHeight > element.clientHeight,
         fullTitle: element.closest('[title]')?.title,
       };
+      const text = element.firstChild;
+      const originalTitle = text.nodeValue;
+      text.nodeValue = 'Sách';
+      const shortHeight = element.getBoundingClientRect().height;
+      text.nodeValue = originalTitle;
+      return { ...long, shortHeight };
     }));
     assert(titles.length >= 5 && titles.some(title => title.clips));
     for (const title of titles) {
       assert.equal(title.lineClamp, '2');
       assert(Math.abs(title.height - title.lineHeight * 2) < 1);
+      assert(Math.abs(title.shortHeight - title.lineHeight) < 1);
       assert.equal(title.fullTitle, longTitle);
     }
     if (width === 768) {
