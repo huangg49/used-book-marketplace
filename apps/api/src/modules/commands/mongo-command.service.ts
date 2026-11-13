@@ -359,6 +359,7 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'receiveExchange',
   'completeExchange',
   'disputeExchange',
+  'actOnOwnExchangeReturn',
 ];
 const KEY_LOCK_TTL_MS = 7 * 24 * 3_600_000;
 const sessionExpired = (
@@ -646,7 +647,9 @@ export class MongoCommandService {
       | 'receiveExchange'
       | 'completeExchange'
       | 'disputeExchange'
-      | 'resolveExchangeDispute',
+      | 'resolveExchangeDispute'
+      | 'actOnOwnExchangeReturn'
+      | 'actOnOperationsExchangeReturn',
     target: string | null,
     body: unknown,
     options: Options<C, ExchangeChange>,

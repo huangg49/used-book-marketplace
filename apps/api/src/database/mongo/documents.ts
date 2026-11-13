@@ -752,6 +752,8 @@ export interface LedgerJournalDoc {
     | 'OrderPayment'
     | 'OrderRefund'
     | 'OrderSettlement'
+    | 'ExchangeReturnRefund'
+    | 'ExchangeNonReturnCompensation'
     | 'ListingFeeCharge'
     | 'ListingFeeRefund'
     | 'ListingFeeSettlement';
@@ -1371,7 +1373,7 @@ export interface PointReturnDoc {
 export interface MemberViolationDoc {
   _id: string;
   userId: string;
-  kind: 'AuctionNonPayment' | 'PointOrderBuyerDefault';
+  kind: 'AuctionNonPayment' | 'PointOrderBuyerDefault' | 'ExchangeReturnDefault';
   sourceId: string;
   recordedAt: Date;
   receiptId: string;
@@ -1459,7 +1461,22 @@ export interface ExchangeShipmentSnapshot {
   lastEventAt?: Date | null;
 }
 
+type ReturnResolutionWire = import('@used-books/api-contract').components['schemas']['ExchangeReturnResolution'];
+export type ExchangeReturnDoc = Pick<ReturnResolutionWire, 'phase' | 'note' | 'appeals' | 'trackingCode' | 'outcome'> & {
+  evidenceDueAt: Date | null;
+  appealDueAt: Date | null;
+  decisionBy: string | null;
+  effectiveAt: Date | null;
+  returnDueAt: Date | null;
+  dispatchedAt: Date | null;
+  returnedAt: Date | null;
+  checkDueAt: Date | null;
+  settlementReceiptId: string | null;
+  evidenceId: string | null;
+};
+
 export interface ExchangeDoc extends Lockable {
+  returnResolution?: ExchangeReturnDoc;
   // Missing/null only for historical records; never reconstruct from live listings.
   agreement?: import('@used-books/api-contract').components['schemas']['ExchangeAgreement'] | null;
   _id: string;

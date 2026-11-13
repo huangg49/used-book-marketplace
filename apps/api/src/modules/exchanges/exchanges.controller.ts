@@ -195,6 +195,17 @@ export class ExchangesController {
     );
   }
 
+  @Post(':id/return-resolution')
+  @ExistingObligation()
+  @Roles('MEMBER')
+  @HttpCode(200)
+  actOnOwnExchangeReturn(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(this.exchanges.actOnReturn(
+      commandContext(this.input, req, res), this.input.uuid(id),
+      this.input.body('ExchangeReturnCommand', body), false,
+    ), res);
+  }
+
   @Post(':id/dispute')
   @ExistingObligation()
   @Roles('MEMBER')

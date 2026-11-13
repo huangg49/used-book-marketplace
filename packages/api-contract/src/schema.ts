@@ -3837,6 +3837,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/return-resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Existing participant obligation. Record a statement, appeal, report return dispatch, acknowledge receipt or report a return problem. */
+        post: operations["actOnOwnExchangeReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{id}/dispute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Independent Staff or Admin reads the current dispute or its closed return resolution. */
+        get: operations["getOperationsExchangeDispute"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{id}/return-resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned independent Staff or Admin requests evidence or orders return within authority. Admin handles appeals, verifies or rejects return evidence, or orders compensation; settlement checks the effective decision and evidence again. */
+        post: operations["actOnOperationsExchangeReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/exchanges/{id}/resolve": {
         parameters: {
             query?: never;
@@ -3848,7 +3899,7 @@ export interface paths {
         put?: never;
         /**
          * resolveExchangeDispute
-         * @description ACTIVE independent STAFF/ADMIN only. New RefundBoth and CompleteExchange decisions are currently rejected with 409 InvalidState: the legacy command cannot establish custody, allocations, authority limits or an effective decision after appeal. No money, listing, exchange, audit or notification mutation is committed on rejection. Historical receipts may still be replayed with the original key and body after current session, role and participant-independence checks; replay does not repeat their financial effects.
+         * @description ACTIVE independent STAFF/ADMIN only. New decisions through this legacy endpoint are currently rejected with 409 InvalidState: the legacy command cannot establish custody, allocations, authority limits or an effective decision after appeal. No money, listing, exchange, audit or notification mutation is committed on rejection. Historical receipts may still be replayed with the original key and body after current session, role and participant-independence checks; replay does not repeat their financial effects.
          */
         post: operations["resolveExchangeDispute"];
         delete?: never;
@@ -6525,7 +6576,7 @@ export interface components {
              * @description ADR 0075/0087. Auction rows are wallet holds for bids and deposits, their releases, and a Seller's share of a non-paying winner's deposit.
              * @enum {string}
              */
-            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare";
+            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare" | "ExchangeReturnRefund" | "ExchangeNonReturnCompensation";
             amount: number;
             balanceAfter: number;
             /** Format: date-time */
@@ -7964,6 +8015,9 @@ export interface components {
             recipientBook: components["schemas"]["ExchangeBookSnapshot"];
         };
         Exchange: {
+            returnResolution?: components["schemas"]["ExchangeReturnResolution"];
+            /** @description One book was sent and received, the other party missed the shipping deadline, and both sides funded. */
+            canStartReturnResolution?: boolean;
             agreement?: components["schemas"]["ExchangeAgreement"] | null;
             /** Format: uuid */
             id: string;
@@ -8156,6 +8210,52 @@ export interface components {
         };
         ReadExchangeEvidence: {
             reason: string;
+        };
+        ExchangeReturnCommand: {
+            expectedVersion: number;
+            /** @enum {string} */
+            action: "RequestEvidence" | "SubmitStatement" | "OrderReturn" | "Appeal" | "Uphold" | "SetAside" | "ReportDispatch" | "AcknowledgeReturn" | "VerifyReturnDelivery" | "RejectReturnDispatch" | "ReportReturnProblem" | "OrderCompensation" | "Settle";
+            note?: string;
+            trackingCode?: string;
+            /** Format: uuid */
+            evidenceId?: string;
+        };
+        ExchangeReturnResolution: {
+            /** @enum {string} */
+            phase: "Evidence" | "ReturnOrdered" | "ReturnInProgress" | "CheckingReturn" | "ReturnIssue" | "CompensationOrdered" | "NeedsReview" | "Closed";
+            /** Format: uuid */
+            ownerId: string;
+            /** Format: uuid */
+            holderId: string;
+            /** Format: uuid */
+            listingId: string;
+            note: string;
+            /** Format: date-time */
+            evidenceDueAt: string | null;
+            /** Format: date-time */
+            appealDueAt: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            appeals: {
+                /** Format: uuid */
+                by: string;
+                note: string;
+            }[];
+            /** Format: date-time */
+            returnDueAt: string | null;
+            trackingCode: string | null;
+            /** Format: date-time */
+            returnedAt: string | null;
+            /** Format: date-time */
+            checkDueAt: string | null;
+            /** @enum {string|null} */
+            outcome: "Returned" | "Compensated" | null;
+            compensation: number;
+            ownerDeposit: number;
+            holderDeposit: number;
+            differenceAmount: number;
+            /** Format: uuid */
+            differencePayerId: string | null;
         };
         DisputeExchangeCommand: {
             expectedVersion: number;
@@ -12406,7 +12506,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare";
+                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare" | "ExchangeReturnRefund" | "ExchangeNonReturnCompensation";
                 topupId?: string;
                 orderId?: string;
                 /** @description Full journal, order, top-up or withdrawal ID, or the first six hexadecimal characters shown on a receipt. Matches only the caller's own history. */
@@ -16158,6 +16258,105 @@ export interface operations {
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+        };
+    };
+    actOnOwnExchangeReturn: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExchangeReturnCommand"];
+            };
+        };
+        responses: {
+            /** @description Current Exchange snapshot or an authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getOperationsExchangeDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current Exchange snapshot or an authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    actOnOperationsExchangeReturn: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExchangeReturnCommand"];
+            };
+        };
+        responses: {
+            /** @description Current Exchange snapshot or an authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
         };
     };
     resolveExchangeDispute: {

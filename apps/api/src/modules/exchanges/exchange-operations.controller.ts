@@ -28,6 +28,22 @@ export class ExchangeOperationsController {
     return this.exchanges.listResolutions(req.auth);
   }
 
+  @Get(':id/dispute')
+  @Roles('STAFF', 'ADMIN')
+  getOperationsExchangeDispute(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.exchanges.getOperationsDispute(req.auth, this.input.uuid(id));
+  }
+
+  @Post(':id/return-resolution')
+  @Roles('STAFF', 'ADMIN')
+  @HttpCode(200)
+  actOnOperationsExchangeReturn(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(this.exchanges.actOnReturn(
+      commandContext(this.input, req, res), this.input.uuid(id),
+      this.input.body('ExchangeReturnCommand', body), true,
+    ), res);
+  }
+
   @Post(':id/resolve')
   @Roles('STAFF', 'ADMIN')
   @HttpCode(200)

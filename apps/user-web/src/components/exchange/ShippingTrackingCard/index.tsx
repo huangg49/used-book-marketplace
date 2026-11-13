@@ -147,12 +147,13 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
   const trackingCode = shipment?.trackingCode;
   const trackingUrl = getTrackingUrl(carrier?.code, trackingCode ?? undefined);
   const hasJourney = Boolean(address || sentAt || receivedAt);
-  const expired = outgoing && shippingExpired && !sentAt;
+  const expired = shippingExpired && !sentAt;
   const inTransit = detail.status === "WAITING_YOU_CONFIRM" || detail.status === "DELIVERING";
   const status = receivedAt ? (outgoing ? "Đối tác đã nhận" : "Bạn đã nhận sách")
-    : sentAt ? (shipment?.method === "direct" ? "Đã ghi nhận điểm hẹn"
+    : sentAt ? (!outgoing && action ? "Chờ bạn xác nhận đã nhận"
+      : shipment?.method === "direct" ? "Đã ghi nhận điểm hẹn"
       : inTransit ? "Đang giao nhận" : trackingCode ? "Đã ghi nhận vận đơn" : "Đã xác nhận gửi")
-    : expired ? "Đã hết hạn gửi"
+    : expired ? (outgoing ? "Đã hết hạn gửi" : "Đối tác chưa gửi đúng hạn")
     : outgoing ? (canSend ? "Chờ bạn tạo đơn" : "Chưa gửi sách") : "Chờ đối tác gửi";
   const Icon = outgoing ? ArrowUpRight : ArrowDownLeft;
   const hasTracking = Boolean(sentAt || receivedAt);
@@ -183,7 +184,7 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
               {receivedAt ? <Check size={16} aria-hidden="true" /> : <Clock size={15} aria-hidden="true" />}
               {status}
             </p>
-            {deadline}
+            {!sentAt && deadline}
             {trackingCode && <p className={styles.trackingPreview} title={trackingCode}>{trackingCode}</p>}
             {receivedAt && inspectionDeadline && (
               <p className={styles.muted}>{outgoing ? "Hạn kiểm tra của đối tác " : "Hạn kiểm tra "}<HandoverTime value={inspectionDeadline} /></p>
@@ -247,6 +248,8 @@ export function ShippingTrackingCard({ detail, sendAction, sendForm, sendDeadlin
         canSend={canSend} shippingExpired={shippingExpired}
         targeted={target === exchangeHandoverAnchor.outgoing} navigationKey={navigationKey} />
       <ShippingLeg detail={detail} direction="incoming" action={receiveAction}
+        deadline={detail.viewerShipping.sentAt ? sendDeadline : undefined}
+        shippingExpired={shippingExpired}
         targeted={target === exchangeHandoverAnchor.incoming} navigationKey={navigationKey} />
     </div>
   );

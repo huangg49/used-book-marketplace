@@ -19,7 +19,7 @@ process.env.PRICE_ASSIST_ENABLED = 'false';
 let fixture, server, browser;
 try {
   fixture = await createTestApi();
-  server = spawn(process.execPath, [path.join(path.dirname(require.resolve('vite/package.json')), 'bin/vite.js'), '--host', '127.0.0.1', '--port', '5174', '--strictPort'], {
+  server = spawn(process.execPath, [path.join(path.dirname(require.resolve('vite/package.json')), 'bin/vite.js'), '--host', '127.0.0.1', '--port', new URL(origin).port, '--strictPort'], {
     cwd: path.join(root, 'apps/admin-web'), windowsHide: true,
     env: { ...process.env, VITE_API_BASE_URL: base }, stdio: 'ignore',
   });
@@ -42,11 +42,49 @@ try {
     initiatorShippedAt: now, recipientShippedAt: now, disputedAt: now,
     disputedBy: 'System', disputeReason: 'QA giao diện: sách đang được đối chiếu tình trạng và nơi giữ. '.repeat(5),
   };
-  let mode = 'populated', mutations = 0;
+  let mode = 'populated', mutations = 0, attempts = 0;
+  const commands = [];
+  let responseLost = true;
+  let current = item;
+  let eligible = false;
+  let assigned = false;
+  const ownerId = item.initiatorId;
+  const holderId = item.recipientId;
   await page.route('**/operations/exchanges/**', async route => {
-    if (route.request().method() !== 'GET') {
+    const url = new URL(route.request().url());
+    if (route.request().method() === 'POST') {
       mutations++;
-      return route.fulfill({ status: 500, json: { code: 'UNAVAILABLE', message: 'UI must remain read-only' } });
+      if (url.pathname.endsWith('/evidence-access')) {
+        assigned = true;
+        return route.fulfill({ json: { entityId: item.id, state: 'Assigned' } });
+      }
+      assert(url.pathname.endsWith('/return-resolution'));
+      attempts++;
+      const command = { body: route.request().postDataJSON(), key: route.request().headers()['idempotency-key'] };
+      commands.push(command);
+      if (responseLost) {
+        responseLost = false;
+        current = { ...current, revision: 9, returnResolution: {
+          phase: 'Evidence', ownerId, holderId, listingId: item.initiatorListingId,
+          note: command.body.note, evidenceDueAt: new Date(Date.now() + 48 * 3600000).toISOString(),
+          appealDueAt: null, effectiveAt: null, appeals: [], returnDueAt: null,
+          trackingCode: null, returnedAt: null, checkDueAt: null, outcome: null,
+          compensation: 0, ownerDeposit: 300000, holderDeposit: 200000,
+          differenceAmount: 100000, differencePayerId: ownerId,
+        } };
+        return route.fulfill({ status: 503, json: { code: 'UNAVAILABLE', message: 'QA: mất phản hồi.' } });
+      }
+      return route.fulfill({ json: current });
+    }
+    if (url.pathname.endsWith('/evidence-access')) {
+      const me = await fixture.db.collection('users').findOne({ emailNormalized: 'admin@operations.test' });
+      return route.fulfill({ json: { assigneeId: assigned ? me._id : null, version: assigned ? 1 : 0 } });
+    }
+    if (url.pathname.endsWith('/evidence')) {
+      return route.fulfill({ json: { items: [], nextCursor: null, totalBytes: 0, maxTotalBytes: 150000000 } });
+    }
+    if (url.pathname.endsWith('/dispute')) {
+      return route.fulfill({ json: { ...current, canStartReturnResolution: eligible } });
     }
     return route.fulfill(mode === 'error'
       ? { status: 503, json: { code: 'UNAVAILABLE', message: 'QA: cần thử lại.' } }
@@ -58,7 +96,7 @@ try {
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Khiếu nại trao đổi sách.' })).toBeVisible();
   await expect(page.getByText('Chờ xử lý · Giữ tiền và sách', { exact: true })).toBeVisible();
-  await expect(page.getByText(/Chưa thể thực thi phán quyết hoàn tiền|Trọng tài đối soát chứng cứ 2 chiều/)).toBeVisible();
+  await expect(page.getByText(/Giữ tiền và sách trong lúc đối chiếu/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Phân xử', exact: true })).toHaveCount(0);
   await expect(page.getByRole('radio')).toHaveCount(0);
   const artifacts = path.join(root, 'apps/admin-web/test-results/exchange-resolution-safety');
@@ -79,10 +117,30 @@ try {
   mode = 'empty';
   await page.getByRole('button', { name: 'Thử tải lại', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Chưa có khiếu nại nào.' })).toBeVisible();
-  await expect(page.getByText(/không xác nhận mọi giao dịch đều đã hoàn tất/)).toBeVisible();
+  await expect(page.getByText('Chưa có giao dịch chờ xử lý trong danh sách bạn được xem.')).toBeVisible();
   assert.equal(mutations, 0);
+  mode = 'populated';
+  await page.getByRole('button', { name: 'Cập nhật danh sách', exact: true }).click();
+  await page.getByRole('link', { name: 'Mở hồ sơ', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Hai chiều giao sách' })).toBeVisible();
+  await expect(page.getByText(/Chưa đủ điều kiện chạy quy trình trả sách một chiều/)).toBeVisible();
+  eligible = true;
+  await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
+  await page.getByRole('textbox', { name: 'Lý do tiếp nhận / xem tệp' }).fill('Tiếp nhận để đối chiếu hai chiều.');
+  await page.getByRole('button', { name: 'Nhận phụ trách bằng chứng' }).click();
+  await page.getByLabel('Thao tác với hồ sơ').selectOption('RequestEvidence');
+  await page.getByRole('textbox', { name: 'Căn cứ hoặc yêu cầu gửi hai bên' }).fill('Vui lòng bổ sung bằng chứng đã nhận hoặc đã gửi sách.');
+  await page.getByRole('button', { name: 'Yêu cầu bổ sung bằng chứng', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận', exact: true }).click();
+  await expect(page.getByText(/Chưa biết máy chủ đã nhận thao tác/)).toBeVisible();
+  await page.getByRole('button', { name: /Thử lại thao tác vừa gửi/ }).click();
+  await expect(page.getByRole('heading', { name: 'Đang bổ sung bằng chứng' })).toBeVisible();
+  assert.equal(attempts, 2);
+  assert.deepEqual(commands[0], commands[1]);
+  await page.screenshot({ path: path.join(artifacts, 'return-detail-320.png'), fullPage: true });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   assert.deepEqual(errors, []);
-  console.log('PASS: independent triage UI, held-state notice, no decision command, error/retry/empty, 1440/390/320 + 130% text. Queue HTTP fixtures, not financial/native acceptance.');
+  console.log('PASS: held queue, read-only out-of-scope case, assignment, return evidence request, same key/body after lost ACK, error/retry/empty, 1440/390/320 + 130% text. UI HTTP fixtures.');
 } finally {
   await browser?.close();
   server?.kill();

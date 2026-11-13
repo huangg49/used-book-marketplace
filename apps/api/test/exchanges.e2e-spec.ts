@@ -1,3 +1,4 @@
+import { Tx } from '../src/database/mongo/transaction.js';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { canonicalJson } from '../src/common/canonical-json.js';
 import { Test } from '@nestjs/testing';
@@ -2211,6 +2212,141 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     });
   });
 
+  describe('one-sided Exchange return', () => {
+    const hour = 3_600_000;
+
+    async function start({ compensation = false } = {}) {
+      const ex = await preparedExchange(100000, 300000);
+      const startTime = Date.now();
+      const original = Tx.prototype.now;
+      let clock = new Date(startTime);
+      const time = vi.spyOn(Tx.prototype, 'now').mockImplementation(async function (this: Tx) {
+        await original.call(this);
+        return clock;
+      });
+      try {
+        const sent = (await post('/exchanges/' + ex.id + '/ship', {
+          expectedVersion: ex.revision, trackingCode: 'QA-OUTBOUND',
+        }, user1).expect(200)).body;
+        await post('/exchanges/' + ex.id + '/receive', { expectedVersion: sent.revision }, user1).expect(409);
+        const received = (await post('/exchanges/' + ex.id + '/receive', {
+          expectedVersion: sent.revision,
+        }, user2).expect(200)).body;
+        expect(received.status).toBe('Preparing');
+        expect(received.recipientReceivedAt).toBeTruthy();
+        clock = new Date(Date.parse(ex.shippingDeadline) + 1);
+        await post('/exchanges/' + ex.id + '/ship', { expectedVersion: received.revision }, user2).expect(409);
+        const dispute = compensation
+          ? (await app.get(ExchangesService).expireShipping(ex.id, clock))!.exchange
+          : (await post('/exchanges/' + ex.id + '/dispute', {
+              expectedVersion: received.revision, reason: 'Bên kia đã nhận nhưng chưa gửi sách.',
+            }, user1).expect(200)).body;
+        expect(dispute).toMatchObject({ status: 'ResolutionPending', canStartReturnResolution: true });
+        const casePath = '/operations/exchanges/' + ex.id + '/dispute';
+        const opsPath = '/operations/exchanges/' + ex.id + '/return-resolution';
+        const memberPath = '/exchanges/' + ex.id + '/return-resolution';
+        const act = (path: string, actor: Reader, rev: number, action: string, extra: object = {}, key?: string) =>
+          post(path, { expectedVersion: rev, action, ...extra }, actor, key);
+        const note = { note: 'Đối chiếu thông tin từng chặng của giao dịch.' };
+        await get(casePath, user1).expect(403);
+        await act(opsPath, admin, dispute.revision, 'RequestEvidence', note).expect(403);
+        await post('/operations/exchanges/' + ex.id + '/evidence-access', {
+          expectedVersion: 0, reason: 'Tiếp nhận hồ sơ trả sách.',
+        }, admin).expect(200);
+        const requested = (await act(opsPath, admin, dispute.revision, 'RequestEvidence', note).expect(200)).body;
+        await act(opsPath, admin, requested.revision, 'OrderReturn', note).expect(409);
+        await act(memberPath, user1, requested.revision, 'Settle').expect(403);
+        clock = new Date(+clock + 48 * hour);
+        const order = (await act(opsPath, admin, requested.revision, 'OrderReturn', note).expect(200)).body;
+        await act(memberPath, user2, order.revision, 'ReportDispatch', { trackingCode: 'QA-RETURN' }).expect(409);
+        await act(opsPath, admin, order.revision, 'Settle').expect(409);
+
+        const version = order.revision;
+        if (compensation) {
+          const appeal = (await act(memberPath, user2, version, 'Appeal', note).expect(200)).body;
+          await act(memberPath, user2, appeal.revision, 'Appeal', note).expect(409);
+          clock = new Date(+clock + 48 * hour);
+          await act(opsPath, admin, appeal.revision, 'Uphold', note).expect(403);
+          const secondAdmin = await reader(['ADMIN']);
+          await post('/operations/exchanges/' + ex.id + '/evidence-access', {
+            expectedVersion: 1, reason: 'Nhận lại để xét kháng nghị độc lập.',
+          }, secondAdmin).expect(200);
+          const finalReturn = (await act(opsPath, secondAdmin, appeal.revision, 'Uphold', note).expect(200)).body;
+          expect(Date.parse(finalReturn.returnResolution.returnDueAt) - +clock).toBe(72 * hour);
+          const claimed = (await act(memberPath, user2, finalReturn.revision, 'ReportDispatch',
+            { trackingCode: 'QA-LABEL-ONLY' }).expect(200)).body;
+          clock = new Date(+clock + 72 * hour);
+          await act(opsPath, secondAdmin, claimed.revision, 'OrderCompensation', { ...note, evidenceId: randomUUID() }).expect(409);
+          await act(opsPath, secondAdmin, claimed.revision, 'RejectReturnDispatch', { ...note, evidenceId: randomUUID() }).expect(422);
+          const evidence = await db.c.exchange_evidence.insertOne({
+            _id: randomUUID(), exchangeId: ex.id, uploaderId: user1.id, fileName: 'return-evidence.png',
+            mimeType: 'image/png', byteSize: 1, sha256: 'a'.repeat(64), reservedBytes: 1,
+            status: 'Ready', version: 2, createdAt: clock, uploadedAt: clock, createReceiptId: randomUUID(),
+            uploadReceiptId: randomUUID(),
+          });
+          const invalidDispatch = (await act(opsPath, secondAdmin, claimed.revision, 'RejectReturnDispatch',
+            { ...note, evidenceId: evidence.insertedId }).expect(200)).body;
+          expect(invalidDispatch.returnResolution.trackingCode).toBeNull();
+          const decision = (await act(opsPath, secondAdmin, invalidDispatch.revision, 'OrderCompensation',
+            { ...note, evidenceId: evidence.insertedId }).expect(200)).body;
+          expect(decision.returnResolution.compensation).toBe(100000);
+          await act(opsPath, secondAdmin, decision.revision, 'Settle').expect(409);
+          clock = new Date(+clock + 48 * hour);
+          const keys = [randomUUID(), randomUUID()];
+          const gate = await Gate.lock(db.client, 'exchanges', [ex.id]);
+          const racing = keys.map((key) => act(opsPath, secondAdmin, decision.revision, 'Settle', {}, key).then((result) => result));
+          try { await gate.contended(); } finally { await gate.close(); }
+          const responses = await Promise.all(racing);
+          expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+          const committedIndex = responses.findIndex((response) => response.status === 200);
+          const committed = responses[committedIndex];
+          const replay = await act(opsPath, secondAdmin, decision.revision, 'Settle', {}, keys[committedIndex]).expect(200);
+          expect(replay.headers['idempotency-replayed']).toBe('true');
+          expect(replay.body).toEqual(committed.body);
+          expect(committed.body.returnResolution.outcome).toBe('Compensated');
+          expect(await db.c.member_violations.countDocuments({ kind: 'ExchangeReturnDefault', sourceId: ex.id, userId: user2.id })).toBe(1);
+        } else {
+          clock = new Date(+clock + 48 * hour);
+          await act(memberPath, user1, version, 'ReportDispatch', { trackingCode: 'QA-RETURN' }).expect(409);
+          await act(memberPath, user2, version, 'ReportDispatch', { trackingCode: 'QA-OUTBOUND' }).expect(422);
+          const sentBack = (await act(memberPath, user2, version, 'ReportDispatch', { trackingCode: 'QA-RETURN' }).expect(200)).body;
+          await act(memberPath, user2, sentBack.revision, 'AcknowledgeReturn').expect(409);
+          await act(opsPath, admin, sentBack.revision, 'Settle').expect(409);
+          const returned = (await act(memberPath, user1, sentBack.revision, 'AcknowledgeReturn').expect(200)).body;
+          await act(opsPath, admin, returned.revision, 'Settle').expect(409);
+          clock = new Date(+clock + 48 * hour);
+          const result = await act(opsPath, admin, returned.revision, 'Settle').expect(200);
+          expect(result.body.returnResolution.outcome).toBe('Returned');
+          expect(await db.c.member_violations.countDocuments({ sourceId: ex.id })).toBe(0);
+        }
+        clock = new Date(startTime);
+        const history = (await get('/me/wallet/history?limit=20', user1).expect(200)).body.items;
+        const holderHistory = (await get('/me/wallet/history?limit=20', user2).expect(200)).body.items;
+        expect(holderHistory.find((item: { type: string }) => item.type === 'ExchangeReturnRefund')?.amount)
+          .toBe(compensation ? undefined : 100000);
+        expect(history.find((item: { type: string }) => item.type === 'ExchangeReturnRefund')?.amount).toBe(500000);
+        expect(history.find((item: { type: string }) => item.type === 'ExchangeNonReturnCompensation')?.amount)
+          .toBe(compensation ? 100000 : undefined);
+        expect(await db.c.listings.findOne({ _id: ex.l1.listingId })).toMatchObject(compensation
+          ? { trade: 'ClosedUnavailable' }
+          : { trade: 'Available', moderation: 'Draft' });
+        expect(await db.c.listings.findOne({ _id: ex.l2.listingId })).toMatchObject({ trade: 'Available' });
+        const closed = (await get(casePath, admin).expect(200)).body;
+        expect(closed.returnResolution.phase).toBe('Closed');
+        expect((await reconcile()).balanced).toBe(true);
+      } finally {
+        time.mockRestore();
+      }
+    }
+
+    it('requires confirmed return and inspection before refunding 500,000 and 100,000', async () => {
+      await start();
+    });
+    it('requires an independent appeal decision and pays 100,000 once from the holder deposit', async () => {
+      await start({ compensation: true });
+    });
+  });
+
   describe('Exchange resolution safety (ADR 0057)', () => {
     async function disputedExchange(received = false) {
       // Total hold 600,000 exceeds the Staff authority limit of 300,000.
@@ -2265,22 +2401,13 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await post(`/operations/exchanges/${randomUUID()}/resolve`, decisionBody(1), staff).expect(404);
     });
 
-    it.each([false, true])('resolves disputed exchange and keeps ledger balanced; received=%s', async received => {
+    it.each([false, true])('rejects new legacy decisions without changing holds or listings; received=%s', async received => {
       const ex = await disputedExchange(received);
-      const queue = (await get('/operations/exchanges/resolutions', staff).expect(200)).body;
-      expect(queue.some((item: { id: string }) => item.id === ex.id)).toBe(true);
       const decision = received ? 'CompleteExchange' : 'RefundBoth';
-      const key = randomUUID(), body = decisionBody(ex.revision, decision);
-      const response = await post(`/operations/exchanges/${ex.id}/resolve`, body, staff, key).expect(200);
-      expect(response.body.status).toBe(received ? 'Completed' : 'Cancelled');
-      // Idempotent replay with same key returns 200; new key after resolution returns 409 Conflict
-      await post(`/operations/exchanges/${ex.id}/resolve`, body, staff, key).expect(200);
-      await post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(response.body.revision, decision), admin, randomUUID()).expect(409);
-      await worker.tick(new Date(Date.now() + 20 * 86400000));
-      const after = await effects(ex.id);
-      expect(after.exchange.status).toBe(received ? 'Completed' : 'Cancelled');
-      expect(after.listings.every(l => l.trade === (received ? 'Exchanged' : 'Available'))).toBe(true);
-      expect((await reconcile()).balanced).toBe(true);
+      const before = await effects(ex.id);
+      await post('/operations/exchanges/' + ex.id + '/resolve', decisionBody(ex.revision, decision), staff).expect(409);
+      await post('/operations/exchanges/' + ex.id + '/resolve', decisionBody(ex.revision, decision), admin).expect(409);
+      expect(await effects(ex.id)).toEqual(before);
     });
 
     it('blocks Staff and Admin participants before even replaying a legacy receipt; filters their queue', async () => {
@@ -2329,16 +2456,18 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
 
     it('retains consistency under contended opposite decisions and inspection expiry', async () => {
       const ex = await disputedExchange(true);
+      const before = await effects(ex.id);
       const gate = await Gate.lock(db.client, 'exchanges', [ex.id]);
       const refund = post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(ex.revision), staff).then(r => r);
       const complete = post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(ex.revision, 'CompleteExchange'), admin).then(r => r);
       const expiry = app.get(ExchangesService).expireInspection(ex.id, new Date(Date.now() + 20 * 86400000));
-      try { await gate.contended(3); } finally { await gate.close(); }
+      try { await gate.contended(); } finally { await gate.close(); }
       const [r1, r2, swept] = await Promise.all([refund, complete, expiry]);
-      expect([r1.status, r2.status].sort()).toEqual([200, 409]);
+      expect([r1.status, r2.status]).toEqual([409, 409]);
       expect(swept).toBeNull();
       const after = await effects(ex.id);
-      expect(['Cancelled', 'Completed']).toContain(after.exchange.status);
+      // The worker takes and commits a lock even when inspection is ineligible.
+      expect(after).toEqual({ ...before, exchange: { ...before.exchange, lockSeq: before.exchange.lockSeq + 1 } });
       expect((await reconcile()).balanced).toBe(true);
     });
 

@@ -11,6 +11,7 @@ import { createAuctionPauseBudgetMigration, withAuctionPauseBudget } from './007
 import { createAuctionReachedNoticeMigration, withAuctionReachedNotice } from './0073-auction-reached-notice.js';
 import { createAuctionSecondChanceMigration, withAuctionSecondChance } from './0074-auction-second-chance.js';
 import { createAuctionDepositShareMigration, withAuctionDepositShare } from './0075-auction-deposit-share.js';
+import { createExchangeReturnMigration, withExchangeReturnResolution } from './0077-exchange-return-resolution.js';
 import { onlinePriceCatalogRevisionMigration, withOnlinePriceCatalogRevision } from './0076-online-price-catalog-revision.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
@@ -574,7 +575,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
 
 export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals).map(withWithdrawalProofReference), registrationSpec, ...withdrawalProofSpecs].map((spec) =>
   onlinePriceSpecs.some(({ name }) => name === spec.name) ? withOnlinePriceCatalogRevision(spec) : spec,
-);
+).map(withExchangeReturnResolution);
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -651,12 +652,17 @@ migrations.push(secondChanceMigration);
 // ADR 0087: seller share of a forfeited deposit and a seller-set deposit, on
 // the 0074 auctions/member_notifications, 0067 auction_intakes and 0066
 // ledger_journals snapshots.
-migrations.push(
-  createAuctionDepositShareMigration([
-    ...secondChanceMigration.definition.collections.filter((s) => s.name !== 'point_orders'),
-    ...lifecycleMigration.definition.collections.filter((s) => s.name === 'auction_intakes'),
-    ...registrationMigration.definition.collections.filter((s) => s.name === 'ledger_journals'),
-  ]),
-);
+const auctionDepositShareMigration = createAuctionDepositShareMigration([
+  ...secondChanceMigration.definition.collections.filter((s) => s.name !== 'point_orders'),
+  ...lifecycleMigration.definition.collections.filter((s) => s.name === 'auction_intakes'),
+  ...registrationMigration.definition.collections.filter((s) => s.name === 'ledger_journals'),
+]);
+migrations.push(auctionDepositShareMigration);
 migrations.push(withdrawalProofMigration, withdrawalProofReferenceMigration);
 migrations.push(onlinePriceCatalogRevisionMigration);
+
+migrations.push(createExchangeReturnMigration([
+  ...exchangeFlexibleDiffSpecs,
+  ...auctionDepositShareMigration.definition.collections.filter((spec) => spec.name === 'ledger_journals'),
+  ...rulesCollectionSpecs,
+]));

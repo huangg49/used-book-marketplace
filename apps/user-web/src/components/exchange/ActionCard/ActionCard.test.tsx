@@ -110,4 +110,22 @@ describe("Exchange handover actions", () => {
     expect(html).toContain("Đã hết hạn gửi");
     expect(html).not.toContain("Tạo đơn gửi sách");
   });
+
+  it("keeps both directions actionable when only the incoming book has been sent", () => {
+    const detail = {
+      status: "WAITING_YOU_SEND",
+      viewerShipping: {},
+      partnerShipping: { sentAt: base.createdAt },
+      shippingDeadline: "2099-01-01T00:00:00Z",
+    } satisfies Partial<ExchangeDetail>;
+    const before = render(detail, true);
+    const incoming = before.indexOf('id="nhan-sach"');
+    expect(before.slice(0, incoming)).toContain("Tạo đơn gửi sách");
+    expect(before.slice(incoming)).toContain("Xác nhận đã nhận sách");
+
+    const after = render({ ...detail, viewerShipping: { receivedAt: base.createdAt } }, true);
+    expect(after).toContain("Bạn đã nhận sách");
+    expect(after).toContain("Tạo đơn gửi sách");
+    expect(after).not.toContain("Xác nhận đã nhận sách");
+  });
 });

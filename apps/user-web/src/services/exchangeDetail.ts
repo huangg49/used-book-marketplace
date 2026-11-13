@@ -35,6 +35,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     createdAt: ex.createdAt,
     status: mapExchangeStatus(ex, actor.id),
     rawStatus: ex.status,
+    returnResolution: ex.returnResolution,
     hasAgreementSnapshot: Boolean(ex.agreement),
     lastProposedById: ex.lastProposedById ?? ex.initiatorId,
     canViewerAccept:

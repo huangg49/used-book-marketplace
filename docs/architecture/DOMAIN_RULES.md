@@ -55,6 +55,11 @@ review source and gate before changing or extending completion.
 
 ## Exchange hiện hành — deadline và nghĩa vụ cũ
 
+13/11/2026: [ADR0089](../adr/0089-one-sided-exchange-return.md) bổ sung một chiều
+đã nhận, chiều kia quá hạn gửi. Quyết định có hạn phản hồi và kháng nghị, rồi theo
+dõi chặng hoàn. Chỉ bồi thường từ cọc của bên giữ sách khi hồ sơ đủ bằng chứng,
+và chỉ giải phóng bài của cuốn thu hồi sau xác minh.
+
 02/11/2026: [ADR0065](../adr/0065-exchange-agreement-snapshots.md), contract0.71:
 đề xuất mới cố định revision/nội dung/giá và ảnh tham chiếu trong agreement.
 Accept tái kiểm cả hai chủ/sách; lỗi thời hoặc thiếu snapshot đóng với

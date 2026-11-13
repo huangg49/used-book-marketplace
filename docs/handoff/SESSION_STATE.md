@@ -1,3 +1,24 @@
+# Xác nhận nhận sách khi đối tác chưa gửi — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, tích hợp nghiệp vụ từ `b4486d6b`
+vào phiếu Member web tại `c4146062`. [ADR0089](../adr/0089-one-sided-exchange-return.md)
+đi cùng OpenAPI 0.75.0 và migration 0077. Mỗi chiều xác nhận riêng. Khi chỉ
+An gửi, Bình có thể xác nhận ở **Bạn nhận** và vẫn thấy nút gửi ở **Bạn gửi**.
+Phiếu của An ghi đối tác đã nhận và còn chờ đối tác gửi. Bước hiện tại vẫn
+là **Giao nhận** cho đến khi đủ hai chiều. Quá hạn một chiều giữ tiền và mở
+đường xử lý sự cố, theo quyền và trạng thái API.
+
+PASS 57 ca HTTP Exchange trên Mongo QA, gồm hai kết quả trả sách/bồi thường,
+và hai ca nâng cấp thứ tự migration trên Mongo QA. Build API/Member, typecheck
+Admin, 486 unit Member và các ca Chromium giả lập về hạn và phục hồi lệnh qua.
+DB local đã áp dụng 0077 và API local đã nạp bản mới. Chromium 1440/390 bấm
+An ghi gửi và Bình xác nhận nhận qua API thật, rồi kiểm trạng thái/hạn trên cả
+hai tài khoản. Phiếu `af7e4fb8` giữ 90.000đ từ ví An, 110.000đ từ ví Bình. Phiếu kiểm tra
+`17a6bd36` là ca hai bên đã nhận riêng.
+
+Gói này dừng ở mốc giao nhận một chiều trên bản local. Nút tua hạn tại phiếu,
+nghiệm thu bàn xử lý Admin với người thật và thiết bị RN còn mở.
+
 # Thanh bước và form gửi sách trên phiếu trao đổi — 13/11/2026
 
 Nhánh `codex/exchange-progress-web`, base `5665f44a`. Phiếu Member web

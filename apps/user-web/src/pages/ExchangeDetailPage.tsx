@@ -1,3 +1,4 @@
+import { ExchangeReturnPanel } from "../components/exchange/ExchangeReturnPanel";
 import type { ReactNode } from "react";
 import {
   TransactionFrame,
@@ -336,7 +337,8 @@ function ExchangeDetailContent({
         ? "Bạn đã từ chối đề nghị này"
         : `@${detail.partner.username} đã từ chối đề nghị của bạn`;
   } else if (detail.status === "CANCELLED") {
-    if (
+    if (detail.returnResolution?.outcome) statusText = "Đã xử lý trả sách";
+    else if (
       detail.closedBy === "both" ||
       detail.cancelReason === "MutualAgreement"
     ) {
@@ -388,6 +390,18 @@ function ExchangeDetailContent({
         onComplete={handleComplete}
         onDispute={handleDispute}
       />
+      {detail.returnResolution && detail.revision && (
+        <ExchangeReturnPanel
+          key={detail.viewer.id + ":" + detail.id}
+          id={detail.id}
+          revision={detail.revision}
+          userId={detail.viewer.id}
+          resolution={detail.returnResolution}
+          returnAddress={detail.partnerAddress}
+          blocked={Boolean(pendingExchange(detail.id) || exchangeAcknowledged(detail.id))}
+          onRead={() => void refetchDetail()}
+        />
+      )}
       {detail.rawStatus === "ResolutionPending" && (
         <ExchangeEvidencePanel
           key={detail.viewer.id + ":" + detail.id}

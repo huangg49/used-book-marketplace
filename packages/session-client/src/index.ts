@@ -17,3 +17,5 @@ export * from "./exchange-evidence";
 export * from './withdrawals';
 export * from "./wallet-history-filters";
 export * from "./chat-message";
+
+export * from "./exchange-return";

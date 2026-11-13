@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.74.1
+  version: 0.75.0
 
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
@@ -5734,6 +5734,8 @@ paths:
               - AuctionBidHold
               - AuctionBidRelease
               - AuctionDepositSellerShare
+              - ExchangeReturnRefund
+              - ExchangeNonReturnCompensation
         - in: query
           name: topupId
           schema:
@@ -11509,6 +11511,96 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/return-resolution:
+    post:
+      operationId: actOnOwnExchangeReturn
+      tags: [Exchanges]
+      description: Existing participant obligation. Record a statement, appeal, report return dispatch, acknowledge receipt or report a return problem.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExchangeReturnCommand' }
+      responses:
+        "200":
+          description: Current Exchange snapshot or an authorized replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exchange' }
+        "400": { $ref: '#/components/responses/ListingError' }
+        "401": { $ref: '#/components/responses/ListingError' }
+        "403": { $ref: '#/components/responses/ListingError' }
+        "404": { $ref: '#/components/responses/ListingError' }
+        "409": { $ref: '#/components/responses/ListingError' }
+        "422": { $ref: '#/components/responses/ListingError' }
+        "503": { $ref: '#/components/responses/ListingError' }
+  /operations/exchanges/{id}/dispute:
+    get:
+      operationId: getOperationsExchangeDispute
+      tags: [Exchanges]
+      description: Independent Staff or Admin reads the current dispute or its closed return resolution.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current Exchange snapshot or an authorized replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exchange' }
+        "400": { $ref: '#/components/responses/ListingError' }
+        "401": { $ref: '#/components/responses/ListingError' }
+        "403": { $ref: '#/components/responses/ListingError' }
+        "404": { $ref: '#/components/responses/ListingError' }
+        "409": { $ref: '#/components/responses/ListingError' }
+        "422": { $ref: '#/components/responses/ListingError' }
+        "503": { $ref: '#/components/responses/ListingError' }
+  /operations/exchanges/{id}/return-resolution:
+    post:
+      operationId: actOnOperationsExchangeReturn
+      tags: [Exchanges]
+      description: Assigned independent Staff or Admin requests evidence or orders return within authority. Admin handles appeals, verifies or rejects return evidence, or orders compensation; settlement checks the effective decision and evidence again.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExchangeReturnCommand' }
+      responses:
+        "200":
+          description: Current Exchange snapshot or an authorized replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exchange' }
+        "400": { $ref: '#/components/responses/ListingError' }
+        "401": { $ref: '#/components/responses/ListingError' }
+        "403": { $ref: '#/components/responses/ListingError' }
+        "404": { $ref: '#/components/responses/ListingError' }
+        "409": { $ref: '#/components/responses/ListingError' }
+        "422": { $ref: '#/components/responses/ListingError' }
+        "503": { $ref: '#/components/responses/ListingError' }
   /operations/exchanges/{id}/resolve:
     post:
       operationId: resolveExchangeDispute
@@ -11516,7 +11608,7 @@ paths:
         - Exchanges
       summary: resolveExchangeDispute
       description: >-
-        ACTIVE independent STAFF/ADMIN only. New RefundBoth and CompleteExchange decisions are
+        ACTIVE independent STAFF/ADMIN only. New decisions through this legacy endpoint are
         currently rejected with 409 InvalidState: the legacy command cannot establish custody,
         allocations, authority limits or an effective decision after appeal. No money, listing,
         exchange, audit or notification mutation is committed on rejection. Historical receipts
@@ -19337,6 +19429,8 @@ components:
             - AuctionBidHold
             - AuctionBidRelease
             - AuctionDepositSellerShare
+            - ExchangeReturnRefund
+            - ExchangeNonReturnCompensation
           description: ADR 0075/0087. Auction rows are wallet holds for bids and deposits, their
             releases, and a Seller's share of a non-paying winner's deposit.
         amount:
@@ -23257,6 +23351,11 @@ components:
         - createdAt
         - updatedAt
       properties:
+        returnResolution:
+          $ref: '#/components/schemas/ExchangeReturnResolution'
+        canStartReturnResolution:
+          type: boolean
+          description: One book was sent and received, the other party missed the shipping deadline, and both sides funded.
         agreement:
           anyOf:
             - $ref: "#/components/schemas/ExchangeAgreement"
@@ -23715,6 +23814,53 @@ components:
       required: [reason]
       properties:
         reason: { type: string, minLength: 5, maxLength: 300 }
+    ExchangeReturnCommand:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, action]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        action:
+          type: string
+          enum: [RequestEvidence, SubmitStatement, OrderReturn, Appeal, Uphold, SetAside, ReportDispatch, AcknowledgeReturn, VerifyReturnDelivery, RejectReturnDispatch, ReportReturnProblem, OrderCompensation, Settle]
+        note: { type: string, minLength: 5, maxLength: 500 }
+        trackingCode: { type: string, minLength: 5, maxLength: 80 }
+        evidenceId: { type: string, format: uuid }
+    ExchangeReturnResolution:
+      type: object
+      additionalProperties: false
+      required: [phase, ownerId, holderId, listingId, note, evidenceDueAt, appealDueAt, effectiveAt, appeals, returnDueAt, trackingCode, returnedAt, checkDueAt, outcome, compensation, ownerDeposit, holderDeposit, differenceAmount, differencePayerId]
+      properties:
+        phase:
+          type: string
+          enum: [Evidence, ReturnOrdered, ReturnInProgress, CheckingReturn, ReturnIssue, CompensationOrdered, NeedsReview, Closed]
+        ownerId: { type: string, format: uuid }
+        holderId: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        note: { type: string }
+        evidenceDueAt: { type: [string, "null"], format: date-time }
+        appealDueAt: { type: [string, "null"], format: date-time }
+        effectiveAt: { type: [string, "null"], format: date-time }
+        appeals:
+          type: array
+          maxItems: 2
+          items:
+            type: object
+            additionalProperties: false
+            required: [by, note]
+            properties:
+              by: { type: string, format: uuid }
+              note: { type: string }
+        returnDueAt: { type: [string, "null"], format: date-time }
+        trackingCode: { type: [string, "null"] }
+        returnedAt: { type: [string, "null"], format: date-time }
+        checkDueAt: { type: [string, "null"], format: date-time }
+        outcome: { type: [string, "null"], enum: [Returned, Compensated, null] }
+        compensation: { type: integer, minimum: 0 }
+        ownerDeposit: { type: integer, minimum: 0 }
+        holderDeposit: { type: integer, minimum: 0 }
+        differenceAmount: { type: integer, minimum: 0 }
+        differencePayerId: { type: [string, "null"], format: uuid }
     DisputeExchangeCommand:
       type: object
       additionalProperties: false

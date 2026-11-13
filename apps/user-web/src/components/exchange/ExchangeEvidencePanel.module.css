@@ -313,3 +313,42 @@
   font-size: 0.75rem;
   margin-left: 6px;
 }
+
+.returnActions,
+.returnForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.returnForm label {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.returnForm textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--shop-control);
+  border-radius: 0.4rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.returnActions button,
+.returnForm button {
+  padding: 0.5rem 0.65rem;
+  min-height: 44px;
+  border: 1px solid var(--shop-control);
+  border-radius: 0.4rem;
+  color: var(--shop-wine);
+  background: var(--shop-paper);
+  font: inherit;
+}
+
+.returnActions button:disabled,
+.returnForm button:disabled {
+  opacity: 0.6;
+}

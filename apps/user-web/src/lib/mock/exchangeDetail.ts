@@ -1,3 +1,4 @@
+import type { ExchangeReturnResolution } from "@used-books/session-client";
 import type { ExchangeStatus, ExchangeBook, ExchangeUser } from './exchangeMine';
 
 export type ViewerRole = 'proposer' | 'recipient';
@@ -24,6 +25,7 @@ export interface ExchangeDetail {
   deliveryMethod?: 'meetup' | 'shipping';
   revision?: number;
   rawStatus?: string;
+  returnResolution?: ExchangeReturnResolution;
   lastProposedById?: string | null;
   canViewerAccept?: boolean;
   viewerFundedAt?: string;

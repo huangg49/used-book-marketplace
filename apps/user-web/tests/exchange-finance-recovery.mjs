@@ -39,11 +39,25 @@ try {
     await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    let failure = 0, standalone = false, messagesFailure = 0;
+    let failure = 0, standalone = false, messagesFailure = 0, exchangeResult = exchange;
+    const returnCommands = [];
     const messageCursors = [];
     await context.route('**/api/v1/**', route => {
       const request = route.request(), p = new URL(request.url()).pathname.slice('/api/v1'.length);
       if (p === '/auth/login') return route.fulfill({ json: { accessToken: 'fixture-access', refreshToken: 'f'.repeat(43), expiresIn: 900, user } });
+      if (p === '/exchanges/' + exchange.id + '/return-resolution') {
+        assert.equal(request.method(), 'POST');
+        const command = request.postDataJSON();
+        assert.equal(command.action, 'Appeal');
+        returnCommands.push({ body: command, key: request.headers()['idempotency-key'] });
+        if (returnCommands.length === 1) {
+          exchangeResult = { ...exchangeResult, revision: 9, returnResolution: {
+            ...exchangeResult.returnResolution, appeals: [{ by: user.id, note: command.note }],
+          } };
+          return route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } });
+        }
+        return route.fulfill({ json: exchangeResult });
+      }
       assert.equal(request.method(), 'GET', 'Recovery must only read existing state');
       if (p === '/auth/me') return route.fulfill({ json: user });
       if (p === '/me/purchase-conversations') return route.fulfill({ json: standalone ? [] : [room] });
@@ -60,11 +74,12 @@ try {
           olderCursor: before ? null : 'older-fixture-cursor',
         } });
       }
+      if (p.endsWith('/evidence')) return route.fulfill({ json: { items: [], nextCursor: null } });
       if (p.endsWith('/messages/history')) return route.fulfill({ json: { items: [], olderCursor: null } });
       if (p.endsWith('/events')) return route.fulfill({ json: [] });
       if (p === `/exchanges/${exchange.id}`) return failure
         ? route.fulfill({ status: failure, json: { code: failure === 403 ? 'Forbidden' : 'Unavailable' } })
-        : route.fulfill({ json: exchange });
+        : route.fulfill({ json: exchangeResult });
       if (p === '/listings/' + id(4)) return route.fulfill({ json: listing(4) });
       if (p === '/listings/' + id(5)) return route.fulfill({ json: listing(5) });
       if (p === '/me/notifications') return route.fulfill({ json: { items: [], nextCursor: null, unreadCount: 0 } });
@@ -121,8 +136,36 @@ try {
     await expect(chat.getByRole('alert')).toContainText('Bạn hiện không thể xem tin nhắn', { timeout: 16000 });
     await expect(chat.getByText('Tin thử 501', { exact: true })).toHaveCount(0);
     await expect(chat.getByRole('button', { name: 'Gửi tin nhắn', exact: true })).toHaveCount(0);
+    messagesFailure = 0;
+    exchangeResult = { ...exchange, status: 'ResolutionPending', revision: 8,
+      initiatorDeposit: 300000, recipientDeposit: 100000, diffAmount: 200000, diffPayerId: user.id,
+      initiatorShippedAt: now, recipientReceivedAt: now,
+      returnResolution: {
+        phase: 'ReturnOrdered', ownerId: user.id, holderId: other.id, listingId: exchange.initiatorListingId,
+        note: 'Đã xác minh một bên nhận sách và quá hạn gửi.',
+        evidenceDueAt: now, appealDueAt: new Date(Date.now() + 48 * 3600000).toISOString(),
+        effectiveAt: null, appeals: [], returnDueAt: new Date(Date.now() + 120 * 3600000).toISOString(),
+        trackingCode: null, returnedAt: null, checkDueAt: null, outcome: null,
+        compensation: 0, ownerDeposit: 300000, holderDeposit: 100000, differenceAmount: 200000, differencePayerId: user.id,
+      },
+    };
+    await page.goto(origin + '/login?returnUrl=' + encodeURIComponent('/exchange/' + exchange.id));
+    await page.getByLabel(/^Email/).fill(user.email);
+    await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
+    await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+    const panel = page.getByRole('region', { name: 'Đã có quyết định trả sách', exact: true });
+    await expect(panel.getByText(/cọc của bạn và .*tiền bù bạn đã nộp/)).toBeVisible();
+    await panel.getByRole('button', { name: 'Gửi kháng nghị', exact: true }).click();
+    await panel.getByRole('textbox', { name: 'Nội dung gửi' }).fill('Xin đối chiếu thêm bằng chứng giao nhận.');
+    await panel.locator('form').getByRole('button', { name: 'Gửi kháng nghị', exact: true }).click();
+    await page.getByRole('button', { name: /Thử lại thao tác|Thử lại yêu cầu/ }).click();
+    await expect(panel.getByText(/Đã có kháng nghị/)).toBeVisible();
+    assert.equal(returnCommands.length, 2);
+    assert.deepEqual(returnCommands[0], returnCommands[1]);
+    await page.screenshot({ path: path.join(out, 'return-appeal-' + width + '.png'), fullPage: true });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.deepEqual(errors, []);
-    console.log(`PASS exchange finance recovery ${width}: stale warning/amounts, denied redaction, read-only retry`);
+    console.log(`PASS exchange finance recovery ${width}: stale warning/amounts, denied redaction, read-only retry, return appeal with exact replay`);
     await context.close();
   }
 } finally {

@@ -1,3 +1,4 @@
+import { exchangeReturnResolutionSchema } from "@used-books/session-client";
 import { z } from "zod";
 import type { components } from "@used-books/api-contract";
 type Schema = components["schemas"];
@@ -504,6 +505,8 @@ export const exchangeShipmentInfo = z.object({
 }).passthrough();
 
 export const exchangeDisputeResolution = z.object({
+  returnResolution: exchangeReturnResolutionSchema.optional(),
+  canStartReturnResolution: z.boolean().optional(),
   id: uuid,
   initiatorId: uuid,
   recipientId: uuid,

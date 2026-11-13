@@ -127,9 +127,7 @@ export function ActionCard(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
-  const [disputeCategory, setDisputeCategory] = useState(
-    "Sách rách nát / hư hỏng nặng",
-  );
+  const [disputeCategory, setDisputeCategory] = useState("Sách rách nát / hư hỏng nặng");
   const [disputeDetail, setDisputeDetail] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   useExchangeRecovery();
@@ -223,8 +221,14 @@ export function ActionCard(props: Props) {
     const partnerRole =
       detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
 
+    if (detail.partnerShipping.sentAt && !detail.viewerShipping.receivedAt) actions.push("received");
+    if (expired && props.onDispute && Boolean(detail.viewerShipping.sentAt) !== Boolean(detail.partnerShipping.sentAt)) {
+      actions.push("dispute");
+    }
     if (detail.viewerShipping.sentAt) {
-      instructions = `Bạn đã tạo đơn vận chuyển thành công. Đang chờ đối tác tạo đơn để bưu tá cùng đến lấy sách ở cả hai đầu.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
+      instructions = expired
+        ? "Đối tác đã quá hạn gửi. Bạn có thể báo sự cố để hệ thống giữ tiền và kiểm tra chặng giao."
+        : "Đã ghi nhận bạn gửi sách. Đối tác có thể xác nhận khi nhận được cuốn của bạn.";
     } else {
       if (!detail.cancellationRequestedBy) {
         instructions = expired
@@ -239,8 +243,7 @@ export function ActionCard(props: Props) {
         if (!expired) actions.push("sent");
       } else if (detail.cancellationRequestedBy === partnerRole) {
         instructions = `Đối tác đã đề nghị hủy trao đổi trước khi gửi sách. Nếu bạn đồng ý hủy, toàn bộ tiền cọc và tiền bù của cả hai bên sẽ được hoàn trả 100% về ví. Nếu bạn muốn tiếp tục giao dịch, hãy từ chối yêu cầu hủy hoặc tạo đơn gửi sách.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
-        if (!expired) actions.push("sent");
-        actions.push("cancel", "reject");
+        if (!expired) actions.push("sent", "cancel", "reject");
       }
     }
   } else if (detail.status === "WAITING_YOU_CONFIRM") {
@@ -270,9 +273,13 @@ export function ActionCard(props: Props) {
     instructions = detail.disputeReason
       ? `Giao dịch đang có tranh chấp / báo sự cố: "${detail.disputeReason}". Toàn bộ tiền cọc bảo chứng và tiền bù đang được tạm khóa an toàn trên Ledger để bảo vệ quyền lợi của hai bên.`
       : "Trao đổi đang chờ giải quyết tranh chấp. Khoản tiền cọc đang được tạm khóa an toàn.";
+    if (!detail.returnResolution && detail.partnerShipping.sentAt && !detail.viewerShipping.sentAt &&
+      !detail.viewerShipping.receivedAt) actions.push("received");
   } else {
     instructions =
-      detail.cancelReason === "DisputeResolvedRefund" && detail.resolutionReason
+      detail.returnResolution?.outcome
+        ? "Hồ sơ trả sách đã xử lý xong. Xem từng khoản đã ghi vào ví bên dưới."
+        : detail.cancelReason === "DisputeResolvedRefund" && detail.resolutionReason
         ? `Giao dịch đã hủy theo phán quyết của Quản trị viên: "${detail.resolutionReason}". Toàn bộ tiền cọc và tiền bù đã được hoàn lại 100% về ví của bạn.`
         : detail.cancelReason === "MutualAgreement"
           ? "Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ 100% tiền cọc và tiền bù đã được hoàn lại về ví của hai bên và sách đã được mở lại trên kệ."
@@ -302,6 +309,9 @@ export function ActionCard(props: Props) {
     if (next === "received") {
       setReceiveOpen(true);
       return;
+    }
+    if (next === "dispute" && detail.status === "WAITING_YOU_SEND") {
+      setDisputeCategory("Đối tác chưa gửi sách");
     }
     setAction(next);
   };
@@ -419,7 +429,7 @@ export function ActionCard(props: Props) {
   const shippingDeadline = preparing && detail.shippingDeadline ? (
     <p className={styles.deadlineRow}>
       <span>
-        Hạn gửi sách{" "}
+        {detail.viewerShipping.sentAt ? "Hạn gửi của đối tác" : "Hạn gửi sách"}{" "}
         <time dateTime={detail.shippingDeadline}>
           {new Date(detail.shippingDeadline).toLocaleString("vi-VN", {
             hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
@@ -797,6 +807,7 @@ export function ActionCard(props: Props) {
                     onChange={(e) => setDisputeCategory(e.target.value)}
                     disabled={busy || !!pending}
                   >
+                    <option value="Đối tác chưa gửi sách">Đối tác chưa gửi sách</option>
                     <option value="Sách rách nát / hư hỏng nặng">Sách hư hỏng</option>
                     <option value="Giao sai sách / Không đúng cam kết">Sai sách hoặc sai mô tả</option>
                     <option value="Thiếu sách / Bưu kiện rỗng">Thiếu sách hoặc kiện rỗng</option>

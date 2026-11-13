@@ -44,7 +44,7 @@ export async function notifyExchange(
   kind: ExchangeNotificationKind,
   recipients: (string | null | undefined)[],
   now: Date,
-  extra?: { trackingCode?: string; reason?: string },
+  extra?: { trackingCode?: string; reason?: string; resolutionUpdate?: boolean },
 ) {
   const users = [...new Set(recipients.filter((u): u is string => !!u))];
   if (!users.length) return;
@@ -87,8 +87,8 @@ export async function notifyExchange(
       case 'ExchangeReceived':
         title = 'Đối tác đã nhận được sách';
         body = isInitiator
-          ? `@${ctx.recipientName} đã xác nhận nhận được sách từ bạn. Khoảng đệm nghiệm thu 48 giờ bắt đầu!`
-          : `@${ctx.initiatorName} đã xác nhận nhận được sách từ bạn. Khoảng đệm nghiệm thu 48 giờ bắt đầu!`;
+          ? `@${ctx.recipientName} đã xác nhận nhận được sách từ bạn. Hạn kiểm tra sách của đối tác đã bắt đầu.`
+          : `@${ctx.initiatorName} đã xác nhận nhận được sách từ bạn. Hạn kiểm tra sách của đối tác đã bắt đầu.`;
         break;
 
       case 'ExchangeCompleted':
@@ -107,7 +107,11 @@ export async function notifyExchange(
         break;
 
       case 'ExchangeDisputed':
-        title = 'Giao dịch trao đổi có khiếu nại';
+        title = extra?.resolutionUpdate ? 'Hồ sơ trả sách có cập nhật' : 'Giao dịch trao đổi có khiếu nại';
+        if (extra?.resolutionUpdate) {
+          body = extra.reason ?? '';
+          break;
+        }
         body = `Giao dịch trao đổi sách đã được tạm dừng tất toán do có khiếu nại.${extra?.reason ? ` Nội dung: ${extra.reason}` : ''}`;
         break;
     }
