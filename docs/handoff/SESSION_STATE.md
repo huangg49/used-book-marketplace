@@ -5,6 +5,12 @@ Member web xếp sách trong kệ theo số tiêu chí tác giả/thể loại k
 hiện có. Nhãn giải thích vì sao sách được gợi ý, lựa chọn vẫn do thành viên
 quyết định. Ghi chú mong muốn vẫn hiển thị trong mục đang tìm.
 
+Màn chọn sách dùng danh sách liền hàng, giá và ô chọn tách cột trên desktop.
+Khối sách muốn nhận giữ bìa lớn hơn, tên đối tác và mục xem mong muốn. Sách
+khớp có nền nhẹ và nhãn, sách đã chọn có dấu tích và tổng giá trị ở cuối.
+Chromium local kiểm hai vai ở 320/390/768/1440 px, chọn bằng phím, xem lại
+và quay lại. Build Member web và 482 unit qua.
+
 Đã thêm hai bài đã duyệt cho mỗi tài khoản An và Bình trong DB local chính.
 Ẩn hai bài trùng của Bình chưa gắn giao dịch để giữ giới hạn năm bài. Chromium
 local qua hai tài khoản ở 320/390/768/1440 px, kiểm xếp hạng, nhãn, chọn sách

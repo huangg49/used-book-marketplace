@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowDownLeft, ArrowLeft, ArrowRight, Check, ChevronDown } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
 import { categoryPath, foldCatalogText } from "@used-books/api-contract/catalog-taxonomy";
 import { z } from "zod";
@@ -67,10 +67,10 @@ function OfferBook({ title, author, coverUrl, value, match }: {
       <div className={styles.cover} aria-hidden="true"><BookCover title={title} coverUrl={coverUrl} /></div>
       <div className={styles.bookText}>
         <strong className={styles.bookTitle} title={title}>{title}</strong>
-        {author && <span>{author}</span>}
-        <span className={styles.value}>{formatVnd(value)}</span>
+        {author && <span className={styles.author} title={author}>{author}</span>}
         {match && <span id={match.id} className={styles.matchLabel}>{match.label}</span>}
       </div>
+      <span className={styles.value}>{formatVnd(value)}</span>
     </div>
   );
 }
@@ -253,20 +253,25 @@ function ExchangeCompose({ listingId }: { listingId: string | null }) {
   }).sort((a, b) => b.priority - a.priority);
   return (
     <div className={styles.page}>
-      {review ? (
-        <button className={styles.back} type="button" disabled={busy} onClick={() => changeStep(false)}><ArrowLeft size={17} aria-hidden="true" /> Đổi lựa chọn</button>
-      ) : (
-        <Link className={styles.back} to={bookPath}><ArrowLeft size={17} aria-hidden="true" /> Về trang sách</Link>
-      )}
-      <h1 ref={heading} tabIndex={-1}>{review ? "Xem lại đề nghị" : "Chọn sách để đổi"}</h1>
+      <header className={styles.header}>
+        {review ? (
+          <button className={styles.back} type="button" disabled={busy} onClick={() => changeStep(false)}><ArrowLeft size={17} aria-hidden="true" /> Đổi lựa chọn</button>
+        ) : (
+          <Link className={styles.back} to={bookPath}><ArrowLeft size={17} aria-hidden="true" /> Về trang sách</Link>
+        )}
+        <h1 ref={heading} tabIndex={-1}>{review ? "Xem lại đề nghị" : "Chọn sách để đổi"}</h1>
+      </header>
       <div className={styles.layout}>
         <section className={styles.target} aria-labelledby="target-book">
-          <h2 id="target-book">Bạn muốn nhận</h2>
+          <h2 id="target-book"><ArrowDownLeft size={17} aria-hidden="true" /> Bạn muốn nhận</h2>
           {targetBook}
-          <p className={styles.meta}>Của {book.seller.displayName} · {conditions[book.condition]}</p>
+          <p className={styles.meta}>
+            <span className={styles.owner}>Của <strong dir="auto" title={book.seller.displayName}>{book.seller.displayName}</strong></span>
+            <span>{conditions[book.condition]}</span>
+          </p>
           {wants.length > 0 && (
             <details className={styles.disclosure}>
-              <summary>{book.seller.displayName} đang tìm <ChevronDown size={16} aria-hidden="true" /></summary>
+              <summary>Mong muốn của đối tác <ChevronDown size={16} aria-hidden="true" /></summary>
               <p>{wants.join(" · ")}</p>
             </details>
           )}
@@ -314,17 +319,24 @@ function ExchangeCompose({ listingId }: { listingId: string | null }) {
               <div className={styles.options} role="group" aria-labelledby="own-books">
                 {options.map(({ item, label }) => (
                   <label className={styles.option} key={item.id} data-selected={selectedIds.includes(item.id)}
-                    data-matched={label ? true : undefined}>
-                    <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={event => {
-                      const checked = event.target.checked;
-                      setSelectedIds(previous => checked ? [...previous, item.id] : previous.filter(value => value !== item.id));
-                    }} aria-label={item.title} aria-describedby={label ? `match-${item.id}` : undefined} />
+                    data-matched={label ? true : undefined} data-focus-surface="">
                     <OfferBook {...item} match={label ? { id: `match-${item.id}`, label } : undefined} />
+                    <span className={styles.selection}>
+                      <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={event => {
+                        const checked = event.target.checked;
+                        setSelectedIds(previous => checked ? [...previous, item.id] : previous.filter(value => value !== item.id));
+                      }} aria-label={item.title} aria-describedby={label ? `match-${item.id}` : undefined} />
+                      <span className={styles.check} aria-hidden="true"><Check size={13} strokeWidth={3} /></span>
+                    </span>
                   </label>
                 ))}
               </div>
               <div className={styles.footer}>
-                <span role="status">{chosen.length ? `Đã chọn ${chosen.length} cuốn` : "Chọn ít nhất một cuốn."}</span>
+                <div className={styles.selectionTotal} role="status">
+                  {chosen.length ? (
+                    <><strong>{chosen.length} cuốn đã chọn</strong><span>Tổng giá trị đổi {formatVnd(ownValue)}</span></>
+                  ) : <span>Chọn ít nhất một cuốn.</span>}
+                </div>
                 <button className={styles.primary} type="button" disabled={!chosen.length} onClick={() => changeStep(true)}>
                   Xem lại đề nghị <ArrowRight size={17} aria-hidden="true" />
                 </button>
