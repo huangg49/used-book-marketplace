@@ -100,7 +100,10 @@ export function CounterDialog({ detail, onClose, onSubmit, isBusy }: Props) {
               <h3><Icon size={16} aria-hidden="true" />{label}</h3>
               {books.map(book => <div key={book.id} className={styles.currentBook}>
                 <Cover book={book} />
-                <div><strong title={book.title}>{book.title}</strong>{book.price != null && <span>{formatVnd(book.price)}</span>}</div>
+                <div className={styles.currentBookText}>
+                  <strong className={styles.bookTitle} title={book.title}>{book.title}</strong>
+                  {book.price != null && <span className={styles.price}>{formatVnd(book.price)}</span>}
+                </div>
               </div>)}
             </div>
           ))}
@@ -122,7 +125,7 @@ export function CounterDialog({ detail, onClose, onSubmit, isBusy }: Props) {
             <div className={styles.choices}>
               {items.map(book => {
                 const checked = selected.includes(book.id);
-                return <label key={book.id} className={styles.bookChoice} data-selected={checked || undefined}>
+                return <label key={book.id} className={styles.bookChoice} title={book.title} data-selected={checked || undefined}>
                   <input type={single ? "radio" : "checkbox"} name="replacement-book" value={book.id}
                     aria-label={book.title} checked={checked}
                     disabled={!single && !checked && selected.length >= 5}
@@ -133,7 +136,10 @@ export function CounterDialog({ detail, onClose, onSubmit, isBusy }: Props) {
                         ? [...previous, book.id] : previous.filter(id => id !== book.id));
                     }} />
                   <Cover book={book} />
-                  <span className={styles.bookText}><strong title={book.title}>{book.title}</strong>{book.author && <span>{book.author}</span>}</span>
+                  <span className={styles.bookText}>
+                    <strong className={styles.bookTitle}>{book.title}</strong>
+                    <span className={styles.author}>{book.author}</span>
+                  </span>
                   <span className={styles.price}>{formatVnd(book.price)}</span>
                   <span className={styles.mark} aria-hidden="true">{checked && <Check size={14} />}</span>
                 </label>;
@@ -150,7 +156,9 @@ export function CounterDialog({ detail, onClose, onSubmit, isBusy }: Props) {
           <section className={styles.preview} aria-label="Xem lại đề nghị mới">
             <h3><ArrowLeftRight size={17} aria-hidden="true" /> Đề nghị mới</h3>
             {replacements.length ? <div aria-live="polite" className={styles.previewValues}>
-              <ul>{replacements.map(book => <li key={book.id}>{book.title}</li>)}</ul>
+              <ul>{replacements.map(book => <li key={book.id}>
+                <strong className={styles.bookTitle} title={book.title}>{book.title}</strong>
+              </li>)}</ul>
               <dl>
                 <div><dt>Giá trị sách bạn gửi</dt><dd>{formatVnd(ownValue)}</dd></div>
                 <div><dt>Cọc của bạn</dt><dd>{formatVnd(receiveValue)}</dd></div>

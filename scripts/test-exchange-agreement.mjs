@@ -110,15 +110,36 @@ try {
   assert(await web.getByRole('button', { name: 'Đề xuất sách thay thế', exact: true }).evaluate(button => document.activeElement === button));
   await web.getByRole('button', { name: 'Đề xuất sách thay thế', exact: true }).click();
   await replacement.check();
-  await web.setViewportSize({ width: 768, height: 1000 });
-  await web.screenshot({ path: path.join(out, 'web-counter-768.png') });
-  await web.setViewportSize({ width: 390, height: 900 });
-  await web.screenshot({ path: path.join(out, 'web-counter-390.png') });
-  await web.setViewportSize({ width: 320, height: 720 });
+  const longTitle = webExchange.agreement.recipientBook.book.title;
+  assert(longTitle.length > 60);
+  for (const [width, height] of [[1440, 1000], [768, 1000], [390, 900], [320, 720]]) {
+    await web.setViewportSize({ width, height });
+    const books = counter.getByText(longTitle, { exact: true });
+    const titles = await books.evaluateAll(elements => elements.map(element => {
+      const style = getComputedStyle(element);
+      return {
+        lineClamp: style.webkitLineClamp,
+        height: element.getBoundingClientRect().height,
+        lineHeight: parseFloat(style.lineHeight),
+        clips: element.scrollHeight > element.clientHeight,
+        fullTitle: element.closest('[title]')?.title,
+      };
+    }));
+    assert(titles.length >= 5 && titles.some(title => title.clips));
+    for (const title of titles) {
+      assert.equal(title.lineClamp, '2');
+      assert(Math.abs(title.height - title.lineHeight * 2) < 1);
+      assert.equal(title.fullTitle, longTitle);
+    }
+    if (width === 768) {
+      await replacement.hover();
+      assert.equal(await counter.locator('input:hover').evaluate(input => input.closest('label')?.title), longTitle);
+    }
+    await web.screenshot({ path: path.join(out, `web-counter-${width}.png`) });
+  }
   assert(await counter.evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth));
   const sendBounds = await sendCounter.boundingBox();
   assert(sendBounds && sendBounds.y + sendBounds.height <= 720);
-  await web.screenshot({ path: path.join(out, 'web-counter-320.png') });
 
   const counterRequests = [];
   const counterPath = '**/api/v1/exchanges/' + webExchange.id + '/counter';

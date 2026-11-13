@@ -23,11 +23,19 @@
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
-  overflow-wrap: anywhere;
 }
 .currentBook + .currentBook { margin-top: 8px; }
-.currentBook strong, .currentBook span { display: block; }
-.currentBook span { font-size: .8125rem; color: var(--shop-muted); }
+.currentBookText, .bookText { display: grid; min-width: 0; gap: 2px; }
+.currentBookText .price { color: var(--shop-muted); font-weight: 400; }
+.bookTitle {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  block-size: 2.7em;
+}
 .cover { aspect-ratio: 3 / 4; overflow: hidden; border-radius: 4px; background: var(--shop-paper); }
 .cover > div { width: 100%; height: 100%; min-height: 0; padding: 0; }
 .cover img { width: 100%; height: 100%; object-fit: contain; }
@@ -55,9 +63,8 @@
 .bookChoice:has(input:disabled) { cursor: default; opacity: .65; }
 .bookChoice:has(input:focus-visible) { outline: 2px solid var(--shop-wine); outline-offset: -2px; }
 .bookChoice input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: inherit; margin: 0; }
-.bookText { display: grid; line-height: 1.35; min-width: 0; overflow-wrap: anywhere; }
-.bookText > span { color: var(--shop-muted); font-size: .8125rem; }
-.price { white-space: nowrap; color: var(--shop-wine); font-size: .8125rem; font-weight: 700; }
+.author { color: var(--shop-muted); font-size: .8125rem; line-height: 1.35; min-block-size: 1lh; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.price { white-space: nowrap; color: var(--shop-wine); font-size: .8125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mark {
   display: grid;
   place-items: center;
@@ -70,7 +77,7 @@
 .bookChoice[data-selected] .mark { border-color: var(--shop-wine); background: var(--shop-wine); color: var(--shop-cream); }
 .preview { min-width: 0; background: var(--shop-shelf, #f4eddf); border-radius: 10px; padding: 14px; }
 .preview h3 { font-size: .9375rem; }
-.preview ul { list-style: none; margin: 0 0 7px; padding: 0; font-weight: 700; overflow-wrap: anywhere; }
+.preview ul { display: grid; gap: 4px; list-style: none; margin: 0 0 7px; padding: 0; }
 .preview dl { margin: 0; font-size: .8125rem; }
 .preview dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-block: 3px; }
 .preview dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -90,14 +97,12 @@
   .workspace { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .currentGroup { padding: 9px; }
   .currentBook { grid-template-columns: 25px minmax(0, 1fr); gap: 6px; font-size: .8125rem; }
-  .currentBook strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .currentGroup h3 { gap: 4px; font-size: .75rem; }
   .currentGroup h3 svg { flex: none; width: 14px; }
   .bookChoice { grid-template-columns: 34px minmax(0, 1fr) 20px; gap: 4px 8px; }
   .bookChoice .cover { grid-column: 1; grid-row: 1 / 3; }
   .bookChoice .mark { grid-column: 3; grid-row: 1 / 3; }
   .bookChoice .price { grid-column: 2; grid-row: 2; }
-  .bookText strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
 @media (forced-colors: active) {
   .bookChoice[data-selected], .bookChoice:has(input:focus-visible) { border-color: Highlight; }
