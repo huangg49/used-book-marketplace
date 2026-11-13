@@ -488,6 +488,7 @@ function ExchangeDetailContent({
   if (standaloneSheet) {
     const waitingForViewer = detail.canViewerAccept ?? detail.viewerRole === "recipient";
     const updatedProposal = proposal && (detail.revision ?? 0) > 1 && !!detail.lastProposedById;
+    const multipleBooks = detail.giveBooks.length > 1 || detail.receiveBooks.length > 1;
     const title = funding
       ? detail.viewerFundedAt ? "Bạn đã đặt cọc" : "Đặt cọc đổi sách"
       : preparing ? "Chuẩn bị gửi sách"
@@ -531,30 +532,42 @@ function ExchangeDetailContent({
             </div>
           </div>
           <div className={styles.proposalLayout} data-books-only={funding || undefined}>
-            <section aria-labelledby="proposal-facts" className={funding || proposal ? styles.fundingBooks : undefined}>
+            <section aria-labelledby="proposal-facts"
+              className={funding || proposal || multipleBooks ? styles.fundingBooks : undefined}
+              data-multiple-books={multipleBooks || undefined}>
               <h2 id="proposal-facts">{proposal && !updatedProposal ? "Phiếu đề nghị đổi sách" : "Sách trong phiếu"}</h2>
               {[
                 { title: "Sách bạn gửi", books: detail.giveBooks, Icon: ArrowUpRight },
                 { title: "Sách bạn nhận", books: detail.receiveBooks, Icon: ArrowDownLeft },
-              ].map(({ title: label, books, Icon }) => (
-                <div className={styles.proposalBooks} key={label} data-receive={Icon === ArrowDownLeft || undefined}>
-                  <h3>{(proposal || funding) && <Icon size={18} aria-hidden="true" />}{label}</h3>
-                  {books.map((book, index) => (
-                    <div className={styles.proposalBook} key={book.id}>
-                      <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} index={index} /></div>
-                      <div>
-                        <strong>{book.title}</strong>
-                        <span>{book.author}</span>
-                        {book.price != null && <span>{formatVnd(book.price)}</span>}
-                        {book.conditionDetails && <details>
-                          <summary>Tình trạng sách</summary><p>{book.conditionDetails}</p>
-                        </details>}
+              ].map(({ title: label, books, Icon }) => {
+                const total = books.reduce((sum, book) => sum + (book.price ?? 0), 0);
+                return (
+                  <div className={styles.proposalBooks} key={label} data-receive={Icon === ArrowDownLeft || undefined}>
+                    <h3>
+                      {(proposal || funding || multipleBooks) && <Icon size={18} aria-hidden="true" />}
+                      {label}
+                      {multipleBooks && books.length > 0 && <span className={styles.bookGroupCount}>{books.length} cuốn</span>}
+                    </h3>
+                    {multipleBooks && books.length > 0 && books.every(book => book.price != null) && (
+                      <p className={styles.bookGroupTotal}><span>Tổng giá trị đổi</span> <strong>{formatVnd(total)}</strong></p>
+                    )}
+                    {books.map((book, index) => (
+                      <div className={styles.proposalBook} key={book.id}>
+                        <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} index={index} /></div>
+                        <div>
+                          <strong className={styles.proposalBookTitle} title={multipleBooks ? book.title : undefined}>{book.title}</strong>
+                          {book.author && <span className={styles.proposalBookAuthor}>{book.author}</span>}
+                          {book.price != null && <span className={styles.proposalBookPrice}>{formatVnd(book.price)}</span>}
+                          {book.conditionDetails && <details>
+                            <summary>Tình trạng sách</summary><p>{book.conditionDetails}</p>
+                          </details>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {books.length === 0 && <p>Chưa tải được thông tin sách.</p>}
-                </div>
-              ))}
+                    ))}
+                    {books.length === 0 && <p>Chưa tải được thông tin sách.</p>}
+                  </div>
+                );
+              })}
               {!detail.hasAgreementSnapshot && <p>Phiếu cũ thiếu thông tin sách lúc gửi đề nghị.</p>}
             </section>
             {proposal && <section className={styles.proposalAmounts} aria-labelledby="proposal-amounts">

@@ -25,6 +25,12 @@ phiếu cùng hàng với lối về danh sách. Trạng thái chờ nằm cạn
 chú chưa giữ sách hay trừ tiền nằm cạnh bảng tiền. Chromium local đã kiểm hai
 vai trên phiếu sửa lại ở 320/390/768/1440 px, thêm ca tên dài qua fixture đọc.
 
+Phiếu chi tiết nhiều cuốn hiện số lượng và tổng giá trị từng bên, liệt kê đủ
+sách theo hàng có bìa nhỏ và tình trạng mở riêng. Hai nhóm cao theo nội dung
+và xếp dọc khi thiếu chỗ. Phiếu 1↔1 giữ bố cục bìa lớn. Build Member web qua.
+Chromium ở 320/390/768/1440 px đã kiểm phiếu local 1↔1, 2↔1 của cả hai tài
+khoản, thêm 3↔1 và 5↔1 qua fixture đọc, gồm tên dài và mở tình trạng bằng phím.
+
 Đã kiểm trên Member web local 5174 bằng An/Bình đến bước xem số tiền của sách
 thay thế. Phiếu demo mới trong Mongo local chính còn chờ Bình gửi, kèm ba bài
 đã duyệt cho hai tài khoản. Phiếu đã chờ đặt cọc trước đó vẫn dùng được.
