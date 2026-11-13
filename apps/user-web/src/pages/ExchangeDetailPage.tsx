@@ -8,6 +8,7 @@ import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinan
 import { exchangeStage } from "../lib/transaction-stage";
 import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
 import { useEffect, useState } from "react";
+import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from "lucide-react";
 import { ApiError, confirmExchangeRead } from "@used-books/session-client";
 import { session } from "../services/api";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
@@ -488,57 +489,70 @@ function ExchangeDetailContent({
       : preparing ? "Chuẩn bị gửi sách"
       : waitingForViewer ? `Đề nghị đổi sách từ ${detail.partner.username}` : "Đã gửi đề nghị";
     return (
-      <div className={styles.proposal}>
-        <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>Trao đổi của tôi</Link>
+      <div className={styles.proposal} data-funding-sheet={funding || undefined}>
+        <div className={styles.proposalNavigation}>
+          <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>
+            {funding && <ArrowLeft size={17} aria-hidden="true" />}
+            Trao đổi của tôi
+          </Link>
+          {funding && <span className={styles.proposalCode}>Phiếu #{detail.transactionCode}</span>}
+        </div>
         <header className={styles.proposalHeader}>
           <h1>{title}</h1>
           {proposal && <p>{waitingForViewer ? "Chưa giữ sách hay trừ tiền." : `Đang chờ ${detail.partner.username} phản hồi. Chưa giữ sách hay trừ tiền.`}</p>}
         </header>
-        <div className={funding ? styles.fundingPanel : undefined}>{actionSection}</div>
-        <div className={styles.proposalContact}>
-          <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
-            partnerName={detail.partner.username} latest={messagePages?.[0]?.items ?? []}>
-            {open => renderChat(true, open)}
-          </ExchangeChatDrawer>
-          <SupportLink type="Exchange" id={detail.id} />
-        </div>
-        <div className={styles.proposalLayout} data-books-only={funding || undefined}>
-          <section aria-labelledby="proposal-facts" className={funding ? styles.fundingBooks : undefined}>
-            <h2 id="proposal-facts">{proposal ? "Phiếu đề nghị đổi sách" : "Sách trong phiếu"}</h2>
-            {[{ title: "Sách bạn gửi", books: detail.giveBooks }, { title: "Sách bạn nhận", books: detail.receiveBooks }].map(group => (
-              <div className={styles.proposalBooks} key={group.title}>
-                <h3>{group.title}</h3>
-                {group.books.map(book => (
-                  <div className={styles.proposalBook} key={book.id}>
-                    <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} /></div>
-                    <div>
-                      <strong>{book.title}</strong>
-                      <span>{book.author}</span>
-                      {book.price != null && <span>{formatVnd(book.price)}</span>}
-                      {book.conditionDetails && <details>
-                        <summary>Tình trạng sách</summary><p>{book.conditionDetails}</p>
-                      </details>}
+        <div className={funding ? styles.fundingWorkspace : undefined}>
+          <div className={funding ? styles.fundingControls : undefined}>
+            <div className={funding ? styles.fundingPanel : undefined}>{actionSection}</div>
+            <div className={styles.proposalContact}>
+              <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
+                partnerName={detail.partner.username} latest={messagePages?.[0]?.items ?? []}>
+                {open => renderChat(true, open)}
+              </ExchangeChatDrawer>
+              <SupportLink type="Exchange" id={detail.id} label={funding ? "Cần hỗ trợ" : undefined} />
+            </div>
+          </div>
+          <div className={styles.proposalLayout} data-books-only={funding || undefined}>
+            <section aria-labelledby="proposal-facts" className={funding ? styles.fundingBooks : undefined}>
+              <h2 id="proposal-facts">{proposal ? "Phiếu đề nghị đổi sách" : "Sách trong phiếu"}</h2>
+              {[
+                { title: "Sách bạn gửi", books: detail.giveBooks, Icon: ArrowUpRight },
+                { title: "Sách bạn nhận", books: detail.receiveBooks, Icon: ArrowDownLeft },
+              ].map(({ title: label, books, Icon }) => (
+                <div className={styles.proposalBooks} key={label} data-receive={Icon === ArrowDownLeft || undefined}>
+                  <h3>{funding && <Icon size={18} aria-hidden="true" />}{label}</h3>
+                  {books.map((book, index) => (
+                    <div className={styles.proposalBook} key={book.id}>
+                      <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} index={index} /></div>
+                      <div>
+                        <strong>{book.title}</strong>
+                        <span>{book.author}</span>
+                        {book.price != null && <span>{formatVnd(book.price)}</span>}
+                        {book.conditionDetails && <details>
+                          <summary>Tình trạng sách</summary><p>{book.conditionDetails}</p>
+                        </details>}
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {group.books.length === 0 && <p>Chưa tải được thông tin sách.</p>}
-              </div>
-            ))}
-            {!detail.hasAgreementSnapshot && <p>Phiếu cũ thiếu thông tin sách lúc gửi đề nghị.</p>}
-          </section>
-          {proposal && <section className={styles.proposalAmounts} aria-labelledby="proposal-amounts">
-            <h2 id="proposal-amounts">Nếu hai bên đồng ý</h2>
-            <dl>
-              {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
-              {detail.moneyAmount != null && detail.moneyCompensationType !== "none" && (
-                <div><dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù của bạn" : `Tiền bù của ${detail.partner.username}`}</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
-              )}
-              {detail.viewerFundingAmount != null && <div><dt>Bạn cần nộp</dt><dd><strong>{formatVnd(detail.viewerFundingAmount)}</strong></dd></div>}
-            </dl>
-          </section>}
-          {preparing && <TransactionDisclosure title="Theo dõi giao nhận">
-            <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
-          </TransactionDisclosure>}
+                  ))}
+                  {books.length === 0 && <p>Chưa tải được thông tin sách.</p>}
+                </div>
+              ))}
+              {!detail.hasAgreementSnapshot && <p>Phiếu cũ thiếu thông tin sách lúc gửi đề nghị.</p>}
+            </section>
+            {proposal && <section className={styles.proposalAmounts} aria-labelledby="proposal-amounts">
+              <h2 id="proposal-amounts">Nếu hai bên đồng ý</h2>
+              <dl>
+                {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
+                {detail.moneyAmount != null && detail.moneyCompensationType !== "none" && (
+                  <div><dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù của bạn" : `Tiền bù của ${detail.partner.username}`}</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
+                )}
+                {detail.viewerFundingAmount != null && <div><dt>Bạn cần nộp</dt><dd><strong>{formatVnd(detail.viewerFundingAmount)}</strong></dd></div>}
+              </dl>
+            </section>}
+            {preparing && <TransactionDisclosure title="Theo dõi giao nhận">
+              <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
+            </TransactionDisclosure>}
+          </div>
         </div>
       </div>
     );

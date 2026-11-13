@@ -69,22 +69,129 @@
     padding-top: 9px;
 }
 .proposalAmounts dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.fundingPanel {
-    max-width: 550px;
-    margin-top: 20px;
-    padding: clamp(16px, 3vw, 24px);
-    border-radius: 12px;
-    background: var(--shop-shelf, #f4eddf);
+.proposal[data-funding-sheet] {
+    max-width: 1216px;
+    padding-block: 26px 58px;
 }
-.proposalLayout[data-books-only] { grid-template-columns: minmax(0, 1fr); }
+.proposal[data-funding-sheet] .proposalNavigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0 16px;
+}
+.proposal[data-funding-sheet] .proposalBack {
+    gap: 8px;
+    font-size: .875rem;
+    text-decoration: none;
+}
+.proposal[data-funding-sheet] .proposalBack:hover { text-decoration: underline; }
+.proposalCode {
+    color: var(--shop-muted);
+    font-size: .8125rem;
+    font-variant-numeric: tabular-nums;
+}
+.proposal[data-funding-sheet] .proposalHeader h1 {
+    max-width: 28ch;
+    margin: 12px 0 24px;
+    font-size: 2.55rem;
+    letter-spacing: -.032em;
+    line-height: 1.15;
+}
+.fundingWorkspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+    grid-template-areas: "books payment";
+    gap: 26px;
+    align-items: start;
+}
+.fundingControls { grid-area: payment; min-width: 0; }
+.fundingPanel {
+    padding: 23px 24px 11px;
+    border: 1px solid var(--shop-line);
+    border-radius: 15px;
+    background: var(--shop-paper);
+}
+.fundingWorkspace .proposalLayout {
+    display: block;
+    grid-area: books;
+    margin: 0;
+}
 .fundingBooks {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 24px;
+    column-gap: 16px;
+    padding: 20px 22px 22px;
+    border-radius: 15px;
+    background: var(--shop-shelf, #f4eddf);
 }
-.fundingBooks > h2, .fundingBooks > p { grid-column: 1 / -1; }
-.fundingBooks > h2 { margin-bottom: 0; }
-.fundingBooks .proposalBooks + .proposalBooks { margin-top: 0; }
+.fundingBooks > h2 {
+    grid-column: 1 / -1;
+    margin: 0 0 15px;
+    font-size: 1.16rem;
+}
+.fundingBooks > p { grid-column: 1 / -1; }
+.fundingBooks .proposalBooks {
+    min-width: 0;
+    margin: 0;
+    padding: 12px 13px 6px;
+    border: 1px solid var(--shop-line);
+    border-radius: 11px;
+    background: var(--shop-paper);
+}
+.fundingBooks .proposalBooks h3 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 6px;
+    color: var(--shop-wine);
+    font-weight: 700;
+}
+.fundingBooks .proposalBooks h3 svg { flex: none; }
+.fundingBooks .proposalBook {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 12px;
+    padding-block: 9px 0;
+    border: 0;
+}
+.fundingBooks .proposalBook + .proposalBook {
+    margin-top: 7px;
+    border-top: 1px solid var(--shop-line);
+}
+.fundingBooks .proposalBook > div:first-child {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 162px;
+    aspect-ratio: auto;
+    padding: 10px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--shop-shelf, #f4eddf) 74%, var(--shop-line));
+}
+.fundingBooks .proposalBooks[data-receive] .proposalBook > div:first-child {
+    background: color-mix(in srgb, var(--shop-paper) 84%, var(--shop-mint));
+}
+.fundingBooks .proposalBook > div:first-child > div {
+    width: auto;
+    height: 100%;
+    border-radius: 3px;
+    box-shadow: 0 4px 9px rgba(40, 25, 20, .16);
+}
+.fundingBooks .proposalBook img {
+    object-fit: contain;
+    background: var(--shop-shelf, #f4eddf);
+}
+.fundingBooks .proposalBook strong {
+    font-size: 1rem;
+    line-height: 1.35;
+}
+.fundingBooks .proposalBook details summary { padding-block: 10px; }
+.fundingBooks .proposalBook details p { font-size: .875rem; }
+.fundingControls .proposalContact {
+    justify-content: space-between;
+    margin-top: 10px;
+}
 .proposalContact {
     display: flex;
     flex-wrap: wrap;
@@ -111,7 +218,31 @@
 .proposalBook details p { margin: 0 0 8px; }
 @media (max-width: 640px) {
     .proposalLayout { grid-template-columns: minmax(0, 1fr); }
-    .fundingBooks { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 800px) {
+    .proposal[data-funding-sheet] { padding-block: 14px 42px; }
+    .proposal[data-funding-sheet] .proposalHeader h1 {
+        margin: 9px 0 17px;
+        font-size: 1.95rem;
+    }
+    .fundingWorkspace {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "payment" "books";
+        gap: 20px;
+    }
+    .fundingPanel { padding: 16px 17px 8px; }
+    .fundingBooks { padding: 15px; }
+}
+@media (max-width: 520px) {
+    .fundingBooks { grid-template-columns: minmax(0, 1fr); row-gap: 10px; }
+    .fundingBooks > h2 { margin-bottom: 1px; }
+    .fundingBooks .proposalBook { grid-template-columns: 60px minmax(0, 1fr); }
+    .fundingBooks .proposalBook > div:first-child {
+        height: 80px;
+        padding: 0;
+    }
+    .fundingBooks .proposalBooks .proposalBook > div:first-child,
+    .fundingBooks .proposalBooks[data-receive] .proposalBook > div:first-child { background: transparent; }
 }
 .sectionLinks {
     display: flex;

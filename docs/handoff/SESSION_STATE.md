@@ -1,3 +1,14 @@
+# Bố cục phiếu đặt cọc trên Member web — 13/11/2026
+
+Nhánh local `codex/exchange-funding-redesign`, base `e3310a7c`.
+Phiếu đang chờ đặt cọc đặt hai bìa sách cạnh bảng tiền trên màn rộng. Màn hẹp
+đặt tiền và nút nộp trước, sách sau. Dùng bìa đã lưu trên phiếu, nhãn gửi/nhận,
+số tiền và hạn thực tế. Tin nhắn mở từ nút cạnh mục hỗ trợ.
+
+Đã xem phiếu An và Bình trên Chromium với dữ liệu local ở 1440 và 390 px,
+kiểm thêm khung chat ở 320 px. Đã kiểm mở xác nhận, Escape, trả focus và giữ bản
+nháp chat. Không gửi lệnh đặt cọc hoặc tin nhắn khi kiểm phiếu local.
+
 # Đặt cọc và thu gọn tin nhắn trên phiếu đổi sách — 13/11/2026
 
 Nhánh local `codex/exchange-funding-ui`, base `2293090c` của checkout demo.

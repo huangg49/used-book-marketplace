@@ -432,6 +432,12 @@ export function ActionCard(props: Props) {
       {props.standaloneSheet && detail.status === "FUNDING" && (
         <>
           <dl className={styles.fundingAmounts}>
+            {fundingAmount != null && (
+              <div className={styles.fundingTotal}>
+                <dt>{detail.viewerFundedAt ? "Đã giữ từ ví mô phỏng" : expired ? "Khoản theo thỏa thuận" : "Cần nộp từ ví mô phỏng"}</dt>
+                <dd>{formatVnd(fundingAmount)}</dd>
+              </div>
+            )}
             {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
             {detail.moneyCompensationType !== "none" && detail.moneyAmount != null && (
               <div>
@@ -439,20 +445,14 @@ export function ActionCard(props: Props) {
                 <dd>{formatVnd(detail.moneyAmount)}</dd>
               </div>
             )}
-            {fundingAmount != null && (
-              <div className={styles.fundingTotal}>
-                <dt>{detail.viewerFundedAt ? "Đã giữ từ ví của bạn" : "Tổng giữ từ ví của bạn"}</dt>
-                <dd>{formatVnd(fundingAmount)}</dd>
-              </div>
-            )}
           </dl>
+          <p className={styles.fundingFee}>Phí giao nhận tính riêng.</p>
           <p className={styles.fundingStatus} role="status">
             {expired ? "Hệ thống đang cập nhật phiếu."
               : detail.viewerFundedAt ? `Chờ ${detail.partner.username} đặt cọc.`
               : detail.partnerFundedAt ? `${detail.partner.username} đã đặt cọc.`
               : "Cả hai cần đặt cọc trước khi gửi sách."}
           </p>
-          <p className={styles.fundingStatus}>Phí giao nhận tính riêng.</p>
         </>
       )}
       {detail.status === "PENDING" && detail.proposalExpiresAt && !expired && (
