@@ -1,0 +1,151 @@
+.steps {
+    margin-block: 0 22px;
+    border: 1px solid var(--shop-line);
+    border-radius: 12px;
+    background: var(--shop-paper);
+}
+
+.steps ol {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+}
+
+.steps li { position: relative; min-width: 0; }
+
+.steps li + li::before {
+    position: absolute;
+    inset-inline-start: -8px;
+    top: 50%;
+    width: 16px;
+    height: 1px;
+    background: var(--shop-line);
+    content: "";
+    pointer-events: none;
+}
+
+.steps button,
+.unavailable {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 52px;
+    width: 100%;
+    padding: 6px 4px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--shop-muted);
+    font: 600 .875rem/1.2 var(--shop-body);
+    text-align: center;
+}
+
+.steps button { color: var(--shop-wine); cursor: pointer; }
+.steps button:focus-visible,
+.history > header button:focus-visible,
+.history > header h2:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 0; }
+.steps button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.steps [data-selected] > button { background: var(--shop-shelf, #f4eddf); }
+.steps [data-selected]:not([data-current]) > button { border-color: var(--shop-line); }
+
+.marker {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--shop-line);
+    border-radius: 50%;
+    background: var(--shop-paper);
+    font-size: .75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.steps [data-reached] .marker { border-color: currentColor; }
+.steps [data-current] .marker {
+    border-color: var(--shop-wine);
+    background: var(--shop-wine);
+    color: var(--shop-cream);
+}
+.steps [data-current] > button { font-weight: 750; }
+
+.announcement {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.history {
+    padding: clamp(14px, 3vw, 24px);
+    border: 1px solid var(--shop-line);
+    border-radius: 12px;
+    background: var(--shop-paper);
+}
+
+.history > header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px 16px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--shop-line);
+}
+
+.history > header h2 { margin: 0; font: 700 1.2rem/1.3 var(--shop-body); }
+.history > header p { margin: 4px 0 0; color: var(--shop-muted); font-size: .8125rem; }
+.history > header button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding-inline: 10px;
+    border: 1px solid var(--shop-control);
+    border-radius: 7px;
+    color: var(--shop-wine);
+    background: transparent;
+    font: 650 .8125rem/1.3 var(--shop-body);
+    cursor: pointer;
+}
+.history > header button:hover { background: var(--shop-shelf, #f4eddf); }
+.historyFacts { max-width: 660px; }
+.record { margin: 0 0 18px; font-size: .875rem; }
+.record > div {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding-block: 8px;
+    border-bottom: 1px solid var(--shop-line);
+}
+.record dd { margin: 0; font-weight: 650; }
+
+@container exchange-sheet (max-width: 580px) {
+    .steps { margin-bottom: 16px; }
+    .steps button,
+    .unavailable {
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 5px;
+        height: 100%;
+        min-height: 58px;
+        font-size: .73rem;
+    }
+    .steps li + li::before { top: 18px; width: 12px; inset-inline-start: -6px; }
+    .marker { width: 24px; height: 24px; }
+}
+
+@media (forced-colors: active) {
+    .steps [data-current] .marker { border-color: Highlight; color: HighlightText; background: Highlight; forced-color-adjust: none; }
+    .steps [data-selected] > button { border-color: Highlight; }
+}

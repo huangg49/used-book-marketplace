@@ -1,3 +1,24 @@
+# Thanh bước và form gửi sách trên phiếu trao đổi — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `5665f44a`. Phiếu Member web
+và phiếu trong hội thoại dùng thanh bước Đề nghị, Đặt cọc, Giao nhận,
+Kiểm tra, Kết quả. Khi đủ cọc, cùng phiếu chuyển sang Giao nhận. Các bước
+đã có dữ liệu mở để xem lại thỏa thuận, khoản cọc, hành trình và hạn kiểm
+tra. Phiếu luôn đánh dấu bước đang diễn ra. Đề nghị trong hội thoại vẫn
+mở từ hội thoại đã liên kết.
+
+Form trong mục Bạn gửi dùng lệnh gửi và phục hồi cũ, giữ nội dung đã nhập
+khi thu gọn, xem lại bước cũ hoặc máy chủ từ chối lần lưu. Sau khi ghi nhận,
+mã vận đơn hiện tại chiều gửi. Link thông báo về đúng chiều và có thể mở
+hành trình ở chế độ chỉ xem khi phiếu đã sang bước sau.
+
+Build, lint (cảnh báo cũ), 484 unit, browser kiểm ví/hạn và Chromium
+320/390/768/1440 qua. Chromium giả lập API kiểm tự chuyển bước, xem lại,
+giữ bản nháp, lỗi lưu và thông báo. Browser với Nest/Mongo QA riêng kiểm
+tạo, chấp nhận, hủy, giữ lệnh khi mất phản hồi, từ chối đặt cọc và 403.
+Đã đọc phiếu local `285a732a` qua cả hai tài khoản An và Bình. Chưa gửi
+kiện trong phiếu demo hoặc kiểm hãng vận chuyển thật.
+
 # Giao nhận hai chiều trên phiếu trao đổi Member web — 13/11/2026
 
 Nhánh `codex/exchange-handover-web`, base `10cab58a`. Phiếu đã đủ cọc mở

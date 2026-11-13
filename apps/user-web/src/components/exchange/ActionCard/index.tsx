@@ -1,10 +1,10 @@
 import { useExchangeRecovery } from "../../../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../ExchangeRecoveryPanel";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { ArrowLeftRight, ArrowUpRight, Check, Clock, AlertCircle, ShieldAlert } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, Check, ChevronUp, Clock, AlertCircle, ShieldAlert } from "lucide-react";
 import { BrandIcon } from "../../BrandIcon";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { session } from "../../../lib/session";
@@ -120,6 +120,7 @@ export function ActionCard(props: Props) {
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [counterRevision, setCounterRevision] = useState<number>();
   const [shipmentOpen, setShipmentOpen] = useState(false);
+  const sendTrigger = useRef<HTMLButtonElement>(null);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -332,6 +333,8 @@ export function ActionCard(props: Props) {
     setBusy(true);
     try {
       await props.onConfirmSent(shipmentData);
+      if (document.activeElement?.closest("#exchange-shipment-form"))
+        document.getElementById("gui-sach")?.focus({ preventScroll: true });
       setShipmentOpen(false);
     } catch (failure) {
       if (pendingExchange(detail.id)) {
@@ -421,11 +424,15 @@ export function ActionCard(props: Props) {
   const visibleActions = props.handover ? actions.filter(next => next !== "sent" && next !== "received") : actions;
   const handoverAction = (next: "sent" | "received") => {
     if (blocked || !actions.includes(next)) return null;
-    const Icon = next === "sent" ? ArrowUpRight : Check;
+    const expanded = next === "sent" && shipmentOpen;
+    const Icon = next === "received" ? Check : expanded ? ChevronUp : ArrowUpRight;
     return (
       <button type="button" className={styles.btnPrimary} disabled={busy}
-        onClick={() => void open(next)}>
-        <Icon size={17} aria-hidden="true" /> {labels[next]}
+        ref={next === "sent" ? sendTrigger : undefined}
+        aria-expanded={next === "sent" ? shipmentOpen : undefined}
+        aria-controls={next === "sent" ? "exchange-shipment-form" : undefined}
+        onClick={() => expanded ? setShipmentOpen(false) : void open(next)}>
+        <Icon size={17} aria-hidden="true" /> {expanded ? "Thu gọn form" : labels[next]}
       </button>
     );
   };
@@ -530,7 +537,22 @@ export function ActionCard(props: Props) {
       {props.handover && (
         <ShippingTrackingCard detail={detail} {...props.handover}
           canSend={!blocked && actions.includes("sent")} shippingExpired={preparing && expired}
-          sendAction={handoverAction("sent")} receiveAction={handoverAction("received")} />
+          sendAction={handoverAction("sent")} receiveAction={handoverAction("received")}
+          sendForm={preparing && (
+            <ShipmentDialog
+              isOpen={shipmentOpen && !blocked && actions.includes("sent")}
+              onClose={() => {
+                setShipmentOpen(false);
+                sendTrigger.current?.focus();
+              }}
+              onSubmit={handleShipmentSubmit}
+              isBusy={busy}
+              exchangeId={detail.id}
+              senderAddress={detail.viewerAddress}
+              receiverAddress={detail.partnerAddress}
+              bookTitle={detail.giveBooks[0]?.title}
+            />
+          )} />
       )}
       {props.handover && preparing && detail.cancellationRequestedBy && (
         <p className={styles.cancellationNotice} role="status">
@@ -669,18 +691,6 @@ export function ActionCard(props: Props) {
           isBusy={busy}
         />
       )}
-
-      {/* Shipment Modal */}
-      <ShipmentDialog
-        isOpen={shipmentOpen}
-        onClose={() => setShipmentOpen(false)}
-        onSubmit={handleShipmentSubmit}
-        isBusy={busy}
-        exchangeId={detail.id}
-        senderAddress={detail.viewerAddress}
-        receiverAddress={detail.partnerAddress}
-        bookTitle={detail.giveBooks[0]?.title}
-      />
 
       {/* Receive Modal */}
       {receiveOpen && <ReceiveDialog

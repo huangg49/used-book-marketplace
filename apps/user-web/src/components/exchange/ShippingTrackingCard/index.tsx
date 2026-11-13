@@ -11,7 +11,9 @@ type Direction = "outgoing" | "incoming";
 interface Props extends Partial<HandoverNavigation> {
   detail: ExchangeDetail;
   sendAction?: ReactNode;
+  sendForm?: ReactNode;
   receiveAction?: ReactNode;
+  history?: boolean;
   canSend?: boolean;
   shippingExpired?: boolean;
 }
@@ -52,10 +54,11 @@ function CopyValue({ value, label }: { value: string; label: string }) {
   );
 }
 
-function ShippingLeg({ detail, direction, action, canSend, shippingExpired, navigationKey, targeted }: {
+function ShippingLeg({ detail, direction, action, form, canSend, shippingExpired, navigationKey, targeted }: {
   detail: ExchangeDetail;
   direction: Direction;
   action: ReactNode;
+  form?: ReactNode;
   canSend?: boolean;
   shippingExpired?: boolean;
   navigationKey?: string;
@@ -80,7 +83,8 @@ function ShippingLeg({ detail, direction, action, canSend, shippingExpired, navi
   const { receivedAt } = outgoing ? detail.partnerShipping : detail.viewerShipping;
   const inspectionDeadline = outgoing ? detail.partnerInspectionDeadline : detail.viewerInspectionDeadline;
   const shipment = sentAt ? (outgoing ? detail.viewerShipment : detail.partnerShipment) : undefined;
-  const address = outgoing ? detail.partnerAddress : detail.viewerAddress;
+  const closed = detail.status === "CANCELLED" || detail.status === "EXPIRED" || detail.status === "REJECTED";
+  const address = closed ? undefined : outgoing ? detail.partnerAddress : detail.viewerAddress;
   const books = outgoing ? detail.giveBooks : detail.receiveBooks;
   const addressText = address ? [address.detail, address.localityCode].filter(Boolean).join(", ") : "";
   const carrier = CARRIERS.find(item => item.code === shipment?.carrierCode);
@@ -136,11 +140,13 @@ function ShippingLeg({ detail, direction, action, canSend, shippingExpired, navi
             {status}
           </p>
           {action}
+          {trackingCode && <p className={styles.trackingPreview} title={trackingCode}>{trackingCode}</p>}
           {receivedAt && inspectionDeadline && (
             <p className={styles.muted}>{outgoing ? "Hạn kiểm tra của đối tác " : "Hạn kiểm tra "}<HandoverTime value={inspectionDeadline} /></p>
           )}
         </div>
       </div>
+      {form}
       {hasJourney && (
         <details ref={journey} className={styles.journey}>
           <summary>{!sentAt && !receivedAt ? "Xem địa chỉ nhận" : "Xem hành trình"} <ChevronDown size={16} aria-hidden="true" /></summary>
@@ -180,7 +186,7 @@ function ShippingLeg({ detail, direction, action, canSend, shippingExpired, navi
   );
 }
 
-export function ShippingTrackingCard({ detail, sendAction, receiveAction, canSend, shippingExpired, target, navigationKey }: Props) {
+export function ShippingTrackingCard({ detail, sendAction, sendForm, receiveAction, history, canSend, shippingExpired, target, navigationKey }: Props) {
   const overview = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (target !== exchangeHandoverAnchor.overview) return;
@@ -191,12 +197,12 @@ export function ShippingTrackingCard({ detail, sendAction, receiveAction, canSen
     return () => cancelAnimationFrame(frame);
   }, [target, navigationKey]);
 
-  if (["PENDING", "FUNDING", "CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)) return null;
+  if (!history && ["PENDING", "FUNDING", "CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)) return null;
 
   return (
     <div ref={overview} id={exchangeHandoverAnchor.overview} className={styles.legs}
       role="region" aria-label="Giao nhận hai chiều" tabIndex={-1}>
-      <ShippingLeg detail={detail} direction="outgoing" action={sendAction}
+      <ShippingLeg detail={detail} direction="outgoing" action={sendAction} form={sendForm}
         canSend={canSend} shippingExpired={shippingExpired}
         targeted={target === exchangeHandoverAnchor.outgoing} navigationKey={navigationKey} />
       <ShippingLeg detail={detail} direction="incoming" action={receiveAction}

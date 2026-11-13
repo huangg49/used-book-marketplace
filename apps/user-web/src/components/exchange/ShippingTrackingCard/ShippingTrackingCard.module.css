@@ -131,6 +131,15 @@
 }
 
 .next > button { width: 100%; min-height: 44px; }
+.trackingPreview {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--shop-muted);
+    font-size: .8125rem;
+    font-variant-numeric: tabular-nums;
+}
 
 .leg .status {
     display: flex;

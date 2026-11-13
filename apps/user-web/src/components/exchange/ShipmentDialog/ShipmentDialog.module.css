@@ -1,28 +1,10 @@
-.overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(42, 38, 34, 0.7);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    padding: 24px 16px;
-    overflow-y: auto;
+.inline {
+    padding: clamp(12px, 2.5cqi, 22px);
+    border-top: 1px solid var(--shop-line);
+    background: color-mix(in srgb, var(--shop-shelf, #f4eddf) 40%, var(--shop-paper));
 }
 
-.modal {
-    background: #fff;
-    width: 100%;
-    max-width: 560px;
-    max-height: calc(100vh - 48px);
-    border-radius: 8px;
-    border: 1px solid var(--line, #ebd9c8);
-    box-shadow: 0 16px 40px rgba(42, 38, 34, 0.25);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    margin: auto;
+.inline:not([hidden]) {
     animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -38,96 +20,19 @@
 }
 
 .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 18px 24px;
-    background: var(--paper, #fdfbf7);
-    border-bottom: 1px solid var(--line, #ebd9c8);
-    flex-shrink: 0;
-}
-
-.headerContent {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.headerIcon {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(92, 2, 2, 0.08);
-    color: var(--shop-wine, #5c0202);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.closeBtn {
-    background: transparent;
-    border: none;
-    color: var(--shop-muted, #716157);
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s ease;
-}
-
-.closeBtn:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.06);
-    color: var(--shop-ink, #281914);
+    margin-bottom: 14px;
 }
 
 .title {
-    font-family: var(--font-serif);
-    font-size: 20px;
-    font-weight: 700;
+    font: 700 1.1rem/1.35 var(--shop-body);
     color: var(--shop-ink, #281914);
     margin: 0 0 4px;
 }
 
-.subtitle {
-    font-size: 13px;
-    color: var(--shop-muted, #716157);
-    margin: 0;
-}
-
-.form {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex: 1;
-    min-height: 0;
-}
-
 .body {
-    padding: 20px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-}
-
-.body::-webkit-scrollbar {
-    width: 6px;
-}
-.body::-webkit-scrollbar-track {
-    background: transparent;
-}
-.body::-webkit-scrollbar-thumb {
-    background: #d8c7b8;
-    border-radius: 3px;
-}
-.body::-webkit-scrollbar-thumb:hover {
-    background: #bfa895;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
 }
 
 .methodGroup {
@@ -137,11 +42,9 @@
 }
 
 .fieldLabel {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--ink-muted);
+    font-size: .8125rem;
+    font-weight: 650;
+    color: var(--shop-ink);
 }
 
 .required {
@@ -154,17 +57,29 @@
     gap: 10px;
 }
 
-@media (min-width: 480px) {
-    .methodCards {
-        grid-template-columns: 1fr 1fr;
-    }
+.methodGroup,
+.ghnAutoBox,
+.evidenceSection,
+.optional,
+.errorMessage {
+    grid-column: 1 / -1;
+}
+
+@container handover (min-width: 580px) {
+    .body,
+    .methodCards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container handover (max-width: 520px) {
+    .evidenceSection .evidenceGrid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .methodCard {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    padding: 14px;
+    min-height: 44px;
+    padding: 10px 12px;
     background: #fff;
     border: 1px solid var(--shop-line, #ebd9c8);
     border-radius: 6px;
@@ -201,11 +116,6 @@
     color: var(--ink);
 }
 
-.methodText span {
-    font-size: 11px;
-    color: var(--leather);
-}
-
 .fieldRow {
     display: flex;
     flex-direction: column;
@@ -230,6 +140,9 @@
 .input,
 .select,
 .textarea {
+    box-sizing: border-box;
+    min-height: 44px;
+    min-width: 0;
     width: 100%;
     padding: 10px 14px;
     font-size: 14px;
@@ -263,44 +176,19 @@
     resize: vertical;
 }
 
-.input:focus,
-.select:focus,
-.textarea:focus {
-    outline: none;
-    border-color: var(--shop-wine, #5c0202);
-    box-shadow: 0 0 0 2px rgba(92, 2, 2, 0.18);
-}
-
 .helpText {
-    font-size: 11px;
+    font-size: .75rem;
     color: var(--shop-muted, #716157);
-    font-style: italic;
 }
 
-.policyNotice {
+.optional summary {
+    min-height: 44px;
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 16px;
-    background: rgba(176, 141, 87, 0.08);
-    border: 1px solid rgba(176, 141, 87, 0.25);
-    border-radius: 6px;
-}
-
-.noticeIcon {
-    color: #b08d57;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-
-.noticeText {
-    font-size: 12px;
-    color: var(--shop-ink, #281914);
-    line-height: 1.5;
-}
-
-.noticeText strong {
-    color: var(--shop-ink, #281914);
+    align-items: center;
+    cursor: pointer;
+    color: var(--shop-wine);
+    font-size: .8125rem;
+    font-weight: 650;
 }
 
 .errorMessage {
@@ -317,11 +205,13 @@
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
-    padding: 14px 24px;
-    background: var(--paper, #fdfbf7);
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
     border-top: 1px solid var(--shop-line, #ebd9c8);
     flex-shrink: 0;
 }
+.actions button, .ghnAutoBtn, .evidenceQuickBtn { min-height: 44px; }
 
 .btnSecondary {
     padding: 10px 18px;
@@ -482,12 +372,6 @@
     gap: 12px;
 }
 
-@media (max-width: 520px) {
-    .evidenceGrid {
-        grid-template-columns: 1fr;
-    }
-}
-
 .evidenceCard {
     background: #fff;
     border: 1px dashed #d1c1b2;
@@ -559,6 +443,7 @@
     font-size: 11px;
     color: #166534;
     font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 .evidenceRemoveBtn {
@@ -578,16 +463,16 @@
     justify-content: center;
     gap: 6px;
     padding: 16px 8px;
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed var(--shop-control);
     border-radius: 4px;
-    background: #f8fafc;
+    background: var(--shop-paper);
     cursor: pointer;
     text-align: center;
 }
 
 .evidenceUploadTrigger:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
+    background: var(--shop-shelf, #f4eddf);
+    border-color: var(--shop-wine);
 }
 
 .evidenceUploadText {
