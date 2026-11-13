@@ -6,6 +6,8 @@ import type { ChatMessage } from '../../../lib/mock/exchangeDetail';
 import styles from './ChatPanel.module.css';
 
 interface ChatPanelProps {
+    inDrawer?: boolean;
+    visible?: boolean;
     messages: ChatMessage[];
     partner: ExchangeUser;
     onSendMessage: (text: string) => Promise<void>;
@@ -25,7 +27,7 @@ interface ChatPanelProps {
     onLoadOlder?: () => Promise<{ isFetchNextPageError: boolean }>;
 }
 
-export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavailable, giveBooks, receiveBooks, statusText, guidance, isLoading, loadError, isRefreshing, onRetry, hasOlder, isLoadingOlder, olderError, onLoadOlder }: ChatPanelProps) {
+export function ChatPanel({ inDrawer, visible = true, messages, partner, onSendMessage, isReadOnly, unavailable, giveBooks, receiveBooks, statusText, guidance, isLoading, loadError, isRefreshing, onRetry, hasOlder, isLoadingOlder, olderError, onLoadOlder }: ChatPanelProps) {
     const [inputText, setInputText] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -65,12 +67,12 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
     };
 
     useEffect(() => {
-        if (messages.length > 0) {
+        if (visible && messages.length > 0) {
             if (!showScrollBtn) {
                 scrollToBottom();
             }
         }
-    }, [messages.length, showScrollBtn]);
+    }, [messages.length, showScrollBtn, visible]);
 
     useEffect(() => {
         scrollToBottom();
@@ -104,7 +106,8 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
     };
 
     return (
-        <section id="exchange-chat" className={styles.chatContainer} data-unavailable={unavailable || undefined} aria-label={`Tin nhắn Đổi sách với ${partner.username}`}>
+        <section id="exchange-chat" className={styles.chatContainer} data-drawer={inDrawer || undefined} data-unavailable={unavailable || undefined} aria-label={`Tin nhắn Đổi sách với ${partner.username}`}>
+            {!inDrawer && <>
             <div className={styles.chatHeader}>
                 <div className={styles.avatar}>
                     {partner.username.charAt(0).toUpperCase()}
@@ -122,6 +125,7 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                 <p>{guidance}</p>
                 {!isReadOnly && <a href="#exchange-actions">Xem bước tiếp theo trong giao dịch</a>}
             </div>
+            </>}
             {loadError && <div className={styles.loadError} role="alert"><p>{unavailable ? "Bạn hiện không thể xem tin nhắn trong giao dịch này." : "Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại."}</p><button type="button" onClick={onRetry} disabled={isRefreshing}>Tải lại tin nhắn</button></div>}
 
             <div 
@@ -140,7 +144,9 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                     </div>
                 )}
                 {isLoading && <p role="status">Đang tải tin nhắn trao đổi…</p>}
-                {!isLoading && !loadError && messages.length === 0 && <div className={styles.emptyState}><h3>Trao đổi về những cuốn sách này</h3><p>Hỏi về tình trạng sách hoặc thông tin giao nhận. Các thay đổi đề nghị cần được xác nhận trong phần Hành động của bạn.</p></div>}
+                {!isLoading && !loadError && messages.length === 0 && <div className={styles.emptyState}>
+                    {inDrawer ? <p>Chưa có tin nhắn.</p> : <><h3>Trao đổi về những cuốn sách này</h3><p>Hỏi về tình trạng sách hoặc thông tin giao nhận. Các thay đổi đề nghị cần được xác nhận trong phần Hành động của bạn.</p></>}
+                </div>}
                 {messages.map((msg) => {
                     const isMine = msg.senderRole === 'viewer';
                     const isSystem = msg.senderRole === 'system';

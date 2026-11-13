@@ -76,7 +76,7 @@ try {
     await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
     const card = page.locator('#exchange-actions');
-    const fund = card.getByRole('button', { name: 'Đặt cọc mô phỏng', exact: true });
+    const fund = card.getByRole('button', { name: /^Đặt cọc (50\.000|mô phỏng)/ });
     await expect(fund).toBeVisible();
     await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 100)));
     const results = [];

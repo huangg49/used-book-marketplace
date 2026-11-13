@@ -46,6 +46,7 @@ import { BookInfoCard } from "../components/exchange/BookInfoCard";
 import { BookCover } from "../components/BookCover";
 import { ActionCard } from "../components/exchange/ActionCard";
 import { ChatPanel } from "../components/exchange/ChatPanel";
+import { ExchangeChatDrawer } from "../components/exchange/ExchangeChatDrawer";
 import { exchangeChatGuidance } from "../lib/exchange-chat-guidance";
 import { SafetyTipsCard } from "../components/exchange/SafetyTipsCard";
 import styles from "./ExchangeDetailPage.module.css";
@@ -350,6 +351,10 @@ function ExchangeDetailContent({
     }
   } else if (detail.status === "EXPIRED") statusText = "Hết hạn";
 
+  const proposal = detail.status === "PENDING";
+  const funding = detail.status === "FUNDING";
+  const preparing = detail.status === "WAITING_YOU_SEND";
+  const standaloneSheet = !embedded && (proposal || funding || preparing);
   const actionSection = (
     <section
       id="exchange-actions"
@@ -358,8 +363,8 @@ function ExchangeDetailContent({
       tabIndex={-1}
     >
       <ActionCard
-        compact={embedded || detail.status === "PENDING"}
-        proposalLayout={!embedded && detail.status === "PENDING"}
+        compact={embedded || standaloneSheet}
+        standaloneSheet={standaloneSheet}
         detail={detail}
         onCancel={handleCancel}
         onAccept={handleAccept}
@@ -387,10 +392,14 @@ function ExchangeDetailContent({
       )}
     </section>
   );
-  const chat = !embedded && (
+  const messagePages = messagesDenied ? undefined : messagesQuery.data?.pages;
+  const messages = messagePages?.slice().reverse().flatMap(page => page.items) ?? [];
+  const renderChat = (inDrawer = false, visible = true) => (
     <ChatPanel
       key={id}
-      messages={messagesDenied ? [] : messagesQuery.data?.pages.slice().reverse().flatMap((page) => page.items) ?? []}
+      inDrawer={inDrawer}
+      visible={visible}
+      messages={messages}
       isLoading={messagesQuery.isPending}
       loadError={messagesDenied || (messagesQuery.isError && !messagesQuery.isFetchNextPageError)}
       isRefreshing={messagesQuery.isFetching}
@@ -472,26 +481,44 @@ function ExchangeDetailContent({
       </div>
     );
 
-  if (detail.status === "PENDING" && !embedded) {
+  if (standaloneSheet) {
     const waitingForViewer = detail.canViewerAccept ?? detail.viewerRole === "recipient";
+    const title = funding
+      ? detail.viewerFundedAt ? "Bạn đã đặt cọc" : `Đặt cọc để đổi sách với ${detail.partner.username}`
+      : preparing ? "Chuẩn bị gửi sách"
+      : waitingForViewer ? `Đề nghị đổi sách từ ${detail.partner.username}` : "Đã gửi đề nghị";
     return (
       <div className={styles.proposal}>
         <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>Trao đổi của tôi</Link>
         <header className={styles.proposalHeader}>
-          <h1>{waitingForViewer ? `Đề nghị đổi sách từ ${detail.partner.username}` : "Đã gửi đề nghị"}</h1>
-          <p>{waitingForViewer ? "Chưa giữ sách hay trừ tiền." : `Đang chờ ${detail.partner.username} phản hồi. Chưa giữ sách hay trừ tiền.`}</p>
+          <h1>{title}</h1>
+          {proposal && <p>{waitingForViewer ? "Chưa giữ sách hay trừ tiền." : `Đang chờ ${detail.partner.username} phản hồi. Chưa giữ sách hay trừ tiền.`}</p>}
         </header>
-        {actionSection}
-        <div className={styles.proposalLayout}>
-          <section className={styles.proposalFacts} aria-labelledby="proposal-facts">
-            <h2 id="proposal-facts">Phiếu đề nghị đổi sách</h2>
+        <div className={funding ? styles.fundingPanel : undefined}>{actionSection}</div>
+        <div className={styles.proposalContact}>
+          <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
+            partnerName={detail.partner.username} latest={messagePages?.[0]?.items ?? []}>
+            {open => renderChat(true, open)}
+          </ExchangeChatDrawer>
+          <SupportLink type="Exchange" id={detail.id} />
+        </div>
+        <div className={styles.proposalLayout} data-books-only={funding || undefined}>
+          <section aria-labelledby="proposal-facts" className={funding ? styles.fundingBooks : undefined}>
+            <h2 id="proposal-facts">{proposal ? "Phiếu đề nghị đổi sách" : "Sách trong phiếu"}</h2>
             {[{ title: "Sách bạn gửi", books: detail.giveBooks }, { title: "Sách bạn nhận", books: detail.receiveBooks }].map(group => (
               <div className={styles.proposalBooks} key={group.title}>
                 <h3>{group.title}</h3>
                 {group.books.map(book => (
                   <div className={styles.proposalBook} key={book.id}>
                     <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} /></div>
-                    <div><strong>{book.title}</strong><span>{book.author}</span>{book.price != null && <span>{formatVnd(book.price)}</span>}</div>
+                    <div>
+                      <strong>{book.title}</strong>
+                      <span>{book.author}</span>
+                      {book.price != null && <span>{formatVnd(book.price)}</span>}
+                      {book.conditionDetails && <details>
+                        <summary>Tình trạng sách</summary><p>{book.conditionDetails}</p>
+                      </details>}
+                    </div>
                   </div>
                 ))}
                 {group.books.length === 0 && <p>Chưa tải được thông tin sách.</p>}
@@ -499,7 +526,7 @@ function ExchangeDetailContent({
             ))}
             {!detail.hasAgreementSnapshot && <p>Phiếu cũ thiếu thông tin sách lúc gửi đề nghị.</p>}
           </section>
-          <section className={styles.proposalAmounts} aria-labelledby="proposal-amounts">
+          {proposal && <section className={styles.proposalAmounts} aria-labelledby="proposal-amounts">
             <h2 id="proposal-amounts">Nếu hai bên đồng ý</h2>
             <dl>
               {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
@@ -508,12 +535,11 @@ function ExchangeDetailContent({
               )}
               {detail.viewerFundingAmount != null && <div><dt>Bạn cần nộp</dt><dd><strong>{formatVnd(detail.viewerFundingAmount)}</strong></dd></div>}
             </dl>
-          </section>
+          </section>}
+          {preparing && <TransactionDisclosure title="Theo dõi giao nhận">
+            <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
+          </TransactionDisclosure>}
         </div>
-        <details className={styles.proposalChat}>
-          <summary>Nhắn cho {detail.partner.username}</summary>
-          {chat}
-        </details>
       </div>
     );
   }
@@ -619,7 +645,7 @@ function ExchangeDetailContent({
           <div
             className={`${styles.sideCol} ${conversation.chat} ${styles.legacyChat}`}
           >
-            {chat}
+            {renderChat()}
           </div>
         )}
       </div>

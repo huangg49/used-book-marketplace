@@ -27,6 +27,7 @@ export interface ExchangeDetail {
   lastProposedById?: string | null;
   canViewerAccept?: boolean;
   viewerFundedAt?: string;
+  partnerFundedAt?: string;
   viewerFundingAmount?: number;
   fundingDeadline?: string;
   proposalExpiresAt?: string;

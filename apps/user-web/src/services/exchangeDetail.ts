@@ -75,6 +75,8 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     cancellationRequestedAt: ex.cancellationRequestedAt ?? undefined,
     viewerFundedAt:
       (initiator ? ex.initiatorFundedAt : ex.recipientFundedAt) ?? undefined,
+    partnerFundedAt:
+      (initiator ? ex.recipientFundedAt : ex.initiatorFundedAt) ?? undefined,
     viewerFundingAmount:
       (initiator ? ex.initiatorDeposit : ex.recipientDeposit) +
       (ex.diffPayerId === actor.id ? ex.diffAmount : 0),

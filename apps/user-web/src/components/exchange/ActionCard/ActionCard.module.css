@@ -13,19 +13,58 @@
 .card[data-compact] { font-size:.875rem; line-height:1.55; }
 .card[data-compact] p { font-size:.875rem; line-height:1.55; }
 .card[data-compact] .calloutBox { padding:12px; background:var(--shop-shelf); }
-.card[data-proposal] {
+.card[data-sheet] {
     padding: 0;
     gap: 8px;
     background: transparent;
     border: 0;
     box-shadow: none;
 }
-.card[data-proposal] .btnGrid {
+.card[data-sheet] .btnGrid {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
-.card[data-proposal] .btnGrid button { width: auto; }
+.card[data-sheet] .btnGrid button { width: auto; }
+.card[data-sheet][data-funding] .btnDanger {
+    border-color: transparent;
+    background: transparent;
+    color: var(--shop-wine);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+.card[data-sheet][data-funding] .btnDanger:hover { background: var(--shop-paper); }
+.fundingAmounts { margin: 0; }
+.fundingAmounts > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 14px;
+    padding-block: 5px;
+}
+.fundingAmounts dd {
+    margin: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.fundingAmounts .fundingTotal {
+    margin-top: 5px;
+    padding-top: 10px;
+    border-top: 1px solid var(--shop-line);
+    color: var(--shop-wine);
+    font-weight: 750;
+}
+.fundingStatus { margin: 2px 0 0; color: var(--shop-muted); }
+.inlineButton {
+    min-height: 44px;
+    padding-inline: 6px;
+    border: 0;
+    background: transparent;
+    color: var(--shop-wine);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
 
 .headerRow {
     display: flex;

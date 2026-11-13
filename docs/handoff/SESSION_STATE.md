@@ -1,3 +1,23 @@
+# Đặt cọc và thu gọn tin nhắn trên phiếu đổi sách — 13/11/2026
+
+Nhánh local `codex/exchange-funding-ui`, base `2293090c` của checkout demo.
+Phiếu Member web đưa cọc, tiền bù, hạn và nút đặt cọc lên đầu trang. Hộp xác
+nhận đọc số dư khả dụng từ ví; thiếu tiền thì dẫn đến ví. Sau khi một bên nộp,
+phiếu hiện người còn phải nộp. Khi cả hai nộp đủ, phiếu đưa thao tác gửi sách
+hiện có lên đầu trang. Dùng lại command và cơ chế đối soát kết quả của Exchange.
+
+Tin nhắn mở từ nút có tên đối tác trên phiếu, trượt bên phải ở desktop và chiếm
+màn hình ở mobile. Bản nháp còn khi đóng/mở. Số tin mới dựa trên trang tin mới
+nhất và mốc đã xem của tab, theo tài khoản/phiếu. Phiếu nhúng trong hội thoại
+vẫn dùng workspace và cơ chế chat riêng.
+
+Đã kiểm giao diện hai vai trên giao dịch local của chủ dự án, không gửi lệnh
+đặt cọc. Chromium với API/Mongo QA riêng đã kiểm hai lượt đặt cọc, mất phản hồi
+và replay, số dư và trạng thái chuẩn bị gửi. Build, 482 unit web, browser hạn
+đặt cọc, cache ví, chat/phân trang và hồi quy hội thoại đều qua. Bước tiếp theo
+là màn gửi và nhận sách từng chiều.
+Hồi quy mất phản hồi, replay và đổi phiên đã qua trên Member web và Expo web.
+
 # Gửi đề nghị đổi sách trên Member web — 13/11/2026
 
 Nhánh local `codex/exchange-proposal-entry`, base `f36c44b9` của checkout demo.

@@ -107,7 +107,7 @@ try {
     await page.getByLabel(/^Email/).fill(user.email);
     await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-    await page.getByRole('link', { name: 'Nhắn với đối tác', exact: true }).click();
+    await page.getByRole('button', { name: /^Nhắn cho / }).click();
     const chat = page.getByRole('region', { name: /Tin nhắn Đổi sách/ });
     await expect(chat.getByText('Tin thử 501', { exact: true })).toBeVisible();
     await expect(chat.getByText('Tin thử 461', { exact: true })).toHaveCount(0);

@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
     cancelText?: string;
     onConfirm: () => void;
     isBusy?: boolean;
+    confirmDisabled?: boolean;
     isDanger?: boolean;
     maxWidth?: string;
 }
@@ -25,6 +26,7 @@ export function ConfirmDialog({
     cancelText = 'Hủy',
     onConfirm,
     isBusy = false,
+    confirmDisabled = false,
     isDanger = false,
     maxWidth,
 }: ConfirmDialogProps) {
@@ -42,23 +44,23 @@ export function ConfirmDialog({
             dialog.focus();
             dialog.scrollLeft = 0;
             dialog.scrollTop = 0;
-            requestAnimationFrame(() => {
+            const frame = requestAnimationFrame(() => {
                 if (dialogRef.current) {
                     dialogRef.current.scrollTop = 0;
                     dialogRef.current.scrollLeft = 0;
                 }
             });
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 if (dialogRef.current) {
                     dialogRef.current.scrollTop = 0;
                 }
             }, 30);
-        } else {
-            dialog.close();
-            // Trả focus
-            if (triggerRef.current) {
-                triggerRef.current.focus();
-            }
+            return () => {
+                cancelAnimationFrame(frame);
+                clearTimeout(timer);
+                if (dialog.open) dialog.close();
+                if (triggerRef.current?.isConnected) triggerRef.current.focus({ preventScroll: true });
+            };
         }
     }, [isOpen]);
 
@@ -128,7 +130,7 @@ export function ConfirmDialog({
                         type="button" 
                         className={`${styles.btnConfirm} ${isDanger ? styles.btnDanger : ''}`} 
                         onClick={onConfirm}
-                        disabled={isBusy}
+                        disabled={isBusy || confirmDisabled}
                         aria-busy={isBusy}
                     >
                         {isBusy ? 'Đang xử lý...' : confirmText}

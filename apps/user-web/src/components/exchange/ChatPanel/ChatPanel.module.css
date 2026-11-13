@@ -299,6 +299,20 @@
 .chatContainer[data-unavailable="true"] .messagesArea {
   display: none;
 }
+.chatContainer[data-drawer] {
+  position: static;
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+.chatContainer[data-drawer] .messagesArea {
+  min-height: 0;
+  max-height: none;
+  overscroll-behavior: contain;
+}
+.chatContainer[data-drawer] .inputArea { flex-shrink: 0; }
+.chatContainer[data-drawer] .textarea { font-size: 1rem; }
 .chatContainer :is(a, button, textarea):focus-visible {
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;

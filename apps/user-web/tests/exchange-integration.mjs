@@ -288,22 +288,19 @@ try {
       () => document.documentElement.scrollWidth <= innerWidth + 1,
     ),
   );
-  // Exercise definite API rejection without falsely closing the dialog.
+  // Insufficient available funds keep the dialog open and confirmation disabled.
   await recipient
     .getByRole("button", { name: "Đặt cọc mô phỏng", exact: true })
     .click();
-  await recipient
-    .getByRole("dialog")
-    .getByRole("button", { name: "Đặt cọc mô phỏng", exact: true })
-    .click();
-  await recipient.getByRole("dialog").getByRole("alert").waitFor();
+  await recipient.getByRole("dialog").getByRole("alert").filter({ hasText: "Ví còn thiếu" }).waitFor();
+  assert.equal(await recipient.getByRole("dialog").getByRole("button", { name: "Đặt cọc mô phỏng", exact: true }).isEnabled(), false);
   assert.equal(await recipient.getByRole("dialog").isVisible(), true);
   await recipient
     .getByRole("dialog")
     .getByRole("button", { name: "Hủy", exact: true })
     .click();
   await recipient
-    .getByRole("button", { name: "Hủy đề nghị", exact: true })
+    .getByRole("button", { name: "Hủy trao đổi", exact: true })
     .click();
   const cancelled = recipient.waitForResponse((response) =>
     new URL(response.url()).pathname === `/api/v1/exchanges/${id}/cancel` &&
@@ -311,7 +308,7 @@ try {
   );
   await recipient
     .getByRole("alertdialog")
-    .getByRole("button", { name: "Hủy đề nghị", exact: true })
+    .getByRole("button", { name: "Hủy trao đổi", exact: true })
     .click();
   await cancelled;
   await recipient.getByText(/^Lịch sử các đề nghị đổi sách \(\d+ lần\)$/, { exact: true }).click();

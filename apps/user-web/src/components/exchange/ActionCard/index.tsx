@@ -14,6 +14,7 @@ import { ReceiveDialog } from "../ReceiveDialog";
 import type { CounterOfferData } from "../CounterDialog";
 import { AcceptExchangeDialog } from "../AcceptExchangeDialog";
 import { ROUTES, formatVnd } from "../../../lib/routes";
+import { getWalletSummary } from "../../../services/wallet";
 import {
   exchangeError,
   pendingExchange,
@@ -51,7 +52,7 @@ type Action =
 
 interface Props {
   compact?: boolean;
-  proposalLayout?: boolean;
+  standaloneSheet?: boolean;
   detail: ExchangeDetail;
   onCancel: () => Promise<void>;
   onAccept: (
@@ -133,6 +134,21 @@ export function ActionCard(props: Props) {
     detail.status === "INSPECTING" ? detail.inspectionDeadline :
     undefined;
   const expired = useDeadlineExpired(deadline);
+  const fundingAmount = detail.viewerFundingAmount;
+  const fundingDialog = action === "fund";
+  const fundLabel = fundingAmount == null ? labels.fund : `Đặt cọc ${formatVnd(fundingAmount)}`;
+  const wallet = useQuery({
+    queryKey: ["wallet-summary", detail.viewer.id],
+    queryFn: getWalletSummary,
+    enabled: fundingDialog,
+    staleTime: 0,
+    retry: false,
+  });
+  const available = wallet.isSuccess ? wallet.data.available : undefined;
+  const shortfall = fundingAmount != null && available != null ? Math.max(0, fundingAmount - available) : 0;
+  const fundDisabled = expired || fundingAmount == null || !!detail.viewerFundedAt ||
+    detail.status !== "FUNDING" || !wallet.isSuccess || wallet.isFetching || shortfall > 0 ||
+    !wallet.data?.paymentsEnabled;
 
   const addresses = useQuery({
     queryKey: ["address-book"],
@@ -179,8 +195,10 @@ export function ActionCard(props: Props) {
     instructions = detail.viewerFundedAt
       ? "Bạn đã đặt cọc. Đang chờ đối tác hoàn tất khoản cọc của họ."
       : `Khoản cần giữ từ ví mô phỏng: ${formatVnd(detail.viewerFundingAmount ?? 0)} (cọc và tiền bù nếu có).`;
-    if (!detail.viewerFundedAt && !expired) actions.push("fund");
-    actions.push("cancel");
+    if (!expired) {
+      if (!detail.viewerFundedAt && fundingAmount != null) actions.push("fund");
+      actions.push("cancel");
+    }
   } else if (detail.status === "WAITING_YOU_SEND") {
     const deadlineStr = detail.shippingDeadline
       ? new Date(detail.shippingDeadline).toLocaleString("vi-VN")
@@ -193,9 +211,11 @@ export function ActionCard(props: Props) {
       instructions = `Bạn đã tạo đơn vận chuyển thành công. Đang chờ đối tác tạo đơn để bưu tá cùng đến lấy sách ở cả hai đầu.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
     } else {
       if (!detail.cancellationRequestedBy) {
-        instructions = `Hai bên đã đặt cọc. Hãy đóng gói sách cẩn thận và bấm tạo đơn vận chuyển.${deadlineStr ? ` Hạn chót gửi sách: ${deadlineStr} (72 giờ).` : ""}`;
-        actions.push("sent");
-        if (!detail.partnerShipping.sentAt) {
+        instructions = expired
+          ? "Đã hết hạn gửi sách. Hệ thống đang cập nhật phiếu."
+          : "Hai bên đã đặt cọc. Bạn có thể chuẩn bị gửi sách.";
+        if (!expired) actions.push("sent");
+        if (!expired && !detail.partnerShipping.sentAt) {
           actions.push("cancel");
         }
       } else if (detail.cancellationRequestedBy === myRole) {
@@ -329,6 +349,7 @@ export function ActionCard(props: Props) {
 
   async function confirm() {
     if (!action || busy) return;
+    if (action === "fund" && fundDisabled) return;
     if (action === "reject") {
       if (reason.trim().length < 5 || reason.trim().length > 300) {
         setError("Nhập lý do từ 5 đến 300 ký tự.");
@@ -370,13 +391,17 @@ export function ActionCard(props: Props) {
     } catch (failure) {
       if (pendingExchange(detail.id)) setAction(undefined);
       setError(exchangeError(failure));
+      if (action === "fund" && !pendingExchange(detail.id)) {
+        void wallet.refetch();
+        void props.onRetry();
+      }
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className={styles.card} data-compact={props.compact || undefined} data-proposal={props.proposalLayout || undefined}>
+    <div className={styles.card} data-compact={props.compact || undefined} data-sheet={props.standaloneSheet || undefined} data-funding={detail.status === "FUNDING" || undefined}>
       {!props.compact && <div className={styles.headerRow}>
         <h2 className={styles.cardTitle}>
           <BrandIcon size={18} />
@@ -399,10 +424,36 @@ export function ActionCard(props: Props) {
         </span>
       </div>
       }
-      {(!props.proposalLayout || expired) && (
+      {(!props.standaloneSheet || detail.status === "WAITING_YOU_SEND" || (expired && detail.status === "PENDING")) && (
         <div className={styles.calloutBox}>
           <p className={styles.instructions}>{instructions}</p>
         </div>
+      )}
+      {props.standaloneSheet && detail.status === "FUNDING" && (
+        <>
+          <dl className={styles.fundingAmounts}>
+            {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
+            {detail.moneyCompensationType !== "none" && detail.moneyAmount != null && (
+              <div>
+                <dt>{detail.moneyCompensationType === "user_pays" ? `Tiền bạn bù cho ${detail.partner.username}` : `Tiền ${detail.partner.username} bù cho bạn`}</dt>
+                <dd>{formatVnd(detail.moneyAmount)}</dd>
+              </div>
+            )}
+            {fundingAmount != null && (
+              <div className={styles.fundingTotal}>
+                <dt>{detail.viewerFundedAt ? "Đã giữ từ ví của bạn" : "Tổng giữ từ ví của bạn"}</dt>
+                <dd>{formatVnd(fundingAmount)}</dd>
+              </div>
+            )}
+          </dl>
+          <p className={styles.fundingStatus} role="status">
+            {expired ? "Hệ thống đang cập nhật phiếu."
+              : detail.viewerFundedAt ? `Chờ ${detail.partner.username} đặt cọc.`
+              : detail.partnerFundedAt ? `${detail.partner.username} đã đặt cọc.`
+              : "Cả hai cần đặt cọc trước khi gửi sách."}
+          </p>
+          <p className={styles.fundingStatus}>Phí giao nhận tính riêng.</p>
+        </>
       )}
       {detail.status === "PENDING" && detail.proposalExpiresAt && !expired && (
         <p className={styles.deadlineRow}>
@@ -420,7 +471,9 @@ export function ActionCard(props: Props) {
           <span>
             Hạn đặt cọc:{" "}
             <time dateTime={detail.fundingDeadline}>
-              {new Date(detail.fundingDeadline).toLocaleString("vi-VN")}
+              {new Date(detail.fundingDeadline).toLocaleString("vi-VN", {
+                hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
+              })}
             </time>
             {expired ? " · Đã hết hạn" : ""}
           </span>
@@ -473,7 +526,7 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
-      {pending && (
+      {pending && !props.standaloneSheet && (
         <p role="status" className={styles.pendingRow}>
           <AlertCircle size={15} />
           <span>
@@ -497,7 +550,9 @@ export function ActionCard(props: Props) {
             const isDanger = next === "cancel" || next === "reject";
             const partnerRole =
               detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
-            let label = labels[next];
+            let label = next === "fund" && props.standaloneSheet ? fundLabel
+              : next === "cancel" && detail.status === "FUNDING" ? "Hủy trao đổi"
+              : labels[next];
             if (detail.status === "WAITING_YOU_SEND") {
               if (next === "cancel") {
                 label =
@@ -526,7 +581,7 @@ export function ActionCard(props: Props) {
               </button>
             );
           })}
-          {!props.proposalLayout && <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
+          {!props.standaloneSheet && <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
             Trao đổi của tôi
           </Link>}
         </div>
@@ -587,7 +642,9 @@ export function ActionCard(props: Props) {
         onClose={() => setAction(undefined)}
         maxWidth={action === "dispute" ? "640px" : undefined}
         title={
-          action === "cancel" && detail.status === "WAITING_YOU_SEND"
+          action === "cancel" && detail.status === "FUNDING"
+            ? "Hủy trao đổi"
+            : action === "cancel" && detail.status === "WAITING_YOU_SEND"
             ? detail.cancellationRequestedBy
               ? "Xác nhận đồng ý hủy"
               : "Đề nghị hủy giao dịch"
@@ -606,6 +663,8 @@ export function ActionCard(props: Props) {
                   detail.status === "WAITING_YOU_SEND" &&
                   detail.cancellationRequestedBy
                 ? "Đồng ý hủy"
+                : action === "cancel" && detail.status === "FUNDING"
+                  ? "Hủy trao đổi"
                 : action === "reject" && detail.status === "WAITING_YOU_SEND"
                   ? "Từ chối hủy"
                   : action
@@ -616,18 +675,37 @@ export function ActionCard(props: Props) {
         isDanger={
           action === "cancel" || action === "reject" || action === "dispute"
         }
+        confirmDisabled={fundingDialog && fundDisabled}
         onConfirm={() => void confirm()}
       >
-        {action !== "dispute" && (
+        {fundingDialog && (
+          <>
+            <dl className={styles.fundingAmounts}>
+              <div><dt>Ví mô phỏng khả dụng</dt><dd>
+                {wallet.isPending || wallet.isFetching ? "Đang tải…" : available == null ? "Chưa tải được" : formatVnd(available)}
+              </dd></div>
+              <div className={styles.fundingTotal}><dt>Số tiền sẽ giữ</dt><dd>{fundingAmount == null ? "Chưa có dữ liệu" : formatVnd(fundingAmount)}</dd></div>
+            </dl>
+            {wallet.isError && (
+              <p role="status">Chưa kiểm tra được số dư. <button className={styles.inlineButton} type="button" onClick={() => void wallet.refetch()}>Tải lại số dư</button></p>
+            )}
+            {shortfall > 0 && (
+              <p role="alert">Ví còn thiếu {formatVnd(shortfall)}. <Link to={ROUTES.wallet}>Mở ví</Link></p>
+            )}
+            {wallet.isSuccess && !wallet.data.paymentsEnabled && <p role="status">Ví hiện chưa thể thanh toán.</p>}
+            {expired && <p role="status">Đã hết hạn đặt cọc.</p>}
+          </>
+        )}
+        {action !== "dispute" && !fundingDialog && (
           <p className={styles.dialogText}>
             {action === "accept"
               ? "Bằng việc chấp nhận, bạn đồng ý với các điều khoản trao đổi."
-              : action === "fund"
-                ? `Giữ ${formatVnd(detail.viewerFundingAmount ?? 0)} từ ví mô phỏng. Kiểm tra khoản tiền trước khi xác nhận.`
                 : action === "retry"
                   ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
                   : action === "complete"
                     ? "Bạn xác nhận đã kiểm tra sách? Xác nhận này không rút ngắn hạn khiếu nại. Tiền cọc tiếp tục được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
+                    : action === "cancel" && detail.status === "FUNDING"
+                      ? "Sách sẽ được mở lại. Khoản đã nộp sẽ được hoàn về ví của người đã nộp."
                     : action === "cancel" &&
                         detail.status === "WAITING_YOU_SEND"
                       ? detail.cancellationRequestedBy

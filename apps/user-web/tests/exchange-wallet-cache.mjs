@@ -63,7 +63,11 @@ try {
       }
       if (p === '/api/v1/me/wallet/history' || p === '/api/v1/me/topups') return route.fulfill({ json: { items: [], nextCursor: null } });
       if (p === '/api/v1/me/notifications') return route.fulfill({ json: { items: [], nextCursor: null, unreadCount: 0 } });
-      if (p === '/api/v1/me/purchase-conversations' || p === `/api/v1/exchanges/${id(3)}/messages`) return route.fulfill({ json: [] });
+      if (p === '/api/v1/me/purchase-conversations') return route.fulfill({ json: [] });
+      if (p === `/api/v1/exchanges/${id(3)}/messages`) return route.fulfill({ json: {
+        items: [{ id: id(6), exchangeId: id(3), senderId: id(2), body: 'Tin nhắn kiểm thử', sentAt: now }],
+        olderCursor: null,
+      } });
       if (p === `/api/v1/exchanges/${id(3)}`) return route.fulfill({ json: exchange() });
       if (p === '/api/v1/listings/' + id(4)) return route.fulfill({ json: listing(4) });
       if (p === '/api/v1/listings/' + id(5)) return route.fulfill({ json: listing(5) });
@@ -81,17 +85,35 @@ try {
       history.pushState({ key: 'qa-exchange', idx: (history.state?.idx ?? 0) + 1 }, '', path);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }, '/exchange/' + id(3));
-    const action = page.locator('#exchange-actions').getByRole('button', { name: 'Đặt cọc mô phỏng', exact: true });
+    const action = page.locator('#exchange-actions').getByRole('button', { name: /^Đặt cọc [\d.]+/ });
     await expect(action).toBeVisible();
+    if (mode === 'success' && !baseline) {
+      const chat = page.getByRole('dialog', { name: /^Nhắn cho / });
+      const trigger = page.getByRole('button', { name: /^Nhắn cho / });
+      await expect(trigger).toContainText('1');
+      await expect(chat).toHaveCount(0);
+      await trigger.click();
+      await expect(chat.getByText('Tin nhắn kiểm thử', { exact: true })).toBeVisible();
+      const input = chat.getByRole('textbox');
+      await input.fill('Bản nháp');
+      await page.keyboard.press('Escape');
+      await expect(chat).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+      await expect(trigger).not.toContainText('1');
+      await trigger.click();
+      await expect(input).toHaveValue('Bản nháp');
+      await chat.getByRole('button', { name: 'Đóng tin nhắn' }).click();
+    }
     const menu = page.getByRole('region', { name: 'Menu tài khoản', exact: true });
     if (width === 1440) {
       await page.getByRole('button', { name: /^Tài khoản của/ }).click();
       await expect(menu.locator('[class*="hubBalance"]')).toContainText('100.000');
       await page.keyboard.press('Escape');
     }
-    const beforeCommand = walletReads;
     await action.click();
     const dialog = page.getByRole('dialog', { name: 'Đặt cọc mô phỏng', exact: true });
+    await expect(dialog.getByText(/100\.000/)).toBeVisible();
+    const beforeCommand = walletReads;
     await dialog.getByRole('button', { name: 'Đặt cọc mô phỏng', exact: true }).click();
     await expect.poll(() => commands.length).toBe(1);
     await page.waitForTimeout(100);
@@ -99,7 +121,7 @@ try {
     release();
     if (mode === 'rejected') {
       await expect(dialog.getByText('QA rejected', { exact: true })).toBeVisible();
-      assert.equal(walletReads, beforeCommand);
+      await expect.poll(() => walletReads).toBeGreaterThan(beforeCommand);
       await dialog.getByRole('button', { name: 'Đặt cọc mô phỏng', exact: true }).click();
       await expect.poll(() => commands.length).toBe(2); release();
     } else if (mode === 'lost-ack') {
