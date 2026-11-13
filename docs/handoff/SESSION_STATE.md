@@ -22,6 +22,12 @@ kiện trong phiếu demo hoặc kiểm hãng vận chuyển thật.
 Đầu phiếu chỉ hiện một liên kết quay lại. Chromium 320/1440 kiểm mở từ
 Hội thoại và mở trực tiếp, căn icon cùng hàng và về đúng danh sách.
 
+Hai màn xem lại dùng bố cục riêng trên cùng phiếu. Đề nghị đặt hai nhóm
+sách cạnh nhau, giữ phần mở tình trạng và tóm tắt cọc, tiền bù. Đặt cọc
+hiện tổng, thời điểm ghi nhận và các khoản theo từng bên. Chromium
+320/390/768/1440 kiểm cả hai vai trên phiếu local `285a732a` ở chế độ đọc,
+cùng ca giả lập tiêu đề dài và chỉ một bên đặt cọc. Build và 484 unit qua.
+
 # Giao nhận hai chiều trên phiếu trao đổi Member web — 13/11/2026
 
 Nhánh `codex/exchange-handover-web`, base `10cab58a`. Phiếu đã đủ cọc mở

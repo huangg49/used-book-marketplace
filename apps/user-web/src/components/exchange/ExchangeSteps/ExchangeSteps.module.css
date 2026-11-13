@@ -118,7 +118,23 @@
     cursor: pointer;
 }
 .history > header button:hover { background: var(--shop-shelf, #f4eddf); }
-.historyFacts { max-width: 660px; }
+.history[data-viewing="proposal"],
+.history[data-viewing="funding"] {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+.history[data-viewing="proposal"] > header,
+.history[data-viewing="funding"] > header {
+    margin-bottom: 12px;
+    padding-bottom: 0;
+    border: 0;
+}
+.history[data-viewing="proposal"] > header h2,
+.history[data-viewing="funding"] > header h2 {
+    font-size: clamp(1.22rem, 2.5cqi, 1.6rem);
+    letter-spacing: -.02em;
+}
 .record { margin: 0 0 18px; font-size: .875rem; }
 .record > div {
     display: flex;

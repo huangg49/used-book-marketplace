@@ -3,9 +3,8 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { HandoverNavigation } from "../../../lib/exchange-handover";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
-import { ExchangeContext } from "../../conversation/ExchangeContext";
-import { ExchangeFinanceFacts } from "../../conversation/ExchangeFinanceSummary";
 import { ShippingTrackingCard } from "../ShippingTrackingCard";
+import { FundingHistory, ProposalHistory } from "./ExchangeHistory";
 import styles from "./ExchangeSteps.module.css";
 
 const steps = [
@@ -63,17 +62,9 @@ function StepHistory({ step, detail, navigation }: {
   detail: ExchangeDetail;
   navigation: HandoverNavigation;
 }) {
-  if (step === "proposal") return <ExchangeContext detail={detail} />;
+  if (step === "proposal") return <ProposalHistory detail={detail} />;
   if (step === "handover") return <ShippingTrackingCard detail={detail} history {...navigation} />;
-  if (step === "funding") return (
-    <div className={styles.historyFacts}>
-      <dl className={styles.record}>
-        <div><dt>Bạn đã đặt cọc lúc</dt><dd><RecordedTime value={detail.viewerFundedAt} empty="Chưa ghi nhận" /></dd></div>
-        <div><dt>Đối tác đã đặt cọc lúc</dt><dd><RecordedTime value={detail.partnerFundedAt} empty="Chưa ghi nhận" /></dd></div>
-      </dl>
-      <ExchangeFinanceFacts detail={detail} />
-    </div>
-  );
+  if (step === "funding") return <FundingHistory detail={detail} />;
   return (
     <dl className={styles.record}>
       <div><dt>Hạn kiểm tra của bạn</dt><dd><RecordedTime value={detail.viewerInspectionDeadline} empty="Chưa ghi nhận" /></dd></div>
@@ -146,7 +137,7 @@ export function ExchangeSteps({ detail, children, navigation }: {
       </nav>
       <p className={styles.announcement} role="status">Bước hiện tại {steps[currentIndex].label}</p>
       {viewing && (
-        <section className={styles.history} aria-labelledby="exchange-history-heading">
+        <section className={styles.history} data-viewing={viewing} aria-labelledby="exchange-history-heading">
           <header>
             <div>
               <h2 ref={historyHeading} id="exchange-history-heading" tabIndex={-1}>
