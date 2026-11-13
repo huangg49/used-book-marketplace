@@ -61,6 +61,8 @@ try {
         fundingDeadline: state === 'AcceptedAwaitingFunding' ? deadline : fundingDeadline,
         shippingDeadline: state === 'Preparing' ? deadline : undefined,
         inspectionDeadline: state === 'Delivered' ? deadline : undefined,
+        initiatorInspectionDeadline: state === 'Delivered' ? deadline : undefined,
+        recipientInspectionDeadline: state === 'Delivered' ? deadline : undefined,
         initiatorReceivedAt: state === 'Delivered' ? iso(epoch) : undefined,
         recipientReceivedAt: state === 'Delivered' ? iso(epoch) : undefined,
       } });
@@ -83,12 +85,12 @@ try {
     for (const [status, label] of [
       ['AcceptedAwaitingFunding', 'Hạn đặt cọc:'],
       ['Preparing', baseline ? 'Hạn gửi sách (72h):' : 'Hạn gửi sách'],
-      ['Delivered', 'Hạn kiểm tra chung (72 giờ):'],
+      ['Delivered', baseline ? 'Hạn kiểm tra chung (72 giờ):' : 'Hạn kiểm tra sách của bạn'],
     ]) {
       state = status;
       deadline = iso(await page.evaluate(() => Date.now() + 15000));
       if (status === 'AcceptedAwaitingFunding') fundingDeadline = deadline;
-      const row = card.locator('p').filter({ hasText: label });
+      const row = card.locator(status === 'Delivered' && !baseline ? 'h3' : 'p').filter({ hasText: label });
       await expect.poll(async () => {
         await page.clock.runFor(1000);
         return row.locator('time').getAttribute('datetime', { timeout: 300 }).catch(() => null);
@@ -100,7 +102,12 @@ try {
       assert.equal(before, baseline ? 2 : 0);
       if (status === 'AcceptedAwaitingFunding') await expect(fund).toBeVisible();
       await page.clock.runFor(16000);
-      await expect(row).toContainText('Đã hết hạn');
+      if (status === 'Delivered' && !baseline) {
+        await expect(card.getByText('Đã hết hạn kiểm tra. Đang chờ kết quả.')).toBeVisible();
+        await expect(card.getByRole('button', { name: 'Báo sự cố', exact: true })).toHaveCount(0);
+      } else {
+        await expect(row).toContainText('Đã hết hạn');
+      }
       if (status === 'AcceptedAwaitingFunding') await expect(fund).toHaveCount(0);
       await page.evaluate(() => { window.qaDeadlineTicks = 0; });
       await page.clock.runFor(2000);

@@ -42,6 +42,7 @@ function render(changes: Partial<ExchangeDetail>, handover = false) {
           onConfirmReceived={noop}
           onRetry={noop}
           onComplete={noop}
+          onDispute={noop}
         />
       </QueryClientProvider>
     </MemoryRouter>,
@@ -74,6 +75,13 @@ describe("merged Exchange inspection semantics", () => {
     });
     expect(html).toContain("200.000");
     expect(html).toContain("Đặt cọc mô phỏng");
+  });
+  it("closes only the viewer's claim when their deadline passes", () => {
+    const html = render({ viewerInspectionDeadline: "2020-01-01T00:00:00Z" });
+    expect(html).toContain("Đã hết hạn kiểm tra của bạn.");
+    expect(html).toContain("Xác nhận đã kiểm tra");
+    expect(html).not.toContain(">Báo sự cố</button>");
+    expect(render({ viewerCompletedAt: base.createdAt })).toContain(">Báo sự cố</button>");
   });
 });
 

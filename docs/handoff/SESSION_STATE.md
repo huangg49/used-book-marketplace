@@ -39,6 +39,14 @@ Dùng tên khu vực từ danh mục dịch vụ khi có và tránh lặp ở cu
 Chromium 320/390/768/1440 kiểm hai vai trên phiếu local, mở và sao chép
 bằng bàn phím, phản hồi khi trình duyệt từ chối clipboard. Build và 484 unit qua.
 
+Màn Kiểm tra sách đặt hạn riêng và thao tác cạnh sách đã nhận. Mỗi bên
+xem được tình trạng theo phiếu, xác nhận đã kiểm tra và báo sự cố trong
+hạn của mình. Xác nhận kiểm tra không rút ngắn hạn. Phiếu dùng luồng
+phục hồi lệnh hiện có rồi mở Bằng chứng sự cố khi báo cáo được ghi nhận.
+Chromium giả lập API kiểm hai hạn khác nhau, 320–1440 px, xác nhận,
+hết hạn, mất phản hồi và thử lại đúng lệnh. Build, 485 unit và browser
+kiểm hạn qua. Phiếu demo local vẫn dùng để bắt đầu từ Giao nhận.
+
 # Giao nhận hai chiều trên phiếu trao đổi Member web — 13/11/2026
 
 Nhánh `codex/exchange-handover-web`, base `10cab58a`. Phiếu đã đủ cọc mở

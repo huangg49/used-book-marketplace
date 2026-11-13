@@ -354,6 +354,7 @@ function ExchangeDetailContent({
   const proposal = detail.status === "PENDING";
   const funding = detail.status === "FUNDING";
   const handover = isExchangeHandover(detail.status);
+  const inspecting = detail.status === "INSPECTING";
   if (!embedded && linked && !handoverTarget && proposal)
     return <Navigate replace to={`/chat/${linked.id}`} />;
   const standaloneSheet = !embedded && (proposal || funding);
@@ -366,8 +367,8 @@ function ExchangeDetailContent({
       tabIndex={-1}
     >
       <ActionCard
-        compact={embedded || standaloneSheet || handover}
-        standaloneSheet={standaloneSheet || handover}
+        compact={embedded || standaloneSheet || handover || inspecting}
+        standaloneSheet={standaloneSheet || handover || inspecting}
         handover={handover ? handoverNavigation : undefined}
         handoverSupport={handover && !embedded ? <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" /> : undefined}
         detail={detail}

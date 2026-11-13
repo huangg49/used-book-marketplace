@@ -10,6 +10,10 @@
 }
 .inspectionDetails { font-size:.8125rem; color:var(--shop-muted); }
 .inspectionDetails summary { cursor:pointer; min-height:44px; padding:12px 0; }
+.inspectionActions {
+    display: grid;
+    gap: 7px;
+}
 .card[data-compact] { font-size:.875rem; line-height:1.55; }
 .card[data-compact] p { font-size:.875rem; line-height:1.55; }
 .card[data-compact] .calloutBox { padding:12px; background:var(--shop-shelf); }
@@ -418,48 +422,6 @@
   gap: 12px;
   width: 100%;
   box-sizing: border-box;
-}
-
-.disputeNoticeBanner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #fff8f0;
-  border: 1px solid #fed7aa;
-  border-radius: 10px;
-  padding: 12px 14px;
-  box-sizing: border-box;
-}
-
-.noticeIconWrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #ffedd5;
-  color: #c2410c;
-  flex-shrink: 0;
-}
-
-.noticeContent {
-  flex: 1;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: #7c2d12;
-}
-
-.noticeContent strong {
-  display: block;
-  font-weight: 700;
-  margin-bottom: 3px;
-  color: #9a3412;
-}
-
-.noticeContent p {
-  margin: 0;
-  color: #8c4a27;
 }
 
 .disputeForm {

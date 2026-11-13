@@ -15,7 +15,8 @@
     background: var(--shop-paper);
 }
 
-.comparison [data-incoming] {
+.bookGroup[data-incoming],
+.fundingSide[data-incoming] {
     --history-accent: var(--shop-exchange-ink, #254337);
     --history-tint: color-mix(in srgb, var(--shop-mint, #b6dac5) 27%, var(--shop-paper));
 }
@@ -34,7 +35,8 @@
     color: var(--history-accent);
 }
 
-.comparison h3 {
+.bookGroup h3,
+.fundingSide h3 {
     display: flex;
     align-items: center;
     gap: 7px;
@@ -42,7 +44,8 @@
     font: 700 .97rem/1.35 var(--shop-body);
 }
 
-.comparison header p {
+.bookGroup header p,
+.fundingSide header p {
     margin: 0;
     font-size: .8125rem;
     font-weight: 600;

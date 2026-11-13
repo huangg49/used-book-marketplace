@@ -19,17 +19,18 @@ function bookTotal(books: ExchangeDetail["giveBooks"]) {
   return books.reduce((sum, book) => sum + (book.price ?? 0), 0);
 }
 
-function BookList({ books, hasSnapshot, incoming = false }: {
+export function ExchangeBookList({ books, hasSnapshot, incoming = false, heading }: {
   books: ExchangeDetail["giveBooks"];
   hasSnapshot?: boolean;
   incoming?: boolean;
+  heading?: string;
 }) {
   const Icon = incoming ? ArrowDownLeft : ArrowUpRight;
   const total = hasSnapshot ? bookTotal(books) : undefined;
   return (
     <section className={styles.bookGroup} data-incoming={incoming || undefined}>
       <header>
-        <h3><Icon size={19} aria-hidden="true" />{incoming ? "Bạn nhận" : "Bạn gửi"}</h3>
+        <h3><Icon size={19} aria-hidden="true" />{heading ?? (incoming ? "Bạn nhận" : "Bạn gửi")}</h3>
         <p>{books.length} cuốn{total != null && <> <span aria-hidden="true">·</span> {formatVnd(total)}</>}</p>
       </header>
       {books.length ? (
@@ -67,8 +68,8 @@ export function ProposalHistory({ detail }: { detail: ExchangeDetail }) {
   return (
     <>
       <div className={styles.comparison}>
-        <BookList books={detail.giveBooks} hasSnapshot={detail.hasAgreementSnapshot} />
-        <BookList books={detail.receiveBooks} hasSnapshot={detail.hasAgreementSnapshot} incoming />
+        <ExchangeBookList books={detail.giveBooks} hasSnapshot={detail.hasAgreementSnapshot} />
+        <ExchangeBookList books={detail.receiveBooks} hasSnapshot={detail.hasAgreementSnapshot} incoming />
       </div>
       {!detail.hasAgreementSnapshot && <p className={styles.note}>Phiếu cũ thiếu bản chụp sách ban đầu.</p>}
       <dl className={styles.agreement}>
