@@ -507,6 +507,11 @@ export const exchangeShipmentInfo = z.object({
 export const exchangeDisputeResolution = z.object({
   returnResolution: exchangeReturnResolutionSchema.optional(),
   canStartReturnResolution: z.boolean().optional(),
+  canVerifyOutboundDelivery: z.boolean().optional(),
+  outboundDeliveryVerification: z.object({
+    verifiedAt: z.iso.datetime({ offset: true }),
+    note: z.string(),
+  }).optional(),
   id: uuid,
   initiatorId: uuid,
   recipientId: uuid,

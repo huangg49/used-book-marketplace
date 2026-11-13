@@ -16,10 +16,11 @@ const HOUR = 3_600_000;
 const STAFF_LIMIT = 300_000;
 type Action = Wire['ExchangeReturnCommand']['action'];
 
-export function oneSidedReturn(row: ExchangeDoc) {
+function oneSidedShipment(row: ExchangeDoc) {
   const sent = Boolean(row.initiatorShippedAt);
-  // This decision covers one physical book per party. The recipient's own
-  // acknowledgement is the evidence that the shipped copy reached them.
+  const shippedAt = sent ? row.initiatorShippedAt : row.recipientShippedAt;
+  const receivedAt = sent ? row.recipientReceivedAt : row.initiatorReceivedAt;
+  // This decision covers one physical book per party.
   if (
     sent === Boolean(row.recipientShippedAt) ||
     (row.initiatorListingIds?.length ?? 1) !== 1 ||
@@ -28,14 +29,15 @@ export function oneSidedReturn(row: ExchangeDoc) {
     !row.shippingDeadline ||
     !row.disputedAt ||
     row.disputedAt < row.shippingDeadline ||
-    (sent ? row.initiatorShippedAt! : row.recipientShippedAt!) >=
-      row.shippingDeadline ||
+    !shippedAt ||
+    shippedAt >= row.shippingDeadline ||
     (sent ? row.recipientDeposit : row.initiatorDeposit) <= 0 ||
-    !(sent ? row.recipientReceivedAt : row.initiatorReceivedAt) ||
     (sent ? row.initiatorReceivedAt : row.recipientReceivedAt)
   )
     return null;
   return {
+    shippedAt,
+    receivedAt,
     ownerId: sent ? row.initiatorId : row.recipientId,
     holderId: sent ? row.recipientId : row.initiatorId,
     listingId: sent ? row.initiatorListingId : row.recipientListingId,
@@ -47,6 +49,33 @@ export function oneSidedReturn(row: ExchangeDoc) {
     ownerOrderId: sent ? row.initiatorOrderId : row.recipientOrderId,
     holderOrderId: sent ? row.recipientOrderId : row.initiatorOrderId,
   };
+}
+
+export function oneSidedReturn(row: ExchangeDoc) {
+  const scope = oneSidedShipment(row);
+  return scope && (scope.receivedAt || row.outboundDeliveryVerification) ? scope : null;
+}
+
+export function pendingOutboundDelivery(row: ExchangeDoc) {
+  if (row.status !== 'ResolutionPending' || row.outboundDeliveryVerification || row.returnResolution)
+    return null;
+  const scope = oneSidedShipment(row);
+  return scope && !scope.receivedAt ? scope : null;
+}
+
+export async function verifyOutboundDelivery(
+  tx: Tx,
+  row: ExchangeDoc,
+  actor: UserDoc,
+  body: Wire['ExchangeReturnCommand'],
+  now: Date,
+): Promise<NonNullable<ExchangeDoc['outboundDeliveryVerification']>> {
+  const scope = pendingOutboundDelivery(row);
+  requireState(Boolean(scope), 'Chiều gửi này không còn chờ xác minh.');
+  const note = body.note?.trim() ?? '';
+  if (note.length < 5) throw invalidField('/note', 'Nhập căn cứ xác minh ít nhất 5 ký tự.');
+  await requireEvidence(tx, row, body.evidenceId, scope!.shippedAt);
+  return { verifiedAt: now, verifiedBy: actor._id, evidenceId: body.evidenceId!, note };
 }
 
 export function returnResolutionView(
@@ -170,6 +199,7 @@ export async function exchangeReturnChange(
   operations: boolean,
   now: Date,
 ): Promise<ExchangeReturnDoc> {
+  if (body.action === 'VerifyOutboundDelivery') throw invalidState();
   const scope = oneSidedReturn(row);
   requireState(
     Boolean(scope),

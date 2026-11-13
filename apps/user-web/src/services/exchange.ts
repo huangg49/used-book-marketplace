@@ -33,6 +33,10 @@ const date = z.string().nullable().optional();
 export const exchangeSchema = z.object({
   returnResolution: exchangeReturnResolutionSchema.optional(),
   canStartReturnResolution: z.boolean().optional(),
+  outboundDeliveryVerification: z.object({
+    verifiedAt: z.iso.datetime({ offset: true }),
+    note: z.string(),
+  }).optional(),
   agreement: exchangeAgreementSchema.nullable().optional(),
   id: z.string().uuid(),
   initiatorId: z.string().uuid(),

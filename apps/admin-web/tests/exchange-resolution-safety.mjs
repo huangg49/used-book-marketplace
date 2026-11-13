@@ -47,7 +47,9 @@ try {
   let responseLost = true;
   let current = item;
   let eligible = false;
+  let canVerify = false;
   let assigned = false;
+  const evidenceId = randomUUID();
   const ownerId = item.initiatorId;
   const holderId = item.recipientId;
   await page.route('**/operations/exchanges/**', async route => {
@@ -59,12 +61,20 @@ try {
         return route.fulfill({ json: { entityId: item.id, state: 'Assigned' } });
       }
       assert(url.pathname.endsWith('/return-resolution'));
-      attempts++;
       const command = { body: route.request().postDataJSON(), key: route.request().headers()['idempotency-key'] };
+      if (command.body.action === 'VerifyOutboundDelivery') {
+        assert.equal(command.body.evidenceId, evidenceId);
+        canVerify = false;
+        eligible = true;
+        current = { ...current, revision: current.revision + 1, canStartReturnResolution: true,
+          outboundDeliveryVerification: { verifiedAt: now, note: command.body.note } };
+        return route.fulfill({ json: current });
+      }
+      attempts++;
       commands.push(command);
       if (responseLost) {
         responseLost = false;
-        current = { ...current, revision: 9, returnResolution: {
+        current = { ...current, revision: current.revision + 1, returnResolution: {
           phase: 'Evidence', ownerId, holderId, listingId: item.initiatorListingId,
           note: command.body.note, evidenceDueAt: new Date(Date.now() + 48 * 3600000).toISOString(),
           appealDueAt: null, effectiveAt: null, appeals: [], returnDueAt: null,
@@ -81,10 +91,13 @@ try {
       return route.fulfill({ json: { assigneeId: assigned ? me._id : null, version: assigned ? 1 : 0 } });
     }
     if (url.pathname.endsWith('/evidence')) {
-      return route.fulfill({ json: { items: [], nextCursor: null, totalBytes: 0, maxTotalBytes: 150000000 } });
+      const items = [{ id: evidenceId, exchangeId: item.id, uploaderId: ownerId,
+        fileName: 'bien-nhan-qa.png', mimeType: 'image/png', byteSize: 42, sha256: 'a'.repeat(64),
+        status: 'Ready', createdAt: now, uploadedAt: now }];
+      return route.fulfill({ json: { items, nextCursor: null, totalBytes: 42, maxTotalBytes: 150000000 } });
     }
     if (url.pathname.endsWith('/dispute')) {
-      return route.fulfill({ json: { ...current, canStartReturnResolution: eligible } });
+      return route.fulfill({ json: { ...current, canStartReturnResolution: eligible, canVerifyOutboundDelivery: canVerify } });
     }
     return route.fulfill(mode === 'error'
       ? { status: 503, json: { code: 'UNAVAILABLE', message: 'QA: cần thử lại.' } }
@@ -124,10 +137,18 @@ try {
   await page.getByRole('link', { name: 'Mở hồ sơ', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Hai chiều giao sách' })).toBeVisible();
   await expect(page.getByText(/Chưa đủ điều kiện chạy quy trình trả sách một chiều/)).toBeVisible();
-  eligible = true;
+  current = { ...current, recipientShippedAt: null };
+  canVerify = true;
   await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
   await page.getByRole('textbox', { name: 'Lý do tiếp nhận / xem tệp' }).fill('Tiếp nhận để đối chiếu hai chiều.');
   await page.getByRole('button', { name: 'Nhận phụ trách bằng chứng' }).click();
+  await page.getByRole('button', { name: 'Xác minh đã giao sách', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Căn cứ xác minh bàn giao' }).fill('Đã đối chiếu đúng kiện và người nhận.');
+  await page.getByLabel('Tệp bằng chứng đã đối chiếu').selectOption(evidenceId);
+  await page.getByRole('button', { name: 'Xác minh đã giao sách', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận', exact: true }).click();
+  await expect(page.getByText('Admin đã xác minh giao đến', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Đã xác minh giao sách\. Có thể yêu cầu/)).toBeVisible();
   await page.getByLabel('Thao tác với hồ sơ').selectOption('RequestEvidence');
   await page.getByRole('textbox', { name: 'Căn cứ hoặc yêu cầu gửi hai bên' }).fill('Vui lòng bổ sung bằng chứng đã nhận hoặc đã gửi sách.');
   await page.getByRole('button', { name: 'Yêu cầu bổ sung bằng chứng', exact: true }).click();

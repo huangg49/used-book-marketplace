@@ -2215,6 +2215,65 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
   describe('one-sided Exchange return', () => {
     const hour = 3_600_000;
 
+    it('lets only the assigned Admin verify an unacknowledged delivery from case evidence', async () => {
+      const ex = await preparedExchange(100000, 300000);
+      const sent = (await post('/exchanges/' + ex.id + '/ship', {
+        expectedVersion: ex.revision, method: 'direct', meetupLocation: 'Điểm QA',
+      }, user1).expect(200)).body;
+      const service = app.get(ExchangesService);
+      const casePath = '/operations/exchanges/' + ex.id;
+      const actionPath = casePath + '/return-resolution';
+      const evidenceId = randomUUID();
+      const body = { expectedVersion: sent.revision, action: 'VerifyOutboundDelivery',
+        note: 'Đã đối chiếu người nhận và kiện sách với biên nhận.', evidenceId };
+      await post(actionPath, body, admin).expect(403);
+      const overdue = new Date(Date.parse(ex.shippingDeadline) + 1);
+      const dispute = (await service.expireShipping(ex.id, overdue))!.exchange;
+      expect(dispute).toMatchObject({ status: 'ResolutionPending', canVerifyOutboundDelivery: true });
+      expect(dispute.canStartReturnResolution).toBeUndefined();
+      await post('/exchanges/' + ex.id + '/return-resolution', body, user1).expect(403);
+      const assign = (actor: Reader, expectedVersion: number) =>
+        post(casePath + '/evidence-access', { expectedVersion, reason: 'Đối chiếu biên nhận giao sách.' }, actor);
+      await assign(staff, 0).expect(200);
+      await post(actionPath, { ...body, expectedVersion: dispute.revision }, staff).expect(403);
+      await post(actionPath, { ...body, expectedVersion: dispute.revision }, admin).expect(403);
+      await assign(admin, 1).expect(200);
+      await post(actionPath, body, admin).expect(409);
+      const command = { ...body, expectedVersion: dispute.revision };
+      await post(actionPath, command, admin).expect(422);
+      const uploadedAt = new Date();
+      await db.c.exchange_evidence.insertOne({
+        _id: evidenceId, exchangeId: ex.id, uploaderId: user1.id, fileName: 'bien-nhan-qa.png',
+        mimeType: 'image/png', byteSize: 1, sha256: 'a'.repeat(64), reservedBytes: 1,
+        status: 'Ready', version: 2, createdAt: uploadedAt, uploadedAt,
+        createReceiptId: randomUUID(), uploadReceiptId: randomUUID(),
+      });
+      const before = await reconcile();
+      const key = randomUUID();
+      const results = await Promise.all([
+        post(actionPath, command, admin, key),
+        post(actionPath, command, admin, key),
+      ]);
+      for (const result of results) {
+        expect(result.status).toBe(200);
+        expect(result.body).toMatchObject({ status: 'ResolutionPending', canStartReturnResolution: true,
+          recipientReceivedAt: null, outboundDeliveryVerification: { note: body.note } });
+      }
+      const updated = results[0].body;
+      expect(updated.revision).toBe(dispute.revision + 1);
+      await post(actionPath, { ...command, note: 'Căn cứ khác cùng mã.' }, admin, key).expect(409);
+      await post(actionPath, { ...command, expectedVersion: updated.revision }, admin).expect(409);
+      await post('/exchanges/' + ex.id + '/receive', { expectedVersion: updated.revision }, user2).expect(409);
+      const memberView = (await get('/exchanges/' + ex.id, user1).expect(200)).body;
+      expect(memberView.outboundDeliveryVerification).toEqual(updated.outboundDeliveryVerification);
+      expect(await reconcile()).toEqual(before);
+      const requested = (await post(actionPath, {
+        expectedVersion: updated.revision, action: 'RequestEvidence', note: 'Đề nghị hai bên bổ sung thông tin.',
+      }, admin).expect(200)).body;
+      expect(requested.returnResolution.phase).toBe('Evidence');
+      expect(requested.outboundDeliveryVerification).toEqual(updated.outboundDeliveryVerification);
+    });
+
     async function start({ compensation = false } = {}) {
       const ex = await preparedExchange(100000, 300000);
       const startTime = Date.now();

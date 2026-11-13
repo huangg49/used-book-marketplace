@@ -1477,6 +1477,12 @@ export type ExchangeReturnDoc = Pick<ReturnResolutionWire, 'phase' | 'note' | 'a
 
 export interface ExchangeDoc extends Lockable {
   returnResolution?: ExchangeReturnDoc;
+  outboundDeliveryVerification?: {
+    verifiedAt: Date;
+    verifiedBy: string;
+    evidenceId: string;
+    note: string;
+  };
   // Missing/null only for historical records; never reconstruct from live listings.
   agreement?: import('@used-books/api-contract').components['schemas']['ExchangeAgreement'] | null;
   _id: string;

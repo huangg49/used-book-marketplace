@@ -8018,6 +8018,13 @@ export interface components {
             returnResolution?: components["schemas"]["ExchangeReturnResolution"];
             /** @description One book was sent and received, the other party missed the shipping deadline, and both sides funded. */
             canStartReturnResolution?: boolean;
+            /** @description An assigned Admin can review delivery evidence for the original one-sided shipment. */
+            canVerifyOutboundDelivery?: boolean;
+            outboundDeliveryVerification?: {
+                /** Format: date-time */
+                verifiedAt: string;
+                note: string;
+            };
             agreement?: components["schemas"]["ExchangeAgreement"] | null;
             /** Format: uuid */
             id: string;
@@ -8214,7 +8221,7 @@ export interface components {
         ExchangeReturnCommand: {
             expectedVersion: number;
             /** @enum {string} */
-            action: "RequestEvidence" | "SubmitStatement" | "OrderReturn" | "Appeal" | "Uphold" | "SetAside" | "ReportDispatch" | "AcknowledgeReturn" | "VerifyReturnDelivery" | "RejectReturnDispatch" | "ReportReturnProblem" | "OrderCompensation" | "Settle";
+            action: "VerifyOutboundDelivery" | "RequestEvidence" | "SubmitStatement" | "OrderReturn" | "Appeal" | "Uphold" | "SetAside" | "ReportDispatch" | "AcknowledgeReturn" | "VerifyReturnDelivery" | "RejectReturnDispatch" | "ReportReturnProblem" | "OrderCompensation" | "Settle";
             note?: string;
             trackingCode?: string;
             /** Format: uuid */

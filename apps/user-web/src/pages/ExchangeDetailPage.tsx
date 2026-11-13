@@ -390,6 +390,12 @@ function ExchangeDetailContent({
         onComplete={handleComplete}
         onDispute={handleDispute}
       />
+      {detail.outboundDeliveryVerification && (
+        <section className={styles.deliveryVerification} aria-label="Xác minh giao sách">
+          <h2>Admin đã xác minh sách đã đến người nhận</h2>
+          <p>{detail.outboundDeliveryVerification.note}</p>
+        </section>
+      )}
       {detail.returnResolution && detail.revision && (
         <ExchangeReturnPanel
           key={detail.viewer.id + ":" + detail.id}

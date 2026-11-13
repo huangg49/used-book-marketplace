@@ -34,7 +34,7 @@ import {
 import { recordViolation } from '../auctions/member-violations.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
-import { exchangeReturnChange, oneSidedReturn, resolutionMessage, returnResolutionView } from './exchange-return-resolution.js';
+import { exchangeReturnChange, oneSidedReturn, pendingOutboundDelivery, resolutionMessage, returnResolutionView, verifyOutboundDelivery } from './exchange-return-resolution.js';
 import { notifyExchange } from './exchange-notifications.js';
 import { EXCHANGE_INSPECTION_MS, hasExchangeDispute, inspectionDeadlines, inspectionMaySettle } from './exchange-inspection.js';
 
@@ -217,6 +217,11 @@ export class ExchangesService {
     return {
       id: row._id,
       ...(oneSidedReturn(row) && row.status === 'ResolutionPending' ? { canStartReturnResolution: true } : {}),
+      ...(pendingOutboundDelivery(row) ? { canVerifyOutboundDelivery: true } : {}),
+      ...(row.outboundDeliveryVerification ? { outboundDeliveryVerification: {
+        verifiedAt: row.outboundDeliveryVerification.verifiedAt.toISOString(),
+        note: row.outboundDeliveryVerification.note,
+      } } : {}),
       ...(row.returnResolution ? { returnResolution: returnResolutionView(row) } : {}),
       agreement: row.agreement ?? null,
       initiatorId: row.initiatorId,
@@ -1558,7 +1563,7 @@ export class ExchangesService {
 
         const incomingShipment = isInitiator ? exchange.recipientShippedAt : exchange.initiatorShippedAt;
         const canRecordReceipt = ['Preparing', 'InTransit', 'Delivered'].includes(exchange.status) ||
-          (exchange.status === 'ResolutionPending' && !exchange.returnResolution &&
+          (exchange.status === 'ResolutionPending' && !exchange.returnResolution && !exchange.outboundDeliveryVerification &&
             Boolean(exchange.shippingDeadline) &&
             Boolean(exchange.initiatorShippedAt) !== Boolean(exchange.recipientShippedAt));
         if (!incomingShipment || !canRecordReceipt) throw invalidState();
@@ -2048,6 +2053,10 @@ export class ExchangesService {
         authorize: async (tx, actor) => {
           await tx.lock('exchanges', [id]);
           const row = await this.exchange(tx, id);
+          if (body.action === 'VerifyOutboundDelivery' &&
+            (!operations || !actor.roles.some(({ role }) => role === 'ADMIN'))) {
+            throw new DomainError(403, 'FORBIDDEN', 'Chỉ Admin phụ trách được xác minh giao sách.');
+          }
           if (operations) {
             staff(actor);
             if ([row.initiatorId, row.recipientId].includes(actor._id))
@@ -2065,10 +2074,13 @@ export class ExchangesService {
           if (row.status !== 'ResolutionPending') throw invalidState();
           if (row.revision !== body.expectedVersion) throw conflict();
           const now = await tx.now();
-          const resolution = await exchangeReturnChange(tx, row, actor, body, operations, now);
-          const closing = resolution.phase === 'Closed';
-          const scope = oneSidedReturn(row)!;
-          if (closing) {
+          const verification = body.action === 'VerifyOutboundDelivery'
+            ? await verifyOutboundDelivery(tx, row, actor, body, now)
+            : undefined;
+          const resolution = verification ? undefined : await exchangeReturnChange(tx, row, actor, body, operations, now);
+          const closing = resolution?.phase === 'Closed';
+          const scope = closing ? oneSidedReturn(row)! : undefined;
+          if (scope && resolution) {
             const books = await this.lockAllListingsOrdered(tx, [scope.listingId, scope.otherListingId]);
             for (const listing of books.values()) {
               const isReturnedBook = listing._id === scope.listingId;
@@ -2082,7 +2094,7 @@ export class ExchangesService {
             { _id: id, revision: row.revision },
             {
               $set: {
-                returnResolution: resolution,
+                ...(verification ? { outboundDeliveryVerification: verification } : { returnResolution: resolution }),
                 updatedAt: now,
                 ...(closing ? {
                   status: 'Cancelled', cancelReason: 'DisputeResolvedRefund', cancelledAt: now, cancelledBy: 'Staff',
@@ -2094,7 +2106,7 @@ export class ExchangesService {
             { returnDocument: 'after' },
           );
           if (!next) throw conflict();
-          if (closing) {
+          if (scope && resolution) {
             await this.ledger.settleExchangeReturn(tx, next, receiptId, now);
             if (resolution.outcome === 'Compensated') {
               await recordViolation(tx, {
@@ -2103,7 +2115,9 @@ export class ExchangesService {
               });
             }
           }
-          const message = resolutionMessage(body.action, resolution);
+          const message = verification
+            ? 'Admin đã xác minh sách gửi ban đầu đã đến người nhận. Hồ sơ tiếp tục giữ tiền trong lúc xử lý.'
+            : resolution && resolutionMessage(body.action, resolution);
           if (message) {
             await notifyExchange(tx, next, closing ? 'ExchangeCancelled' : 'ExchangeDisputed',
               [next.initiatorId, next.recipientId], now, { reason: message, resolutionUpdate: !closing });
@@ -2115,7 +2129,7 @@ export class ExchangesService {
             version: next.revision,
             state: next.status,
             decidedAt: now,
-            event: 'ExchangeReturnUpdated',
+            event: verification ? 'ExchangeOutboundDeliveryVerified' : 'ExchangeReturnUpdated',
             reason: body.note ?? body.action,
             before: {
               phase: row.returnResolution?.phase ?? null,

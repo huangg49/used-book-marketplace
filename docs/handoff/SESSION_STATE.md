@@ -1,3 +1,22 @@
+# Admin xác minh giao sách khi người nhận im lặng — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `65641555`. API0.76 và
+migration 0078 thêm mốc xác minh riêng, giữ trạng thái khiếu nại, cọc và
+tiền bù. Admin được phân công chọn bằng chứng đã tải xong và ghi căn cứ.
+Member web thấy kết quả. Bước tiếp theo là yêu cầu hai bên bổ sung bằng
+chứng, rồi chờ hạn xử lý theo [ADR0089](../adr/0089-one-sided-exchange-return.md).
+
+DB local chính đã áp dụng 0078. Phiếu `990053c6` chờ xác minh, Bình chưa
+ghi nhận gửi và chưa bấm nhận. Tệp mẫu ghi rõ dữ liệu demo, đã tải qua API
+vào bucket bằng chứng đang cấu hình. Admin web local 5173 đã kiểm đăng nhập,
+nhận phụ trách, xem biên nhận mẫu và mở hộp xác nhận. Lệnh xác minh của phiếu
+demo để người dùng tự thực hiện. Member web 5174 đã kiểm đọc tệp trên phiếu.
+
+Mongo QA kiểm 3 ca trao đổi một chiều gồm quyền, bằng chứng, replay đồng
+thời và giữ tiền. Hai ca nâng cấp migration qua. Build API, typecheck hai web
+và Chromium Admin với HTTP fixture qua, gồm xác minh và chuyển sang yêu cầu
+bổ sung bằng chứng. Nút tua hạn trên phiếu và nghiệm thu người thật còn mở.
+
 # Xác nhận nhận sách khi đối tác chưa gửi — 13/11/2026
 
 Nhánh `codex/exchange-progress-web`, tích hợp nghiệp vụ từ `b4486d6b`

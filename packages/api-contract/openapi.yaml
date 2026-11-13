@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.75.0
+  version: 0.76.0
 
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
@@ -23356,6 +23356,15 @@ components:
         canStartReturnResolution:
           type: boolean
           description: One book was sent and received, the other party missed the shipping deadline, and both sides funded.
+        canVerifyOutboundDelivery:
+          type: boolean
+          description: An assigned Admin can review delivery evidence for the original one-sided shipment.
+        outboundDeliveryVerification:
+          type: object
+          required: [verifiedAt, note]
+          properties:
+            verifiedAt: { type: string, format: date-time }
+            note: { type: string }
         agreement:
           anyOf:
             - $ref: "#/components/schemas/ExchangeAgreement"
@@ -23822,7 +23831,7 @@ components:
         expectedVersion: { type: integer, minimum: 1 }
         action:
           type: string
-          enum: [RequestEvidence, SubmitStatement, OrderReturn, Appeal, Uphold, SetAside, ReportDispatch, AcknowledgeReturn, VerifyReturnDelivery, RejectReturnDispatch, ReportReturnProblem, OrderCompensation, Settle]
+          enum: [VerifyOutboundDelivery, RequestEvidence, SubmitStatement, OrderReturn, Appeal, Uphold, SetAside, ReportDispatch, AcknowledgeReturn, VerifyReturnDelivery, RejectReturnDispatch, ReportReturnProblem, OrderCompensation, Settle]
         note: { type: string, minLength: 5, maxLength: 500 }
         trackingCode: { type: string, minLength: 5, maxLength: 80 }
         evidenceId: { type: string, format: uuid }

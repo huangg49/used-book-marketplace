@@ -71,6 +71,7 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
 }
 
 const actionText: Partial<Record<ExchangeReturnAction, { label: string; effect: string }>> = {
+  VerifyOutboundDelivery: { label: "Xác minh đã giao sách", effect: "Đối chiếu đúng kiện sách, người nhận và thời điểm bàn giao. Sau khi lưu, hồ sơ có thể chuyển sang bước yêu cầu bổ sung bằng chứng." },
   RequestEvidence: { label: "Yêu cầu bổ sung bằng chứng", effect: "Hai bên có 48 giờ để bổ sung thông tin. Tiền vẫn được giữ." },
   OrderReturn: { label: "Ra quyết định yêu cầu trả sách", effect: "Hai bên có 48 giờ để kháng nghị. Sau khi quyết định có hiệu lực, bên giữ sách có 72 giờ bàn giao sách hoàn." },
   Uphold: { label: "Giữ quyết định sau kháng nghị", effect: "Quyết định có hiệu lực sau khi Admin xác nhận." },
@@ -104,6 +105,7 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
   const assigned = access.isSuccess && access.data.assigneeId === user.id && item.status === "ResolutionPending";
   const r = item.returnResolution;
   const admin = user.roles.includes("ADMIN");
+  const verifying = item.canVerifyOutboundDelivery && admin;
   const privileged = admin || item.initiatorDeposit + item.recipientDeposit + item.diffAmount <= 300000;
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -113,7 +115,8 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
   const due = (deadline?: string | null) => !!deadline && Date.parse(deadline) <= now;
   const ready = r && due(r.appealDueAt) && !r.appeals.length;
   const actions: ExchangeReturnAction[] = [];
-  if (!r || r.phase === "NeedsReview") actions.push("RequestEvidence");
+  if (verifying) actions.push("VerifyOutboundDelivery");
+  if (item.canStartReturnResolution && (!r || r.phase === "NeedsReview")) actions.push("RequestEvidence");
   if (r?.phase === "Evidence" && due(r.evidenceDueAt) && privileged) actions.push("OrderReturn");
   if (r && (r.phase === "ReturnOrdered" || r.phase === "CompensationOrdered") && due(r.appealDueAt) && r.appeals.length && !r.effectiveAt && admin) {
     actions.push("Uphold", "SetAside");
@@ -125,7 +128,7 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
   }
   if (privileged && r && ((r.phase === "CheckingReturn" && due(r.checkDueAt)) ||
     (r.phase === "CompensationOrdered" && (ready || r.effectiveAt)))) actions.push("Settle");
-  const useEvidence = selected === "OrderCompensation" || selected === "VerifyReturnDelivery" || selected === "RejectReturnDispatch";
+  const useEvidence = selected === "VerifyOutboundDelivery" || selected === "OrderCompensation" || selected === "VerifyReturnDelivery" || selected === "RejectReturnDispatch";
   const evidence = useQuery({
     queryKey: ["operations", "exchange-evidence", user.id, item.id],
     queryFn: () => session.request("/operations/exchanges/" + item.id + "/evidence", exchangeEvidenceListSchema),
@@ -146,7 +149,13 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
           : r?.appeals.length && !r.effectiveAt ? "Đang chờ Admin khác xem xét kháng nghị."
           : "Theo dõi hạn và các cập nhật của hai bên trong hồ sơ."}</p>
       )}
-      {(actions.length > 0 || pending) && (
+      {verifying && !selected && (
+        <div className={styles.verifyCallout}>
+          <p>Chiều gửi ban đầu đang chờ đối chiếu. Mở tệp bàn giao trong mục bằng chứng trước khi xác minh.</p>
+          <Button onClick={() => setSelected("VerifyOutboundDelivery")}>Xác minh đã giao sách</Button>
+        </div>
+      )}
+      {(!verifying && actions.length > 0 || pending && selected !== "VerifyOutboundDelivery") && (
         <label>
           Thao tác với hồ sơ
           <select value={selected ?? ""} disabled={pending} onChange={(e) => {
@@ -171,7 +180,7 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
           fields={(locked) => assigned && selected !== "Settle" && (
             <>
               <label>
-                Căn cứ hoặc yêu cầu gửi hai bên
+                {selected === "VerifyOutboundDelivery" ? "Căn cứ xác minh bàn giao" : "Căn cứ hoặc yêu cầu gửi hai bên"}
                 <textarea value={note} disabled={locked} minLength={5} maxLength={500} onChange={(e) => setNote(e.target.value)} />
               </label>
               {useEvidence && (
@@ -184,6 +193,8 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
                     ))}
                   </select>
                   {evidence.isError && <span role="alert">Chưa tải được tệp. Hãy tải lại hồ sơ.</span>}
+                  {evidence.isSuccess && !evidence.data.items.some((entry) => entry.status === "Ready") &&
+                    <span>Chưa có tệp tải xong trong hồ sơ.</span>}
                 </label>
               )}
             </>
@@ -199,10 +210,14 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
           })}
           schema={exchangeDisputeResolution}
           interpret={(updated) => {
-            if (updated.id !== item.id || !updated.returnResolution) {
+            if (updated.id !== item.id || (selected === "VerifyOutboundDelivery"
+              ? !updated.outboundDeliveryVerification || !updated.canStartReturnResolution
+              : !updated.returnResolution)) {
               throw new Error("Chưa xác minh được kết quả của đúng hồ sơ.");
             }
-            return { tone: "success", text: "Đã ghi nhận thao tác. Hồ sơ đã được cập nhật.", close: true };
+            return { tone: "success", text: selected === "VerifyOutboundDelivery"
+              ? "Đã xác minh giao sách. Có thể yêu cầu hai bên bổ sung bằng chứng."
+              : "Đã ghi nhận thao tác. Hồ sơ đã được cập nhật.", close: true };
           }}
           reconcile={reload}
           onPending={reportPending}
@@ -235,6 +250,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
   const item = !result.isError && result.data?.id === id ? result.data : undefined;
   const retained = result.data?.id === id ? result.data : undefined;
   const r = item?.returnResolution;
+  const verified = item?.outboundDeliveryVerification;
   return (
     <main className={styles.detailPageContainer}>
       <header className={styles.detailHeader}>
@@ -251,13 +267,14 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
           <section className={styles.reasonBox} aria-label="Thông tin giao nhận">
             <h2>Hai chiều giao sách</h2>
             <dl className={styles.returnFacts}>
-              <div><dt>Sách bên khởi tạo gửi</dt><dd>{!item.initiatorShippedAt ? "Chưa ghi nhận gửi" : item.recipientReceivedAt ? "Đối tác đã xác nhận nhận" : "Chưa xác minh giao đến"}</dd></div>
-              <div><dt>Sách bên nhận đề xuất gửi</dt><dd>{!item.recipientShippedAt ? "Chưa ghi nhận gửi" : item.initiatorReceivedAt ? "Đối tác đã xác nhận nhận" : "Chưa xác minh giao đến"}</dd></div>
+              <div><dt>Sách bên khởi tạo gửi</dt><dd>{!item.initiatorShippedAt ? "Chưa ghi nhận gửi" : verified ? "Admin đã xác minh giao đến" : item.recipientReceivedAt ? "Đối tác đã xác nhận nhận" : "Chưa xác minh giao đến"}</dd></div>
+              <div><dt>Sách bên nhận đề xuất gửi</dt><dd>{!item.recipientShippedAt ? "Chưa ghi nhận gửi" : verified ? "Admin đã xác minh giao đến" : item.initiatorReceivedAt ? "Đối tác đã xác nhận nhận" : "Chưa xác minh giao đến"}</dd></div>
               <div><dt>Cọc bên khởi tạo</dt><dd>{money(item.initiatorDeposit)}</dd></div>
               <div><dt>Cọc bên nhận đề xuất</dt><dd>{money(item.recipientDeposit)}</dd></div>
               <div><dt>Tiền bù đã nộp</dt><dd>{money(item.diffAmount)}{item.diffAmount > 0 && (item.diffPayerId === item.initiatorId ? " từ bên khởi tạo" : item.diffPayerId === item.recipientId ? " từ bên nhận đề xuất" : "")}</dd></div>
             </dl>
             {item.disputeReason && <details><summary>Nội dung báo sự cố</summary><p>{item.disputeReason}</p></details>}
+            {verified && <p><strong>Đã xác minh lúc {dateText(verified.verifiedAt)}</strong><br />{verified.note}</p>}
           </section>
           {r && (
             <section className={styles.reasonBox} aria-label="Quyết định trả sách">
@@ -274,11 +291,14 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
           )}
           {item.status === "ResolutionPending" && <ExchangeEvidenceReview id={item.id} userId={user.id} />}
           {item.status === "ResolutionPending" && !item.canStartReturnResolution && (
-            <Notice tone="info">Hồ sơ tiếp tục giữ tiền và sách trong lúc đối chiếu. Chưa đủ điều kiện chạy quy trình trả sách một chiều.</Notice>
+            <Notice tone="info">{item.canVerifyOutboundDelivery
+              ? "Tiền và sách đang được giữ. Admin phụ trách có thể xác minh giao sách từ bằng chứng bàn giao."
+              : "Hồ sơ tiếp tục giữ tiền và sách trong lúc đối chiếu. Chưa đủ điều kiện chạy quy trình trả sách một chiều."}</Notice>
           )}
         </>
       )}
-      {retained && (pending || (item?.status === "ResolutionPending" && item.canStartReturnResolution)) && (
+      {retained && (pending || (item?.status === "ResolutionPending" &&
+        (item.canStartReturnResolution || item.canVerifyOutboundDelivery && user.roles.includes("ADMIN")))) && (
         <OperationsReturnActions
           item={retained}
           user={user}

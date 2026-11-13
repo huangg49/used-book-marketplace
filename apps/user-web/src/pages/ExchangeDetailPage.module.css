@@ -117,6 +117,15 @@
     padding-top: 9px;
 }
 .proposalAmounts dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.deliveryVerification {
+    padding: 14px 17px;
+    border: 1px solid var(--shop-line);
+    border-inline-start: 3px solid var(--shop-exchange-ink);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+.deliveryVerification h2 { margin: 0; font-size: 1.05rem; }
+.deliveryVerification p { margin: 5px 0 0; color: var(--shop-muted); }
 .proposalAmountNote { margin: 6px 0 0; color: var(--shop-muted); font-size: .8125rem; }
 .proposalWorkspace {
     display: grid;

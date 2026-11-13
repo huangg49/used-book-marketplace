@@ -59,3 +59,13 @@
 .nextStep p {
   margin: 0;
 }
+
+.verifyCallout {
+  display: grid;
+  justify-items: start;
+  gap: 0.85rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-inline-start: 3px solid var(--admin-aquarium-ink, #164b56);
+  border-radius: 6px;
+}

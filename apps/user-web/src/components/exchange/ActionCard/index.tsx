@@ -273,7 +273,7 @@ export function ActionCard(props: Props) {
     instructions = detail.disputeReason
       ? `Giao dịch đang có tranh chấp / báo sự cố: "${detail.disputeReason}". Toàn bộ tiền cọc bảo chứng và tiền bù đang được tạm khóa an toàn trên Ledger để bảo vệ quyền lợi của hai bên.`
       : "Trao đổi đang chờ giải quyết tranh chấp. Khoản tiền cọc đang được tạm khóa an toàn.";
-    if (!detail.returnResolution && detail.partnerShipping.sentAt && !detail.viewerShipping.sentAt &&
+    if (!detail.returnResolution && !detail.outboundDeliveryVerification && detail.partnerShipping.sentAt && !detail.viewerShipping.sentAt &&
       !detail.viewerShipping.receivedAt) actions.push("received");
   } else {
     instructions =
