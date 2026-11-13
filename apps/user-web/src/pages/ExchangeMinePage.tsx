@@ -446,7 +446,7 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
           </span>
           <div className={`${styles.statusPill} ${statusInfo.pillClass}`}>
             <StatusIcon size={14} aria-hidden="true" />
-            <span>{statusInfo.text}</span>
+            <span>{item.needsProposalReply ? "Chờ bạn phản hồi" : statusInfo.text}</span>
           </div>
         </div>
       </div>

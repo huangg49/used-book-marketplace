@@ -187,9 +187,12 @@ function ExchangeDetailContent({
     invalidate();
   };
 
-  const handleCounter = async (data: CounterOfferData) => {
-    await counterExchange(id!, detail!.revision!, data);
-    invalidate();
+  const handleCounter = async (data: CounterOfferData, revision: number) => {
+    try {
+      await counterExchange(id!, revision, data);
+    } finally {
+      invalidate();
+    }
   };
 
   const handleDispute = async (reason: string) => {
@@ -484,30 +487,34 @@ function ExchangeDetailContent({
 
   if (standaloneSheet) {
     const waitingForViewer = detail.canViewerAccept ?? detail.viewerRole === "recipient";
+    const updatedProposal = proposal && (detail.revision ?? 0) > 1 && !!detail.lastProposedById;
     const title = funding
       ? detail.viewerFundedAt ? "Bạn đã đặt cọc" : "Đặt cọc đổi sách"
       : preparing ? "Chuẩn bị gửi sách"
+      : updatedProposal ? waitingForViewer ? "Đề nghị đã cập nhật" : "Đã gửi đề nghị mới"
       : waitingForViewer ? "Đề nghị đổi sách" : "Đã gửi đề nghị";
     return (
-      <div className={styles.proposal} data-funding-sheet={funding || undefined}>
+      <div className={styles.proposal} data-funding-sheet={funding || undefined} data-proposal-sheet={proposal || undefined}>
         <div className={styles.proposalNavigation}>
           <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>
             {funding && <ArrowLeft size={17} aria-hidden="true" />}
             Trao đổi của tôi
           </Link>
-          {funding && <span className={styles.proposalCode}>Phiếu #{detail.transactionCode}</span>}
+          {(proposal || funding) && <span className={styles.proposalCode}>Phiếu #{detail.transactionCode}</span>}
         </div>
         <header className={styles.proposalHeader}>
           <h1>{title}</h1>
           <p className={styles.proposalPartner}>
-            <span>{proposal && waitingForViewer ? "Người gửi" : "Đổi sách với"}</span>
+            <span>Đổi sách với</span>
             <strong dir="auto" title={detail.partner.username}>{detail.partner.username}</strong>
           </p>
-          {proposal && <p>{waitingForViewer ? "Chưa giữ sách hay trừ tiền." : "Đang chờ đối tác phản hồi. Chưa giữ sách hay trừ tiền."}</p>}
+          {proposal && <p>{waitingForViewer
+            ? updatedProposal ? "Xem lại sách và tiền bù trước khi phản hồi." : "Chưa giữ sách hay trừ tiền."
+            : "Đang chờ đối tác phản hồi. Chưa giữ sách hay trừ tiền."}</p>}
         </header>
-        <div className={funding ? styles.fundingWorkspace : undefined}>
-          <div className={funding ? styles.fundingControls : undefined}>
-            <div className={funding ? styles.fundingPanel : undefined}>{actionSection}</div>
+        <div className={funding ? styles.fundingWorkspace : proposal ? styles.proposalWorkspace : undefined}>
+          <div className={funding ? styles.fundingControls : proposal ? styles.proposalControls : undefined}>
+            <div className={funding ? styles.fundingPanel : proposal ? styles.proposalActions : undefined}>{actionSection}</div>
             <div className={styles.proposalContact}>
               <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
                 partnerName={detail.partner.username} latest={messagePages?.[0]?.items ?? []}>
@@ -517,14 +524,14 @@ function ExchangeDetailContent({
             </div>
           </div>
           <div className={styles.proposalLayout} data-books-only={funding || undefined}>
-            <section aria-labelledby="proposal-facts" className={funding ? styles.fundingBooks : undefined}>
-              <h2 id="proposal-facts">{proposal ? "Phiếu đề nghị đổi sách" : "Sách trong phiếu"}</h2>
+            <section aria-labelledby="proposal-facts" className={funding || proposal ? styles.fundingBooks : undefined}>
+              <h2 id="proposal-facts">{proposal && !updatedProposal ? "Phiếu đề nghị đổi sách" : "Sách trong phiếu"}</h2>
               {[
                 { title: "Sách bạn gửi", books: detail.giveBooks, Icon: ArrowUpRight },
                 { title: "Sách bạn nhận", books: detail.receiveBooks, Icon: ArrowDownLeft },
               ].map(({ title: label, books, Icon }) => (
                 <div className={styles.proposalBooks} key={label} data-receive={Icon === ArrowDownLeft || undefined}>
-                  <h3>{funding && <Icon size={18} aria-hidden="true" />}{label}</h3>
+                  <h3>{(proposal || funding) && <Icon size={18} aria-hidden="true" />}{label}</h3>
                   {books.map((book, index) => (
                     <div className={styles.proposalBook} key={book.id}>
                       <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} index={index} /></div>
@@ -547,6 +554,7 @@ function ExchangeDetailContent({
               <h2 id="proposal-amounts">Nếu hai bên đồng ý</h2>
               <dl>
                 {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
+                {detail.partnerDeposit != null && <div><dt>Cọc của đối tác</dt><dd>{formatVnd(detail.partnerDeposit)}</dd></div>}
                 {detail.moneyAmount != null && detail.moneyCompensationType !== "none" && (
                   <div><dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù bạn trả" : "Tiền bù bạn nhận"}</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
                 )}

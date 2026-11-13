@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Clock, AlertCircle, ShieldAlert } from "lucide-react";
+import { ArrowLeftRight, Clock, AlertCircle, ShieldAlert } from "lucide-react";
 import { BrandIcon } from "../../BrandIcon";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { session } from "../../../lib/session";
 import { ConfirmDialog } from "../../ConfirmDialog";
 import { ShipmentDialog } from "../ShipmentDialog";
 import { ReceiveDialog } from "../ReceiveDialog";
-import type { CounterOfferData } from "../CounterDialog";
+import { CounterDialog, type CounterOfferData } from "../CounterDialog";
 import { AcceptExchangeDialog } from "../AcceptExchangeDialog";
 import { ROUTES, formatVnd } from "../../../lib/routes";
 import { getWalletSummary } from "../../../services/wallet";
@@ -42,6 +42,7 @@ const addressBookSchema = z.object({
 type Action =
   | "cancel"
   | "accept"
+  | "counter"
   | "reject"
   | "fund"
   | "sent"
@@ -60,7 +61,7 @@ interface Props {
     revisionOverride?: number,
   ) => Promise<void>;
   onReject: (reason: string) => Promise<void>;
-  onCounter?: (data: CounterOfferData) => Promise<void>;
+  onCounter?: (data: CounterOfferData, revision: number) => Promise<void>;
   onFund: () => Promise<void>;
   onConfirmSent: (shipmentData?: ShipmentData) => Promise<void>;
   onConfirmReceived: () => Promise<void>;
@@ -72,6 +73,7 @@ interface Props {
 const labels: Record<Action, string> = {
   cancel: "Hủy đề nghị",
   accept: "Chấp nhận đề nghị",
+  counter: "Đề xuất sách thay thế",
   reject: "Từ chối đề nghị",
   fund: "Đặt cọc mô phỏng",
   sent: "Tạo đơn vận chuyển",
@@ -111,8 +113,9 @@ function useDeadlineExpired(deadline: string | undefined) {
 
 export function ActionCard(props: Props) {
   const { detail } = props;
-  const [action, setAction] = useState<Action>();
+  const [action, setAction] = useState<Exclude<Action, "counter">>();
   const [acceptOpen, setAcceptOpen] = useState(false);
+  const [counterRevision, setCounterRevision] = useState<number>();
   const [shipmentOpen, setShipmentOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -134,6 +137,9 @@ export function ActionCard(props: Props) {
     detail.status === "INSPECTING" ? detail.inspectionDeadline :
     undefined;
   const expired = useDeadlineExpired(deadline);
+  const canAccept = detail.canViewerAccept ?? detail.viewerRole === "recipient";
+  const canReplace = detail.status === "PENDING" && canAccept && !expired &&
+    detail.hasAgreementSnapshot && detail.revision != null && Boolean(props.onCounter);
   const fundingAmount = detail.viewerFundingAmount;
   const fundingDialog = action === "fund";
   const fundLabel = fundingAmount == null ? labels.fund : `Đặt cọc ${formatVnd(fundingAmount)}`;
@@ -167,8 +173,6 @@ export function ActionCard(props: Props) {
   const actions: Action[] = [];
 
   if (detail.status === "PENDING") {
-    const canAccept =
-      detail.canViewerAccept ?? detail.viewerRole !== "proposer";
     if (expired) {
       instructions = "Đề nghị đã hết hạn. Đang chờ cập nhật trạng thái.";
     } else if (canAccept) {
@@ -177,6 +181,7 @@ export function ActionCard(props: Props) {
           ? "Đối tác đã điều chỉnh điều khoản. Hãy kiểm tra sách, cọc và tiền bù trước khi chấp nhận."
           : "Bạn có thể đồng ý hoặc từ chối đề nghị.";
       actions.push("accept");
+      if (canReplace) actions.push("counter");
       if (detail.viewerRole === "proposer") {
         actions.push("cancel");
       } else {
@@ -285,6 +290,10 @@ export function ActionCard(props: Props) {
       setAcceptOpen(true);
       return;
     }
+    if (next === "counter") {
+      setCounterRevision(detail.revision);
+      return;
+    }
     if (next === "sent") {
       setShipmentOpen(true);
       return;
@@ -296,13 +305,15 @@ export function ActionCard(props: Props) {
     setAction(next);
   };
 
-  async function handleCounterSubmit(data: CounterOfferData) {
+  async function handleCounterSubmit(data: CounterOfferData, revision = detail.revision!) {
     if (!props.onCounter) return;
     setBusy(true);
     try {
-      await props.onCounter(data);
+      await props.onCounter(data, revision);
+      setCounterRevision(undefined);
     } catch (failure) {
       if (pendingExchange(detail.id)) {
+        setCounterRevision(undefined);
         setShipmentOpen(false);
         setReceiveOpen(false);
         setAcceptOpen(false);
@@ -401,7 +412,7 @@ export function ActionCard(props: Props) {
   }
 
   return (
-    <div className={styles.card} data-compact={props.compact || undefined} data-sheet={props.standaloneSheet || undefined} data-funding={detail.status === "FUNDING" || undefined}>
+    <div className={styles.card} data-compact={props.compact || undefined} data-sheet={props.standaloneSheet || undefined} data-funding={detail.status === "FUNDING" || undefined} data-proposal-actions={detail.status === "PENDING" || undefined}>
       {!props.compact && <div className={styles.headerRow}>
         <h2 className={styles.cardTitle}>
           <BrandIcon size={18} />
@@ -577,6 +588,7 @@ export function ActionCard(props: Props) {
                 }
                 onClick={() => void open(next)}
               >
+                {next === "counter" && <ArrowLeftRight size={16} aria-hidden="true" />}
                 {label}
               </button>
             );
@@ -614,6 +626,16 @@ export function ActionCard(props: Props) {
         isBusy={busy}
         detail={detail}
       />
+
+      {canReplace && !blocked && counterRevision != null && counterRevision === detail.revision && (
+        <CounterDialog
+          key={`${detail.id}:${counterRevision}`}
+          detail={detail}
+          onClose={() => setCounterRevision(undefined)}
+          onSubmit={data => handleCounterSubmit(data, counterRevision)}
+          isBusy={busy}
+        />
+      )}
 
       {/* Shipment Modal */}
       <ShipmentDialog

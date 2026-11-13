@@ -14,6 +14,7 @@ interface ConfirmDialogProps {
     confirmDisabled?: boolean;
     isDanger?: boolean;
     maxWidth?: string;
+    stickyFooter?: boolean;
 }
 
 export function ConfirmDialog({
@@ -29,6 +30,7 @@ export function ConfirmDialog({
     confirmDisabled = false,
     isDanger = false,
     maxWidth,
+    stickyFooter,
 }: ConfirmDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
@@ -96,6 +98,7 @@ export function ConfirmDialog({
             tabIndex={-1}
             style={maxWidth ? { maxWidth } : undefined}
             className={styles.dialog}
+            data-sticky-footer={stickyFooter || undefined}
             role={isDanger ? "alertdialog" : "dialog"}
             aria-labelledby="dialog-title"
             aria-describedby={description ? "dialog-desc" : undefined}

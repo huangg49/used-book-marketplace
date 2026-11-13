@@ -1,3 +1,20 @@
+# Đề xuất sách thay thế trên Member web — 13/11/2026
+
+Nhánh `codex/exchange-replacement-web`, base `4ceb61c0`. Bên đến lượt phản hồi
+mở hộp chọn sách thay thế trong kệ đủ điều kiện. Hộp hiện sách trên phiếu hiện
+tại và tính cọc, tiền bù của đề nghị mới từ giá trị sách. Nút gửi ghim ở đáy
+hộp trên mobile. Phiếu giữ cùng ID, đổi lượt phản hồi và hiện số tiền mới từ
+API. Danh sách Trao đổi của tôi hiện nhãn Chờ bạn phản hồi theo lượt thực tế.
+Dùng command counter, revision và đối soát mất phản hồi hiện có.
+
+Đã kiểm trên Member web local 5174 bằng An/Bình đến bước xem số tiền của sách
+thay thế. Phiếu demo mới trong Mongo local chính còn chờ Bình gửi, kèm ba bài
+đã duyệt cho hai tài khoản. Phiếu đã chờ đặt cọc trước đó vẫn dùng được.
+Chromium với API/Mongo QA riêng và storage fake đã kiểm luồng Bình gửi, mất
+phản hồi và gửi lại đúng mã/nội dung, An chấp nhận cùng phiếu, bàn phím và bố
+cục 320/390/768/1440 px. Hồi quy Expo web, build và 482 unit Member web đã qua.
+Chưa kiểm thiết bị native. Bước tiếp theo là màn chọn sách để gửi đề nghị.
+
 # Tên đối tác dài trên phiếu đổi sách — 13/11/2026
 
 Nhánh local `codex/exchange-long-names`, base `51df7c85`.

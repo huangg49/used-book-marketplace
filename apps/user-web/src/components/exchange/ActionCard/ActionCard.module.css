@@ -26,6 +26,12 @@
     gap: 8px;
 }
 .card[data-sheet] .btnGrid button { width: auto; }
+.card[data-sheet][data-proposal-actions] .btnGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.card[data-sheet][data-proposal-actions] .btnGrid button { min-height: 44px; }
+.card[data-sheet][data-proposal-actions] .btnGrid > button { grid-column: 1 / -1; }
+.card[data-sheet][data-proposal-actions] .btnDanger { border-color: transparent; background: transparent; color: var(--shop-muted); }
+.card[data-sheet][data-proposal-actions] .btnDanger:hover { color: var(--shop-wine); text-decoration: underline; }
+.btnSecondary svg { flex: none; }
 .card[data-sheet][data-funding] {
     gap: 0;
     font-size: .9375rem;

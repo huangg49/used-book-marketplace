@@ -85,6 +85,32 @@
     padding-top: 9px;
 }
 .proposalAmounts dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.proposal[data-proposal-sheet] { max-width: 1216px; }
+.proposal[data-proposal-sheet] .proposalNavigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0 12px;
+    border-bottom: 1px solid var(--shop-line);
+}
+.proposal[data-proposal-sheet] .proposalHeader h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); }
+.proposalWorkspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(270px, .85fr);
+    grid-template-rows: min-content 1fr;
+    grid-template-areas: "facts actions" "facts amounts";
+    gap: 14px 22px;
+    align-items: start;
+}
+.proposalWorkspace .proposalLayout { display: contents; }
+.proposalWorkspace .fundingBooks { grid-area: facts; }
+.proposalControls { grid-area: actions; min-width: 0; }
+.proposalActions { border: 1px solid var(--shop-line); border-radius: 12px; padding: 15px; background: var(--shop-shelf, #f4eddf); }
+.proposalWorkspace .proposalAmounts { grid-area: amounts; min-width: 0; padding: 15px 17px; border: 1px solid var(--shop-line); }
+@media (max-width: 740px) {
+    .proposalWorkspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "actions" "facts" "amounts"; gap: 12px; }
+}
 .proposal[data-funding-sheet] {
     max-width: 1216px;
     padding-block: 26px 58px;

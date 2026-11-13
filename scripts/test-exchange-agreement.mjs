@@ -52,9 +52,11 @@ try {
   await api('/listings/' + bl + '/revision', b.accessToken, { expectedVersion: current.version, ownershipDeclared: true, content: { ...current.currentRevision.content, exchangeValue: 600000 } });
   await approve(bl);
   // A controlled synthetic address makes the actual Accept dialog usable.
-  const addresses = await api('/me/addresses', b.accessToken);
-  await api('/me/addresses', b.accessToken, { expectedBookVersion: addresses.version, makeDefault: true,
-    address: { recipientName: 'Người nhận QA', phone: '0900000000', detail: 'Địa chỉ tổng hợp kiểm thử', serviceAreaCode: 'HCM-DEMO-v1', localityCode: 'DEMO-A' } });
+  for (const member of [a, b]) {
+    const addresses = await api('/me/addresses', member.accessToken);
+    await api('/me/addresses', member.accessToken, { expectedBookVersion: addresses.version, makeDefault: true,
+      address: { recipientName: 'Người nhận QA', phone: '0900000000', detail: 'Địa chỉ tổng hợp kiểm thử', serviceAreaCode: 'HCM-DEMO-v1', localityCode: 'DEMO-A' } });
+  }
   const req = createRequire(path.join(root, 'apps/user-web/package.json'));
   const { chromium } = createRequire(path.join(root, 'apps/admin-web/package.json'))('playwright');
   const { createServer } = await import(pathToFileURL(req.resolve('vite')).href);
@@ -92,15 +94,52 @@ try {
   result.checks.push('web frozen terms and stale acceptance closes with no reservation');
   const webExchange = await propose(bl2, al2);
   await web.evaluate((id) => { history.pushState({}, '', '/exchange/' + id); dispatchEvent(new PopStateEvent('popstate')); }, webExchange.id);
+  await web.getByRole('heading', { name: 'Đề nghị đổi sách', exact: true }).waitFor();
+  await web.screenshot({ path: path.join(out, 'web-proposal-1440.png') });
   await web.getByRole('button', { name: 'Đề xuất sách thay thế', exact: true }).click();
   const counter = web.getByRole('dialog', { name: 'Đề xuất sách thay thế' });
-  await counter.locator('input[value="' + bl3 + '"]').check();
+  const sendCounter = counter.getByRole('button', { name: 'Gửi đề xuất sách mới', exact: true });
+  assert(await sendCounter.isDisabled());
+  assert.equal(await counter.locator('input[value="' + bl2 + '"]').count(), 0);
+  const replacement = counter.locator('input[value="' + bl3 + '"]');
+  await replacement.focus();
+  await web.keyboard.press('Space');
+  assert(await replacement.isChecked());
+  await web.keyboard.press('Escape');
+  await counter.waitFor({ state: 'hidden' });
+  assert(await web.getByRole('button', { name: 'Đề xuất sách thay thế', exact: true }).evaluate(button => document.activeElement === button));
+  await web.getByRole('button', { name: 'Đề xuất sách thay thế', exact: true }).click();
+  await replacement.check();
   await web.setViewportSize({ width: 768, height: 1000 });
   await web.screenshot({ path: path.join(out, 'web-counter-768.png') });
   await web.setViewportSize({ width: 390, height: 900 });
   await web.screenshot({ path: path.join(out, 'web-counter-390.png') });
-  await counter.getByRole('button', { name: 'Gửi đề xuất sách mới', exact: true }).click();
+  await web.setViewportSize({ width: 320, height: 720 });
+  assert(await counter.evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth));
+  const sendBounds = await sendCounter.boundingBox();
+  assert(sendBounds && sendBounds.y + sendBounds.height <= 720);
+  await web.screenshot({ path: path.join(out, 'web-counter-320.png') });
+
+  const counterRequests = [];
+  const counterPath = '**/api/v1/exchanges/' + webExchange.id + '/counter';
+  await web.route(counterPath, async route => {
+    const request = route.request();
+    counterRequests.push({ key: request.headers()['idempotency-key'], body: request.postData() });
+    if (counterRequests.length === 1) {
+      const response = await route.fetch();
+      assert(response.ok());
+      await route.abort('failed');
+    } else {
+      await route.continue();
+    }
+  });
+  await sendCounter.click();
   await counter.waitFor({ state: 'hidden' });
+  await web.getByRole('button', { name: 'Thử lại thao tác trước', exact: true }).click();
+  await web.getByRole('heading', { name: 'Đã gửi đề nghị mới', exact: true }).waitFor();
+  assert.equal(counterRequests.length, 2);
+  assert(counterRequests[0].key);
+  assert.deepEqual(counterRequests[0], counterRequests[1]);
   const countered = await api('/exchanges/' + webExchange.id, a.accessToken);
   assert.equal(countered.revision, 2);
   assert.equal(countered.recipientListingId, bl3);
@@ -108,9 +147,24 @@ try {
   assert.equal(countered.diffPayerId, b.user.id);
   assert.equal(countered.recipientDeposit, 200000);
   assert.equal(countered.initiatorDeposit, countered.agreement.recipientBook.exchangeValue);
-  await api('/exchanges/' + countered.id + '/accept', a.accessToken, { revision: countered.revision });
-  result.checks.push('web book replacement computes reversed payer and requires partner acceptance');
+  assert.equal(countered.status, 'Proposed');
+  for (const id of [al2, bl2, bl3]) assert.equal((await fixture.db.collection('listings').findOne({ _id: id })).trade, 'Available');
+  const initiator = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await initiator.goto('http://127.0.0.1:5194/login?returnUrl=' + encodeURIComponent('/exchange/' + countered.id));
+  await initiator.getByLabel(/^Email/).fill('admin@operations.test');
+  await initiator.getByLabel(/^Mật khẩu/).fill(password);
+  await initiator.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await initiator.getByRole('heading', { name: 'Đề nghị đã cập nhật', exact: true }).waitFor();
+  assert(await initiator.getByRole('region', { name: 'Nếu hai bên đồng ý' }).getByText('Tiền bù bạn nhận').isVisible());
+  await initiator.screenshot({ path: path.join(out, 'web-revised-1440.png') });
+  await initiator.getByRole('button', { name: 'Chấp nhận đề nghị', exact: true }).click();
+  await initiator.getByRole('button', { name: 'Đồng ý & Khóa giao dịch', exact: true }).click();
+  await initiator.getByRole('heading', { name: 'Đặt cọc đổi sách', exact: true }).waitFor();
+  assert.equal((await api('/exchanges/' + countered.id, a.accessToken)).status, 'AcceptedAwaitingFunding');
+  result.checks.push('web replacement at 320/390/768/1440, keyboard and exact retry after lost response; partner accepts revised terms from the same sheet');
   const rnExchange = await propose(bl2, al3);
+  // This isolated browser fixture exercises agreement state, not login throttling.
+  await fixture.db.collection('login_attempts').deleteMany({});
   const rn = await browser.newPage({ viewport: { width: 390, height: 900 } });
   await rn.goto('http://127.0.0.1:8087/account');
   await rn.getByLabel('Email', { exact: true }).last().fill('member@operations.test');
@@ -123,8 +177,11 @@ try {
   // Keep the designed native fade; capture its settled state, not a mid-fade frame.
   await rn.waitForTimeout(350);
   await rn.screenshot({ path: path.join(out, 'rn-counter-390.png'), fullPage: true });
-  await rn.getByRole('button', { name: 'Gửi đề xuất sách mới', exact: true }).click();
-  await rn.getByRole('button', { name: 'Gửi đề xuất sách mới', exact: true }).waitFor({ state: 'hidden' });
+  await Promise.all([
+    rn.waitForResponse(response => response.url().endsWith('/exchanges/' + rnExchange.id + '/counter') && response.ok()),
+    rn.getByRole('button', { name: 'Gửi đề xuất sách mới', exact: true }).click(),
+  ]);
+  await rn.getByRole('button', { name: 'Đề xuất sách thay thế', exact: true }).waitFor({ state: 'hidden' });
   const rnCountered = await api('/exchanges/' + rnExchange.id, a.accessToken);
   assert.equal(rnCountered.revision, 2);
   assert.equal(rnCountered.recipientListingId, bl);

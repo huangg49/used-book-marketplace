@@ -380,6 +380,9 @@ export async function getExchangeTransactions(
         createdAt: ex.createdAt,
         tab,
         status: mapExchangeStatus(ex, actor),
+        needsProposalReply: ex.status === "Proposed" &&
+          (ex.lastProposedById ?? ex.initiatorId) !== actor &&
+          (!ex.proposalExpiresAt || Date.parse(ex.proposalExpiresAt) > Date.now()),
         partner: {
           id: initiator ? ex.recipientId : ex.initiatorId,
           username:
