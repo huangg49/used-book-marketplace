@@ -19,6 +19,9 @@ tạo, chấp nhận, hủy, giữ lệnh khi mất phản hồi, từ chối đ
 Đã đọc phiếu local `285a732a` qua cả hai tài khoản An và Bình. Chưa gửi
 kiện trong phiếu demo hoặc kiểm hãng vận chuyển thật.
 
+Đầu phiếu chỉ hiện một liên kết quay lại. Chromium 320/1440 kiểm mở từ
+Hội thoại và mở trực tiếp, căn icon cùng hàng và về đúng danh sách.
+
 # Giao nhận hai chiều trên phiếu trao đổi Member web — 13/11/2026
 
 Nhánh `codex/exchange-handover-web`, base `10cab58a`. Phiếu đã đủ cọc mở

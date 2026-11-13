@@ -482,11 +482,14 @@ function ExchangeDetailContent({
   return (
       <div className={styles.exchangeSheet} data-chat-morph-room={transitioning || undefined}>
         <nav className={styles.handoverNav} aria-label="Điều hướng phiếu trao đổi">
-          {location.state?.chatFromInbox && <ConversationBackLink />}
-          <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>
-            <ArrowLeft size={17} aria-hidden="true" />
-            Trao đổi của tôi
-          </Link>
+          {location.state?.chatFromInbox === true ? (
+            <ConversationBackLink className={styles.proposalBack} />
+          ) : (
+            <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>
+              <ArrowLeft size={18} aria-hidden="true" />
+              Trao đổi của tôi
+            </Link>
+          )}
           <span className={styles.proposalCode}>Phiếu #{detail.transactionCode}</span>
         </nav>
         <header className={styles.handoverHeader}>
