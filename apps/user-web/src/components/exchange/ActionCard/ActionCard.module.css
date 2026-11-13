@@ -13,6 +13,19 @@
 .card[data-compact] { font-size:.875rem; line-height:1.55; }
 .card[data-compact] p { font-size:.875rem; line-height:1.55; }
 .card[data-compact] .calloutBox { padding:12px; background:var(--shop-shelf); }
+.card[data-proposal] {
+    padding: 0;
+    gap: 8px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+.card[data-proposal] .btnGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.card[data-proposal] .btnGrid button { width: auto; }
 
 .headerRow {
     display: flex;

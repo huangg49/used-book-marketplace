@@ -51,6 +51,7 @@ type Action =
 
 interface Props {
   compact?: boolean;
+  proposalLayout?: boolean;
   detail: ExchangeDetail;
   onCancel: () => Promise<void>;
   onAccept: (
@@ -126,6 +127,7 @@ export function ActionCard(props: Props) {
   const acknowledged = exchangeAcknowledged(detail.id);
   const blocked = Boolean(pending || acknowledged);
   const deadline =
+    detail.status === "PENDING" ? detail.proposalExpiresAt :
     detail.status === "FUNDING" ? detail.fundingDeadline :
     detail.status === "WAITING_YOU_SEND" ? detail.shippingDeadline :
     detail.status === "INSPECTING" ? detail.inspectionDeadline :
@@ -151,11 +153,13 @@ export function ActionCard(props: Props) {
   if (detail.status === "PENDING") {
     const canAccept =
       detail.canViewerAccept ?? detail.viewerRole !== "proposer";
-    if (canAccept) {
+    if (expired) {
+      instructions = "Đề nghị đã hết hạn. Đang chờ cập nhật trạng thái.";
+    } else if (canAccept) {
       instructions =
         detail.viewerRole === "proposer"
           ? "Đối tác đã điều chỉnh điều khoản. Hãy kiểm tra sách, cọc và tiền bù trước khi chấp nhận."
-          : "Xem thông tin sách và các điều khoản trước khi chấp nhận trao đổi.";
+          : "Bạn có thể đồng ý hoặc từ chối đề nghị.";
       actions.push("accept");
       if (detail.viewerRole === "proposer") {
         actions.push("cancel");
@@ -165,7 +169,7 @@ export function ActionCard(props: Props) {
     } else {
       instructions =
         detail.viewerRole === "proposer"
-          ? "Đề nghị đã gửi. Bạn có thể nhắn tin thương lượng trong khung chat hoặc hủy đề nghị nếu đổi ý."
+          ? "Bạn có thể hủy trong lúc chờ phản hồi."
           : "Bạn đã gửi đề xuất điều chỉnh. Đang chờ đối tác phản hồi; sách chưa được giữ.";
       if (detail.viewerRole === "proposer") {
         actions.push("cancel");
@@ -372,7 +376,7 @@ export function ActionCard(props: Props) {
   }
 
   return (
-    <div className={styles.card} data-compact={props.compact || undefined}>
+    <div className={styles.card} data-compact={props.compact || undefined} data-proposal={props.proposalLayout || undefined}>
       {!props.compact && <div className={styles.headerRow}>
         <h2 className={styles.cardTitle}>
           <BrandIcon size={18} />
@@ -395,9 +399,21 @@ export function ActionCard(props: Props) {
         </span>
       </div>
       }
-      <div className={styles.calloutBox}>
-        <p className={styles.instructions}>{instructions}</p>
-      </div>
+      {(!props.proposalLayout || expired) && (
+        <div className={styles.calloutBox}>
+          <p className={styles.instructions}>{instructions}</p>
+        </div>
+      )}
+      {detail.status === "PENDING" && detail.proposalExpiresAt && !expired && (
+        <p className={styles.deadlineRow}>
+          Hạn phản hồi{" "}
+          <time dateTime={detail.proposalExpiresAt}>
+            {new Date(detail.proposalExpiresAt).toLocaleString("vi-VN", {
+              hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
+            })}
+          </time>
+        </p>
+      )}
       {detail.status === "FUNDING" && detail.fundingDeadline && (
         <p className={styles.deadlineRow}>
           <Clock size={14} className={styles.iconGold} />
@@ -510,9 +526,9 @@ export function ActionCard(props: Props) {
               </button>
             );
           })}
-          <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
+          {!props.proposalLayout && <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
             Trao đổi của tôi
-          </Link>
+          </Link>}
         </div>
       )}
 

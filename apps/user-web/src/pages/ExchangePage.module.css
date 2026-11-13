@@ -1,5 +1,3 @@
-/* Biến màu/font được định nghĩa ở MainLayout.module.css (.root) */
-
 .container {
     max-width: 1280px;
     margin: 0 auto;
@@ -21,288 +19,8 @@
     overflow: hidden;
 }
 
-.coverImage {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.cover0 {
-    background: linear-gradient(160deg, #6b4f3a, #4a3728);
-}
-
-.cover1 {
-    background: linear-gradient(160deg, #5d6b4a, #3f4a30);
-}
-
-.cover2 {
-    background: linear-gradient(160deg, #7a4a3a, #55302a);
-}
-
-.cover3 {
-    background: linear-gradient(160deg, #4a5a6b, #303d4a);
-}
-
-.coverTitle {
-    font-family: var(--font-serif);
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 1.2;
-}
-
-.tag {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    padding: 3px 8px;
-    background: var(--gold-strong);
-    color: #fff;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-/* ===== Giới thiệu ===== */
-.intro {
-    max-width: 1024px;
-    margin: 0 auto;
-    padding: 64px 24px 72px;
-    text-align: center;
-}
-
-.tagline {
-    margin: 0 0 16px;
-    font-family: var(--font-serif);
-    font-size: 22px;
-    font-style: italic;
-    color: var(--gold-strong);
-}
-
-.title {
-    margin: 0 0 24px;
-    font-family: var(--font-serif);
-    font-size: 44px;
-    font-weight: 700;
-    line-height: 1.1;
-}
-
-.lead {
-    max-width: 640px;
-    margin: 0 auto 56px;
-    font-size: 18px;
-    line-height: 1.7;
-    color: var(--ink-muted);
-}
-
-.steps {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 40px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.stepNumber {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 20px;
-    background: var(--sepia);
-    border-radius: 50%;
-    font-family: var(--font-serif);
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--leather);
-}
-
-.stepTitle {
-    margin: 0 0 8px;
-    font-family: var(--font-serif);
-    font-size: 22px;
-    font-weight: 700;
-}
-
-.stepText {
-    max-width: 320px;
-    margin: 0 auto;
-    line-height: 1.65;
-    color: var(--ink-muted);
-}
-
-/* ===== Gợi ý khớp ===== */
-.matches {
-    padding: 72px 0;
-    background: rgba(232, 223, 208, 0.3);
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-}
-
-.matchesHeader {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 40px;
-}
-
-.matchesTitle {
-    margin: 0;
-    font-family: var(--font-serif);
-    font-size: 34px;
-    font-style: italic;
-    font-weight: 700;
-}
-
-.matchesRule {
-    display: none;
-    flex: 1;
-    height: 1px;
-    margin: 0 32px;
-    background: rgba(176, 141, 87, 0.4);
-}
-
-.matchesHint {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--gold-strong);
-}
-
-.matchGrid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
-}
-
-.match {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 24px;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    transition:
-        transform 0.3s ease,
-        box-shadow 0.3s ease;
-}
-
-.match:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 18px 32px -12px rgba(74, 55, 40, 0.2);
-}
-
-.matchBooks {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.matchBook {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    text-align: center;
-}
-
-.matchBook .cover {
-    margin-bottom: 12px;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(42, 38, 34, 0.15);
-}
-
-.matchCaption {
-    display: grid;
-    gap: 2px;
-}
-
-.matchCaption strong {
-    overflow: hidden;
-    font-size: 14px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.matchCaption span {
-    font-size: 13px;
-    font-style: italic;
-    color: var(--ink-muted);
-}
-
-.matchCenter {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-
-.matchBadge {
-    padding: 4px 10px;
-    background: var(--sepia);
-    color: var(--leather);
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.matchBadgeMutual {
-    background: var(--gold-strong);
-    color: #fff;
-}
-
-.matchIcon {
-    color: var(--gold-strong);
-}
-
-.matchNote {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.5;
-    text-align: center;
-    color: var(--ink-muted);
-}
-
-.matchPrimary,
-.matchSecondary {
-    display: block;
-    padding: 14px 16px;
-    border-radius: 4px;
-    font-weight: 700;
-    font-size: 15px;
-    text-align: center;
-    text-decoration: none;
-}
-
-.matchPrimary {
-    background: var(--leather);
-    color: #fff;
-    border: 2px solid var(--leather);
-}
-
-.matchPrimary:hover {
-    background: var(--ink);
-    border-color: var(--ink);
-}
-
-.matchSecondary {
-    background: transparent;
-    color: var(--leather);
-    border: 2px solid var(--leather);
-}
-
-.matchSecondary:hover {
-    background: var(--leather);
-    color: #fff;
-}
-
-/* ===== Sách đang mở trao đổi ===== */
 .open {
-    padding: 72px 0 80px;
+    padding: clamp(24px, 4vw, 56px) 0 72px;
 }
 
 .openHeader {
@@ -314,43 +32,10 @@
 }
 
 .openTitle {
-    margin: 0 0 12px;
-    font-family: var(--font-serif);
-    font-size: 34px;
-    font-weight: 700;
-}
-
-.openLead {
-    max-width: 520px;
     margin: 0;
-    line-height: 1.6;
-    color: var(--ink-muted);
-}
-
-.sortGroup {
-    display: flex;
-    gap: 8px;
-}
-
-.sortButton {
-    padding: 8px 16px;
-    background: transparent;
-    color: var(--ink);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    font: inherit;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.sortButton:hover {
-    background: var(--sepia);
-}
-
-.sortButton[aria-pressed='true'] {
-    background: var(--leather);
-    border-color: var(--leather);
-    color: #fff;
+    font-family: var(--font-serif);
+    font-size: clamp(1.9rem, 4vw, 3.35rem);
+    font-weight: 700;
 }
 
 .bookGrid {
@@ -406,23 +91,6 @@
     text-overflow: ellipsis;
 }
 
-.cardWants {
-    margin: 12px 0 0;
-    font-size: 14px;
-    line-height: 1.4;
-    min-height: 40px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-wrap: pretty;
-}
-
-.cardWantsLabel {
-    font-weight: 600;
-    color: var(--leather);
-}
-
 .cardMeta {
     display: flex;
     flex-direction: column;
@@ -464,13 +132,9 @@
     color: #fff;
 }
 
-.cardCta:focus-visible {
-    outline: none;
-}
-
 .cardCta:focus-visible::after {
-    outline: 3px solid var(--gold-strong);
-    outline-offset: 2px;
+    outline: 2px solid var(--shop-wine);
+    outline-offset: -2px;
 }
 
 .moreWrap {
@@ -493,74 +157,15 @@
     color: #fff;
 }
 
-/* ===== Responsive ===== */
 @media (min-width: 640px) {
-    .bookGrid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .openHeader {
-        flex-direction: row;
-        align-items: flex-end;
-        justify-content: space-between;
-    }
-
-    .title {
-        font-size: 56px;
-    }
+    .bookGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .openHeader { flex-direction: row; align-items: center; justify-content: space-between; }
 }
 
 @media (min-width: 768px) {
-    .container {
-        padding: 0 48px;
-    }
-
-    .intro {
-        padding: 80px 48px 88px;
-    }
-
-    .steps {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 48px;
-    }
-
-    .matchesHeader {
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .matchesRule {
-        display: block;
-    }
+    .container { padding-inline: 48px; }
 }
 
 @media (min-width: 1024px) {
-    .title {
-        font-size: 68px;
-    }
-
-    .matchGrid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 32px;
-    }
-
-    .match {
-        padding: 32px;
-    }
-
-    .bookGrid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 32px;
-    }
-}
-
-@media (max-width: 480px) {
-    .coverTitle {
-        font-size: 15px;
-    }
-
-    .matchBadge {
-        font-size: 11px;
-        padding: 4px 8px;
-    }
+    .bookGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
 }

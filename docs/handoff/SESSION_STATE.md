@@ -1,3 +1,18 @@
+# Gửi đề nghị đổi sách trên Member web — 13/11/2026
+
+Nhánh local `codex/exchange-proposal-entry`, base `f36c44b9` của checkout demo.
+Trang sách mở màn chọn sách, xem lại cọc và tiền bù, rồi gửi đề nghị theo
+FR-X01–X02. Phiếu chờ phản hồi có hành động và hạn ở đầu trang. Thông báo
+mở đúng phiếu cho bên nhận. Nếu đã có hội thoại đang hoạt động cho cuốn sách,
+màn soạn dẫn người dùng tiếp tục ở đó theo quyền chuyển chế độ hiện có.
+
+Đã thử hai tài khoản và sách đã duyệt trên Mongo local chính, đến màn xem lại.
+Gửi đề nghị, mất phản hồi, gửi lại cùng mã và nội dung, và mở phiếu từ thông báo
+đã chạy trên Chromium với API/Mongo QA riêng và ảnh fixture. Ca đề nghị chưa
+giữ sách và chưa giữ tiền. Build, 482 unit web, browser chi tiết sách và hồi
+quy hội thoại trao đổi đã qua. Các bước đồng ý, đặt cọc và giao nhận tiếp tục
+dùng màn hiện có. Bước thiết kế tiếp theo là xác nhận đề nghị và đặt cọc.
+
 # Tra giá cho đầu sách chờ duyệt — 10–11/11/2026
 
 Nhánh `codex/price-lookup-pending`, base `f9fc82af`, commit subject

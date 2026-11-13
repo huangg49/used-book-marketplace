@@ -166,8 +166,8 @@ try {
     await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
     await page.waitForURL(origin + arrivalPath);
   }
-  // The current entry is the shared conversation sheet. Both members need a
-  // real saved receiving address before choosing books, as required by the API.
+  // Exercise the existing conversation path as well as the standalone entry.
+  // Both members have a real saved receiving address for the later acceptance.
   for (const actor of [fixture.member, admin]) {
     const book = await fixture.api("/me/addresses", actor.accessToken);
     await fixture.api("/me/addresses", actor.accessToken, {
@@ -180,8 +180,13 @@ try {
       },
     });
   }
+  const target = await fixture.api(`/listings/${draft.entityId}`);
+  await fixture.api(`/listings/${draft.entityId}/purchase-conversations`, fixture.member.accessToken, {
+    expectedVersion: target.version, intent: "Negotiation",
+  });
   await login(page, "member@operations.test", `/books/${draft.entityId}`);
-  await page.getByRole("link", { name: "Gửi đề nghị đổi sách", exact: true }).click();
+  await page.getByRole("link", { name: "Đề nghị đổi sách", exact: true }).click();
+  await page.getByRole("link", { name: "Mở hội thoại", exact: true }).click();
   await page.waitForURL(/\/chat\/[0-9a-f-]{36}$/);
   const conversationId = new URL(page.url()).pathname.split("/").at(-1);
   const chatPath = `/chat/${conversationId}`;

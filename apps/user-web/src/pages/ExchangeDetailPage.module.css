@@ -3,6 +3,77 @@
     margin: 0 auto;
     padding: 24px;
 }
+
+.proposal {
+    max-width: 1072px;
+    margin-inline: auto;
+    padding: clamp(20px, 4vw, 48px) clamp(16px, 4vw, 48px) 72px;
+    color: var(--shop-ink);
+}
+.proposalBack, .proposalChat summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--shop-wine);
+    font-weight: 650;
+}
+.proposalHeader h1 {
+    margin: 12px 0 7px;
+    font: 700 clamp(1.9rem, 4vw, 3.35rem)/1.13 var(--font-serif);
+    overflow-wrap: anywhere;
+}
+.proposalHeader p {
+    margin: 0 0 16px;
+    color: var(--shop-muted);
+}
+.proposalLayout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: clamp(16px, 4vw, 42px);
+    margin-top: 23px;
+    align-items: start;
+}
+.proposalLayout h2 { margin: 0 0 12px; font-size: 1.14rem; }
+.proposalBooks + .proposalBooks { margin-top: 15px; }
+.proposalBooks h3 { margin: 0 0 6px; color: var(--shop-muted); font-size: .88rem; }
+.proposalBook {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    padding-block: 8px;
+    border-bottom: 1px solid var(--shop-line);
+}
+.proposalBook > div:first-child { aspect-ratio: 3 / 4; overflow: hidden; border-radius: 5px; }
+.proposalBook > div:first-child > div { width: 100%; height: 100%; padding: 0; gap: 0; }
+.proposalBook svg { width: 20px; height: 20px; }
+.proposalBook svg + span { display: none; }
+.proposalBook > div:last-child { display: grid; gap: 2px; overflow-wrap: anywhere; }
+.proposalBook span { color: var(--shop-muted); font-size: .88rem; }
+.proposalAmounts {
+    background: var(--shop-shelf);
+    border-radius: 12px;
+    padding: 16px;
+}
+.proposalAmounts dl { margin: 0; }
+.proposalAmounts dl > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding-block: 4px;
+}
+.proposalAmounts dl > div:last-child {
+    border-top: 1px solid var(--shop-line);
+    margin-top: 5px;
+    padding-top: 9px;
+}
+.proposalAmounts dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.proposalChat { margin-top: 17px; }
+.proposalChat summary { cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 640px) {
+    .proposalLayout { grid-template-columns: minmax(0, 1fr); }
+}
 .sectionLinks {
     display: flex;
     flex-wrap: wrap;

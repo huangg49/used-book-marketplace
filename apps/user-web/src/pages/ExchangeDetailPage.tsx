@@ -19,7 +19,7 @@ import { useConversationTransition } from "../components/conversation/conversati
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
 import { getPurchaseConversations } from "../services/purchase-conversations";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ROUTES } from "../lib/routes";
+import { ROUTES, formatVnd } from "../lib/routes";
 import { useSession } from "../hooks/useSession";
 import { exchangeAcknowledged, pendingExchange } from "../services/exchange";
 import {
@@ -43,6 +43,7 @@ import { SettlementCard } from "../components/exchange/SettlementCard";
 import { ReviewCard } from "../components/exchange/ReviewCard";
 import { ShippingTrackingCard } from "../components/exchange/ShippingTrackingCard";
 import { BookInfoCard } from "../components/exchange/BookInfoCard";
+import { BookCover } from "../components/BookCover";
 import { ActionCard } from "../components/exchange/ActionCard";
 import { ChatPanel } from "../components/exchange/ChatPanel";
 import { exchangeChatGuidance } from "../lib/exchange-chat-guidance";
@@ -357,7 +358,8 @@ function ExchangeDetailContent({
       tabIndex={-1}
     >
       <ActionCard
-        compact={embedded}
+        compact={embedded || detail.status === "PENDING"}
+        proposalLayout={!embedded && detail.status === "PENDING"}
         detail={detail}
         onCancel={handleCancel}
         onAccept={handleAccept}
@@ -384,6 +386,33 @@ function ExchangeDetailContent({
         />
       )}
     </section>
+  );
+  const chat = !embedded && (
+    <ChatPanel
+      key={id}
+      messages={messagesDenied ? [] : messagesQuery.data?.pages.slice().reverse().flatMap((page) => page.items) ?? []}
+      isLoading={messagesQuery.isPending}
+      loadError={messagesDenied || (messagesQuery.isError && !messagesQuery.isFetchNextPageError)}
+      isRefreshing={messagesQuery.isFetching}
+      hasOlder={!messagesDenied && messagesQuery.hasNextPage}
+      isLoadingOlder={messagesQuery.isFetchingNextPage}
+      olderError={!messagesDenied && messagesQuery.isFetchNextPageError}
+      onLoadOlder={() => messagesQuery.fetchNextPage({ cancelRefetch: false })}
+      onRetry={() => void messagesQuery.refetch()}
+      giveBooks={detail.giveBooks.map((book) => book.title)}
+      receiveBooks={detail.receiveBooks.map((book) => book.title)}
+      statusText={statusText}
+      guidance={exchangeChatGuidance(detail)}
+      partner={detail.partner}
+      onSendMessage={handleSendMessage}
+      isReadOnly={[
+        "COMPLETED",
+        "CANCELLED",
+        "REJECTED",
+        "EXPIRED",
+      ].includes(detail.status)}
+      unavailable={messagesDenied}
+    />
   );
   if (embedded)
     return (
@@ -442,6 +471,52 @@ function ExchangeDetailContent({
         </TransactionFrame>
       </div>
     );
+
+  if (detail.status === "PENDING" && !embedded) {
+    const waitingForViewer = detail.canViewerAccept ?? detail.viewerRole === "recipient";
+    return (
+      <div className={styles.proposal}>
+        <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>Trao đổi của tôi</Link>
+        <header className={styles.proposalHeader}>
+          <h1>{waitingForViewer ? `Đề nghị đổi sách từ ${detail.partner.username}` : "Đã gửi đề nghị"}</h1>
+          <p>{waitingForViewer ? "Chưa giữ sách hay trừ tiền." : `Đang chờ ${detail.partner.username} phản hồi. Chưa giữ sách hay trừ tiền.`}</p>
+        </header>
+        {actionSection}
+        <div className={styles.proposalLayout}>
+          <section className={styles.proposalFacts} aria-labelledby="proposal-facts">
+            <h2 id="proposal-facts">Phiếu đề nghị đổi sách</h2>
+            {[{ title: "Sách bạn gửi", books: detail.giveBooks }, { title: "Sách bạn nhận", books: detail.receiveBooks }].map(group => (
+              <div className={styles.proposalBooks} key={group.title}>
+                <h3>{group.title}</h3>
+                {group.books.map(book => (
+                  <div className={styles.proposalBook} key={book.id}>
+                    <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} /></div>
+                    <div><strong>{book.title}</strong><span>{book.author}</span>{book.price != null && <span>{formatVnd(book.price)}</span>}</div>
+                  </div>
+                ))}
+                {group.books.length === 0 && <p>Chưa tải được thông tin sách.</p>}
+              </div>
+            ))}
+            {!detail.hasAgreementSnapshot && <p>Phiếu cũ thiếu thông tin sách lúc gửi đề nghị.</p>}
+          </section>
+          <section className={styles.proposalAmounts} aria-labelledby="proposal-amounts">
+            <h2 id="proposal-amounts">Nếu hai bên đồng ý</h2>
+            <dl>
+              {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
+              {detail.moneyAmount != null && detail.moneyCompensationType !== "none" && (
+                <div><dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù của bạn" : `Tiền bù của ${detail.partner.username}`}</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
+              )}
+              {detail.viewerFundingAmount != null && <div><dt>Bạn cần nộp</dt><dd><strong>{formatVnd(detail.viewerFundingAmount)}</strong></dd></div>}
+            </dl>
+          </section>
+        </div>
+        <details className={styles.proposalChat}>
+          <summary>Nhắn cho {detail.partner.username}</summary>
+          {chat}
+        </details>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -544,31 +619,7 @@ function ExchangeDetailContent({
           <div
             className={`${styles.sideCol} ${conversation.chat} ${styles.legacyChat}`}
           >
-            <ChatPanel
-              key={id}
-              messages={messagesDenied ? [] : messagesQuery.data?.pages.slice().reverse().flatMap((page) => page.items) ?? []}
-              isLoading={messagesQuery.isPending}
-              loadError={messagesDenied || (messagesQuery.isError && !messagesQuery.isFetchNextPageError)}
-              isRefreshing={messagesQuery.isFetching}
-              hasOlder={!messagesDenied && messagesQuery.hasNextPage}
-              isLoadingOlder={messagesQuery.isFetchingNextPage}
-              olderError={!messagesDenied && messagesQuery.isFetchNextPageError}
-              onLoadOlder={() => messagesQuery.fetchNextPage({ cancelRefetch: false })}
-              onRetry={() => void messagesQuery.refetch()}
-              giveBooks={detail.giveBooks.map((book) => book.title)}
-              receiveBooks={detail.receiveBooks.map((book) => book.title)}
-              statusText={statusText}
-              guidance={exchangeChatGuidance(detail)}
-              partner={detail.partner}
-              onSendMessage={handleSendMessage}
-              isReadOnly={[
-                "COMPLETED",
-                "CANCELLED",
-                "REJECTED",
-                "EXPIRED",
-              ].includes(detail.status)}
-              unavailable={messagesDenied}
-            />
+            {chat}
           </div>
         )}
       </div>
