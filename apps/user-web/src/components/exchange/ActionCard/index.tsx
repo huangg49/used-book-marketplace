@@ -441,7 +441,7 @@ export function ActionCard(props: Props) {
             {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
             {detail.moneyCompensationType !== "none" && detail.moneyAmount != null && (
               <div>
-                <dt>{detail.moneyCompensationType === "user_pays" ? `Tiền bạn bù cho ${detail.partner.username}` : `Tiền ${detail.partner.username} bù cho bạn`}</dt>
+                <dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù bạn trả" : "Tiền bù bạn nhận"}</dt>
                 <dd>{formatVnd(detail.moneyAmount)}</dd>
               </div>
             )}
@@ -449,8 +449,8 @@ export function ActionCard(props: Props) {
           <p className={styles.fundingFee}>Phí giao nhận tính riêng.</p>
           <p className={styles.fundingStatus} role="status">
             {expired ? "Hệ thống đang cập nhật phiếu."
-              : detail.viewerFundedAt ? `Chờ ${detail.partner.username} đặt cọc.`
-              : detail.partnerFundedAt ? `${detail.partner.username} đã đặt cọc.`
+              : detail.viewerFundedAt ? "Chờ đối tác đặt cọc."
+              : detail.partnerFundedAt ? "Đối tác đã đặt cọc."
               : "Cả hai cần đặt cọc trước khi gửi sách."}
           </p>
         </>

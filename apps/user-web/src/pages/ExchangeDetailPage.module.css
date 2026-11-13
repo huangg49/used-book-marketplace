@@ -26,6 +26,22 @@
     margin: 0 0 16px;
     color: var(--shop-muted);
 }
+.proposalHeader .proposalPartner {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+    font-size: .9375rem;
+}
+.proposalPartner span { flex: none; }
+.proposalPartner strong {
+    min-width: 0;
+    color: var(--shop-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .proposalLayout {
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
@@ -93,7 +109,7 @@
 }
 .proposal[data-funding-sheet] .proposalHeader h1 {
     max-width: 28ch;
-    margin: 12px 0 24px;
+    margin: 12px 0 7px;
     font-size: 2.55rem;
     letter-spacing: -.032em;
     line-height: 1.15;
@@ -196,6 +212,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    min-width: 0;
     gap: 8px 16px;
     margin-top: 14px;
 }
@@ -222,7 +239,7 @@
 @media (max-width: 800px) {
     .proposal[data-funding-sheet] { padding-block: 14px 42px; }
     .proposal[data-funding-sheet] .proposalHeader h1 {
-        margin: 9px 0 17px;
+        margin: 9px 0 6px;
         font-size: 1.95rem;
     }
     .fundingWorkspace {

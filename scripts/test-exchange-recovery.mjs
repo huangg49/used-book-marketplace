@@ -272,7 +272,7 @@ try {
   });
   await spa(web, "/exchange/" + webExchange.id);
   await web
-    .getByRole("heading", { name: /^Đặt cọc để đổi sách với / })
+    .getByRole("heading", { name: "Đặt cọc đổi sách", exact: true })
     .waitFor();
 
   async function funding(page, exchange, native) {

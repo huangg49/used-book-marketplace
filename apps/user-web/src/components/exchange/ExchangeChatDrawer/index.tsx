@@ -67,14 +67,14 @@ export function ExchangeChatDrawer({ viewerId, exchangeId, partnerName, latest, 
           setOpen(true);
         }}>
         <MessageCircle size={18} aria-hidden="true" />
-        Nhắn cho {partnerName}
+        <span className={styles.name} title={partnerName}>Nhắn cho <bdi>{partnerName}</bdi></span>
         {unread > 0 && <span className={styles.count} aria-label={`${unread} tin mới trên tab này`}>{unread}</span>}
       </button>
       <dialog id={dialogId} ref={dialogRef} className={styles.drawer}
         aria-labelledby={titleId} onClose={close} data-lenis-prevent>
         <div className={styles.sheet}>
           <header className={styles.header}>
-            <h2 id={titleId}>Nhắn cho {partnerName}</h2>
+            <h2 id={titleId} className={styles.name} title={partnerName}>Nhắn cho <bdi>{partnerName}</bdi></h2>
             <button type="button" aria-label="Đóng tin nhắn" className={styles.close}
               onClick={() => dialogRef.current?.close()}>
               <X size={22} aria-hidden="true" />

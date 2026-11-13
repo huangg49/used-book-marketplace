@@ -485,9 +485,9 @@ function ExchangeDetailContent({
   if (standaloneSheet) {
     const waitingForViewer = detail.canViewerAccept ?? detail.viewerRole === "recipient";
     const title = funding
-      ? detail.viewerFundedAt ? "Bạn đã đặt cọc" : `Đặt cọc để đổi sách với ${detail.partner.username}`
+      ? detail.viewerFundedAt ? "Bạn đã đặt cọc" : "Đặt cọc đổi sách"
       : preparing ? "Chuẩn bị gửi sách"
-      : waitingForViewer ? `Đề nghị đổi sách từ ${detail.partner.username}` : "Đã gửi đề nghị";
+      : waitingForViewer ? "Đề nghị đổi sách" : "Đã gửi đề nghị";
     return (
       <div className={styles.proposal} data-funding-sheet={funding || undefined}>
         <div className={styles.proposalNavigation}>
@@ -499,7 +499,11 @@ function ExchangeDetailContent({
         </div>
         <header className={styles.proposalHeader}>
           <h1>{title}</h1>
-          {proposal && <p>{waitingForViewer ? "Chưa giữ sách hay trừ tiền." : `Đang chờ ${detail.partner.username} phản hồi. Chưa giữ sách hay trừ tiền.`}</p>}
+          <p className={styles.proposalPartner}>
+            <span>{proposal && waitingForViewer ? "Người gửi" : "Đổi sách với"}</span>
+            <strong dir="auto" title={detail.partner.username}>{detail.partner.username}</strong>
+          </p>
+          {proposal && <p>{waitingForViewer ? "Chưa giữ sách hay trừ tiền." : "Đang chờ đối tác phản hồi. Chưa giữ sách hay trừ tiền."}</p>}
         </header>
         <div className={funding ? styles.fundingWorkspace : undefined}>
           <div className={funding ? styles.fundingControls : undefined}>
@@ -544,7 +548,7 @@ function ExchangeDetailContent({
               <dl>
                 {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
                 {detail.moneyAmount != null && detail.moneyCompensationType !== "none" && (
-                  <div><dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù của bạn" : `Tiền bù của ${detail.partner.username}`}</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
+                  <div><dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù bạn trả" : "Tiền bù bạn nhận"}</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
                 )}
                 {detail.viewerFundingAmount != null && <div><dt>Bạn cần nộp</dt><dd><strong>{formatVnd(detail.viewerFundingAmount)}</strong></dd></div>}
               </dl>

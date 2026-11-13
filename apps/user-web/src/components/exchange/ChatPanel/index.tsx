@@ -188,7 +188,7 @@ export function ChatPanel({ inDrawer, visible = true, messages, partner, onSendM
                     </div>
                 ) : (
                     <form onSubmit={handleSend}>
-                        <label htmlFor="chatInput" className={styles.inputLabel}>Nhắn cho {partner.username}</label>
+                        <label htmlFor="chatInput" className={styles.inputLabel}>{inDrawer ? "Tin nhắn" : `Nhắn cho ${partner.username}`}</label>
                         {sendError && <p className={styles.sendError} role="alert">{sendError}</p>}
                         <div className={styles.inputForm}>
                         <textarea 

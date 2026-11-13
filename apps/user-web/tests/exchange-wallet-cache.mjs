@@ -30,13 +30,33 @@ let browser;
 const checks = [];
 try {
   browser = await chromium.launch();
-  for (const width of [390, 1440]) for (const mode of ['success', 'rejected', 'lost-ack']) {
+  for (const [width, mode] of [
+    [320, 'success'],
+    ...[390, 1440].flatMap(width => ['success', 'rejected', 'lost-ack'].map(mode => [width, mode])),
+  ]) {
     const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
     await page.clock.setFixedTime(new Date(now));
     let funded = false, walletReads = 0, release;
     const commands = [], errors = [];
+    const partnerName = width === 320 ? 'Đ'.repeat(80) : 'Nguyễn '.repeat(11).trim();
+    const snapshot = (listingId, ownerId, ownerDisplayName) => {
+      const entry = listing(listingId);
+      return {
+        listingId: entry.id, listingVersion: entry.version, revisionId: entry.revisionId,
+        ownerId, ownerDisplayName, bookId: entry.book.id, catalogRevisionId: id(listingId + 300),
+        book: entry.book, condition: entry.condition, description: entry.description,
+        pages: entry.pages, coverNote: entry.coverNote, notes: entry.notes, accessories: entry.accessories,
+        readable: true, hasMissingPages: false, missingEssentialContent: false,
+        exchangeValue: 50000, mediaIds: [id(listingId + 400)],
+      };
+    };
+    const agreement = {
+      initiatorBooks: [snapshot(4, actor.id, actor.displayName)],
+      recipientBook: snapshot(5, id(2), partnerName),
+    };
     const exchange = () => ({ id: id(3), initiatorId: id(1), recipientId: id(2), initiatorListingId: id(4), recipientListingId: id(5),
       status: 'AcceptedAwaitingFunding', revision: 1, initiatorDeposit: 50000, recipientDeposit: 50000,
+      ...(!baseline && { agreement }),
       diffAmount: 0, diffPayerId: null, createdAt: now, updatedAt: now,
       fundingDeadline: '2026-11-03T04:00:00.000Z', initiatorFundedAt: funded ? now : null });
     page.on('pageerror', error => errors.push(error.message));
@@ -88,12 +108,24 @@ try {
     const action = page.locator('#exchange-actions').getByRole('button', { name: /^Đặt cọc [\d.]+/ });
     await expect(action).toBeVisible();
     if (mode === 'success' && !baseline) {
+      const heading = page.getByRole('heading', { name: 'Đặt cọc đổi sách', exact: true });
+      await expect(heading).toBeVisible();
+      const partner = heading.locator('..').getByText(partnerName, { exact: true });
+      await expect(partner).toBeVisible();
+      assert.ok(await partner.evaluate(name => {
+        const line = getComputedStyle(name);
+        return line.whiteSpace === 'nowrap' && line.textOverflow === 'ellipsis';
+      }));
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      const actionBox = await action.boundingBox();
+      assert.ok(actionBox && actionBox.y + actionBox.height <= 900, 'Deposit action fits in the first viewport');
       const chat = page.getByRole('dialog', { name: /^Nhắn cho / });
       const trigger = page.getByRole('button', { name: /^Nhắn cho / });
       await expect(trigger).toContainText('1');
       await expect(chat).toHaveCount(0);
       await trigger.click();
       await expect(chat.getByText('Tin nhắn kiểm thử', { exact: true })).toBeVisible();
+      await expect(chat.getByRole('button', { name: 'Đóng tin nhắn' })).toBeInViewport();
       const input = chat.getByRole('textbox');
       await input.fill('Bản nháp');
       await page.keyboard.press('Escape');

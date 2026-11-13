@@ -1,3 +1,12 @@
+# Tên đối tác dài trên phiếu đổi sách — 13/11/2026
+
+Nhánh local `codex/exchange-long-names`, base `51df7c85`.
+Tiêu đề phiếu đề nghị và đặt cọc dùng nhãn cố định theo trạng thái. Tên đối tác
+ở dòng riêng và thu gọn trong nút chat. Tiền bù ghi theo bên trả/nhận để tên dài
+không đẩy nút đặt cọc xuống dưới.
+Chromium với dữ liệu giả đã kiểm tên dài và tên liền 80 ký tự ở các cỡ
+320/390/1440 px. Đã mở phiếu local của An và Bình, kiểm hộp xác nhận và chat.
+
 # Bố cục phiếu đặt cọc trên Member web — 13/11/2026
 
 Nhánh local `codex/exchange-funding-redesign`, base `e3310a7c`.
