@@ -66,6 +66,26 @@
   font-size: 0.875rem;
 }
 
+.bookTitle {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.35;
+}
+
+.bookText .matchLabel {
+  justify-self: start;
+  max-width: 100%;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--shop-mint) 42%, var(--shop-paper));
+  color: var(--shop-ink);
+  font-size: .75rem;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
 .bookText .value {
   color: var(--shop-wine, #5c0202);
   font-weight: 650;
@@ -96,6 +116,11 @@
 .option[data-selected="true"] {
   border-color: var(--shop-wine, #5c0202);
   background: var(--shop-cream, #fcf8db);
+}
+
+.option[data-matched="true"]:not([data-selected="true"]) {
+  border-color: color-mix(in srgb, var(--shop-mint) 68%, var(--shop-control));
+  background: color-mix(in srgb, var(--shop-mint) 12%, var(--shop-paper));
 }
 
 .option:hover { border-color: var(--shop-wine, #5c0202); }

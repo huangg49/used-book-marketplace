@@ -1,3 +1,16 @@
+# Gợi ý sách theo mong muốn khi gửi đề nghị — 13/11/2026
+
+Member web xếp sách trong kệ theo số tiêu chí tác giả/thể loại khớp với bài
+đang muốn nhận. Dùng tên đã chuẩn hóa dấu/chữ hoa và nhánh thể loại từ taxonomy
+hiện có. Nhãn giải thích vì sao sách được gợi ý, lựa chọn vẫn do thành viên
+quyết định. Ghi chú mong muốn vẫn hiển thị trong mục đang tìm.
+
+Đã thêm hai bài đã duyệt cho mỗi tài khoản An và Bình trong DB local chính.
+Ẩn hai bài trùng của Bình chưa gắn giao dịch để giữ giới hạn năm bài. Chromium
+local qua hai tài khoản ở 320/390/768/1440 px, kiểm xếp hạng, nhãn, chọn sách
+ngoài gợi ý bằng bàn phím và giữ lựa chọn khi quay lại từ màn xem lại. Dừng
+trước gửi đề nghị. Build và 482 unit Member web qua.
+
 # Đề xuất sách thay thế trên Member web — 13/11/2026
 
 Nhánh `codex/exchange-replacement-web`, base `4ceb61c0`. Bên đến lượt phản hồi

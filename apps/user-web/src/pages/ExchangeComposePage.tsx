@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, ChevronDown } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
+import { categoryPath, foldCatalogText } from "@used-books/api-contract/catalog-taxonomy";
 import { z } from "zod";
 import { BookCover } from "../components/BookCover";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
@@ -46,28 +47,36 @@ async function inventory() {
       id: row.id,
       title: book.title,
       author: book.authors.join(", "),
+      authors: book.authors,
+      category: book.category,
       value: revision.content.exchangeValue ?? 0,
       coverUrl: photo?.url,
     };
   }));
 }
 
-function OfferBook({ title, author, coverUrl, value }: {
+function OfferBook({ title, author, coverUrl, value, match }: {
   title: string;
   author: string;
   coverUrl?: string;
   value: number;
+  match?: { id: string; label: string };
 }) {
   return (
     <div className={styles.book}>
       <div className={styles.cover} aria-hidden="true"><BookCover title={title} coverUrl={coverUrl} /></div>
       <div className={styles.bookText}>
-        <strong>{title}</strong>
+        <strong className={styles.bookTitle} title={title}>{title}</strong>
         {author && <span>{author}</span>}
         <span className={styles.value}>{formatVnd(value)}</span>
+        {match && <span id={match.id} className={styles.matchLabel}>{match.label}</span>}
       </div>
     </div>
   );
+}
+
+function preferenceKey(value?: string | null) {
+  return foldCatalogText(value ?? "").trim().replace(/\s+/g, " ");
 }
 
 function ExchangeCompose({ listingId }: { listingId: string | null }) {
@@ -231,6 +240,17 @@ function ExchangeCompose({ listingId }: { listingId: string | null }) {
   const targetBook = <OfferBook title={book.book.title} author={book.book.authors.join(", ")} coverUrl={book.coverUrl} value={targetValue} />;
   const preferences = book.exchangePreferences;
   const wants = [preferences?.targetCategory, preferences?.targetAuthor, preferences?.targetDescription].filter(Boolean);
+  const wantedAuthor = preferenceKey(preferences?.targetAuthor);
+  const wantedCategory = preferenceKey(preferences?.targetCategory);
+  const options = (mine.data ?? []).map(item => {
+    const authorMatch = !!wantedAuthor && item.authors.some(author => preferenceKey(author) === wantedAuthor);
+    const categoryMatch = !!wantedCategory && (preferenceKey(item.category) === wantedCategory ||
+      (!!item.category && categoryPath(item.category).some(category =>
+        category.id === wantedCategory || preferenceKey(category.label) === wantedCategory)));
+    const label = authorMatch && categoryMatch ? "Khớp tác giả và thể loại"
+      : authorMatch ? "Khớp tác giả" : categoryMatch ? "Khớp thể loại" : undefined;
+    return { item, label, priority: Number(authorMatch) + Number(categoryMatch) };
+  }).sort((a, b) => b.priority - a.priority);
   return (
     <div className={styles.page}>
       {review ? (
@@ -292,13 +312,14 @@ function ExchangeCompose({ listingId }: { listingId: string | null }) {
           ) : mine.data?.length ? (
             <>
               <div className={styles.options} role="group" aria-labelledby="own-books">
-                {mine.data.map(item => (
-                  <label className={styles.option} key={item.id} data-selected={selectedIds.includes(item.id)}>
+                {options.map(({ item, label }) => (
+                  <label className={styles.option} key={item.id} data-selected={selectedIds.includes(item.id)}
+                    data-matched={label ? true : undefined}>
                     <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={event => {
                       const checked = event.target.checked;
                       setSelectedIds(previous => checked ? [...previous, item.id] : previous.filter(value => value !== item.id));
-                    }} aria-label={item.title} />
-                    <OfferBook {...item} />
+                    }} aria-label={item.title} aria-describedby={label ? `match-${item.id}` : undefined} />
+                    <OfferBook {...item} match={label ? { id: `match-${item.id}`, label } : undefined} />
                   </label>
                 ))}
               </div>
