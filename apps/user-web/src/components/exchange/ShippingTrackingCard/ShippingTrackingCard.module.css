@@ -222,6 +222,37 @@
 .address,
 .tracking { min-width: 0; }
 
+.address {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 14px;
+    padding: 13px 14px;
+    border: 1px solid var(--shop-line);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--leg-tint) 55%, var(--shop-paper));
+}
+
+.addressInfo { flex: 1 1 180px; min-width: 0; }
+.address .addressInfo h3 {
+    margin: 0 0 6px;
+    color: var(--leg-ink);
+    font-size: .8125rem;
+    font-weight: 650;
+}
+.address .contact {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    margin: 0;
+    color: var(--shop-ink);
+}
+.contact > * { min-width: 0; }
+.contact strong { font-size: .9375rem; }
+.contact span { color: var(--shop-muted); font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.address .street { margin-top: 4px; color: var(--shop-ink); line-height: 1.5; }
+
 .copy,
 .trackingCode {
     display: flex;
@@ -250,6 +281,31 @@
 .copy > button:hover,
 .trackingCode > a:hover { background: var(--leg-tint); }
 .copy > span { color: var(--shop-muted); font-size: .8125rem; }
+.copy[data-labeled] {
+    display: grid;
+    justify-items: start;
+    align-self: center;
+    min-width: 0;
+}
+.copy[data-labeled] > button {
+    min-width: min(144px, 100%);
+    padding-inline: 9px;
+    border: 1px solid var(--shop-control);
+    border-radius: 7px;
+    background: var(--shop-paper);
+    font-size: .75rem;
+    font-weight: 650;
+}
+.copy[data-labeled] > button svg { flex: none; }
+.copy[data-labeled] > button:hover { background: var(--leg-tint); }
+.visuallyHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
 .trackingCode > div { display: grid; }
 .trackingCode > div > span { color: var(--shop-muted); font-size: .8125rem; }
 .trackingCode strong { font-variant-numeric: tabular-nums; }

@@ -34,6 +34,11 @@ Hạn gửi nằm cùng trạng thái và nút tạo đơn. Địa chỉ, hành 
 hai vai, địa chỉ bằng bàn phím và giữ bản nháp. Ca giả lập kiểm gửi, nhận
 lỗi lưu, thử lại, thông báo và chuyển bước. Build và 484 unit qua.
 
+Phần địa chỉ nhận gom người nhận, số điện thoại, địa chỉ và nút sao chép.
+Dùng tên khu vực từ danh mục dịch vụ khi có và tránh lặp ở cuối địa chỉ.
+Chromium 320/390/768/1440 kiểm hai vai trên phiếu local, mở và sao chép
+bằng bàn phím, phản hồi khi trình duyệt từ chối clipboard. Build và 484 unit qua.
+
 # Giao nhận hai chiều trên phiếu trao đổi Member web — 13/11/2026
 
 Nhánh `codex/exchange-handover-web`, base `10cab58a`. Phiếu đã đủ cọc mở

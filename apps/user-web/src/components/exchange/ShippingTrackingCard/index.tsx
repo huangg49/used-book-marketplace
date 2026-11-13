@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock, Copy, ExternalLink, MapPin, Route } from "lucide-react";
 import { exchangeHandoverAnchor, type HandoverNavigation } from "../../../lib/exchange-handover";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { CARRIERS, getTrackingUrl } from "../../../services/exchangeShipment";
+import { serviceAreasQuery } from "../../../services/service-areas";
 import { BookCover } from "../../BookCover";
 import styles from "./ShippingTrackingCard.module.css";
 
@@ -31,7 +33,7 @@ function HandoverTime({ value }: { value: string }) {
   return <time dateTime={value}>{dateFormat.format(new Date(value))}</time>;
 }
 
-function CopyValue({ value, label }: { value: string; label: string }) {
+function CopyValue({ value, label, showLabel = false }: { value: string; label: string; showLabel?: boolean }) {
   const [feedback, setFeedback] = useState<"copied" | "error">();
   useEffect(() => {
     if (!feedback) return;
@@ -39,7 +41,7 @@ function CopyValue({ value, label }: { value: string; label: string }) {
     return () => window.clearTimeout(timer);
   }, [feedback]);
   return (
-    <span className={styles.copy}>
+    <span className={styles.copy} data-labeled={showLabel || undefined}>
       <button type="button" aria-label={label} title={label} onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);
@@ -49,9 +51,41 @@ function CopyValue({ value, label }: { value: string; label: string }) {
         }
       }}>
         {feedback === "copied" ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+        {showLabel && <span aria-hidden="true">{feedback === "copied" ? "Đã sao chép" : label}</span>}
       </button>
-      <span role="status">{feedback === "copied" ? "Đã sao chép" : feedback === "error" ? "Sao chép thất bại" : ""}</span>
+      <span role="status" className={showLabel && feedback !== "error" ? styles.visuallyHidden : undefined}>
+        {feedback === "copied" ? "Đã sao chép" : feedback === "error" ? "Sao chép thất bại" : ""}
+      </span>
     </span>
+  );
+}
+
+function DeliveryAddress({ address, outgoing, open }: {
+  address: NonNullable<ExchangeDetail["viewerAddress"]>;
+  outgoing: boolean;
+  open: boolean;
+}) {
+  const areas = useQuery({ ...serviceAreasQuery, enabled: open && Boolean(address.localityCode), retry: false });
+  const locality = areas.data?.localities.find(item => item.code === address.localityCode)?.label;
+  const street = address.detail.trim();
+  const normalize = (value: string) => value.toLocaleLowerCase("vi").replace(/[.\s]/g, "");
+  const addressText = locality && !normalize(street).endsWith(normalize(locality))
+    ? [street, locality].filter(Boolean).join(", ")
+    : street;
+  const value = [address.recipientName, address.phone, addressText].filter(Boolean).join("\n");
+
+  return (
+    <div className={styles.address}>
+      <div className={styles.addressInfo}>
+        <h3>{outgoing ? "Địa chỉ nhận của đối tác" : "Địa chỉ nhận của bạn"}</h3>
+        <p className={styles.contact}>
+          <strong>{address.recipientName}</strong>
+          <span>{address.phone}</span>
+        </p>
+        <p className={styles.street}>{addressText}</p>
+      </div>
+      <CopyValue value={value} label="Sao chép địa chỉ" showLabel />
+    </div>
   );
 }
 
@@ -88,6 +122,7 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
 }) {
   const row = useRef<HTMLElement>(null);
   const journey = useRef<HTMLDetailsElement>(null);
+  const [journeyOpen, setJourneyOpen] = useState(false);
   const outgoing = direction === "outgoing";
   const id = exchangeHandoverAnchor[direction];
 
@@ -108,7 +143,6 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
   const closed = detail.status === "CANCELLED" || detail.status === "EXPIRED" || detail.status === "REJECTED";
   const address = closed ? undefined : outgoing ? detail.partnerAddress : detail.viewerAddress;
   const books = outgoing ? detail.giveBooks : detail.receiveBooks;
-  const addressText = address ? [address.detail, address.localityCode].filter(Boolean).join(", ") : "";
   const carrier = CARRIERS.find(item => item.code === shipment?.carrierCode);
   const trackingCode = shipment?.trackingCode;
   const trackingUrl = getTrackingUrl(carrier?.code, trackingCode ?? undefined);
@@ -159,20 +193,13 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
         </div>
       {form}
       {hasJourney && (
-        <details ref={journey} className={styles.journey}>
+        <details ref={journey} className={styles.journey} onToggle={event => setJourneyOpen(event.currentTarget.open)}>
           <summary>
             <span><DetailIcon size={16} aria-hidden="true" />{hasTracking ? "Xem hành trình" : "Xem địa chỉ nhận"}</span>
             <ChevronDown size={16} aria-hidden="true" />
           </summary>
           <div className={styles.journeyBody}>
-            {address && (
-              <div className={styles.address}>
-                <h3>{outgoing ? "Địa chỉ nhận của đối tác" : "Địa chỉ nhận của bạn"}</h3>
-                <p>{address.recipientName} · {address.phone}</p>
-                <p>{addressText}</p>
-                <CopyValue value={`${address.recipientName} · ${address.phone}, ${addressText}`} label="Sao chép địa chỉ" />
-              </div>
-            )}
+            {address && <DeliveryAddress address={address} outgoing={outgoing} open={journeyOpen} />}
             {(sentAt || receivedAt) && (
               <div className={styles.tracking}>
                 <h3>{shipment?.method === "direct" ? "Giao trực tiếp" : shipment?.carrierName || carrier?.name || "Thông tin giao nhận"}</h3>
