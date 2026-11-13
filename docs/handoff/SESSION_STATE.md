@@ -20,6 +20,11 @@ hai tên và ảnh bìa, báo số còn lại trong phiếu chi tiết. Tổng g
 dưới danh sách, tiền bù ở giữa. Chromium local đã kiểm phiếu An–Bình 2↔1 từ
 cả hai tài khoản ở 320/390/768/1440 px và nút mở đúng phiếu. Build web qua.
 
+Đầu phiếu chờ phản hồi dùng tiêu đề gọn và tên đối tác ở khối riêng, giữ mã
+phiếu cùng hàng với lối về danh sách. Trạng thái chờ nằm cạnh thao tác và ghi
+chú chưa giữ sách hay trừ tiền nằm cạnh bảng tiền. Chromium local đã kiểm hai
+vai trên phiếu sửa lại ở 320/390/768/1440 px, thêm ca tên dài qua fixture đọc.
+
 Đã kiểm trên Member web local 5174 bằng An/Bình đến bước xem số tiền của sách
 thay thế. Phiếu demo mới trong Mongo local chính còn chờ Bình gửi, kèm ba bài
 đã duyệt cho hai tài khoản. Phiếu đã chờ đặt cọc trước đó vẫn dùng được.

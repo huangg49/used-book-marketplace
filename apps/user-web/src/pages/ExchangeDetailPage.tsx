@@ -497,20 +497,27 @@ function ExchangeDetailContent({
       <div className={styles.proposal} data-funding-sheet={funding || undefined} data-proposal-sheet={proposal || undefined}>
         <div className={styles.proposalNavigation}>
           <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>
-            {funding && <ArrowLeft size={17} aria-hidden="true" />}
+            {(proposal || funding) && <ArrowLeft size={17} aria-hidden="true" />}
             Trao đổi của tôi
           </Link>
           {(proposal || funding) && <span className={styles.proposalCode}>Phiếu #{detail.transactionCode}</span>}
         </div>
         <header className={styles.proposalHeader}>
           <h1>{title}</h1>
-          <p className={styles.proposalPartner}>
-            <span>Đổi sách với</span>
-            <strong dir="auto" title={detail.partner.username}>{detail.partner.username}</strong>
-          </p>
-          {proposal && <p>{waitingForViewer
-            ? updatedProposal ? "Xem lại sách và tiền bù trước khi phản hồi." : "Chưa giữ sách hay trừ tiền."
-            : "Đang chờ đối tác phản hồi. Chưa giữ sách hay trừ tiền."}</p>}
+          {proposal ? (
+            <div className={styles.proposalIdentity}>
+              <span className={styles.proposalInitial} aria-hidden="true">{Array.from(detail.partner.username.trim())[0]?.toLocaleUpperCase("vi") || "?"}</span>
+              <div>
+                <span>Đổi sách với</span>
+                <strong dir="auto" title={detail.partner.username}>{detail.partner.username}</strong>
+              </div>
+            </div>
+          ) : (
+            <p className={styles.proposalPartner}>
+              <span>Đổi sách với</span>
+              <strong dir="auto" title={detail.partner.username}>{detail.partner.username}</strong>
+            </p>
+          )}
         </header>
         <div className={funding ? styles.fundingWorkspace : proposal ? styles.proposalWorkspace : undefined}>
           <div className={funding ? styles.fundingControls : proposal ? styles.proposalControls : undefined}>
@@ -560,6 +567,7 @@ function ExchangeDetailContent({
                 )}
                 {detail.viewerFundingAmount != null && <div><dt>Bạn cần nộp</dt><dd><strong>{formatVnd(detail.viewerFundingAmount)}</strong></dd></div>}
               </dl>
+              <p className={styles.proposalAmountNote}>Chưa giữ sách hay trừ tiền.</p>
             </section>}
             {preparing && <TransactionDisclosure title="Theo dõi giao nhận">
               <ShippingTrackingCard detail={detail} onRefresh={invalidate} />

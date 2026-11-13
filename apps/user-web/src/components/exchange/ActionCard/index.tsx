@@ -466,6 +466,9 @@ export function ActionCard(props: Props) {
           </p>
         </>
       )}
+      {props.standaloneSheet && detail.status === "PENDING" && !canAccept && !expired && (
+        <p className={styles.proposalWaiting}>Chờ đối tác phản hồi</p>
+      )}
       {detail.status === "PENDING" && detail.proposalExpiresAt && !expired && (
         <p className={styles.deadlineRow}>
           Hạn phản hồi{" "}

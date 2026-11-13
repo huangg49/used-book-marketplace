@@ -85,16 +85,81 @@
     padding-top: 9px;
 }
 .proposalAmounts dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.proposal[data-proposal-sheet] { max-width: 1216px; }
+.proposal[data-proposal-sheet] {
+    max-width: 1216px;
+    padding-block-start: clamp(12px, 2.6vw, 30px);
+}
 .proposal[data-proposal-sheet] .proposalNavigation {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0 12px;
+}
+.proposal[data-proposal-sheet] .proposalBack {
+    gap: 7px;
+    font-size: .875rem;
+    text-decoration: none;
+    text-underline-offset: 4px;
+}
+.proposal[data-proposal-sheet] .proposalBack:hover { text-decoration: underline; }
+.proposal[data-proposal-sheet] .proposalHeader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) fit-content(36%);
+    align-items: center;
+    gap: 12px 24px;
+    padding-block: 12px 16px;
+    margin-block-end: 18px;
     border-bottom: 1px solid var(--shop-line);
 }
-.proposal[data-proposal-sheet] .proposalHeader h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); }
+.proposal[data-proposal-sheet] .proposalHeader h1 {
+    margin: 0;
+    font-size: clamp(1.625rem, 3vw, 2.125rem);
+    line-height: 1.16;
+    letter-spacing: -.025em;
+}
+.proposalIdentity {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    padding-inline-start: 14px;
+    border-inline-start: 1px solid var(--shop-line);
+}
+.proposalInitial {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 50%;
+    color: var(--shop-wine);
+    background: var(--shop-shelf, #f4eddf);
+    font-size: .875rem;
+    font-weight: 700;
+}
+.proposalIdentity > div { display: grid; min-width: 0; gap: 2px; }
+.proposalIdentity > div > span { color: var(--shop-muted); font-size: .75rem; line-height: 1.25; }
+.proposalIdentity strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .9375rem;
+    line-height: 1.25;
+    text-align: start;
+}
+.proposalAmountNote { margin: 6px 0 0; color: var(--shop-muted); font-size: .8125rem; }
+@media (max-width: 560px) {
+    .proposal[data-proposal-sheet] .proposalHeader {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 9px;
+        padding-block: 6px 12px;
+        margin-block-end: 12px;
+    }
+    .proposalIdentity { border: 0; padding: 0; }
+    .proposalInitial { width: 32px; height: 32px; }
+}
 .proposalWorkspace {
     display: grid;
     grid-template-columns: minmax(0, 1.65fr) minmax(270px, .85fr);
