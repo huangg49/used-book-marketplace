@@ -15,6 +15,11 @@ Danh sách sách thay thế có chiều cao tối đa theo màn hình và cuộn
 dài. Chromium QA với bốn lựa chọn đã kiểm cuộn chuột, chọn bằng bàn phím và
 nút gửi trên màn hẹp ở 320 px. Nút tải trang tiếp theo nằm dưới danh sách.
 
+Thẻ Trao đổi của tôi hiện số cuốn ngay cạnh nhãn nhận/gửi. Mỗi bên hiện tối đa
+hai tên và ảnh bìa, báo số còn lại trong phiếu chi tiết. Tổng giá trị đổi nằm
+dưới danh sách, tiền bù ở giữa. Chromium local đã kiểm phiếu An–Bình 2↔1 từ
+cả hai tài khoản ở 320/390/768/1440 px và nút mở đúng phiếu. Build web qua.
+
 Đã kiểm trên Member web local 5174 bằng An/Bình đến bước xem số tiền của sách
 thay thế. Phiếu demo mới trong Mongo local chính còn chờ Bình gửi, kèm ba bài
 đã duyệt cho hai tài khoản. Phiếu đã chờ đặt cọc trước đó vẫn dùng được.

@@ -359,54 +359,48 @@ export default function ExchangeMinePage() {
   );
 }
 
+function ExchangeBookSide({ books, sending = false }: { books: ExchangeBook[]; sending?: boolean }) {
+  const count = books.length;
+  const visibleBooks = books.slice(0, 2);
+  const remainingCount = count - visibleBooks.length;
+  const totalPrice = books.reduce((sum, book) => sum + (book.price ?? 0), 0);
+  return (
+    <section className={styles.bookSide} data-sending={sending || undefined}>
+      <h3 className={styles.bookSideHeading}>
+        <span>{sending ? "Sách bạn gửi" : "Sách bạn nhận"}</span>
+        {count > 0 && <span className={styles.bookCount}>{count} cuốn</span>}
+      </h3>
+      {count > 0 ? (
+        <ul className={styles.bookList}>
+          {visibleBooks.map((book, index) => (
+            <li className={styles.bookRow} key={book.id}>
+              <div className={styles.bookCoverBox} aria-hidden="true">
+                <BookCover title={book.title} coverUrl={book.coverUrl} index={index} className={styles.coverImage} />
+              </div>
+              <div className={styles.bookDetails}>
+                <p className={styles.bookTitle} title={book.title}>{book.title}</p>
+                {book.author && <p className={styles.bookAuthor} title={book.author}>{book.author}</p>}
+              </div>
+            </li>
+          ))}
+          {remainingCount > 0 && <li className={styles.bookRemainder}>Còn {remainingCount} cuốn trong chi tiết</li>}
+        </ul>
+      ) : <p className={styles.bookRemainder}>Chưa có thông tin sách.</p>}
+      {count > 0 && books.every(book => book.price != null) && (
+        <p className={styles.bookPrice}>
+          <span>{count > 1 ? "Tổng giá trị đổi" : "Giá trị đổi"}</span>
+          <strong>{formatVnd(totalPrice)}</strong>
+        </p>
+      )}
+    </section>
+  );
+}
+
 function ExchangeCard({ item }: { item: ExchangeItem }) {
   const isRejected =
     item.status === "REJECTED" || item.status === "EXPIRED" || item.status === "CANCELLED";
   const statusInfo = getStatusInfo(item.status);
   const StatusIcon = statusInfo.Icon;
-
-  const renderBookCol = (books: ExchangeBook[], label: string, isGive: boolean) => {
-    const mainBook = books[0] || {
-      title: "Sách trao đổi",
-      author: "Chưa rõ",
-      price: 0,
-    };
-    const count = books.length;
-    const title = count > 1 ? `${mainBook.title} (+${count - 1} cuốn khác)` : mainBook.title;
-    const author = count > 1 ? "Nhiều tác giả" : mainBook.author;
-    const totalPrice = books.reduce((sum, b) => sum + (b.price || 0), 0);
-
-    return (
-      <div className={styles.bookSide}>
-        <div className={styles.bookCoverBox}>
-          <BookCover
-            title={mainBook.title}
-            coverUrl={mainBook.coverUrl}
-            index={isGive ? 1 : 0}
-            className={styles.coverImage}
-          />
-          {count > 1 && <span className={styles.multiBadge}>{count} cuốn</span>}
-        </div>
-
-        <div className={styles.bookDetails}>
-          <span
-            className={`${styles.sideTag} ${
-              isGive ? styles.sideTagGive : styles.sideTagReceive
-            }`}
-          >
-            {label}
-          </span>
-          <h3 className={styles.bookTitle} title={title}>
-            {title}
-          </h3>
-          <p className={styles.bookAuthor}>{author}</p>
-          {totalPrice > 0 && (
-            <p className={styles.bookPrice}>Ước tính: {formatVnd(totalPrice)}</p>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   const firstReceiveTitle = item.receiveBooks[0]?.title || "Sách";
   const firstGiveTitle = item.giveBooks[0]?.title || "Sách";
@@ -453,7 +447,7 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
 
       {/* Middle Body: Receive (Left) <== [Swap & Compensation] ==> Give (Right) */}
       <div className={styles.cardBody}>
-        {renderBookCol(item.receiveBooks, "Sách bạn nhận", false)}
+        <ExchangeBookSide books={item.receiveBooks} />
 
         <div className={styles.swapConnector}>
           <div
@@ -462,30 +456,26 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
             }`}
           >
             {isRejected ? (
-              <X size={20} strokeWidth={2.5} />
+              <X size={20} strokeWidth={2.5} aria-hidden="true" />
             ) : (
-              <ArrowLeftRight size={20} strokeWidth={2.2} />
+              <ArrowLeftRight size={20} strokeWidth={2.2} aria-hidden="true" />
             )}
           </div>
 
-          <div className={styles.compBadge}>
+          <div className={styles.compensation}>
             {isRejected ? (
               <span className={styles.compNone}>Đã kết thúc</span>
             ) : item.moneyCompensationType === "user_pays" ? (
-              <span className={styles.compUserPays}>
-                Bạn bù: +{formatVnd(item.moneyAmount || 0)}
-              </span>
+              <><span>Bạn bù</span><strong className={styles.compUserPays}>{formatVnd(item.moneyAmount ?? 0)}</strong></>
             ) : item.moneyCompensationType === "other_pays" ? (
-              <span className={styles.compOtherPays}>
-                Họ bù: +{formatVnd(item.moneyAmount || 0)}
-              </span>
+              <><span>Bạn nhận tiền bù</span><strong className={styles.compOtherPays}>{formatVnd(item.moneyAmount ?? 0)}</strong></>
             ) : (
               <span className={styles.compNone}>Đổi ngang giá</span>
             )}
           </div>
         </div>
 
-        {renderBookCol(item.giveBooks, "Sách bạn giao", true)}
+        <ExchangeBookSide books={item.giveBooks} sending />
       </div>
 
       {/* Bottom Footer: Meta & Action CTA Button */}
