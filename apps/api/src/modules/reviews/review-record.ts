@@ -22,7 +22,7 @@ export async function reviewTransaction(
         : 'point_orders';
   if (lock) await tx.lock(collection, [id]);
   const row = await tx.c[collection].findOne({ _id: id });
-  if (!row) throw notFound();
+  if (!row || ('demoArchivedAt' in row && row.demoArchivedAt)) throw notFound();
   const a = 'initiatorId' in row ? row.initiatorId : row.buyerId;
   const b = 'recipientId' in row ? row.recipientId : row.sellerId;
   if (authorId !== a && authorId !== b) throw notFound();

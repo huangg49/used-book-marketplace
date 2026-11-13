@@ -1,4 +1,4 @@
-import type { ExchangeReturnResolution } from "@used-books/session-client";
+import type { DemoExchangeDeadline, ExchangeReturnResolution } from "@used-books/session-client";
 import type { ExchangeStatus, ExchangeBook, ExchangeUser } from './exchangeMine';
 
 export type ViewerRole = 'proposer' | 'recipient';
@@ -27,6 +27,7 @@ export interface ExchangeDetail {
   rawStatus?: string;
   returnResolution?: ExchangeReturnResolution;
   demoShippingAdvanceAvailable?: boolean;
+  demoDeadline?: DemoExchangeDeadline;
   outboundDeliveryVerification?: { verifiedAt: string; note: string };
   lastProposedById?: string | null;
   canViewerAccept?: boolean;

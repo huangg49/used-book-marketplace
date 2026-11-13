@@ -12,6 +12,7 @@ export type ExchangeCommand =
   | "complete"
   | "dispute"
   | "demo-advance-shipping"
+  | "demo-advance"
   | "return-resolution";
 const stateSchema = z.object({
   id: z.string().uuid(),

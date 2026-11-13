@@ -14,9 +14,11 @@ const receipt = z.object({ entityId: z.string(), state: z.string() });
 export function ExchangeEvidenceReview({
   id,
   userId,
+  onAssignment,
 }: {
   id: string;
   userId: string;
+  onAssignment?: () => Promise<unknown>;
 }) {
   const [reason, setReason] = useState(""),
     [error, setError] = useState(""),
@@ -82,6 +84,7 @@ export function ExchangeEvidenceReview({
       );
       setIntent(undefined);
       await access.refetch();
+      await onAssignment?.();
     } catch (e) {
       if (e instanceof ApiError && [400, 409, 422].includes(e.status)) {
         setIntent(undefined);

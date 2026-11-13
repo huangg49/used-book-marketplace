@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.78.0
+  version: 0.79.0
 
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
@@ -11137,6 +11137,31 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/demo-advance:
+    post:
+      operationId: advanceDemoExchangeDeadline
+      tags: [Exchanges]
+      description: Apply the current exchange deadline on an allowlisted local simulation. Does not attest pickup, receipt or dispute evidence.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DemoExchangeDeadlineCommand' }
+      responses:
+        "200":
+          description: Current Exchange snapshot or authorized replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exchange' }
+        "400": { $ref: '#/components/responses/ListingError' }
+        "401": { $ref: '#/components/responses/ListingError' }
+        "403": { $ref: '#/components/responses/ListingError' }
+        "404": { $ref: '#/components/responses/ListingError' }
+        "409": { $ref: '#/components/responses/ListingError' }
   /exchanges/{id}/messages:
     get:
       operationId: getExchangeMessages
@@ -11607,6 +11632,31 @@ paths:
         "409": { $ref: '#/components/responses/ListingError' }
         "422": { $ref: '#/components/responses/ListingError' }
         "503": { $ref: '#/components/responses/ListingError' }
+  /operations/exchanges/{id}/demo-advance:
+    post:
+      operationId: advanceOperationsDemoExchangeDeadline
+      tags: [Exchanges]
+      description: Close the current simulated dispute window as the assigned independent Admin. Decisions, review of appeals, evidence and settlement remain separate commands.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DemoExchangeDeadlineCommand' }
+      responses:
+        "200":
+          description: Current Exchange snapshot or authorized replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exchange' }
+        "400": { $ref: '#/components/responses/ListingError' }
+        "401": { $ref: '#/components/responses/ListingError' }
+        "403": { $ref: '#/components/responses/ListingError' }
+        "404": { $ref: '#/components/responses/ListingError' }
+        "409": { $ref: '#/components/responses/ListingError' }
   /operations/exchanges/{id}/return-resolution:
     post:
       operationId: actOnOperationsExchangeReturn
@@ -23392,6 +23442,8 @@ components:
       properties:
         returnResolution:
           $ref: '#/components/schemas/ExchangeReturnResolution'
+        demoDeadline:
+          $ref: '#/components/schemas/DemoExchangeDeadline'
         demoShippingAdvanceAvailable:
           type: boolean
           description: The current member can simulate this local demo exchange's shipping deadline.
@@ -23869,6 +23921,16 @@ components:
       required: [reason]
       properties:
         reason: { type: string, minLength: 5, maxLength: 300 }
+    DemoExchangeDeadline:
+      type: string
+      enum: [Proposal, Funding, Shipping, Transit, Inspection, Evidence, Appeal, Return, ReturnCheck]
+    DemoExchangeDeadlineCommand:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, deadline]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        deadline: { $ref: '#/components/schemas/DemoExchangeDeadline' }
     ExchangeReturnCommand:
       type: object
       additionalProperties: false

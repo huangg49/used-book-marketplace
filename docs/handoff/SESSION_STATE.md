@@ -1,3 +1,17 @@
+# Tua thời hạn trao đổi trên phiếu và hồ sơ Admin — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `d6885a54`. OpenAPI 0.79.0 và
+migration 0079. Member web có nút tua hạn phản hồi, cọc, gửi, vận chuyển và
+kiểm tra. Hồ sơ Admin đang phụ trách có nút tua hạn bằng chứng, kháng nghị,
+trả sách và kiểm tra sách hoàn. Chỉ bật cho hai tài khoản demo local. Xem
+[cách bật](ENV_HANDOFF.md). Nghiệm thu native và hãng thật chưa chạy.
+
+DB local dọn sáu phiếu, 14 bài cũ của An/Bình và hoàn các khoản đang giữ ở
+bốn phiếu. Phiếu có bút toán được lưu nội bộ để đối soát. Mỗi người có ba
+bài trao đổi mới đã duyệt, không có phiếu mới. Chromium với HTTP/Mongo QA
+đã bấm tua hạn gửi trên Member và tua hạn bổ sung bằng chứng trên Admin.
+Suite Exchange qua 62 ca. Đối soát sổ cái local cân bằng.
+
 # Chờ đủ hai vận đơn trước khi shipper lấy sách — 13/11/2026
 
 Nhánh `codex/exchange-progress-web`, base `807c899a`, OpenAPI 0.78.0. API tách

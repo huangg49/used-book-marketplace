@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import {
   exchangeEvidenceAccessSchema,
+  demoExchangeDeadlineLabel,
   exchangeEvidenceListSchema,
   exchangeReturnPhase,
   type CurrentUser,
+  type DemoExchangeDeadline,
   type ExchangeReturnAction,
 } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
@@ -93,6 +95,7 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
   const [note, setNote] = useState("");
   const [evidenceId, setEvidenceId] = useState("");
   const [pending, setPending] = useState(false);
+  const [demo, setDemo] = useState<{ deadline: DemoExchangeDeadline; revision: number }>();
   const reportPending = useCallback((value: boolean) => {
     setPending(value);
     onPending(value);
@@ -149,13 +152,43 @@ function OperationsReturnActions({ item, user, reload, onFinish, onPending }: {
           : r?.appeals.length && !r.effectiveAt ? "Đang chờ Admin khác xem xét kháng nghị."
           : "Theo dõi hạn và các cập nhật của hai bên trong hồ sơ."}</p>
       )}
-      {verifying && !selected && (
+      {item.demoDeadline && !selected && !demo && !pending && (
+        <Button onClick={() => setDemo({ deadline: item.demoDeadline!, revision: item.revision })}>
+          Tua {demoExchangeDeadlineLabel[item.demoDeadline]} · Demo
+        </Button>
+      )}
+      {demo && (
+        <div className={styles.demoAction}>
+        <ActionPanel
+          label="Tua hạn demo"
+          title={"Tua " + demoExchangeDeadlineLabel[demo.deadline]}
+          submitLabel="Tua ngay"
+          confirmTitle="Xác nhận tua hạn demo?"
+          confirmBody={<p>Đóng thời hạn này để thử thao tác tiếp theo trên hồ sơ.</p>}
+          build={() => ({
+            path: "/operations/exchanges/" + item.id + "/demo-advance",
+            body: { expectedVersion: demo.revision, deadline: demo.deadline },
+          })}
+          schema={exchangeDisputeResolution}
+          interpret={(updated) => {
+            if (updated.id !== item.id || updated.revision <= demo.revision)
+              throw new Error("Chưa xác minh được kết quả của đúng hồ sơ.");
+            return { tone: "success", text: "Đã tua hạn demo. Xem thao tác tiếp theo trên hồ sơ.", close: true };
+          }}
+          reconcile={reload}
+          onPending={reportPending}
+          onFinish={(outcome) => { setDemo(undefined); onFinish(outcome); }}
+        />
+        {!pending && <Button onClick={() => setDemo(undefined)}>Đóng thao tác demo</Button>}
+        </div>
+      )}
+      {verifying && !selected && !demo && (
         <div className={styles.verifyCallout}>
           <p>Chiều gửi ban đầu đang chờ đối chiếu. Mở tệp bàn giao trong mục bằng chứng trước khi xác minh.</p>
           <Button onClick={() => setSelected("VerifyOutboundDelivery")}>Xác minh đã giao sách</Button>
         </div>
       )}
-      {(!verifying && actions.length > 0 || pending && selected !== "VerifyOutboundDelivery") && (
+      {!demo && (!verifying && actions.length > 0 || pending && selected !== "VerifyOutboundDelivery") && (
         <label>
           Thao tác với hồ sơ
           <select value={selected ?? ""} disabled={pending} onChange={(e) => {
@@ -289,7 +322,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
               {r.outcome && <p>{r.outcome === "Returned" ? "Đã ghi nhận trả sách và hoàn tiền." : "Đã chi bồi thường và ghi nhận vi phạm không trả sách."}</p>}
             </section>
           )}
-          {item.status === "ResolutionPending" && <ExchangeEvidenceReview id={item.id} userId={user.id} />}
+          {item.status === "ResolutionPending" && <ExchangeEvidenceReview id={item.id} userId={user.id} onAssignment={() => result.refetch()} />}
           {item.status === "ResolutionPending" && !item.canStartReturnResolution && (
             <Notice tone="info">{item.canVerifyOutboundDelivery
               ? "Tiền và sách đang được giữ. Admin phụ trách có thể xác minh giao sách từ bằng chứng bàn giao."

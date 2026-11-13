@@ -226,6 +226,7 @@ export class CarrierService {
       exchange = await this.mongo.c.exchanges.findOne({ _id: exchangeId });
     } else if (trackingCode) {
       exchange = await this.mongo.c.exchanges.findOne({
+        demoArchivedAt: { $exists: false },
         $or: [
           { 'initiatorShipment.trackingCode': trackingCode },
           { 'recipientShipment.trackingCode': trackingCode },
@@ -236,6 +237,7 @@ export class CarrierService {
       exchange = await this.mongo.c.exchanges.findOne(
         {
           status: { $in: ['InTransit', 'Delivered'] },
+          demoArchivedAt: { $exists: false },
         },
         { sort: { updatedAt: -1 } },
       );
@@ -245,6 +247,7 @@ export class CarrierService {
         exchange = await this.mongo.c.exchanges.findOne(
           {
             status: 'Preparing',
+            demoArchivedAt: { $exists: false },
           },
           { sort: { updatedAt: -1 } },
         );
@@ -253,13 +256,13 @@ export class CarrierService {
       // 3. Fallback: Đơn gần nhất
       if (!exchange) {
         exchange = await this.mongo.c.exchanges.findOne(
-          {},
+          { demoArchivedAt: { $exists: false } },
           { sort: { updatedAt: -1 } },
         );
       }
     }
 
-    if (!exchange) return null;
+    if (!exchange || exchange.demoArchivedAt) return null;
 
     const isBothCreated = hasCarrierLabels(exchange);
 
@@ -379,6 +382,7 @@ export class CarrierService {
     const exchanges = await this.mongo.c.exchanges
       .find({
         status: { $in: ['InTransit', 'Preparing', 'Delivered'] },
+        demoArchivedAt: { $exists: false },
       })
       .sort({ updatedAt: -1 })
       .limit(3)

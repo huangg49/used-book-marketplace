@@ -38,6 +38,7 @@ import { LedgerService } from '../wallet/ledger.service.js';
 import { exchangeReturnChange, oneSidedReturn, pendingOutboundDelivery, resolutionMessage, returnResolutionView, verifyOutboundDelivery } from './exchange-return-resolution.js';
 import { notifyExchange } from './exchange-notifications.js';
 import { EXCHANGE_INSPECTION_MS, hasExchangeDispute, inspectionDeadlines, inspectionMaySettle } from './exchange-inspection.js';
+import { currentDemoDeadline, closeDemoDisputeWindow, demoExchangeDeadlineEnabled } from './exchange-demo-deadline.js';
 
 @Injectable()
 export class ExchangesService {
@@ -202,7 +203,7 @@ export class ExchangesService {
   }
 
   private async exchange(tx: Tx, id: string) {
-    const row = await tx.c.exchanges.findOne({ _id: id });
+    const row = await tx.c.exchanges.findOne({ _id: id, demoArchivedAt: { $exists: false } });
     if (!row) throw notFound();
     return row;
   }
@@ -588,7 +589,7 @@ export class ExchangesService {
       member(actor);
       const rows = await tx.c.exchanges
         .find(
-          { $or: [{ initiatorId: actor._id }, { recipientId: actor._id }] },
+          { demoArchivedAt: { $exists: false }, $or: [{ initiatorId: actor._id }, { recipientId: actor._id }] },
           { sort: { updatedAt: -1, _id: -1 }, limit: 100 },
         )
         .toArray();
@@ -602,8 +603,12 @@ export class ExchangesService {
       const row = await this.exchange(tx, id);
       this.participant(row, actor._id);
       const view = this.view(row);
+      const now = await tx.now();
+      const demoDeadline = actor.status === 'ACTIVE' && demoExchangeDeadlineEnabled(this.config, row)
+        ? currentDemoDeadline(row, now, false) : undefined;
+      if (demoDeadline) return { ...view, demoDeadline };
       return actor.status === 'ACTIVE' && this.demoShippingEnabled(id) &&
-        this.demoShippingEligible(row, actor._id, await tx.now())
+        this.demoShippingEligible(row, actor._id, now)
         ? { ...view, demoShippingAdvanceAvailable: true }
         : view;
     });
@@ -1762,133 +1767,138 @@ export class ExchangesService {
   async expireInspection(id: string, nowOverride?: Date) {
     return this.mongo.tx(async (tx) => {
       await tx.lock('exchanges', [id]);
-      const exchange = await tx.c.exchanges.findOne({ _id: id });
-      if (!exchange) return null;
-
-      const now = nowOverride ?? (await tx.now());
-      if (
-        !inspectionMaySettle(exchange, now)
-      ) {
-        return null;
-      }
-
-      const updatedForSettlement: ExchangeDoc = {
-        ...exchange,
-        status: 'Completed',
-        completedAt: now,
-      };
-      await this.ledger.settleExchange(tx, updatedForSettlement, now);
-
-      const initIds = this.getInitiatorListingIds(exchange);
-      const allIds = [...initIds, exchange.recipientListingId];
-      const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
-      for (const id of allIds) {
-        const listing = lockedMap.get(id)!;
-        await this.listings.project(
-          tx,
-          listing._id,
-          listing.version,
-          'Reserved',
-          'Exchanged',
-        );
-      }
-
-      const next = await tx.c.exchanges.findOneAndUpdate(
-        { _id: exchange._id, revision: exchange.revision, status: 'Delivered' },
-        {
-          $set: {
-            status: 'Completed',
-            completedAt: now,
-            updatedAt: now,
-          },
-          $inc: { revision: 1 },
-        },
-        { returnDocument: 'after' },
-      );
-      if (!next) return null;
-
-      await notifyExchange(
-        tx,
-        next,
-        'ExchangeCompleted',
-        [next.initiatorId, next.recipientId],
-        now,
-      );
-
-      this.logger.log(
-        JSON.stringify({
-          event: 'exchangeInspectionCompleted',
-          exchangeId: exchange._id,
-          status: 'Completed',
-        }),
-      );
-
-      return { exchange: this.view(next) };
+      const row = await tx.c.exchanges.findOne({ _id: id });
+      if (!row) return null;
+      return this.expireInspectionTx(tx, row, nowOverride ?? (await tx.now()));
     });
+  }
+
+  private async expireInspectionTx(tx: Tx, exchange: ExchangeDoc, now: Date, demo = false) {
+    if (
+      !inspectionMaySettle(exchange, demo ? inspectionDeadlines(exchange).all ?? now : now)
+    ) {
+      return null;
+    }
+
+    const updatedForSettlement: ExchangeDoc = {
+      ...exchange,
+      status: 'Completed',
+      completedAt: now,
+    };
+    await this.ledger.settleExchange(tx, updatedForSettlement, now);
+
+    const initIds = this.getInitiatorListingIds(exchange);
+    const allIds = [...initIds, exchange.recipientListingId];
+    const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+    for (const id of allIds) {
+      const listing = lockedMap.get(id)!;
+      await this.listings.project(
+        tx,
+        listing._id,
+        listing.version,
+        'Reserved',
+        'Exchanged',
+      );
+    }
+
+    const next = await tx.c.exchanges.findOneAndUpdate(
+      { _id: exchange._id, revision: exchange.revision, status: 'Delivered' },
+      {
+        $set: {
+          status: 'Completed',
+          completedAt: now,
+          updatedAt: now,
+        },
+        $inc: { revision: 1 },
+      },
+      { returnDocument: 'after' },
+    );
+    if (!next) return null;
+
+    await notifyExchange(
+      tx,
+      next,
+      'ExchangeCompleted',
+      [next.initiatorId, next.recipientId],
+      now,
+    );
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'exchangeInspectionCompleted',
+        exchangeId: exchange._id,
+        status: 'Completed',
+      }),
+    );
+
+    return { exchange: this.view(next) };
   }
 
   async expireExchange(id: string, nowOverride?: Date) {
     return this.mongo.tx(async (tx) => {
       await tx.lock('exchanges', [id]);
-      const exchange = await tx.c.exchanges.findOne({ _id: id });
-      if (!exchange) return null;
-
-      const now = nowOverride ?? (await tx.now());
-      if (
-        exchange.status !== 'AcceptedAwaitingFunding' ||
-        !exchange.fundingDeadline ||
-        exchange.fundingDeadline >= now
-      ) {
-        return null;
-      }
-
-      const next = await this.cancelInternal(tx, exchange, {
-        reason: 'FundingExpired',
-        cancelledBy: 'System',
-        now,
-      });
-
-      return {
-        exchange: this.view(next),
-        refundedInitiator: Boolean(exchange.initiatorFundedAt),
-        refundedRecipient: Boolean(exchange.recipientFundedAt),
-      };
+      const row = await tx.c.exchanges.findOne({ _id: id });
+      if (!row) return null;
+      return this.expireExchangeTx(tx, row, nowOverride ?? (await tx.now()));
     });
+  }
+
+  private async expireExchangeTx(tx: Tx, exchange: ExchangeDoc, now: Date, demo = false) {
+    if (
+      exchange.status !== 'AcceptedAwaitingFunding' ||
+      !exchange.fundingDeadline ||
+      (!demo && exchange.fundingDeadline >= now)
+    ) {
+      return null;
+    }
+
+    const next = await this.cancelInternal(tx, exchange, {
+      reason: 'FundingExpired',
+      cancelledBy: 'System',
+      now,
+    });
+
+    return {
+      exchange: this.view(next),
+      refundedInitiator: Boolean(exchange.initiatorFundedAt),
+      refundedRecipient: Boolean(exchange.recipientFundedAt),
+    };
   }
 
   async expireProposal(id: string, nowOverride?: Date) {
     return this.mongo.tx(async (tx) => {
       await tx.lock('exchanges', [id]);
-      const exchange = await tx.c.exchanges.findOne({ _id: id });
-      if (!exchange) return null;
-
-      const now = nowOverride ?? (await tx.now());
-      // Re-check under lock: status must still be Proposed and deadline must have passed.
-      if (
-        exchange.status !== 'Proposed' ||
-        !exchange.proposalExpiresAt ||
-        exchange.proposalExpiresAt > now
-      ) {
-        // Already accepted/rejected/cancelled by another path, or not yet expired — skip safely.
-        return null;
-      }
-
-      const next = await this.cancelInternal(tx, exchange, {
-        reason: 'ProposalExpired',
-        cancelledBy: 'System',
-        now,
-      });
-
-      this.logger.log(
-        JSON.stringify({
-          event: 'exchangeProposalExpired',
-          exchangeId: exchange._id,
-          status: 'Cancelled',
-        }),
-      );
-
-      return { exchange: this.view(next) };
+      const row = await tx.c.exchanges.findOne({ _id: id });
+      if (!row) return null;
+      return this.expireProposalTx(tx, row, nowOverride ?? (await tx.now()));
     });
+  }
+
+  private async expireProposalTx(tx: Tx, exchange: ExchangeDoc, now: Date, demo = false) {
+    if (
+      exchange.status !== 'Proposed' ||
+      !exchange.proposalExpiresAt ||
+      (!demo && exchange.proposalExpiresAt > now)
+    ) {
+      // Already accepted/rejected/cancelled by another path, or not yet expired — skip safely.
+      return null;
+    }
+
+    const next = await this.cancelInternal(tx, exchange, {
+      reason: 'ProposalExpired',
+      cancelledBy: 'System',
+      now,
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'exchangeProposalExpired',
+        exchangeId: exchange._id,
+        status: 'Cancelled',
+      }),
+    );
+
+    return { exchange: this.view(next) };
   }
 
   dispute(
@@ -2003,6 +2013,7 @@ export class ExchangesService {
       const rows = await tx.c.exchanges
         .find({
           status: 'ResolutionPending',
+          demoArchivedAt: { $exists: false },
           initiatorId: { $ne: actor._id },
           recipientId: { $ne: actor._id },
         })
@@ -2057,7 +2068,13 @@ export class ExchangesService {
       if ([row.initiatorId, row.recipientId].includes(actor._id))
         throw new DomainError(403, 'SelfReviewForbidden', 'Không được xử lý trao đổi của chính mình.');
       if (row.status !== 'ResolutionPending' && !row.returnResolution) throw notFound();
-      return this.view(row);
+      const view = this.view(row);
+      if (actor.status !== 'ACTIVE' || !actor.roles.some(({ role }) => role === 'ADMIN') ||
+        !demoExchangeDeadlineEnabled(this.config, row)) return view;
+      const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
+      const demoDeadline = assignment?.assigneeId === actor._id
+        ? currentDemoDeadline(row, await tx.now(), true) : undefined;
+      return demoDeadline ? { ...view, demoDeadline } : view;
     });
   }
 
@@ -2162,6 +2179,73 @@ export class ExchangesService {
     );
   }
 
+  advanceDemoDeadline(context: CommandContext, id: string, body: Wire['DemoExchangeDeadlineCommand'], operations: boolean) {
+    return this.commands.runExchange(context,
+      operations ? 'advanceOperationsDemoExchangeDeadline' : 'advanceDemoExchangeDeadline', id, body, {
+        discover: async (tx) => {
+          const row = await this.exchange(tx, id);
+          if (!demoExchangeDeadlineEnabled(this.config, row)) throw notFound();
+          return [row.initiatorId, row.recipientId];
+        },
+        authorize: async (tx, actor) => {
+          await tx.lock('exchanges', [id]);
+          const row = await this.exchange(tx, id);
+          if (!demoExchangeDeadlineEnabled(this.config, row)) throw notFound();
+          requireActive(actor);
+          if (!operations) {
+            member(actor);
+            this.participant(row, actor._id);
+          } else {
+            const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
+            if (!actor.roles.some(({ role }) => role === 'ADMIN') || assignment?.assigneeId !== actor._id ||
+              [row.initiatorId, row.recipientId].includes(actor._id))
+              throw new DomainError(403, 'FORBIDDEN', 'Chỉ Admin độc lập đang phụ trách mới được tua hạn hồ sơ demo.');
+          }
+          return row;
+        },
+        mutate: async (tx, _actor, row) => {
+          if (row.revision !== body.expectedVersion) throw conflict();
+          const now = await tx.now();
+          if (currentDemoDeadline(row, now, operations) !== body.deadline) throw invalidState();
+          const result = await this.applyDemoDeadline(tx, row, now, body.deadline);
+          if (!result) throw invalidState();
+          const exchange = result.exchange;
+          return {
+            entityType: 'Exchange',
+            entityId: id,
+            initiatorListingId: row.initiatorListingId,
+            version: exchange.revision,
+            state: exchange.status,
+            decidedAt: now,
+            event: 'ExchangeDemoDeadlineAdvanced',
+            reason: body.deadline,
+            before: { status: row.status, returnPhase: row.returnResolution?.phase ?? null },
+            exchange,
+          };
+        },
+      });
+  }
+
+  private async applyDemoDeadline(tx: Tx, row: ExchangeDoc, now: Date, deadline: Wire['DemoExchangeDeadline']) {
+    switch (deadline) {
+      case 'Proposal': return this.expireProposalTx(tx, row, now, true);
+      case 'Funding': return this.expireExchangeTx(tx, row, now, true);
+      case 'Shipping': return this.expireShippingTx(tx, row, now, true);
+      case 'Transit': return this.expireTransitTx(tx, row, now, true);
+      case 'Inspection': return this.expireInspectionTx(tx, row, now, true);
+      default: {
+        const resolution = closeDemoDisputeWindow(row, deadline, now);
+        if (!resolution) return null;
+        const next = await tx.c.exchanges.findOneAndUpdate(
+          { _id: row._id, revision: row.revision },
+          { $set: { returnResolution: resolution, updatedAt: now }, $inc: { revision: 1 } },
+          { returnDocument: 'after' },
+        );
+        return next ? { exchange: this.view(next) } : null;
+      }
+    }
+  }
+
   private demoShippingEnabled(id: string) {
     if (!['development', 'test'].includes(this.config.get<string>('NODE_ENV', 'development')) ||
       !this.config.get<string>('PAYMENT_SIMULATOR_SECRET') ||
@@ -2232,53 +2316,55 @@ export class ExchangesService {
   async expireShipping(id: string, nowOverride?: Date) {
     return this.mongo.tx(async (tx) => {
       await tx.lock('exchanges', [id]);
-      const exchange = await tx.c.exchanges.findOne({ _id: id });
-      if (!exchange) return null;
+      const row = await tx.c.exchanges.findOne({ _id: id });
+      if (!row) return null;
+      return this.expireShippingTx(tx, row, nowOverride ?? (await tx.now()));
+    });
+  }
 
-      const now = nowOverride ?? (await tx.now());
-      if (
-        exchange.status !== 'Preparing' ||
-        !exchange.shippingDeadline ||
-        exchange.shippingDeadline > now
-      ) {
-        return null;
-      }
+  private async expireShippingTx(tx: Tx, exchange: ExchangeDoc, now: Date, demo = false) {
+    if (
+      exchange.status !== 'Preparing' ||
+      !exchange.shippingDeadline ||
+      (!demo && exchange.shippingDeadline > now)
+    ) {
+      return null;
+    }
 
-      const hasInitShipped = Boolean(exchange.initiatorShippedAt);
-      const hasRecipShipped = Boolean(exchange.recipientShippedAt);
+    const hasInitShipped = Boolean(exchange.initiatorShippedAt);
+    const hasRecipShipped = Boolean(exchange.recipientShippedAt);
 
-      // Case A: Neither party shipped -> Full refund and Cancel
-      if (!hasInitShipped && !hasRecipShipped) {
-        const next = await this.cancelInternal(tx, exchange, {
-          reason: 'ShippingExpired',
-          cancelledBy: 'System',
-          now,
-        });
-
-        this.logger.log(
-          JSON.stringify({
-            event: 'exchangeShippingExpiredBothUnsent',
-            exchangeId: exchange._id,
-            status: 'Cancelled',
-          }),
-        );
-
-        return { exchange: this.view(next), escalated: false };
-      }
-
-      const next = await this.openShippingDispute(tx, exchange, now);
-      if (!next) return null;
+    // Case A: Neither party shipped -> Full refund and Cancel
+    if (!hasInitShipped && !hasRecipShipped) {
+      const next = await this.cancelInternal(tx, exchange, {
+        reason: 'ShippingExpired',
+        cancelledBy: 'System',
+        now,
+      });
 
       this.logger.log(
         JSON.stringify({
-          event: 'exchangeShippingExpiredOneSent',
+          event: 'exchangeShippingExpiredBothUnsent',
           exchangeId: exchange._id,
-          status: 'ResolutionPending',
+          status: 'Cancelled',
         }),
       );
 
-      return { exchange: this.view(next), escalated: true };
-    });
+      return { exchange: this.view(next), escalated: false };
+    }
+
+    const next = await this.openShippingDispute(tx, exchange, now, demo);
+    if (!next) return null;
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'exchangeShippingExpiredOneSent',
+        exchangeId: exchange._id,
+        status: 'ResolutionPending',
+      }),
+    );
+
+    return { exchange: this.view(next), escalated: true };
   }
 
   private async openShippingDispute(tx: Tx, exchange: ExchangeDoc, now: Date, demo = false) {
@@ -2319,74 +2405,76 @@ export class ExchangesService {
   async expireTransit(id: string, nowOverride?: Date) {
     return this.mongo.tx(async (tx) => {
       await tx.lock('exchanges', [id]);
-      const exchange = await tx.c.exchanges.findOne({ _id: id });
-      if (!exchange) return null;
-
-      if (exchange.status !== 'InTransit') {
-        return null;
-      }
-
-      const overdueHours = Number(
-        this.config.get('EXCHANGE_DELIVERY_OVERDUE_HOURS') ?? 240,
-      );
-      const overdueMs = overdueHours * 3_600_000;
-      const now = nowOverride ?? (await tx.now());
-
-      const initLegOverdue =
-        Boolean(exchange.initiatorShippedAt) &&
-        !exchange.recipientReceivedAt &&
-        now.getTime() - exchange.initiatorShippedAt!.getTime() >= overdueMs;
-
-      const recipLegOverdue =
-        Boolean(exchange.recipientShippedAt) &&
-        !exchange.initiatorReceivedAt &&
-        now.getTime() - exchange.recipientShippedAt!.getTime() >= overdueMs;
-
-      if (!initLegOverdue && !recipLegOverdue) {
-        return null;
-      }
-
-      const overdueSides: string[] = [];
-      if (initLegOverdue) overdueSides.push('chiều Người khởi tạo gửi');
-      if (recipLegOverdue) overdueSides.push('chiều Người nhận gửi');
-
-      const disputeReason = `Quá hạn vận chuyển (${overdueHours} giờ): ${overdueSides.join(' và ')} chưa được xác nhận đã nhận hàng. Hệ thống tự động mở điều tra vận chuyển (POL-07).`;
-
-      const next = await tx.c.exchanges.findOneAndUpdate(
-        { _id: exchange._id, revision: exchange.revision, status: 'InTransit' },
-        {
-          $set: {
-            status: 'ResolutionPending',
-            disputedAt: now,
-            disputeReason,
-            disputedBy: 'System',
-            updatedAt: now,
-          },
-          $inc: { revision: 1 },
-        },
-        { returnDocument: 'after' },
-      );
-      if (!next) return null;
-
-      await notifyExchange(
-        tx,
-        next,
-        'ExchangeDisputed',
-        [next.initiatorId, next.recipientId],
-        now,
-        { reason: disputeReason },
-      );
-
-      this.logger.log(
-        JSON.stringify({
-          event: 'exchangeTransitOverdue',
-          exchangeId: exchange._id,
-          status: 'ResolutionPending',
-          disputeReason,
-        }),
-      );
-
-      return { exchange: this.view(next), escalated: true };
+      const row = await tx.c.exchanges.findOne({ _id: id });
+      if (!row) return null;
+      return this.expireTransitTx(tx, row, nowOverride ?? (await tx.now()));
     });
+  }
+
+  private async expireTransitTx(tx: Tx, exchange: ExchangeDoc, now: Date, demo = false) {
+    if (exchange.status !== 'InTransit' || hasExchangeDispute(exchange)) {
+      return null;
+    }
+
+    const overdueHours = Number(
+      this.config.get('EXCHANGE_DELIVERY_OVERDUE_HOURS') ?? 240,
+    );
+    const overdueMs = overdueHours * 3_600_000;
+
+    const initLegOverdue =
+      Boolean(exchange.initiatorShippedAt) &&
+      !exchange.recipientReceivedAt &&
+      (demo || now.getTime() - exchange.initiatorShippedAt!.getTime() >= overdueMs);
+
+    const recipLegOverdue =
+      Boolean(exchange.recipientShippedAt) &&
+      !exchange.initiatorReceivedAt &&
+      (demo || now.getTime() - exchange.recipientShippedAt!.getTime() >= overdueMs);
+
+    if (!initLegOverdue && !recipLegOverdue) {
+      return null;
+    }
+
+    const overdueSides: string[] = [];
+    if (initLegOverdue) overdueSides.push('chiều Người khởi tạo gửi');
+    if (recipLegOverdue) overdueSides.push('chiều Người nhận gửi');
+
+    const disputeReason = `${demo ? "[Demo local] " : ""}Quá hạn vận chuyển (${overdueHours} giờ): ${overdueSides.join(' và ')} chưa được xác nhận đã nhận hàng. Hệ thống tự động mở điều tra vận chuyển (POL-07).`;
+
+    const next = await tx.c.exchanges.findOneAndUpdate(
+      { _id: exchange._id, revision: exchange.revision, status: 'InTransit' },
+      {
+        $set: {
+          status: 'ResolutionPending',
+          disputedAt: now,
+          disputeReason,
+          disputedBy: 'System',
+          updatedAt: now,
+        },
+        $inc: { revision: 1 },
+      },
+      { returnDocument: 'after' },
+    );
+    if (!next) return null;
+
+    await notifyExchange(
+      tx,
+      next,
+      'ExchangeDisputed',
+      [next.initiatorId, next.recipientId],
+      now,
+      { reason: disputeReason },
+    );
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'exchangeTransitOverdue',
+        exchangeId: exchange._id,
+        status: 'ResolutionPending',
+        disputeReason,
+      }),
+    );
+
+    return { exchange: this.view(next), escalated: true };
   }
 }

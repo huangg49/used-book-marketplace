@@ -1477,6 +1477,7 @@ export type ExchangeReturnDoc = Pick<ReturnResolutionWire, 'phase' | 'note' | 'a
 };
 
 export interface ExchangeDoc extends Lockable {
+  demoArchivedAt?: Date;
   returnResolution?: ExchangeReturnDoc;
   outboundDeliveryVerification?: {
     verifiedAt: Date;

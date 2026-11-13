@@ -16,6 +16,8 @@
 
 ## Tích hợp
 
+- Chế độ demo local 0.79 thêm nút tua hạn trên phiếu và hồ sơ Admin theo [ENV_HANDOFF](../handoff/ENV_HANDOFF.md). Nút đóng thời hạn hiện tại và áp dụng quy tắc hết hạn tương ứng. Các bước cần chứng cứ, phân công, quyết định độc lập hoặc tất toán vẫn dùng lệnh sẵn có.
+
 - Contract 0.75.0, migration mới 0077. Triển khai API và các consumer ví cùng phiên bản để nhận hai loại bút toán mới. React Native đã có schema và nhãn ví tương thích. Màn thao tác trả sách RN thuộc lane của teammate.
 - Contract 0.76.0 và migration 0078 thêm xác minh giao ban đầu cho Admin và kết quả chỉ đọc trên Member web. Dùng lại phân công, bằng chứng riêng và lệnh phục hồi của hồ sơ.
 - Member web và Admin/Staff web dùng API thật. Bàn vận hành xem tệp riêng qua service có kiểm phân công; các lệnh cũ giữ replay dưới quyền hiện tại. Các thay đổi state, tiền, bài đăng, audit, receipt và vi phạm khi chi nằm trong một transaction.

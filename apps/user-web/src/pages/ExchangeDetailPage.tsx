@@ -23,7 +23,7 @@ import { getPurchaseConversations } from "../services/purchase-conversations";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES, formatVnd } from "../lib/routes";
 import { useSession } from "../hooks/useSession";
-import { exchangeAcknowledged, pendingExchange } from "../services/exchange";
+import { exchangeAcknowledged, exchangeCommand, pendingExchange } from "../services/exchange";
 import {
   getExchangeDetail,
   getMessagePage,
@@ -390,6 +390,17 @@ function ExchangeDetailContent({
         onConfirmReceived={handleConfirmReceived}
         onComplete={handleComplete}
         onDispute={handleDispute}
+        onAdvanceDemoDeadline={async () => {
+          const latest = await getExchangeDetail(detail.id);
+          if (latest.demoDeadline !== detail.demoDeadline || latest.revision !== detail.revision) {
+            invalidate();
+            throw new Error("Phiếu vừa thay đổi. Xem lại trạng thái trước khi tua hạn.");
+          }
+          await exchangeCommand(`/exchanges/${detail.id}/demo-advance`, {
+            expectedVersion: detail.revision!, deadline: detail.demoDeadline,
+          });
+          invalidate();
+        }}
         onAdvanceDemoShipping={async () => {
           await advanceDemoShipping(id!, detail.revision!);
           invalidate();
@@ -403,7 +414,7 @@ function ExchangeDetailContent({
       )}
       {detail.returnResolution && detail.revision && (
         <ExchangeReturnPanel
-          key={detail.viewer.id + ":" + detail.id}
+          key={"return:" + detail.viewer.id + ":" + detail.id}
           id={detail.id}
           revision={detail.revision}
           userId={detail.viewer.id}
@@ -415,7 +426,7 @@ function ExchangeDetailContent({
       )}
       {detail.rawStatus === "ResolutionPending" && (
         <ExchangeEvidencePanel
-          key={detail.viewer.id + ":" + detail.id}
+          key={"evidence:" + detail.viewer.id + ":" + detail.id}
           id={detail.id}
           revision={detail.revision!}
           userId={detail.viewer.id}

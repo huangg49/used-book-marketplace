@@ -648,6 +648,8 @@ export class MongoCommandService {
       | 'completeExchange'
       | 'disputeExchange'
       | 'advanceDemoExchangeShipping'
+      | 'advanceDemoExchangeDeadline'
+      | 'advanceOperationsDemoExchangeDeadline'
       | 'resolveExchangeDispute'
       | 'actOnOwnExchangeReturn'
       | 'actOnOperationsExchangeReturn',

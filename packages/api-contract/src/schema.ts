@@ -3628,6 +3628,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/demo-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Apply the current exchange deadline on an allowlisted local simulation. Does not attest pickup, receipt or dispute evidence. */
+        post: operations["advanceDemoExchangeDeadline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchanges/{id}/messages": {
         parameters: {
             query?: never;
@@ -3888,6 +3905,23 @@ export interface paths {
         get: operations["getOperationsExchangeDispute"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{id}/demo-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Close the current simulated dispute window as the assigned independent Admin. Decisions, review of appeals, evidence and settlement remain separate commands. */
+        post: operations["advanceOperationsDemoExchangeDeadline"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8039,6 +8073,7 @@ export interface components {
         };
         Exchange: {
             returnResolution?: components["schemas"]["ExchangeReturnResolution"];
+            demoDeadline?: components["schemas"]["DemoExchangeDeadline"];
             /** @description The current member can simulate this local demo exchange's shipping deadline. */
             demoShippingAdvanceAvailable?: boolean;
             /** @description One book was sent and received, the other party missed the shipping deadline, and both sides funded. */
@@ -8247,6 +8282,12 @@ export interface components {
         };
         ReadExchangeEvidence: {
             reason: string;
+        };
+        /** @enum {string} */
+        DemoExchangeDeadline: "Proposal" | "Funding" | "Shipping" | "Transit" | "Inspection" | "Evidence" | "Appeal" | "Return" | "ReturnCheck";
+        DemoExchangeDeadlineCommand: {
+            expectedVersion: number;
+            deadline: components["schemas"]["DemoExchangeDeadline"];
         };
         ExchangeReturnCommand: {
             expectedVersion: number;
@@ -15944,6 +15985,39 @@ export interface operations {
             500: components["responses"]["ListingError"];
         };
     };
+    advanceDemoExchangeDeadline: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoExchangeDeadlineCommand"];
+            };
+        };
+        responses: {
+            /** @description Current Exchange snapshot or authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+        };
+    };
     getExchangeMessages: {
         parameters: {
             query?: {
@@ -16384,6 +16458,39 @@ export interface operations {
             409: components["responses"]["ListingError"];
             422: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
+        };
+    };
+    advanceOperationsDemoExchangeDeadline: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoExchangeDeadlineCommand"];
+            };
+        };
+        responses: {
+            /** @description Current Exchange snapshot or authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
         };
     };
     actOnOperationsExchangeReturn: {

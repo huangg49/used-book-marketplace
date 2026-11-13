@@ -44,6 +44,16 @@ export class ExchangeOperationsController {
     ), res);
   }
 
+  @Post(':id/demo-advance')
+  @Roles('ADMIN')
+  @HttpCode(200)
+  advanceOperationsDemoExchangeDeadline(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(this.exchanges.advanceDemoDeadline(
+      commandContext(this.input, req, res), this.input.uuid(id),
+      this.input.body('DemoExchangeDeadlineCommand', body), true,
+    ), res);
+  }
+
   @Post(':id/resolve')
   @Roles('STAFF', 'ADMIN')
   @HttpCode(200)

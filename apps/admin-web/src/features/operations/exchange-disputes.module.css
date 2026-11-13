@@ -55,6 +55,12 @@
   gap: 0.65rem;
 }
 
+.demoAction {
+  display: grid;
+  justify-items: start;
+  gap: 0.65rem;
+}
+
 .nextStep h2,
 .nextStep p {
   margin: 0;

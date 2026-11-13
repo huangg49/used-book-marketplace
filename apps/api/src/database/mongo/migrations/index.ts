@@ -13,6 +13,7 @@ import { createAuctionSecondChanceMigration, withAuctionSecondChance } from './0
 import { createAuctionDepositShareMigration, withAuctionDepositShare } from './0075-auction-deposit-share.js';
 import { createExchangeReturnMigration, withExchangeReturnResolution } from './0077-exchange-return-resolution.js';
 import { createExchangeOutboundDeliveryMigration, withExchangeOutboundDeliveryVerification } from './0078-exchange-outbound-delivery-verification.js';
+import { createExchangeDemoArchiveMigration, withExchangeDemoArchive } from './0079-exchange-demo-archive.js';
 import { onlinePriceCatalogRevisionMigration, withOnlinePriceCatalogRevision } from './0076-online-price-catalog-revision.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
@@ -576,7 +577,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
 
 export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals).map(withWithdrawalProofReference), registrationSpec, ...withdrawalProofSpecs].map((spec) =>
   onlinePriceSpecs.some(({ name }) => name === spec.name) ? withOnlinePriceCatalogRevision(spec) : spec,
-).map(withExchangeReturnResolution).map(withExchangeOutboundDeliveryVerification);
+).map(withExchangeReturnResolution).map(withExchangeOutboundDeliveryVerification).map(withExchangeDemoArchive);
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -668,6 +669,8 @@ const exchangeReturnMigration = createExchangeReturnMigration([
   ...rulesCollectionSpecs,
 ]);
 migrations.push(exchangeReturnMigration);
-migrations.push(createExchangeOutboundDeliveryMigration(
+const exchangeOutboundMigration = createExchangeOutboundDeliveryMigration(
   exchangeReturnMigration.definition.collections.find((spec) => spec.name === 'exchanges')!,
-));
+);
+migrations.push(exchangeOutboundMigration);
+migrations.push(createExchangeDemoArchiveMigration(exchangeOutboundMigration.definition.collections[0]));

@@ -2225,6 +2225,144 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
   describe('one-sided Exchange return', () => {
     const hour = 3_600_000;
 
+    it('advances local exchange windows with the current version and the normal refund and return rules', async () => {
+      const config = app.get(ConfigService);
+      const flag = 'DEMO_EXCHANGE_DEADLINES_ENABLED';
+      const allow = 'DEMO_EXCHANGE_MEMBER_IDS';
+      const previous = [config.get<string>(flag), config.get<string>(allow)];
+      const outsider = await reader();
+      const unsent = await preparedExchange();
+      const path = '/exchanges/' + unsent.id;
+      const command = { expectedVersion: unsent.revision, deadline: 'Shipping' };
+      try {
+        config.set(flag, 'false');
+        await post(path + '/demo-advance', command, user1).expect(404);
+        config.set(flag, 'true');
+        config.set(allow, [unsent.initiatorId, unsent.recipientId].join(','));
+        expect((await get(path, user1).expect(200)).body.demoDeadline).toBe('Shipping');
+        await post(path + '/demo-advance', command, outsider).expect(404);
+        await post(path + '/demo-advance', { ...command, deadline: 'Inspection' }, user1).expect(409);
+        const key = randomUUID();
+        const [first, second] = await Promise.all([
+          post(path + '/demo-advance', command, user1, key).expect(200),
+          post(path + '/demo-advance', command, user1, key).expect(200),
+        ]);
+        expect(first.body).toEqual(second.body);
+        expect(first.body).toMatchObject({ status: 'Cancelled', cancelReason: 'ShippingExpired' });
+
+        const inTransit = await inTransitExchange();
+        const transitPath = '/exchanges/' + inTransit.id;
+        const late = (await post(transitPath + '/demo-advance', {
+          deadline: 'Transit', expectedVersion: inTransit.revision,
+        }, user2).expect(200)).body;
+        expect(late).toMatchObject({ status: 'ResolutionPending', initiatorReceivedAt: null, recipientReceivedAt: null });
+
+        const inspecting = await inTransitExchange();
+        const inspectionPath = '/exchanges/' + inspecting.id;
+        const firstReceipt = (await post(inspectionPath + '/receive', {
+          expectedVersion: inspecting.revision,
+        }, user1).expect(200)).body;
+        const delivered = (await post(inspectionPath + '/receive', {
+          expectedVersion: firstReceipt.revision,
+        }, user2).expect(200)).body;
+        const completed = (await post(inspectionPath + '/demo-advance', {
+          deadline: 'Inspection', expectedVersion: delivered.revision,
+        }, user1).expect(200)).body;
+        expect(completed).toMatchObject({ status: 'Completed',
+          initiatorReceivedAt: delivered.initiatorReceivedAt, recipientReceivedAt: delivered.recipientReceivedAt });
+
+        const proposalA = await createApprovedListing(user1, 100000, 'Both');
+        const proposalB = await createApprovedListing(user2, 100000, 'Both');
+        const propose = async () => (await post('/exchanges', {
+          initiatorListingId: proposalA.listingId, recipientListingId: proposalB.listingId,
+        }, user1).expect(201)).body;
+        const proposal = await propose();
+        await post('/exchanges/' + proposal.id + '/demo-advance', {
+          expectedVersion: proposal.revision, deadline: 'Proposal',
+        }, user2).expect(200).expect(({ body }) => {
+          expect(body).toMatchObject({ status: 'Cancelled', cancelReason: 'ProposalExpired' });
+        });
+        const anotherProposal = await propose();
+        const fundingPath = '/exchanges/' + anotherProposal.id;
+        await post(fundingPath + '/accept', { revision: anotherProposal.revision }, user2).expect(200);
+        const fundedOnce = (await post(fundingPath + '/funding', {}, user1).expect(200)).body;
+        await post(fundingPath + '/demo-advance', {
+          expectedVersion: fundedOnce.revision, deadline: 'Funding',
+        }, user2).expect(200).expect(({ body }) => {
+          expect(body).toMatchObject({ status: 'Cancelled', cancelReason: 'FundingExpired', recipientFundedAt: null });
+        });
+
+        const ex = await preparedExchange();
+        const member = '/exchanges/' + ex.id;
+        const ops = '/operations/exchanges/' + ex.id;
+        const sent = (await post(member + '/ship', { method: 'direct', expectedVersion: ex.revision }, user1).expect(200)).body;
+        const received = (await post(member + '/receive', { expectedVersion: sent.revision }, user2).expect(200)).body;
+        const dispute = (await post(member + '/demo-advance', {
+          deadline: 'Shipping', expectedVersion: received.revision,
+        }, user1).expect(200)).body;
+        expect(dispute).toMatchObject({ status: 'ResolutionPending', canStartReturnResolution: true });
+        await post(ops + '/demo-advance', { deadline: 'Evidence', expectedVersion: dispute.revision }, admin).expect(403);
+        await post(ops + '/evidence-access', { expectedVersion: 0, reason: 'Kiểm tra tua hạn hồ sơ demo.' }, admin).expect(200);
+        const note = 'Đối chiếu bằng chứng của hai bên.';
+        const act = async (row: {revision:number}, action: string) => (await post(ops + '/return-resolution',
+          { expectedVersion: row.revision, action, note }, admin).expect(200)).body;
+        const skip = async (row: {revision:number}, deadline: string) => (await post(ops + '/demo-advance',
+          { expectedVersion: row.revision, deadline }, admin).expect(200)).body;
+        const evidence = await act(dispute, 'RequestEvidence');
+        expect((await get(ops + '/dispute', admin).expect(200)).body.demoDeadline).toBe('Evidence');
+        const ready = await skip(evidence, 'Evidence');
+        const order = await act(ready, 'OrderReturn');
+        const effective = await skip(order, 'Appeal');
+        expect(Date.parse(effective.returnResolution.returnDueAt) - Date.parse(effective.returnResolution.appealDueAt)).toBe(72 * hour);
+        const dispatched = (await post(member + '/return-resolution', {
+          expectedVersion: effective.revision, action: 'ReportDispatch', trackingCode: 'QA-DEMO-RETURN',
+        }, user2).expect(200)).body;
+        const returned = (await post(member + '/return-resolution', {
+          expectedVersion: dispatched.revision, action: 'AcknowledgeReturn',
+        }, user1).expect(200)).body;
+        const checked = await skip(returned, 'ReturnCheck');
+        expect(checked.returnResolution.phase).toBe('CheckingReturn');
+        expect((await act(checked, 'Settle')).returnResolution.outcome).toBe('Returned');
+
+        const overdue = await preparedExchange();
+        const returnMember = '/exchanges/' + overdue.id;
+        const returnOps = '/operations/exchanges/' + overdue.id;
+        const returnSent = (await post(returnMember + '/ship', {
+          method: 'direct', expectedVersion: overdue.revision,
+        }, user1).expect(200)).body;
+        const returnReceived = (await post(returnMember + '/receive', {
+          expectedVersion: returnSent.revision,
+        }, user2).expect(200)).body;
+        const returnDispute = (await post(returnMember + '/demo-advance', {
+          deadline: 'Shipping', expectedVersion: returnReceived.revision,
+        }, user1).expect(200)).body;
+        await post(returnOps + '/evidence-access', {
+          expectedVersion: 0, reason: 'Kiểm tra quá hạn bàn giao sách hoàn.',
+        }, admin).expect(200);
+        let state = returnDispute;
+        for (const [endpoint, fields] of [
+          ['return-resolution', { action: 'RequestEvidence', note }],
+          ['demo-advance', { deadline: 'Evidence' }],
+          ['return-resolution', { action: 'OrderReturn', note }],
+          ['demo-advance', { deadline: 'Appeal' }],
+          ['demo-advance', { deadline: 'Return' }],
+        ] as const) {
+          state = (await post(returnOps + '/' + endpoint, {
+            expectedVersion: state.revision, ...fields,
+          }, admin).expect(200)).body;
+        }
+        expect(state.returnResolution).toMatchObject({ phase: 'ReturnOrdered', trackingCode: null });
+        await post(returnOps + '/return-resolution', {
+          expectedVersion: state.revision, action: 'OrderCompensation', note,
+          evidenceId: randomUUID(),
+        }, admin).expect(422);
+        expect((await reconcile()).balanced).toBe(true);
+      } finally {
+        config.set(flag, previous[0] ?? '');
+        config.set(allow, previous[1] ?? '');
+      }
+    });
+
     it('refunds a carrier label-only exchange after the deadline and rejects pickup', async () => {
       const ex = await preparedExchange();
       const path = '/exchanges/' + ex.id;

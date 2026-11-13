@@ -1,3 +1,4 @@
+import { demoExchangeDeadlineLabel } from "@used-books/session-client";
 import { useExchangeRecovery } from "../../../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../ExchangeRecoveryPanel";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -75,6 +76,7 @@ interface Props {
   onComplete: () => Promise<void>;
   onDispute?: (reason: string) => Promise<void>;
   onAdvanceDemoShipping?: () => Promise<void>;
+  onAdvanceDemoDeadline?: () => Promise<void>;
 }
 
 const labels: Record<Action, string> = {
@@ -327,6 +329,18 @@ export function ActionCard(props: Props) {
     setAction(next);
   };
 
+  if (detail.demoDeadline && props.onAdvanceDemoDeadline) actions.push("advanceDemoShipping");
+
+  const demoLabel = detail.demoDeadline
+    ? `Tua ${demoExchangeDeadlineLabel[detail.demoDeadline]} · Demo`
+    : labels.advanceDemoShipping;
+  const pickupCount = Number(Boolean(detail.viewerShipping.sentAt)) + Number(Boolean(detail.partnerShipping.sentAt));
+  const demoEffect = detail.demoDeadline === "Proposal" ? "Phiếu sẽ hết hạn phản hồi."
+    : detail.demoDeadline === "Funding" ? "Phiếu sẽ hủy và hoàn khoản đã nộp."
+    : detail.demoDeadline === "Shipping" && pickupCount === 0 ? "Phiếu sẽ hủy và hoàn các khoản đã nộp."
+    : detail.demoDeadline === "Inspection" ? "Phiếu sẽ hoàn cọc và chuyển tiền bù theo thỏa thuận."
+    : "Phiếu sẽ chuyển sang xử lý sự cố. Tiền và sách tiếp tục được giữ.";
+
   async function handleCounterSubmit(data: CounterOfferData, revision = detail.revision!) {
     if (!props.onCounter) return;
     setBusy(true);
@@ -417,7 +431,7 @@ export function ActionCard(props: Props) {
         received: props.onConfirmReceived,
         retry: props.onRetry,
         complete: props.onComplete,
-        advanceDemoShipping: async () => props.onAdvanceDemoShipping?.(),
+        advanceDemoShipping: async () => detail.demoDeadline ? props.onAdvanceDemoDeadline?.() : props.onAdvanceDemoShipping?.(),
         dispute: () =>
           props.onDispute
             ? props.onDispute(finalDisputeReason)
@@ -453,13 +467,12 @@ export function ActionCard(props: Props) {
   ) : undefined;
   const otherRequestedCancellation = Boolean(detail.cancellationRequestedBy &&
     detail.cancellationRequestedBy !== (detail.viewerRole === "proposer" ? "Initiator" : "Recipient"));
-  const visibleActions = props.handover
-    ? actions.filter(next => next !== "sent" && next !== "received" && next !== "advanceDemoShipping")
-    : actions;
+  const visibleActions = actions.filter(next => next !== "advanceDemoShipping" &&
+    (!props.handover || (next !== "sent" && next !== "received")));
   const demoAdvance = !blocked && actions.includes("advanceDemoShipping") && (
     <button type="button" className={styles.demoAdvance} disabled={busy}
       onClick={() => void open("advanceDemoShipping")}>
-      {labels.advanceDemoShipping}
+      {demoLabel}
     </button>
   );
   const handoverAction = (next: "sent" | "received") => {
@@ -559,10 +572,11 @@ export function ActionCard(props: Props) {
         </p>
       )}
       {!props.handover && shippingDeadline}
+      {(!props.handover || detail.demoDeadline === "Transit") && demoAdvance}
       {props.handover && (
         <ShippingTrackingCard detail={detail} {...props.handover}
           canSend={!blocked && actions.includes("sent")} shippingExpired={preparing && expired}
-          sendDeadline={<>{shippingDeadline}{demoAdvance}</>}
+          sendDeadline={<>{shippingDeadline}{preparing && demoAdvance}</>}
           sendAction={handoverAction("sent")} receiveAction={handoverAction("received")}
           sendForm={preparing && (
             <ShipmentDialog
@@ -734,7 +748,7 @@ export function ActionCard(props: Props) {
         onClose={() => setAction(undefined)}
         maxWidth={action === "dispute" ? "640px" : undefined}
         description={action === "advanceDemoShipping"
-          ? "Phiếu demo sẽ chuyển sang xử lý vì đối tác chưa gửi sách. Tiền cọc và tiền bù vẫn được giữ."
+          ? demoEffect
           : undefined}
         title={
           action === "cancel" && detail.status === "FUNDING"
@@ -745,7 +759,7 @@ export function ActionCard(props: Props) {
               : "Đề nghị hủy giao dịch"
             : action === "reject" && detail.status === "WAITING_YOU_SEND"
               ? "Từ chối yêu cầu hủy"
-              : action
+              : action === "advanceDemoShipping" ? demoLabel : action
                 ? labels[action]
                 : ""
         }
@@ -762,7 +776,7 @@ export function ActionCard(props: Props) {
                   ? "Hủy trao đổi"
                 : action === "reject" && detail.status === "WAITING_YOU_SEND"
                   ? "Từ chối hủy"
-                  : action
+                  : action === "advanceDemoShipping" ? "Xác nhận tua hạn" : action
                     ? labels[action]
                     : "Xác nhận"
         }
