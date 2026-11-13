@@ -11,6 +11,9 @@ Tên sách trong hộp thay thế chiếm đúng số dòng thực tế, tối �
 sách trên phiếu, kệ chọn sách và đề nghị mới. Giá hoặc tác giả nằm sát tên một
 dòng. Tên dài hiện dấu ba chấm, hover xem tên đầy đủ. Chromium đã kiểm tên ngắn,
 tên dài và bố cục ở 320/390/768/1440 px, đã xem phiếu demo local ở 390/1440 px.
+Danh sách sách thay thế có chiều cao tối đa theo màn hình và cuộn riêng khi
+dài. Chromium QA với bốn lựa chọn đã kiểm cuộn chuột, chọn bằng bàn phím và
+nút gửi trên màn hẹp ở 320 px. Nút tải trang tiếp theo nằm dưới danh sách.
 
 Đã kiểm trên Member web local 5174 bằng An/Bình đến bước xem số tiền của sách
 thay thế. Phiếu demo mới trong Mongo local chính còn chờ Bình gửi, kèm ba bài

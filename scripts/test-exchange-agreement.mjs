@@ -17,7 +17,7 @@ const result = { storage: 'fake', mail: 'local', native: 'NOT RUN', checks: [] }
 let fixture, vite, browser, staticServer;
 const save = () => writeFile(path.join(out, 'result.json'), JSON.stringify(result, null, 2));
 try {
-  fixture = await createTestApi({ corsOrigin: 'http://127.0.0.1:5194,http://127.0.0.1:8087', listingCount: 3 });
+  fixture = await createTestApi({ corsOrigin: 'http://127.0.0.1:5194,http://127.0.0.1:8087', listingCount: 5 });
   const api = fixture.api, b = fixture.member;
   const a = await api('/auth/login', null, { email: 'admin@operations.test', password });
   const staff = await api('/auth/login', null, { email: 'staff@operations.test', password });
@@ -101,6 +101,8 @@ try {
   const sendCounter = counter.getByRole('button', { name: 'Gửi đề xuất sách mới', exact: true });
   assert(await sendCounter.isDisabled());
   assert.equal(await counter.locator('input[value="' + bl2 + '"]').count(), 0);
+  await counter.getByRole('radio').last().waitFor();
+  assert.equal(await counter.getByRole('radio').count(), 4);
   const replacement = counter.locator('input[value="' + bl3 + '"]');
   await replacement.focus();
   await web.keyboard.press('Space');
@@ -142,11 +144,22 @@ try {
       await replacement.hover();
       assert.equal(await counter.locator('input:hover').evaluate(input => input.closest('label')?.title), longTitle);
     }
+    const choices = counter.locator('[data-lenis-prevent]');
+    assert(await choices.evaluate(list => list.scrollHeight > list.clientHeight));
     await web.screenshot({ path: path.join(out, `web-counter-${width}.png`) });
   }
   assert(await counter.evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth));
   const sendBounds = await sendCounter.boundingBox();
   assert(sendBounds && sendBounds.y + sendBounds.height <= 720);
+  const choices = counter.locator('[data-lenis-prevent]');
+  await choices.hover();
+  await choices.evaluate(list => { list.scrollTop = 0; });
+  await web.mouse.wheel(0, 110);
+  await web.waitForFunction(element => element.scrollTop > 0, await choices.elementHandle());
+  await counter.getByRole('radio').last().focus();
+  await web.keyboard.press('Space');
+  assert(await counter.getByRole('radio').last().isChecked());
+  await replacement.check();
 
   const counterRequests = [];
   const counterPath = '**/api/v1/exchanges/' + webExchange.id + '/counter';
@@ -201,7 +214,7 @@ try {
   await rn.getByRole('heading', { name: 'Việc của tôi', exact: true }).waitFor();
   await rn.evaluate((id) => { history.pushState({}, '', '/exchange?id=' + id); dispatchEvent(new PopStateEvent('popstate')); }, rnExchange.id);
   await rn.getByRole('button', { name: 'Đề xuất sách thay thế', exact: true }).click();
-  await rn.getByRole('checkbox').first().click();
+  await rn.getByRole('checkbox').filter({ hasText: /600\.000/ }).click();
   // Keep the designed native fade; capture its settled state, not a mid-fade frame.
   await rn.waitForTimeout(350);
   await rn.screenshot({ path: path.join(out, 'rn-counter-390.png'), fullPage: true });

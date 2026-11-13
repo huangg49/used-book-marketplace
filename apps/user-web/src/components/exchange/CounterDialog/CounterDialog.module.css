@@ -43,7 +43,14 @@
 .workspace { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 22px; align-items: start; }
 .inventory { margin: 0; padding: 0; border: 0; min-width: 0; }
 .inventory legend { padding: 0; margin-bottom: 9px; font-size: 1rem; font-weight: 700; }
-.choices { display: grid; gap: 6px; }
+.choices {
+  display: grid;
+  gap: 6px;
+  max-block-size: clamp(6rem, 30dvh, 14rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-control) transparent;
+}
 .bookChoice {
   position: relative;
   display: grid;

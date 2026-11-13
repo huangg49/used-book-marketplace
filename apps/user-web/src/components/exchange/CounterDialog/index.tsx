@@ -122,7 +122,7 @@ export function CounterDialog({ detail, onClose, onSubmit, isBusy }: Props) {
             {candidates.isSuccess && !items.length && (
               <p className={styles.hint}>{candidates.hasNextPage ? "Trang này chưa có sách thay thế." : "Bạn chưa có cuốn khác đủ điều kiện đổi."}</p>
             )}
-            <div className={styles.choices}>
+            <div className={styles.choices} data-lenis-prevent="">
               {items.map(book => {
                 const checked = selected.includes(book.id);
                 return <label key={book.id} className={styles.bookChoice} title={book.title} data-selected={checked || undefined}>
