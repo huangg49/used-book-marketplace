@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, RefreshCw, Truck, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  ArrowRight,
+  BookOpen,
+  Check,
+  Clock3,
+  Package,
+  RefreshCw,
+  Truck,
+  Wallet,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import {
   exchangeEvidenceAccessSchema,
   demoExchangeDeadlineLabel,
   exchangeEvidenceListSchema,
+  profileAvatarReadSchema,
   exchangeReturnPhase,
   type CurrentUser,
   type DemoExchangeDeadline,
@@ -113,6 +125,19 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
             >
               <div className={styles.queueCase}>
                 <h3>Trao đổi {exchangeCode(item)}</h3>
+                <div className={styles.queuePeople}>
+                  <ParticipantAvatar
+                    person={disputeParty(item, "initiator")}
+                    viewerId={user.id}
+                  />
+                  <span>{disputeParty(item, "initiator").name}</span>
+                  <ArrowLeftRight size={14} aria-label="trao đổi với" />
+                  <ParticipantAvatar
+                    person={disputeParty(item, "recipient")}
+                    viewerId={user.id}
+                  />
+                  <span>{disputeParty(item, "recipient").name}</span>
+                </div>
                 <p>{item.disputeReason || "Chưa có nội dung báo sự cố."}</p>
               </div>
               <div className={styles.queueFacts}>
@@ -607,7 +632,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                 {item.disputeReason || "Chưa có nội dung báo sự cố."}
               </p>
             </section>
-            <ShipmentOverview item={item} />
+            <ShipmentOverview item={item} viewerId={user.id} />
             {item.status === "ResolutionPending" && (
               <ExchangeEvidenceReview
                 id={item.id}
@@ -650,51 +675,176 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
   );
 }
 
-function ShipmentOverview({ item }: { item: ExchangeDisputeItem }) {
+function disputeParty(
+  item: ExchangeDisputeItem,
+  side: "initiator" | "recipient",
+) {
+  const initiating = side === "initiator";
+  const profile = item.participants?.[side];
+  const books = initiating
+    ? item.agreement?.initiatorBooks
+    : item.agreement && [item.agreement.recipientBook];
+  const role = initiating ? "Bên khởi tạo" : "Bên nhận đề xuất";
+  return {
+    id: initiating ? item.initiatorId : item.recipientId,
+    name:
+      profile?.displayName.trim() ||
+      books?.[0]?.ownerDisplayName.trim() ||
+      role,
+    avatarId: profile?.avatarId,
+    role,
+    side,
+    books: books?.map(({ book }) => book.title) ?? [],
+  };
+}
+
+function ParticipantAvatar({
+  person,
+  viewerId,
+}: {
+  person: ReturnType<typeof disputeParty>;
+  viewerId: string;
+}) {
+  const avatar = useQuery({
+    queryKey: [
+      "operations",
+      "user-avatar",
+      viewerId,
+      person.id,
+      person.avatarId,
+    ],
+    enabled: Boolean(person.avatarId),
+    queryFn: () =>
+      session.request(
+        "/operations/users/" + person.id + "/avatar/read",
+        profileAvatarReadSchema,
+      ),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const url = avatar.isSuccess ? avatar.data.url : undefined;
+  const [failedUrl, setFailedUrl] = useState<string>();
+  return (
+    <span className={styles.avatar} data-side={person.side} aria-hidden="true">
+      {person.name.slice(0, 1).toLocaleUpperCase("vi")}
+      {url && url !== failedUrl && (
+        <img
+          src={url}
+          alt=""
+          loading="lazy"
+          onError={() => setFailedUrl(url)}
+        />
+      )}
+    </span>
+  );
+}
+
+function ShipmentOverview({
+  item,
+  viewerId,
+}: {
+  item: ExchangeDisputeItem;
+  viewerId: string;
+}) {
   const verified = item.outboundDeliveryVerification;
+  const initiator = disputeParty(item, "initiator");
+  const recipient = disputeParty(item, "recipient");
   const shipments = [
     {
-      from: "Bên khởi tạo",
-      to: "Bên nhận đề xuất",
+      from: initiator,
+      to: recipient,
       shipped: item.initiatorShippedAt,
       received: item.recipientReceivedAt,
+      verified: verified && !item.recipientShippedAt,
     },
     {
-      from: "Bên nhận đề xuất",
-      to: "Bên khởi tạo",
+      from: recipient,
+      to: initiator,
       shipped: item.recipientShippedAt,
       received: item.initiatorReceivedAt,
+      verified: verified && !item.initiatorShippedAt,
     },
   ];
   return (
-    <section className={styles.card}>
-      <h2>
+    <section className={styles.card} aria-labelledby="shipment-overview-title">
+      <h2 id="shipment-overview-title">
         <Truck size={20} aria-hidden="true" /> Hai chiều giao sách
       </h2>
-      <ul className={styles.shipments}>
-        {shipments.map(({ from, to, shipped, received }) => (
-          <li key={from}>
-            <h3>
-              {from} <ArrowRight size={15} aria-label="gửi cho" /> {to}
-            </h3>
-            <p>
-              {!shipped
-                ? "Chưa ghi nhận gửi"
-                : verified
-                  ? "Admin đã xác minh giao đến"
-                  : received
-                    ? "Đối tác đã xác nhận nhận"
-                    : "Chưa xác minh giao đến"}
-            </p>
-            {shipped && (
-              <time dateTime={shipped}>Gửi lúc {dateText(shipped)}</time>
-            )}
-            {received && (
-              <time dateTime={received}>Nhận lúc {dateText(received)}</time>
-            )}
-          </li>
-        ))}
-      </ul>
+      <ol className={styles.shipments}>
+        {shipments.map(
+          ({ from, to, shipped, received, verified: deliveryVerified }) => {
+            const delivered = Boolean(received || deliveryVerified);
+            const tone = delivered
+              ? "delivered"
+              : shipped
+                ? "waiting"
+                : "unsent";
+            const StatusIcon = delivered ? Check : shipped ? Clock3 : Package;
+            return (
+              <li key={from.id} className={styles.lane}>
+                <div
+                  className={styles.route}
+                  aria-label={from.name + " gửi cho " + to.name}
+                >
+                  <div className={styles.person}>
+                    <ParticipantAvatar person={from} viewerId={viewerId} />
+                    <div>
+                      <small>Người gửi</small>
+                      <strong>{from.name}</strong>
+                    </div>
+                  </div>
+                  <span className={styles.routeArrow}>
+                    <ArrowRight size={18} aria-hidden="true" />
+                  </span>
+                  <div className={styles.person}>
+                    <ParticipantAvatar person={to} viewerId={viewerId} />
+                    <div>
+                      <small>Người nhận</small>
+                      <strong>{to.name}</strong>
+                    </div>
+                  </div>
+                </div>
+                {from.books.length > 0 && (
+                  <div className={styles.laneBooks}>
+                    <BookOpen size={16} aria-hidden="true" />
+                    <ul aria-label="Sách gửi">
+                      {from.books.map((title, index) => (
+                        <li key={index}>{title}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className={styles.delivery}>
+                  <span className={styles.deliveryStatus} data-tone={tone}>
+                    <StatusIcon size={15} aria-hidden="true" />
+                    {!shipped
+                      ? "Chưa ghi nhận gửi"
+                      : deliveryVerified
+                        ? "Admin đã xác minh giao đến"
+                        : received
+                          ? "Đối tác đã xác nhận nhận"
+                          : "Chưa xác minh giao đến"}
+                  </span>
+                  {(shipped || received) && (
+                    <div className={styles.deliveryTimes}>
+                      {shipped && (
+                        <time dateTime={shipped}>
+                          Gửi lúc {dateText(shipped)}
+                        </time>
+                      )}
+                      {received && (
+                        <time dateTime={received}>
+                          Nhận lúc {dateText(received)}
+                        </time>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          },
+        )}
+      </ol>
       {verified && (
         <div className={styles.verified}>
           <strong>Đã xác minh lúc {dateText(verified.verifiedAt)}</strong>

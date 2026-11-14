@@ -23429,6 +23429,16 @@ components:
             $ref: "#/components/schemas/ExchangeBookSnapshot"
         recipientBook:
           $ref: "#/components/schemas/ExchangeBookSnapshot"
+    ExchangeDisputeParticipant:
+      type: object
+      additionalProperties: false
+      required: [displayName, avatarId]
+      properties:
+        displayName:
+          type: string
+        avatarId:
+          type: [string, "null"]
+          format: uuid
     Exchange:
       type: object
       additionalProperties: false
@@ -23447,6 +23457,20 @@ components:
         - createdAt
         - updatedAt
       properties:
+        participants:
+          description: Included only in authorized operations dispute reads.
+          type: object
+          additionalProperties: false
+          required: [initiator, recipient]
+          properties:
+            initiator:
+              oneOf:
+                - $ref: '#/components/schemas/ExchangeDisputeParticipant'
+                - type: 'null'
+            recipient:
+              oneOf:
+                - $ref: '#/components/schemas/ExchangeDisputeParticipant'
+                - type: 'null'
         returnResolution:
           $ref: '#/components/schemas/ExchangeReturnResolution'
         demoDeadline:

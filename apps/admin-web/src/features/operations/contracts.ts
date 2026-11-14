@@ -1,4 +1,4 @@
-import { demoExchangeDeadlineSchema, exchangeReturnResolutionSchema } from "@used-books/session-client";
+import { demoExchangeDeadlineSchema, exchangeAgreementSchema, exchangeReturnResolutionSchema } from "@used-books/session-client";
 import { z } from "zod";
 import type { components } from "@used-books/api-contract";
 type Schema = components["schemas"];
@@ -504,7 +504,13 @@ export const exchangeShipmentInfo = z.object({
   lastEventAt: time.nullable().optional(),
 }).passthrough();
 
+const disputeParticipant = z.object({ displayName: z.string(), avatarId: uuid.nullable() });
 export const exchangeDisputeResolution = z.object({
+  agreement: exchangeAgreementSchema.nullable().optional(),
+  participants: z.object({
+    initiator: disputeParticipant.nullable(),
+    recipient: disputeParticipant.nullable(),
+  }).optional(),
   demoDeadline: demoExchangeDeadlineSchema.optional(),
   returnResolution: exchangeReturnResolutionSchema.optional(),
   canStartReturnResolution: z.boolean().optional(),

@@ -2709,6 +2709,21 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await post(`/operations/exchanges/${randomUUID()}/resolve`, decisionBody(1), staff).expect(404);
     });
 
+    it('returns only participant display fields to independent operations readers', async () => {
+      const ex = await disputedExchange();
+      const expected = await Promise.all([ex.initiatorId, ex.recipientId].map(async (id: string) => {
+        const user = await db.c.users.findOne({ _id: id });
+        return { displayName: user!.displayName, avatarId: user!.avatarId ?? null };
+      }));
+      const participants = { initiator: expected[0], recipient: expected[1] };
+      const path = '/operations/exchanges/' + ex.id + '/dispute';
+      expect((await get(path, admin).expect(200)).body.participants).toEqual(participants);
+      const queue = (await get('/operations/exchanges/resolutions', staff).expect(200)).body;
+      expect(queue.find((row: { id: string }) => row.id === ex.id).participants).toEqual(participants);
+      expect((await get('/exchanges/' + ex.id, user1).expect(200)).body).not.toHaveProperty('participants');
+      await get(path, user1).expect(403);
+    });
+
     it.each([false, true])('rejects new legacy decisions without changing holds or listings; received=%s', async received => {
       const ex = await disputedExchange(received);
       const decision = received ? 'CompleteExchange' : 'RefundBoth';

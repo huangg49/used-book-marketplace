@@ -8071,7 +8071,17 @@ export interface components {
             initiatorBooks: components["schemas"]["ExchangeBookSnapshot"][];
             recipientBook: components["schemas"]["ExchangeBookSnapshot"];
         };
+        ExchangeDisputeParticipant: {
+            displayName: string;
+            /** Format: uuid */
+            avatarId: string | null;
+        };
         Exchange: {
+            /** @description Included only in authorized operations dispute reads. */
+            participants?: {
+                initiator: components["schemas"]["ExchangeDisputeParticipant"] | null;
+                recipient: components["schemas"]["ExchangeDisputeParticipant"] | null;
+            };
             returnResolution?: components["schemas"]["ExchangeReturnResolution"];
             demoDeadline?: components["schemas"]["DemoExchangeDeadline"];
             /** @description The current member can simulate this local demo exchange's shipping deadline. */

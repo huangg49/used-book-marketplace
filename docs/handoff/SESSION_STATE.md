@@ -8,6 +8,12 @@ PASS. Browser dùng Mongo QA và phản hồi HTTP mô phỏng cho khiếu nại
 nhận phụ trách, xác minh bàn giao và giữ đúng lệnh khi mất phản hồi.
 Bước tiếp theo là xem lại trên Admin demo bằng tài khoản được cấp quyền.
 
+Lượt chỉnh tiếp bổ sung tên/avatar thành viên cho danh sách và chi tiết,
+tách từng chiều người gửi → người nhận, tựa sách và mốc giao nhận. API E2E
+kiểm quyền và phạm vi trường trả về. Browser QA kiểm tải avatar và chữ cái
+thay thế. Hồ sơ local #B57A9858 đã kiểm tên, tựa sách và hai trạng thái
+từ bản chụp giao dịch. API demo port 3000 cần nạp bản mới để trả avatar ID.
+
 # Trang gửi yêu cầu hỗ trợ — 13/11/2026
 
 Nhánh `codex/support-request-redesign`, base `16ba9585`. Member web tách phần

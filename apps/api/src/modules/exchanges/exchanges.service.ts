@@ -2007,6 +2007,25 @@ export class ExchangesService {
     );
   }
 
+  private async operationsDisputes(tx: Tx, rows: ExchangeDoc[]): Promise<Wire['Exchange'][]> {
+    if (!rows.length) return [];
+    const ids = [...new Set(rows.flatMap((row) => [row.initiatorId, row.recipientId]))];
+    const users = await tx.c.users
+      .find({ _id: { $in: ids } }, { projection: { displayName: 1, avatarId: 1 } })
+      .toArray();
+    const participants = new Map(users.map((user) => [
+      user._id,
+      { displayName: user.displayName, avatarId: user.avatarId ?? null },
+    ]));
+    return rows.map((row) => ({
+      ...this.view(row),
+      participants: {
+        initiator: participants.get(row.initiatorId) ?? null,
+        recipient: participants.get(row.recipientId) ?? null,
+      },
+    }));
+  }
+
   listResolutions(auth: Actor) {
     return this.commands.read(auth, async (tx, actor) => {
       staff(actor);
@@ -2019,7 +2038,7 @@ export class ExchangesService {
         })
         .sort({ disputedAt: -1, updatedAt: -1 })
         .toArray();
-      return rows.map((r) => this.view(r));
+      return this.operationsDisputes(tx, rows);
     });
   }
 
@@ -2068,7 +2087,7 @@ export class ExchangesService {
       if ([row.initiatorId, row.recipientId].includes(actor._id))
         throw new DomainError(403, 'SelfReviewForbidden', 'Không được xử lý trao đổi của chính mình.');
       if (row.status !== 'ResolutionPending' && !row.returnResolution) throw notFound();
-      const view = this.view(row);
+      const [view] = await this.operationsDisputes(tx, [row]);
       if (actor.status !== 'ACTIVE' || !actor.roles.some(({ role }) => role === 'ADMIN') ||
         !demoExchangeDeadlineEnabled(this.config, row)) return view;
       const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });

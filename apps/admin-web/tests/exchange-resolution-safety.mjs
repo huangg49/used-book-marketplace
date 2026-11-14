@@ -41,6 +41,7 @@ try {
     recipientDeposit: 200000, diffAmount: 100000, createdAt: now, updatedAt: now,
     initiatorFundedAt: now, recipientFundedAt: now, diffPayerId: null,
     initiatorShippedAt: now, recipientShippedAt: now, disputedAt: now,
+    participants: { initiator: { displayName: 'An QA', avatarId: randomUUID() }, recipient: { displayName: 'Bình QA', avatarId: null } },
     disputedBy: 'System', disputeReason: 'QA giao diện: sách đang được đối chiếu tình trạng và nơi giữ. '.repeat(5),
   };
   let mode = 'populated', mutations = 0, attempts = 0;
@@ -53,6 +54,10 @@ try {
   const evidenceId = randomUUID();
   const ownerId = item.initiatorId;
   const holderId = item.recipientId;
+  await page.route('**/operations/users/*/avatar/read', route =>
+    route.fulfill({ json: { url: origin + '/qa-avatar.png', expiresAt: new Date(Date.now() + 600000).toISOString() } }));
+  await page.route('**/qa-avatar.png', route =>
+    route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/r50AAAAASUVORK5CYII=', 'base64') }));
   await page.route('**/operations/exchanges/**', async route => {
     const url = new URL(route.request().url());
     if (route.request().method() === 'POST') {
@@ -109,6 +114,9 @@ try {
   await page.getByLabel(/^Mật khẩu(?:\s|$)/).fill(password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Khiếu nại trao đổi sách', exact: true })).toBeVisible();
+  await expect(page.getByText('An QA', { exact: true })).toBeVisible();
+  await expect(page.getByText('Bình QA', { exact: true })).toBeVisible();
+  await expect(page.locator('img[src$="/qa-avatar.png"]')).toHaveCount(1);
   await expect(page.getByText('Chờ xử lý · Giữ tiền và sách', { exact: true })).toBeVisible();
   await expect(page.getByText(/Giữ tiền và sách trong lúc đối chiếu/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Phân xử', exact: true })).toHaveCount(0);
@@ -138,6 +146,10 @@ try {
   await page.getByRole('button', { name: 'Cập nhật danh sách', exact: true }).click();
   await page.getByRole('link', { name: 'Mở hồ sơ', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Hai chiều giao sách' })).toBeVisible();
+  const handover = page.getByRole('region', { name: 'Hai chiều giao sách' });
+  await expect(handover.getByText('An QA', { exact: true })).toHaveCount(2);
+  await expect(handover.getByText('Bình QA', { exact: true })).toHaveCount(2);
+  await expect(handover.locator('img[src$="/qa-avatar.png"]')).toHaveCount(2);
   await expect(page.getByRole('heading', { name: 'Nội dung báo sự cố' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Đối chiếu khoản tiền' })).toBeVisible();
   await expect(page.getByText('Đang giữ', { exact: true })).toBeVisible();

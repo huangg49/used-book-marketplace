@@ -212,29 +212,170 @@
   line-height: 1.65;
 }
 
-.shipments li,
-.verified {
-  display: grid;
-  gap: 0.3rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--shop-line);
+.queuePeople,
+.person {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
 }
 
-.shipments li:last-child {
-  padding-bottom: 0;
+.queuePeople {
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  font-weight: 700;
 }
 
-.shipments h3 {
+.avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+  font-weight: 700;
   font-size: 0.875rem;
 }
 
-.shipments h3 svg {
-  vertical-align: middle;
+.avatar[data-side="recipient"] {
+  background: var(--info-surface);
+  color: var(--info);
+}
+
+.avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.queuePeople .avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.75rem;
+}
+
+.shipments {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lane {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: clamp(0.55rem, 1.8cqi, 0.9rem);
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+}
+
+.route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.routeArrow {
+  display: grid;
+  place-items: center;
+  color: var(--shop-wine);
+}
+
+.person small,
+.person strong {
+  display: block;
+}
+
+.person small {
   color: var(--shop-muted);
+  font-size: 0.75rem;
+}
+
+.person strong {
+  font-size: 0.9375rem;
+}
+
+.laneBooks {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  color: var(--shop-wine);
+}
+
+.laneBooks svg {
+  align-self: start;
+  margin-top: 0.2rem;
+}
+
+.laneBooks ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.delivery {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.8rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--rule);
+}
+
+.deliveryStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 5px;
+  background: var(--shop-shelf);
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.deliveryStatus[data-tone="delivered"] {
+  background: var(--success-surface);
+  color: var(--success);
+}
+
+.deliveryStatus[data-tone="waiting"] {
+  background: var(--warning-surface);
+  color: var(--warning);
+}
+
+.deliveryTimes,
+.verified {
+  display: grid;
+  gap: 0.25rem;
 }
 
 .verified {
-  padding-bottom: 0;
+  border-top: 1px solid var(--shop-line);
+  padding-top: 0.75rem;
+}
+
+@container (max-width: 25rem) {
+  .route {
+    gap: 0.4rem;
+    align-items: start;
+  }
+
+  .person {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .routeArrow {
+    margin-top: 0.4rem;
+  }
 }
 
 .facts {
