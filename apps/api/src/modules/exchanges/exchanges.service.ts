@@ -2079,9 +2079,6 @@ export class ExchangesService {
               'SelfReviewForbidden',
               'Bạn không thể phân xử giao dịch của chính mình.',
             );
-          const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
-          if (assignment?.assigneeId !== actor._id)
-            throw new DomainError(403, 'FORBIDDEN', 'Nhận phụ trách hồ sơ trước khi xử lý.');
           return exchange;
         },
         mutate: async (tx, actor, initialExchange, receiptId) => {
@@ -2089,6 +2086,15 @@ export class ExchangesService {
           const exchange = await this.exchange(tx, initialExchange._id);
           if (exchange.status !== 'ResolutionPending') throw invalidState();
           if (exchange.revision !== body.expectedVersion) throw conflict();
+
+          if (body.decision === 'RefundBoth') {
+            throw invalidState('Quyết định cũ chỉ dùng để đối chiếu kết quả đã ghi. Hãy xử lý trong hồ sơ trả sách.');
+          }
+
+          const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
+          if (!assignment || assignment.assigneeId !== actor._id) {
+            throw invalidState('Quyết định cũ chỉ dùng để đối chiếu kết quả đã ghi. Hãy xử lý trong hồ sơ trả sách.');
+          }
 
           const trimmedReason = body.reason.trim();
           if (trimmedReason.length < 10)
@@ -2453,7 +2459,7 @@ export class ExchangesService {
           if (row.revision !== body.expectedVersion) throw conflict();
           const now = await tx.now();
           if (currentDemoDeadline(row, now, operations) !== body.deadline) throw invalidState();
-          const result = await this.applyDemoDeadline(tx, row, now, body.deadline, actor._id);
+          const result = await this.applyDemoDeadline(tx, row, now, body.deadline, operations ? undefined : actor._id);
           if (!result) throw invalidState();
           const exchange = result.exchange;
           return {
@@ -2485,6 +2491,10 @@ export class ExchangesService {
       case 'Shipping': return this.expireShippingTx(tx, row, now, true);
       case 'Transit': return this.expireTransitTx(tx, row, now, true);
       case 'Inspection': {
+        const isParticipant = row.initiatorId === actorId || row.recipientId === actorId;
+        if (!actorId || !isParticipant) {
+          return this.expireInspectionTx(tx, row, now, true);
+        }
         const isInitiator = row.initiatorId === actorId;
         const myCompleted = isInitiator ? row.initiatorCompletedAt : row.recipientCompletedAt;
         const partnerCompleted = isInitiator ? row.recipientCompletedAt : row.initiatorCompletedAt;
