@@ -31,6 +31,7 @@ import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
 import { checkOrder } from '../orders/order-invariants.js';
 import { checkPointOrder } from '../auctions/point-order-invariants.js';
+import { oneSidedReturn } from '../exchanges/exchange-return-resolution.js';
 import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
 import {
   FEE_JOURNAL_TYPES,
@@ -270,6 +271,28 @@ export async function checkJournal(tx: Tx, journalId: string) {
     )
       throw new Error('Listing fee journal source mismatch');
     tx.check(`listing-fee:${fee._id}`, () => checkListingFee(tx, fee._id));
+  } else if (j.type === 'ExchangeReturnRefund' || j.type === 'ExchangeNonReturnCompensation') {
+    const ex = await tx.c.exchanges.findOne({
+      $or: [{ initiatorOrderId: j.orderId! }, { recipientOrderId: j.orderId! }],
+    });
+    const baseReceipt = ex?.returnResolution?.settlementReceiptId;
+    if (!ex || !baseReceipt || ex.status !== 'Cancelled' || ex.returnResolution?.phase !== 'Closed')
+      throw new Error('Exchange return journal requires a closed resolution');
+    const move = exchangeReturnMoves(ex).find((candidate) =>
+      candidate.kind === j.type && candidate.orderId === j.orderId);
+    const debit = entries.find((entry) => entry.debit > 0);
+    const credit = entries.find((entry) => entry.credit > 0);
+    if (!move || j.receiptId !== exchangeReturnJournalRef(baseReceipt, move.code) ||
+        !debit || debit.debit !== move.amount ||
+        account(debit.accountId)?.purpose !== 'UserAvailable' ||
+        account(debit.accountId)?.ownerId !== move.recipientId ||
+        !credit || credit.credit !== move.amount ||
+        account(credit.accountId)?.purpose !== 'OrderHold' ||
+        account(credit.accountId)?.orderId !== move.orderId ||
+        !(await tx.c.mutation_receipts.findOne({
+          _id: baseReceipt, operation: 'actOnOperationsExchangeReturn',
+        }))) throw new Error('Exchange return allocation mismatch');
+    tx.check('exchange-return:' + ex._id, () => checkExchangeReturn(tx, ex));
   } else if (j.type === 'OrderSettlement') {
     // ViaPoint completion (migration 0012): the whole hold leaves once, the
     // seller receives P − C and the platform C plus the outbound leg fee.
@@ -1401,15 +1424,92 @@ export class LedgerService {
       }
     }
   }
-  async forfeitExchangeAndCompensate(
-    tx: Tx,
-    exchange: ExchangeDoc,
-    _compensatedParty: 'Initiator' | 'Recipient',
-    now: Date,
-  ) {
-    // Release deposits safely via compliant double-entry refund
-    await this.refundExchange(tx, exchange, now);
+  async settleExchangeReturn(tx: Tx, exchange: ExchangeDoc, receiptId: string, now: Date) {
+    const scope = oneSidedReturn(exchange);
+    if (!scope || exchange.returnResolution?.settlementReceiptId !== receiptId) throw invalidState();
+    const sources = await Promise.all([scope.ownerOrderId, scope.holderOrderId].map((orderId) =>
+      tx.c.wallet_accounts.findOne({ orderId, purpose: 'OrderHold' })));
+    const [ownerHold, holderHold] = sources;
+    if (!ownerHold || !holderHold) throw invalidState('Không tìm thấy hai khoản giữ của giao dịch.');
+    const [ownerWallet, holderWallet] = await Promise.all([
+      this.account(tx, { ownerId: scope.ownerId }), this.account(tx, { ownerId: scope.holderId }),
+    ]);
+    await this.lockAccounts(tx, [ownerHold._id, holderHold._id, ownerWallet._id, holderWallet._id]);
+    if (await this.balance(tx, ownerHold._id) !== scope.ownerDeposit + (scope.differencePayerId === scope.ownerId ? scope.differenceAmount : 0) ||
+        await this.balance(tx, holderHold._id) !== scope.holderDeposit + (scope.differencePayerId === scope.holderId ? scope.differenceAmount : 0))
+      throw invalidState('Tiền đang giữ không khớp thỏa thuận. Cần đối soát trước khi chi.');
+    for (const move of exchangeReturnMoves(exchange)) {
+      await this.journal(tx, {
+        type: move.kind, orderId: move.orderId, receiptId: exchangeReturnJournalRef(receiptId, move.code),
+        topupId: null, eventId: null, postedAt: now,
+      },
+      move.orderId === scope.ownerOrderId ? ownerHold._id : holderHold._id,
+      move.recipientId === scope.ownerId ? ownerWallet._id : holderWallet._id,
+      move.amount);
+    }
+    tx.check('exchange-return-books:' + exchange._id, () => checkExchangeReturnBooks(tx, exchange));
   }
+
+}
+
+function exchangeReturnJournalRef(receiptId: string, allocation: string) {
+  const hash = createHash('sha256').update('exchange-return:' + receiptId + ':' + allocation).digest('hex');
+  return [hash.slice(0, 8), hash.slice(8, 12), hash.slice(12, 16), hash.slice(16, 20), hash.slice(20, 32)].join('-');
+}
+
+function exchangeReturnMoves(exchange: ExchangeDoc) {
+  const scope = oneSidedReturn(exchange);
+  const outcome = exchange.returnResolution?.outcome;
+  if (!scope || !outcome) throw new Error('Exchange return allocation requires a final outcome');
+  const compensated = outcome === 'Compensated';
+  return ([
+    { code: 'exchange-owner-refund', kind: 'ExchangeReturnRefund', orderId: scope.ownerOrderId,
+      recipientId: scope.ownerId, amount: scope.ownerDeposit + (scope.differencePayerId === scope.ownerId ? scope.differenceAmount : 0) },
+    { code: 'exchange-holder-refund', kind: 'ExchangeReturnRefund', orderId: scope.holderOrderId,
+      recipientId: scope.holderId, amount: (compensated ? 0 : scope.holderDeposit) +
+        (scope.differencePayerId === scope.holderId ? scope.differenceAmount : 0) },
+    { code: 'exchange-compensation', kind: 'ExchangeNonReturnCompensation', orderId: scope.holderOrderId,
+      recipientId: scope.ownerId, amount: compensated ? scope.holderDeposit : 0 },
+  ] as const).filter((move) => move.amount > 0);
+}
+
+async function checkExchangeReturn(tx: Tx, exchange: ExchangeDoc) {
+  const scope = oneSidedReturn(exchange)!;
+  const resolution = exchange.returnResolution!;
+  const receipt = await tx.c.mutation_receipts.findOne({ _id: resolution.settlementReceiptId! });
+  const moves = exchangeReturnMoves(exchange);
+  const journals = await tx.c.ledger_journals.find({
+    orderId: { $in: [scope.ownerOrderId, scope.holderOrderId] },
+    type: { $in: ['ExchangeReturnRefund', 'ExchangeNonReturnCompensation'] },
+  }).toArray();
+  const compensated = resolution.outcome === 'Compensated';
+  if (receipt?.operation !== 'actOnOperationsExchangeReturn' || receipt.resultVersion !== exchange.revision ||
+      journals.length !== moves.length || moves.some((move) => !journals.some((journal) =>
+        journal.receiptId === exchangeReturnJournalRef(receipt._id, move.code))) ||
+      (compensated && !(await tx.c.member_violations.findOne({
+        sourceId: exchange._id, kind: 'ExchangeReturnDefault', userId: scope.holderId, receiptId: receipt._id,
+      })))) throw new Error('Exchange return resolution, books or journal mismatch');
+  const accounts = await tx.c.wallet_accounts.find({
+    orderId: { $in: [scope.ownerOrderId, scope.holderOrderId] }, purpose: 'OrderHold',
+  }).toArray();
+  if (accounts.length !== 2) throw new Error('Exchange holds missing');
+  for (const account of accounts) {
+    if (await balanceOf(tx, account._id) !== 0) throw new Error('Exchange return hold not fully released');
+  }
+}
+
+// Listings can be revised and traded again after return. Check their resulting
+// state only in the settlement transaction, while both listings are locked.
+async function checkExchangeReturnBooks(tx: Tx, exchange: ExchangeDoc) {
+  const scope = oneSidedReturn(exchange)!;
+  const [affected, retained] = await Promise.all([
+    tx.c.listings.findOne({ _id: scope.listingId }),
+    tx.c.listings.findOne({ _id: scope.otherListingId }),
+  ]);
+  const compensated = exchange.returnResolution?.outcome === 'Compensated';
+  if (affected?.trade !== (compensated ? 'ClosedUnavailable' : 'Available') ||
+      (!compensated && affected.moderation !== 'Draft') || retained?.trade !== 'Available')
+    throw new Error('Exchange return listing projection mismatch');
 }
 
 // Commit-time replacement for latlai_check_topup.

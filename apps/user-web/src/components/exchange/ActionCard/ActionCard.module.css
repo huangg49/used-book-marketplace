@@ -10,9 +10,183 @@
 }
 .inspectionDetails { font-size:.8125rem; color:var(--shop-muted); }
 .inspectionDetails summary { cursor:pointer; min-height:44px; padding:12px 0; }
+.inspectionActions {
+    display: grid;
+    gap: 7px;
+}
 .card[data-compact] { font-size:.875rem; line-height:1.55; }
 .card[data-compact] p { font-size:.875rem; line-height:1.55; }
 .card[data-compact] .calloutBox { padding:12px; background:var(--shop-shelf); }
+.card[data-sheet] {
+    padding: 0;
+    gap: 8px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+.card[data-sheet] .btnGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.card[data-sheet] .btnGrid button { width: auto; }
+.card[data-handover] { gap: 12px; }
+.card[data-handover] .deadlineRow {
+    margin: 4px 0 0;
+    color: var(--shop-muted);
+    font-size: .8125rem;
+    line-height: 1.5;
+}
+.card[data-handover] .deadlineRow time { font-variant-numeric: tabular-nums; }
+.demoAdvance {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px dashed var(--shop-control);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--shop-wine);
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+.demoAdvance:hover:not(:disabled) { background: var(--shop-shelf); }
+.demoAdvance:disabled { opacity: .6; cursor: wait; }
+.card[data-handover] .btnGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.card[data-handover] .btnGrid > button { min-height: 44px; }
+.handoverSupport { margin-inline-start: auto; }
+.handoverSupport > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--shop-wine);
+    text-underline-offset: 4px;
+}
+.handoverSupport > a:hover { text-decoration: underline; }
+.card[data-handover] .btnDanger:only-of-type {
+    border-color: transparent;
+    background: transparent;
+    color: var(--shop-muted);
+    padding-inline: 0;
+    text-underline-offset: 4px;
+}
+.card[data-handover] .btnDanger:only-of-type:hover:not(:disabled) {
+    color: var(--shop-wine);
+    text-decoration: underline;
+}
+.card[data-handover] .btnPrimary { display: inline-flex; gap: 7px; align-items: center; justify-content: center; }
+.card[data-handover] .btnPrimary svg { flex: none; }
+.cancellationNotice {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--shop-line);
+    border-radius: 8px;
+    background: var(--shop-cream);
+    color: var(--shop-ink);
+}
+.card[data-sheet][data-proposal-actions] .btnGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.card[data-sheet][data-proposal-actions] .btnGrid button { min-height: 44px; }
+.card[data-sheet][data-proposal-actions] .btnGrid > button { grid-column: 1 / -1; }
+.card[data-sheet][data-proposal-actions] .btnDanger { border-color: transparent; background: transparent; color: var(--shop-muted); }
+.card[data-sheet][data-proposal-actions] .btnDanger:hover { color: var(--shop-wine); text-decoration: underline; }
+.proposalWaiting { margin: 0; font-weight: 700; }
+.btnSecondary svg { flex: none; }
+.card[data-sheet][data-funding] {
+    gap: 0;
+    font-size: .9375rem;
+}
+.card[data-sheet][data-funding] .btnGrid {
+    margin-top: 18px;
+    gap: 4px;
+}
+.card[data-sheet][data-funding] .btnPrimary {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 8px;
+    color: var(--shop-cream);
+    font-size: .9375rem;
+}
+.card[data-sheet][data-funding] .btnDanger {
+    margin-inline: auto;
+    padding-inline: 8px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--shop-muted);
+    font-size: .8125rem;
+    font-weight: 600;
+    text-underline-offset: 4px;
+}
+.card[data-sheet][data-funding] .btnDanger:hover { color: var(--shop-wine); text-decoration: underline; }
+.fundingAmounts { margin: 0; }
+.fundingAmounts > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 14px;
+    padding-block: 5px;
+}
+.fundingAmounts dd {
+    margin: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.fundingAmounts .fundingTotal {
+    margin-top: 5px;
+    padding-top: 10px;
+    border-top: 1px solid var(--shop-line);
+    color: var(--shop-wine);
+    font-weight: 750;
+}
+.fundingStatus { margin: 2px 0 0; color: var(--shop-muted); }
+.card[data-sheet][data-funding] .fundingTotal {
+    display: grid;
+    gap: 3px;
+    padding: 0 0 17px;
+    margin: 0 0 11px;
+    border: 0;
+    border-bottom: 1px solid var(--shop-line);
+}
+.card[data-sheet][data-funding] .fundingTotal dt {
+    color: var(--shop-ink);
+    font-weight: 650;
+}
+.card[data-sheet][data-funding] .fundingTotal dd {
+    font-size: 2.5rem;
+    line-height: 1.14;
+    letter-spacing: -.035em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.card[data-sheet][data-funding] .fundingFee {
+    margin: 5px 0 0;
+    font-size: .8125rem;
+    color: var(--shop-muted);
+}
+.card[data-sheet][data-funding] .fundingStatus {
+    margin: 14px 0 0;
+    border-top: 1px solid var(--shop-line);
+    padding-top: 12px;
+    color: var(--shop-ink);
+}
+.card[data-sheet][data-funding] .deadlineRow { margin: 5px 0 0; }
+.card[data-sheet][data-funding] .recoverySection { margin-top: 16px; }
+.inlineButton {
+    min-height: 44px;
+    padding-inline: 6px;
+    border: 0;
+    background: transparent;
+    color: var(--shop-wine);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
 
 .headerRow {
     display: flex;
@@ -265,48 +439,6 @@
   gap: 12px;
   width: 100%;
   box-sizing: border-box;
-}
-
-.disputeNoticeBanner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #fff8f0;
-  border: 1px solid #fed7aa;
-  border-radius: 10px;
-  padding: 12px 14px;
-  box-sizing: border-box;
-}
-
-.noticeIconWrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #ffedd5;
-  color: #c2410c;
-  flex-shrink: 0;
-}
-
-.noticeContent {
-  flex: 1;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: #7c2d12;
-}
-
-.noticeContent strong {
-  display: block;
-  font-weight: 700;
-  margin-bottom: 3px;
-  color: #9a3412;
-}
-
-.noticeContent p {
-  margin: 0;
-  color: #8c4a27;
 }
 
 .disputeForm {

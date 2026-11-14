@@ -47,6 +47,8 @@ export const walletHistoryItem = z.object({
     "AuctionBidHold",
     "AuctionBidRelease",
     "AuctionDepositSellerShare",
+    "ExchangeReturnRefund",
+    "ExchangeNonReturnCompensation",
   ]),
   amount: z.number().int().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER),
   balanceAfter: money,

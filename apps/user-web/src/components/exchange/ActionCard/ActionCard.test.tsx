@@ -23,7 +23,7 @@ const base: ExchangeDetail = {
   partnerInspectionDeadline: "2099-01-02T00:00:00Z",
   inspectionDeadline: "2099-01-02T00:00:00Z",
 };
-function render(changes: Partial<ExchangeDetail>) {
+function render(changes: Partial<ExchangeDetail>, handover = false) {
   const cache = new QueryClient();
   const noop = async () => {};
   const html = renderToStaticMarkup(
@@ -31,6 +31,9 @@ function render(changes: Partial<ExchangeDetail>) {
       <QueryClientProvider client={cache}>
         <ActionCard
           detail={{ ...base, ...changes }}
+          compact={handover}
+          standaloneSheet={handover}
+          handover={handover ? { navigationKey: "qa" } : undefined}
           onCancel={noop}
           onAccept={noop}
           onReject={noop}
@@ -39,6 +42,7 @@ function render(changes: Partial<ExchangeDetail>) {
           onConfirmReceived={noop}
           onRetry={noop}
           onComplete={noop}
+          onDispute={noop}
         />
       </QueryClientProvider>
     </MemoryRouter>,
@@ -71,5 +75,57 @@ describe("merged Exchange inspection semantics", () => {
     });
     expect(html).toContain("200.000");
     expect(html).toContain("Đặt cọc mô phỏng");
+  });
+  it("closes only the viewer's claim when their deadline passes", () => {
+    const html = render({ viewerInspectionDeadline: "2020-01-01T00:00:00Z" });
+    expect(html).toContain("Đã hết hạn kiểm tra của bạn.");
+    expect(html).toContain("Xác nhận đã kiểm tra");
+    expect(html).not.toContain(">Báo sự cố</button>");
+    expect(render({ viewerCompletedAt: base.createdAt })).toContain(">Báo sự cố</button>");
+  });
+});
+
+describe("Exchange handover actions", () => {
+  it("puts sending and receiving in their respective directions", () => {
+    const preparing = render({
+      status: "WAITING_YOU_SEND", viewerShipping: {}, partnerShipping: {},
+      shippingDeadline: "2099-01-01T00:00:00Z",
+    }, true);
+    const incomingStart = preparing.indexOf('id="nhan-sach"');
+    expect(preparing.slice(0, incomingStart)).toContain("Tạo đơn gửi sách");
+    expect(preparing).not.toContain("Xác nhận đã nhận sách");
+    const inTransit = render({
+      status: "WAITING_YOU_CONFIRM",
+      viewerShipping: { sentAt: base.createdAt }, partnerShipping: { sentAt: base.createdAt },
+    }, true);
+    expect(inTransit.slice(inTransit.indexOf('id="nhan-sach"'))).toContain("Xác nhận đã nhận sách");
+    expect(inTransit).not.toContain("Tạo đơn gửi sách");
+  });
+
+  it("never offers to send after the deadline even with an open cancellation request", () => {
+    const html = render({
+      status: "WAITING_YOU_SEND", viewerShipping: {}, partnerShipping: {},
+      shippingDeadline: "2020-01-01T00:00:00Z", cancellationRequestedBy: "Recipient",
+    }, true);
+    expect(html).toContain("Đã hết hạn gửi");
+    expect(html).not.toContain("Tạo đơn gửi sách");
+  });
+
+  it("keeps both directions actionable when only the incoming book has been sent", () => {
+    const detail = {
+      status: "WAITING_YOU_SEND",
+      viewerShipping: {},
+      partnerShipping: { sentAt: base.createdAt },
+      shippingDeadline: "2099-01-01T00:00:00Z",
+    } satisfies Partial<ExchangeDetail>;
+    const before = render(detail, true);
+    const incoming = before.indexOf('id="nhan-sach"');
+    expect(before.slice(0, incoming)).toContain("Tạo đơn gửi sách");
+    expect(before.slice(incoming)).toContain("Xác nhận đã nhận sách");
+
+    const after = render({ ...detail, viewerShipping: { receivedAt: base.createdAt } }, true);
+    expect(after).toContain("Bạn đã nhận sách");
+    expect(after).toContain("Tạo đơn gửi sách");
+    expect(after).not.toContain("Xác nhận đã nhận sách");
   });
 });

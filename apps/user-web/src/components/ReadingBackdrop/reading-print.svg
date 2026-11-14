@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <defs>
+    <g id="open-book">
+      <path d="M0-8c-5-4-12-5-19-4v24c7-1 14 0 19 4 5-4 12-5 19-4v-24C12-13 5-12 0-8Z"/>
+      <path d="M0-8v24m-23-25v25c8-1 16 0 23 4 7-4 15-5 23-4V-9M-14-5c4 0 7 1 10 2m-10 4c4 0 7 1 10 2m-10 4c4 0 7 1 10 2M4-3c3-1 6-2 10-2M4 3c3-1 6-2 10-2M4 9c3-1 6-2 10-2"/>
+    </g>
+    <g id="glasses">
+      <circle cx="-12" cy="2" r="8.5"/>
+      <circle cx="12" cy="2" r="8.5"/>
+      <path d="M-3.5 1a4 4 0 0 1 7 0M-20 0l-5-5m45 5 5-5M-16-1a4 4 0 0 1 4-2m20 2a4 4 0 0 1 4-2"/>
+    </g>
+    <g id="bookmark">
+      <path d="M-7-13H7v30l-7-5-7 5zM0-13c-5-2-6-6-3-9 4 0 6 5 3 9zm0 0c2-5 5-7 8-6 0 4-3 6-8 6zm-3 7h6m-6 4h6"/>
+    </g>
+    <g id="owl">
+      <path d="M-16-6v-9l7 4a23 23 0 0 1 18 0l7-4v9c2 3 3 6 3 9 0 8-7 14-19 14S-19 11-19 3c0-3 1-6 3-9Z"/>
+      <circle cx="-7" cy="0" r="5.5"/>
+      <circle cx="7" cy="0" r="5.5"/>
+      <path d="M-7 0h.1M7 0h.1M-2 7l2 2 2-2m-6 6h8"/>
+    </g>
+    <g id="closed-book">
+      <path d="M-11-17h24v29h-24a4 4 0 0 0 0 8h24v-8m-24 8a4 4 0 0 1-4-4v-29a4 4 0 0 1 4-4v29m5 4h15"/>
+      <path d="M-6-11h14v12H-6zm3 4h8m-8 4h5"/>
+    </g>
+    <g id="spark">
+      <path d="M0-5v10m-5-5H5"/>
+    </g>
+  </defs>
+  <g fill="none" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#806854" opacity=".49">
+      <use href="#open-book" transform="translate(66 70) rotate(-15)"/>
+      <use href="#glasses" transform="translate(375 49) rotate(-12)"/>
+      <use href="#glasses" transform="translate(142 212) rotate(17) scale(.87)"/>
+      <use href="#open-book" transform="translate(497 247) rotate(12) scale(.92)"/>
+      <use href="#owl" transform="translate(89 369) rotate(-8) scale(.9)"/>
+      <use href="#open-book" transform="translate(316 419) rotate(9) scale(.95)"/>
+      <use href="#glasses" transform="translate(561 397) rotate(-13)"/>
+    </g>
+    <g stroke="#924e45" opacity=".49">
+      <use href="#bookmark" transform="translate(220 97) rotate(19) scale(.91)"/>
+      <use href="#closed-book" transform="translate(548 90) rotate(-16)"/>
+      <use href="#owl" transform="translate(322 180) rotate(-10) scale(.83)"/>
+      <use href="#closed-book" transform="translate(235 303) rotate(-18) scale(.85)"/>
+      <use href="#bookmark" transform="translate(381 304) rotate(14)"/>
+      <use href="#bookmark" transform="translate(607 207) rotate(-16) scale(.75)"/>
+    </g>
+    <g stroke="#a78360" opacity=".42">
+      <use href="#spark" transform="translate(140 43) rotate(20) scale(.65)"/>
+      <use href="#spark" transform="translate(36 161) rotate(14)"/>
+      <use href="#spark" transform="translate(444 122) rotate(-15) scale(.75)"/>
+      <use href="#spark" transform="translate(267 207) rotate(-19) scale(.65)"/>
+      <use href="#spark" transform="translate(578 278) rotate(14) scale(.65)"/>
+      <use href="#spark" transform="translate(153 323) rotate(16)"/>
+      <use href="#spark" transform="translate(454 380) rotate(-12)"/>
+      <use href="#spark" transform="translate(201 443) rotate(-14) scale(.8)"/>
+    </g>
+  </g>
+</svg>

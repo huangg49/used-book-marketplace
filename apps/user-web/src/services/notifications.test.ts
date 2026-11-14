@@ -71,6 +71,8 @@ describe("durable inbox cache and targets", () => {
       ["SupportUpdated", "SupportCase", `/support/${id}`],
       ["ReviewModerated", "TransactionReview", `/reviews?reviewId=${id}`],
       ["ExchangeDisputed", "Exchange", `/exchange/${id}`],
+      ["ExchangeShipped", "Exchange", `/exchange/${id}#nhan-sach`],
+      ["ExchangeReceived", "Exchange", `/exchange/${id}#giao-nhan`],
     ] as const) {
       const notice = notificationSchema.parse({
         id,

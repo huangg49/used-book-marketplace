@@ -1,3 +1,4 @@
+import { demoExchangeDeadlineSchema, exchangeReturnResolutionSchema, exchangeStatementSchema } from "@used-books/session-client";
 import {
   acknowledgedExchange,
   acknowledgedExchangeProposal,
@@ -30,6 +31,15 @@ import type {
 
 const date = z.string().nullable().optional();
 export const exchangeSchema = z.object({
+  statements: z.array(exchangeStatementSchema).optional(),
+  returnResolution: exchangeReturnResolutionSchema.optional(),
+  canStartReturnResolution: z.boolean().optional(),
+  demoShippingAdvanceAvailable: z.boolean().optional(),
+  demoDeadline: demoExchangeDeadlineSchema.optional(),
+  outboundDeliveryVerification: z.object({
+    verifiedAt: z.iso.datetime({ offset: true }),
+    note: z.string(),
+  }).optional(),
   agreement: exchangeAgreementSchema.nullable().optional(),
   id: z.string().uuid(),
   initiatorId: z.string().uuid(),
@@ -105,6 +115,7 @@ export const exchangeSchema = z.object({
       packagingVideoUrl: z.string().nullable().optional(),
       packagingPhotoName: z.string().nullable().optional(),
       packagingVideoName: z.string().nullable().optional(),
+      registeredAt: date,
       shippedAt: date,
       lastEvent: z.string().nullable().optional(),
       lastEventAt: date,
@@ -123,6 +134,7 @@ export const exchangeSchema = z.object({
       packagingVideoUrl: z.string().nullable().optional(),
       packagingPhotoName: z.string().nullable().optional(),
       packagingVideoName: z.string().nullable().optional(),
+      registeredAt: date,
       shippedAt: date,
       lastEvent: z.string().nullable().optional(),
       lastEventAt: date,
@@ -380,6 +392,9 @@ export async function getExchangeTransactions(
         createdAt: ex.createdAt,
         tab,
         status: mapExchangeStatus(ex, actor),
+        needsProposalReply: ex.status === "Proposed" &&
+          (ex.lastProposedById ?? ex.initiatorId) !== actor &&
+          (!ex.proposalExpiresAt || Date.parse(ex.proposalExpiresAt) > Date.now()),
         partner: {
           id: initiator ? ex.recipientId : ex.initiatorId,
           username:
@@ -448,7 +463,7 @@ export function exchangeCommand(path: string, body: object) {
       exchangeSchema,
     );
   const match =
-    /^\/exchanges\/([^/]+)\/(accept|reject|counter|funding|cancel|ship|receive|complete|dispute)$/.exec(
+    /^\/exchanges\/([^/]+)\/(accept|reject|counter|funding|cancel|ship|receive|complete|dispute|return-resolution|demo-advance(?:-shipping)?)$/.exec(
       path,
     );
   if (!match) throw new Error("Thao tác trao đổi không hợp lệ.");

@@ -10,7 +10,10 @@ export type ExchangeCommand =
   | "ship"
   | "receive"
   | "complete"
-  | "dispute";
+  | "dispute"
+  | "demo-advance-shipping"
+  | "demo-advance"
+  | "return-resolution";
 const stateSchema = z.object({
   id: z.string().uuid(),
   initiatorId: z.string().uuid(),

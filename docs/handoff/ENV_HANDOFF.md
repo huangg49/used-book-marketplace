@@ -57,7 +57,12 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
      Model soạn khoảng giá vẫn do `PRICE_ASSIST_PROVIDER` chọn.
      Áp migration `0076-online-price-catalog-revision` trước khi bật tra giá cho
      sách chờ duyệt. Không sửa hoặc chạy lại các migration đã áp dụng.
-7. Với DB đã có, phiên bản hiện tại có15 migration Mongo (registry là nguồn).
+   - **Autofill** ([ADR 0048](../adr/0048-listing-photo-autofill.md)) dùng
+     `AUTOFILL_ENABLED=true`, `AUTOFILL_PROVIDER=openai` và `AUTOFILL_OPENAI_API_KEY`.
+     Giữ `AUTOFILL_API_KEY` nếu muốn NVIDIA dự phòng. Nếu cần quay về NVIDIA chính,
+     đặt `AUTOFILL_PROVIDER=nvidia`. Hai luồng OpenAI mặc định `gpt-5.4-mini` và có thể
+     dùng cùng một key backend. Khởi động lại API sau khi cập nhật `.env`.
+7. Với DB đã có, đối chiếu các migration Mongo trong registry.
    Khi có migration thêm collection: áp `pnpm db:migrate` rồi `pnpm db:bootstrap`
    để cập nhật role như ADR0032; không reset/reseed hoặc sửa migration đã áp dụng.
 
@@ -103,3 +108,24 @@ không gửi key/password/URL ký riêng tư.
 Setup đầy đủ: [START_HERE](START_HERE.md), [media setup](../features/SUPABASE_MEDIA_SETUP.md),
 [Android](../ANDROID_QUALITY.md). Việc chuyển key do chủ dự án thực hiện qua kênh
 riêng; agent không tự gửi các file chứa secret cho người khác.
+## Nút tua thời hạn trên phiếu demo
+
+Đặt `DEMO_EXCHANGE_DEADLINES_ENABLED=true` và điền
+`DEMO_EXCHANGE_MEMBER_IDS` bằng ID hai tài khoản demo trong `apps/api/.env`.
+Khởi động lại API. Chỉ hai người tham gia nằm trong danh sách mới thấy nút
+trên Member web. Phần khiếu nại dùng nút trên hồ sơ của Admin đang phụ trách.
+Chế độ này yêu cầu development/test, Mongo loopback và ví mô phỏng.
+
+Member có thể tua hạn phản hồi, đặt cọc, gửi, vận chuyển và kiểm tra. Admin
+có thể tua hạn bổ sung bằng chứng, kháng nghị, trả sách và kiểm tra sách hoàn.
+Tua hạn dùng kết quả hết hạn hiện hành. Các thao tác giao nhận, quyết định,
+đối chiếu bằng chứng và thực hiện quyết định vẫn có nút riêng.
+
+### Cấu hình cũ cho một phiếu
+
+Trong `apps/api/.env`, đặt `DEMO_EXCHANGE_SHIPPING_ENABLED=true` và điền
+`DEMO_EXCHANGE_SHIPPING_IDS` bằng các ID phiếu demo, ngăn bằng dấu phẩy.
+Khởi động lại API để nạp cấu hình. Nút chỉ khả dụng trong môi trường
+development/test dùng Mongo loopback và ví mô phỏng, cho người đã ghi nhận
+giao trực tiếp trên phiếu đủ cọc và đang chờ chiều còn lại. Giá trị mặc định
+là tắt. Xem [ADR0089](../adr/0089-one-sided-exchange-return.md).

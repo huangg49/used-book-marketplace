@@ -255,7 +255,7 @@ try {
     );
   await spa(web, "/chat/" + room.id);
   await web
-    .getByRole("button", { name: "Báo sự cố / Khiếu nại", exact: true })
+    .getByRole("button", { name: "Báo sự cố", exact: true })
     .click();
   await web
     .locator("#dispute-detail")
@@ -403,7 +403,7 @@ try {
     .first()
     .click();
 
-  await ops.getByText(/Xem ảnh & video bằng chứng|Đối soát chứng cứ/).first().click();
+  await ops.getByRole("link", { name: "Mở hồ sơ", exact: true }).first().click();
   const review = ops.getByRole("region", {
     name: "Bằng chứng riêng của hồ sơ",
     exact: true,

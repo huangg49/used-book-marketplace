@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { components } from '@used-books/api-contract'
 import { session } from '../lib/session'
+import { exchangeHandoverAnchor } from '../lib/exchange-handover'
 
 // Durable inbox (FR-N03/N04, OpenAPI 0.30.0). The server writes rows in the same
 // transaction as the event; pages only read and mark them read.
@@ -70,13 +71,19 @@ export function notificationPreviewQuery(owner: string | undefined) {
     retry: false as const,
   };
 }
-export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetId'>){
+export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetId'> & Partial<Pick<MemberNotification,'kind'>>){
   switch(n.targetType){
     case 'Withdrawal':return `/wallet?withdrawal=${n.targetId}`;
     case 'SupportCase':return `/support/${n.targetId}`;
     case 'TransactionReview':return `/reviews?reviewId=${encodeURIComponent(n.targetId)}`;
     case 'Order':return `/orders/${n.targetId}`;
-    case 'Exchange':return `/exchange/${n.targetId}`;
+    case 'Exchange': {
+      const path = `/exchange/${n.targetId}`;
+      if (n.kind === 'ExchangeShipped') return `${path}#${exchangeHandoverAnchor.incoming}`;
+      // Carrier updates can notify both members with the same kind.
+      if (n.kind === 'ExchangeReceived') return `${path}#${exchangeHandoverAnchor.overview}`;
+      return path;
+    }
     case 'Auction':return `/auctions/${n.targetId}`;
     default:return '/notifications';
   }

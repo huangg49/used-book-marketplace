@@ -10,7 +10,7 @@ const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');const user={id
 const checks=[];let browser;
 try{
  browser=await chromium.launch();
- for(const width of [390,1440])for(const mode of ['saved','manual','address-refetch','area-refetch']){
+ for(const width of [320,390,1440])for(const mode of width===320?['trade-layout']:['saved','manual','address-refetch','area-refetch','trade-layout','trade-bundle','trade-auction']){
   const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'});await context.routeWebSocket('**/*',socket=>socket.close());
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   let keepAddress=true,keepArea=true,addressReads=0,areaReads=0;
@@ -25,13 +25,48 @@ try{
    if(p.startsWith('/api/v1/'))return route.fulfill({status:503,json:{code:'QA_UNAVAILABLE'}});
    return url.origin===origin?route.continue():route.abort();
   });
-  await page.goto(origin+'/login?returnUrl=%2Fsell');await page.getByLabel(/^Email/).fill(user.email);await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
+  const target=mode==='trade-auction'?'/sell?channel=Auction':'/sell';
+  await page.goto(origin+'/login?returnUrl='+encodeURIComponent(target));await page.getByLabel(/^Email/).fill(user.email);await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
   await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await expect(page.getByRole('navigation',{name:'Các bước đăng sách',exact:true})).toBeVisible();
   await page.waitForFunction(()=>!document.querySelector('[data-paper-storm]'),undefined,{timeout:15000});
+  if(mode==='trade-bundle'||mode==='trade-auction'){
+   const auction=mode==='trade-auction',label=auction?'Giá trị khai báo':'Giá cả bộ';
+   if(!auction)await page.getByRole('button',{name:'Bộ sách',exact:true}).click();
+   await page.getByRole('navigation',{name:'Các bước đăng sách',exact:true}).getByRole('button',{name:new RegExp(label)}).click();
+   const amount=page.getByLabel(label+' (VNĐ)',{exact:true});await amount.fill('75000');await expect(amount).toHaveValue('75000');
+   await expect(page.getByRole('radio',{name:'Đổi sách',exact:true})).toHaveCount(0);
+   await expect(page.getByRole('region',{name:'Gợi ý giá bán',exact:true})).toHaveCount(0);
+   await expect(page.getByRole('region',{name:'Nơi gửi sách',exact:true})).toHaveCount(auction?0:1);
+   assert.deepEqual(errors,[]);checks.push({width,mode,amountVisible:true});await context.close();continue;
+  }
   await page.getByRole('button',{name:'Tự nhập thông tin',exact:true}).click();await page.getByLabel('Tên sách',{exact:true}).fill('Tên giữ nguyên QA');
   await page.getByLabel('Tác giả',{exact:true}).fill('Tác giả QA');await page.getByRole('combobox',{name:'Danh mục sách',exact:true}).selectOption({label:'Sách khác'});
   await page.getByRole('navigation',{name:'Các bước đăng sách',exact:true}).getByRole('button',{name:/Bán hoặc đổi/}).click();
   const price=page.getByLabel('Giá bán (VNĐ)',{exact:true});await price.fill('50000');
+  if(mode==='trade-layout'){
+   const choose=name=>page.getByRole('radio',{name,exact:true}).locator('..').click();
+   const assist=page.getByRole('region',{name:'Gợi ý giá bán',exact:true});
+   const originSection=page.getByRole('region',{name:'Nơi gửi sách',exact:true});
+   const exchange=page.getByLabel('Giá trị đổi (VNĐ)',{exact:true});
+   await expect(assist.getByRole('button',{name:'Lưu đầu sách và kiểm tra giá'})).toBeDisabled();
+   await expect(originSection.getByText('Cần chọn',{exact:true})).toBeVisible();
+   await choose('Bán hoặc đổi');await exchange.fill('80000');
+   const criteria=page.locator('summary').filter({hasText:'Sách bạn muốn đổi lấy'});
+   await expect(criteria).toBeVisible();await expect(page.getByLabel('Thể loại mong muốn',{exact:true})).toBeHidden();
+   await criteria.focus();await page.keyboard.press('Enter');await page.getByLabel('Thể loại mong muốn',{exact:true}).fill('Văn học');
+   await choose('Đổi sách');await expect(price).toHaveCount(0);await expect(assist).toHaveCount(0);
+   await expect(originSection).toHaveCount(0);await expect(exchange).toHaveValue('80000');
+   await choose('Bán hoặc đổi');await expect(price).toHaveValue('50000');await expect(exchange).toHaveValue('80000');
+   await expect(criteria.getByText('Đã thêm',{exact:true})).toBeVisible();
+   await expect(page.getByRole('region',{name:'Giá bán',exact:true}).getByText(/50\.000/)).toBeVisible();
+   const form=page.locator('form').filter({has:price});
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+   assert.equal(await form.evaluate(node=>node.scrollWidth<=node.clientWidth+1),true);
+   if(await criteria.evaluate(node=>node.parentElement.open))await criteria.click();
+   await page.evaluate(()=>window.scrollTo(0,0));
+   await page.screenshot({path:path.join(out,`trade-layout-${width}.png`),animations:'disabled',fullPage:true});
+   assert.deepEqual(errors,[]);checks.push({width,mode,modeValuesPreserved:true});await context.close();continue;
+  }
   const progress=page.getByRole('progressbar',{name:/^Tiến độ hoàn thiện/});
   const count=async()=>Number((await progress.getAttribute('aria-label')).match(/\((\d+) trên/)[1]);
   const initial=await count();await page.getByRole('button',{name:'Thêm nơi gửi sách',exact:true}).click();

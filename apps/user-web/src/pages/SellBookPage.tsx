@@ -14,14 +14,17 @@ import {
 } from "react-router-dom";
 import {
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   Check,
   CircleAlert,
   ChevronDown,
   BookOpen,
   ImagePlus,
+  MapPin,
   PencilLine,
   Sparkles,
+  Tag,
   X,
 } from "lucide-react";
 import { Header } from "../layouts/MainLayout";
@@ -98,7 +101,6 @@ const addressReceiptSchema = z.object({
   addressId: z.string().uuid(),
   version: z.number().int().positive(),
 });
-
 const PRICE_LOOKUP_INTERVAL_MS = 3_000;
 const PRICE_LOOKUP_MAX_READS = 13;
 
@@ -948,16 +950,11 @@ export function SellBookPage() {
         message =
           "Sách cần có nội dung đọc rõ và đủ nội dung trọng yếu để đủ điều kiện đăng.";
     }
-    if (
-      forStep === 4 &&
-      ((formData.mode !== "Exchange" && !validPrice(formData.salePrice)) ||
-        (formData.mode !== "Sale" && !validPrice(formData.exchangeValue)))
-    )
-      message =
-        "Giá bán và giá trị đổi từ 10.000đ đến 1.000.000đ, không có phần lẻ.";
-    if (forStep === 4 && needsOrigin && !hasValidOriginAddress())
-      message =
-        "Chọn khu vực luân chuyển và nhập đủ nơi gửi sách trước khi tiếp tục.";
+    if (forStep === 4 && (
+      (formData.mode !== "Exchange" && !validPrice(formData.salePrice)) ||
+      (formData.mode !== "Sale" && !validPrice(formData.exchangeValue)) ||
+      (needsOrigin && !hasValidOriginAddress())
+    )) message = "Hoàn tất các mục được đánh dấu để tiếp tục.";
     return message;
   }
   function continueStep() {
@@ -1096,15 +1093,45 @@ export function SellBookPage() {
           .join(" ") || undefined,
     };
   }
+  const salePriceLabel = auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Giá bán";
+  const hasExchangeCriteria = [formData.targetCategory, formData.targetAuthor, formData.targetDescription]
+    .some((value) => value.trim());
+  const originReady = hasValidOriginAddress();
+  const originDetail = originReady
+    ? addresses.data?.items.find((item) => item.id === originAddressId)?.detail ?? originForm.detail
+    : "";
+
+  function tradeAmount(key: "salePrice" | "exchangeValue", label: string) {
+    const hint = shownError(key) ? undefined : `sell-${key}-amount-hint`;
+    const valid = validPrice(formData[key]);
+    return (
+      <div className={`${styles.field} ${styles.tradeAmount}`}>
+        <label htmlFor={key}>{label} <span>(VNĐ)</span></label>
+        <input
+          id={key}
+          inputMode="numeric"
+          {...feedbackProps(key, hint)}
+          value={formData[key]}
+          onChange={(event) => setFormData((previous) => ({ ...previous, [key]: event.target.value }))}
+          placeholder="Ví dụ 75000"
+        />
+        {hint && (
+          <p className={valid ? styles.tradeAmountValue : styles.help} id={hint}>
+            {valid ? formatVnd(Number(formData[key])) : "10.000–1.000.000 đ"}
+          </p>
+        )}
+        {fieldFeedback(key)}
+      </div>
+    );
+  }
+
   const postingLimit =
     "Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn.";
   const stepHelp = [
     null,
     "Ảnh thật giúp người đọc nhìn rõ bản sách của bạn.",
     "Kể rõ những dấu vết đã có trên cuốn sách.",
-    auction
-      ? "Khai báo giá trị cuốn sách; giá khởi điểm đặt khi gửi đấu giá."
-      : "Chọn hình thức phù hợp và đặt giá cho bản sách.",
+    auction || bundle ? null : "Chọn cách giao dịch. Các mục cần điền sẽ hiện bên dưới.",
     "Xem lại một lượt. Bạn có thể chỉnh sửa từng phần.",
   ];
   function reviewEdit(target: number) {
@@ -1747,7 +1774,6 @@ export function SellBookPage() {
                     </div>
                     <span className={styles.draftStamp}>Bản nháp</span>
                   </div>
-                  <p className={styles.stepCount}>Bước {step}/5</p>
                   <h2 ref={heading} tabIndex={-1}>
                     {steps[step - 1]}
                   </h2>
@@ -2611,78 +2637,133 @@ export function SellBookPage() {
                         </>
                       )}
                       {step === 4 && (
-                        <>
-                          {auction ? (
-                            <p className={styles.help}>
-                              Giá trị khai báo là mức bồi thường tối đa nếu sách
-                              hư hỏng hoặc thất lạc tại điểm giao nhận. Đây không
-                              phải giá bán; giá khởi điểm đặt khi gửi đấu giá.
-                            </p>
-                          ) : bundle ? <p className={styles.help}>Bộ {bundle.items.length} cuốn được bán cùng nhau. Người mua nhận toàn bộ danh sách đã ghi ở bước Thông tin sách.</p> : (
-                          <fieldset className={styles.mode}>
-                            <legend>Bạn muốn bán hay đổi?</legend>
-                            <div className={styles.modeOptions}>
-                              {(
-                                [
-                                  ["Sale", "Bán sách"],
-                                  ["Exchange", "Đổi sách"],
-                                  ["Both", "Bán hoặc đổi"],
-                                ] as const
-                              ).map(([value, label]) => (
-                                <label className={styles.choice} key={value}>
-                                  <input
-                                    type="radio"
-                                    name="mode"
-                                    checked={formData.mode === value}
-                                    onChange={() =>
-                                      setFormData((previous) => ({
-                                        ...previous,
-                                        mode: value,
-                                      }))
-                                    }
-                                  />
-                                  <span className={styles.choiceFace}>
-                                    <Check size={18} aria-hidden="true" />
-                                    <span>{label}</span>
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </fieldset>
+                        <div className={styles.tradeDesk}>
+                          {!auction && !bundle && (
+                            <fieldset className={styles.tradeModes}>
+                              <legend>Hình thức giao dịch</legend>
+                              <div className={styles.tradeChoices}>
+                                {([
+                                  ["Sale", "Bán sách", "Nhận thanh toán", Tag],
+                                  ["Exchange", "Đổi sách", "Nhận đề nghị đổi", ArrowLeftRight],
+                                  ["Both", "Bán hoặc đổi", "Chấp nhận cả hai", BookOpen],
+                                ] as const).map(([value, label, hint, Icon]) => (
+                                  <label className={styles.choice} data-focus-surface key={value}>
+                                    <input
+                                      type="radio"
+                                      name="mode"
+                                      aria-label={label}
+                                      aria-describedby={`trade-mode-${value}`}
+                                      checked={formData.mode === value}
+                                      onChange={() => setFormData((previous) => ({ ...previous, mode: value }))}
+                                    />
+                                    <span className={`${styles.choiceFace} ${styles.tradeChoiceFace}`}>
+                                      <Icon size={18} aria-hidden="true" className={styles.tradeChoiceIcon} />
+                                      <span>
+                                        <strong>{label}</strong>
+                                        <small id={`trade-mode-${value}`}>{hint}</small>
+                                      </span>
+                                      <Check size={16} aria-hidden="true" className={styles.tradeChoiceCheck} />
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </fieldset>
                           )}
-                          <p className={styles.help}>
-                            {auction
-                              ? "Giá trị khai báo tính bằng VNĐ, từ 10.000đ đến 1.000.000đ."
-                              : bundle ? "Giá cho cả bộ, từ 10.000đ đến 1.000.000đ. Không bán tách từng cuốn."
-                              : "Giá bán và giá trị đổi đều tính bằng VNĐ, từ 10.000đ đến 1.000.000đ."}
-                          </p>
+
+                          {formData.mode !== "Exchange" && (
+                            <section className={styles.tradeSection} aria-label={salePriceLabel}>
+                              {tradeAmount("salePrice", salePriceLabel)}
+                              {auction ? (
+                                <p className={styles.help}>Mức bồi thường tối đa nếu sách hư hỏng hoặc thất lạc tại điểm giao nhận. Giá khởi điểm đặt khi gửi đấu giá.</p>
+                              ) : bundle ? (
+                                <p className={styles.help}>Giá cho cả bộ {bundle.items.length} cuốn.</p>
+                              ) : (
+                                <PriceAssistPanel
+                                  state={assist}
+                                  reference={displayedReference}
+                                  lookupResult={lookupResult}
+                                  lookupWatching={watchLookup && !lookupResult && !lookupInterrupted}
+                                  lookupInterrupted={lookupInterrupted}
+                                  currentKey={assistKey}
+                                  currentPrice={formData.salePrice}
+                                  phase={pricePhase}
+                                  disabled={submitting || hasAttempt}
+                                  hasPhoto={imageFiles.length > 0}
+                                  needsCatalog={!selectedBook}
+                                  onAsk={() => void askWebPrice()}
+                                  onEnterPrice={() => document.getElementById("salePrice")?.focus()}
+                                  onApplyReference={(amount) => {
+                                    setFormData((previous) => ({ ...previous, salePrice: String(amount) }));
+                                    setAssist(clearAiPriceAttribution);
+                                  }}
+                                  onApply={(amount) => {
+                                    setFormData((previous) => ({ ...previous, salePrice: String(amount) }));
+                                    setAssist((previous) => previous.status === "ready" && previous.key === assistKey
+                                      ? { ...previous, appliedPrice: amount }
+                                      : previous);
+                                  }}
+                                />
+                              )}
+                            </section>
+                          )}
+
+                          {!auction && formData.mode !== "Sale" && (
+                            <section className={styles.tradeSection} aria-label="Điều kiện đổi sách">
+                              {tradeAmount("exchangeValue", "Giá trị đổi")}
+                              <p className={styles.help}>Mức để hai bên so sánh khi đề nghị đổi sách.</p>
+                              <details className={styles.tradeCriteria}>
+                                <summary>
+                                  <span>Sách bạn muốn đổi lấy</span>
+                                  <small>{hasExchangeCriteria ? "Đã thêm" : "Tùy chọn"}</small>
+                                  <ChevronDown size={16} aria-hidden="true" />
+                                </summary>
+                                <div className={styles.tradeCriteriaFields}>
+                                  {([
+                                    ["targetCategory", "Thể loại mong muốn", "Ví dụ: Văn học", 100],
+                                    ["targetAuthor", "Tác giả mong muốn", "Ví dụ: Haruki Murakami", 150],
+                                    ["targetDescription", "Ghi chú khi đổi", "Ví dụ: Ưu tiên bản dịch mới", 500],
+                                  ] as const).map(([key, label, placeholder, maxLength]) => (
+                                    <div className={styles.field} key={key}>
+                                      <label htmlFor={key}>{label}</label>
+                                      <input
+                                        id={key}
+                                        type="text"
+                                        placeholder={placeholder}
+                                        value={formData[key]}
+                                        maxLength={maxLength}
+                                        onChange={(event) => setFormData((previous) => ({ ...previous, [key]: event.target.value }))}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
+                            </section>
+                          )}
+
                           {needsOrigin && (
                             <>
-                              <section
-                                className={styles.mode}
-                                aria-label="Nơi gửi sách"
-                              >
-                                <h3>Nơi gửi sách</h3>
-                                <p className={styles.help}>
-                                  {addresses.data?.items.find(
-                                    (item) => item.id === originAddressId,
-                                  )?.detail ??
-                                    (hasValidOriginAddress()
-                                      ? originForm.detail
-                                      : "Thêm nơi người giao hàng đến lấy sách của bạn.")}
-                                </p>
-                                <button
-                                  type="button"
-                                  className={purchaseStyles.textButton}
-                                  onClick={() => {
-                                    setOriginDialogError(false);
-                                    setOriginDialogOpen(true);
-                                  }}
-                                >
-                                  {hasValidOriginAddress()
-                                    ? "Đổi nơi gửi sách"
-                                    : "Thêm nơi gửi sách"}
-                                </button>
+                              <section className={`${styles.tradeSection} ${styles.tradeOrigin}`} aria-labelledby="sell-origin-title">
+                                <div className={styles.tradeOriginHeading}>
+                                  <MapPin size={19} aria-hidden="true" />
+                                  <h3 id="sell-origin-title">Nơi gửi sách</h3>
+                                  <span className={styles.tradeOriginStatus} data-ready={originReady}>
+                                    {originReady ? "Đã chọn" : "Cần chọn"}
+                                  </span>
+                                </div>
+                                <div className={styles.tradeOriginBody}>
+                                  <p className={styles.help}>{originDetail || "Chọn địa chỉ để người giao hàng đến lấy sách."}</p>
+                                  <button
+                                    type="button"
+                                    className={styles.tradeOriginButton}
+                                    aria-haspopup="dialog"
+                                    onClick={() => {
+                                      setOriginDialogError(false);
+                                      setOriginDialogOpen(true);
+                                    }}
+                                  >
+                                    {originReady ? "Đổi nơi gửi sách" : "Thêm nơi gửi sách"}
+                                  </button>
+                                </div>
                                 {fieldFeedback("originAddress")}
                               </section>
                               <PurchaseDialog
@@ -2696,11 +2777,9 @@ export function SellBookPage() {
                                 <fieldset
                                   className={`${styles.mode} ${purchaseStyles.form}`}
                                 >
-                                  <legend>Nơi gửi sách</legend>
+                                  <legend className="sr-only">Địa chỉ lấy sách</legend>
                                   <p className={styles.help}>
-                                    Người giao hàng sẽ lấy sách tại đây. Người
-                                    mua chỉ thấy khu vực luân chuyển, không thấy
-                                    địa chỉ chi tiết hoặc số điện thoại của bạn.
+                                    Người mua chỉ thấy khu vực luân chuyển của sách.
                                   </p>
                                   <div className={styles.field}>
                                     <label htmlFor="originAddress">
@@ -2854,107 +2933,7 @@ export function SellBookPage() {
                               </PurchaseDialog>
                             </>
                           )}
-                          {(
-                            [
-                              [
-                                "salePrice",
-                                auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Giá bán",
-                                formData.mode !== "Exchange",
-                              ],
-                              [
-                                "exchangeValue",
-                                "Giá trị đổi",
-                                formData.mode !== "Sale",
-                              ],
-                            ] as const
-                          )
-                            .filter(([, , visible]) => visible)
-                            .map(([key, label]) => (
-                              <div className={styles.field} key={key}>
-                                <label htmlFor={key}>{label} (VNĐ)</label>
-                                <input
-                                  id={key}
-                                  inputMode="numeric"
-                                  {...feedbackProps(key)}
-                                  value={formData[key]}
-                                  onChange={(event) =>
-                                    setFormData((previous) => ({
-                                      ...previous,
-                                      [key]: event.target.value,
-                                    }))
-                                  }
-                                  placeholder="Ví dụ: 75000"
-                                />
-                                {fieldFeedback(key)}
-                              </div>
-                            ))}
-                          {!auction && formData.mode !== "Sale" && (
-                            <div
-                              style={{
-                                marginTop: 16,
-                                padding: 14,
-                                background: "var(--surface-sunken, #f8fafc)",
-                                border: "1px dashed var(--border-subtle, #cbd5e1)",
-                                borderRadius: 8,
-                              }}
-                            >
-                              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
-                                🎯 Tiêu chí đổi sách mong muốn (Tùy chọn)
-                              </div>
-                              <p style={{ fontSize: 13, color: "var(--ink-muted, #64748b)", margin: "0 0 12px" }}>
-                                Nhập thể loại, tác giả hoặc mô tả cuốn sách bạn muốn đổi lấy để hệ thống hỗ trợ gợi ý ghép đôi thông minh (Smart Matchmaking).
-                              </p>
-                              <div className={styles.field}>
-                                <label htmlFor="targetCategory">Thể loại mong muốn</label>
-                                <input
-                                  id="targetCategory"
-                                  type="text"
-                                  placeholder="VD: Văn học, Kinh tế, Tâm lý..."
-                                  value={formData.targetCategory}
-                                  onChange={(event) =>
-                                    setFormData((previous) => ({
-                                      ...previous,
-                                      targetCategory: event.target.value,
-                                    }))
-                                  }
-                                  maxLength={100}
-                                />
-                              </div>
-                              <div className={styles.field}>
-                                <label htmlFor="targetAuthor">Tác giả mong muốn</label>
-                                <input
-                                  id="targetAuthor"
-                                  type="text"
-                                  placeholder="VD: Haruki Murakami, Dan Brown..."
-                                  value={formData.targetAuthor}
-                                  onChange={(event) =>
-                                    setFormData((previous) => ({
-                                      ...previous,
-                                      targetAuthor: event.target.value,
-                                    }))
-                                  }
-                                  maxLength={150}
-                                />
-                              </div>
-                              <div className={styles.field}>
-                                <label htmlFor="targetDescription">Ghi chú tiêu chí trao đổi chi tiết</label>
-                                <input
-                                  id="targetDescription"
-                                  type="text"
-                                  placeholder="VD: Ưu tiên bản dịch mới hoặc sách trinh thám..."
-                                  value={formData.targetDescription}
-                                  onChange={(event) =>
-                                    setFormData((previous) => ({
-                                      ...previous,
-                                      targetDescription: event.target.value,
-                                    }))
-                                  }
-                                  maxLength={500}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </>
+                        </div>
                       )}
                       {step === 5 && (
                         <>
@@ -3161,14 +3140,6 @@ export function SellBookPage() {
                         </>
                       )}
                     </fieldset>
-                    {!auction && !bundle && formData.mode !== "Exchange" ? <div hidden={step !== 4}>
-                      <PriceAssistPanel reference={displayedReference} lookupResult={lookupResult}
-                        lookupWatching={watchLookup && !lookupResult && !lookupInterrupted} lookupInterrupted={lookupInterrupted}
-                        onEnterPrice={() => document.getElementById("salePrice")?.focus()} onApplyReference={amount => { setFormData(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }} state={assist} currentKey={assistKey} currentPrice={formData.salePrice} phase={pricePhase} disabled={submitting || hasAttempt} hasPhoto={imageFiles.length > 0} needsCatalog={!selectedBook} onAsk={() => void askWebPrice()} onApply={amount => {
-                        setFormData(prev => ({ ...prev, salePrice: String(amount) }));
-                        setAssist(prev => prev.status === "ready" && prev.key === assistKey ? { ...prev, appliedPrice: amount } : prev);
-                      }} />
-                    </div> : null}
                     {coverCropBusy && (
                       <p role="status" className={styles.help}>
                         Đang xử lý ảnh bìa. Chờ ảnh hoàn tất rồi kiểm tra lại trước khi gửi.
@@ -3238,7 +3209,7 @@ export function SellBookPage() {
                         )}
                       </div>
                     )}
-                    {step === 1 ? (
+                    {step === 1 || step === 4 ? (
                       <details className={styles.postingLimit}>
                         <summary>
                           <span>Giới hạn đăng bài</span>
@@ -3270,6 +3241,7 @@ export function SellBookPage() {
                           Bản nháp chưa tự lưu.
                         </span>
                       )}
+                      {step === 4 && <span className={styles.tradeNext}>Tiếp theo · Kiểm tra bài đăng</span>}
                       <button
                         type="submit"
                         className={styles.primary}

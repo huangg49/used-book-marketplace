@@ -173,6 +173,7 @@ export class AutofillAssistService {
         .update(canonicalJson({
           photos: ordered.map((m) => m.sha256),
           model: this.model.model,
+          ...(this.model.fallback ? { fallback: this.model.fallback } : {}),
           instructions: [AUTOFILL_SYSTEM, AUTOFILL_USER, AUTOFILL_DETAIL_USER],
           imageProfile: AUTOFILL_IMAGE_PROFILE,
         }))
@@ -280,8 +281,7 @@ export class AutofillAssistService {
         usage.inputTokens += draft.inputTokens;
         usage.outputTokens += draft.outputTokens;
         cost += costMicroUsd(rateFor(id, null), draft.inputTokens, draft.outputTokens);
-        modelId = draft.model;
-        return checkAutofill(draft.output);
+        return { checked: checkAutofill(draft.output), model: draft.model };
       } catch (e) {
         if (e instanceof PriceModelError && e.usage) {
           usage.inputTokens += e.usage.inputTokens;
@@ -293,22 +293,23 @@ export class AutofillAssistService {
     };
     try {
       const images = await timings.measure('images', () => this.images!.readingImages(p.keys, model.supportsDetail));
-      let first: CheckedAutofill | null = null;
+      let first: Awaited<ReturnType<typeof attempt>> | null = null;
       try {
         first = await attempt(images, false);
       } catch (e) {
-        if (!model.fallback) throw e;
+        if (!model.fallback || !model.canFallback(e)) throw e;
       }
-      checked = first;
-      // One fallback call when the first model read no title or failed.
-      if (model.fallback && !first?.fields.title) {
+      let selected = first;
+      if (model.fallback && (!first || (model.fallbackOnEmpty && !first.checked.fields.title))) {
         try {
           const second = await attempt(images.slice(0, p.keys.length), true);
-          if (second.fields.title || !first) checked = second;
+          if (second.checked.fields.title || !first) selected = second;
         } catch (e) {
           if (!first) throw e;
         }
       }
+      checked = selected?.checked ?? null;
+      modelId = selected?.model ?? modelId;
     } catch (e) {
       checked = null;
       if (e instanceof PriceModelError) failure = e.kind;

@@ -22,13 +22,15 @@ class FakeAutofill extends AutofillModel {
   readonly model = 'fake/vision';
   fallback: string | null = null;
   override readonly supportsDetail = true;
+  override fallbackOnEmpty = true;
   calls: { images: string[]; fallback: boolean; userPrompt: string }[] = [];
   output: unknown = {};
   fallbackOutput: unknown = {};
-  mode: 'ok' | 'timeout' | 'slow' = 'ok';
+  mode: 'ok' | 'timeout' | 'primary-timeout' | 'slow' = 'ok';
   async read(_s: string, _u: string, images: string[], useFallback = false): Promise<ModelDraft> {
     this.calls.push({ images, fallback: useFallback, userPrompt: _u });
-    if (this.mode === 'timeout') throw new PriceModelError('Timeout', 'fake timeout');
+    if (this.mode === 'timeout' || (this.mode === 'primary-timeout' && !useFallback))
+      throw new PriceModelError('Timeout', 'fake timeout');
     if (this.mode === 'slow') await new Promise((r) => setTimeout(r, 400));
     return {
       output: useFallback ? this.fallbackOutput : this.output,
@@ -200,6 +202,7 @@ describe('photo autofill through HTTP with MongoDB', () => {
   beforeEach(async () => {
     fake.mode = 'ok';
     fake.fallback = null;
+    fake.fallbackOnEmpty = true;
     fake.calls = [];
     fake.output = {
       title: bookTitle,
@@ -330,6 +333,23 @@ describe('photo autofill through HTTP with MongoDB', () => {
     expect(res.body.matches[0]).toMatchObject({ book: { id: bookId }, matchedBy: 'TitleAuthor' });
     expect(fake.calls.map((c) => c.fallback)).toEqual([false, true]);
     expect(fake.calls.map((c) => c.images.length)).toEqual([2, 1]);
+  });
+
+  it('with error-only fallback, keeps a sparse result but retries a timeout once', async () => {
+    const l = await listing();
+    fake.fallback = 'fake/fallback';
+    fake.fallbackOnEmpty = false;
+    fake.output = { title: null, language: 'vi' };
+    fake.fallbackOutput = { title: bookTitle };
+    const sparse = await ask(l.id, [l.photo], m1).expect(200);
+    expect(sparse.body).toMatchObject({ status: 'NeedsMoreData', model: fake.model, fields: { language: 'vi' } });
+    expect(fake.calls.map((c) => c.fallback)).toEqual([false]);
+
+    fake.mode = 'primary-timeout';
+    const next = await listing();
+    const recovered = await ask(next.id, [next.photo], m1).expect(200);
+    expect(recovered.body).toMatchObject({ status: 'Suggested', model: 'fake/fallback', fields: { title: bookTitle } });
+    expect(fake.calls.map((c) => c.fallback)).toEqual([false, false, true]);
   });
 
   it('matches the catalog despite a misread accent, capitals and different name spacing', async () => {

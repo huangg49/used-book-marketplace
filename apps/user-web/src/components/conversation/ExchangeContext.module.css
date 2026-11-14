@@ -14,6 +14,7 @@
   line-height: 1.6;
   margin: 0;
 }
+.context header p span { overflow-wrap: anywhere; }
 .context > section {
   padding: 18px 0;
   border-bottom: 1px solid var(--shop-line);
@@ -51,7 +52,11 @@
   min-width: 0;
 }
 .book strong {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -60,6 +65,7 @@
   color: var(--shop-muted);
   line-height: 1.6;
   margin: 4px 0;
+  overflow-wrap: anywhere;
 }
 .book span,
 .book summary {

@@ -15,12 +15,13 @@ const server=await preview({configFile:false,root:path.join(root,'apps/user-web'
  preview:{host:'127.0.0.1',port:4234,strictPort:true}});
 const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 const user={id:id(1),displayName:'Bạn đọc QA',email:'reader@example.test',roles:['MEMBER'],status:'ACTIVE'};
+const photoTips = ['Chụp rõ trang bản quyền', 'Chụp rõ gáy sách', 'Chụp rõ bìa sau'];
 const checks=[];let browser;
 try{
  browser=await chromium.launch();
  const modes = ['isbn', 'lookup-fail', 'ai-lost-ack', ...baseline ? [] : ['lookup-ai-bypass', 'ai-direct', 'catalog-match', 'step-one']];
  const viewports = baseline ? [390, 1440] : [320, 390, 1440];
- for (const width of viewports) for (const mode of width === 320 ? ['step-one'] : modes) {
+ for (const width of viewports) for (const mode of width === 320 ? ['step-one', 'ai-direct'] : modes) {
   const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'});
   await context.routeWebSocket('**/*',socket=>socket.close());
   const page=await context.newPage(),errors=[],gates=[],aiGates=[],intents=[];
@@ -48,7 +49,7 @@ try{
     if(holdAi)await new Promise(resolve=>aiGates.push(resolve));
     if(at===1&&mode==='ai-lost-ack')return route.abort('failed');
     return route.fulfill({json:{id:id(20),status:'Suggested',fields:{title:'Tên đọc từ ảnh QA',authors:[],publisher:null,
-     publicationYear:null,language:directAi?'vi':null,edition:null,isbn:null},matches:[],missing:[],cached:mode==='lookup-ai-bypass'&&at>1}});
+     publicationYear:null,language:directAi?'vi':null,edition:null,isbn:null},matches:[],missing:mode==='ai-direct'?photoTips:[],cached:mode==='lookup-ai-bypass'&&at>1}});
    }
    if(p.endsWith('/catalog-matches')&&m==='POST'){
     searchedTitle=request.postDataJSON().title;
@@ -181,8 +182,15 @@ try{
     await panel.getByText(/Chưa tìm thấy đầu sách phù hợp/).waitFor();
     await panel.screenshot({path:path.join(out,`after-ai-direct-${width}.png`)});
     const more = result.locator('summary').filter({ hasText: 'Bổ sung 5 mục chưa đọc được' });
+    const tips = result.getByText('Gợi ý chụp thêm', { exact: true });
+    await expect(tips).toBeHidden();
     await more.focus();
     await page.keyboard.press('Enter');
+    await expect(tips).toBeVisible();
+    const hintList = result.getByRole('list').filter({ hasText: photoTips[0] });
+    await expect(hintList.getByRole('listitem')).toHaveText(photoTips);
+    assert.equal(await result.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true, 'Photo guidance fits the result panel');
+    await result.screenshot({path:path.join(out,`photo-guidance-${width}.png`),animations:'disabled'});
     const author = result.getByLabel('Tác giả từ ảnh', { exact: true });
     await expect(author).toBeVisible();
     await author.fill('Tác giả bổ sung QA');

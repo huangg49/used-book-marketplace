@@ -1,3 +1,4 @@
+import { Tx } from '../src/database/mongo/transaction.js';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { canonicalJson } from '../src/common/canonical-json.js';
 import { Test } from '@nestjs/testing';
@@ -86,6 +87,9 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       .set('Authorization', `Bearer ${actor.token}`)
       .set('Idempotency-Key', key)
       .send(body);
+
+  const carrierEvent = (code: string, status = 'PICKING') =>
+    request(app.getHttpServer()).post('/api/v1/webhooks/carrier').send({ trackingCode: code, status });
 
   const put = (
     id: string,
@@ -679,7 +683,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       },
       user1,
     ).expect(200);
-    expect(ship1Res.body.initiatorShippedAt).toBeDefined();
+    expect(ship1Res.body.initiatorShippedAt).toBeNull();
     expect(ship1Res.body.initiatorShipment).toMatchObject({
       method: 'carrier',
       carrierCode: 'GHN',
@@ -700,19 +704,23 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       },
       user2,
     ).expect(200);
-    expect(ship2Res.body.recipientShippedAt).toBeDefined();
+    expect(ship2Res.body.recipientShippedAt).toBeNull();
     expect(ship2Res.body.recipientShipment).toMatchObject({
       method: 'carrier',
       carrierCode: 'GHTK',
       trackingCode: 'GHTK777888',
     });
-    expect(ship2Res.body.status).toBe('InTransit');
+    expect(ship2Res.body.status).toBe('Preparing');
+    await carrierEvent('GHN888999').expect(200);
+    await carrierEvent('GHTK777888').expect(200);
+    const inTransit = (await get('/exchanges/' + exchangeId, user1).expect(200)).body;
+    expect(inTransit.status).toBe('InTransit');
 
     // 6. Receiving
     // User1 receives -> status remains InTransit until both sides receive
     const rec1Res = await post(
       `/exchanges/${exchangeId}/receive`,
-      { expectedVersion: ship2Res.body.revision },
+      { expectedVersion: inTransit.revision },
       user1,
     ).expect(200);
     expect(rec1Res.body.initiatorReceivedAt).toBeDefined();
@@ -1947,8 +1955,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         `/exchanges/${created.id}/ship`,
         {
           expectedVersion: fund2Res.body.revision,
-          method: 'carrier',
-          trackingCode: 'EXP_TEST_123',
+          method: 'direct',
         },
         user1,
       ).expect(200);
@@ -2159,7 +2166,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         ).expect(200)
       ).body;
 
-      const inTransitRes = (
+      const secondLabel = (
         await post(
           `/exchanges/${created.id}/ship`,
           {
@@ -2173,6 +2180,10 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         ).expect(200)
       ).body;
 
+      expect(secondLabel.status).toBe('Preparing');
+      await carrierEvent('GHN-TRANSIT-1').expect(200);
+      await carrierEvent('GHN-TRANSIT-2').expect(200);
+      const inTransitRes = (await get('/exchanges/' + created.id, user1).expect(200)).body;
       expect(inTransitRes.status).toBe('InTransit');
 
       // User1 marks received, but User2 never confirms receipt!
@@ -2208,6 +2219,465 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
 
       const rec = await reconcile();
       expect(rec.balanced).toBe(true);
+    });
+  });
+
+  describe('one-sided Exchange return', () => {
+    const hour = 3_600_000;
+
+    it('advances local exchange windows with the current version and the normal refund and return rules', async () => {
+      const config = app.get(ConfigService);
+      const flag = 'DEMO_EXCHANGE_DEADLINES_ENABLED';
+      const allow = 'DEMO_EXCHANGE_MEMBER_IDS';
+      const previous = [config.get<string>(flag), config.get<string>(allow)];
+      const outsider = await reader();
+      const unsent = await preparedExchange();
+      const path = '/exchanges/' + unsent.id;
+      const command = { expectedVersion: unsent.revision, deadline: 'Shipping' };
+      try {
+        config.set(flag, 'false');
+        await post(path + '/demo-advance', command, user1).expect(404);
+        config.set(flag, 'true');
+        config.set(allow, [unsent.initiatorId, unsent.recipientId].join(','));
+        expect((await get(path, user1).expect(200)).body.demoDeadline).toBe('Shipping');
+        await post(path + '/demo-advance', command, outsider).expect(404);
+        await post(path + '/demo-advance', { ...command, deadline: 'Inspection' }, user1).expect(409);
+        const key = randomUUID();
+        const [first, second] = await Promise.all([
+          post(path + '/demo-advance', command, user1, key).expect(200),
+          post(path + '/demo-advance', command, user1, key).expect(200),
+        ]);
+        expect(first.body).toEqual(second.body);
+        expect(first.body).toMatchObject({ status: 'Cancelled', cancelReason: 'ShippingExpired' });
+
+        const inTransit = await inTransitExchange();
+        const transitPath = '/exchanges/' + inTransit.id;
+        const late = (await post(transitPath + '/demo-advance', {
+          deadline: 'Transit', expectedVersion: inTransit.revision,
+        }, user2).expect(200)).body;
+        expect(late).toMatchObject({ status: 'ResolutionPending', initiatorReceivedAt: null, recipientReceivedAt: null });
+
+        const inspecting = await inTransitExchange();
+        const inspectionPath = '/exchanges/' + inspecting.id;
+        const firstReceipt = (await post(inspectionPath + '/receive', {
+          expectedVersion: inspecting.revision,
+        }, user1).expect(200)).body;
+        const delivered = (await post(inspectionPath + '/receive', {
+          expectedVersion: firstReceipt.revision,
+        }, user2).expect(200)).body;
+        const completed = (await post(inspectionPath + '/demo-advance', {
+          deadline: 'Inspection', expectedVersion: delivered.revision,
+        }, user1).expect(200)).body;
+        expect(completed).toMatchObject({ status: 'Completed',
+          initiatorReceivedAt: delivered.initiatorReceivedAt, recipientReceivedAt: delivered.recipientReceivedAt });
+
+        const proposalA = await createApprovedListing(user1, 100000, 'Both');
+        const proposalB = await createApprovedListing(user2, 100000, 'Both');
+        const propose = async () => (await post('/exchanges', {
+          initiatorListingId: proposalA.listingId, recipientListingId: proposalB.listingId,
+        }, user1).expect(201)).body;
+        const proposal = await propose();
+        await post('/exchanges/' + proposal.id + '/demo-advance', {
+          expectedVersion: proposal.revision, deadline: 'Proposal',
+        }, user2).expect(200).expect(({ body }) => {
+          expect(body).toMatchObject({ status: 'Cancelled', cancelReason: 'ProposalExpired' });
+        });
+        const anotherProposal = await propose();
+        const fundingPath = '/exchanges/' + anotherProposal.id;
+        await post(fundingPath + '/accept', { revision: anotherProposal.revision }, user2).expect(200);
+        const fundedOnce = (await post(fundingPath + '/funding', {}, user1).expect(200)).body;
+        await post(fundingPath + '/demo-advance', {
+          expectedVersion: fundedOnce.revision, deadline: 'Funding',
+        }, user2).expect(200).expect(({ body }) => {
+          expect(body).toMatchObject({ status: 'Cancelled', cancelReason: 'FundingExpired', recipientFundedAt: null });
+        });
+
+        const ex = await preparedExchange();
+        const member = '/exchanges/' + ex.id;
+        const ops = '/operations/exchanges/' + ex.id;
+        const sent = (await post(member + '/ship', { method: 'direct', expectedVersion: ex.revision }, user1).expect(200)).body;
+        const received = (await post(member + '/receive', { expectedVersion: sent.revision }, user2).expect(200)).body;
+        const dispute = (await post(member + '/demo-advance', {
+          deadline: 'Shipping', expectedVersion: received.revision,
+        }, user1).expect(200)).body;
+        expect(dispute).toMatchObject({ status: 'ResolutionPending', canStartReturnResolution: true });
+        await post(ops + '/demo-advance', { deadline: 'Evidence', expectedVersion: dispute.revision }, admin).expect(403);
+        await post(ops + '/evidence-access', { expectedVersion: 0, reason: 'Kiểm tra tua hạn hồ sơ demo.' }, admin).expect(200);
+        const note = 'Đối chiếu bằng chứng của hai bên.';
+        const act = async (row: {revision:number}, action: string) => (await post(ops + '/return-resolution',
+          { expectedVersion: row.revision, action, note }, admin).expect(200)).body;
+        const skip = async (row: {revision:number}, deadline: string) => (await post(ops + '/demo-advance',
+          { expectedVersion: row.revision, deadline }, admin).expect(200)).body;
+        const evidence = await act(dispute, 'RequestEvidence');
+        expect((await get(ops + '/dispute', admin).expect(200)).body.demoDeadline).toBe('Evidence');
+        const statementKey = randomUUID();
+        const statement = { expectedVersion: evidence.revision, action: 'SubmitStatement', note: 'Tôi đã bàn giao sách tại điểm hẹn.' };
+        const lockedOutsider = await reader(['MEMBER'], 'LOCKED');
+        await post(member + '/return-resolution', statement, lockedOutsider).expect(404);
+        await db.setStatus(user1.id, 'LOCKED');
+        const submitted = (await post(member + '/return-resolution', statement, user1, statementKey).expect(200)).body;
+        await post(member + '/return-resolution', statement, user1, statementKey).expect(200);
+        await db.setStatus(user1.id, 'ACTIVE');
+        const secondStatement = { expectedVersion: submitted.revision, action: 'SubmitStatement', note: 'Tôi xác nhận đã nhận sách.' };
+        const latest = (await post(member + '/return-resolution', secondStatement, user2).expect(200)).body;
+        const detail = (await get(ops + '/dispute', admin).expect(200)).body;
+        expect(detail.statements).toEqual(expect.arrayContaining([
+          expect.objectContaining({ senderId: user1.id, note: statement.note }),
+          expect.objectContaining({ senderId: user2.id, note: secondStatement.note }),
+        ]));
+        expect(detail.statements).toHaveLength(2);
+        expect((await get(ops + '/dispute', staff).expect(200)).body).not.toHaveProperty('statements');
+        for (const [participant, ownNote] of [[user1, statement.note], [user2, secondStatement.note]] as const) {
+          const memberDetail = (await get(member, participant).expect(200)).body;
+          expect(memberDetail.statements).toEqual([
+            expect.objectContaining({ senderId: participant.id, note: ownNote }),
+          ]);
+        }
+        await get(member, outsider).expect(404);
+        expect((await get('/operations/exchanges/resolutions', admin).expect(200)).body
+          .find((entry: {id:string}) => entry.id === ex.id)).not.toHaveProperty('statements');
+        const ready = await skip(latest, 'Evidence');
+        const order = await act(ready, 'OrderReturn');
+        const effective = await skip(order, 'Appeal');
+        expect(Date.parse(effective.returnResolution.returnDueAt) - Date.parse(effective.returnResolution.appealDueAt)).toBe(72 * hour);
+        const dispatched = (await post(member + '/return-resolution', {
+          expectedVersion: effective.revision, action: 'ReportDispatch', trackingCode: 'QA-DEMO-RETURN',
+        }, user2).expect(200)).body;
+        const returned = (await post(member + '/return-resolution', {
+          expectedVersion: dispatched.revision, action: 'AcknowledgeReturn',
+        }, user1).expect(200)).body;
+        const checked = await skip(returned, 'ReturnCheck');
+        expect(checked.returnResolution.phase).toBe('CheckingReturn');
+        expect((await act(checked, 'Settle')).returnResolution.outcome).toBe('Returned');
+
+        const overdue = await preparedExchange();
+        const returnMember = '/exchanges/' + overdue.id;
+        const returnOps = '/operations/exchanges/' + overdue.id;
+        const returnSent = (await post(returnMember + '/ship', {
+          method: 'direct', expectedVersion: overdue.revision,
+        }, user1).expect(200)).body;
+        const returnReceived = (await post(returnMember + '/receive', {
+          expectedVersion: returnSent.revision,
+        }, user2).expect(200)).body;
+        const returnDispute = (await post(returnMember + '/demo-advance', {
+          deadline: 'Shipping', expectedVersion: returnReceived.revision,
+        }, user1).expect(200)).body;
+        await post(returnOps + '/evidence-access', {
+          expectedVersion: 0, reason: 'Kiểm tra quá hạn bàn giao sách hoàn.',
+        }, admin).expect(200);
+        let state = returnDispute;
+        for (const [endpoint, fields] of [
+          ['return-resolution', { action: 'RequestEvidence', note }],
+          ['demo-advance', { deadline: 'Evidence' }],
+          ['return-resolution', { action: 'OrderReturn', note }],
+          ['demo-advance', { deadline: 'Appeal' }],
+          ['demo-advance', { deadline: 'Return' }],
+        ] as const) {
+          state = (await post(returnOps + '/' + endpoint, {
+            expectedVersion: state.revision, ...fields,
+          }, admin).expect(200)).body;
+        }
+        expect(state.returnResolution).toMatchObject({ phase: 'ReturnOrdered', trackingCode: null });
+        await post(returnOps + '/return-resolution', {
+          expectedVersion: state.revision, action: 'OrderCompensation', note,
+          evidenceId: randomUUID(),
+        }, admin).expect(422);
+        expect((await reconcile()).balanced).toBe(true);
+      } finally {
+        config.set(flag, previous[0] ?? '');
+        config.set(allow, previous[1] ?? '');
+      }
+    });
+
+    it('refunds a carrier label-only exchange after the deadline and rejects pickup', async () => {
+      const ex = await preparedExchange();
+      const path = '/exchanges/' + ex.id;
+      const label = (await post(path + '/ship', {
+        expectedVersion: ex.revision, method: 'carrier', carrierCode: 'SIMULATOR', trackingCode: 'DEMO-ONE-LABEL',
+      }, user1).expect(200)).body;
+      expect(label).toMatchObject({ status: 'Preparing', initiatorShippedAt: null,
+        initiatorShipment: { trackingCode: 'DEMO-ONE-LABEL', registeredAt: expect.any(String), shippedAt: null } });
+      await post(path + '/receive', { expectedVersion: label.revision }, user2).expect(409);
+      await carrierEvent('DEMO-ONE-LABEL').expect(409);
+      await carrierEvent('DEMO-ONE-LABEL', 'DELIVERED').expect(409);
+      await carrierEvent('DEMO-ONE-LABEL', 'UNKNOWN').expect(422);
+      await request(app.getHttpServer()).get('/api/v1/shipments/carrier/orders/recent')
+        .set('X-Forwarded-Host', 'example.com').expect(404);
+      await request(app.getHttpServer()).post('/api/v1/shipments/carrier/seed-demo-order').expect(409);
+      await request(app.getHttpServer()).post('/api/v1/shipments/carrier/orders/' + ex.id + '/auto-simulate').expect(409);
+      const deadline = new Date(label.shippingDeadline);
+      await worker.tick(new Date(+deadline + 1));
+      await worker.tick(new Date(+deadline + 2));
+      expect((await get(path, user1).expect(200)).body).toMatchObject({ status: 'Cancelled', cancelReason: 'ShippingExpired' });
+      for (const id of [ex.l1.listingId, ex.l2.listingId])
+        expect(await db.c.listings.findOne({ _id: id })).toMatchObject({ trade: 'Available' });
+      const row = await db.c.exchanges.findOne({ _id: ex.id });
+      expect(await db.c.ledger_journals.countDocuments({
+        orderId: { $in: [row!.initiatorOrderId, row!.recipientOrderId] }, type: 'OrderRefund',
+      })).toBe(2);
+      expect((await reconcile()).balanced).toBe(true);
+      await carrierEvent('DEMO-ONE-LABEL').expect(409);
+    });
+
+    it('keeps the money and both listings reserved when only one registered parcel was picked up', async () => {
+      const ex = await preparedExchange();
+      const path = '/exchanges/' + ex.id;
+      const label = (await post(path + '/ship', {
+        expectedVersion: ex.revision, method: 'carrier', trackingCode: 'DEMO-PICKUP-A',
+      }, user1).expect(200)).body;
+      await post(path + '/ship', { expectedVersion: label.revision, method: 'direct' }, user2).expect(409);
+      await post(path + '/ship', {
+        expectedVersion: label.revision, method: 'carrier', trackingCode: 'DEMO-PICKUP-B',
+      }, user2).expect(200);
+      await carrierEvent('DEMO-PICKUP-A', 'DELIVERED').expect(409);
+      const results = await Promise.all([carrierEvent('DEMO-PICKUP-A').expect(200), carrierEvent('DEMO-PICKUP-A').expect(200)]);
+      expect(results[0].body.nextStatus).toBe('Preparing');
+      const picked = (await get(path, user1).expect(200)).body;
+      expect(picked).toMatchObject({ revision: label.revision + 2, initiatorShippedAt: expect.any(String), recipientShippedAt: null });
+      const before = await reconcile();
+      await worker.tick(new Date(Date.parse(picked.shippingDeadline) + 1));
+      expect((await get(path, user1).expect(200)).body.status).toBe('ResolutionPending');
+      for (const id of [ex.l1.listingId, ex.l2.listingId])
+        expect(await db.c.listings.findOne({ _id: id })).toMatchObject({ trade: 'Reserved' });
+      expect(await reconcile()).toEqual(before);
+    });
+
+    it('advances only the configured demo deadline, once, without changing delivery evidence or funds', async () => {
+      const ex = await preparedExchange(100000, 300000);
+      const path = '/exchanges/' + ex.id;
+      const endpoint = path + '/demo-advance-shipping';
+      const config = app.get(ConfigService);
+      const keys = ['DEMO_EXCHANGE_SHIPPING_ENABLED', 'DEMO_EXCHANGE_SHIPPING_IDS'] as const;
+      const previous = keys.map(key => config.get<string>(key));
+      const key = randomUUID();
+      const before = await reconcile();
+      try {
+        config.set(keys[0], 'false');
+        await post(endpoint, { expectedVersion: ex.revision }, user1).expect(404);
+        config.set(keys[0], 'true');
+        config.set(keys[1], ex.id);
+        const sent = (await post(path + '/ship', {
+          expectedVersion: ex.revision, method: 'direct', meetupLocation: 'Điểm hẹn QA',
+        }, user1).expect(200)).body;
+        const body = { expectedVersion: sent.revision };
+        const outsider = await reader();
+        expect((await get(path, user1).expect(200)).body.demoShippingAdvanceAvailable).toBe(true);
+        expect((await get(path, user2).expect(200)).body.demoShippingAdvanceAvailable).toBeUndefined();
+        await post(endpoint, body, user2).expect(403);
+        await post(endpoint, body, outsider).expect(404);
+        await post(endpoint, { expectedVersion: ex.revision }, user1).expect(409);
+        const [first, second] = await Promise.all([
+          post(endpoint, body, user1, key).expect(200),
+          post(endpoint, body, user1, key).expect(200),
+        ]);
+        expect(first.body).toEqual(second.body);
+        expect(first.body).toMatchObject({
+          status: 'ResolutionPending',
+          revision: sent.revision + 1,
+          initiatorShippedAt: sent.initiatorShippedAt,
+          recipientShippedAt: null,
+          recipientReceivedAt: null,
+          canVerifyOutboundDelivery: true,
+        });
+        expect(first.body.shippingDeadline).toBe(first.body.disputedAt);
+        expect(Date.parse(first.body.shippingDeadline)).toBeLessThan(Date.parse(ex.shippingDeadline));
+        expect(await reconcile()).toEqual(before);
+        expect((await get('/operations/exchanges/' + ex.id + '/dispute', admin).expect(200)).body.status).toBe('ResolutionPending');
+        expect((await get(path, user1).expect(200)).body.demoShippingAdvanceAvailable).toBeUndefined();
+        await post(endpoint, { expectedVersion: first.body.revision }, user1).expect(409);
+      } finally {
+        keys.forEach((name, index) => config.set(name, previous[index] ?? ''));
+      }
+    });
+
+    it('lets only the assigned Admin verify an unacknowledged delivery from case evidence', async () => {
+      const ex = await preparedExchange(100000, 300000);
+      const sent = (await post('/exchanges/' + ex.id + '/ship', {
+        expectedVersion: ex.revision, method: 'direct', meetupLocation: 'Điểm QA',
+      }, user1).expect(200)).body;
+      const service = app.get(ExchangesService);
+      const casePath = '/operations/exchanges/' + ex.id;
+      const actionPath = casePath + '/return-resolution';
+      const evidenceId = randomUUID();
+      const body = { expectedVersion: sent.revision, action: 'VerifyOutboundDelivery',
+        note: 'Đã đối chiếu người nhận và kiện sách với biên nhận.', evidenceId };
+      await post(actionPath, body, admin).expect(403);
+      const overdue = new Date(Date.parse(ex.shippingDeadline) + 1);
+      const dispute = (await service.expireShipping(ex.id, overdue))!.exchange;
+      expect(dispute).toMatchObject({ status: 'ResolutionPending', canVerifyOutboundDelivery: true });
+      expect(dispute.canStartReturnResolution).toBeUndefined();
+      await post('/exchanges/' + ex.id + '/return-resolution', body, user1).expect(403);
+      const assign = (actor: Reader, expectedVersion: number) =>
+        post(casePath + '/evidence-access', { expectedVersion, reason: 'Đối chiếu biên nhận giao sách.' }, actor);
+      await assign(staff, 0).expect(200);
+      await post(actionPath, { ...body, expectedVersion: dispute.revision }, staff).expect(403);
+      await post(actionPath, { ...body, expectedVersion: dispute.revision }, admin).expect(403);
+      await assign(admin, 1).expect(200);
+      await post(actionPath, body, admin).expect(409);
+      const command = { ...body, expectedVersion: dispute.revision };
+      await post(actionPath, command, admin).expect(422);
+      const uploadedAt = new Date();
+      await db.c.exchange_evidence.insertOne({
+        _id: evidenceId, exchangeId: ex.id, uploaderId: user1.id, fileName: 'bien-nhan-qa.png',
+        mimeType: 'image/png', byteSize: 1, sha256: 'a'.repeat(64), reservedBytes: 1,
+        status: 'Ready', version: 2, createdAt: uploadedAt, uploadedAt,
+        createReceiptId: randomUUID(), uploadReceiptId: randomUUID(),
+      });
+      const before = await reconcile();
+      const key = randomUUID();
+      const results = await Promise.all([
+        post(actionPath, command, admin, key),
+        post(actionPath, command, admin, key),
+      ]);
+      for (const result of results) {
+        expect(result.status).toBe(200);
+        expect(result.body).toMatchObject({ status: 'ResolutionPending', canStartReturnResolution: true,
+          recipientReceivedAt: null, outboundDeliveryVerification: { note: body.note } });
+      }
+      const updated = results[0].body;
+      expect(updated.revision).toBe(dispute.revision + 1);
+      await post(actionPath, { ...command, note: 'Căn cứ khác cùng mã.' }, admin, key).expect(409);
+      await post(actionPath, { ...command, expectedVersion: updated.revision }, admin).expect(409);
+      await post('/exchanges/' + ex.id + '/receive', { expectedVersion: updated.revision }, user2).expect(409);
+      const memberView = (await get('/exchanges/' + ex.id, user1).expect(200)).body;
+      expect(memberView.outboundDeliveryVerification).toEqual(updated.outboundDeliveryVerification);
+      expect(await reconcile()).toEqual(before);
+      const requested = (await post(actionPath, {
+        expectedVersion: updated.revision, action: 'RequestEvidence', note: 'Đề nghị hai bên bổ sung thông tin.',
+      }, admin).expect(200)).body;
+      expect(requested.returnResolution.phase).toBe('Evidence');
+      expect(requested.outboundDeliveryVerification).toEqual(updated.outboundDeliveryVerification);
+    });
+
+    async function start({ compensation = false } = {}) {
+      const ex = await preparedExchange(100000, 300000);
+      const startTime = Date.now();
+      const original = Tx.prototype.now;
+      let clock = new Date(startTime);
+      const time = vi.spyOn(Tx.prototype, 'now').mockImplementation(async function (this: Tx) {
+        await original.call(this);
+        return clock;
+      });
+      try {
+        const sent = (await post('/exchanges/' + ex.id + '/ship', {
+          expectedVersion: ex.revision, method: 'direct',
+        }, user1).expect(200)).body;
+        await post('/exchanges/' + ex.id + '/receive', { expectedVersion: sent.revision }, user1).expect(409);
+        const received = (await post('/exchanges/' + ex.id + '/receive', {
+          expectedVersion: sent.revision,
+        }, user2).expect(200)).body;
+        expect(received.status).toBe('Preparing');
+        expect(received.recipientReceivedAt).toBeTruthy();
+        clock = new Date(Date.parse(ex.shippingDeadline) + 1);
+        await post('/exchanges/' + ex.id + '/ship', { expectedVersion: received.revision }, user2).expect(409);
+        const dispute = compensation
+          ? (await app.get(ExchangesService).expireShipping(ex.id, clock))!.exchange
+          : (await post('/exchanges/' + ex.id + '/dispute', {
+              expectedVersion: received.revision, reason: 'Bên kia đã nhận nhưng chưa gửi sách.',
+            }, user1).expect(200)).body;
+        expect(dispute).toMatchObject({ status: 'ResolutionPending', canStartReturnResolution: true });
+        const casePath = '/operations/exchanges/' + ex.id + '/dispute';
+        const opsPath = '/operations/exchanges/' + ex.id + '/return-resolution';
+        const memberPath = '/exchanges/' + ex.id + '/return-resolution';
+        const act = (path: string, actor: Reader, rev: number, action: string, extra: object = {}, key?: string) =>
+          post(path, { expectedVersion: rev, action, ...extra }, actor, key);
+        const note = { note: 'Đối chiếu thông tin từng chặng của giao dịch.' };
+        await get(casePath, user1).expect(403);
+        await act(opsPath, admin, dispute.revision, 'RequestEvidence', note).expect(403);
+        await post('/operations/exchanges/' + ex.id + '/evidence-access', {
+          expectedVersion: 0, reason: 'Tiếp nhận hồ sơ trả sách.',
+        }, admin).expect(200);
+        const requested = (await act(opsPath, admin, dispute.revision, 'RequestEvidence', note).expect(200)).body;
+        await act(opsPath, admin, requested.revision, 'OrderReturn', note).expect(409);
+        await act(memberPath, user1, requested.revision, 'Settle').expect(403);
+        clock = new Date(+clock + 48 * hour);
+        const order = (await act(opsPath, admin, requested.revision, 'OrderReturn', note).expect(200)).body;
+        await act(memberPath, user2, order.revision, 'ReportDispatch', { trackingCode: 'QA-RETURN' }).expect(409);
+        await act(opsPath, admin, order.revision, 'Settle').expect(409);
+
+        const version = order.revision;
+        if (compensation) {
+          const appeal = (await act(memberPath, user2, version, 'Appeal', note).expect(200)).body;
+          await act(memberPath, user2, appeal.revision, 'Appeal', note).expect(409);
+          clock = new Date(+clock + 48 * hour);
+          await act(opsPath, admin, appeal.revision, 'Uphold', note).expect(403);
+          const secondAdmin = await reader(['ADMIN']);
+          await post('/operations/exchanges/' + ex.id + '/evidence-access', {
+            expectedVersion: 1, reason: 'Nhận lại để xét kháng nghị độc lập.',
+          }, secondAdmin).expect(200);
+          const finalReturn = (await act(opsPath, secondAdmin, appeal.revision, 'Uphold', note).expect(200)).body;
+          expect(Date.parse(finalReturn.returnResolution.returnDueAt) - +clock).toBe(72 * hour);
+          const claimed = (await act(memberPath, user2, finalReturn.revision, 'ReportDispatch',
+            { trackingCode: 'QA-LABEL-ONLY' }).expect(200)).body;
+          clock = new Date(+clock + 72 * hour);
+          await act(opsPath, secondAdmin, claimed.revision, 'OrderCompensation', { ...note, evidenceId: randomUUID() }).expect(409);
+          await act(opsPath, secondAdmin, claimed.revision, 'RejectReturnDispatch', { ...note, evidenceId: randomUUID() }).expect(422);
+          const evidence = await db.c.exchange_evidence.insertOne({
+            _id: randomUUID(), exchangeId: ex.id, uploaderId: user1.id, fileName: 'return-evidence.png',
+            mimeType: 'image/png', byteSize: 1, sha256: 'a'.repeat(64), reservedBytes: 1,
+            status: 'Ready', version: 2, createdAt: clock, uploadedAt: clock, createReceiptId: randomUUID(),
+            uploadReceiptId: randomUUID(),
+          });
+          const invalidDispatch = (await act(opsPath, secondAdmin, claimed.revision, 'RejectReturnDispatch',
+            { ...note, evidenceId: evidence.insertedId }).expect(200)).body;
+          expect(invalidDispatch.returnResolution.trackingCode).toBeNull();
+          const decision = (await act(opsPath, secondAdmin, invalidDispatch.revision, 'OrderCompensation',
+            { ...note, evidenceId: evidence.insertedId }).expect(200)).body;
+          expect(decision.returnResolution.compensation).toBe(100000);
+          await act(opsPath, secondAdmin, decision.revision, 'Settle').expect(409);
+          clock = new Date(+clock + 48 * hour);
+          const keys = [randomUUID(), randomUUID()];
+          const gate = await Gate.lock(db.client, 'exchanges', [ex.id]);
+          const racing = keys.map((key) => act(opsPath, secondAdmin, decision.revision, 'Settle', {}, key).then((result) => result));
+          try { await gate.contended(); } finally { await gate.close(); }
+          const responses = await Promise.all(racing);
+          expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+          const committedIndex = responses.findIndex((response) => response.status === 200);
+          const committed = responses[committedIndex];
+          const replay = await act(opsPath, secondAdmin, decision.revision, 'Settle', {}, keys[committedIndex]).expect(200);
+          expect(replay.headers['idempotency-replayed']).toBe('true');
+          expect(replay.body).toEqual(committed.body);
+          expect(committed.body.returnResolution.outcome).toBe('Compensated');
+          expect(await db.c.member_violations.countDocuments({ kind: 'ExchangeReturnDefault', sourceId: ex.id, userId: user2.id })).toBe(1);
+        } else {
+          clock = new Date(+clock + 48 * hour);
+          await act(memberPath, user1, version, 'ReportDispatch', { trackingCode: 'QA-RETURN' }).expect(409);
+          await act(memberPath, user2, version, 'ReportDispatch', { trackingCode: 'ABC' }).expect(422);
+          const sentBack = (await act(memberPath, user2, version, 'ReportDispatch', { trackingCode: 'QA-RETURN' }).expect(200)).body;
+          await act(memberPath, user2, sentBack.revision, 'AcknowledgeReturn').expect(409);
+          await act(opsPath, admin, sentBack.revision, 'Settle').expect(409);
+          const returned = (await act(memberPath, user1, sentBack.revision, 'AcknowledgeReturn').expect(200)).body;
+          await act(opsPath, admin, returned.revision, 'Settle').expect(409);
+          clock = new Date(+clock + 48 * hour);
+          const result = await act(opsPath, admin, returned.revision, 'Settle').expect(200);
+          expect(result.body.returnResolution.outcome).toBe('Returned');
+          expect(await db.c.member_violations.countDocuments({ sourceId: ex.id })).toBe(0);
+        }
+        clock = new Date(startTime);
+        const history = (await get('/me/wallet/history?limit=20', user1).expect(200)).body.items;
+        const holderHistory = (await get('/me/wallet/history?limit=20', user2).expect(200)).body.items;
+        expect(holderHistory.find((item: { type: string }) => item.type === 'ExchangeReturnRefund')?.amount)
+          .toBe(compensation ? undefined : 100000);
+        expect(history.find((item: { type: string }) => item.type === 'ExchangeReturnRefund')?.amount).toBe(500000);
+        expect(history.find((item: { type: string }) => item.type === 'ExchangeNonReturnCompensation')?.amount)
+          .toBe(compensation ? 100000 : undefined);
+        expect(await db.c.listings.findOne({ _id: ex.l1.listingId })).toMatchObject(compensation
+          ? { trade: 'ClosedUnavailable' }
+          : { trade: 'Available', moderation: 'Draft' });
+        expect(await db.c.listings.findOne({ _id: ex.l2.listingId })).toMatchObject({ trade: 'Available' });
+        const closed = (await get(casePath, admin).expect(200)).body;
+        expect(closed.returnResolution.phase).toBe('Closed');
+        expect((await reconcile()).balanced).toBe(true);
+      } finally {
+        time.mockRestore();
+      }
+    }
+
+    it('requires confirmed return and inspection before refunding 500,000 and 100,000', async () => {
+      await start();
+    });
+    it('requires an independent appeal decision and pays 100,000 once from the holder deposit', async () => {
+      await start({ compensation: true });
     });
   });
 
@@ -2265,22 +2735,28 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await post(`/operations/exchanges/${randomUUID()}/resolve`, decisionBody(1), staff).expect(404);
     });
 
-    it.each([false, true])('resolves disputed exchange and keeps ledger balanced; received=%s', async received => {
-      const ex = await disputedExchange(received);
+    it('returns only participant display fields to independent operations readers', async () => {
+      const ex = await disputedExchange();
+      const expected = await Promise.all([ex.initiatorId, ex.recipientId].map(async (id: string) => {
+        const user = await db.c.users.findOne({ _id: id });
+        return { displayName: user!.displayName, avatarId: user!.avatarId ?? null };
+      }));
+      const participants = { initiator: expected[0], recipient: expected[1] };
+      const path = '/operations/exchanges/' + ex.id + '/dispute';
+      expect((await get(path, admin).expect(200)).body.participants).toEqual(participants);
       const queue = (await get('/operations/exchanges/resolutions', staff).expect(200)).body;
-      expect(queue.some((item: { id: string }) => item.id === ex.id)).toBe(true);
+      expect(queue.find((row: { id: string }) => row.id === ex.id).participants).toEqual(participants);
+      expect((await get('/exchanges/' + ex.id, user1).expect(200)).body).not.toHaveProperty('participants');
+      await get(path, user1).expect(403);
+    });
+
+    it.each([false, true])('rejects new legacy decisions without changing holds or listings; received=%s', async received => {
+      const ex = await disputedExchange(received);
       const decision = received ? 'CompleteExchange' : 'RefundBoth';
-      const key = randomUUID(), body = decisionBody(ex.revision, decision);
-      const response = await post(`/operations/exchanges/${ex.id}/resolve`, body, staff, key).expect(200);
-      expect(response.body.status).toBe(received ? 'Completed' : 'Cancelled');
-      // Idempotent replay with same key returns 200; new key after resolution returns 409 Conflict
-      await post(`/operations/exchanges/${ex.id}/resolve`, body, staff, key).expect(200);
-      await post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(response.body.revision, decision), admin, randomUUID()).expect(409);
-      await worker.tick(new Date(Date.now() + 20 * 86400000));
-      const after = await effects(ex.id);
-      expect(after.exchange.status).toBe(received ? 'Completed' : 'Cancelled');
-      expect(after.listings.every(l => l.trade === (received ? 'Exchanged' : 'Available'))).toBe(true);
-      expect((await reconcile()).balanced).toBe(true);
+      const before = await effects(ex.id);
+      await post('/operations/exchanges/' + ex.id + '/resolve', decisionBody(ex.revision, decision), staff).expect(409);
+      await post('/operations/exchanges/' + ex.id + '/resolve', decisionBody(ex.revision, decision), admin).expect(409);
+      expect(await effects(ex.id)).toEqual(before);
     });
 
     it('blocks Staff and Admin participants before even replaying a legacy receipt; filters their queue', async () => {
@@ -2329,16 +2805,18 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
 
     it('retains consistency under contended opposite decisions and inspection expiry', async () => {
       const ex = await disputedExchange(true);
+      const before = await effects(ex.id);
       const gate = await Gate.lock(db.client, 'exchanges', [ex.id]);
       const refund = post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(ex.revision), staff).then(r => r);
       const complete = post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(ex.revision, 'CompleteExchange'), admin).then(r => r);
       const expiry = app.get(ExchangesService).expireInspection(ex.id, new Date(Date.now() + 20 * 86400000));
-      try { await gate.contended(3); } finally { await gate.close(); }
+      try { await gate.contended(); } finally { await gate.close(); }
       const [r1, r2, swept] = await Promise.all([refund, complete, expiry]);
-      expect([r1.status, r2.status].sort()).toEqual([200, 409]);
+      expect([r1.status, r2.status]).toEqual([409, 409]);
       expect(swept).toBeNull();
       const after = await effects(ex.id);
-      expect(['Cancelled', 'Completed']).toContain(after.exchange.status);
+      // The worker takes and commits a lock even when inspection is ineligible.
+      expect(after).toEqual({ ...before, exchange: { ...before.exchange, lockSeq: before.exchange.lockSeq + 1 } });
       expect((await reconcile()).balanced).toBe(true);
     });
 
@@ -2506,16 +2984,13 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
           `/exchanges/${created.id}/ship`,
           {
             expectedVersion: req.revision,
-            method: 'carrier',
-            carrierCode: 'GHN',
-            carrierName: 'Giao Hàng Nhanh',
-            trackingCode: 'GHN-MUTUAL-1',
+            method: 'direct',
           },
           user2,
         ).expect(200)
       ).body;
 
-      expect(shipped.recipientShippedAt).toBeDefined();
+      expect(shipped.recipientShippedAt).toEqual(expect.any(String));
       expect(shipped.cancellationRequestedBy).toBeNull();
 
       // Once shipped, neither party can cancel

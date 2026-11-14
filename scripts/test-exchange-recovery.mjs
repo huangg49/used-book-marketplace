@@ -232,18 +232,21 @@ try {
     password,
   });
   const topup = async (actor) => {
+    const amount = 2000000;
     const intent = await api("/me/topups", actor.accessToken, {
-      amount: 2000000,
+      amount,
     });
+    const wallet = await api("/me/wallet", actor.accessToken);
     await api("/operations/simulator/topup-events", operator.accessToken, {
       eventId: crypto.randomUUID(),
       intentId: intent.entityId,
       recipientId: actor.user.id,
-      amount: 2000000,
+      amount,
       currency: "VND",
       outcome: "Succeeded",
-      occurredAt: new Date().toISOString(),
+      occurredAt: wallet.serverTime,
     });
+    assert.equal((await api("/me/wallet", actor.accessToken)).available, amount);
   };
   await topup(a);
   await topup(b);
@@ -269,7 +272,7 @@ try {
   });
   await spa(web, "/exchange/" + webExchange.id);
   await web
-    .getByRole("heading", { name: "Phiếu đề nghị đổi sách", exact: true })
+    .getByRole("heading", { name: "Đặt cọc đổi sách", exact: true })
     .waitFor();
 
   async function funding(page, exchange, native) {
@@ -316,7 +319,7 @@ try {
       },
     );
     const fund = page.getByRole("button", {
-      name: native ? /Đặt cọc bảo chứng ngay/ : "Đặt cọc mô phỏng",
+      name: native ? /Đặt cọc bảo chứng ngay/ : /^Đặt cọc [\d.]+/,
       exact: !native,
     });
     await fund.click();

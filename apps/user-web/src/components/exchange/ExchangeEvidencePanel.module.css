@@ -1,23 +1,44 @@
 .panelCard {
-  background: #fffdfa;
-  border: 1.5px solid var(--shop-line, #ebd9c8);
-  border-radius: 12px;
-  padding: 16px;
-  margin-top: 16px;
+  background: #ffffff;
+  border: 1px solid var(--shop-line, #ebd9c8);
+  border-radius: 14px;
+  padding: clamp(1.2rem, 3vw, 1.6rem);
+  margin-top: 1rem;
   color: var(--shop-ink, #281914);
+  box-shadow: 0 4px 18px rgba(40, 25, 20, 0.04);
 }
 
 .panelHeader {
-  border-bottom: 1px solid #f0e6dc;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+  border-bottom: 1px solid var(--shop-line, #ebd9c8);
+  padding-bottom: 0.85rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.panelHeaderLeft {
+  display: grid;
+  gap: 3px;
 }
 
 .title {
   font-family: var(--shop-body, 'Be Vietnam Pro', sans-serif);
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--shop-ink, #281914);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: var(--shop-wine, #5c0202);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.8125rem;
+  color: var(--shop-muted, #716157);
+  line-height: 1.4;
   margin: 0;
 }
 
@@ -28,9 +49,9 @@
 }
 
 .dropzone {
-  border: 1.5px dashed #cfb9a5;
-  border-radius: 8px;
-  padding: 18px 12px;
+  border: 1.5px dashed var(--shop-line, #ebd9c8);
+  border-radius: 10px;
+  padding: 1.25rem 1rem;
   text-align: center;
   background: #fdfaf6;
   cursor: pointer;
@@ -38,8 +59,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  transition: all 0.15s ease;
+  gap: 5px;
+  transition: all 0.16s ease;
   position: relative;
 }
 
@@ -48,8 +69,15 @@
   background: #fffcf8;
 }
 
+.dropzone:focus-within {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 0;
+}
+
+.dropzoneIcon { color: var(--shop-wine); }
+
 .dropzoneTitle {
-  font-size: 0.9rem;
+  font-size: 0.925rem;
   font-weight: 700;
   color: var(--shop-wine, #5c0202);
 }
@@ -71,26 +99,26 @@
 
 /* Preview Box */
 .previewBox {
-  background: #ffffff;
-  border: 1px solid #ebd9c8;
-  border-radius: 8px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  background: #fbf9f5;
+  border: 1px solid var(--shop-line, #ebd9c8);
+  border-radius: 10px;
+  padding: 1.15rem;
+  display: grid;
+  gap: 1rem;
 }
 
 .previewTop {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .previewInfo {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -98,57 +126,70 @@
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--shop-ink, #281914);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .previewMeta {
-  font-size: 0.75rem;
+  font-size: 0.775rem;
   color: var(--shop-muted, #716157);
+  font-variant-numeric: tabular-nums;
 }
 
 .changeFileBtn {
   background: #ffffff;
-  border: 1px solid #d9cbbd;
+  border: 1.5px solid var(--shop-line, #ebd9c8);
   color: var(--shop-muted, #716157);
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
+  transition: all 160ms ease;
 }
 
 .changeFileBtn:hover {
   border-color: var(--shop-wine, #5c0202);
   color: var(--shop-wine, #5c0202);
+  background: var(--shop-shelf, #f4eddf);
+}
+
+.changeFileBtn:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 0;
 }
 
 .mediaPreviewWrap {
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
-  background: #f4ede4;
+  background: #fdfaf6;
+  border: 1px solid var(--shop-line, #ebd9c8);
   display: flex;
   justify-content: center;
   align-items: center;
-  max-height: 220px;
+  padding: 1rem;
+  max-height: 280px;
 }
 
 .imagePreview {
-  max-height: 220px;
+  max-height: 240px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(40, 25, 20, 0.08);
 }
 
 .videoPreview {
   width: 100%;
-  max-height: 220px;
+  max-height: 240px;
   background: #000000;
+  border-radius: 6px;
 }
 
 .pdfPreviewNote {
   padding: 14px;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--shop-muted, #716157);
 }
 
@@ -159,17 +200,29 @@
 
 .primaryBtn {
   background: var(--shop-wine, #5c0202);
-  border: 1px solid var(--shop-wine, #5c0202);
-  color: #ffffff;
-  font-size: 0.85rem;
+  border: 1.5px solid var(--shop-wine, #5c0202);
+  color: var(--shop-cream, #fcf8db);
+  font-size: 0.875rem;
   font-weight: 700;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 8px 18px;
+  min-height: 42px;
+  border-radius: 8px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(92, 2, 2, 0.16);
+  transition: all 160ms ease;
 }
 
 .primaryBtn:hover:not(:disabled) {
-  background: var(--shop-wine-hover, #7c2320);
+  background: #470101;
+  border-color: #470101;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(92, 2, 2, 0.24);
+  transform: translateY(-1px);
+}
+
+.primaryBtn:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 0;
 }
 
 .primaryBtn:disabled {
@@ -243,6 +296,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -313,3 +367,32 @@
   font-size: 0.75rem;
   margin-left: 6px;
 }
+
+.panelCard[data-compact] {
+  margin-top: 0;
+  padding: 0.85rem;
+  min-width: 0;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.panelCard[data-compact] .panelHeader {
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.55rem;
+}
+
+.panelCard[data-compact] .title { font-size: 1rem; }
+
+.panelCard[data-compact] .dropzone {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: stretch;
+  column-gap: 0.65rem;
+  row-gap: 0.1rem;
+  padding: 0.65rem 0.75rem;
+  min-height: 62px;
+  text-align: start;
+}
+
+.panelCard[data-compact] .dropzoneIcon { grid-row: span 2; }
+.panelCard[data-compact] .listSection { margin-top: 0.65rem; padding-top: 0.55rem; }

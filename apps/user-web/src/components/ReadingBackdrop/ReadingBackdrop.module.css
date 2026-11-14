@@ -1,0 +1,68 @@
+.backdrop {
+    --tile-width: 640px;
+    --tile-height: 480px;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    contain: strict;
+    pointer-events: none;
+    background-color: var(--shop-paper);
+}
+
+.pattern {
+    position: absolute;
+    inset: calc(-1 * var(--tile-height)) calc(-1 * var(--tile-width)) 0 0;
+    background: url("./reading-print.svg") 0 0 / var(--tile-width) var(--tile-height) repeat;
+    animation: drift 192s linear infinite paused;
+}
+
+.backdrop[data-moving="true"] .pattern {
+    animation-play-state: running;
+}
+
+/* A full tile in each direction returns the repeat to the same phase. */
+@keyframes drift {
+    to {
+        transform: translate(calc(-1 * var(--tile-width)), var(--tile-height));
+    }
+}
+
+/* The middle sits behind the reading surface. Keep the ink strongest at the edges. */
+.backdrop::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, var(--shop-paper) 66%, transparent) 18% 82%,
+        transparent
+    );
+    content: "";
+}
+
+@media (max-width: 640px) {
+    .backdrop {
+        --tile-width: 480px;
+        --tile-height: 360px;
+    }
+
+    .pattern {
+        animation-duration: 144s;
+    }
+
+    .backdrop::after {
+        background: linear-gradient(
+            90deg,
+            transparent,
+            color-mix(in srgb, var(--shop-paper) 66%, transparent) 26% 74%,
+            transparent
+        );
+    }
+}
+
+@media (forced-colors: active) {
+    .backdrop {
+        display: none;
+    }
+}

@@ -92,6 +92,8 @@ export const supportTargetOptionSchema: z.ZodType<
   target: supportSummarySchema.shape.target.unwrap(),
   label: z.string(),
   description: z.string().nullable(),
+  booksToGive: z.array(z.string()).optional(),
+  booksToReceive: z.array(z.string()).optional(),
   partnerName: z.string().nullable(),
   createdAt: z.iso.datetime().nullable(),
   state: z.string().nullable(),

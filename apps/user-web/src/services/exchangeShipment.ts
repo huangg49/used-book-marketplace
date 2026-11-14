@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { session } from './api';
 
-export type CarrierCode = 'GHN' | 'GHTK' | 'VIETTELPOST' | 'VNPOST' | 'DIRECT' | 'OTHER';
+export type CarrierCode = 'GHN' | 'GHTK' | 'VIETTELPOST' | 'VNPOST' | 'DIRECT' | 'OTHER' | 'SIMULATOR';
 
 export interface CarrierInfo {
     code: CarrierCode;
@@ -11,6 +11,7 @@ export interface CarrierInfo {
 }
 
 export const CARRIERS: CarrierInfo[] = [
+    { code: 'SIMULATOR', name: 'Lật Lại · Mô phỏng' },
     {
         code: 'GHN',
         name: 'Giao Hàng Nhanh (GHN Express)',

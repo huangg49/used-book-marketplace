@@ -28,7 +28,6 @@ interface LegData {
 
 interface ShipmentOrderData {
   exchangeId: string;
-  exchangeStatus: string;
   activeLeg: 'initiator' | 'recipient';
   trackingCode: string;
   carrierCode: string;
@@ -86,7 +85,7 @@ export function DriverPage() {
     if (event.includes('đang đi giao') || event.includes('đang trên đường giao')) return 3;
     if (event.includes('nhập kho') || event.includes('kho tổng') || event.includes('trung chuyển')) return 2;
     if (event.includes('đã lấy sách') || event.includes('đã có mặt') || event.includes('đã nhận kiện')) return 1;
-    return 0;
+    return order.shippedAt ? 1 : 0;
   })();
 
   const fetchRecentOrders = useCallback(async () => {
@@ -160,28 +159,6 @@ export function DriverPage() {
     void fetchActiveOrder(undefined, order.exchangeId, targetLeg);
   };
 
-  const handleSeedDemoOrder = async () => {
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/v1/shipments/carrier/seed-demo-order', {
-        method: 'POST',
-      });
-      if (!res.ok) throw new Error(`Lỗi tạo đơn mẫu (${res.status})`);
-      const data = await res.json();
-      if (data.exchangeId) {
-        setLegSteps({});
-        setSearchParams({ exchangeId: data.exchangeId });
-        await fetchActiveOrder(undefined, data.exchangeId);
-        await fetchRecentOrders();
-        alert('⚡ Đã tạo mới đơn trao đổi thử nghiệm mẫu giữa Nguyễn Đại và Trần Tú với mã GHN mới toanh!');
-      }
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Có lỗi khi tạo đơn mẫu');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleAutoSimulate = async () => {
     if (!order?.exchangeId) return;
     const ok = window.confirm(
@@ -243,30 +220,6 @@ export function DriverPage() {
       alert(err instanceof Error ? err.message : 'Có lỗi khi tự động chạy mô phỏng');
     } finally {
       setSimulatingSpeed(false);
-    }
-  };
-
-  const handleResetDemo = async () => {
-    if (!order?.exchangeId) return;
-    const ok = window.confirm(
-      'Bạn có muốn đặt lại cuộc trao đổi này về trạng thái Đang giao (InTransit) để diễn tập lại từ đầu không?',
-    );
-    if (!ok) return;
-
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/v1/shipments/carrier/orders/${order.exchangeId}/reset-for-demo`, {
-        method: 'POST',
-      });
-      if (!res.ok) throw new Error(`Lỗi đặt lại đơn (${res.status})`);
-      setLegSteps({});
-      alert('✓ Đã đặt lại thành công! Cả 2 kiện hàng đã sẵn sàng để bưu tá giao lại.');
-      void fetchActiveOrder(undefined, order.exchangeId);
-      void fetchRecentOrders();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -394,18 +347,7 @@ export function DriverPage() {
 
         {/* Quick Chips: Chọn các đơn gần đây trong DB */}
         <div className={styles.chipsSection}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <p className={styles.chipsLabel} style={{ margin: 0 }}>📋 Chọn nhanh đơn hàng:</p>
-            <button
-              type="button"
-              className={styles.seedMiniBtn}
-              onClick={() => void handleSeedDemoOrder()}
-              disabled={submitting || simulatingSpeed}
-              title="Tạo nhanh một đơn trao đổi mẫu mới trong Database"
-            >
-              + Tạo đơn mẫu
-            </button>
-          </div>
+          <p className={styles.chipsLabel}>Chọn nhanh đơn hàng</p>
           {recentOrders.length > 0 && (
             <div className={styles.chipsRow}>
               {recentOrders.map((ro) => {
@@ -449,9 +391,6 @@ export function DriverPage() {
                   Toàn bộ bưu phẩm 2 chiều đã ký nhận POD. Sàn Lật Lại đã tự động chuyển sang bước Kiểm định &amp;
                   Nghiệm thu 72h (POL-08).
                 </p>
-                <button type="button" className={styles.resetDemoBtn} onClick={() => void handleResetDemo()}>
-                  🔄 Đặt lại đơn này về &quot;Đang giao&quot; để diễn tập lại
-                </button>
               </div>
             )}
 
@@ -559,11 +498,8 @@ export function DriverPage() {
               >
                 <span style={{ fontSize: 24 }}>⏳</span>
                 <div>
-                  <strong>Quy tắc nghiệp vụ 2 chiều (BA Rule):</strong>
-                  <div>
-                    Đang chờ đối tác hoàn tất tạo đơn vận chuyển. Khi cả 2 bên cùng tạo đơn thành công, bưu tá mới được
-                    phép đến lấy sách để đảm bảo an toàn giao dịch.
-                  </div>
+                  <strong>Chưa thể lấy sách</strong>
+                  <div>Shipper chỉ lấy sách khi có đủ hai vận đơn và phiếu còn trong hạn.</div>
                 </div>
               </div>
             )}
@@ -591,7 +527,7 @@ export function DriverPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${currentStep >= 1 ? styles.actionBtnActive : ''}`}
-                disabled={submitting || simulatingSpeed || order.readyForPickup === false || Boolean(order.deliveredAt)}
+                disabled={submitting || simulatingSpeed || order.readyForPickup === false || currentStep >= 1}
                 onClick={() =>
                   void handleUpdateStatus(
                     1,
@@ -617,7 +553,7 @@ export function DriverPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${currentStep >= 2 ? styles.actionBtnActive : ''}`}
-                disabled={submitting || simulatingSpeed || order.readyForPickup === false || Boolean(order.deliveredAt)}
+                disabled={submitting || simulatingSpeed || order.readyForPickup === false || currentStep < 1 || currentStep >= 2}
                 onClick={() =>
                   void handleUpdateStatus(
                     2,
@@ -645,7 +581,7 @@ export function DriverPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${currentStep >= 3 ? styles.actionBtnActive : ''}`}
-                disabled={submitting || simulatingSpeed || order.readyForPickup === false || Boolean(order.deliveredAt)}
+                disabled={submitting || simulatingSpeed || order.readyForPickup === false || currentStep < 2 || currentStep >= 3}
                 onClick={() =>
                   void handleUpdateStatus(
                     3,
@@ -673,7 +609,7 @@ export function DriverPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${order.deliveredAt ? styles.actionBtnFinishDelivered : styles.actionBtnFinish}`}
-                disabled={submitting || simulatingSpeed || order.readyForPickup === false || Boolean(order.deliveredAt)}
+                disabled={submitting || simulatingSpeed || order.readyForPickup === false || currentStep < 3 || Boolean(order.deliveredAt)}
                 onClick={() =>
                   void handleUpdateStatus(
                     4,
@@ -712,39 +648,20 @@ export function DriverPage() {
                 type="button"
                 className={styles.failBtn}
                 onClick={() => void handleReportFailure()}
-                disabled={submitting || order.readyForPickup === false}
+                disabled={submitting || simulatingSpeed || order.readyForPickup === false || currentStep < 1}
               >
                 ⚠️ Báo giao không thành công (Khách vắng mặt / Hẹn giao lại)
               </button>
             )}
 
-            {/* Nút reset diễn tập lại */}
-            {order.exchangeStatus !== 'InTransit' && !order.bothDelivered && (
-              <button
-                type="button"
-                className={styles.resetDemoBtn}
-                style={{ width: '100%', marginTop: 14 }}
-                onClick={() => void handleResetDemo()}
-              >
-                🔄 Đặt lại cuộc trao đổi này về &quot;Đang giao&quot; để test lại
-              </button>
-            )}
           </>
         ) : (
           <div className={styles.emptyBox}>
             <p style={{ fontSize: 36, margin: '0 0 10px' }}>📦</p>
             <p className={styles.emptyTitle}>Chưa có đơn hàng nào cần giao</p>
             <p className={styles.emptyDesc}>
-              Hệ thống hiện tại chưa có đơn vận chuyển nào đang hoạt động. Bạn có thể bấm nút bên dưới để tạo ngay một đơn trao đổi thử nghiệm mẫu giữa Nguyễn Đại và Trần Tú:
+              Mở phiếu trao đổi của An và Bình, đặt cọc rồi lưu mã vận đơn của mỗi bên.
             </p>
-            <button
-              type="button"
-              className={styles.seedBigBtn}
-              onClick={() => void handleSeedDemoOrder()}
-              disabled={submitting || simulatingSpeed}
-            >
-              ⚡ Tạo nhanh đơn trao đổi mẫu ngay (Seed Demo)
-            </button>
           </div>
         )}
 

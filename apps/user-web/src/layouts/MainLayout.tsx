@@ -5,6 +5,7 @@ import { ROUTES, searchUrl } from "../lib/routes";
 import { Header, Logo } from "../components/Header";
 import { ConversationNavigation } from "../components/conversation/ConversationNavigation";
 import { useConversationTransition } from "../components/conversation/conversation-navigation";
+import { ReadingBackdrop } from "../components/ReadingBackdrop/ReadingBackdrop";
 export { Header };
 import styles from "./MainLayout.module.css";
 
@@ -14,6 +15,8 @@ export default function MainLayout() {
     location.pathname === "/chat" || location.pathname.startsWith("/chat/");
   const isChatRoom =
     location.pathname.startsWith("/chat/") && location.pathname !== "/chat";
+  const isExchange =
+    location.pathname === "/exchange" || location.pathname.startsWith("/exchange/");
   const chatTransition = useConversationTransition("/chat");
   useEffect(() => {
     if (isChat) return;
@@ -41,12 +44,9 @@ export default function MainLayout() {
         className={styles.main}
         data-chat={isChat || undefined}
         data-chat-room={isChatRoom || undefined}
-        data-exchange={
-          location.pathname === "/exchange" ||
-          location.pathname.startsWith("/exchange/") ||
-          undefined
-        }
+        data-exchange={isExchange || undefined}
       >
+        {(isChat || isExchange) && <ReadingBackdrop />}
         <ConversationNavigation>
           <Outlet />
         </ConversationNavigation>

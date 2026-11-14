@@ -1,5 +1,6 @@
 import {
   validateAccountMail,
+  validateAutofill,
   validateEnvironment,
   validatePriceAssist,
 } from './environment.js';
@@ -129,5 +130,15 @@ describe('price assistant provider config', () => {
     expect(() =>
       validatePriceAssist({ PRICE_ASSIST_PROVIDER: 'nvidia', NVIDIA_BASE_URL: 'http://nim.local' }),
     ).toThrow('NVIDIA_BASE_URL');
+  });
+});
+
+describe('photo autofill provider config', () => {
+  it('defaults to NVIDIA and validates OpenAI separately', () => {
+    expect(validateAutofill({})).toMatchObject({ AUTOFILL_PROVIDER: 'nvidia', AUTOFILL_ENABLED: 'false' });
+    expect(validateAutofill({ AUTOFILL_PROVIDER: 'openai', AUTOFILL_OPENAI_MODEL: 'gpt-5.4-mini' }))
+      .toMatchObject({ AUTOFILL_PROVIDER: 'openai', AUTOFILL_OPENAI_MODEL: 'gpt-5.4-mini' });
+    expect(() => validateAutofill({ AUTOFILL_PROVIDER: 'gemini' })).toThrow('AUTOFILL_PROVIDER');
+    expect(() => validateAutofill({ AUTOFILL_OPENAI_API_KEY: 'replace-me' })).toThrow('AUTOFILL_OPENAI_API_KEY');
   });
 });

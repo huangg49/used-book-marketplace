@@ -1,3 +1,4 @@
+import { ExchangeReturnPanel } from "../components/exchange/ExchangeReturnPanel";
 import type { ReactNode } from "react";
 import {
   TransactionFrame,
@@ -6,22 +7,23 @@ import {
 import { ExchangeContext } from "../components/conversation/ExchangeContext";
 import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinanceSummary";
 import { exchangeStage } from "../lib/transaction-stage";
+import { exchangeHandoverTarget, isExchangeHandover } from "../lib/exchange-handover";
 import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from "lucide-react";
 import { ApiError, confirmExchangeRead } from "@used-books/session-client";
 import { session } from "../services/api";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../components/exchange/ExchangeRecoveryPanel";
 import { SupportLink } from "../features/support/SupportLink";
-import conversation from "../components/conversation/Conversation.module.css";
 import { useParams, Link, Navigate, useLocation } from "react-router-dom";
 import { useConversationTransition } from "../components/conversation/conversation-navigation";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
 import { getPurchaseConversations } from "../services/purchase-conversations";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ROUTES } from "../lib/routes";
+import { ROUTES, formatVnd } from "../lib/routes";
 import { useSession } from "../hooks/useSession";
-import { exchangeAcknowledged, pendingExchange } from "../services/exchange";
+import { exchangeAcknowledged, exchangeCommand, pendingExchange } from "../services/exchange";
 import {
   getExchangeDetail,
   getMessagePage,
@@ -35,16 +37,17 @@ import {
   completeExchange,
   counterExchange,
   reportIssue,
+  advanceDemoShipping,
 } from "../services/exchangeDetail";
 import type { CounterOfferData } from "../components/exchange/CounterDialog";
 import { type ShipmentData } from "../services/exchangeShipment";
-import { ProgressStepper } from "../components/exchange/ProgressStepper";
+import { ExchangeSteps } from "../components/exchange/ExchangeSteps";
 import { SettlementCard } from "../components/exchange/SettlementCard";
 import { ReviewCard } from "../components/exchange/ReviewCard";
-import { ShippingTrackingCard } from "../components/exchange/ShippingTrackingCard";
-import { BookInfoCard } from "../components/exchange/BookInfoCard";
+import { BookCover } from "../components/BookCover";
 import { ActionCard } from "../components/exchange/ActionCard";
 import { ChatPanel } from "../components/exchange/ChatPanel";
+import { ExchangeChatDrawer } from "../components/exchange/ExchangeChatDrawer";
 import { exchangeChatGuidance } from "../lib/exchange-chat-guidance";
 import { SafetyTipsCard } from "../components/exchange/SafetyTipsCard";
 import styles from "./ExchangeDetailPage.module.css";
@@ -80,12 +83,12 @@ function ExchangeDetailContent({
   useExchangeRecovery();
   const chatTransition = useConversationTransition("/chat");
   const location = useLocation();
+  const handoverTarget = exchangeHandoverTarget(location.hash);
   const transitioning = !embedded && chatTransition;
   const { id: routeId } = useParams<{ id: string }>();
   const id = exchangeId ?? routeId;
   const queryClient = useQueryClient();
   const auth = useSession();
-  const [panel, setPanel] = useState<"sheet" | "chat">("sheet");
   const conversations = useQuery({
     queryKey: [
       "purchase-conversations",
@@ -184,9 +187,12 @@ function ExchangeDetailContent({
     invalidate();
   };
 
-  const handleCounter = async (data: CounterOfferData) => {
-    await counterExchange(id!, detail!.revision!, data);
-    invalidate();
+  const handleCounter = async (data: CounterOfferData, revision: number) => {
+    try {
+      await counterExchange(id!, revision, data);
+    } finally {
+      invalidate();
+    }
   };
 
   const handleDispute = async (reason: string) => {
@@ -220,8 +226,6 @@ function ExchangeDetailContent({
   const linked = conversations.data?.find((room) =>
     room.terms?.exchangeIds.includes(id ?? ""),
   );
-  if (!embedded && linked)
-    return <Navigate replace to={`/chat/${linked.id}`} />;
   if (auth.status !== "authenticated") {
     return (
       <div className={styles.authContainer}>
@@ -233,7 +237,7 @@ function ExchangeDetailContent({
         {auth.status !== "loading" && (
           <Link
             className={styles.loginBtn}
-            to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ""}`)}`}
+            to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ""}${location.hash}`)}`}
           >
             Đăng nhập
           </Link>
@@ -334,7 +338,8 @@ function ExchangeDetailContent({
         ? "Bạn đã từ chối đề nghị này"
         : `@${detail.partner.username} đã từ chối đề nghị của bạn`;
   } else if (detail.status === "CANCELLED") {
-    if (
+    if (detail.returnResolution?.outcome) statusText = "Đã xử lý trả sách";
+    else if (
       detail.closedBy === "both" ||
       detail.cancelReason === "MutualAgreement"
     ) {
@@ -349,6 +354,28 @@ function ExchangeDetailContent({
     }
   } else if (detail.status === "EXPIRED") statusText = "Hết hạn";
 
+  const proposal = detail.status === "PENDING";
+  const funding = detail.status === "FUNDING";
+  const handover = isExchangeHandover(detail.status);
+  const inspecting = detail.status === "INSPECTING";
+  if (!embedded && linked && !handoverTarget && proposal)
+    return <Navigate replace to={`/chat/${linked.id}`} />;
+  const standaloneSheet = !embedded && (proposal || funding);
+  const handoverNavigation = { target: handoverTarget, navigationKey: location.key };
+  const recoveringAction = Boolean(pendingExchange(detail.id) || exchangeAcknowledged(detail.id));
+  const bookOwner = detail.returnResolution?.ownerId === detail.viewer.id;
+  const returnBooks = bookOwner ? detail.giveBooks : detail.receiveBooks;
+  const caseBook = returnBooks.find((book) => book.id === detail.returnResolution?.listingId);
+  const returnResolution = detail.revision ? detail.returnResolution : undefined;
+  const evidence = detail.rawStatus === "ResolutionPending" && (
+    <ExchangeEvidencePanel
+      key={"evidence:" + detail.viewer.id + ":" + detail.id}
+      id={detail.id}
+      revision={detail.revision!}
+      userId={detail.viewer.id}
+      compact={Boolean(returnResolution)}
+    />
+  );
   const actionSection = (
     <section
       id="exchange-actions"
@@ -356,34 +383,113 @@ function ExchangeDetailContent({
       aria-label="Hành động của bạn"
       tabIndex={-1}
     >
-      <ActionCard
-        compact={embedded}
-        detail={detail}
-        onCancel={handleCancel}
-        onAccept={handleAccept}
-        onCounter={handleCounter}
-        onFund={async () => {
-          await fundExchange(id!);
-          invalidate();
-        }}
-        onRetry={async () => {
-          await refetchDetail();
-        }}
-        onReject={handleReject}
-        onConfirmSent={handleConfirmSent}
-        onConfirmReceived={handleConfirmReceived}
-        onComplete={handleComplete}
-        onDispute={handleDispute}
-      />
-      {detail.rawStatus === "ResolutionPending" && (
-        <ExchangeEvidencePanel
-          key={detail.viewer.id + ":" + detail.id}
-          id={detail.id}
-          revision={detail.revision!}
-          userId={detail.viewer.id}
+      {(!detail.returnResolution || recoveringAction) && (
+        <ActionCard
+          compact={embedded || standaloneSheet || handover || inspecting}
+          standaloneSheet={standaloneSheet || handover || inspecting}
+          handover={handover ? handoverNavigation : undefined}
+          handoverSupport={handover && !embedded ? <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" /> : undefined}
+          detail={detail}
+          onCancel={handleCancel}
+          onAccept={handleAccept}
+          onCounter={handleCounter}
+          onFund={async () => {
+            await fundExchange(id!);
+            invalidate();
+          }}
+          onRetry={async () => {
+            await refetchDetail();
+          }}
+          onReject={handleReject}
+          onConfirmSent={handleConfirmSent}
+          onConfirmReceived={handleConfirmReceived}
+          onComplete={handleComplete}
+          onDispute={handleDispute}
+          onAdvanceDemoDeadline={async () => {
+            const latest = await getExchangeDetail(detail.id);
+            if (latest.demoDeadline !== detail.demoDeadline || latest.revision !== detail.revision) {
+              invalidate();
+              throw new Error("Phiếu vừa thay đổi. Xem lại trạng thái trước khi tua hạn.");
+            }
+            await exchangeCommand(`/exchanges/${detail.id}/demo-advance`, {
+              expectedVersion: detail.revision!, deadline: detail.demoDeadline,
+            });
+            invalidate();
+          }}
+          onAdvanceDemoShipping={async () => {
+            await advanceDemoShipping(id!, detail.revision!);
+            invalidate();
+          }}
         />
       )}
+      {detail.outboundDeliveryVerification && (
+        <section className={styles.deliveryVerification} aria-label="Xác minh giao sách">
+          <h2>Admin đã xác minh sách đã đến người nhận</h2>
+          <p>{detail.outboundDeliveryVerification.note}</p>
+        </section>
+      )}
+      {returnResolution && detail.revision && (
+        <ExchangeReturnPanel
+          key={"return:" + detail.viewer.id + ":" + detail.id}
+          id={detail.id}
+          revision={detail.revision}
+          userId={detail.viewer.id}
+          resolution={returnResolution}
+          evidence={evidence}
+          statements={detail.statements}
+          caseBook={caseBook && { title: caseBook.title, coverUrl: caseBook.coverUrl,
+            confirmed: Boolean(bookOwner ? detail.partnerShipping.receivedAt : detail.viewerShipping.receivedAt) }}
+          disputeReason={detail.disputeReason}
+          returnAddress={detail.partnerAddress}
+          blocked={recoveringAction}
+          onRead={() => void refetchDetail()}
+        />
+      )}
+      {!returnResolution && evidence}
     </section>
+  );
+  const messagePages = messagesDenied ? undefined : messagesQuery.data?.pages;
+  const messages = messagePages?.slice().reverse().flatMap(page => page.items) ?? [];
+  const renderChat = (inDrawer = false, visible = true) => (
+    <ChatPanel
+      key={id}
+      inDrawer={inDrawer}
+      visible={visible}
+      messages={messages}
+      isLoading={messagesQuery.isPending}
+      loadError={messagesDenied || (messagesQuery.isError && !messagesQuery.isFetchNextPageError)}
+      isRefreshing={messagesQuery.isFetching}
+      hasOlder={!messagesDenied && messagesQuery.hasNextPage}
+      isLoadingOlder={messagesQuery.isFetchingNextPage}
+      olderError={!messagesDenied && messagesQuery.isFetchNextPageError}
+      onLoadOlder={() => messagesQuery.fetchNextPage({ cancelRefetch: false })}
+      onRetry={() => void messagesQuery.refetch()}
+      giveBooks={detail.giveBooks.map((book) => book.title)}
+      receiveBooks={detail.receiveBooks.map((book) => book.title)}
+      statusText={statusText}
+      guidance={exchangeChatGuidance(detail)}
+      partner={detail.partner}
+      onSendMessage={handleSendMessage}
+      isReadOnly={[
+        "COMPLETED",
+        "CANCELLED",
+        "REJECTED",
+        "EXPIRED",
+      ].includes(detail.status)}
+      unavailable={messagesDenied}
+    />
+  );
+  const contact = linked ? <Link className={styles.chatLink} to={`/chat/${linked.id}`}>Mở hội thoại</Link> : (
+    <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
+      transactionCode={detail.transactionCode} partnerName={detail.partner.username}
+      latest={messagePages?.[0]?.items ?? []}>
+      {open => renderChat(true, open)}
+    </ExchangeChatDrawer>
+  );
+  const stepPanel = (children: ReactNode) => (
+    <ExchangeSteps detail={detail} navigation={handoverNavigation}>
+      {children}
+    </ExchangeSteps>
   );
   if (embedded)
     return (
@@ -402,39 +508,13 @@ function ExchangeDetailContent({
               {detail.partner.username}
             </p>
           </header>
-          <div className={styles.workspaceProgress}>
-            <ProgressStepper
-              compact
-              summary={false}
-              status={detail.status}
-              failedAtStep={detail.failedAtStep}
-              closedBy={detail.closedBy}
-              partnerUsername={detail.partner.username}
-              hasReceived={Boolean(detail.viewerShipping.receivedAt)}
-              cancelReason={detail.cancelReason}
-            />
+          <div className={styles.embeddedSteps}>
+            {stepPanel(<>
+              {actionSection}
+              <ReviewCard detail={detail} />
+              {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
+            </>)}
           </div>
-          {actionSection}
-          <ReviewCard detail={detail} />
-          {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
-          {(!["PENDING", "FUNDING", "REJECTED", "EXPIRED"].includes(
-            detail.status,
-          ) &&
-            !(
-              detail.status === "CANCELLED" &&
-              detail.cancelReason !== "DisputeResolvedRefund"
-            )) && (
-            <TransactionDisclosure
-              title="Theo dõi giao nhận hai chiều"
-              open={[
-                "WAITING_YOU_SEND",
-                "DELIVERING",
-                "WAITING_YOU_CONFIRM",
-              ].includes(detail.status)}
-            >
-              <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
-            </TransactionDisclosure>
-          )}
           {workspaceNavigation}
           <TransactionDisclosure title="Hướng dẫn giao nhận và bảo quản">
             <SafetyTipsCard />
@@ -443,135 +523,108 @@ function ExchangeDetailContent({
       </div>
     );
 
+  const waitingForViewer = detail.canViewerAccept ?? detail.viewerRole === "recipient";
+  const updatedProposal = proposal && (detail.revision ?? 0) > 1 && !!detail.lastProposedById;
+  const multipleBooks = detail.giveBooks.length > 1 || detail.receiveBooks.length > 1;
+  const title = funding
+      ? detail.viewerFundedAt ? "Bạn đã đặt cọc" : "Đặt cọc đổi sách"
+      : handover ? "Giao nhận sách"
+      : !proposal ? (detail.status === "REJECTED" ? "Đề nghị bị từ chối" : statusText)
+      : updatedProposal ? waitingForViewer ? "Đề nghị đã cập nhật" : "Đã gửi đề nghị mới"
+      : waitingForViewer ? "Đề nghị đổi sách" : "Đã gửi đề nghị";
   return (
-    <div
-      className={embedded ? styles.embedded : styles.container}
-      data-chat-morph-room={transitioning || undefined}
-    >
-      {!embedded && location.state?.chatFromInbox && <ConversationBackLink />}
-      {!embedded && (
-        <div className={styles.pageHeader}>
-          <div>
-            <span className={styles.transactionCode}>
-              Mã Giao Dịch: #{detail.transactionCode}
-            </span>
-            <h1 className={styles.pageTitle}>Cuộc trao đổi sách</h1>
-            <p>
-              <SupportLink type="Exchange" id={id!} />
-            </p>
-          </div>
-          <div className={styles.headerStatus}>
-            Trạng thái: <span className={styles.statusValue}>{statusText}</span>
-          </div>
-        </div>
-      )}
-
-      <div className={styles.stepperCard}>
-        <ProgressStepper
-          compact={embedded}
-          status={detail.status}
-          failedAtStep={detail.failedAtStep}
-          closedBy={detail.closedBy}
-          partnerUsername={detail.partner.username}
-          hasReceived={Boolean(detail.viewerShipping.receivedAt)}
-          cancelReason={detail.cancelReason}
-        />
-      </div>
-
-      {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
-
-      {!embedded && (
-        <nav className={styles.sectionLinks} aria-label="Đi tới phần trao đổi">
-          <a href="#exchange-actions">Xem bước tiếp theo</a>
-          <a href="#exchange-chat" onClick={() => setPanel("chat")}>
-            Nhắn với đối tác
-          </a>
-        </nav>
-      )}
-      {!embedded && (
-        <nav
-          className={conversation.mobileTabs}
-          aria-label="Nội dung cuộc trao đổi"
-        >
-          <button
-            type="button"
-            aria-pressed={panel === "sheet"}
-            onClick={() => setPanel("sheet")}
-          >
-            Phiếu thỏa thuận
-          </button>
-          <button
-            type="button"
-            aria-pressed={panel === "chat"}
-            onClick={() => setPanel("chat")}
-          >
-            Hội thoại
-          </button>
-        </nav>
-      )}
-      <div
-        className={
-          embedded
-            ? styles.embeddedGrid
-            : `${styles.gridContainer} ${conversation.workspace}`
-        }
-        data-panel={panel}
-      >
-        <div
-          className={
-            embedded
-              ? styles.mainCol
-              : `${styles.mainCol} ${styles.legacySheet} ${conversation.sheet}`
-          }
-        >
-          {!embedded && (
-            <div className={conversation.sheetHeading}>
-              <h2>Phiếu thỏa thuận</h2>
-              <span>Đổi sách · {statusText}</span>
-            </div>
+      <div className={styles.exchangeSheet} data-chat-morph-room={transitioning || undefined}>
+        <nav className={styles.handoverNav} aria-label="Điều hướng phiếu trao đổi">
+          {location.state?.chatFromInbox === true ? (
+            <ConversationBackLink className={styles.proposalBack} />
+          ) : (
+            <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>
+              <ArrowLeft size={18} aria-hidden="true" />
+              Trao đổi của tôi
+            </Link>
           )}
-          <BookInfoCard detail={detail} compact={embedded} />
-          <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
-          {actionSection}
-          <ReviewCard detail={detail} />
-          <details className={styles.safetyDetails}>
-            <summary>Mẹo bảo quản và giao nhận an toàn</summary>
-            <SafetyTipsCard />
-          </details>
-        </div>
-
-        {!embedded && (
-          <div
-            className={`${styles.sideCol} ${conversation.chat} ${styles.legacyChat}`}
-          >
-            <ChatPanel
-              key={id}
-              messages={messagesDenied ? [] : messagesQuery.data?.pages.slice().reverse().flatMap((page) => page.items) ?? []}
-              isLoading={messagesQuery.isPending}
-              loadError={messagesDenied || (messagesQuery.isError && !messagesQuery.isFetchNextPageError)}
-              isRefreshing={messagesQuery.isFetching}
-              hasOlder={!messagesDenied && messagesQuery.hasNextPage}
-              isLoadingOlder={messagesQuery.isFetchingNextPage}
-              olderError={!messagesDenied && messagesQuery.isFetchNextPageError}
-              onLoadOlder={() => messagesQuery.fetchNextPage({ cancelRefetch: false })}
-              onRetry={() => void messagesQuery.refetch()}
-              giveBooks={detail.giveBooks.map((book) => book.title)}
-              receiveBooks={detail.receiveBooks.map((book) => book.title)}
-              statusText={statusText}
-              guidance={exchangeChatGuidance(detail)}
-              partner={detail.partner}
-              onSendMessage={handleSendMessage}
-              isReadOnly={[
-                "COMPLETED",
-                "CANCELLED",
-                "REJECTED",
-                "EXPIRED",
-              ].includes(detail.status)}
-              unavailable={messagesDenied}
-            />
+          <span className={styles.proposalCode}>Phiếu #{detail.transactionCode}</span>
+        </nav>
+        <header className={styles.handoverHeader}>
+          <div>
+            <h1>{title}</h1>
+            <p>Đổi sách với <strong dir="auto" title={detail.partner.username}>{detail.partner.username}</strong></p>
           </div>
-        )}
+          {contact}
+        </header>
+        {stepPanel(standaloneSheet ? (
+          <div className={funding ? styles.fundingWorkspace : styles.proposalWorkspace}>
+            <div className={funding ? styles.fundingControls : proposal ? styles.proposalControls : undefined}>
+              <div className={funding ? styles.fundingPanel : proposal ? styles.proposalActions : undefined}>{actionSection}</div>
+              <div className={styles.proposalContact}>
+                <SupportLink type="Exchange" id={detail.id} label={funding ? "Cần hỗ trợ" : undefined} />
+              </div>
+            </div>
+            <div className={styles.proposalLayout} data-books-only={funding || undefined}>
+              <section aria-labelledby="proposal-facts"
+                className={funding || proposal || multipleBooks ? styles.fundingBooks : undefined}
+                data-multiple-books={multipleBooks || undefined}>
+                <h2 id="proposal-facts">{proposal && !updatedProposal ? "Phiếu đề nghị đổi sách" : "Sách trong phiếu"}</h2>
+                {[
+                  { title: "Sách bạn gửi", books: detail.giveBooks, Icon: ArrowUpRight },
+                  { title: "Sách bạn nhận", books: detail.receiveBooks, Icon: ArrowDownLeft },
+                ].map(({ title: label, books, Icon }) => {
+                  const total = books.reduce((sum, book) => sum + (book.price ?? 0), 0);
+                  return (
+                    <div className={styles.proposalBooks} key={label} data-receive={Icon === ArrowDownLeft || undefined}>
+                      <h3>
+                        {(proposal || funding || multipleBooks) && <Icon size={18} aria-hidden="true" />}
+                        {label}
+                        {multipleBooks && books.length > 0 && <span className={styles.bookGroupCount}>{books.length} cuốn</span>}
+                      </h3>
+                      {multipleBooks && books.length > 0 && books.every(book => book.price != null) && (
+                        <p className={styles.bookGroupTotal}><span>Tổng giá trị đổi</span> <strong>{formatVnd(total)}</strong></p>
+                      )}
+                      {books.map((book, index) => (
+                        <div className={styles.proposalBook} key={book.id}>
+                          <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} index={index} /></div>
+                          <div>
+                            <strong className={styles.proposalBookTitle} title={multipleBooks ? book.title : undefined}>{book.title}</strong>
+                            {book.author && <span className={styles.proposalBookAuthor}>{book.author}</span>}
+                            {book.price != null && <span className={styles.proposalBookPrice}>{formatVnd(book.price)}</span>}
+                            {book.conditionDetails && <details>
+                              <summary>Tình trạng sách</summary><p>{book.conditionDetails}</p>
+                            </details>}
+                          </div>
+                        </div>
+                      ))}
+                      {books.length === 0 && <p>Chưa tải được thông tin sách.</p>}
+                    </div>
+                  );
+                })}
+                {!detail.hasAgreementSnapshot && <p>Phiếu cũ thiếu thông tin sách lúc gửi đề nghị.</p>}
+              </section>
+              {proposal && <section className={styles.proposalAmounts} aria-labelledby="proposal-amounts">
+                <h2 id="proposal-amounts">Nếu hai bên đồng ý</h2>
+                <dl>
+                  {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
+                  {detail.partnerDeposit != null && <div><dt>Cọc của đối tác</dt><dd>{formatVnd(detail.partnerDeposit)}</dd></div>}
+                  {detail.moneyAmount != null && detail.moneyCompensationType !== "none" && (
+                    <div><dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù bạn trả" : "Tiền bù bạn nhận"}</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
+                  )}
+                  {detail.viewerFundingAmount != null && <div><dt>Bạn cần nộp</dt><dd><strong>{formatVnd(detail.viewerFundingAmount)}</strong></dd></div>}
+                </dl>
+                <p className={styles.proposalAmountNote}>Chưa giữ sách hay trừ tiền.</p>
+              </section>}
+            </div>
+          </div>
+        ) : (
+          <>
+            {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
+            {actionSection}
+            <ReviewCard detail={detail} />
+            <div className={styles.handoverFooter} data-shipping={handover || undefined}>
+              {handover ? <TransactionDisclosure title="Hướng dẫn đóng gói và giao nhận">
+                <SafetyTipsCard />
+              </TransactionDisclosure> : <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" />}
+            </div>
+          </>
+        ))}
       </div>
-    </div>
   );
 }

@@ -11,8 +11,10 @@ interface ConfirmDialogProps {
     cancelText?: string;
     onConfirm: () => void;
     isBusy?: boolean;
+    confirmDisabled?: boolean;
     isDanger?: boolean;
     maxWidth?: string;
+    stickyFooter?: boolean;
 }
 
 export function ConfirmDialog({
@@ -25,8 +27,10 @@ export function ConfirmDialog({
     cancelText = 'Hủy',
     onConfirm,
     isBusy = false,
+    confirmDisabled = false,
     isDanger = false,
     maxWidth,
+    stickyFooter,
 }: ConfirmDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
@@ -42,23 +46,23 @@ export function ConfirmDialog({
             dialog.focus();
             dialog.scrollLeft = 0;
             dialog.scrollTop = 0;
-            requestAnimationFrame(() => {
+            const frame = requestAnimationFrame(() => {
                 if (dialogRef.current) {
                     dialogRef.current.scrollTop = 0;
                     dialogRef.current.scrollLeft = 0;
                 }
             });
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 if (dialogRef.current) {
                     dialogRef.current.scrollTop = 0;
                 }
             }, 30);
-        } else {
-            dialog.close();
-            // Trả focus
-            if (triggerRef.current) {
-                triggerRef.current.focus();
-            }
+            return () => {
+                cancelAnimationFrame(frame);
+                clearTimeout(timer);
+                if (dialog.open) dialog.close();
+                if (triggerRef.current?.isConnected) triggerRef.current.focus({ preventScroll: true });
+            };
         }
     }, [isOpen]);
 
@@ -94,6 +98,7 @@ export function ConfirmDialog({
             tabIndex={-1}
             style={maxWidth ? { maxWidth } : undefined}
             className={styles.dialog}
+            data-sticky-footer={stickyFooter || undefined}
             role={isDanger ? "alertdialog" : "dialog"}
             aria-labelledby="dialog-title"
             aria-describedby={description ? "dialog-desc" : undefined}
@@ -128,7 +133,7 @@ export function ConfirmDialog({
                         type="button" 
                         className={`${styles.btnConfirm} ${isDanger ? styles.btnDanger : ''}`} 
                         onClick={onConfirm}
-                        disabled={isBusy}
+                        disabled={isBusy || confirmDisabled}
                         aria-busy={isBusy}
                     >
                         {isBusy ? 'Đang xử lý...' : confirmText}
