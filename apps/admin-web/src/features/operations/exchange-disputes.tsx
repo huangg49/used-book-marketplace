@@ -1153,7 +1153,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                   <div className={styles.incidentHeader}>
                     <div className={styles.incidentTitleWrap}>
                       <ShieldAlert size={18} aria-hidden="true" color="var(--shop-wine)" />
-                      <h2>Khiếu nại nhận sách</h2>
+                      <h2>Nội dung báo sự cố</h2>
                     </div>
                     <span className={styles.incidentTag}>
                       {category}
