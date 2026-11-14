@@ -55,12 +55,14 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
      được bỏ qua. Để trống danh sách nếu tiếp tục dùng cấu hình Gemini qua `PRICE_ASSIST_*`.
      Danh sách nhà sách, thời hạn lưu và ngân sách tra theo `apps/api/.env.example`.
      Model soạn khoảng giá vẫn do `PRICE_ASSIST_PROVIDER` chọn.
+     Áp migration `0076-online-price-catalog-revision` trước khi bật tra giá cho
+     sách chờ duyệt. Không sửa hoặc chạy lại các migration đã áp dụng.
    - **Autofill** ([ADR 0048](../adr/0048-listing-photo-autofill.md)) dùng
      `AUTOFILL_ENABLED=true`, `AUTOFILL_PROVIDER=openai` và `AUTOFILL_OPENAI_API_KEY`.
      Giữ `AUTOFILL_API_KEY` nếu muốn NVIDIA dự phòng. Nếu cần quay về NVIDIA chính,
      đặt `AUTOFILL_PROVIDER=nvidia`. Hai luồng OpenAI mặc định `gpt-5.4-mini` và có thể
      dùng cùng một key backend. Khởi động lại API sau khi cập nhật `.env`.
-7. Với DB đã có, phiên bản hiện tại có15 migration Mongo (registry là nguồn).
+7. Với DB đã có, đối chiếu các migration Mongo trong registry.
    Khi có migration thêm collection: áp `pnpm db:migrate` rồi `pnpm db:bootstrap`
    để cập nhật role như ADR0032; không reset/reseed hoặc sửa migration đã áp dụng.
 

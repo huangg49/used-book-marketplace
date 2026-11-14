@@ -611,6 +611,18 @@
   animation: panelPop 200ms var(--ease-spring) both;
 }
 
+/* The row card is the frame: an action opened inside it keeps the wine rule
+   but draws no second border, background or inset (no box in a box). */
+.row-panel:has(.operation-panel) {
+  border-top: 3px solid var(--shop-wine);
+}
+.row-panel .operation-panel {
+  position: static;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .operation-panel h3 {
   margin-bottom: 0.5rem;
   color: var(--shop-wine);

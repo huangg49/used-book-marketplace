@@ -28,7 +28,9 @@ type PanelProps = {
 }
 
 function useAvailable(me: AuctionParticipation | null) {
-  const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000 })
+  // Re-read on open: a top-up made on the wallet page (its own cache key) must
+  // count at once, not after this copy goes stale.
+  const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000, refetchOnMount: 'always' })
   // The amount already held for this auction counts toward a raise.
   return wallet.data ? wallet.data.available + (me?.heldAmount ?? 0) : null
 }
@@ -130,7 +132,7 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
         title={`Đặt cọc ${formatVnd(deposit)} để đăng ký?`}
-        description={`Ví giữ ${formatVnd(deposit)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${need} người (hoặc, khi đã đủ, tới 72 giờ trước giờ mở). Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`}
+        description={`Ví giữ ${formatVnd(deposit)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${need} người (hoặc, khi đã đủ, tới 72 giờ trước giờ mở). Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc không được hoàn.`}
         confirmText="Đặt cọc và đăng ký"
         isBusy={busy}
         onConfirm={() => void run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {

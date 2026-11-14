@@ -192,7 +192,7 @@ Các đường dẫn trong bảng tính từ root repo.
 | Delivery overdue | `orders/orders.service.ts`, `order-expiry.service.ts`; `src/order-worker.ts` | ADR 0025; `delivery-overdue.e2e-spec.ts` |
 | Purchase chat | `modules/purchases/`, purchase listing projection; user-web ChatPage | Migration0014; giữ24h không là checkout Order; `/purchase-chat` auth riêng |
 | Auction/point Order | `modules/auctions/` và migration0008–0013 | ADR0030, auctions.e2e; settlement source không tự đóng READINESS |
-| Hành trình đấu giá xuyên vai trò | Web Create/My/DetailAuction, RN auction/send-to-auction, Admin operations/intakes | [QA real API](../ui/AUCTION_JOURNEY_2026_10_29.md), `pnpm test:auctions:browser`; API0.60 đi cùng client; dừng ở payment hold |
+| Hành trình đấu giá xuyên vai trò | Web Create/My/DetailAuction, RN auction/send-to-auction, Admin operations/intakes | [QA real API](../ui/AUCTION_JOURNEY_2026_10_29.md), `pnpm test:auctions:browser` (~75 s) và `pnpm test:auctions:branches` (~85 s, nhánh kiểm định/admin/giá kín/Hà Lan/quầy); dời đồng hồ fixture thay vì chờ |
 | Live/inbox | `auction.gateway.ts`, `auction-live.service.ts`, `modules/notifications/` | ADR0031/32; mutation REST, ceiling private; migration0015 |
 | Wishlist/price assist | `modules/wishlist/`, `price-assist/` | Wishlist API/RN; ADR0028/29 và PRICE_ASSIST_REPORT, cờ tắt mặc định |
 | Review/uy tín | `modules/reviews/`, migration0040; web `src/features/reviews/`, RN `src/features/reviews/`, Admin `src/features/reviews/` | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md); `transaction-reviews.e2e-spec.ts`, `pnpm test:reviews:browser` (API build + RN export dùng URL QA trước chạy) |

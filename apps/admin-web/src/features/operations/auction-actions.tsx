@@ -212,3 +212,135 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
     />
   );
 }
+
+type ScheduledChoice = "Start" | "Cancel";
+
+// An independent Admin opens a scheduled auction now or cancels it, with a
+// reason. A registration auction opens only once it has its minimum
+// registrants; the server re-checks this and the seller's eligibility.
+export function AuctionScheduledDecision({ item, ...context }: Props) {
+  const need = item.minBidders ?? null;
+  const registered = item.registeredCount ?? 0;
+  const canStart = need === null || registered >= need;
+  const [choice, setChoice] = useState<ScheduledChoice | null>(canStart ? null : "Cancel");
+  const [reason, setReason] = useState("");
+  const [problem, setProblem] = useState<"choice" | "reason" | null>(null);
+  const first = useRef<HTMLInputElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const trimmed = reason.trim();
+  const start = choice === "Start";
+  const lengthMs = Date.parse(item.endAt) - Date.parse(item.startAt);
+  const hours = Math.floor(lengthMs / 3_600_000);
+  const minutes = Math.round((lengthMs % 3_600_000) / 60_000);
+  const length = `${hours} giờ${minutes ? ` ${minutes} phút` : ""}`;
+  return (
+    <ActionPanel
+      {...context}
+      label="Mở hoặc hủy phiên"
+      title="Mở ngay hoặc hủy phiên đang chờ mở."
+      intro={
+        canStart
+          ? `Mở ngay: người đăng ký trả giá được từ bây giờ, phiên chạy đủ ${length} như đã hẹn. Người bán và người đăng ký được báo kèm lý do.`
+          : `Phiên mới có ${registered}/${need} người đăng ký nên chưa mở được; chỉ hủy được khi có sự cố hoặc gian lận.`
+      }
+      dirty={reason !== "" || (canStart && choice !== null)}
+      fields={(locked) => (
+        <>
+          <fieldset disabled={locked}>
+            <legend>Quyết định</legend>
+            <label className="check">
+              <input
+                ref={first}
+                type="radio"
+                name={`scheduled-${item.id}`}
+                checked={start}
+                disabled={!canStart}
+                aria-describedby={canStart ? undefined : `scheduled-start-hint-${item.id}`}
+                onChange={() => {
+                  setChoice("Start");
+                  setProblem(null);
+                }}
+              />
+              Mở phiên ngay: giữ nguyên người đăng ký và tiền cọc, thời lượng {length}
+            </label>
+            {!canStart && (
+              <p id={`scheduled-start-hint-${item.id}`} className="muted">
+                Cần đủ {need} người đăng ký mới mở được.
+              </p>
+            )}
+            <label className="check">
+              <input
+                type="radio"
+                name={`scheduled-${item.id}`}
+                checked={choice === "Cancel"}
+                onChange={() => {
+                  setChoice("Cancel");
+                  setProblem(null);
+                }}
+              />
+              Hủy phiên: không ai thắng, hoàn mọi khoản giữ và tiền cọc
+            </label>
+          </fieldset>
+          {problem === "choice" && <p className="field-error">Chọn mở hoặc hủy phiên.</p>}
+          <div className="field">
+            <label htmlFor={`scheduled-reason-${item.id}`}>Lý do</label>
+            <textarea
+              id={`scheduled-reason-${item.id}`}
+              ref={input}
+              rows={4}
+              maxLength={1000}
+              value={reason}
+              disabled={locked}
+              aria-invalid={problem === "reason"}
+              aria-describedby={`scheduled-hint-${item.id}`}
+              onChange={(event) => {
+                setReason(event.target.value);
+                if (problem === "reason") setProblem(null);
+              }}
+            />
+          </div>
+          <p id={`scheduled-hint-${item.id}`} className={problem === "reason" ? "field-error" : "muted"}>
+            {problem === "reason"
+              ? "Nhập lý do từ 10 đến 1.000 ký tự."
+              : start
+                ? "Bắt buộc, 10–1.000 ký tự. Được ghi vào nhật ký quản trị và gửi kèm thông báo cho người bán và người đăng ký; không ghi thông tin cá nhân."
+                : "Bắt buộc, 10–1.000 ký tự. Người bán và người đăng ký đọc được lý do này."}
+          </p>
+        </>
+      )}
+      validate={() => {
+        if (!choice) {
+          setProblem("choice");
+          first.current?.focus();
+          return false;
+        }
+        const n = [...trimmed].length;
+        if (n >= 10 && n <= 1000) return true;
+        setProblem("reason");
+        input.current?.focus();
+        return false;
+      }}
+      submitLabel={start ? "Mở phiên ngay" : "Hủy phiên"}
+      confirmTitle={start ? "Mở phiên đấu giá ngay?" : "Hủy phiên đấu giá?"}
+      confirmBody={
+        <>
+          <p>
+            {start
+              ? `Phiên “${item.title}” mở ngay bây giờ và kết thúc sau ${length}. Không đổi lại giờ mở được.`
+              : `Phiên “${item.title}” sẽ kết thúc ngay, không có người thắng. Không hoàn tác được.`}
+          </p>
+          <blockquote className="prose">{trimmed}</blockquote>
+        </>
+      }
+      build={() => ({
+        path: `/operations/auctions/${item.id}/${start ? "start" : "cancel"}`,
+        body: { expectedVersion: item.version, reason: trimmed },
+      })}
+      interpret={(receipt) =>
+        receipt.state === "Active"
+          ? { tone: "success", text: `Đã mở phiên “${item.title}”.`, close: true }
+          : { tone: "success", text: `Đã hủy phiên “${item.title}”. Người bán được báo đến nhận lại sách.`, close: true }
+      }
+    />
+  );
+}

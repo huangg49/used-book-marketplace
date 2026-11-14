@@ -4,7 +4,7 @@ import type { CurrentUser } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
 import { canOperatePoint, canResolve, session } from "../../core/session";
 import { AssignmentNote } from "./assignment-note";
-import { AuctionCancel, AuctionHoldDecision } from "./auction-actions";
+import { AuctionCancel, AuctionHoldDecision, AuctionScheduledDecision } from "./auction-actions";
 import {
   collectionLabels,
   collectionQueue,
@@ -16,6 +16,7 @@ import {
   resolutionQueue,
   type CollectionItem,
   type Intake,
+  type OperationsAuction,
 } from "./contracts";
 import {
   CollectionDispatch,
@@ -246,6 +247,27 @@ function ResolutionQueueContent() {
   );
 }
 
+const AUCTION_TYPE_LABEL: Record<NonNullable<OperationsAuction["auctionType"]>, string> = {
+  English: "Trả giá lên",
+  Dutch: "Giá giảm dần",
+  SealedFirst: "Giá kín",
+  SealedSecond: "Giá kín · giá thứ hai",
+};
+
+// ADR 0081: before a registration auction is full, startAt is the 24 h
+// registration deadline, not the open time; show the seller's time instead.
+function scheduledStatus(item: OperationsAuction, serverTime?: string) {
+  const need = item.minBidders;
+  if (need == null || !item.opensAt)
+    return `Hẹn mở ${dateText(item.startAt)} · kết thúc ${dateText(item.endAt)}`;
+  if ((item.registeredCount ?? 0) >= need)
+    return `Đủ người, mở ${dateText(item.startAt)} · kết thúc ${dateText(item.endAt)}`;
+  const now = serverTime ? Date.parse(serverTime) : Date.now();
+  return Date.parse(item.opensAt) > now
+    ? `Chờ đủ người, mở ${dateText(item.opensAt)} · chưa đủ thì hủy ${dateText(item.startAt)}`
+    : `Đã qua giờ mở, chờ đủ người tới ${dateText(item.startAt)}`;
+}
+
 export function AuctionQueue() {
   const user = useOutletContext<CurrentUser>();
   if (!canResolve(user)) return <Forbidden />;
@@ -263,7 +285,7 @@ function AuctionQueueContent() {
     <OperationsQueue
       number="04"
       title="Phiên đang mở hoặc tạm giữ."
-      intro="Theo dõi các phiên còn có thể hủy. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục (cộng lại thời gian tạm dừng) hoặc hủy; mỗi phiên tạm dừng tối đa 72 giờ."
+      intro="Theo dõi các phiên còn có thể hủy. Phiên chờ mở đã đủ người đăng ký có thể mở ngay, kèm lý do. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục (cộng lại thời gian tạm dừng) hoặc hủy; mỗi phiên tạm dừng tối đa 72 giờ."
       order="Xếp theo giờ kết thúc, gần nhất trước."
       unit="phiên"
       result={result}
@@ -275,9 +297,18 @@ function AuctionQueueContent() {
           item.state === "OnHold"
             ? `${item.holdReason === "Review" ? "Tạm dừng vì báo cáo" : "Tạm giữ"}, chờ quyết định${item.holdExpiresAt ? ` · tự hủy ${dateText(item.holdExpiresAt)}` : ""}`
             : item.phase === "Scheduled"
-              ? `Hẹn mở ${dateText(item.startAt)} · kết thúc ${dateText(item.endAt)}`
+              ? scheduledStatus(item, result.data?.serverTime)
               : `Kết thúc ${dateText(item.endAt)}`,
-        meta: [item.pointName, `${item.bidderCount} người trả giá`],
+        meta: [
+          item.pointName,
+          ...(item.auctionType && item.auctionType !== "English"
+            ? [AUCTION_TYPE_LABEL[item.auctionType]]
+            : []),
+          ...(item.minBidders != null
+            ? [`${item.registeredCount ?? 0}/${item.minBidders} người đăng ký`]
+            : []),
+          `${item.bidderCount} người trả giá`,
+        ],
         title: item.title,
         detail: `Giá hiện tại ${money(item.currentPrice ?? item.startPrice)} · bước ${money(item.step)}`,
         action:
@@ -286,10 +317,15 @@ function AuctionQueueContent() {
                 label: "Xử lý phiên",
                 render: (context) => <AuctionHoldDecision item={item} {...context} />,
               }
-            : {
-                label: "Hủy phiên",
-                render: (context) => <AuctionCancel item={item} {...context} />,
-              },
+            : item.phase === "Scheduled"
+              ? {
+                  label: "Mở hoặc hủy phiên",
+                  render: (context) => <AuctionScheduledDecision item={item} {...context} />,
+                }
+              : {
+                  label: "Hủy phiên",
+                  render: (context) => <AuctionCancel item={item} {...context} />,
+                },
       }))}
       empty={{
         title: "Không có phiên nào cần theo dõi.",

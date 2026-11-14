@@ -2707,6 +2707,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/auctions/{auctionId}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN independent of the seller, bidders and registrants opens an Active auction that has not opened yet (phase Scheduled) right now, with a reason. A registration auction must already have its minimum registrants. startAt, the open time and the start of bidding become server time; the planned length is kept (end = now + length). The seller and registrants receive an AuctionBiddingStarted notification quoting the reason. Holds and deposits are kept. */
+        post: operations["startAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions": {
         parameters: {
             query?: never;
@@ -7318,6 +7335,11 @@ export interface components {
             /** @description ADR 0083. Recorded in the audit log and quoted (shortened to fit) in the notification members receive. */
             reason: string;
         };
+        StartAuction: {
+            expectedVersion: number;
+            /** @description Recorded in the audit log and quoted (shortened to fit) in the notification the seller and registrants receive. */
+            reason: string;
+        };
         PlaceAuctionBid: {
             amount: number;
             /** @enum {string} */
@@ -7720,6 +7742,16 @@ export interface components {
             holdReason?: "Eligibility" | "Review" | null;
             /** @description ADR 0084. Pause time this auction may still use (72 hours in total, given back on resume). Optional for older servers. */
             pauseBudgetLeftSeconds?: number;
+            auctionType?: components["schemas"]["AuctionType"];
+            /**
+             * Format: date-time
+             * @description ADR 0081. The seller's open time on a ScheduledGrace registration auction; until minBidders register, startAt is the registration deadline (opensAt + 24 h). Null on other modes. Optional for older servers.
+             */
+            opensAt?: string | null;
+            /** @description ADR 0077/0079. Registered bidders needed before bidding opens; null when the auction needs no registration. Optional for older servers. */
+            minBidders?: number | null;
+            /** @description ADR 0077. Current registrations. Optional for older servers. */
+            registeredCount?: number;
             title: string;
             /** @enum {string} */
             state: "Active" | "OnHold";
@@ -13968,6 +14000,46 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ResumeAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    startAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartAuction"];
             };
         };
         responses: {

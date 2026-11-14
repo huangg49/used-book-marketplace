@@ -141,7 +141,7 @@ export function AuctionListPage() {
           <div className={styles.headerText}>
             <h1 className={styles.pageTitle}>Đấu giá sách cũ</h1>
             <p className={styles.pageSubtitle}>
-              Mỗi bản sách đều được kiểm định tình trạng tại điểm trước khi mở phiên. Người đọc tự do trả giá trong 24 giờ, nhận sách trực tiếp tại điểm giao nhận TP.HCM.
+              Mỗi bản sách đều được kiểm định tình trạng tại điểm trước khi mở phiên. Người đọc trả giá trong thời gian phiên mở (1 giờ đến 7 ngày), người thắng nhận sách trực tiếp tại điểm giao nhận TP.HCM.
             </p>
           </div>
 
@@ -356,7 +356,26 @@ export function AuctionListPage() {
             </div>
           )}
 
-          {result.data && !result.isError && items.length === 0 && (
+          {/* Nothing live, but sessions are waiting below: point there instead of
+              showing the full "empty shelf" state above real sessions. */}
+          {result.data && !result.isError && items.length === 0 && !filtered && upcomingItems.length > 0 && (
+            <div className={styles.emptyCompact} role="status">
+              <p>
+                <strong>Chưa có phiên đang mở.</strong>{' '}
+                {upcomingItems.length} phiên sắp mở đang nhận đăng ký; đăng ký và đặt cọc trước để được trả giá khi phiên mở.
+              </p>
+              <button type="button" className={styles.secondaryBtn} onClick={() => {
+                const target = document.getElementById('auction-upcoming-title')
+                target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                target?.focus({ preventScroll: true })
+              }}>
+                <span>Xem phiên sắp mở</span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+
+          {result.data && !result.isError && items.length === 0 && (filtered || upcomingItems.length === 0) && (
             <div className={styles.empty}>
               <AuctionEmptyArt variant={filtered ? 'filter' : 'shelf'} />
               <h3>{filtered ? 'Chưa có phiên phù hợp' : 'Kệ đấu giá đang chờ những cuốn sách mới'}</h3>
@@ -413,12 +432,12 @@ export function AuctionListPage() {
               <div className={styles.headingLeft}>
                 <h2 id="auction-upcoming-title" tabIndex={-1}>Đang nhận đăng ký</h2>
                 <span className={styles.countBadgeUpcoming}>
-                  {upcoming.data.items.length} phiên chờ đủ người
+                  {upcoming.data.items.length} phiên sắp mở
                 </span>
               </div>
             </div>
             <p className={styles.upcomingHint}>
-              Sách đã qua kiểm định. Đăng ký và đặt cọc để giữ chỗ; phiên mở khi đủ số người tối thiểu (tự mở ngay hoặc theo giờ người bán hẹn). Không đủ người trước hạn thì phiên bị hủy và hoàn cọc.
+              Sách đã qua kiểm định. Đăng ký và đặt cọc để giữ chỗ; phiên mở theo giờ người bán hẹn khi đủ số người tối thiểu. Không đủ người trước hạn thì phiên bị hủy và hoàn cọc.
             </p>
             <AuctionGrid className={styles.grid} orderKey={upcoming.data.items.map((a) => a.id).join(':')}>
               {upcomingItems.slice((upcomingPage - 1) * size, upcomingPage * size).map((auction) => (

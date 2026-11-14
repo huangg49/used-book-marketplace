@@ -113,12 +113,9 @@ export function ExchangeChatDrawer({ viewerId, exchangeId, transactionCode, part
         }}>
         <div className={styles.sheet}>
           <header className={styles.header}>
-            <div className={styles.avatarWrapper}>
-              <span className={styles.avatar} aria-hidden="true">
-                {initial || <MessageCircle size={20} />}
-              </span>
-              <span className={styles.onlineDot} title="Đang trực tuyến" aria-label="Đang trực tuyến" />
-            </div>
+            <span className={styles.avatar} aria-hidden="true">
+              {initial || <MessageCircle size={20} />}
+            </span>
             <div className={styles.identity}>
               <div className={styles.nameRow}>
                 <h2 id={titleId}><bdi>{partnerName}</bdi></h2>

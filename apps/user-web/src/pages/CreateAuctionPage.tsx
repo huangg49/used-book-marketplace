@@ -390,7 +390,7 @@ export function CreateAuctionPage() {
           <ul>
             <li>Sách tạm ẩn khỏi chợ công khai để giữ chỗ</li>
             <li>Sách được nhân viên kiểm tra tại điểm trước khi mở phiên</li>
-            <li>Bạn chọn mở ngay hoặc hẹn giờ, thời lượng 1–168 giờ</li>
+            <li>Bạn hẹn giờ mở phiên, thời lượng 1–168 giờ</li>
           </ul>
         </div>
       </section>
@@ -520,24 +520,30 @@ export function CreateAuctionPage() {
                 </p>
               )}
             </div>
-            <div className={styles.chips} role="group" aria-label="Kiểu đấu giá">
-              {AUCTION_TYPES.filter((t) => !t.retired || t.value === auctionType).map((t) => <button type="button" key={t.value} aria-pressed={auctionType === t.value} disabled={locked} onClick={() => setAuctionType(t.value)}>{t.label}<span>{t.short}</span></button>)}
+            <div className={styles.group}>
+              <span className={styles.label} id="auction-type-label">Hình thức đấu giá</span>
+              <div className={styles.chips} role="group" aria-labelledby="auction-type-label">
+                {AUCTION_TYPES.filter((t) => !t.retired || t.value === auctionType).map((t) => <button type="button" key={t.value} aria-pressed={auctionType === t.value} disabled={locked} onClick={() => setAuctionType(t.value)}>{t.label}<span>{t.short}</span></button>)}
+              </div>
+              <p className={styles.stepHint}>{AUCTION_TYPES.find((t) => t.value === auctionType)!.hint}</p>
             </div>
-            <p className={styles.stepHint}>{AUCTION_TYPES.find((t) => t.value === auctionType)!.hint}</p>
-            <div className={styles.chips} role="group" aria-label="Số người đăng ký tối thiểu">
-              {MIN_BIDDER_OPTIONS.map((n) => <button type="button" key={n} aria-pressed={minBidders === n} disabled={locked} onClick={() => setMinBidders(n)}>{n} người<span>tối thiểu</span></button>)}
-              <label className={styles.minCustom}>
-                Khác
-                <input type="number" inputMode="numeric" aria-label="Số người đăng ký tối thiểu" min={AUCTION_MIN_BIDDERS_FLOOR} max={AUCTION_MIN_BIDDERS_CAP} value={minBidders} disabled={locked}
-                  onChange={(e) => setMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Math.trunc(Number(e.target.value) || AUCTION_MIN_BIDDERS_FLOOR))))} />
-              </label>
+            <div className={styles.group}>
+              <span className={styles.label} id="auction-min-label">Số người đăng ký tối thiểu</span>
+              <div className={styles.chips} role="group" aria-labelledby="auction-min-label">
+                {MIN_BIDDER_OPTIONS.map((n) => <button type="button" key={n} aria-pressed={minBidders === n} disabled={locked} onClick={() => setMinBidders(n)}>{n} người<span>tối thiểu</span></button>)}
+                <label className={styles.minCustom}>
+                  Khác
+                  <input type="number" inputMode="numeric" aria-label="Số người đăng ký tối thiểu" min={AUCTION_MIN_BIDDERS_FLOOR} max={AUCTION_MIN_BIDDERS_CAP} value={minBidders} disabled={locked}
+                    onChange={(e) => setMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Math.trunc(Number(e.target.value) || AUCTION_MIN_BIDDERS_FLOOR))))} />
+                </label>
+              </div>
+              <ul className={styles.rules} aria-label="Quy tắc đăng ký và mở phiên">
+                <li><strong>Đăng ký trước:</strong> người mua đặt cọc {deposit !== null ? formatVnd(deposit) : '10% giá khởi điểm'} rồi mới được trả giá.</li>
+                <li><strong>Mở khi đủ người:</strong> phiên mở đúng giờ bạn hẹn khi có đủ {minBidders} người (ít nhất {AUCTION_MIN_BIDDERS_FLOOR}); chưa đủ thì chờ thêm 24 giờ, hết hạn thì hủy và hoàn cọc.</li>
+                <li><strong>Hẹn giờ:</strong> tối đa 30 ngày sau khi đăng, đổi được 2 lần.</li>
+                <li><strong>Bán được khi:</strong> có ít nhất hai người trả giá. Người thắng không thanh toán thì mất tiền cọc; nếu sách không bán được, bạn nhận một nửa số đó.</li>
+              </ul>
             </div>
-            <p className={styles.stepHint}>
-              Người mua đăng ký và đặt cọc {deposit !== null ? formatVnd(deposit) : '10% giá khởi điểm'} trước khi trả giá.
-              Người thắng không thanh toán thì mất tiền cọc; nếu sách không bán được, bạn nhận một nửa số đó.
-              Bạn hẹn giờ mở (tối đa 30 ngày sau khi đăng, đổi được 2 lần). Phiên mở đúng giờ khi đủ {minBidders} người (ít nhất {AUCTION_MIN_BIDDERS_FLOOR}); chưa đủ thì chờ thêm 24 giờ và mở ngay khi đủ, hết hạn thì bị hủy và hoàn cọc.
-              Phiên chỉ bán khi có ít nhất hai người trả giá.
-            </p>
             <PriceInput id="auction-start" label={auctionType === 'Dutch' ? 'Giá sàn (thấp nhất)' : 'Giá khởi điểm'} value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
               onChange={setStartPrice} error={touched || startPrice !== null ? formErrors.startPrice : undefined}
               hint={declaredValue !== null ? `Gợi ý theo giá trị khai báo ${formatVnd(declaredValue)}. Giá khởi điểm hợp lý thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />
@@ -574,10 +580,13 @@ export function CreateAuctionPage() {
             {english && buyNowOn && <>
               <PriceInput id="auction-buy-now" label="Giá mua ngay" value={buyNowPrice} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
                 onChange={setBuyNowPrice} error={touched || buyNowPrice !== null ? formErrors.buyNowPrice : undefined} hint="Phải cao hơn giá khởi điểm và nằm trên lưới giá." />
-              <div className={styles.chips} role="group" aria-label="Khi có người mua ngay">
-                {BUY_NOW_MODES.map((m) => <button type="button" key={m.value} aria-pressed={buyNowMode === m.value} disabled={locked} onClick={() => setBuyNowMode(m.value)}>{m.label}<span>{m.short}</span></button>)}
+              <div className={styles.group}>
+                <span className={styles.label} id="auction-buy-now-mode-label">Khi có người mua ngay</span>
+                <div className={styles.chips} role="group" aria-labelledby="auction-buy-now-mode-label">
+                  {BUY_NOW_MODES.map((m) => <button type="button" key={m.value} aria-pressed={buyNowMode === m.value} disabled={locked} onClick={() => setBuyNowMode(m.value)}>{m.label}<span>{m.short}</span></button>)}
+                </div>
+                <p className={styles.stepHint}>{BUY_NOW_MODES.find((m) => m.value === buyNowMode)!.hint}</p>
               </div>
-              <p className={styles.stepHint}>{BUY_NOW_MODES.find((m) => m.value === buyNowMode)!.hint}</p>
               {buyNowChips.length > 0 && (
                 <div className={styles.chips} aria-label="Gợi ý giá mua ngay">
                   {buyNowChips.map((v, i) => <button type="button" key={v} aria-pressed={buyNowPrice === v} disabled={locked} onClick={() => setBuyNowPrice(v)}>{formatVnd(v)}<span>+{[3, 5, 10][i]} bước</span></button>)}
@@ -612,12 +621,15 @@ export function CreateAuctionPage() {
               <div><dt>Bước giá</dt><dd>+{formatVnd(step)}</dd></div>
               <div><dt>Mua ngay</dt><dd>{buyNowOn && buyNowPrice && !formErrors.buyNowPrice ? `${formatVnd(buyNowPrice)} · ${buyNowMode === 'Instant' ? 'kết thúc ngay' : 'chờ thách đấu'}` : 'Không đặt'}</dd></div>
               <div><dt>Giá trị bảo vệ</dt><dd>{declaredValue !== null && !priceErrors.declaredValue ? formatVnd(declaredValue) : '—'}</dd></div>
+              <div><dt>Tiền cọc đăng ký</dt><dd>{deposit !== null ? formatVnd(deposit) : '—'}</dd></div>
+              <div><dt>Hình thức</dt><dd>{AUCTION_TYPES.find((t) => t.value === auctionType)!.label}</dd></div>
+              <div><dt>Mở khi đủ</dt><dd>{minBidders} người</dd></div>
             </dl>
             <p className={styles.protect}>Giá trị bảo vệ bồi thường khi sách mất hoặc hỏng lúc điểm đang giữ. Khi giữ chỗ, sách sẽ ngừng hiển thị trên kệ mua bán công khai.</p>
             <ol className={styles.timeline}>
               <li className={styles.timelineNow}><Store size={15} aria-hidden="true" /><span><strong>Gửi sách trong {DROPOFF_HOURS} giờ</strong>{point ? point.name : 'Tại điểm bạn chọn'}</span></li>
               <li><Check size={15} aria-hidden="true" /><span><strong>Nhân viên kiểm tra</strong>Sách khớp mô tả mới được mở phiên</span></li>
-              <li><Gavel size={15} aria-hidden="true" /><span><strong>Bạn chọn lịch mở phiên</strong>Sau khi sách đạt kiểm tra, mở ngay hoặc hẹn giờ; thời lượng 1–168 giờ</span></li>
+              <li><Gavel size={15} aria-hidden="true" /><span><strong>Bạn hẹn giờ mở phiên</strong>Sau khi sách đạt kiểm tra; phiên mở khi đủ người đăng ký, thời lượng 1–168 giờ</span></li>
               <li><ArrowRight size={15} aria-hidden="true" /><span><strong>Người thắng thanh toán</strong>Trong 24 giờ, rồi nhận sách tại điểm</span></li>
             </ol>
           </div>

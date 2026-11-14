@@ -6621,6 +6621,11 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
               resumedAt: at.toISOString(),
               holdReason: null,
               pauseBudgetLeftSeconds: 70 * 3600,
+              // ADR 0081: the queue names the open time and registrations.
+              auctionType: back.auctionType ?? 'English',
+              opensAt: back.opensAt!.toISOString(),
+              minBidders: back.minBidders,
+              registeredCount: back.registeredCount,
             });
             // Bidding continues where it paused.
             await bid(a._id, x, 300_000).expect(200);

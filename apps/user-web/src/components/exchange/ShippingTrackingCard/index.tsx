@@ -155,7 +155,9 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
   const status = receivedAt ? (outgoing ? "Đối tác đã nhận" : "Bạn đã nhận sách")
     : sentAt ? (!outgoing && action ? "Chờ bạn xác nhận đã nhận"
       : shipment?.method === "direct" ? "Đã ghi nhận điểm hẹn"
-      : inTransit ? "Đang giao nhận" : trackingCode ? "Shipper đã lấy sách" : "Đã xác nhận gửi")
+      : inTransit ? "Đang giao nhận"
+      : shipment?.registeredAt ? "Shipper đã lấy sách"
+      : trackingCode ? "Đã ghi nhận vận đơn" : "Đã xác nhận gửi")
     : expired ? (registered ? "Chưa được lấy đúng hạn" : outgoing ? "Đã hết hạn gửi" : "Đối tác chưa gửi đúng hạn")
     : registered ? (bothRegistered ? "Chờ shipper lấy sách" : "Đã tạo đơn · Chờ đủ hai đơn")
     : outgoing ? (canSend ? "Chờ bạn tạo đơn" : "Chưa gửi sách") : "Chờ đối tác gửi";

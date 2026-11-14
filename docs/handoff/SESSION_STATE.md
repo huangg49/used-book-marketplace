@@ -1,3 +1,20 @@
+# Tích hợp bản demo lên main — 14/11/2026
+
+- Worktree tích hợp ghép bản demo `6435707c` với GitHub `main` tại `955d29e6`.
+  Giữ cập nhật đấu giá từ main, một bảng gợi ý giá trong form đăng sách và
+  thứ tự migration `0076`–`0079`. Giữ replay phiếu phân xử cũ theo ADR 0057
+  và đưa luồng một bên trả sách theo ADR 0089 vào cùng gói để review.
+- Khung chat Exchange giữ avatar chữ cái, tên và mã phiếu. Bỏ chỉ báo online
+  vì API chưa cung cấp trạng thái hiện diện. Giao nhận cũ chỉ hiện xác nhận
+  vận đơn nếu không có dữ liệu đăng ký hãng để suy ra mốc lấy sách.
+- Qua contract, docs, build API/Admin/Member, typecheck React Native, unit
+  API/Member/session-client, Exchange E2E trên Mongo QA và hai đường nâng
+  cấp Mongo. Chromium Admin Exchange dùng fixture HTTP với đăng nhập API QA.
+  Bài test tính phí hãng dùng HTTP giả lập.
+- Review trước squash theo [TEAMWORK](../TEAMWORK.md), gồm owner và reviewer
+  thứ hai cho phần quyền, tranh chấp và tiền. Các gate phát hành ở
+  [READINESS](READINESS.md) giữ nguyên.
+
 # Hiệu ứng đóng khung chat Đổi sách — 14/11/2026
 
 Nút X và Escape cho khung chat trượt sang phải trong 190 ms, đồng thời làm
@@ -668,6 +685,91 @@ chưa có nguồn giá. Backend trả `R-NEED-CATALOG-APPROVAL` và cache theo t
 danh mục. Member web hiện một kết quả, giữ đường nhập giá tay và giữ khoảng
 tham chiếu khi có giá trị. Kiểm 33 unit API, 29 ca HTTP trên Mongo QA riêng và
 Chromium ở 390/1440 px với dữ liệu mẫu.
+
+# Review gợi ý giá sách — 11/11/2026
+
+Nhánh `codex/price-assist-review` từ main `807cef3bff2fd3188f38405b08f67c56e0f26164`.
+Tách phần gợi ý giá từ `codex/price-lookup-pending` (`f36c44b9`) để review riêng,
+giữ luồng đăng sách và sửa đổi đấu giá của main. OpenAPI thêm trường tùy chọn
+`lookupStatus`. Migration `0076-online-price-catalog-revision` gắn nguồn với
+revision và giữ tương thích dữ liệu cũ. Bật tra nguồn qua cấu hình backend theo
+[ENV_HANDOFF](ENV_HANDOFF.md) và [ADR0029](../adr/0029-online-price-lookup.md).
+
+Local PASS: API/web build và lint, contract/routes, 97 unit API, 53 ca HTTP giá
+và tự duyệt trên Mongo QA, 28 ca schema/migration, 486 unit web, 158 unit
+session-client và 12 ca Chromium ở 390/1440 px cho luồng tự đọc kết quả, mất
+phản hồi và đổi bản sách. Cần CI remote và review độc lập trước khi merge.
+
+Chromium 1440 px, Nest/Mongo QA, OpenAI tra nguồn thật, storage giả lập:
+*Dế Mèn phiêu lưu ký* có một nguồn, bước 4 tự hiện khoảng tham chiếu và lưu
+16.000 đ khi xác nhận. *One Piece Tập II* có 0 nguồn, hiện thông báo và lưu
+125.000 đ người bán nhập. Cả hai bài vào `PendingReview`, mỗi bài chỉ có yêu
+cầu gợi ý ban đầu, không ghi áp dụng AI. Fixture QA đã dọn.
+
+Probe OpenAI + đọc trang thật trên bốn cuốn từ tập thử: *Hoàng tử bé* và *Đất
+rừng phương Nam* có ISBN, mỗi cuốn có một nguồn. *Kính vạn hoa Tập 1* và *Số đỏ*
+không có ISBN trong mẫu, không xác minh được nguồn. Các lý do loại gồm khác
+tên/ISBN, trang thiếu giá cấu trúc hoặc chặn truy cập. Mẫu nhỏ chưa đại diện
+thị trường. Eval NVIDIA riêng, 34 ca: đúng trạng thái 33/34, 19/20 lượt gọi
+thật hợp lệ, một ca bị chặn vì khoảng quá rộng, hai lỗi tiêm theo kế hoạch.
+P50 2,8 s, p95 8,3 s, chi phí ước tính 0,015 USD. Chưa có nhãn giá do người
+review nên chưa chấm độ đúng của khoảng giá. Ưu tiên thêm dữ liệu theo ISBN
+và cách đối chiếu tên ấn bản trước khi cân nhắc đổi model.
+
+# Kiểm thử đấu giá nhanh: journey viết lại + nhánh còn lại — 10/11/2026
+
+Nhánh `test/auction-journey-registration` (trên `fix/auction-ui-review`). Hai kịch bản trình
+duyệt chạy trên QA `*_test`, storage giả, ví mô phỏng; dời đồng hồ máy chủ của fixture
+(`advanceClock` trong `apps/admin-web/tests/test-api.mjs`, chỉ cộng lệch vào `Tx.now()` /
+`MongoService.now()`, không ghi trạng thái phiên/đơn) thay vì chờ thời gian thật.
+
+- `pnpm test:auctions:browser` (`scripts/test-auction-journey.mjs`), 16 bước, ~75 s: viết lại cho
+  phiên có đăng ký (ADR 0077/0081/0087): đăng phiên giờ "Sớm nhất" (mất ACK), không còn "mở ngay",
+  khóa đổi giờ 30 phút cuối, 4 người đăng ký và đặt cọc (mất ACK), mở đúng giờ người bán, trả giá
+  bị giữ tiền, ví thiếu thì không mua ngay được, mua ngay "Kết thúc ngay", worker chốt, người thua
+  được hoàn đủ, thanh toán từ khoản giữ (mất ACK).
+- `pnpm test:auctions:branches` (`scripts/test-auction-branches.mjs`), 12 bước, ~85 s: Không đạt
+  trên admin (Đạt bị khóa khi lệch) → người bán nhận lại tại quầy; Cần bằng chứng → người yêu cầu
+  không được quyết → nhân viên độc lập ghi Không đạt; hàng đợi admin `/operations/auctions` và
+  Admin hủy phiên (hoàn cọc, trả sách); giá kín (tạo từ web, RN không lộ giá người khác, không hạ
+  giá) và Hà Lan (giảm 2 bước sau 2 khoảng, người chấp nhận đầu thắng); điểm đóng cửa (web khóa
+  nút, quầy từ chối bàn giao dù mã đúng); bàn giao bằng mã (mã sai bị từ chối); hết hạn kiểm tra →
+  worker chi trả người bán trừ 5%.
+- Lỗi đã sửa: hàng đợi admin hiện hạn đăng ký như giờ mở và không có số người đăng ký (thêm
+  `opensAt`/`minBidders`/`registeredCount`/`auctionType` vào `OperationsAuctionItem`, contract +
+  API + admin, e2e ADR 0084 kiểm thêm); RN chủ phiên đang chờ (nay theo thẻ "Quản lý phiên của bạn"
+  từ main); trang phiên dùng số dư cũ tới 15 giây sau khi nạp ví; sau mua ngay
+  "Kết thúc ngay" người mua chỉ thấy "Hệ thống đang chốt người thắng"; admin: khung thao tác lồng
+  hộp, nút tắt "Đạt: mọi mục khớp" vẫn là nút chính sau khi nhân viên đã chọn Không đạt.
+- Kiểm tra: hai kịch bản PASS liên tiếp; vitest user-web 485, admin-web 250 PASS; typecheck
+  API/admin/user-web/RN; e2e `auctions.e2e-spec.ts -t "ADR 0084: a resume"` PASS. RN web export
+  xuất lại với API QA 3009.
+- Còn lại/NOT RUN: native RN; trả sách sau khi từ chối biên bản, khiếu nại sau bàn giao, cơ hội
+  thứ hai, người thắng không trả (mất cọc); tạm giữ/tiếp tục phiên trên admin. Nhãn phiên Hà Lan
+  vẫn ghi "Giá khởi điểm" cho giá sàn; phiên giá kín vẫn hiện "Mua ngay: Không còn". API cho xin mã
+  ngoài giờ (đúng contract); chỉ quầy chặn bàn giao.
+
+# Rà soát trình duyệt luồng đấu giá (Member web) — 10/11/2026
+
+Nhánh `fix/auction-ui-review` từ `origin/main` (`71ba3257`). Đi trọn luồng bằng trình duyệt
+trên QA replica set (`*_test`, storage giả, ví mô phỏng): người bán giữ chỗ → nhân viên nhận và
+kiểm Đạt (admin web) → người bán hẹn giờ → 4 người đăng ký và đặt cọc → trả giá, bị vượt giá
+trực tiếp, mua ngay (chờ thách đấu và kết thúc ngay) → worker chốt → thanh toán → đồng ý biên
+bản → mã nhận sách. Người thua được hoàn đủ cọc; người thắng bị giữ đúng 120.000 đ cho đơn.
+
+- Lỗi đã sửa (user-web): "Sớm nhất" chọn giờ thiếu vài giây so với 5 phút nên hộp thoại tự báo
+  lỗi; Đấu giá của tôi hiện hạn đăng ký (opensAt + 24 giờ) như giờ mở và cho "Đổi thời gian"
+  kiểu cũ với phiên có đăng ký; người đã đăng ký nhưng chưa trả giá thấy "Bạn đã bị vượt giá";
+  số dư khả dụng không làm mới khi bị vượt giá qua push; tiêu đề tab giữ "Đăng nhập" sau khi
+  đăng nhập; lấy được mã nhận sách 10 phút ngoài giờ 09:00–18:00 (nay khóa nút, báo giờ mở lại).
+- UX/nội dung: danh sách hiện ghi chú gọn thay trạng thái trống lớn khi có phiên sắp mở; nhãn
+  cho nhóm chọn hình thức, số người tối thiểu, chế độ mua ngay; quy tắc đăng ký thành danh sách;
+  phiếu xem trước có tiền cọc, hình thức, số người; bỏ chữ "mở ngay"/"24 giờ" lỗi thời (ADR 0081);
+  tiền cọc mất "không được hoàn" (ADR 0087); nút báo cáo đặt sau tác giả; "sau khi mở" không còn
+  Title Case; Đấu giá của tôi ẩn khối người bán với người chỉ mua.
+- Kiểm tra: typecheck; vitest user-web 485 PASS (thêm `lib/point-hours.test.ts`); stage
+  `apps/user-web/tests/auction-stage.mjs` PASS; kiểm lại từng sửa trên trình duyệt 1366/390px.
+  Kịch bản journey và các nhánh còn lại: xem mục "Kiểm thử đấu giá nhanh" ở trên.
 
 # Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
 

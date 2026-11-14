@@ -8021,6 +8021,77 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/auctions/{auctionId}/start:
+    post:
+      operationId: startAuction
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN independent of the seller, bidders and registrants opens an Active
+        auction that has not opened yet (phase Scheduled) right now, with a reason. A registration
+        auction must already have its minimum registrants. startAt, the open time and the start of
+        bidding become server time; the planned length is kept (end = now + length). The seller and
+        registrants receive an AuctionBiddingStarted notification quoting the reason. Holds and
+        deposits are kept.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /auctions:
     get:
       operationId: listAuctions
@@ -21383,6 +21454,23 @@ components:
           maxLength: 1000
           description: ADR 0083. Recorded in the audit log and quoted (shortened to fit) in the
             notification members receive.
+    StartAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+          description: Recorded in the audit log and quoted (shortened to fit) in the
+            notification the seller and registrants receive.
     PlaceAuctionBid:
       type: object
       additionalProperties: false
@@ -22475,6 +22563,29 @@ components:
           maximum: 259200
           description: ADR 0084. Pause time this auction may still use (72 hours in total, given back on
             resume). Optional for older servers.
+        auctionType:
+          $ref: "#/components/schemas/AuctionType"
+        opensAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0081. The seller's open time on a ScheduledGrace registration auction; until
+            minBidders register, startAt is the registration deadline (opensAt + 24 h). Null on other
+            modes. Optional for older servers.
+        minBidders:
+          type:
+            - integer
+            - "null"
+          minimum: 2
+          maximum: 1000
+          description: ADR 0077/0079. Registered bidders needed before bidding opens; null when the auction
+            needs no registration. Optional for older servers.
+        registeredCount:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: ADR 0077. Current registrations. Optional for older servers.
         title:
           type: string
         state:

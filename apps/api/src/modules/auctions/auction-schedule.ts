@@ -443,3 +443,29 @@ export function resumeFields(a: Movable, now: Date): Partial<AuctionDoc> {
     biddingOpenedAt: nullable(a.biddingOpenedAt),
   };
 }
+
+/**
+ * An independent Admin opens a Scheduled auction now: the planned length
+ * (startAt..plannedEndAt before it opens) is kept from now; a registration
+ * auction's open time moves to now too. Null below the registration minimum.
+ */
+export function startNowFields(
+  a: Pick<
+    AuctionDoc,
+    'startAt' | 'plannedEndAt' | 'opensAt' | 'minBidders' | 'registeredCount'
+  >,
+  now: Date,
+): Partial<AuctionDoc> | null {
+  if (a.minBidders != null && (a.registeredCount ?? 0) < a.minBidders)
+    return null;
+  const end = new Date(
+    now.getTime() + (a.plannedEndAt.getTime() - a.startAt.getTime()),
+  );
+  return {
+    startAt: now,
+    plannedEndAt: end,
+    endAt: end,
+    biddingOpenedAt: now,
+    ...(a.opensAt ? { opensAt: now } : {}),
+  };
+}
