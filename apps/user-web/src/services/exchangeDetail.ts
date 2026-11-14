@@ -36,6 +36,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     status: mapExchangeStatus(ex, actor.id),
     rawStatus: ex.status,
     returnResolution: ex.returnResolution,
+    statements: ex.statements,
     demoShippingAdvanceAvailable: ex.demoShippingAdvanceAvailable,
     demoDeadline: ex.demoDeadline,
     outboundDeliveryVerification: ex.outboundDeliveryVerification,

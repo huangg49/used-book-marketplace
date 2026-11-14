@@ -23457,6 +23457,18 @@ components:
         - createdAt
         - updatedAt
       properties:
+        statements:
+          description: Formal statements. The assigned independent reviewer sees both participants' submissions in operations detail. Exchange detail returns only the requesting participant's own submissions.
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, senderId, note, sentAt]
+            properties:
+              id: { type: string, format: uuid }
+              senderId: { type: string, format: uuid }
+              note: { type: string }
+              sentAt: { type: string, format: date-time }
         participants:
           description: Included only in authorized operations dispute reads.
           type: object

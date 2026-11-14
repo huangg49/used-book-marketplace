@@ -362,6 +362,20 @@ function ExchangeDetailContent({
     return <Navigate replace to={`/chat/${linked.id}`} />;
   const standaloneSheet = !embedded && (proposal || funding);
   const handoverNavigation = { target: handoverTarget, navigationKey: location.key };
+  const recoveringAction = Boolean(pendingExchange(detail.id) || exchangeAcknowledged(detail.id));
+  const bookOwner = detail.returnResolution?.ownerId === detail.viewer.id;
+  const returnBooks = bookOwner ? detail.giveBooks : detail.receiveBooks;
+  const caseBook = returnBooks.find((book) => book.id === detail.returnResolution?.listingId);
+  const returnResolution = detail.revision ? detail.returnResolution : undefined;
+  const evidence = detail.rawStatus === "ResolutionPending" && (
+    <ExchangeEvidencePanel
+      key={"evidence:" + detail.viewer.id + ":" + detail.id}
+      id={detail.id}
+      revision={detail.revision!}
+      userId={detail.viewer.id}
+      compact={Boolean(returnResolution)}
+    />
+  );
   const actionSection = (
     <section
       id="exchange-actions"
@@ -369,69 +383,69 @@ function ExchangeDetailContent({
       aria-label="Hành động của bạn"
       tabIndex={-1}
     >
-      <ActionCard
-        compact={embedded || standaloneSheet || handover || inspecting}
-        standaloneSheet={standaloneSheet || handover || inspecting}
-        handover={handover ? handoverNavigation : undefined}
-        handoverSupport={handover && !embedded ? <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" /> : undefined}
-        detail={detail}
-        onCancel={handleCancel}
-        onAccept={handleAccept}
-        onCounter={handleCounter}
-        onFund={async () => {
-          await fundExchange(id!);
-          invalidate();
-        }}
-        onRetry={async () => {
-          await refetchDetail();
-        }}
-        onReject={handleReject}
-        onConfirmSent={handleConfirmSent}
-        onConfirmReceived={handleConfirmReceived}
-        onComplete={handleComplete}
-        onDispute={handleDispute}
-        onAdvanceDemoDeadline={async () => {
-          const latest = await getExchangeDetail(detail.id);
-          if (latest.demoDeadline !== detail.demoDeadline || latest.revision !== detail.revision) {
+      {(!detail.returnResolution || recoveringAction) && (
+        <ActionCard
+          compact={embedded || standaloneSheet || handover || inspecting}
+          standaloneSheet={standaloneSheet || handover || inspecting}
+          handover={handover ? handoverNavigation : undefined}
+          handoverSupport={handover && !embedded ? <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" /> : undefined}
+          detail={detail}
+          onCancel={handleCancel}
+          onAccept={handleAccept}
+          onCounter={handleCounter}
+          onFund={async () => {
+            await fundExchange(id!);
             invalidate();
-            throw new Error("Phiếu vừa thay đổi. Xem lại trạng thái trước khi tua hạn.");
-          }
-          await exchangeCommand(`/exchanges/${detail.id}/demo-advance`, {
-            expectedVersion: detail.revision!, deadline: detail.demoDeadline,
-          });
-          invalidate();
-        }}
-        onAdvanceDemoShipping={async () => {
-          await advanceDemoShipping(id!, detail.revision!);
-          invalidate();
-        }}
-      />
+          }}
+          onRetry={async () => {
+            await refetchDetail();
+          }}
+          onReject={handleReject}
+          onConfirmSent={handleConfirmSent}
+          onConfirmReceived={handleConfirmReceived}
+          onComplete={handleComplete}
+          onDispute={handleDispute}
+          onAdvanceDemoDeadline={async () => {
+            const latest = await getExchangeDetail(detail.id);
+            if (latest.demoDeadline !== detail.demoDeadline || latest.revision !== detail.revision) {
+              invalidate();
+              throw new Error("Phiếu vừa thay đổi. Xem lại trạng thái trước khi tua hạn.");
+            }
+            await exchangeCommand(`/exchanges/${detail.id}/demo-advance`, {
+              expectedVersion: detail.revision!, deadline: detail.demoDeadline,
+            });
+            invalidate();
+          }}
+          onAdvanceDemoShipping={async () => {
+            await advanceDemoShipping(id!, detail.revision!);
+            invalidate();
+          }}
+        />
+      )}
       {detail.outboundDeliveryVerification && (
         <section className={styles.deliveryVerification} aria-label="Xác minh giao sách">
           <h2>Admin đã xác minh sách đã đến người nhận</h2>
           <p>{detail.outboundDeliveryVerification.note}</p>
         </section>
       )}
-      {detail.returnResolution && detail.revision && (
+      {returnResolution && detail.revision && (
         <ExchangeReturnPanel
           key={"return:" + detail.viewer.id + ":" + detail.id}
           id={detail.id}
           revision={detail.revision}
           userId={detail.viewer.id}
-          resolution={detail.returnResolution}
+          resolution={returnResolution}
+          evidence={evidence}
+          statements={detail.statements}
+          caseBook={caseBook && { title: caseBook.title, coverUrl: caseBook.coverUrl,
+            confirmed: Boolean(bookOwner ? detail.partnerShipping.receivedAt : detail.viewerShipping.receivedAt) }}
+          disputeReason={detail.disputeReason}
           returnAddress={detail.partnerAddress}
-          blocked={Boolean(pendingExchange(detail.id) || exchangeAcknowledged(detail.id))}
+          blocked={recoveringAction}
           onRead={() => void refetchDetail()}
         />
       )}
-      {detail.rawStatus === "ResolutionPending" && (
-        <ExchangeEvidencePanel
-          key={"evidence:" + detail.viewer.id + ":" + detail.id}
-          id={detail.id}
-          revision={detail.revision!}
-          userId={detail.viewer.id}
-        />
-      )}
+      {!returnResolution && evidence}
     </section>
   );
   const messagePages = messagesDenied ? undefined : messagesQuery.data?.pages;
@@ -467,7 +481,8 @@ function ExchangeDetailContent({
   );
   const contact = linked ? <Link className={styles.chatLink} to={`/chat/${linked.id}`}>Mở hội thoại</Link> : (
     <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
-      partnerName={detail.partner.username} latest={messagePages?.[0]?.items ?? []}>
+      transactionCode={detail.transactionCode} partnerName={detail.partner.username}
+      latest={messagePages?.[0]?.items ?? []}>
       {open => renderChat(true, open)}
     </ExchangeChatDrawer>
   );

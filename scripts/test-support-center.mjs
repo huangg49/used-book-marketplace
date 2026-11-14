@@ -53,6 +53,23 @@ const servers = [],
   errors = [],
   checks = [];
 const button = (p, name) => p.getByRole("button", { name, exact: true });
+const supportCombobox = (page, label) =>
+  page.getByRole("combobox", { name: label, exact: true });
+const supportListbox = (page, label) =>
+  page.getByRole("listbox", { name: label, exact: true });
+async function chooseSupportOption(page, label, option, touch = false) {
+  const combo = supportCombobox(page, label);
+  if (touch) await combo.tap();
+  else await combo.click();
+  const choice = supportListbox(page, label).getByRole("option", {
+    name: option,
+    exact: true,
+  });
+  if (touch) await choice.tap();
+  else await choice.click();
+  await expect(combo).toHaveValue(option);
+  await expect(combo).toHaveAttribute("aria-expanded", "false");
+}
 const shot = async (p, name) => {
   await p.evaluate(() => document.fonts.ready);
   assert.equal(
@@ -82,7 +99,7 @@ async function newMemberCase(p) {
   ).toBeVisible();
   await p.getByRole("link", { name: "Gửi yêu cầu mới", exact: true }).click();
   await expect(
-    p.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+    p.getByRole("heading", { name: "Gửi yêu cầu hỗ trợ", exact: true }),
   ).toBeVisible();
 }
 try {
@@ -144,14 +161,30 @@ try {
   await expect(
     member.getByRole("heading", { name: "Hỗ trợ & phản ánh", exact: true }),
   ).toBeVisible();
+  const stateFilter = supportCombobox(member, "Trạng thái");
+  await stateFilter.press("ArrowDown");
+  await expect(supportListbox(member, "Trạng thái")).toBeVisible();
+  await stateFilter.press("ArrowDown");
+  await stateFilter.press("Enter");
+  await expect(stateFilter).toHaveValue("Đã tiếp nhận");
+  await expect(member).toHaveURL(/state=Open/);
+  await stateFilter.press("Enter");
+  await expect(supportListbox(member, "Trạng thái")).toBeVisible();
+  await stateFilter.press("Escape");
+  await expect(stateFilter).toHaveAttribute("aria-expanded", "false");
+  await chooseSupportOption(member, "Trạng thái", "Tất cả trạng thái");
+  await chooseSupportOption(member, "Loại yêu cầu", "Góp ý");
+  await expect(member).toHaveURL(/kind=Feedback/);
+  await chooseSupportOption(member, "Loại yêu cầu", "Tất cả loại");
+  await expect(member).toHaveURL(memberOrigin + "/support");
   await member
     .getByRole("link", { name: "Gửi yêu cầu mới", exact: true })
     .click();
   await member.waitForURL(memberOrigin + "/support/new");
   await expect(
-    member.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+    member.getByRole("heading", { name: "Gửi yêu cầu hỗ trợ", exact: true }),
   ).toBeVisible();
-  await member.getByLabel("Loại yêu cầu", { exact: true }).selectOption("Bug");
+  await chooseSupportOption(member, "Loại yêu cầu", "Báo lỗi");
   await member
     .getByLabel("Tiêu đề", { exact: true })
     .fill("QA: Bộ lọc tìm sách chưa cập nhật");
@@ -174,8 +207,14 @@ try {
       await route.abort("failed");
     } else await route.continue();
   });
-  await button(member, "Gửi yêu cầu").click();
+  const submitCase = button(member, "Gửi yêu cầu");
+  await submitCase.hover();
+  await expect(submitCase).toHaveCSS("background-color", "rgb(124, 35, 32)");
+  await expect(submitCase).toHaveCSS("color", "rgb(252, 248, 219)");
+  await submitCase.click();
   await expect(button(member, "Thử lại yêu cầu đã gửi")).toBeVisible();
+  await expect(supportCombobox(member, "Loại yêu cầu")).toBeDisabled();
+  await expect(supportCombobox(member, "Đối tượng liên quan")).toBeDisabled();
   await member
     .getByRole("link", { name: "Yêu cầu của tôi", exact: true })
     .click();
@@ -188,7 +227,7 @@ try {
     .click();
   await member.waitForURL(memberOrigin + "/support/new");
   await expect(
-    member.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+    member.getByRole("heading", { name: "Gửi yêu cầu hỗ trợ", exact: true }),
   ).toBeVisible();
   await expect(member.getByLabel("Tiêu đề", { exact: true })).toHaveValue(
     "QA: Bộ lọc tìm sách chưa cập nhật",
@@ -431,19 +470,118 @@ try {
       recipientListingId: randomUUID(),
       createdAt: new Date(+completedAt - (index + 1) * 60000),
     });
+  // Same-route navigation opens the contextual form without losing the in-memory session.
+  const contextUrl = "/support/new?" + new URLSearchParams({type:"Exchange", id:currentId, kind:"TransactionIssue"});
+  const compose = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await login(compose, memberOrigin, "/exchange/" + currentId, "member@operations.test");
+  const contextualLink = compose.locator(`a[href="${contextUrl}"]`).first();
+  await contextualLink.click();
+  const ticket = compose.getByRole("region", { name:"Chọn nội dung liên quan" });
+  const expectedCode = "#" + currentId.slice(0,8).toUpperCase();
+  await expect(ticket.getByText(expectedCode, {exact:true})).toBeVisible();
+  await expect(ticket.getByText(/Những lá thư bên sông/)).toBeVisible();
+  await expect(compose.getByLabel("Loại yêu cầu", {exact:true})).toHaveCount(0);
+  await expect(compose.getByRole("radio")).toHaveCount(0);
+  await expect(ticket.getByRole("link", {name:"Xem giao dịch"})).toHaveAttribute("href","/exchange/"+currentId);
+  for (const width of [1440, 768, 320]) {
+    await compose.setViewportSize({width,height:900});
+    await compose.evaluate((width) => {
+      document.documentElement.style.fontSize = width === 320 ? "130%" : "";
+      window.scrollTo({top:0,behavior:"instant"});
+    }, width);
+    await expect.poll(() => compose.evaluate(() => window.scrollY)).toBe(0);
+    const header = compose.locator("[data-member-header-slot] header");
+    await expect(header).toHaveAttribute("data-floating", "false");
+    const title = compose.getByRole("heading", {name:"Gửi yêu cầu hỗ trợ",exact:true});
+    const titleTop = await title.evaluate(node => node.getBoundingClientRect().top);
+    const headerBottom = await header.evaluate(node => node.getBoundingClientRect().bottom);
+    assert.ok(titleTop > headerBottom, "Navigation must leave the form heading visible");
+    await compose.evaluate(() => document.fonts.ready);
+    assert.equal(await compose.evaluate(() => document.documentElement.scrollWidth > innerWidth),false);
+    await compose.screenshot({path:path.join(evidence,`support-compose-${width}.png`)});
+    const titleInput = compose.getByLabel("Tiêu đề",{exact:true});
+    await titleInput.fill("Tôi cần hỗ trợ với giao dịch này");
+    await button(compose,"Đổi giao dịch").click();
+    const focusedSearch = compose.getByRole("searchbox");
+    await expect(focusedSearch).toBeFocused();
+    assert.ok(await focusedSearch.evaluate(node => node.getBoundingClientRect().top >= document.querySelector("[data-member-header-slot] header").getBoundingClientRect().bottom), "Search must stay below navigation");
+    await expect(button(compose,"Gửi yêu cầu")).toBeDisabled();
+    await expect(compose.getByRole("radio")).toHaveCount(1);
+    await expect(compose.getByRole("radio").first()).toBeChecked();
+    await compose.screenshot({path:path.join(evidence,`support-picker-${width}.png`)});
+    await button(compose,"Giữ giao dịch hiện tại").click();
+    await expect(button(compose,"Đổi giao dịch")).toBeFocused();
+    await expect(ticket.getByText(expectedCode, {exact:true})).toBeVisible();
+    await expect(titleInput).toHaveValue("Tôi cần hỗ trợ với giao dịch này");
+  }
+  const headingPosition = async (page, name) => {
+    const heading = page.getByRole("heading", { name, level: 1, exact: true });
+    await expect(heading).toBeVisible();
+    return heading.evaluate((node) => {
+      const headingBounds = node.getBoundingClientRect();
+      const workspaceBounds = node.closest("main").getBoundingClientRect();
+      return {
+        left: Math.round(headingBounds.left - workspaceBounds.left),
+        top: Math.round(headingBounds.top - workspaceBounds.top),
+      };
+    });
+  };
+  for (const width of [1440, 768, 320]) {
+    await compose.setViewportSize({ width, height: 900 });
+    const fontSize = width === 320 ? "130%" : "";
+    await compose.evaluate((size) => { document.documentElement.style.fontSize = size; }, fontSize);
+    const requestTitle = await headingPosition(compose, "Gửi yêu cầu hỗ trợ");
+    const supportHome = compose.getByRole("link", { name: "Yêu cầu của tôi", exact: true });
+    await supportHome.click();
+    const supportTitle = await headingPosition(compose, "Hỗ trợ & phản ánh");
+    const reviewLink = compose.getByRole("link", { name: "Đánh giá của tôi", exact: true });
+    if (!(await reviewLink.isVisible())) await compose.getByRole("button", { name: /^Menu:/ }).click();
+    await reviewLink.click();
+    const reviewTitle = await headingPosition(compose, "Đánh giá của tôi");
+    assert.deepEqual(supportTitle, reviewTitle, "Support and Reviews share a heading origin");
+    assert.deepEqual(requestTitle, reviewTitle, "Request form and Reviews share a heading origin");
+    const walletLink = compose.getByRole("link", { name: "Ví của tôi", exact: true });
+    if (!(await walletLink.isVisible())) await compose.getByRole("button", { name: /^Menu:/ }).click();
+    await walletLink.click();
+    assert.deepEqual(await headingPosition(compose, "Ví & Ký Quỹ Thư Quán"), reviewTitle);
+    await compose.goBack();
+    await compose.goBack();
+    await compose.goBack();
+    await expect(compose.getByRole("heading", { name: "Gửi yêu cầu hỗ trợ", exact: true })).toBeVisible();
+  }
+  checks.push("aligned Support, compose, Reviews and Wallet headings at 1440/768/320px");
+  await compose.close();
+  const touch = await browser.newPage({
+    viewport: { width: 320, height: 900 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  touch.on("pageerror", (e) => errors.push(e.message));
+  await login(touch, memberOrigin, "/support", "member@operations.test");
+  await supportCombobox(touch, "Trạng thái").tap();
+  const mobileStates = supportListbox(touch, "Trạng thái");
+  await expect(mobileStates).toBeVisible();
+  const bounds = await mobileStates.boundingBox();
+  assert.ok(bounds && bounds.x >= 0 && bounds.x + bounds.width <= 320);
+  await touch.screenshot({ path: path.join(evidence, "member-support-filter-mobile.png") });
+  await expect(mobileStates).toBeVisible();
+  await mobileStates.getByRole("option", { name: "Đã tiếp nhận", exact: true }).tap();
+  await expect(supportCombobox(touch, "Trạng thái")).toHaveValue("Đã tiếp nhận");
+  await chooseSupportOption(touch, "Loại yêu cầu", "Báo lỗi", true);
+  await touch.getByRole("link", { name: "Gửi yêu cầu mới", exact: true }).tap();
+  await chooseSupportOption(touch, "Loại yêu cầu", "Phản ánh giao dịch", true);
+  await chooseSupportOption(touch, "Đối tượng liên quan", "Trao đổi sách", true);
+  await touch.close();
+  checks.push("support filters and compose dropdowns support keyboard and touch, and submit hover stays legible");
   await newMemberCase(member);
   await expect(
-    member.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+    member.getByRole("heading", { name: "Gửi yêu cầu hỗ trợ", exact: true }),
   ).toBeVisible();
   await expect(member.getByLabel("Mã đối tượng", { exact: true })).toHaveCount(
     0,
   );
-  await member
-    .getByLabel("Loại yêu cầu", { exact: true })
-    .selectOption("TransactionIssue");
-  await member
-    .getByLabel("Đối tượng liên quan", { exact: true })
-    .selectOption("Exchange");
+  await chooseSupportOption(member, "Loại yêu cầu", "Phản ánh giao dịch");
+  await chooseSupportOption(member, "Đối tượng liên quan", "Trao đổi sách");
   const search = member.getByLabel("Tìm theo tên sách, người giao dịch hoặc mã", { exact: true });
   const currentCode = "#" + currentId.slice(0, 8).toUpperCase();
   const archivedCode = "#" + archivedId.slice(0, 8).toUpperCase();
@@ -473,14 +611,13 @@ try {
   await expect(member.getByRole("radio")).toHaveCount(6);
   await shot(member, "member-target-options-desktop");
   await member.getByRole("radio").first().click();
+  await expect(member.getByRole("radio")).toHaveCount(0);
+  await expect(member.getByRole("heading", { name: "Chuyện gì đã xảy ra?" })).toBeVisible();
   await expect(
-    member.getByText("Đã gắn kèm yêu cầu", { exact: true }),
+    member.getByRole("button", { name: "Đổi giao dịch", exact: true }),
   ).toBeVisible();
   await expect(
-    member.getByRole("button", { name: "Chọn giao dịch khác", exact: true }),
-  ).toBeVisible();
-  await expect(
-    member.getByRole("button", { name: "Chọn giao dịch khác", exact: true }),
+    member.getByRole("button", { name: "Đổi giao dịch", exact: true }),
   ).toBeFocused();
   await expect(member.getByText("Trao đổi với Đối tác đánh giá QA", { exact: true })).toBeVisible();
   await member
@@ -489,6 +626,20 @@ try {
   await member
     .getByLabel("Nội dung", { exact: true })
     .fill("Tôi chọn giao dịch từ danh sách để Admin hỗ trợ đối chiếu.");
+  await button(member, "Đổi giao dịch").click();
+  await expect(member.getByRole("searchbox")).toBeFocused();
+  await expect(member.getByRole("radio")).toHaveCount(1);
+  await member.getByRole("radio").first().click();
+  await expect(member.getByText(currentCode, { exact: true })).toBeVisible();
+  await expect(member.getByRole("radio")).toHaveCount(0);
+  await button(member, "Đổi giao dịch").click();
+  await button(member, "Lịch sử").click();
+  await member.getByRole("radio").first().click();
+  await expect(member.getByText("#" + exchangeId.slice(0, 8).toUpperCase(), { exact: true })).toBeVisible();
+  await expect(member.getByLabel("Tiêu đề", { exact: true })).toHaveValue("QA: Phản ánh từ giao dịch đã chọn");
+  await expect(member.getByLabel("Nội dung", { exact: true })).toHaveValue(
+    "Tôi chọn giao dịch từ danh sách để Admin hỗ trợ đối chiếu.",
+  );
   await shot(member, "member-target-picker-desktop");
   await member.setViewportSize({ width: 320, height: 800 });
   await member.evaluate(() => {
@@ -515,7 +666,7 @@ try {
   });
   await newMemberCase(member);
   await expect(
-    member.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+    member.getByRole("heading", { name: "Gửi yêu cầu hỗ trợ", exact: true }),
   ).toBeVisible();
   await member
     .getByLabel("Tiêu đề", { exact: true })
@@ -523,9 +674,7 @@ try {
   await member
     .getByLabel("Nội dung", { exact: true })
     .fill("Nội dung bản nháp vẫn còn sau khi chọn từ hồ sơ đánh giá.");
-  await member
-    .getByLabel("Đối tượng liên quan", { exact: true })
-    .selectOption("Review");
+  await chooseSupportOption(member, "Đối tượng liên quan", "Đánh giá");
   await member.getByRole("link", { name: /^Về tài khoản của tôi/ }).click();
   await member.waitForURL(memberOrigin + "/account");
   await member
@@ -543,11 +692,10 @@ try {
     .getByRole("link", { name: "Báo cáo nội dung", exact: true })
     .click();
   await expect(
-    member.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+    member.getByRole("heading", { name: "Gửi yêu cầu hỗ trợ", exact: true }),
   ).toBeVisible();
-  await expect(member.getByLabel("Loại yêu cầu", { exact: true })).toHaveValue(
-    "Violation",
-  );
+  await expect(member.getByText("Báo cáo vi phạm", { exact: true })).toBeVisible();
+  await expect(member.getByLabel("Loại yêu cầu", { exact: true })).toHaveCount(0);
   await expect(member.getByLabel("Tiêu đề", { exact: true })).toHaveValue(
     "QA: Bản nháp đi tìm nội dung",
   );

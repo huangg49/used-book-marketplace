@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, Check, Search } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, ArrowUpRight, Check, Search } from "lucide-react";
 import {
   ApiError,
   supportTargetOptionSchema,
@@ -21,53 +21,58 @@ const date = new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Ho_Chi_Minh",
 });
 
-function TargetDescription({ option }: { option: SupportTargetOption }) {
+function TargetDescription({
+  option,
+  selected = false,
+}: {
+  option: SupportTargetOption;
+  selected?: boolean;
+}) {
   const transaction = ["DirectOrder", "Exchange", "PointOrder"].includes(
     option.target.type,
   );
   const exchange = option.target.type === "Exchange";
   const give = option.booksToGive ?? [];
   const receive = option.booksToReceive ?? [];
+  const hasBooks = exchange && (give.length > 0 || receive.length > 0);
+  const identity = exchange && option.partnerName
+    ? `Trao đổi với ${option.partnerName}`
+    : option.label;
   return (
     <span className={styles.targetDescription}>
-      <span className={styles.targetIdentity}>
-        <strong>
-          {exchange && option.partnerName
-            ? `Trao đổi với ${option.partnerName}`
-            : option.label}
-        </strong>
-        {transaction && (
-          <span className={styles.targetCode}>
-            #{option.target.id.slice(0, 8).toUpperCase()}
-          </span>
-        )}
-      </span>
-      {exchange && (give.length > 0 || receive.length > 0) ? (
+      {hasBooks ? (
         <span className={styles.bookPair}>
           {give.length > 0 && (
             <span>
               <small>Bạn gửi</small>
-              {give.join(" · ")}
+              <strong>{give.join(" · ")}</strong>
             </span>
           )}
           {receive.length > 0 && (
             <span>
               <small>Bạn nhận</small>
-              {receive.join(" · ")}
+              <strong>{receive.join(" · ")}</strong>
             </span>
           )}
         </span>
-      ) : null}
+      ) : <strong className={styles.targetName}>{identity}</strong>}
       <span className={styles.targetMeta}>
+        {hasBooks && <span>{identity}</span>}
+        {transaction && (
+          <span className={styles.targetCode}>
+            #{option.target.id.slice(0, 8).toUpperCase()}
+          </span>
+        )}
         {option.state && (
-          <span className={styles.targetState}>
+          <span className={styles.targetState}
+            data-dispute={["Disputed", "ResolutionPending"].includes(option.state) || undefined}>
             {supportRelatedState(option.state)}
           </span>
         )}
         {!exchange && option.partnerName && (
           <span>Với {option.partnerName}</span>
         )}
-        {option.createdAt && (
+        {(!selected || !hasBooks) && option.createdAt && (
           <time dateTime={option.createdAt}>
             {date.format(new Date(option.createdAt))}
           </time>
@@ -76,6 +81,9 @@ function TargetDescription({ option }: { option: SupportTargetOption }) {
           option.description !== option.label &&
           option.description && <span>{option.description}</span>}
       </span>
+      {exchange && !hasBooks && selected && (
+        <span className={styles.targetMeta}>Phiếu cũ thiếu tên sách. Dùng mã và ngày để đối chiếu.</span>
+      )}
     </span>
   );
 }
@@ -85,26 +93,53 @@ export function SupportTargetPicker({
   id,
   active,
   onSelect,
+  onChanging,
 }: {
   type: Exclude<SupportDraft["targetType"], "">;
   id: string;
   active: boolean;
   onSelect: (id: string) => void;
+  onChanging: (open: boolean) => void;
 }) {
   const auth = useSession(),
     owner = auth.status === "authenticated" ? auth.user.id : undefined;
-  const [input, setInput] = useState(""),
-    [search, setSearch] = useState(""),
-    [view, setView] = useState<"Current" | "History">("Current");
-  const previousId = useRef(id),
-    changeButton = useRef<HTMLButtonElement>(null),
-    searchInput = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (id && !previousId.current) changeButton.current?.focus();
-    if (!id && previousId.current) searchInput.current?.focus();
-    previousId.current = id;
-  }, [id]);
+  const [input, setInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState<"Current" | "History">("Current");
+  const [changing, setChanging] = useState(false);
+  const changeButton = useRef<HTMLButtonElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const historyButton = useRef<HTMLButtonElement>(null);
+  const restoreFocus = useRef(false);
   const transactions = ["DirectOrder", "Exchange", "PointOrder"].includes(type);
+  const choosing = transactions && (!id || changing);
+
+  useEffect(() => {
+    if (!restoreFocus.current) return;
+    const control = choosing ? searchInput.current : changeButton.current;
+    if (!control) return;
+    restoreFocus.current = false;
+    control.focus({ preventScroll: true });
+    const headerBottom =
+      document
+        .querySelector("[data-member-header-slot] header")
+        ?.getBoundingClientRect().bottom ?? 0;
+    const bounds = control.getBoundingClientRect();
+    if (bounds.top < headerBottom + 8 || bounds.bottom > window.innerHeight) {
+      control.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+  }, [choosing, id]);
+
+  function togglePicker(open: boolean) {
+    restoreFocus.current = true;
+    if (open) {
+      setInput("");
+      setSearch("");
+      setView("Current");
+    }
+    setChanging(open);
+    onChanging(open);
+  }
   const selected = useQuery({
     queryKey: ["support-target", owner, type, id],
     queryFn: () =>
@@ -126,7 +161,7 @@ export function SupportTargetPicker({
         supportTargetOptionsPageSchema,
       ),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
-    enabled: !!owner && active && transactions && !id,
+    enabled: !!owner && active && choosing,
     staleTime: 0,
     refetchOnMount: "always",
     retry: false,
@@ -144,43 +179,67 @@ export function SupportTargetPicker({
     Member: { to: "/books", label: "Tìm bài đăng của thành viên" },
   };
   const destination = destinations[type as keyof typeof destinations];
+  const detailPath =
+    type === "Exchange"
+      ? `/exchange/${id}`
+      : type === "DirectOrder"
+        ? `/orders/${id}`
+        : undefined;
   return (
     <section
       className={styles.targetPicker}
       aria-label="Chọn nội dung liên quan"
     >
-      {id ? (
+      {id && !choosing && (
         <div className={styles.selectedTarget}>
           <span className={styles.attached}>
-            <Check size={16} aria-hidden="true" /> Đã gắn kèm yêu cầu
+            <Check size={16} aria-hidden="true" />
+            <span className={styles.visuallyHidden}>{transactions ? "Giao dịch đã chọn" : "Nội dung đã chọn"}</span>
           </span>
-          {selected.isFetching ? (
-            <span role="status">Đang tải thông tin đã chọn…</span>
-          ) : null}
-          {selected.isSuccess && !selected.isError ? (
-            <TargetDescription option={selected.data} />
-          ) : null}
-          {selected.isError ? (
-            <p role="alert">
-              Không tải được nội dung đã chọn. {supportError(selected.error)}{" "}
+          {selected.isSuccess && (
+            <TargetDescription option={selected.data} selected />
+          )}
+          {selected.isPending && active && (
+            <p role="status">Đang tải thông tin giao dịch…</p>
+          )}
+          {selected.isError && (
+            <div className={styles.pickerFeedback} role="alert">
+              <p>
+                Không tải được nội dung đã chọn. {supportError(selected.error)}
+              </p>
               <button type="button" onClick={() => void selected.refetch()}>
                 Tải lại thông tin
               </button>
-            </p>
-          ) : null}
-          <button
-            ref={changeButton}
-            type="button"
-            className={styles.changeTarget}
-            onClick={() => onSelect("")}
-          >
-            {transactions && <ArrowLeftRight size={16} aria-hidden="true" />}
-            {transactions ? "Chọn giao dịch khác" : "Bỏ chọn"}
-          </button>
+            </div>
+          )}
+          <div className={styles.ticketActions}>
+            {detailPath && selected.isSuccess && (
+              <Link to={detailPath}>
+                Xem giao dịch <ArrowUpRight size={15} aria-hidden="true" />
+              </Link>
+            )}
+            <button
+              ref={changeButton}
+              type="button"
+              className={styles.changeTarget}
+              onClick={() => (transactions ? togglePicker(true) : onSelect(""))}
+            >
+              {transactions && <ArrowLeftRight size={16} aria-hidden="true" />}
+              {transactions ? "Đổi giao dịch" : "Bỏ chọn"}
+            </button>
+          </div>
         </div>
-      ) : null}
-      {transactions && !id ? (
-        <>
+      )}
+      {choosing ? (
+        <div className={styles.chooseTarget}>
+          <div className={styles.pickerHeader}>
+            <h2>Chọn giao dịch</h2>
+            {id && (
+              <button type="button" onClick={() => togglePicker(false)}>
+                Giữ giao dịch hiện tại
+              </button>
+            )}
+          </div>
           <div
             className={styles.targetViews}
             role="group"
@@ -189,13 +248,16 @@ export function SupportTargetPicker({
             <button
               type="button"
               aria-pressed={view === "Current"}
+              data-focus-inverse={view === "Current" || undefined}
               onClick={() => setView("Current")}
             >
               Đang diễn ra
             </button>
             <button
+              ref={historyButton}
               type="button"
               aria-pressed={view === "History"}
+              data-focus-inverse={view === "History" || undefined}
               onClick={() => setView("History")}
             >
               Lịch sử
@@ -246,7 +308,7 @@ export function SupportTargetPicker({
               </button>
             </p>
           ) : null}
-          {!inaccessible ? (
+          {!inaccessible && items.length > 0 ? (
             <div
               className={styles.targetOptions}
               role="radiogroup"
@@ -262,11 +324,12 @@ export function SupportTargetPicker({
                     type="radio"
                     name="support-target"
                     checked={id === option.target.id}
-                    onChange={() => onSelect(option.target.id)}
+                    onChange={() => {
+                      onSelect(option.target.id);
+                      togglePicker(false);
+                    }}
                   />
-                  <span>
-                    <TargetDescription option={option} />
-                  </span>
+                  <TargetDescription option={option} />
                 </label>
               ))}
             </div>
@@ -278,13 +341,23 @@ export function SupportTargetPicker({
             </p>
           ) : null}
           {options.isSuccess && !items.length && !options.hasNextPage ? (
-            <p role="status">
-              {search
-                ? "Không có giao dịch khớp tìm kiếm trong mục này."
-                : view === "Current"
-                  ? "Bạn chưa có giao dịch đang diễn ra. Mở Lịch sử để tìm giao dịch đã đóng."
-                  : "Bạn chưa có giao dịch đã đóng thuộc loại này."}
-            </p>
+            <div className={styles.targetEmpty}>
+              <p role="status">
+                {search
+                  ? "Không có giao dịch khớp tìm kiếm trong mục này."
+                  : view === "Current"
+                    ? "Bạn chưa có giao dịch đang diễn ra."
+                    : "Bạn chưa có giao dịch đã đóng thuộc loại này."}
+              </p>
+              {!search && view === "Current" && (
+                <button type="button" onClick={() => {
+                  historyButton.current?.focus();
+                  setView("History");
+                }}>
+                  Xem giao dịch đã đóng <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              )}
+            </div>
           ) : null}
           {options.hasNextPage && !inaccessible ? (
             <button
@@ -297,7 +370,7 @@ export function SupportTargetPicker({
               {options.isFetchingNextPage ? "Đang tải…" : "Xem thêm giao dịch"}
             </button>
           ) : null}
-        </>
+        </div>
       ) : !id && destination ? (
         <div className={styles.notice}>
           <p>

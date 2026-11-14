@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock, ShieldCheck } from "lucide-react";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { conditions } from "../../../lib/listing-labels";
 import { formatVnd } from "../../../lib/routes";
@@ -72,14 +72,33 @@ export function ProposalHistory({ detail }: { detail: ExchangeDetail }) {
         <ExchangeBookList books={detail.receiveBooks} hasSnapshot={detail.hasAgreementSnapshot} incoming />
       </div>
       {!detail.hasAgreementSnapshot && <p className={styles.note}>Phiếu cũ thiếu bản chụp sách ban đầu.</p>}
-      <dl className={styles.agreement}>
-        <div><dt>Cọc của bạn</dt><dd>{amount(detail.viewerDeposit)}</dd></div>
-        <div><dt>Cọc của đối tác</dt><dd>{amount(detail.partnerDeposit)}</dd></div>
-        <div>
-          <dt>{compensation === "user_pays" ? "Tiền bù bạn trả" : compensation === "other_pays" ? "Tiền bù đối tác trả" : "Tiền bù"}</dt>
-          <dd>{compensation === "none" ? "Không có" : amount(detail.moneyAmount)}</dd>
-        </div>
-      </dl>
+      <div className={styles.financialSection}>
+        <h3 className={styles.financialTitle}>
+          <ShieldCheck size={16} aria-hidden="true" /> Cam kết tài chính & Ký quỹ an toàn
+        </h3>
+        <dl className={styles.agreement}>
+          <div className={styles.agreementCard}>
+            <dt>Cọc của bạn</dt>
+            <dd>{amount(detail.viewerDeposit)}</dd>
+            <span className={styles.agreementHint}>Hoàn trả khi nhận sách</span>
+          </div>
+          <div className={styles.agreementCard}>
+            <dt>Cọc của đối tác</dt>
+            <dd>{amount(detail.partnerDeposit)}</dd>
+            <span className={styles.agreementHint}>Lật Lại đang bảo chứng</span>
+          </div>
+          <div className={`${styles.agreementCard} ${detail.moneyAmount ? styles.highlightCard : ""}`}>
+            <dt>{compensation === "user_pays" ? "Tiền bù bạn trả" : compensation === "other_pays" ? "Tiền bù đối tác trả" : "Tiền bù"}</dt>
+            <dd>{compensation === "none" ? "Không có" : amount(detail.moneyAmount)}</dd>
+            <span className={styles.agreementHint}>
+              {compensation === "user_pays" ? "Cộng vào đơn đối tác" : compensation === "other_pays" ? "Chuyển vào ví bạn" : "Giá trị hai bên cân bằng"}
+            </span>
+          </div>
+        </dl>
+        <p className={styles.escrowNote}>
+          🛡️ Toàn bộ tiền cọc và tiền bù được bảo chứng an toàn trong tài khoản ký quỹ Lật Lại, tự động quyết toán sau khi hai bên hoàn tất giao nhận.
+        </p>
+      </div>
     </>
   );
 }

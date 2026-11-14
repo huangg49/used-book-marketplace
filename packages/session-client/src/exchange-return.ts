@@ -2,6 +2,14 @@ import { z } from "zod";
 import type { components } from "@used-books/api-contract";
 
 const date = z.iso.datetime({ offset: true }).nullable();
+export const exchangeStatementSchema = z.object({
+  id: z.uuid(),
+  senderId: z.uuid(),
+  note: z.string(),
+  sentAt: z.iso.datetime({ offset: true }),
+});
+export type ExchangeStatement = z.infer<typeof exchangeStatementSchema>;
+
 const money = z.number().int().nonnegative();
 export const exchangeReturnResolutionSchema = z.object({
   phase: z.enum(["Evidence", "ReturnOrdered", "ReturnInProgress", "CheckingReturn", "ReturnIssue", "CompensationOrdered", "NeedsReview", "Closed"]),

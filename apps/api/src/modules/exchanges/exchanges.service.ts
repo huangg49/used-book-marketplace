@@ -602,7 +602,10 @@ export class ExchangesService {
       member(actor);
       const row = await this.exchange(tx, id);
       this.participant(row, actor._id);
-      const view = this.view(row);
+      const view = {
+        ...this.view(row),
+        ...(row.returnResolution ? { statements: await this.readDisputeStatements(tx, row, actor._id) } : {}),
+      };
       const now = await tx.now();
       const demoDeadline = actor.status === 'ACTIVE' && demoExchangeDeadlineEnabled(this.config, row)
         ? currentDemoDeadline(row, now, false) : undefined;
@@ -2080,6 +2083,38 @@ export class ExchangesService {
     );
   }
 
+  // Older statements were written as chat entries without a type marker. Their
+  // committed command audit and receipt identify them without exposing chat.
+  private async readDisputeStatements(tx: Tx, row: ExchangeDoc, senderId?: string): Promise<NonNullable<Wire['Exchange']['statements']>> {
+    const statements = await tx.c.audit_events.aggregate<{
+      _id: string; actorId: string; reason: string; createdAt: Date;
+    }>([
+      { $match: {
+        listingId: row.initiatorListingId,
+        action: 'actOnOwnExchangeReturn',
+        'before.action': 'SubmitStatement',
+        actorId: senderId ?? { $in: [row.initiatorId, row.recipientId] },
+        reason: { $type: 'string' },
+        receiptId: { $type: 'string' },
+      } },
+      { $lookup: {
+        from: 'mutation_receipts',
+        localField: 'receiptId',
+        foreignField: '_id',
+        as: 'receipt',
+      } },
+      { $match: { 'receipt.result.id': row._id } },
+      { $sort: { createdAt: 1, _id: 1 } },
+      { $project: { actorId: 1, reason: 1, createdAt: 1 } },
+    ]).toArray();
+    return statements.map((entry) => ({
+      id: entry._id,
+      senderId: entry.actorId,
+      note: entry.reason.trim(),
+      sentAt: entry.createdAt.toISOString(),
+    }));
+  }
+
   getOperationsDispute(auth: Actor, id: string) {
     return this.commands.read(auth, async (tx, actor) => {
       staff(actor);
@@ -2088,12 +2123,13 @@ export class ExchangesService {
         throw new DomainError(403, 'SelfReviewForbidden', 'Không được xử lý trao đổi của chính mình.');
       if (row.status !== 'ResolutionPending' && !row.returnResolution) throw notFound();
       const [view] = await this.operationsDisputes(tx, [row]);
-      if (actor.status !== 'ACTIVE' || !actor.roles.some(({ role }) => role === 'ADMIN') ||
-        !demoExchangeDeadlineEnabled(this.config, row)) return view;
       const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
-      const demoDeadline = assignment?.assigneeId === actor._id
+      if (assignment?.assigneeId !== actor._id) return view;
+      const statements = await this.readDisputeStatements(tx, row);
+      const demoDeadline = actor.roles.some(({ role }) => role === 'ADMIN') &&
+        demoExchangeDeadlineEnabled(this.config, row)
         ? currentDemoDeadline(row, await tx.now(), true) : undefined;
-      return demoDeadline ? { ...view, demoDeadline } : view;
+      return { ...view, statements, ...(demoDeadline ? { demoDeadline } : {}) };
     });
   }
 

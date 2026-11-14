@@ -44,6 +44,28 @@ try {
     participants: { initiator: { displayName: 'An QA', avatarId: randomUUID() }, recipient: { displayName: 'Bình QA', avatarId: null } },
     disputedBy: 'System', disputeReason: 'QA giao diện: sách đang được đối chiếu tình trạng và nơi giữ. '.repeat(5),
   };
+  const snapshot = (listingId, ownerId, ownerDisplayName, title) => ({
+    listingId, ownerId, ownerDisplayName, listingVersion: 1,
+    revisionId: randomUUID(), bookId: randomUUID(), catalogRevisionId: randomUUID(),
+    book: { title, authors: [], isbn: null, edition: null, publisher: null,
+      publicationYear: null, language: 'Tiếng Việt', category: 'Văn học' },
+    condition: 'Good', description: '', pages: '', coverNote: '', notes: '', accessories: '',
+    readable: true, hasMissingPages: false, missingEssentialContent: false,
+    exchangeValue: 100000, mediaIds: [randomUUID()],
+  });
+  const longTitle = 'Những lá thư mùa đông và các ghi chép từ một chuyến đi rất dài';
+  item.agreement = {
+    initiatorBooks: [
+      snapshot(item.initiatorListingId, item.initiatorId, 'An QA', longTitle),
+      ...['Đồi gió hú', 'Truyện Kiều', 'Bên kia sông', 'Ánh trăng cuối mùa'].map(title =>
+        snapshot(randomUUID(), item.initiatorId, 'An QA', title)),
+    ],
+    recipientBook: snapshot(item.recipientListingId, item.recipientId, 'Bình QA', 'Dế Mèn phiêu lưu ký'),
+  };
+  const dense = Array.from({ length: 24 }, (_, index) => ({
+    ...item, id: index.toString(16).padStart(8, '0') + item.id.slice(8),
+  }));
+  dense.splice(10, 0, item);
   let mode = 'populated', mutations = 0, attempts = 0;
   const commands = [];
   let responseLost = true;
@@ -54,6 +76,9 @@ try {
   const evidenceId = randomUUID();
   const ownerId = item.initiatorId;
   const holderId = item.recipientId;
+  await page.route('**/operations/listings/*/media/*/read', route =>
+    route.fulfill({ json: { id: new URL(route.request().url()).pathname.split('/').at(-2),
+      url: origin + '/qa-avatar.png', expiresAt: new Date(Date.now() + 600000).toISOString(), width: 1, height: 1 } }));
   await page.route('**/operations/users/*/avatar/read', route =>
     route.fulfill({ json: { url: origin + '/qa-avatar.png', expiresAt: new Date(Date.now() + 600000).toISOString() } }));
   await page.route('**/qa-avatar.png', route =>
@@ -103,19 +128,22 @@ try {
       return route.fulfill({ json: { items, nextCursor: null, totalBytes: 42, maxTotalBytes: 150000000 } });
     }
     if (url.pathname.endsWith('/dispute')) {
-      return route.fulfill({ json: { ...current, canStartReturnResolution: eligible, canVerifyOutboundDelivery: canVerify } });
+      return route.fulfill({ json: { ...current, canStartReturnResolution: eligible, canVerifyOutboundDelivery: canVerify,
+        ...(assigned && current.returnResolution ? { statements: [
+          { id: evidenceId, senderId: ownerId, note: 'Tôi đã bàn giao sách tại điểm hẹn.', sentAt: now },
+        ] } : {}),
+      } });
     }
     return route.fulfill(mode === 'error'
       ? { status: 503, json: { code: 'UNAVAILABLE', message: 'QA: cần thử lại.' } }
-      : { json: mode === 'empty' ? [] : [item] });
+      : { json: mode === 'empty' ? [] : mode === 'dense' ? dense : [item] });
   });
   await page.goto(origin + '/operations/exchange-disputes');
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill('admin@operations.test');
   await page.getByLabel(/^Mật khẩu(?:\s|$)/).fill(password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Khiếu nại trao đổi sách', exact: true })).toBeVisible();
-  await expect(page.getByText('An QA', { exact: true })).toBeVisible();
-  await expect(page.getByText('Bình QA', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'An QA ↔ Bình QA', exact: true })).toBeVisible();
   await expect(page.locator('img[src$="/qa-avatar.png"]')).toHaveCount(1);
   await expect(page.getByText('Chờ xử lý · Giữ tiền và sách', { exact: true })).toBeVisible();
   await expect(page.getByText(/Giữ tiền và sách trong lúc đối chiếu/)).toBeVisible();
@@ -133,6 +161,39 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, JSON.stringify({ width, overflow }));
     await textZoom?.evaluate((style) => style.remove());
   }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  mode = 'dense';
+  await page.getByRole('button', { name: 'Cập nhật danh sách', exact: true }).click();
+  const search = page.getByRole('searchbox', { name: 'Tìm hồ sơ', exact: true });
+  await expect(page.getByText('Hồ sơ 1–10 / 25 · Trang 1/3')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Mở hồ sơ', exact: true })).toHaveCount(10);
+  await expect(page.getByText('+4 cuốn', { exact: true })).toHaveCount(10);
+  await page.screenshot({ path: path.join(artifacts, 'queue-dense-1440.png') });
+  await search.fill('anh trang cuoi mua');
+  await search.press('Enter');
+  await expect(page).toHaveURL(/q=anh\+trang\+cuoi\+mua/);
+  await expect(page.getByText('Hồ sơ 1–10 / 25 · Trang 1/3')).toBeVisible();
+  await page.getByRole('button', { name: 'Trang sau', exact: true }).click();
+  await expect(page).toHaveURL(/q=anh\+trang\+cuoi\+mua&page=2/);
+  const caseCode = 'Trao đổi #' + item.id.slice(0, 8).toUpperCase();
+  const caseRow = page.getByRole('listitem').filter({ has: page.getByText(caseCode, { exact: true }) });
+  await caseRow.getByRole('link', { name: 'Mở hồ sơ', exact: true }).click();
+  const books = page.getByRole('region', { name: 'Hai chiều giao sách' }).getByRole('list', { name: 'Sách gửi', exact: true }).first();
+  await expect(books.getByRole('listitem')).toHaveCount(5);
+  await expect(books.locator('img[src$="/qa-avatar.png"]')).toHaveCount(5);
+  await expect(books.getByText('Ánh trăng cuối mùa', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Danh sách khiếu nại' }).click();
+  await expect(page).toHaveURL(/q=anh\+trang\+cuoi\+mua&page=2/);
+  await expect(search).toHaveValue('anh trang cuoi mua');
+  await search.fill('khong co sach nay');
+  await search.press('Enter');
+  await expect(page.getByText('Không tìm thấy hồ sơ phù hợp.')).toBeVisible();
+  await page.getByRole('button', { name: 'Xóa tìm kiếm', exact: true }).click();
+  await expect(page.getByText('Hồ sơ 1–10 / 25 · Trang 1/3')).toBeVisible();
+  mode = 'populated';
+  await page.getByRole('button', { name: 'Cập nhật danh sách', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Mở hồ sơ', exact: true })).toHaveCount(1);
+  await page.setViewportSize({ width: 320, height: 1000 });
   mode = 'error';
   await page.getByRole('button', { name: 'Cập nhật danh sách', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Máy chủ chưa hoàn tất yêu cầu. Vui lòng thử lại.');
@@ -149,7 +210,7 @@ try {
   const handover = page.getByRole('region', { name: 'Hai chiều giao sách' });
   await expect(handover.getByText('An QA', { exact: true })).toHaveCount(2);
   await expect(handover.getByText('Bình QA', { exact: true })).toHaveCount(2);
-  await expect(handover.locator('img[src$="/qa-avatar.png"]')).toHaveCount(2);
+  await expect(handover.locator('span[data-side="initiator"] img[src$="/qa-avatar.png"]')).toHaveCount(2);
   await expect(page.getByRole('heading', { name: 'Nội dung báo sự cố' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Đối chiếu khoản tiền' })).toBeVisible();
   await expect(page.getByText('Đang giữ', { exact: true })).toBeVisible();
@@ -174,6 +235,9 @@ try {
   await expect(page.getByText(/Chưa biết máy chủ đã nhận thao tác/)).toBeVisible();
   await page.getByRole('button', { name: /Thử lại thao tác vừa gửi/ }).click();
   await expect(page.getByRole('heading', { name: 'Đang bổ sung bằng chứng' })).toBeVisible();
+  const statements = page.getByRole('region', { name: 'Giải trình của hai bên', exact: true });
+  await expect(statements.getByText('An QA', { exact: true })).toBeVisible();
+  await expect(statements.getByText('Tôi đã bàn giao sách tại điểm hẹn.', { exact: true })).toBeVisible();
   assert.equal(attempts, 2);
   assert.deepEqual(commands[0], commands[1]);
   for (const width of [1440, 390, 320]) {

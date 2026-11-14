@@ -1,23 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
-  ArrowLeftRight,
   ArrowRight,
   BookOpen,
   Check,
+  CheckCircle2,
   Clock3,
+  Coins,
+  FileText,
   Package,
   RefreshCw,
+  Search,
+  ShieldAlert,
   Truck,
   Wallet,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useOutletContext,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   exchangeEvidenceAccessSchema,
   demoExchangeDeadlineLabel,
   exchangeEvidenceListSchema,
   profileAvatarReadSchema,
+  PUBLIC_MEDIA_GC_MS,
+  signedMediaStaleTime,
   exchangeReturnPhase,
   type CurrentUser,
   type DemoExchangeDeadline,
@@ -37,6 +49,7 @@ import {
 } from "./contracts";
 import { ExchangeEvidenceReview } from "./exchange-evidence-review";
 import { Forbidden } from "./queue-frame";
+import { mediaRead } from "../review/contracts";
 import styles from "./exchange-disputes.module.css";
 
 export function ExchangeDisputesPage() {
@@ -49,6 +62,14 @@ export function ExchangeDisputesPage() {
 }
 
 const queuePath = "/operations/exchange-disputes";
+const pageSize = 10;
+const normalizeSearch = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase("vi")
+    .replaceAll("đ", "d")
+    .trim();
 
 function disputeStatus(item: ExchangeDisputeItem) {
   return item.returnResolution
@@ -63,6 +84,12 @@ const exchangeCode = (item: ExchangeDisputeItem) =>
 const totalDeposit = (item: ExchangeDisputeItem) =>
   item.initiatorDeposit + item.recipientDeposit + item.diffAmount;
 
+function shipmentIssue(item: ExchangeDisputeItem) {
+  if (Boolean(item.initiatorShippedAt) === Boolean(item.recipientShippedAt))
+    return undefined;
+  return "Một chiều chưa gửi";
+}
+
 function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
   const result = useQuery({
     queryKey: ["operations", "exchange-disputes", user.id],
@@ -74,11 +101,55 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
     refetchInterval: 30_000,
   });
   const rows = result.data;
+  const [params, setParams] = useSearchParams();
+  const query = params.get("q")?.trim() ?? "";
+  const searchTerms = normalizeSearch(query.replace(/^#/, ""))
+    .split(/\s+/)
+    .filter(Boolean);
+  const filtered = (rows ?? []).filter((item) => {
+    if (!searchTerms.length) return true;
+    const initiator = disputeParty(item, "initiator");
+    const recipient = disputeParty(item, "recipient");
+    const searchable = normalizeSearch(
+      [
+        item.id,
+        initiator.name,
+        recipient.name,
+        ...initiator.books,
+        ...recipient.books,
+      ].join(" "),
+    );
+    return searchTerms.every((term) => searchable.includes(term));
+  });
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const rawPage = params.get("page") ?? "";
+  const requestedPage = /^\d+$/.test(rawPage) ? Number(rawPage) : 1;
+  const page = Math.min(pageCount, Math.max(1, requestedPage));
+  const start = (page - 1) * pageSize;
+  const visible = filtered.slice(start, start + pageSize);
   const list = useRef<HTMLOListElement>(null);
+  const listTitle = useRef<HTMLHeadingElement>(null);
   useListMotion(
     list,
-    rows?.map((item) => item.id + ":" + item.revision).join("|") ?? "",
+    visible.map((item) => item.id + ":" + item.revision).join("|"),
   );
+
+  function changePage(next: number) {
+    listTitle.current?.focus();
+    setParams({
+      ...(query ? { q: query } : {}),
+      ...(next > 1 ? { page: String(next) } : {}),
+    });
+  }
+
+  const returnCount =
+    rows?.filter((row) => Boolean(row.returnResolution)).length ?? 0;
+  const funded =
+    rows?.filter((row) => row.initiatorFundedAt && row.recipientFundedAt) ?? [];
+  const escrowTotal = funded.reduce((sum, row) => sum + totalDeposit(row), 0);
+  const queueSearch = new URLSearchParams();
+  if (query) queueSearch.set("q", query);
+  if (page > 1) queueSearch.set("page", String(page));
 
   return (
     <div className={styles.page}>
@@ -95,18 +166,91 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
           Cập nhật danh sách
         </Button>
       </header>
+
+      {rows && rows.length > 0 && (
+        <section className={styles.metricsBar} aria-label="Tổng quan khiếu nại">
+          <div className={styles.metricCard}>
+            <div className={styles.metricIconWrap}>
+              <FileText size={18} aria-hidden="true" />
+            </div>
+            <div className={styles.metricData}>
+              <span className={styles.metricLabel}>Đang thụ lý</span>
+              <strong className={styles.metricValue}>
+                {rows.length} hồ sơ
+              </strong>
+            </div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricIconWrap} data-tone="info">
+              <Package size={18} aria-hidden="true" />
+            </div>
+            <div className={styles.metricData}>
+              <span className={styles.metricLabel}>Quy trình trả sách</span>
+              <strong className={styles.metricValue}>{returnCount} ca</strong>
+            </div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricIconWrap} data-tone="escrow">
+              <Coins size={18} aria-hidden="true" />
+            </div>
+            <div className={styles.metricData}>
+              <span className={styles.metricLabel}>Khoản giữ đã xác nhận</span>
+              <strong className={styles.metricValue}>
+                {funded.length ? money(escrowTotal) : "Chưa đối chiếu"}
+              </strong>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className={styles.queue} aria-labelledby="exchange-queue-title">
         <header className={styles.queueHeader}>
           <div>
-            <h2 id="exchange-queue-title">Hồ sơ chờ xử lý</h2>
+            <h2 id="exchange-queue-title" tabIndex={-1} ref={listTitle}>
+              Hồ sơ chờ xử lý
+            </h2>
             <p>Giữ tiền và sách trong lúc đối chiếu.</p>
           </div>
           {rows && (
             <p className={styles.queueCount}>
-              {rows.length} hồ sơ · Mới nhất trước
+              {filtered.length === rows.length
+                ? `${rows.length} hồ sơ`
+                : `${filtered.length} / ${rows.length} hồ sơ`}{" "}
+              · Mới nhất trước
             </p>
           )}
         </header>
+        {Boolean(rows?.length) && (
+          <form
+            className={styles.queueSearch}
+            role="search"
+            aria-label="Tìm hồ sơ khiếu nại"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const value = String(
+                new FormData(event.currentTarget).get("query") ?? "",
+              ).trim();
+              setParams(value ? { q: value } : {});
+            }}
+          >
+            <label>
+              Tìm hồ sơ
+              <input
+                key={query}
+                type="search"
+                name="query"
+                defaultValue={query}
+                placeholder="Mã hồ sơ, tên người hoặc tựa sách"
+              />
+            </label>
+            <Button type="submit">
+              <Search size={16} aria-hidden="true" /> Tìm
+            </Button>
+            {query && (
+              <Button onClick={() => setParams({})}>Xóa tìm kiếm</Button>
+            )}
+          </form>
+        )}
         <ListFeedback result={result} loadingText="Đang tải hồ sơ…" />
         {result.isSuccess && !rows?.length && (
           <div className="empty">
@@ -115,54 +259,113 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
             <p>Chưa có giao dịch chờ xử lý trong danh sách bạn được xem.</p>
           </div>
         )}
-        <ol className={styles.queueList} ref={list}>
-          {rows?.map((item) => (
-            <li
-              className={styles.queueRow}
-              key={item.id}
-              data-motion-key={item.id}
-              data-motion-revision={item.revision}
-            >
-              <div className={styles.queueCase}>
-                <h3>Trao đổi {exchangeCode(item)}</h3>
-                <div className={styles.queuePeople}>
-                  <ParticipantAvatar
-                    person={disputeParty(item, "initiator")}
-                    viewerId={user.id}
-                  />
-                  <span>{disputeParty(item, "initiator").name}</span>
-                  <ArrowLeftRight size={14} aria-label="trao đổi với" />
-                  <ParticipantAvatar
-                    person={disputeParty(item, "recipient")}
-                    viewerId={user.id}
-                  />
-                  <span>{disputeParty(item, "recipient").name}</span>
+        {result.isSuccess && Boolean(rows?.length) && !filtered.length && (
+          <div className="empty">
+            <h3>Không tìm thấy hồ sơ phù hợp.</h3>
+          </div>
+        )}
+        <ol className={styles.queueList} ref={list} start={start + 1}>
+          {visible.map((item) => {
+            const isHighValue = totalDeposit(item) > 300000;
+            const initiator = disputeParty(item, "initiator");
+            const recipient = disputeParty(item, "recipient");
+            return (
+              <li
+                className={styles.queueRow}
+                key={item.id}
+                data-motion-key={item.id}
+                data-motion-revision={item.revision}
+              >
+                <div className={styles.queueIdentity}>
+                  <div className={styles.pairAvatars}>
+                    <ParticipantAvatar person={initiator} viewerId={user.id} />
+                    <ParticipantAvatar person={recipient} viewerId={user.id} />
+                  </div>
+                  <div>
+                    <h3 className={styles.caseTitle}>
+                      {initiator.name} ↔ {recipient.name}
+                    </h3>
+                    <span className={styles.muted}>
+                      Trao đổi {exchangeCode(item)}
+                    </span>
+                  </div>
                 </div>
-                <p>{item.disputeReason || "Chưa có nội dung báo sự cố."}</p>
-              </div>
-              <div className={styles.queueFacts}>
-                <span className={styles.stage}>{disputeStatus(item)}</span>
-                {item.disputedAt && (
-                  <time dateTime={item.disputedAt}>
-                    Mở lúc {dateText(item.disputedAt)}
-                  </time>
-                )}
-                <span>
-                  {item.initiatorFundedAt && item.recipientFundedAt ? (
-                    <>
-                      Đang giữ <strong>{money(totalDeposit(item))}</strong>
-                    </>
-                  ) : (
-                    "Cần đối chiếu khoản giữ"
+                <div className={styles.queueSummary}>
+                  <div className={styles.queueBooks}>
+                    <QueueBooks books={initiator.books} />
+                    <QueueBooks books={recipient.books} />
+                  </div>
+                  <p>
+                    {shipmentIssue(item) ||
+                      item.disputeReason ||
+                      "Chưa có nội dung báo sự cố."}
+                  </p>
+                </div>
+                <div className={styles.queueStage}>
+                  <span
+                    className={styles.stage}
+                    data-phase={item.returnResolution?.phase || "pending"}
+                  >
+                    {disputeStatus(item)}
+                  </span>
+                  {item.disputedAt && (
+                    <time className={styles.muted} dateTime={item.disputedAt}>
+                      {dateText(item.disputedAt)}
+                    </time>
                   )}
-                </span>
-              </div>
-              <Link className={styles.caseLink} to={queuePath + "/" + item.id}>
-                Mở hồ sơ <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            </li>
-          ))}
+                  {isHighValue && (
+                    <span className={styles.adminRequiredBadge}>
+                      <ShieldAlert size={13} aria-hidden="true" /> Thẩm quyền
+                      Admin
+                    </span>
+                  )}
+                </div>
+                <div className={styles.queueActions}>
+                  {item.initiatorFundedAt && item.recipientFundedAt ? (
+                    <span>
+                      Đang giữ <strong>{money(totalDeposit(item))}</strong>
+                    </span>
+                  ) : (
+                    <span>Cần đối chiếu khoản giữ</span>
+                  )}
+                  <Link
+                    className={styles.caseLink}
+                    to={{
+                      pathname: queuePath + "/" + item.id,
+                      search: queueSearch.size
+                        ? "?" + queueSearch.toString()
+                        : "",
+                    }}
+                  >
+                    Mở hồ sơ <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
         </ol>
+        {pageCount > 1 && (
+          <nav className={styles.pagination} aria-label="Phân trang khiếu nại">
+            <p aria-live="polite">
+              Hồ sơ {start + 1}–{start + visible.length} / {filtered.length} ·
+              Trang {page}/{pageCount}
+            </p>
+            <div>
+              <Button
+                disabled={page === 1}
+                onClick={() => changePage(page - 1)}
+              >
+                Trang trước
+              </Button>
+              <Button
+                disabled={page === pageCount}
+                onClick={() => changePage(page + 1)}
+              >
+                Trang sau
+              </Button>
+            </div>
+          </nav>
+        )}
       </section>
     </div>
   );
@@ -571,6 +774,7 @@ export function ExchangeDisputeDetailPage() {
 
 function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
   const { id } = useParams<{ id: string }>();
+  const { search } = useLocation();
   const [outcome, setOutcome] = useState<Omit<Outcome, "close">>();
   const [pending, setPending] = useState(false);
   const result = useQuery({
@@ -587,15 +791,21 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
   const retained = result.data?.id === id ? result.data : undefined;
   return (
     <div className={styles.page}>
-      <Link to={queuePath} className={styles.backLink}>
+      <Link to={{ pathname: queuePath, search }} className={styles.backLink}>
         <ArrowLeft size={17} aria-hidden="true" /> Danh sách khiếu nại
       </Link>
       <header className={styles.heading}>
         <div className="page-heading">
-          <h1>Hồ sơ khiếu nại trao đổi</h1>
+          <h1>
+            {item
+              ? disputeParty(item, "initiator").name +
+                " ↔ " +
+                disputeParty(item, "recipient").name
+              : "Hồ sơ khiếu nại trao đổi"}
+          </h1>
           {item && (
             <div className={styles.identity}>
-              <strong>Trao đổi {exchangeCode(item)}</strong>
+              <strong>Hồ sơ {exchangeCode(item)}</strong>
               <span className={styles.stage}>{disputeStatus(item)}</span>
             </div>
           )}
@@ -621,6 +831,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
       <div className={styles.detailGrid}>
         {item && (
           <div className={styles.column}>
+            <ShipmentOverview item={item} viewerId={user.id} />
             <section className={styles.card}>
               <h2>Nội dung báo sự cố</h2>
               {item.disputedAt && (
@@ -632,18 +843,28 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                 {item.disputeReason || "Chưa có nội dung báo sự cố."}
               </p>
             </section>
-            <ShipmentOverview item={item} viewerId={user.id} />
-            {item.status === "ResolutionPending" && (
-              <ExchangeEvidenceReview
-                id={item.id}
-                userId={user.id}
-                onAssignment={() => result.refetch()}
-              />
+            {(item.returnResolution || item.status === "ResolutionPending") && (
+              <section
+                className={styles.card}
+                aria-labelledby="dispute-materials-title"
+              >
+                <h2 id="dispute-materials-title">Giải trình và bằng chứng</h2>
+                {item.returnResolution && (
+                  <DisputeStatements item={item} viewerId={user.id} />
+                )}
+                {item.status === "ResolutionPending" && (
+                  <ExchangeEvidenceReview
+                    embedded
+                    id={item.id}
+                    userId={user.id}
+                    onAssignment={() => result.refetch()}
+                  />
+                )}
+              </section>
             )}
           </div>
         )}
         <div className={styles.column}>
-          {item && <PaymentOverview item={item} />}
           {item?.returnResolution && (
             <ReturnOverview resolution={item.returnResolution} />
           )}
@@ -669,6 +890,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                 onPending={setPending}
               />
             )}
+          {item && <PaymentOverview item={item} />}
         </div>
       </div>
     </div>
@@ -695,7 +917,21 @@ function disputeParty(
     role,
     side,
     books: books?.map(({ book }) => book.title) ?? [],
+    snapshots: books ?? [],
   };
+}
+
+function QueueBooks({ books }: { books: string[] }) {
+  if (!books.length) return null;
+  return (
+    <div className={styles.partyBook}>
+      <BookOpen size={14} aria-hidden="true" />
+      <span>{books[0]}</span>
+      {books.length > 1 && (
+        <strong className={styles.bookCount}>+{books.length - 1} cuốn</strong>
+      )}
+    </div>
+  );
 }
 
 function ParticipantAvatar({
@@ -734,6 +970,101 @@ function ParticipantAvatar({
           loading="lazy"
           onError={() => setFailedUrl(url)}
         />
+      )}
+    </span>
+  );
+}
+
+function DisputeStatements({
+  item,
+  viewerId,
+}: {
+  item: ExchangeDisputeItem;
+  viewerId: string;
+}) {
+  const statements = item.statements;
+  return (
+    <section aria-labelledby="dispute-statements-title">
+      <h3 className={styles.materialTitle} id="dispute-statements-title">
+        <FileText size={20} aria-hidden="true" /> Giải trình của hai bên
+      </h3>
+      {statements === undefined ? (
+        <p className={styles.muted}>
+          Nhận phụ trách bằng chứng để xem nội dung giải trình.
+        </p>
+      ) : statements.length === 0 ? (
+        <p className={styles.muted}>Hai bên chưa gửi giải trình.</p>
+      ) : (
+        <ol className={styles.statements}>
+          {statements.map(({ id, senderId, note, sentAt }) => {
+            const person = disputeParty(
+              item,
+              senderId === item.initiatorId ? "initiator" : "recipient",
+            );
+            return (
+              <li key={id}>
+                <div className={styles.statementAuthor}>
+                  <ParticipantAvatar person={person} viewerId={viewerId} />
+                  <div>
+                    <strong>{person.name}</strong>
+                    <small>{person.role}</small>
+                  </div>
+                  <time dateTime={sentAt}>{dateText(sentAt)}</time>
+                </div>
+                <p className={styles.prose}>{note}</p>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function DisputeBookImage({
+  listingId,
+  mediaId,
+  viewerId,
+}: {
+  listingId: string;
+  mediaId: string;
+  viewerId: string;
+}) {
+  const [failedUrl, setFailedUrl] = useState<string>();
+  const photo = useQuery({
+    queryKey: [
+      "operations",
+      "dispute-book-image",
+      viewerId,
+      listingId,
+      mediaId,
+    ],
+    queryFn: () =>
+      session.request(
+        "/operations/listings/" + listingId + "/media/" + mediaId + "/read",
+        mediaRead,
+      ),
+    retry: false,
+    staleTime: (query) =>
+      signedMediaStaleTime(
+        query.state.data?.expiresAt,
+        query.state.dataUpdatedAt,
+      ),
+    gcTime: PUBLIC_MEDIA_GC_MS,
+  });
+  const url = photo.data?.url;
+  return (
+    <span className={styles.bookImage} aria-hidden="true">
+      {url && failedUrl !== url ? (
+        <img
+          src={url}
+          alt=""
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailedUrl(url)}
+        />
+      ) : (
+        <BookOpen size={18} />
       )}
     </span>
   );
@@ -806,10 +1137,20 @@ function ShipmentOverview({
                 </div>
                 {from.books.length > 0 && (
                   <div className={styles.laneBooks}>
-                    <BookOpen size={16} aria-hidden="true" />
+                    <p>
+                      <BookOpen size={16} aria-hidden="true" />{" "}
+                      {from.books.length} cuốn sách
+                    </p>
                     <ul aria-label="Sách gửi">
-                      {from.books.map((title, index) => (
-                        <li key={index}>{title}</li>
+                      {from.snapshots.map(({ listingId, mediaIds, book }) => (
+                        <li key={listingId}>
+                          <DisputeBookImage
+                            listingId={listingId}
+                            mediaId={mediaIds[0]}
+                            viewerId={viewerId}
+                          />
+                          <strong>{book.title}</strong>
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -847,7 +1188,14 @@ function ShipmentOverview({
       </ol>
       {verified && (
         <div className={styles.verified}>
-          <strong>Đã xác minh lúc {dateText(verified.verifiedAt)}</strong>
+          <div className={styles.verifiedHeader}>
+            <CheckCircle2
+              size={16}
+              className={styles.verifiedIcon}
+              aria-hidden="true"
+            />
+            <strong>Đã xác minh lúc {dateText(verified.verifiedAt)}</strong>
+          </div>
           <p className={styles.prose}>{verified.note}</p>
         </div>
       )}

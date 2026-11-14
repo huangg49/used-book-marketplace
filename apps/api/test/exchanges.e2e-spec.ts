@@ -2310,7 +2310,29 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
           { expectedVersion: row.revision, deadline }, admin).expect(200)).body;
         const evidence = await act(dispute, 'RequestEvidence');
         expect((await get(ops + '/dispute', admin).expect(200)).body.demoDeadline).toBe('Evidence');
-        const ready = await skip(evidence, 'Evidence');
+        const statementKey = randomUUID();
+        const statement = { expectedVersion: evidence.revision, action: 'SubmitStatement', note: 'Tôi đã bàn giao sách tại điểm hẹn.' };
+        const submitted = (await post(member + '/return-resolution', statement, user1, statementKey).expect(200)).body;
+        await post(member + '/return-resolution', statement, user1, statementKey).expect(200);
+        const secondStatement = { expectedVersion: submitted.revision, action: 'SubmitStatement', note: 'Tôi xác nhận đã nhận sách.' };
+        const latest = (await post(member + '/return-resolution', secondStatement, user2).expect(200)).body;
+        const detail = (await get(ops + '/dispute', admin).expect(200)).body;
+        expect(detail.statements).toEqual(expect.arrayContaining([
+          expect.objectContaining({ senderId: user1.id, note: statement.note }),
+          expect.objectContaining({ senderId: user2.id, note: secondStatement.note }),
+        ]));
+        expect(detail.statements).toHaveLength(2);
+        expect((await get(ops + '/dispute', staff).expect(200)).body).not.toHaveProperty('statements');
+        for (const [participant, ownNote] of [[user1, statement.note], [user2, secondStatement.note]] as const) {
+          const memberDetail = (await get(member, participant).expect(200)).body;
+          expect(memberDetail.statements).toEqual([
+            expect.objectContaining({ senderId: participant.id, note: ownNote }),
+          ]);
+        }
+        await get(member, outsider).expect(404);
+        expect((await get('/operations/exchanges/resolutions', admin).expect(200)).body
+          .find((entry: {id:string}) => entry.id === ex.id)).not.toHaveProperty('statements');
+        const ready = await skip(latest, 'Evidence');
         const order = await act(ready, 'OrderReturn');
         const effective = await skip(order, 'Appeal');
         expect(Date.parse(effective.returnResolution.returnDueAt) - Date.parse(effective.returnResolution.appealDueAt)).toBe(72 * hour);

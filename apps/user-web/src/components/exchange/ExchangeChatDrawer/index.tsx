@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { MessageCircle, X } from "lucide-react";
 import type { ChatMessage } from "../../../lib/mock/exchangeDetail";
 import styles from "./ExchangeChatDrawer.module.css";
@@ -23,20 +23,23 @@ function readMarker(key: string): Marker | null {
   return null;
 }
 
-export function ExchangeChatDrawer({ viewerId, exchangeId, partnerName, latest, children }: {
+export function ExchangeChatDrawer({ viewerId, exchangeId, transactionCode, partnerName, latest, children }: {
   viewerId: string;
   exchangeId: string;
+  transactionCode: string;
   partnerName: string;
   latest: ChatMessage[];
   children: (open: boolean) => ReactNode;
 }) {
   const titleId = useId();
+  const codeId = useId();
   const dialogId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const storageKey = `latlai:exchange-chat-seen:${viewerId}:${exchangeId}`;
   const [seen, setSeen] = useState(() => readMarker(storageKey));
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const last = latest.at(-1);
 
   useEffect(() => {
@@ -49,14 +52,45 @@ export function ExchangeChatDrawer({ viewerId, exchangeId, partnerName, latest, 
     }
   }, [last, open, seen, storageKey]);
 
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!closing || !dialog?.open) return;
+
+    // Keep the modal and its scroll lock active until the exit animation ends.
+    const exitName = getComputedStyle(dialog).animationName;
+    const exit = dialog.getAnimations?.().find(animation =>
+      "animationName" in animation && animation.animationName === exitName);
+    if (!exit) {
+      dialog.close();
+      return;
+    }
+
+    let active = true;
+    const finish = () => {
+      if (active && dialog.open) dialog.close();
+    };
+    void exit.finished.then(finish, finish);
+    return () => { active = false; };
+  }, [closing]);
+
+  function requestClose() {
+    const dialog = dialogRef.current;
+    if (closing || !dialog?.open) return;
+    dialog.style.setProperty("--drawer-exit-from", getComputedStyle(dialog).transform);
+    setClosing(true);
+  }
+
   function close() {
     if (last && isNewer(last, seen)) setSeen({ id: last.id, sentAt: last.sentAt });
     setOpen(false);
+    setClosing(false);
+    dialogRef.current?.style.removeProperty("--drawer-exit-from");
     trigger.current?.focus({ preventScroll: true });
   }
 
   const unread = open ? 0 : latest.filter(message =>
     message.senderRole === "partner" && isNewer(message, seen)).length;
+  const initial = Array.from(partnerName.trim())[0]?.toLocaleUpperCase("vi");
 
   return (
     <>
@@ -71,13 +105,32 @@ export function ExchangeChatDrawer({ viewerId, exchangeId, partnerName, latest, 
         {unread > 0 && <span className={styles.count} aria-label={`${unread} tin mới trên tab này`}>{unread}</span>}
       </button>
       <dialog id={dialogId} ref={dialogRef} className={styles.drawer}
-        aria-labelledby={titleId} onClose={close} data-lenis-prevent>
+        aria-labelledby={titleId} aria-describedby={codeId}
+        data-closing={closing || undefined} onClose={close} data-lenis-prevent
+        onCancel={event => {
+          event.preventDefault();
+          requestClose();
+        }}>
         <div className={styles.sheet}>
           <header className={styles.header}>
-            <h2 id={titleId} className={styles.name} title={partnerName}>Nhắn cho <bdi>{partnerName}</bdi></h2>
+            <div className={styles.avatarWrapper}>
+              <span className={styles.avatar} aria-hidden="true">
+                {initial || <MessageCircle size={20} />}
+              </span>
+              <span className={styles.onlineDot} title="Đang trực tuyến" aria-label="Đang trực tuyến" />
+            </div>
+            <div className={styles.identity}>
+              <div className={styles.nameRow}>
+                <h2 id={titleId}><bdi>{partnerName}</bdi></h2>
+                <span className={styles.partnerRoleBadge}>Đối tác</span>
+              </div>
+              <p id={codeId} className={styles.transaction}>
+                Mã giao dịch <bdi>#{transactionCode}</bdi>
+              </p>
+            </div>
             <button type="button" aria-label="Đóng tin nhắn" className={styles.close}
-              onClick={() => dialogRef.current?.close()}>
-              <X size={22} aria-hidden="true" />
+              onClick={requestClose}>
+              <X size={20} aria-hidden="true" />
             </button>
           </header>
           {children(open)}

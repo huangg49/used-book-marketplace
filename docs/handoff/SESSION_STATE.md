@@ -1,18 +1,251 @@
+# Hiệu ứng đóng khung chat Đổi sách — 14/11/2026
+
+Nút X và Escape cho khung chat trượt sang phải trong 190 ms, đồng thời làm
+mờ lớp phủ. Modal giữ khóa cuộn và khoảng chừa thanh cuộn đến hết hiệu ứng,
+sau đó trả focus về nút mở chat. Build Member web và Chromium với API giả
+lập kiểm hiệu ứng và vị trí phiếu ở 390/1440 px với reduced motion bật.
+
+# Cố định vị trí Khung Chat và đưa Bộ đếm Ký tự lên hàng Tiêu đề — 14/11/2026
+
+Khắc phục triệt để hiện tượng giật cục và đẩy trồi thanh chat khi bắt đầu gõ tin nhắn (`ChatPanel`):
+- Đưa bộ đếm ký tự (`.charCount`, ví dụ `0/2000`, `4/2000`) lên cùng hàng với nhãn "Tin nhắn" thông qua container `.inputHeaderRow` (`display: flex; justify-content: space-between; align-items: baseline`).
+- Loại bỏ hoàn toàn khối hiển thị động ở dưới cùng của form nhập tin.
+- Khi người dùng bắt đầu gõ hoặc xóa chữ, khung nhập (`.inputForm`) cố định 100% tọa độ y, không bị nhảy giật hay co giãn chiều cao vùng nhập.
+- Build và Playwright test PASS 100% trên cả 390px và 1440px.
+
+# Giữ vị trí phiếu khi mở khung chat — 14/11/2026
+
+Giữ `scrollbar-gutter: stable` của trang trong khi khung chat khóa cuộn.
+Chromium với thanh cuộn 16 px và API giả lập xác nhận phiếu ở 1440 px từng
+lệch 8 px sang phải. Sau sửa, vị trí và chiều rộng giữ nguyên ở 1440/390 px.
+Cuộn nền vẫn bị khóa và Escape trả focus về nút mở chat.
+
+# Cân bằng trục dọc Header Khung Chat Drawer — 14/11/2026
+
+Điều chỉnh dãn cách dòng và căn chỉnh khối định danh đối tác (`.identity` trong `ExchangeChatDrawer`) khớp chính xác với chiều cao avatar tròn (44px / 2.75rem):
+- Khóa chiều cao khối chữ `.identity` bằng đúng chiều cao Avatar `2.75rem` (`44px`), căn giữa trục dọc (`justify-content: center`).
+- Thu gọn khoảng cách giữa tên và mã giao dịch xuống còn `2px`, tối ưu `line-height: 1.15` cho tiêu đề và dòng mã giao dịch bưu chính.
+- Mép trên của tên người dùng căn thẳng hàng với đỉnh cong của Avatar, mép dưới của mã giao dịch căn ngang bằng với đáy của Avatar và chấm xanh online, triệt tiêu hoàn toàn cảm giác lệch trục và thừa khoảng trống.
+- Build và Playwright test PASS 100% trên cả 390px và 1440px.
+
+# Tối giản và làm thoáng Khung Chat Drawer Đổi sách — 14/11/2026
+
+Lược bỏ thanh dải sách (`drawerContextRibbon`) và băng nút câu thoại nhanh (`quickChips`) theo phản hồi của người dùng:
+- Giúp khung chat thoáng đãng, tập trung trọn vẹn vào dòng tin nhắn và nội dung trao đổi giữa hai bên độc giả.
+- Giữ nguyên toàn bộ cấu trúc định danh bưu chính cao cấp: Avatar nổi bật kèm chấm online xanh, tên đối tác kèm nhãn vai trò, mã giao dịch dấu bưu chính lưu trữ monospace, bong bóng thư từ bất đối xứng (`18px 18px 4px 18px` / `18px 18px 18px 4px`) và khung soạn tin dạng viên thuốc nổi bo tròn 24px.
+- Build và Playwright test PASS 100% trên 390px và 1440px.
+
+# Tân trang toàn diện Khung Chat Drawer Đổi sách (Archival Postal Chat Drawer) — 14/11/2026
+
+Tân trang toàn diện ngăn kéo tin nhắn (`ExchangeChatDrawer` & `ChatPanel`) theo thẩm mỹ thư từ lưu trữ bưu cục sách (Archival Postal aesthetic), giải quyết tình trạng khung chat trống trải, thiếu ngữ cảnh và thô sơ:
+1. **Header định danh & Dấu mộc lưu trữ (Identity & Archival Stamp)**:
+   - Avatar viền nổi kép đỏ rượu kèm chấm xanh trực tuyến (Online Dot).
+   - Tên đối tác rõ ràng kèm huy hiệu vai trò `[Đối tác]`.
+   - Mã giao dịch định dạng dấu bưu chính lưu trữ với font monospace trên nền thẻ kraft ngà (`#f4eddf`, viền `#d9cbbd`).
+   - Nút đóng quay 90 độ khi hover, tuân thủ nghiêm ngặt quy chuẩn focus viền wine sát mép 03/11 (`outline-offset: 0`).
+2. **Thanh dải ngữ cảnh giao dịch (Exchange Context Ribbon)**:
+   - Ghim cố định ngay dưới header khi ở dạng drawer (`[Gửi ↗] Tựa sách ⇄ [Nhận ↙] Tựa sách`).
+   - Giúp hai bên luôn nắm rõ cuốn sách đang đàm phán mà không chiếm diện tích vùng tin nhắn.
+3. **Bong bóng thư từ & Trạng thái trống chào đón (Bubbles & Empty State)**:
+   - Bong bóng bất đối xứng hiện đại (`18px 18px 4px 18px` cho người gửi, `18px 18px 18px 4px` cho đối tác) với độ đổ bóng nhẹ ấm áp.
+   - Trạng thái chưa có tin nhắn: Thẻ viền nét đứt phong thư (`.emptyDrawerCard`) với biểu tượng thư từ và lời chào khuyến khích kết nối trao đổi.
+4. **Băng gợi ý câu thoại nhanh & Khung soạn tin dạng viên thuốc nổi (Quick Chips & Pill Composer)**:
+   - Băng nút gợi ý nhanh cuộn ngang (`.quickChips`) giúp người dùng chọn nhanh các câu hỏi thường gặp ("Sách còn nguyên vẹn không bạn?", "Bạn tính gửi qua bưu cục nào?", v.v.).
+   - Khung nhập tin nhắn dạng viên thuốc bo tròn mềm mại (`border-radius: 24px`, viền `#d9cbbd`, focus highlight rượu vang), nút gửi tròn màu đỏ rượu hover phóng to mượt mà.
+5. **Kiểm tra và tương thích**:
+   - Typecheck PASS 0 lỗi (`tsc -b`).
+   - Production Build PASS (`vite build`).
+   - Playwright test PASS 100% trên cả 390px và 1440px (`exchange-finance-recovery.mjs`).
+
+# Phiếu gửi yêu cầu hỗ trợ — 14/11/2026
+
+Bộ chọn giao dịch ưu tiên tên sách và chiều gửi/nhận, để mã, đối tác và trạng thái
+ở dòng phụ. Sau khi chọn, danh sách thu thành một hàng tóm tắt và phần mô tả
+được nhấn rõ hơn. Chuyển hướng dẫn vào cạnh ô mô tả và nút gửi.
+Build Member web và Chromium trên Mongo QA riêng PASS, gồm tìm/tải thêm,
+đổi qua hai giao dịch giữ nguyên bản nháp và gửi đúng đối tượng, màn 320 px chữ
+130% và kiểm luồng hỗ trợ xuyên Member/Admin.
+Khung chọn dùng nền be, mục đang mở dùng đỏ rượu và chữ kem. Khi mục Đang
+diễn ra trống, nút Xem giao dịch đã đóng mở Lịch sử và chuyển focus đến mục đó.
+Chromium với API giả lập kiểm ở 320 px chữ 130% và 1440 px, bản nháp còn nguyên.
+
+# Ngăn tin nhắn trên phiếu Đổi sách — 14/11/2026
+
+Header ngăn chat hiển thị avatar chữ cái, tên đối tác và mã từ chính phiếu.
+Ảnh hồ sơ người khác chưa có API Member để đọc. Làm gọn trạng thái trống,
+bong bóng và khung soạn. Build Member web và Chromium với API giả lập
+ở 390/1440 px kiểm header, bản nháp, Escape/trả focus, lịch sử và phục hồi.
+Kiểm thêm bố cục 320 px với chữ 130%.
+Chữ trong bong bóng tin gửi dùng màu kem trên nền đỏ rượu. Chromium kiểm
+màu thực tế của cả tin gửi và tin nhận với dữ liệu giả lập.
+
+# Nền họa tiết in trên giấy cho Chat và Đổi sách — 14/11/2026
+
+Theo hướng chủ dự án chọn, thay dải sticker bằng họa tiết nét mảnh nâu mực
+và đỏ rượu nhạt. Một lớp dùng chung trong MainLayout trôi từ trên phải xuống
+dưới trái, lặp theo đúng kích thước ô họa tiết. Tăng độ rõ ở mép, làm dịu
+vùng giữa và tạm dừng khi tab ẩn hoặc vùng chính rời viewport.
+Build, detector và Chromium 1440/390 px với dữ liệu giả lập PASS. Kiểm chiều
+trôi, chu kỳ, tab ẩn, forced-colors và phạm vi route. Bản trước lưu local
+trong `.tmp/reading-backdrop-before-print/` để đối chiếu.
+
+# Thu gọn thanh tiến trình Đổi sách — 14/11/2026
+
+Sửa trên checkout demo `codex/admin-exchange-dispute-ui` đang có thay đổi local.
+Theo tham chiếu sidebar Admin, toàn ô của bước hiện tại dùng nền đỏ rượu
+và chữ sáng. Bước đang xem lại dùng nền kem; hai dấu hiệu cùng hiện trong
+lịch sử. Số hoặc dấu tích đặt cạnh tên trên màn rộng và ở trên tên trên màn
+hẹp. Giữ điều kiện mở và thao tác quay về bước hiện tại.
+Build Member web và browser Exchange Finance Recovery với API giả lập PASS
+ở 390/1440 px. Kiểm thêm thanh tiến trình tại 320 px chữ 130%, Enter/Tab,
+trả focus và forced-colors. Không có lần chạy native.
+
+# Thiết kế lại Thanh Tiến trình 5 Bước Đổi Sách (Bookmark Journey Rail) — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`. Tái thiết kế toàn diện thanh 5 bước tiến trình đổi sách (`ExchangeSteps`) theo phong cách thước đo lộ trình sách cổ điển (Bookmark Journey Rail), giải quyết triệt để vấn đề thanh quá mờ nhạt và mất cân đối thị giác:
+- **Mặt phẳng hộp thước đo lộ trình (`.steps`)**: Sử dụng nền giấy ngà ấm áp chuyển sắc nhẹ (`linear-gradient(180deg, #ffffff 0%, #fbf6ee 100%)`), bo góc 20px, viền kép chỉ sách sang trọng (`border: 1.5px solid #d9cbbe`), đổ bóng 3 lớp (`0 4px 20px rgba(40, 25, 20, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9)`), tách biệt hoàn toàn khỏi nền dossier của trang.
+- **Đường ray tiến trình phát sáng (Illuminated Progress Rail)**:
+  - Rãnh ngầm dẫn hướng (`ol::before`): Đường rãnh chìm 4px màu be da cổ điển (`#ebdcd0`), bo tròn 99px và đổ bóng chìm nhẹ.
+  - Dải sáng tiến trình (`ol::after`): Tự động tính toán theo tỉ lệ bước thực tế (`--progress-pct`), phủ dải màu chuyển tiếp từ xanh ngọc bích tri thức (`#254337`) qua xanh ngọc đậm (`#3e6b5c`) đến đỏ rượu Lật Lại (`#5c0202`), có quầng sáng lan tỏa 10px.
+- **Hệ thống trạm mốc đồng nhất & Cấu trúc 2 tầng (Two-line Milestone Stations)**:
+  - Tất cả 5 bước đều có khung viên nang bao bọc riêng (`min-height: 58px; padding: 8px 12px; border-radius: 14px;`), không còn hiện tượng 1 bước có khung còn 4 bước trần trụi.
+  - Cấu trúc 2 dòng rõ ràng: Nhãn phụ dập nổi `BƯỚC 1` ... `BƯỚC 5` (uppercase micro-tag `0.6875rem`) nằm trên tiêu đề chính (`0.9375rem`), tạo nhịp điệu cân bằng thị giác.
+  - **Bước hoàn thành (`data-completed`)**: Dấu ấn ngọc bích 32px nguyên khối (`#254337`) với dấu tích trắng sắc sảo, nền viên nang xanh nhạt (`rgba(235, 245, 238, 0.45)`).
+  - **Bước hiện tại (`data-current`)**: Thẻ hồ sơ trắng nổi bật (`#ffffff`), viền đỏ rượu 2px, dấu ấn sáp đỏ 34px (`#5c0202`) có viền bảo chứng kép và chữ số đậm 850, tiêu đề đỏ rượu nổi bật.
+  - **Bước xem lại lịch sử (`data-selected`)**: Phủ màu vàng giấy ngà dập nổi (`#fcf8db`, viền `#d4be72`).
+  - **Bước chưa tới (`unavailable`)**: Dấu ấn trắng viền nét đứt (`2px dashed #cfc0b0`), nhãn màu cát trầm thanh thoát.
+- **Tương thích di động (Mobile container query <= 680px)**: Tự động căn giữa, đường ray tiến trình chuyển lên cao chạy qua tâm dấu ấn (top 22px), ẩn nhãn `Bước X` để nhường chỗ cho tiêu đề wrap 2 dòng mượt mà.
+- Typecheck (`tsc -b`), build (`vite build`) và Playwright test suite `exchange-finance-recovery.mjs` (390px & 1440px) đều PASS 100%.
+
+# Refactor Giao diện 5 Bước Đổi Sách & Nền Chuyển Động Chibi (Taste v2 & Impeccable) — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`. Nâng cấp toàn diện giao diện 5 bước đổi sách
+(`ExchangeSteps` & `ExchangeHistory`) và hoàn thiện mặt phẳng đỡ hồ sơ (`ExchangeDetailPage`):
+- **Đường ray hành trình liên tục (Journey Rail Stepper)**: Thêm trục nối ngầm xuyên suốt
+  5 bước (`.steps ol::before`), định hình rõ chuỗi hành trình. Phân cấp thị giác chuẩn mực:
+  bước hoàn thành mang huy hiệu tích ngọc bích (`#ebf5ee`/`#254337`), bước hiện tại mang sắc
+  đỏ rượu vang Lật Lại kèm quầng sáng bảo chứng (`#5c0202`), bước đang xem lại lịch sử nổi bật
+  với sắc vàng giấy ngà (`#fcf8db`), bước chưa tới dịu nền (`#f8f4ec`).
+- **Dải băng lưu trữ đối chiếu (Archive Dossier Banner)**: Thay thế hoàn toàn thẻ `h2` tranh chấp
+  thị giác cũ bằng dải thông điệp hồ sơ trang nhã: huy hiệu `Clock` "Bản lưu trữ đối chiếu",
+  tiêu đề phân định rõ "Xem lại bước N: [Tên bước]" và lời giải thích yên tâm cho bạn đọc;
+  nút quay về bước hiện tại màu đỏ rượu nguyên khối sắc sảo.
+- **Hồ sơ sách đối xứng (Dual Book Dossier)**: Bìa sách chuẩn tỉ lệ 3:4 có gáy sách và đổ bóng
+  chiều sâu; tựa sách font serif sắc nét; thẻ tình trạng và giá trị sách dập nổi nhẹ; phân
+  biệt trang nhã giữa "Bạn gửi ↗" (tông đỏ ấm) và "Bạn nhận ↙" (tông xanh ngọc bích tri thức).
+- **Phiếu cân bằng tài chính & Ký quỹ an toàn (Financial Equilibrium Ledger)**: Chuyển đổi 3 ô
+  bảng đơn điệu thành các thẻ cam kết tài chính độc lập có icon `ShieldCheck`, nêu rõ cọc của bạn,
+  cọc của đối tác và tiền bù kèm chỉ dẫn ký quỹ Lật Lại bảo chứng.
+- **Header & Điều hướng hồ sơ**: Mã phiếu `#HEX` được dập nổi dạng tem lưu trữ monospace;
+  nút quay lại và nút nhắn tin đối tác bo góc nguyên khối; toàn bộ focus tuân thủ nghiêm ngặt
+  quy chuẩn 03/11 (`outline: 2px solid var(--shop-wine); outline-offset: 0;`).
+- Typecheck, build và Playwright test suite `exchange-finance-recovery.mjs` (390px & 1440px)
+  đều PASS 100%.
+
+# Nền chuyển động Chibi Vector và Thẻ hồ sơ đỡ giao diện Chat / Đổi sách — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`. Thay thế toàn bộ nền cũ trên `MainLayout`
+bằng nền chuyển động băng chuyền chéo (Diagonal Infinite Marquee) với các sticker vector
+Chibi Lật Lại (8 biểu tượng: sách đỏ dát vàng, mắt kính, sách mở, cú thủ thư, tách trà
+tim, chồi lá bookmark, chồng sách, ngòi bút cổ điển):
+- Chuyển động so le 2 chiều (dải lẻ trôi lên ↗, dải chẵn trôi xuống ↙) ở tốc độ siêu êm
+  dịu 120s, góc nghiêng -25°, độ mờ nền 0.65 tạo không gian đọc sách ấm áp.
+- Tối ưu hiệu năng triệt để: loại bỏ toàn bộ `backdrop-filter: blur()`, bật `contain: strict`,
+  giảm số lượng DOM xuống ~450 phần tử, đảm bảo 60fps mượt mà không còn giật lag.
+- Bổ sung khung thẻ đỡ giao diện (Paper Dossier Surface) trên `/exchange/:id` (`.exchangeSheet`)
+  và `/exchange` (`.container`): nền giấy ngà sang trọng (`rgba(255, 252, 245, 0.97)`),
+  bo góc 20px, viền chỉ sách (`#d9cbbd`) và đổ bóng chiều sâu 3 lớp. Giúp toàn bộ văn bản,
+  tiêu đề và các bước giao nhận nổi bật hoàn toàn, tách biệt 100% khỏi các họa tiết di chuyển phía sau.
+- Build, typecheck, và Playwright suite `exchange-finance-recovery.mjs` (390px & 1440px) đều PASS.
+
+# Nền chuyển động Chat và Đổi sách trên Member Web — 14/11/2026
+
+Checkout demo `codex/admin-exchange-dispute-ui` tại `7203be4c`. MainLayout
+dùng chung họa tiết sách và dấu trang WebP cho Chat, trang tìm sách để đổi và
+phiếu trao đổi 5 bước. Nền trôi từ trên phải xuống dưới trái, giữ cùng lớp khi
+đổi bước và tạm dừng khi tab ẩn hoặc vùng chính rời viewport.
+
+Build Member Web, kiểm tra trực tiếp trên Chromium 1440px/390px, bộ test phục
+hồi tài chính trao đổi và 64 ca workspace Chat với dữ liệu giả lập đều PASS.
+Bộ Chat đầy đủ timeout ở nút “Thương lượng mua” sau khi hủy đề nghị, tái hiện
+với layout trước khi đổi nền. Chờ chủ dự án xem nhịp và màu trong checkout demo.
+
 # Giao diện khiếu nại trao đổi Admin — 14/11/2026
 
-Nhánh `codex/admin-exchange-dispute-ui`, base `64f32cde`. Danh sách gom mã,
-trạng thái và khoản giữ. Chi tiết đưa lý do, hai chiều giao sách và bằng
-chứng vào cột chính, khoản tiền, thời hạn và bước tiếp theo ở cột bên.
-Admin web build, 250 unit và Chromium 1440/390/320 px (320 px chữ 130%)
-PASS. Browser dùng Mongo QA và phản hồi HTTP mô phỏng cho khiếu nại, kiểm
-nhận phụ trách, xác minh bàn giao và giữ đúng lệnh khi mất phản hồi.
-Bước tiếp theo là xem lại trên Admin demo bằng tài khoản được cấp quyền.
+Nhánh `codex/admin-exchange-dispute-ui`, base `64f32cde`. Refactor thẩm mỹ danh sách
+khiếu nại trao đổi theo phương án Hồ sơ phân xử sách cao cấp (Judicial Book Dossier)
+chuẩn Taste v2 và Impeccable (Operate & Care):
+- Tách từng ca khiếu nại thành thẻ hồ sơ độc lập trên nền kệ sách (`--shop-shelf`),
+  hiệu ứng đổ bóng và viền ấm nhẹ khi hover.
+- Đầu hồ sơ: mã hồ sơ `#HEX` in đậm, huy hiệu thẩm quyền Admin (`ShieldAlert`), thời
+  điểm mở thụ lý kèm biểu tượng đồng hồ và nhãn giai đoạn ngữ nghĩa (`.stage`).
+- Khán đài phân xử hai bên (Judicial Arena): đặt song song bên khởi tạo và bên nhận
+  đề xuất đối xứng qua cầu nối trao đổi (`exchangeBridge` với `ArrowLeftRight`),
+  hiển thị avatar người dùng, vai trò, tên đối soát và tựa sách tham gia trao đổi.
+- Khối trích dẫn sự cố: viền chỉ đỏ rượu sát mép (`border-left: 3.5px solid var(--shop-wine)`),
+  tiêu đề "Căn cứ khiếu nại" kèm icon tệp hồ sơ và mô tả tóm tắt 2 dòng.
+- Chân hồ sơ: viên nang ký quỹ (`.escrowCapsule`) với số tiền đang giữ nổi bật và
+  nút điều hướng đỏ rượu nguyên khối "Mở hồ sơ →" có focus sát mép chuẩn quy tắc 03/11.
+- Tương thích đa thiết bị: container queries tự động xếp dọc ở màn hình nhỏ (< 48rem, < 30rem),
+  không vỡ chữ hoặc tràn ngang ở 1440/390/320 px với 130% font zoom.
+Admin web build, typecheck, 250 unit tests và Playwright suite `exchange-resolution-safety.mjs`
+đều PASS toàn bộ.
 
-Lượt chỉnh tiếp bổ sung tên/avatar thành viên cho danh sách và chi tiết,
-tách từng chiều người gửi → người nhận, tựa sách và mốc giao nhận. API E2E
-kiểm quyền và phạm vi trường trả về. Browser QA kiểm tải avatar và chữ cái
-thay thế. Hồ sơ local #B57A9858 đã kiểm tên, tựa sách và hai trạng thái
-từ bản chụp giao dịch. API demo port 3000 cần nạp bản mới để trả avatar ID.
+# Giao diện hồ sơ khiếu nại & đối soát Member Web — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`, base `64f32cde`. Redesign toàn diện trải nghiệm
+xử lý tranh chấp cho bạn đọc (`ExchangeReturnPanel` và `ExchangeEvidencePanel`):
+- Bổ sung thanh thông điệp bảo chứng tâm lý (`assuranceBanner`): trấn an an toàn tiền cọc
+  và quyền lợi trong lúc Admin thụ lý.
+- Header hồ sơ trang trọng: Kicker "Hồ sơ khiếu nại", tiêu đề giai đoạn rõ nét, nhãn vai
+  trò bạn đọc dạng thẻ bo tròn thanh lịch (`Bạn là chủ sách`).
+- Khối chỉ đạo từ Admin (`request`): viền chỉ đỏ rượu sát mép trái, bố cục typography sắc sảo.
+- Thẻ thông số đối chiếu (`facts`): Hạn bổ sung/kháng nghị đếm ngược trực quan, số tiền cọc
+  và tiền bù được bảo chứng nổi bật, giữ trọn vẹn văn bản hợp đồng kiểm thử.
+- Khối bằng chứng sự cố (`ExchangeEvidencePanel`): Khu vực xem trước tệp media được đóng
+  khung cân đối, loại bỏ khoảng trống xám vô nghĩa, ảnh thu nhỏ có viền bo và bóng nhẹ.
+- Đồng bộ hệ thống nút CTA đỏ rượu nguyên khối và viền focus sát mép chuẩn quy chuẩn 03/11.
+Member web build, typecheck, và Playwright browser suite `exchange-finance-recovery.mjs`
+ở cả 390px và 1440px đều PASS.
+
+Rà lại bản Gemini khi có nhiều hồ sơ và nhiều sách. Giữ kiểu thẻ, avatar
+và hiệu ứng hover. Danh sách hiển thị 10 hồ sơ/trang, tìm theo mã, người
+hoặc mọi tựa sách và giữ ngữ cảnh khi quay lại từ chi tiết. Thẻ hiện số
+cuốn còn lại, chi tiết liệt kê từng cuốn theo chiều giao. Build Admin và
+Chromium với 25 hồ sơ mô phỏng, phiếu 5 cuốn, màn 1440/390/320 px PASS.
+Phân trang ở frontend trên tập hồ sơ API hiện trả về.
+
+Member web chỉnh cụm khiếu nại trên phiếu trao đổi. Đưa trạng thái, yêu
+cầu Admin, hạn và tiền đang giữ vào cùng hồ sơ. Gom nút giải trình khi
+form mở, thêm focus và sửa nhãn tệp. Giữ lối phục hồi thao tác khi chưa
+rõ kết quả. Build, 8 ca ActionCard và Chromium local phiếu #B57A9858
+với An/Bình ở 1440/390 px PASS. Kiểm form đến trước bước gửi.
+
+Admin hiển thị giải trình của hai bên trên chi tiết khiếu nại. Đọc nội dung
+đã gửi qua nhật ký và receipt đúng phiếu, giới hạn người đang phụ trách.
+API E2E kiểm hai người gửi, replay và quyền đọc. Admin build và Chromium
+QA PASS. API demo đã nạp bản mới, hồ sơ #B57A9858 hiện một giải trình có sẵn.
+
+Bản thử riêng cho danh sách và chi tiết Admin cùng bước 5 Member web
+tại [exchange-dispute](../../apps/user-web/design-previews/exchange-dispute/index.html).
+Ca mô phỏng An–Bình cho phép gửi giải trình ở Member và xem ngay ở Admin.
+Chromium kiểm tìm kiếm, đổi màn, gửi thử, focus, tải lại và màn
+1440/1024/390/320 px (320 px chữ 130%). Chủ dự án đã duyệt đưa vào web.
+
+Áp vào danh sách Admin, chi tiết Admin và bước 5 Member. Danh sách gọn
+theo hàng, giữ tìm kiếm/phân trang. Chi tiết đặt hai chiều với ảnh sách
+từ bản chụp, gom giải trình và tệp. Member ưu tiên việc cần làm và xem
+lại nội dung của mình sau khi máy chủ ghi nhận. API phân quyền theo người
+gửi hoặc người phụ trách, không đổi lệnh xử lý. Build cả ba app, API E2E
+và Admin Chromium QA PASS. Phiếu local #B57A9858 đã kiểm đọc giải trình
+cũ, hai ảnh tải được và form Member đến trước bước gửi.
+
+Bước 5 Member web dùng hai cột khi đủ chiều rộng nội dung. Giải trình và
+thao tác nằm cạnh bằng chứng, sách và khoản giữ. Màn hẹp tự xếp một cột.
+Đo Chromium local #B57A9858 tại 1440×900, cạnh dưới vùng chọn tệp từ
+1450 xuống 622 px tính từ đầu trang. Kiểm thêm 1024/390/320 px.
+Thông tin đối chiếu dùng hàng riêng dưới hai cột để cân chiều cao.
+Hiện trạng thái chưa gửi giải trình khi API trả danh sách rỗng.
 
 # Trang gửi yêu cầu hỗ trợ — 13/11/2026
 
@@ -28,6 +261,18 @@ phiếu đã lưu trữ và lưu đúng giao dịch. Kiểm ở 1440 px và 320 
 API/Member web build và OpenAPI qua kiểm tra. Member web unit 485/486, ca
 ShippingTrackingCard hiện hành còn lệch câu hiển thị. API demo port 3000
 còn chạy bản cũ do lệnh restart bị môi trường chặn.
+
+Bổ sung 14/11 trên nhánh `codex/support-ui-redesign` từ `64f32cde`. Căn tiêu đề
+danh sách, gửi yêu cầu và chi tiết hồ sơ theo khung Ví. Đồng bộ lề mobile của
+Đánh giá. Giữ bố cục Gemini và sửa nút gửi, nhãn trạng thái, nút tạo trùng,
+phân trang giao dịch và chữ vỡ ở 320 px. Bỏ lời hứa 24 giờ và bảo đảm ký quỹ
+khỏi nội dung hỗ trợ. Member web lint/build và browser với Mongo QA PASS.
+Browser so vị trí tiêu đề Ví, Đánh giá và Hỗ trợ ở 1440/768/320 px.
+
+Trang Hỗ trợ dùng FilterSelect của Member web cho cả bốn bộ chọn trên
+desktop và mobile. Sửa màu hover nút gửi và khoảng trống tiêu đề mobile.
+Chromium với Mongo QA qua kiểm tra bàn phím, chạm 320 px, màu nút và
+khóa bộ chọn trong lúc chờ gửi lại. Member web build/typecheck PASS.
 
 # Tua thời hạn trao đổi trên phiếu và hồ sơ Admin — 13/11/2026
 

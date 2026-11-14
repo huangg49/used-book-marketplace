@@ -1,4 +1,4 @@
-import { demoExchangeDeadlineSchema, exchangeReturnResolutionSchema } from "@used-books/session-client";
+import { demoExchangeDeadlineSchema, exchangeReturnResolutionSchema, exchangeStatementSchema } from "@used-books/session-client";
 import {
   acknowledgedExchange,
   acknowledgedExchangeProposal,
@@ -31,6 +31,7 @@ import type {
 
 const date = z.string().nullable().optional();
 export const exchangeSchema = z.object({
+  statements: z.array(exchangeStatementSchema).optional(),
   returnResolution: exchangeReturnResolutionSchema.optional(),
   canStartReturnResolution: z.boolean().optional(),
   demoShippingAdvanceAvailable: z.boolean().optional(),

@@ -1,4 +1,4 @@
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Clock } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { HandoverNavigation } from "../../../lib/exchange-handover";
@@ -117,19 +117,25 @@ export function ExchangeSteps({ detail, children, navigation }: {
             const available = index < currentIndex && hasStepFacts(id, detail);
             const selected = (viewing ?? current) === id;
             const completed = available && hasCompleted(id, current, detail);
-            const marker = completed ? <Check size={15} aria-hidden="true" /> : index + 1;
-            const content = <><span className={styles.marker} aria-hidden="true">{marker}</span><span>{label}</span></>;
+            const marker = completed ? <Check size={15} strokeWidth={2.6} aria-hidden="true" /> : index + 1;
+            const content = (
+              <>
+                <span className={styles.marker} aria-hidden="true">{marker}</span>
+                <span className={styles.label}>{label}</span>
+              </>
+            );
             return (
               <li key={id} data-current={active || undefined} data-selected={selected || undefined}
-                data-reached={available || active || undefined}>
+                data-completed={completed || undefined}>
                 {active || available ? (
-                  <button ref={active ? currentButton : undefined} type="button"
+                  <button className={styles.step} ref={active ? currentButton : undefined} type="button"
+                    data-focus-inverse={active || undefined}
                     aria-current={active ? "step" : undefined} aria-pressed={selected}
                     aria-label={available ? `Xem lại ${label.toLowerCase()}` : undefined}
                     onClick={() => active ? backToCurrent() : setSelection({ step: id, navigationKey: navigation.navigationKey })}>
                     {content}
                   </button>
-                ) : <span className={styles.unavailable}>{content}<span className={styles.announcement}> · Chưa mở</span></span>}
+                ) : <span className={styles.step}>{content}<span className={styles.announcement}> · Chưa mở</span></span>}
               </li>
             );
           })}
@@ -138,15 +144,20 @@ export function ExchangeSteps({ detail, children, navigation }: {
       <p className={styles.announcement} role="status">Bước hiện tại {steps[currentIndex].label}</p>
       {viewing && (
         <section className={styles.history} data-viewing={viewing} aria-labelledby="exchange-history-heading">
-          <header>
-            <div>
-              <h2 ref={historyHeading} id="exchange-history-heading" tabIndex={-1}>
-                Xem lại {steps.find(step => step.id === viewing)?.label.toLowerCase()}
+          <header className={styles.historyHeader}>
+            <div className={styles.historyHeadingGroup}>
+              <span className={styles.archiveBadge}>
+                <Clock size={13} aria-hidden="true" /> Bản lưu trữ đối chiếu
+              </span>
+              <h2 ref={historyHeading} id="exchange-history-heading" tabIndex={-1} className={styles.historyTitle}>
+                Xem lại bước {steps.findIndex(s => s.id === viewing) + 1}: {steps.find(step => step.id === viewing)?.label}
               </h2>
-              <p>Chỉ xem</p>
+              <p className={styles.historyNote}>
+                Thông tin được lưu vết tự động từ thỏa thuận ban đầu để đối chiếu, không ảnh hưởng đến giao dịch hiện tại.
+              </p>
             </div>
-            <button type="button" onClick={backToCurrent}>
-              <ArrowLeft size={16} aria-hidden="true" /> Về bước hiện tại
+            <button type="button" className={styles.backButton} onClick={backToCurrent}>
+              <ArrowLeft size={16} aria-hidden="true" /> Về bước {steps[currentIndex].label}
             </button>
           </header>
           <StepHistory step={viewing} detail={detail}

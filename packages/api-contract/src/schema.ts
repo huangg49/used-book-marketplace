@@ -8077,6 +8077,16 @@ export interface components {
             avatarId: string | null;
         };
         Exchange: {
+            /** @description Formal statements. The assigned independent reviewer sees both participants' submissions in operations detail. Exchange detail returns only the requesting participant's own submissions. */
+            statements?: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                senderId: string;
+                note: string;
+                /** Format: date-time */
+                sentAt: string;
+            }[];
             /** @description Included only in authorized operations dispute reads. */
             participants?: {
                 initiator: components["schemas"]["ExchangeDisputeParticipant"] | null;

@@ -1,4 +1,4 @@
-/* Snapshot only Chat content. Navigation and the autumn background stay live. */
+/* Snapshot only Chat content. Navigation and the moving background stay live. */
 :root:has([data-chat-transition="true"]) {
   view-transition-name: none;
   --chat-morph-duration: 420ms;

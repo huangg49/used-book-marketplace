@@ -29,6 +29,10 @@
 .root :is(.control, .native):focus-visible {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--filter-select-focus, var(--shop-wine)) 30%, transparent) !important;
 }
+.root :is(.control, .native):disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 .control::placeholder {
   color: var(--filter-select-placeholder, var(--shop-ink)) !important;
   opacity: 1;

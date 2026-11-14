@@ -1,4 +1,4 @@
-import type { DemoExchangeDeadline, ExchangeReturnResolution } from "@used-books/session-client";
+import type { DemoExchangeDeadline, ExchangeReturnResolution, ExchangeStatement } from "@used-books/session-client";
 import type { ExchangeStatus, ExchangeBook, ExchangeUser } from './exchangeMine';
 
 export type ViewerRole = 'proposer' | 'recipient';
@@ -25,6 +25,7 @@ export interface ExchangeDetail {
   deliveryMethod?: 'meetup' | 'shipping';
   revision?: number;
   rawStatus?: string;
+  statements?: ExchangeStatement[];
   returnResolution?: ExchangeReturnResolution;
   demoShippingAdvanceAvailable?: boolean;
   demoDeadline?: DemoExchangeDeadline;

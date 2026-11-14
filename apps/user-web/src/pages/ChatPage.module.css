@@ -33,6 +33,8 @@
   padding: 8px 16px 10px;
   border-radius: 14px;
   background: var(--shop-shelf);
+  border: 1px solid var(--shop-line);
+  box-shadow: 0 12px 40px rgba(40, 25, 20, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -42,8 +44,10 @@
 .guest {
   width: calc(100% - 48px);
   margin: 24px auto 32px;
-  border-radius: 12px;
-  background: var(--shop-paper);
+  border-radius: 14px;
+  background: rgba(255, 252, 245, 0.97);
+  border: 1px solid var(--shop-line);
+  box-shadow: 0 8px 30px rgba(40, 25, 20, 0.05);
 }
 .pageHeading {
   display: flex;

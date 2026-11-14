@@ -48,6 +48,14 @@ try {
       if (p === '/exchanges/' + exchange.id + '/return-resolution') {
         assert.equal(request.method(), 'POST');
         const command = request.postDataJSON();
+        if (command.action === 'SubmitStatement') {
+          const updated = { ...exchangeResult, revision: exchangeResult.revision + 1, statements: [
+            { id: id(900), senderId: user.id, note: command.note, sentAt: now },
+          ] };
+          exchangeResult = updated;
+          const { statements, ...receipt } = updated;
+          return route.fulfill({ json: receipt });
+        }
         assert.equal(command.action, 'Appeal');
         returnCommands.push({ body: command, key: request.headers()['idempotency-key'] });
         if (returnCommands.length === 1) {
@@ -122,7 +130,39 @@ try {
     await page.getByLabel(/^Email/).fill(user.email);
     await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-    await page.getByRole('button', { name: /^Nhắn cho / }).click();
+    const openChat = page.getByRole('button', { name: /^Nhắn cho / });
+    const drawer = page.locator('dialog').filter({ has: page.getByRole('region', { name: /Tin nhắn Đổi sách/ }) });
+    await expect(openChat).toBeVisible();
+    await page.waitForFunction(() => !document.querySelector('[data-paper-storm]'));
+    const position = () => page.locator('main h1').evaluate(node => node.getBoundingClientRect().left);
+    for (const dismiss of [
+      () => drawer.getByRole('button', { name: 'Đóng tin nhắn' }).click(),
+      () => page.keyboard.press('Escape'),
+    ]) {
+      const before = await position();
+      await openChat.click();
+      await expect(drawer).toBeVisible();
+      await drawer.evaluate(node => {
+        node.addEventListener('animationstart', event => {
+          if (event.target !== node || event.pseudoElement || !node.hasAttribute('data-closing')) return;
+          const root = getComputedStyle(document.documentElement);
+          node.dataset.testExit = JSON.stringify({
+            open: node.open, locked: root.overflowY === 'hidden', gutter: root.scrollbarGutter,
+            left: document.querySelector('main h1').getBoundingClientRect().left,
+          });
+        });
+      });
+      await dismiss();
+      await expect(drawer).toBeHidden();
+      const closed = page.locator('dialog[data-test-exit]');
+      assert.deepEqual(JSON.parse(await closed.getAttribute('data-test-exit', { timeout: 2000 })), {
+        open: true, locked: true, gutter: 'stable', left: before,
+      });
+      await closed.evaluate(node => delete node.dataset.testExit);
+      await expect(openChat).toBeFocused();
+      assert.equal(await position(), before);
+    }
+    await openChat.click();
     const chat = page.getByRole('region', { name: /Tin nhắn Đổi sách/ });
     await expect(chat.getByText('Tin thử 501', { exact: true })).toBeVisible();
     await expect(chat.getByText('Tin thử 461', { exact: true })).toHaveCount(0);
@@ -164,6 +204,38 @@ try {
     assert.deepEqual(returnCommands[0], returnCommands[1]);
     await page.screenshot({ path: path.join(out, 'return-appeal-' + width + '.png'), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    exchangeResult = { ...exchangeResult, revision: 10, statements: [], returnResolution: {
+      ...exchangeResult.returnResolution, phase: 'Evidence', note: 'Bổ sung biên nhận bàn giao.',
+      appeals: [], evidenceDueAt: new Date(Date.now() + 48 * 3600000).toISOString(),
+    } };
+    await panel.getByRole('button', { name: 'Cập nhật hồ sơ', exact: true }).click();
+    const task = page.getByRole('region', { name: 'Việc cần làm', exact: true });
+    await expect(task.getByRole('heading', { name: 'Bổ sung thông tin bàn giao', exact: true })).toBeVisible();
+    const evidence = page.getByRole('region', { name: 'Bằng chứng sự cố', exact: true });
+    await expect(evidence.getByLabel('Chọn bằng chứng')).toBeVisible();
+    const statement = page.getByRole('region', { name: 'Giải trình của bạn', exact: true });
+    await expect(statement.getByText('Chưa gửi giải trình', { exact: true })).toBeVisible();
+    const overview = page.getByRole('region', { name: 'Thông tin đối chiếu', exact: true });
+    const overviewBox = await overview.boundingBox();
+    const taskBox = await task.boundingBox();
+    const evidenceBox = await evidence.boundingBox();
+    assert.ok(taskBox && evidenceBox && overviewBox);
+    assert.ok(overviewBox.y >= evidenceBox.y + evidenceBox.height && Math.abs(overviewBox.x - taskBox.x) < 4);
+    if (width === 1440) {
+      assert.ok(Math.abs(taskBox.y - evidenceBox.y) < 4 && evidenceBox.x >= taskBox.x + taskBox.width);
+    } else {
+      assert.ok(evidenceBox.y >= taskBox.y + taskBox.height);
+    }
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await task.getByRole('button', { name: 'Gửi giải trình', exact: true }).click();
+    const editor = page.getByRole('form', { name: 'Gửi giải trình', exact: true });
+    await editor.getByRole('textbox', { name: 'Nội dung gửi' }).fill('Tôi đã bàn giao sách tại điểm hẹn.');
+    await editor.getByRole('button', { name: 'Gửi giải trình', exact: true }).click();
+    await expect(task.getByRole('heading', { name: 'Đã gửi giải trình', exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Giải trình của bạn', exact: true }))
+      .toContainText('Tôi đã bàn giao sách tại điểm hẹn.');
+    await expect(statement.getByText('Chưa gửi giải trình', { exact: true })).toHaveCount(0);
+    await expect(task.getByRole('button', { name: 'Gửi thêm giải trình', exact: true })).toBeEnabled();
     assert.deepEqual(errors, []);
     console.log(`PASS exchange finance recovery ${width}: stale warning/amounts, denied redaction, read-only retry, return appeal with exact replay`);
     await context.close();

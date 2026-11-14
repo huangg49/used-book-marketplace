@@ -16,9 +16,11 @@ export function ExchangeEvidenceReview({
   id,
   userId,
   onAssignment,
+  embedded = false,
 }: {
   id: string;
   userId: string;
+  embedded?: boolean;
   onAssignment?: () => Promise<unknown>;
 }) {
   const [reason, setReason] = useState(""),
@@ -117,10 +119,14 @@ export function ExchangeEvidenceReview({
     }
   }
   return (
-    <section aria-label="Bằng chứng riêng của hồ sơ" className={styles.root}>
-      <h2>
+    <section
+      aria-label="Bằng chứng riêng của hồ sơ"
+      className={styles.root}
+      data-embedded={embedded || undefined}
+    >
+      <h3>
         <Paperclip size={20} aria-hidden="true" /> Bằng chứng riêng của hồ sơ
-      </h2>
+      </h3>
       <p className={styles.hint}>
         Mỗi lượt cấp quyền tải tệp được ghi vào nhật ký.
       </p>
