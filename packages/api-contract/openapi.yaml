@@ -11651,6 +11651,7 @@ paths:
       operationId: actOnOwnExchangeReturn
       tags: [Exchanges]
       description: Existing participant obligation. Record a statement, appeal, report return dispatch, acknowledge receipt or report a return problem.
+      x-locked-access: existing-obligations
       security: [{ bearerAuth: [] }]
       parameters:
         - in: path

@@ -2312,8 +2312,12 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         expect((await get(ops + '/dispute', admin).expect(200)).body.demoDeadline).toBe('Evidence');
         const statementKey = randomUUID();
         const statement = { expectedVersion: evidence.revision, action: 'SubmitStatement', note: 'Tôi đã bàn giao sách tại điểm hẹn.' };
+        const lockedOutsider = await reader(['MEMBER'], 'LOCKED');
+        await post(member + '/return-resolution', statement, lockedOutsider).expect(404);
+        await db.setStatus(user1.id, 'LOCKED');
         const submitted = (await post(member + '/return-resolution', statement, user1, statementKey).expect(200)).body;
         await post(member + '/return-resolution', statement, user1, statementKey).expect(200);
+        await db.setStatus(user1.id, 'ACTIVE');
         const secondStatement = { expectedVersion: submitted.revision, action: 'SubmitStatement', note: 'Tôi xác nhận đã nhận sách.' };
         const latest = (await post(member + '/return-resolution', secondStatement, user2).expect(200)).body;
         const detail = (await get(ops + '/dispute', admin).expect(200)).body;
