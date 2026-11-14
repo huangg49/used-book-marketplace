@@ -1,60 +1,81 @@
 .root {
   display: grid;
-  gap: 12px;
+  gap: 0.8rem;
   min-width: 0;
-  padding-block: 16px;
-  border-block: 1px solid var(--border);
+  padding: clamp(0.75rem, 2.4cqi, 1.4rem);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-paper);
   overflow-wrap: anywhere;
 }
-.root h3,
-.root p {
-  margin: 0;
+
+.root h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
+
+.hint,
+.file span {
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+}
+
 .root label {
   display: grid;
-  gap: 8px;
+  gap: 0.35rem;
+  font-weight: 700;
 }
+
 .root textarea {
   min-height: 88px;
   width: 100%;
   font: inherit;
 }
-.root button {
+
+.root :global(.button) {
   width: fit-content;
   max-width: 100%;
-  min-height: 44px;
-  padding: 10px 16px;
-  border: 1px solid var(--forest);
-  border-radius: 8px;
-  color: var(--forest);
-  background: var(--surface);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  overflow-wrap: anywhere;
-  text-align: start;
 }
-.root button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-.root button:focus-visible {
-  outline: 2px solid var(--forest);
-  outline-offset: 3px;
-}
+
 .root ul {
-  display: grid;
-  gap: 12px;
-  margin: 0;
   padding: 0;
+  margin: 0;
   list-style: none;
 }
+
 .root li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block: 0.75rem;
+  border-top: 1px solid var(--shop-line);
 }
 
-.preview { display: grid; gap: 12px; min-width: 0; }
-.preview img, .preview video { display: block; width: 100%; max-height: 440px; object-fit: contain; border-radius: 8px; background: var(--surface); }
+.file {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.file span {
+  display: block;
+}
+
+.preview {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.preview :is(img, video) {
+  display: block;
+  width: 100%;
+  max-height: 440px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--surface);
+}

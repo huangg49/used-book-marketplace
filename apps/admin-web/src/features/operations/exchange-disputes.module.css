@@ -1,77 +1,325 @@
-.reasonBox {
-  background: var(--shop-shelf, #f4eddf);
-  border: 1px solid #dfd2c6;
-  border-radius: 6px;
-  padding: 0.85rem 1rem;
+.page {
+  display: grid;
+  gap: 1.1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  container-type: inline-size;
+}
+
+.heading,
+.queueHeader {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.heading :global(.page-heading) {
+  margin: 0;
+}
+
+.heading :global(.intro) {
+  margin: 0;
+}
+
+.queue,
+.card,
+.nextStep {
+  min-width: 0;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-paper);
+}
+
+.queueHeader,
+.card,
+.nextStep {
+  padding: clamp(0.75rem, 2.4cqi, 1.4rem);
+}
+
+.queueHeader {
+  border-bottom: 1px solid var(--shop-line);
+}
+
+.page h2,
+.page h3,
+.page p {
+  margin: 0;
+}
+
+.page h2 {
+  font-size: 1.125rem;
+  line-height: 1.4;
+  color: var(--shop-wine);
+}
+
+.queueHeader p,
+.queueFacts,
+.shipments time,
+.muted {
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+}
+
+.queueHeader h2 + p {
+  margin-top: 0.25rem;
+}
+
+.queueCount,
+.identity strong,
+.facts dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.queue :global(.list-feedback) > :not(:global(.refresh-status)),
+.queue :global(.refresh-status[data-busy="true"]) {
+  padding-inline: clamp(0.75rem, 2.4cqi, 1.4rem);
+}
+
+.queue :global(.refresh-status[data-busy="false"]),
+.queue :global(.refresh-status[data-busy="false"]) > p {
+  min-height: 0;
+  padding: 0;
+}
+
+.page > :global(.notice),
+.column > :global(.notice) {
+  margin: 0;
+}
+
+.queueList,
+.shipments {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.queueRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(11rem, 0.5fr) auto;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  padding: clamp(0.75rem, 2.4cqi, 1.4rem);
+}
+
+.queueRow + .queueRow {
+  border-top: 1px solid var(--shop-line);
+}
+
+.queueCase,
+.queueFacts {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+}
+
+.queueCase h3 {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.queueCase p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+}
+
+.stage {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  color: var(--shop-wine);
+  background: var(--shop-shelf);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.caseLink,
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  width: fit-content;
+  max-width: 100%;
+  color: var(--shop-wine);
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.caseLink {
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--shop-control);
+}
+
+.caseLink:hover {
+  background: var(--shop-shelf);
+}
+
+.backLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.page svg {
+  flex-shrink: 0;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  margin-top: 0.45rem;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+}
+
+.column,
+.card,
+.nextStep {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.column {
+  gap: 1rem;
+}
+
+.card h2 {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.detailPageContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem clamp(0.75rem, 4vw, 2rem) 3rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-  overflow-wrap: anywhere;
+.prose {
+  white-space: pre-wrap;
+  line-height: 1.65;
 }
 
-.detailHeader {
+.shipments li,
+.verified {
   display: grid;
-  gap: 0.75rem;
-  justify-items: start;
+  gap: 0.3rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--shop-line);
 }
 
-.detailHeader h1,
-.reasonBox h2,
-.reasonBox p {
+.shipments li:last-child {
+  padding-bottom: 0;
+}
+
+.shipments h3 {
+  font-size: 0.875rem;
+}
+
+.shipments h3 svg {
+  vertical-align: middle;
+  color: var(--shop-muted);
+}
+
+.verified {
+  padding-bottom: 0;
+}
+
+.facts {
   margin: 0;
 }
 
-.returnFacts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
-  gap: 0.75rem 1.25rem;
-  margin: 0.75rem 0;
+.facts:empty {
+  display: none;
 }
 
-.returnFacts dt {
-  font-weight: 600;
+.facts > div {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  padding-block: 0.5rem;
 }
 
-.returnFacts dd {
-  margin: 0.25rem 0 0;
+.facts > div + div {
+  border-top: 1px solid var(--shop-line);
 }
 
-.detailPageContainer :is(textarea, select) {
+.facts dt,
+.facts small {
+  color: var(--shop-muted);
+}
+
+.facts small {
+  display: block;
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.facts .total {
+  padding-bottom: 0;
+}
+
+.total dd,
+.total dt {
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+
+.nextStep :is(textarea, select) {
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
 }
 
-.nextStep {
-  display: grid;
-  gap: 0.65rem;
-}
-
+.nextStep > label,
+.verifyCallout,
 .demoAction {
   display: grid;
-  justify-items: start;
   gap: 0.65rem;
+  min-width: 0;
 }
 
-.nextStep h2,
-.nextStep p {
-  margin: 0;
-}
-
-.verifyCallout {
-  display: grid;
+.verifyCallout,
+.demoAction {
   justify-items: start;
-  gap: 0.85rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--shop-line, #d9cbbd);
-  border-inline-start: 3px solid var(--admin-aquarium-ink, #164b56);
-  border-radius: 6px;
+}
+
+.nextStep :global(.operation-panel) {
+  min-width: 0;
+}
+
+@container (max-width: 48rem) {
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .queueRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .queueCase {
+    grid-column: 1 / -1;
+  }
+}
+
+@container (max-width: 25rem) {
+  .queueRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FileText, Paperclip } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
   exchangeEvidenceAccessSchema,
@@ -8,7 +9,7 @@ import {
 import { z } from "zod";
 import { ApiError } from "@used-books/session-client";
 import { session } from "../../core/session";
-import { Notice } from "../../core/ui";
+import { Button, Notice } from "../../core/ui";
 import styles from "./exchange-evidence-review.module.css";
 const receipt = z.object({ entityId: z.string(), state: z.string() });
 export function ExchangeEvidenceReview({
@@ -117,10 +118,11 @@ export function ExchangeEvidenceReview({
   }
   return (
     <section aria-label="Bằng chứng riêng của hồ sơ" className={styles.root}>
-      <h3>Bằng chứng riêng của hồ sơ</h3>
-      <p>
-        Nhận phụ trách để xem tệp. Mỗi lượt cấp quyền tải được ghi audit; không
-        dùng bằng chứng để tự động hoàn tiền hoặc xác nhận nơi giữ sách.
+      <h2>
+        <Paperclip size={20} aria-hidden="true" /> Bằng chứng riêng của hồ sơ
+      </h2>
+      <p className={styles.hint}>
+        Mỗi lượt cấp quyền tải tệp được ghi vào nhật ký.
       </p>
       <label>
         Lý do tiếp nhận / xem tệp
@@ -146,12 +148,14 @@ export function ExchangeEvidenceReview({
               ? "Hồ sơ đã có người phụ trách. Chỉ Admin có thể nhận lại với lý do."
               : "Chưa có người phụ trách bằng chứng."}
           </p>
-          <button
-            disabled={busy || (!intent && reason.trim().length < 5)}
+          <Button
+            variant="primary"
+            busy={busy}
+            disabled={!access.data || (!intent && reason.trim().length < 5)}
             onClick={() => void assign()}
           >
             {intent ? "Thử lại tiếp nhận" : "Nhận phụ trách bằng chứng"}
-          </button>
+          </Button>
         </>
       ) : (
         <>
@@ -180,14 +184,24 @@ export function ExchangeEvidenceReview({
               <ul>
                 {list.data?.items.map((e) => (
                   <li key={e.id}>
-                    {e.fileName} · {e.mimeType} · {Math.ceil(e.byteSize / 1000)}{" "}
-                    KB{" "}
-                    <button
-                      disabled={e.status !== "Ready" || reason.trim().length < 5}
+                    <div className={styles.file}>
+                      <FileText size={18} aria-hidden="true" />
+                      <div>
+                        <strong>{e.fileName}</strong>
+                        <span>
+                          {e.mimeType} · {Math.ceil(e.byteSize / 1000)} KB
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      aria-label={`Cấp quyền tải ${e.fileName}`}
+                      disabled={
+                        e.status !== "Ready" || reason.trim().length < 5
+                      }
                       onClick={() => void read(e.id, e.fileName, e.mimeType)}
                     >
-                      Cấp quyền tải {e.fileName}
-                    </button>
+                      Cấp quyền tải
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -195,20 +209,46 @@ export function ExchangeEvidenceReview({
           )}
         </>
       )}
-      {assigned && !list.isError && download &&
-        list.data?.items.some(e => e.id === download.evidenceId && e.status === "Ready") && (
-        <div className={styles.preview}>
-          {!previewFailed && download.mimeType.startsWith("image/") && <img onError={() => setPreviewFailed(true)} src={download.url} alt={`Bằng chứng: ${download.name}`} />}
-          {!previewFailed && download.mimeType === "video/mp4" && <video onError={() => setPreviewFailed(true)} aria-label={`Video bằng chứng: ${download.name}`} src={download.url} controls playsInline preload="metadata">Trình duyệt chưa phát được video. Dùng liên kết tải bên dưới.</video>}
-        {previewFailed && <p role="status">Chưa xem trước được tệp. Dùng liên kết tải bên dưới hoặc cấp lại quyền khi liên kết hết hạn.</p>}
-        <p>
-          <a href={download.url} target="_blank" rel="noopener noreferrer">
-            Tải tệp đã được cấp quyền: {download.name}
-          </a>{" "}
-          · Liên kết hết hạn sau tối đa 2 phút.
-        </p>
-        </div>
-      )}
+      {assigned &&
+        !list.isError &&
+        download &&
+        list.data?.items.some(
+          (e) => e.id === download.evidenceId && e.status === "Ready",
+        ) && (
+          <div className={styles.preview}>
+            {!previewFailed && download.mimeType.startsWith("image/") && (
+              <img
+                onError={() => setPreviewFailed(true)}
+                src={download.url}
+                alt={`Bằng chứng: ${download.name}`}
+              />
+            )}
+            {!previewFailed && download.mimeType === "video/mp4" && (
+              <video
+                onError={() => setPreviewFailed(true)}
+                aria-label={`Video bằng chứng: ${download.name}`}
+                src={download.url}
+                controls
+                playsInline
+                preload="metadata"
+              >
+                Trình duyệt chưa phát được video. Dùng liên kết tải bên dưới.
+              </video>
+            )}
+            {previewFailed && (
+              <p role="status">
+                Chưa xem trước được tệp. Dùng liên kết tải bên dưới hoặc cấp lại
+                quyền khi liên kết hết hạn.
+              </p>
+            )}
+            <p>
+              <a href={download.url} target="_blank" rel="noopener noreferrer">
+                Tải tệp đã được cấp quyền: {download.name}
+              </a>{" "}
+              · Liên kết hết hạn sau tối đa 2 phút.
+            </p>
+          </div>
+        )}
       {error && <Notice tone="error">{error}</Notice>}
     </section>
   );

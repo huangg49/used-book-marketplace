@@ -39,6 +39,7 @@ try {
     initiatorListingId: randomUUID(), recipientListingId: randomUUID(),
     status: 'ResolutionPending', revision: 8, initiatorDeposit: 300000,
     recipientDeposit: 200000, diffAmount: 100000, createdAt: now, updatedAt: now,
+    initiatorFundedAt: now, recipientFundedAt: now, diffPayerId: null,
     initiatorShippedAt: now, recipientShippedAt: now, disputedAt: now,
     disputedBy: 'System', disputeReason: 'QA giao diện: sách đang được đối chiếu tình trạng và nơi giữ. '.repeat(5),
   };
@@ -107,7 +108,7 @@ try {
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill('admin@operations.test');
   await page.getByLabel(/^Mật khẩu(?:\s|$)/).fill(password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Khiếu nại trao đổi sách.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Khiếu nại trao đổi sách', exact: true })).toBeVisible();
   await expect(page.getByText('Chờ xử lý · Giữ tiền và sách', { exact: true })).toBeVisible();
   await expect(page.getByText(/Giữ tiền và sách trong lúc đối chiếu/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Phân xử', exact: true })).toHaveCount(0);
@@ -116,12 +117,13 @@ try {
   await mkdir(artifacts, { recursive: true });
   for (const width of [1440, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
-    if (width === 320) await page.addStyleTag({ content: ':root { font-size: 130%; }' });
+    const textZoom = width === 320 ? await page.addStyleTag({ content: ':root { font-size: 130%; }' }) : null;
     await page.screenshot({ path: path.join(artifacts, `queue-${width}.png`), fullPage: true });
     const overflow = await page.evaluate(() => [...document.querySelectorAll('*')]
       .filter(el => el.getBoundingClientRect().right > innerWidth + 1)
       .map(el => ({ tag: el.tagName, class: el.className, right: Math.round(el.getBoundingClientRect().right) })).slice(0, 12));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, JSON.stringify({ width, overflow }));
+    await textZoom?.evaluate((style) => style.remove());
   }
   mode = 'error';
   await page.getByRole('button', { name: 'Cập nhật danh sách', exact: true }).click();
@@ -136,6 +138,10 @@ try {
   await page.getByRole('button', { name: 'Cập nhật danh sách', exact: true }).click();
   await page.getByRole('link', { name: 'Mở hồ sơ', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Hai chiều giao sách' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nội dung báo sự cố' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Đối chiếu khoản tiền' })).toBeVisible();
+  await expect(page.getByText('Đang giữ', { exact: true })).toBeVisible();
+  await expect(page.getByText(/600[.]000/)).toBeVisible();
   await expect(page.getByText(/Chưa đủ điều kiện chạy quy trình trả sách một chiều/)).toBeVisible();
   current = { ...current, recipientShippedAt: null };
   canVerify = true;
@@ -158,8 +164,13 @@ try {
   await expect(page.getByRole('heading', { name: 'Đang bổ sung bằng chứng' })).toBeVisible();
   assert.equal(attempts, 2);
   assert.deepEqual(commands[0], commands[1]);
-  await page.screenshot({ path: path.join(artifacts, 'return-detail-320.png'), fullPage: true });
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    if (width === 320) await page.addStyleTag({ content: ':root { font-size: 130%; }' });
+    await page.evaluate(() => { window.scrollTo(0, 0); return document.fonts.ready; });
+    await page.screenshot({ path: path.join(artifacts, `return-detail-${width}.png`), fullPage: true });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Detail overflow at ${width}px`);
+  }
   assert.deepEqual(errors, []);
   console.log('PASS: held queue, read-only out-of-scope case, assignment, return evidence request, same key/body after lost ACK, error/retry/empty, 1440/390/320 + 130% text. UI HTTP fixtures.');
 } finally {

@@ -1,3 +1,13 @@
+# Giao diện khiếu nại trao đổi Admin — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`, base `64f32cde`. Danh sách gom mã,
+trạng thái và khoản giữ. Chi tiết đưa lý do, hai chiều giao sách và bằng
+chứng vào cột chính, khoản tiền, thời hạn và bước tiếp theo ở cột bên.
+Admin web build, 250 unit và Chromium 1440/390/320 px (320 px chữ 130%)
+PASS. Browser dùng Mongo QA và phản hồi HTTP mô phỏng cho khiếu nại, kiểm
+nhận phụ trách, xác minh bàn giao và giữ đúng lệnh khi mất phản hồi.
+Bước tiếp theo là xem lại trên Admin demo bằng tài khoản được cấp quyền.
+
 # Trang gửi yêu cầu hỗ trợ — 13/11/2026
 
 Nhánh `codex/support-request-redesign`, base `16ba9585`. Member web tách phần
