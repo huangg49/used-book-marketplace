@@ -16,7 +16,7 @@ const HOUR = 3_600_000;
 const STAFF_LIMIT = 300_000;
 type Action = Wire['ExchangeReturnCommand']['action'];
 
-function oneSidedShipment(row: ExchangeDoc) {
+export function oneSidedShipment(row: ExchangeDoc) {
   const sent = Boolean(row.initiatorShippedAt);
   const shippedAt = sent ? row.initiatorShippedAt : row.recipientShippedAt;
   const receivedAt = sent ? row.recipientReceivedAt : row.initiatorReceivedAt;
@@ -53,7 +53,27 @@ function oneSidedShipment(row: ExchangeDoc) {
 
 export function oneSidedReturn(row: ExchangeDoc) {
   const scope = oneSidedShipment(row);
-  return scope && (scope.receivedAt || row.outboundDeliveryVerification) ? scope : null;
+  if (scope && (scope.receivedAt || row.outboundDeliveryVerification)) return scope;
+  if (row.initiatorShippedAt && row.recipientShippedAt && row.initiatorReceivedAt && row.recipientReceivedAt) {
+    const isRecipientComplainant = row.disputedBy === 'Recipient' || row.disputedBy === row.recipientId;
+    const victimIsInitiator = row.resolutionDecision === 'CompensateInitiator' ||
+      (row.resolutionDecision !== 'CompensateRecipient' && !isRecipientComplainant);
+    return {
+      shippedAt: victimIsInitiator ? row.recipientShippedAt : row.initiatorShippedAt,
+      receivedAt: victimIsInitiator ? row.initiatorReceivedAt : row.recipientReceivedAt,
+      ownerId: victimIsInitiator ? row.initiatorId : row.recipientId,
+      holderId: victimIsInitiator ? row.recipientId : row.initiatorId,
+      listingId: victimIsInitiator ? row.recipientListingId : row.initiatorListingId,
+      otherListingId: victimIsInitiator ? row.initiatorListingId : row.recipientListingId,
+      ownerDeposit: victimIsInitiator ? row.initiatorDeposit : row.recipientDeposit,
+      holderDeposit: victimIsInitiator ? row.recipientDeposit : row.initiatorDeposit,
+      differenceAmount: row.diffAmount,
+      differencePayerId: row.diffPayerId,
+      ownerOrderId: victimIsInitiator ? row.initiatorOrderId : row.recipientOrderId,
+      holderOrderId: victimIsInitiator ? row.recipientOrderId : row.initiatorOrderId,
+    };
+  }
+  return null;
 }
 
 export function pendingOutboundDelivery(row: ExchangeDoc) {

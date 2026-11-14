@@ -764,6 +764,293 @@ function OperationsReturnActions({
   );
 }
 
+function InspectionDisputeActions({
+  item,
+  user,
+  reload,
+  onFinish,
+  onPending,
+}: {
+  item: ExchangeDisputeItem;
+  user: CurrentUser;
+  reload: () => Promise<unknown>;
+  onFinish: (outcome: Omit<Outcome, "close">) => void;
+  onPending: (value: boolean) => void;
+}) {
+  const key = ["operations", "exchange-evidence-access", user.id, item.id];
+  const access = useQuery({
+    queryKey: key,
+    queryFn: () =>
+      session.request(
+        "/operations/exchanges/" + item.id + "/evidence-access",
+        exchangeEvidenceAccessSchema,
+      ),
+  });
+  const assigned = access.isSuccess && access.data.assigneeId === user.id;
+
+  const initiatorName =
+    item.participants?.initiator?.displayName?.trim() || "Bên khởi tạo";
+  const recipientName =
+    item.participants?.recipient?.displayName?.trim() || "Bên nhận đề xuất";
+
+  const isComplainantRecipient =
+    item.disputedBy === item.recipientId || item.disputedBy === "Recipient";
+  const isComplainantInitiator =
+    item.disputedBy === item.initiatorId || item.disputedBy === "Initiator";
+
+  const initiatorDeposit = item.initiatorDeposit;
+  const recipientDeposit = item.recipientDeposit;
+  const diffAmount = item.diffAmount;
+  const diffPayerIsInitiator = item.diffPayerId === item.initiatorId;
+  const diffPayerIsRecipient = item.diffPayerId === item.recipientId;
+
+  const defaultDecision = isComplainantRecipient
+    ? "CompensateRecipient"
+    : isComplainantInitiator
+      ? "CompensateInitiator"
+      : "CompleteExchange";
+
+  const [decision, setDecision] = useState<
+    "CompleteExchange" | "CompensateInitiator" | "CompensateRecipient"
+  >(defaultDecision);
+  const [note, setNote] = useState("");
+
+  const recipientTotal =
+    recipientDeposit +
+    initiatorDeposit +
+    (diffPayerIsRecipient && diffAmount > 0 ? diffAmount : 0);
+
+  const initiatorTotal =
+    initiatorDeposit +
+    recipientDeposit +
+    (diffPayerIsInitiator && diffAmount > 0 ? diffAmount : 0);
+
+  const decisionMeta = {
+    CompensateRecipient: {
+      label: `Bồi thường cho ${recipientName} (+${money(recipientTotal)})`,
+      ruling: `Xác định sách do ${initiatorName} gửi đến bị hư hại/không đúng mô tả. Chấp nhận khiếu nại của ${recipientName}.`,
+      confirmTitle: `Xác nhận bồi thường cho ${recipientName}?`,
+      party1: {
+        name: recipientName,
+        role: "Bên bị hại · Nhận bồi thường",
+        amount: `+${money(recipientTotal)}`,
+        isPositive: true,
+        detail: `Hoàn ${money(recipientDeposit)} cọc + nhận ${money(initiatorDeposit)} bồi thường${diffPayerIsRecipient && diffAmount > 0 ? ` + hoàn ${money(diffAmount)} tiền bù` : ""}`,
+      },
+      party2: {
+        name: initiatorName,
+        role: "Bên vi phạm · Làm hỏng sách",
+        amount: `-${money(initiatorDeposit)}`,
+        isPositive: false,
+        detail: `Tịch thu toàn bộ cọc · Nhận 1 điểm vi phạm · Sách bị đóng`,
+      },
+      footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + (diffPayerIsRecipient && diffAmount > 0 ? diffAmount : 0))} về ví`,
+    },
+    CompleteExchange: {
+      label: "Bác khiếu nại (Hoàn tất trao đổi, hoàn 100% cọc)",
+      ruling: "Sách đúng mô tả ban đầu, khiếu nại không đủ cơ sở. Hoàn tất trao đổi bình thường.",
+      confirmTitle: "Xác nhận bác khiếu nại & hoàn tất trao đổi?",
+      party1: {
+        name: initiatorName,
+        role: "Bên khởi tạo · Hoàn tất",
+        amount: `+${money(initiatorDeposit + (diffPayerIsRecipient && diffAmount > 0 ? diffAmount : 0))}`,
+        isPositive: true,
+        detail: `Hoàn 100% cọc (${money(initiatorDeposit)})${diffPayerIsRecipient && diffAmount > 0 ? ` + nhận ${money(diffAmount)} tiền bù` : ""}`,
+      },
+      party2: {
+        name: recipientName,
+        role: "Bên nhận đề xuất · Hoàn tất",
+        amount: `+${money(recipientDeposit + (diffPayerIsInitiator && diffAmount > 0 ? diffAmount : 0))}`,
+        isPositive: true,
+        detail: `Hoàn 100% cọc (${money(recipientDeposit)})${diffPayerIsInitiator && diffAmount > 0 ? ` + nhận ${money(diffAmount)} tiền bù` : ""}`,
+      },
+      footerText: "Cả hai bên đều nhận lại 100% tiền cọc về ví",
+    },
+    CompensateInitiator: {
+      label: `Bồi thường cho ${initiatorName} (+${money(initiatorTotal)})`,
+      ruling: `Xác định sách do ${recipientName} gửi đến bị hư hại/không đúng mô tả. Chấp nhận khiếu nại của ${initiatorName}.`,
+      confirmTitle: `Xác nhận bồi thường cho ${initiatorName}?`,
+      party1: {
+        name: initiatorName,
+        role: "Bên bị hại · Nhận bồi thường",
+        amount: `+${money(initiatorTotal)}`,
+        isPositive: true,
+        detail: `Hoàn ${money(initiatorDeposit)} cọc + nhận ${money(recipientDeposit)} bồi thường${diffPayerIsInitiator && diffAmount > 0 ? ` + hoàn ${money(diffAmount)} tiền bù` : ""}`,
+      },
+      party2: {
+        name: recipientName,
+        role: "Bên vi phạm · Làm hỏng sách",
+        amount: `-${money(recipientDeposit)}`,
+        isPositive: false,
+        detail: `Tịch thu toàn bộ cọc · Nhận 1 điểm vi phạm · Sách bị đóng`,
+      },
+      footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + (diffPayerIsInitiator && diffAmount > 0 ? diffAmount : 0))} về ví`,
+    },
+  };
+
+  const active = decisionMeta[decision];
+
+  return (
+    <section
+      aria-label="Phán quyết khiếu nại kiểm tra sách"
+      className={styles.nextStep}
+    >
+      <h2>Phán quyết khiếu nại kiểm tra sách</h2>
+      {!assigned ? (
+        <p>
+          Nhận phụ trách ở mục bằng chứng để đưa ra phán quyết cho hồ sơ này.
+        </p>
+      ) : (
+        <ActionPanel
+          label="Phán quyết"
+          title={active.label}
+          intro={active.ruling}
+          fields={(locked) => (
+            <>
+              <label>
+                Phương án phán quyết
+                <select
+                  value={decision}
+                  disabled={locked}
+                  onChange={(e) => setDecision(e.target.value as any)}
+                >
+                  <option value="CompensateRecipient">
+                    {decisionMeta.CompensateRecipient.label}
+                  </option>
+                  <option value="CompleteExchange">
+                    {decisionMeta.CompleteExchange.label}
+                  </option>
+                  <option value="CompensateInitiator">
+                    {decisionMeta.CompensateInitiator.label}
+                  </option>
+                </select>
+              </label>
+
+              <div className={styles.settlementCard}>
+                <div className={styles.settlementHeader}>
+                  <span>Dòng tiền sau phán quyết</span>
+                  <span>Sổ cái</span>
+                </div>
+                <div className={styles.settlementPartyBlock}>
+                  <div className={styles.settlementPartyRow}>
+                    <div className={styles.settlementPartyName}>
+                      <span>{active.party1.name}</span>
+                      <span className={styles.settlementPartyRole}>({active.party1.role})</span>
+                    </div>
+                    <div className={active.party1.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNegative}>
+                      {active.party1.amount}
+                    </div>
+                  </div>
+                  <div className={styles.settlementPartyDetail}>
+                    {active.party1.detail}
+                  </div>
+                </div>
+
+                <hr className={styles.settlementDivider} />
+
+                <div className={styles.settlementPartyBlock}>
+                  <div className={styles.settlementPartyRow}>
+                    <div className={styles.settlementPartyName}>
+                      <span>{active.party2.name}</span>
+                      <span className={styles.settlementPartyRole}>({active.party2.role})</span>
+                    </div>
+                    <div className={active.party2.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNegative}>
+                      {active.party2.amount}
+                    </div>
+                  </div>
+                  <div className={styles.settlementPartyDetail}>
+                    {active.party2.detail}
+                  </div>
+                </div>
+
+                <div className={styles.settlementFooter}>
+                  <span>{active.footerText}</span>
+                </div>
+              </div>
+
+              <label>
+                Lý do phán quyết
+                <textarea
+                  value={note}
+                  disabled={locked}
+                  minLength={10}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Ví dụ: Đối chiếu video đóng gói của bên gửi và ảnh nhận hàng, xác nhận sách rách nát trước khi giao..."
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </label>
+            </>
+          )}
+          dirty={note.trim().length > 0}
+          validate={() => note.trim().length >= 10}
+          submitLabel="Xác nhận phán quyết"
+          confirmTitle={active.confirmTitle}
+          confirmBody={
+            <div>
+              <p>
+                <strong>Phán quyết:</strong> {active.ruling}
+              </p>
+              <div className={styles.settlementCard} style={{ margin: "10px 0" }}>
+                <div className={styles.settlementPartyBlock}>
+                  <div className={styles.settlementPartyRow}>
+                    <strong>{active.party1.name}</strong>
+                    <span className={active.party1.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNegative}>
+                      {active.party1.amount}
+                    </span>
+                  </div>
+                  <small className={styles.settlementPartyDetail}>{active.party1.detail}</small>
+                </div>
+                <hr className={styles.settlementDivider} />
+                <div className={styles.settlementPartyBlock}>
+                  <div className={styles.settlementPartyRow}>
+                    <strong>{active.party2.name}</strong>
+                    <span className={active.party2.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNegative}>
+                      {active.party2.amount}
+                    </span>
+                  </div>
+                  <small className={styles.settlementPartyDetail}>{active.party2.detail}</small>
+                </div>
+              </div>
+              <p style={{ marginTop: 8 }}>
+                <strong>Lý do ghi nhận:</strong> {note}
+              </p>
+            </div>
+          }
+          build={() => ({
+            path: `/operations/exchanges/${item.id}/resolve`,
+            body: {
+              expectedVersion: item.revision,
+              decision,
+              reason: note.trim(),
+            },
+          })}
+          schema={exchangeDisputeResolution}
+          interpret={(updated) => {
+            if (updated.id !== item.id) {
+              throw new Error("Chưa xác minh được kết quả của đúng hồ sơ.");
+            }
+            return {
+              tone: "success",
+              text:
+                decision === "CompleteExchange"
+                  ? "Đã bác khiếu nại và hoàn tất trao đổi thành công. Tiền cọc đã được tất toán về ví."
+                  : "Đã ra phán quyết bồi thường hư hại thành công. Tiền bồi thường đã được chuyển về ví.",
+              close: true,
+            };
+          }}
+          reconcile={reload}
+          onPending={onPending}
+          onFinish={(outcome) => {
+            setNote("");
+            onFinish(outcome);
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
 export function ExchangeDisputeDetailPage() {
   const user = useOutletContext<CurrentUser>();
   return canReview(user) ? (
@@ -833,17 +1120,75 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
         {item && (
           <div className={styles.column}>
             <ShipmentOverview item={item} viewerId={user.id} />
-            <section className={styles.card}>
-              <h2>Nội dung báo sự cố</h2>
-              {item.disputedAt && (
-                <time className={styles.muted} dateTime={item.disputedAt}>
-                  Mở lúc {dateText(item.disputedAt)}
-                </time>
-              )}
-              <p className={styles.prose}>
-                {item.disputeReason || "Chưa có nội dung báo sự cố."}
-              </p>
-            </section>
+            {(() => {
+              const isRecipientComplainant =
+                item.disputedBy === item.recipientId ||
+                item.disputedBy === "Recipient";
+              const isInitiatorComplainant =
+                item.disputedBy === item.initiatorId ||
+                item.disputedBy === "Initiator";
+              const complainantParty = isRecipientComplainant
+                ? disputeParty(item, "recipient")
+                : isInitiatorComplainant
+                  ? disputeParty(item, "initiator")
+                  : null;
+              const respondentParty = isRecipientComplainant
+                ? disputeParty(item, "initiator")
+                : isInitiatorComplainant
+                  ? disputeParty(item, "recipient")
+                  : null;
+              const disputedBook = respondentParty?.books?.[0];
+
+              const rawReason = item.disputeReason || "";
+              const catMatch = rawReason.match(/\[Sự cố\]:\s*([^\n]+)/);
+              const detailMatch = rawReason.match(/\[Chi tiết\]:\s*([\s\S]+)/);
+              const category = catMatch?.[1]?.trim() || "Sách không đúng mô tả";
+              const userNote = detailMatch?.[1]?.trim() || (!catMatch ? rawReason : "");
+
+              return (
+                <section
+                  className={styles.card}
+                  aria-label="Nội dung khiếu nại kiểm tra sách"
+                >
+                  <div className={styles.incidentHeader}>
+                    <div className={styles.incidentTitleWrap}>
+                      <ShieldAlert size={18} aria-hidden="true" color="var(--shop-wine)" />
+                      <h2>Khiếu nại nhận sách</h2>
+                    </div>
+                    <span className={styles.incidentTag}>
+                      {category}
+                    </span>
+                  </div>
+
+                  <div className={styles.incidentRelationship}>
+                    <div className={styles.relationshipRow}>
+                      <span className={styles.complainantDot} />
+                      <strong>{complainantParty ? complainantParty.name : "Người nhận"}</strong>
+                      <span className={styles.muted}>khiếu nại về sách nhận từ</span>
+                      <strong>{respondentParty ? respondentParty.name : "Người gửi"}</strong>
+                    </div>
+                    {disputedBook && respondentParty && (
+                      <div className={styles.relationshipRow} style={{ color: "var(--shop-wine)" }}>
+                        <BookOpen size={14} aria-hidden="true" />
+                        <span>Cuốn sách: <strong>{disputedBook}</strong></span>
+                      </div>
+                    )}
+                    {item.disputedAt && (
+                      <time className={styles.muted} dateTime={item.disputedAt} style={{ fontSize: "0.775rem" }}>
+                        Mở khiếu nại lúc {dateText(item.disputedAt)}
+                      </time>
+                    )}
+                  </div>
+
+                  {userNote && (
+                    <div className={styles.incidentQuoteBox}>
+                      <div className={styles.incidentQuoteLabel}>Nội dung phản ánh từ người nhận</div>
+                      <p className={styles.incidentQuoteText}>"{userNote}"</p>
+                    </div>
+                  )}
+                </section>
+              );
+            })()}
             {(item.returnResolution || item.status === "ResolutionPending") && (
               <section
                 className={styles.card}
@@ -871,11 +1216,21 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
           )}
           {item?.status === "ResolutionPending" &&
             !item.canStartReturnResolution && (
-              <Notice tone="info">
-                {item.canVerifyOutboundDelivery
-                  ? "Tiền và sách đang được giữ. Admin phụ trách có thể xác minh giao sách từ bằng chứng bàn giao."
-                  : "Hồ sơ tiếp tục giữ tiền và sách trong lúc đối chiếu. Chưa đủ điều kiện chạy quy trình trả sách một chiều."}
-              </Notice>
+              Boolean(item.initiatorReceivedAt && item.recipientReceivedAt) ? (
+                <InspectionDisputeActions
+                  item={item}
+                  user={user}
+                  reload={() => result.refetch()}
+                  onFinish={setOutcome}
+                  onPending={setPending}
+                />
+              ) : (
+                <Notice tone="info">
+                  {item.canVerifyOutboundDelivery
+                    ? "Tiền và sách đang được giữ. Admin phụ trách có thể xác minh giao sách từ bằng chứng bàn giao."
+                    : "Hồ sơ tiếp tục giữ tiền và sách trong lúc đối chiếu. Chưa đủ điều kiện chạy quy trình trả sách một chiều."}
+                </Notice>
+              )
             )}
           {retained &&
             (pending ||
@@ -1088,6 +1443,7 @@ function ShipmentOverview({
       shipped: item.initiatorShippedAt,
       received: item.recipientReceivedAt,
       verified: verified && !item.recipientShippedAt,
+      shipment: item.initiatorShipment,
     },
     {
       from: recipient,
@@ -1095,6 +1451,7 @@ function ShipmentOverview({
       shipped: item.recipientShippedAt,
       received: item.initiatorReceivedAt,
       verified: verified && !item.initiatorShippedAt,
+      shipment: item.recipientShipment,
     },
   ];
   return (
@@ -1104,7 +1461,7 @@ function ShipmentOverview({
       </h2>
       <ol className={styles.shipments}>
         {shipments.map(
-          ({ from, to, shipped, received, verified: deliveryVerified }) => {
+          ({ from, to, shipped, received, verified: deliveryVerified, shipment }) => {
             const delivered = Boolean(received || deliveryVerified);
             const tone = delivered
               ? "delivered"
@@ -1182,6 +1539,51 @@ function ShipmentOverview({
                     </div>
                   )}
                 </div>
+                {shipment && (shipment.packagingPhotoUrl || shipment.packagingVideoUrl || shipment.notes) && (
+                  <div className={styles.packagingSection}>
+                    <div className={styles.packagingHeader}>
+                      <span>
+                        <Package size={14} aria-hidden="true" style={{ verticalAlign: -2, marginRight: 4 }} />
+                        Đóng gói lúc gửi
+                      </span>
+                      <small className={styles.muted}>{from.name}</small>
+                    </div>
+                    {shipment.notes && (
+                      <p className={styles.packagingNote}>
+                        💬 {shipment.notes}
+                      </p>
+                    )}
+                    <div className={styles.packagingMediaRow}>
+                      {shipment.packagingPhotoUrl && (
+                        <a
+                          href={shipment.packagingPhotoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.packagingMediaCard}
+                          title={shipment.packagingPhotoName || "Xem ảnh đóng gói"}
+                        >
+                          <img
+                            src={shipment.packagingPhotoUrl}
+                            alt="Ảnh đóng gói"
+                            className={styles.packagingMediaThumb}
+                          />
+                          <span className={styles.packagingBadge}>📷 Ảnh đóng gói</span>
+                        </a>
+                      )}
+                      {shipment.packagingVideoUrl && (
+                        <div className={styles.packagingMediaCard}>
+                          <video
+                            src={shipment.packagingVideoUrl}
+                            controls
+                            preload="metadata"
+                            className={styles.packagingMediaVideo}
+                          />
+                          <span className={styles.packagingBadge}>🎥 Video</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </li>
             );
           },

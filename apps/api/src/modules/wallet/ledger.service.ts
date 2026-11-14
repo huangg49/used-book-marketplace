@@ -290,7 +290,7 @@ export async function checkJournal(tx: Tx, journalId: string) {
         account(credit.accountId)?.purpose !== 'OrderHold' ||
         account(credit.accountId)?.orderId !== move.orderId ||
         !(await tx.c.mutation_receipts.findOne({
-          _id: baseReceipt, operation: 'actOnOperationsExchangeReturn',
+          _id: baseReceipt, operation: { $in: ['actOnOperationsExchangeReturn', 'resolveExchangeDispute'] },
         }))) throw new Error('Exchange return allocation mismatch');
     tx.check('exchange-return:' + ex._id, () => checkExchangeReturn(tx, ex));
   } else if (j.type === 'OrderSettlement') {
@@ -1483,7 +1483,7 @@ async function checkExchangeReturn(tx: Tx, exchange: ExchangeDoc) {
     type: { $in: ['ExchangeReturnRefund', 'ExchangeNonReturnCompensation'] },
   }).toArray();
   const compensated = resolution.outcome === 'Compensated';
-  if (receipt?.operation !== 'actOnOperationsExchangeReturn' || receipt.resultVersion !== exchange.revision ||
+  if (!['actOnOperationsExchangeReturn', 'resolveExchangeDispute'].includes(receipt?.operation ?? '') || receipt?.resultVersion !== exchange.revision ||
       journals.length !== moves.length || moves.some((move) => !journals.some((journal) =>
         journal.receiptId === exchangeReturnJournalRef(receipt._id, move.code))) ||
       (compensated && !(await tx.c.member_violations.findOne({

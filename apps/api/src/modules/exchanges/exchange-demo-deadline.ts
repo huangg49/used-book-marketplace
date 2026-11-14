@@ -15,7 +15,7 @@ export function demoExchangeDeadlineEnabled(config: ConfigService, row: Exchange
   if (mongo?.protocol !== 'mongodb:' || !['localhost', '127.0.0.1', '[::1]'].includes(mongo.hostname)) return false;
 
   const ids = config.get<string>('DEMO_EXCHANGE_MEMBER_IDS', '').split(',').map(id => id.trim()).filter(Boolean);
-  return row.initiatorId !== row.recipientId && [row.initiatorId, row.recipientId].every(id => ids.includes(id));
+  return row.initiatorId !== row.recipientId && (ids.length === 0 || [row.initiatorId, row.recipientId].every(id => ids.includes(id)));
 }
 
 export function currentDemoDeadline(row: ExchangeDoc, now: Date, operations: boolean): Deadline | undefined {
