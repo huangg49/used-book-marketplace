@@ -255,7 +255,7 @@ try {
     );
   await spa(web, "/chat/" + room.id);
   await web
-    .getByRole("button", { name: "Báo sự cố / Khiếu nại", exact: true })
+    .getByRole("button", { name: "Báo sự cố", exact: true })
     .click();
   await web
     .locator("#dispute-detail")
