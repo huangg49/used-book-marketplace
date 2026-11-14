@@ -569,6 +569,8 @@ try {
   await expect(supportCombobox(touch, "Trạng thái")).toHaveValue("Đã tiếp nhận");
   await chooseSupportOption(touch, "Loại yêu cầu", "Báo lỗi", true);
   await touch.getByRole("link", { name: "Gửi yêu cầu mới", exact: true }).tap();
+  await touch.waitForURL(memberOrigin + "/support/new");
+  await expect(touch.getByRole("heading", { name: "Gửi yêu cầu hỗ trợ", exact: true })).toBeVisible();
   await chooseSupportOption(touch, "Loại yêu cầu", "Phản ánh giao dịch", true);
   await chooseSupportOption(touch, "Đối tượng liên quan", "Trao đổi sách", true);
   await touch.close();
