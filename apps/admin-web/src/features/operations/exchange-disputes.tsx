@@ -230,7 +230,8 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
               const value = String(
                 new FormData(event.currentTarget).get("query") ?? "",
               ).trim();
-              setParams(value ? { q: value } : {});
+              // Publish the applied filter before pagination can read it.
+              setParams(value ? { q: value } : {}, { flushSync: true });
             }}
           >
             <label>
