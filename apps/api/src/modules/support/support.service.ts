@@ -731,7 +731,7 @@ export class SupportService {
           : 'point_orders';
     if (lock) await tx.lock(collection, [id]);
     const row = await tx.c[collection].findOne({ _id: id });
-    if (!row) throw notFound();
+    if (!row || ('demoArchivedAt' in row && row.demoArchivedAt)) throw notFound();
     const ids =
       'initiatorId' in row
         ? [row.initiatorId, row.recipientId]

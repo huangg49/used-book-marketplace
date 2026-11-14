@@ -3569,7 +3569,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Participant confirms they have shipped their book. */
+        /** @description Register a carrier label without recording pickup, or record direct handover. Requests omitting both the method and tracking code retain the legacy manual handover behavior. */
         post: operations["shipExchange"];
         delete?: never;
         options?: never;
@@ -3622,6 +3622,40 @@ export interface paths {
         put?: never;
         /** @description Participant opens a dispute during delivery or inspection window, halting auto-settlement. */
         post: operations["disputeExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/demo-advance-shipping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Simulate expiration of the shipping deadline on an explicitly enabled local demo exchange with exactly one recorded outbound shipment. The sender can invoke the standard dispute transition. */
+        post: operations["advanceDemoExchangeShipping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/demo-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Apply the current exchange deadline on an allowlisted local simulation. Does not attest pickup, receipt or dispute evidence. */
+        post: operations["advanceDemoExchangeDeadline"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3757,7 +3791,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Reset exchange and shipment state for live interactive demo. */
+        /**
+         * @deprecated
+         * @description Retained for compatibility. Rewinding an exchange is disabled.
+         */
         post: operations["resetShipmentOrderForDemo"];
         delete?: never;
         options?: never;
@@ -3774,7 +3811,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Automatically advance simulation of exchange delivery stages. */
+        /** @description Advance local simulated delivery for a funded exchange with two registered carrier labels and eligible pickup state. */
         post: operations["autoSimulateExchangeShipment"];
         delete?: never;
         options?: never;
@@ -3791,7 +3828,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Seed demo exchange order ready for carrier delivery testing. */
+        /**
+         * @deprecated
+         * @description Retained for compatibility. Seeding pre-funded demo orders is disabled.
+         */
         post: operations["seedDemoShipmentOrder"];
         delete?: never;
         options?: never;
@@ -3808,7 +3848,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Receive webhook events from carrier partners. */
+        /** @description Local driver simulator events. Pickup requires both registered carrier labels before the shipping deadline. Delivery requires a prior pickup. */
         post: operations["carrierWebhookCallback"];
         delete?: never;
         options?: never;
@@ -3854,6 +3894,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/return-resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Existing participant obligation. Record a statement, appeal, report return dispatch, acknowledge receipt or report a return problem. */
+        post: operations["actOnOwnExchangeReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{id}/dispute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Independent Staff or Admin reads the current dispute or its closed return resolution. */
+        get: operations["getOperationsExchangeDispute"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{id}/demo-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Close the current simulated dispute window as the assigned independent Admin. Decisions, review of appeals, evidence and settlement remain separate commands. */
+        post: operations["advanceOperationsDemoExchangeDeadline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{id}/return-resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned independent Staff or Admin requests evidence or orders return within authority. Admin handles appeals, verifies or rejects return evidence, or orders compensation; settlement checks the effective decision and evidence again. */
+        post: operations["actOnOperationsExchangeReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/exchanges/{id}/resolve": {
         parameters: {
             query?: never;
@@ -3865,7 +3973,7 @@ export interface paths {
         put?: never;
         /**
          * resolveExchangeDispute
-         * @description ACTIVE independent STAFF/ADMIN only. New RefundBoth and CompleteExchange decisions are currently rejected with 409 InvalidState: the legacy command cannot establish custody, allocations, authority limits or an effective decision after appeal. No money, listing, exchange, audit or notification mutation is committed on rejection. Historical receipts may still be replayed with the original key and body after current session, role and participant-independence checks; replay does not repeat their financial effects.
+         * @description ACTIVE independent STAFF/ADMIN only. New decisions through this legacy endpoint are currently rejected with 409 InvalidState: the legacy command cannot establish custody, allocations, authority limits or an effective decision after appeal. No money, listing, exchange, audit or notification mutation is committed on rejection. Historical receipts may still be replayed with the original key and body after current session, role and participant-independence checks; replay does not repeat their financial effects.
          */
         post: operations["resolveExchangeDispute"];
         delete?: never;
@@ -6542,7 +6650,7 @@ export interface components {
              * @description ADR 0075/0087. Auction rows are wallet holds for bids and deposits, their releases, and a Seller's share of a non-paying winner's deposit.
              * @enum {string}
              */
-            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare";
+            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare" | "ExchangeReturnRefund" | "ExchangeNonReturnCompensation";
             amount: number;
             balanceAfter: number;
             /** Format: date-time */
@@ -7995,7 +8103,40 @@ export interface components {
             initiatorBooks: components["schemas"]["ExchangeBookSnapshot"][];
             recipientBook: components["schemas"]["ExchangeBookSnapshot"];
         };
+        ExchangeDisputeParticipant: {
+            displayName: string;
+            /** Format: uuid */
+            avatarId: string | null;
+        };
         Exchange: {
+            /** @description Formal statements. The assigned independent reviewer sees both participants' submissions in operations detail. Exchange detail returns only the requesting participant's own submissions. */
+            statements?: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                senderId: string;
+                note: string;
+                /** Format: date-time */
+                sentAt: string;
+            }[];
+            /** @description Included only in authorized operations dispute reads. */
+            participants?: {
+                initiator: components["schemas"]["ExchangeDisputeParticipant"] | null;
+                recipient: components["schemas"]["ExchangeDisputeParticipant"] | null;
+            };
+            returnResolution?: components["schemas"]["ExchangeReturnResolution"];
+            demoDeadline?: components["schemas"]["DemoExchangeDeadline"];
+            /** @description The current member can simulate this local demo exchange's shipping deadline. */
+            demoShippingAdvanceAvailable?: boolean;
+            /** @description One book was sent and received, the other party missed the shipping deadline, and both sides funded. */
+            canStartReturnResolution?: boolean;
+            /** @description An assigned Admin can review delivery evidence for the original one-sided shipment. */
+            canVerifyOutboundDelivery?: boolean;
+            outboundDeliveryVerification?: {
+                /** Format: date-time */
+                verifiedAt: string;
+                note: string;
+            };
             agreement?: components["schemas"]["ExchangeAgreement"] | null;
             /** Format: uuid */
             id: string;
@@ -8076,6 +8217,11 @@ export interface components {
             carrierCode?: string | null;
             carrierName?: string | null;
             trackingCode?: string | null;
+            /**
+             * Format: date-time
+             * @description When the carrier label was registered. A label alone does not indicate pickup.
+             */
+            registeredAt?: string | null;
             meetupLocation?: string | null;
             notes?: string | null;
             packagingPhotoUrl?: string | null;
@@ -8188,6 +8334,58 @@ export interface components {
         };
         ReadExchangeEvidence: {
             reason: string;
+        };
+        /** @enum {string} */
+        DemoExchangeDeadline: "Proposal" | "Funding" | "Shipping" | "Transit" | "Inspection" | "Evidence" | "Appeal" | "Return" | "ReturnCheck";
+        DemoExchangeDeadlineCommand: {
+            expectedVersion: number;
+            deadline: components["schemas"]["DemoExchangeDeadline"];
+        };
+        ExchangeReturnCommand: {
+            expectedVersion: number;
+            /** @enum {string} */
+            action: "VerifyOutboundDelivery" | "RequestEvidence" | "SubmitStatement" | "OrderReturn" | "Appeal" | "Uphold" | "SetAside" | "ReportDispatch" | "AcknowledgeReturn" | "VerifyReturnDelivery" | "RejectReturnDispatch" | "ReportReturnProblem" | "OrderCompensation" | "Settle";
+            note?: string;
+            trackingCode?: string;
+            /** Format: uuid */
+            evidenceId?: string;
+        };
+        ExchangeReturnResolution: {
+            /** @enum {string} */
+            phase: "Evidence" | "ReturnOrdered" | "ReturnInProgress" | "CheckingReturn" | "ReturnIssue" | "CompensationOrdered" | "NeedsReview" | "Closed";
+            /** Format: uuid */
+            ownerId: string;
+            /** Format: uuid */
+            holderId: string;
+            /** Format: uuid */
+            listingId: string;
+            note: string;
+            /** Format: date-time */
+            evidenceDueAt: string | null;
+            /** Format: date-time */
+            appealDueAt: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            appeals: {
+                /** Format: uuid */
+                by: string;
+                note: string;
+            }[];
+            /** Format: date-time */
+            returnDueAt: string | null;
+            trackingCode: string | null;
+            /** Format: date-time */
+            returnedAt: string | null;
+            /** Format: date-time */
+            checkDueAt: string | null;
+            /** @enum {string|null} */
+            outcome: "Returned" | "Compensated" | null;
+            compensation: number;
+            ownerDeposit: number;
+            holderDeposit: number;
+            differenceAmount: number;
+            /** Format: uuid */
+            differencePayerId: string | null;
         };
         DisputeExchangeCommand: {
             expectedVersion: number;
@@ -8498,6 +8696,8 @@ export interface components {
             target: components["schemas"]["SupportTarget"];
             label: string;
             description: string | null;
+            booksToGive?: string[];
+            booksToReceive?: string[];
             partnerName: string | null;
             createdAt: string | null;
             state: string | null;
@@ -12438,7 +12638,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare";
+                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare" | "ExchangeReturnRefund" | "ExchangeNonReturnCompensation";
                 topupId?: string;
                 orderId?: string;
                 /** @description Full journal, order, top-up or withdrawal ID, or the first six hexadecimal characters shown on a receipt. Matches only the caller's own history. */
@@ -15845,6 +16045,73 @@ export interface operations {
             500: components["responses"]["ListingError"];
         };
     };
+    advanceDemoExchangeShipping: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Demo exchange moved to the dispute queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    advanceDemoExchangeDeadline: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoExchangeDeadlineCommand"];
+            };
+        };
+        responses: {
+            /** @description Current Exchange snapshot or authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+        };
+    };
     getExchangeMessages: {
         parameters: {
             query?: {
@@ -16067,15 +16334,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     autoSimulateExchangeShipment: {
@@ -16098,6 +16358,8 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     seedDemoShipmentOrder: {
@@ -16109,15 +16371,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     carrierWebhookCallback: {
@@ -16144,6 +16399,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
         };
     };
     getExchangeReviews: {
@@ -16230,6 +16488,138 @@ export interface operations {
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+        };
+    };
+    actOnOwnExchangeReturn: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExchangeReturnCommand"];
+            };
+        };
+        responses: {
+            /** @description Current Exchange snapshot or an authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getOperationsExchangeDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current Exchange snapshot or an authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    advanceOperationsDemoExchangeDeadline: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoExchangeDeadlineCommand"];
+            };
+        };
+        responses: {
+            /** @description Current Exchange snapshot or authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+        };
+    };
+    actOnOperationsExchangeReturn: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExchangeReturnCommand"];
+            };
+        };
+        responses: {
+            /** @description Current Exchange snapshot or an authorized replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
         };
     };
     resolveExchangeDispute: {
@@ -17020,7 +17410,10 @@ export interface operations {
         parameters: {
             query: {
                 type: "DirectOrder" | "Exchange" | "PointOrder";
+                /** @description Search by book title, participant name, or the transaction code. */
                 q?: string;
+                /** @description Current or closed transactions. Omit to include both. Archived demo exchanges are always excluded. */
+                view?: "Current" | "History";
                 cursor?: string;
                 limit?: number;
             };

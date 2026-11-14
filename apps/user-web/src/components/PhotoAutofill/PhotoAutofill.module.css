@@ -414,20 +414,48 @@
   margin-top: 10px;
 }
 
-.missing,
+.photoTips {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--shop-shelf);
+}
+
+.photoTipsTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--shop-ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.photoTipsTitle svg {
+  flex: none;
+  color: var(--shop-wine);
+}
+
+.photoTipsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 24px;
+  padding-inline-start: 18px;
+  list-style: disc;
+}
+
+.photoTipsList li {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .candidates {
   display: grid;
   gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.missing li {
-  color: var(--shop-muted);
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
 }
 
 .searchFields {

@@ -27,15 +27,15 @@ export class ListingCommitmentPolicy {
     id: string,
     expectedVersion: number,
     from: 'Available' | 'Reserved',
-    // Sold or Exchanged only from Reserved (migration 0012, 0016).
-    to: 'Reserved' | 'Available' | 'Sold' | 'Exchanged',
+    // Terminal trade states can only be projected from Reserved.
+    to: 'Reserved' | 'Available' | 'Sold' | 'Exchanged' | 'ClosedUnavailable',
   ) {
     const listing = await tx.c.listings.findOne({ _id: id });
     if (!listing) throw notFound();
     if (listing.version !== expectedVersion) throw conflict();
     if (
       listing.trade !== from ||
-      ((to === 'Sold' || to === 'Exchanged') && from !== 'Reserved')
+      ((to === 'Sold' || to === 'Exchanged' || to === 'ClosedUnavailable') && from !== 'Reserved')
     )
       throw invalidState();
     // Preserve moderation, visibility, ownership and accepted revision on release.

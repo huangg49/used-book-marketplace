@@ -39,6 +39,8 @@ export const walletHistoryLabels = {
   AuctionBidHold: "Đấu giá · Giữ tiền",
   AuctionBidRelease: "Đấu giá · Trả lại tiền giữ",
   AuctionDepositSellerShare: "Đấu giá · Nhận một phần tiền cọc",
+  ExchangeReturnRefund: "Trao đổi · Hoàn khoản đã nộp",
+  ExchangeNonReturnCompensation: "Trao đổi · Bồi thường sách chưa trả",
 } as const;
 export type WalletHistoryType = keyof typeof walletHistoryLabels;
 const walletHistoryItemSchema = z.object({

@@ -39,11 +39,33 @@ try {
     await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    let failure = 0, standalone = false, messagesFailure = 0;
+    let failure = 0, standalone = false, messagesFailure = 0, exchangeResult = exchange;
+    const returnCommands = [];
     const messageCursors = [];
     await context.route('**/api/v1/**', route => {
       const request = route.request(), p = new URL(request.url()).pathname.slice('/api/v1'.length);
       if (p === '/auth/login') return route.fulfill({ json: { accessToken: 'fixture-access', refreshToken: 'f'.repeat(43), expiresIn: 900, user } });
+      if (p === '/exchanges/' + exchange.id + '/return-resolution') {
+        assert.equal(request.method(), 'POST');
+        const command = request.postDataJSON();
+        if (command.action === 'SubmitStatement') {
+          const updated = { ...exchangeResult, revision: exchangeResult.revision + 1, statements: [
+            { id: id(900), senderId: user.id, note: command.note, sentAt: now },
+          ] };
+          exchangeResult = updated;
+          const { statements, ...receipt } = updated;
+          return route.fulfill({ json: receipt });
+        }
+        assert.equal(command.action, 'Appeal');
+        returnCommands.push({ body: command, key: request.headers()['idempotency-key'] });
+        if (returnCommands.length === 1) {
+          exchangeResult = { ...exchangeResult, revision: 9, returnResolution: {
+            ...exchangeResult.returnResolution, appeals: [{ by: user.id, note: command.note }],
+          } };
+          return route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } });
+        }
+        return route.fulfill({ json: exchangeResult });
+      }
       assert.equal(request.method(), 'GET', 'Recovery must only read existing state');
       if (p === '/auth/me') return route.fulfill({ json: user });
       if (p === '/me/purchase-conversations') return route.fulfill({ json: standalone ? [] : [room] });
@@ -60,11 +82,12 @@ try {
           olderCursor: before ? null : 'older-fixture-cursor',
         } });
       }
+      if (p.endsWith('/evidence')) return route.fulfill({ json: { items: [], nextCursor: null } });
       if (p.endsWith('/messages/history')) return route.fulfill({ json: { items: [], olderCursor: null } });
       if (p.endsWith('/events')) return route.fulfill({ json: [] });
       if (p === `/exchanges/${exchange.id}`) return failure
         ? route.fulfill({ status: failure, json: { code: failure === 403 ? 'Forbidden' : 'Unavailable' } })
-        : route.fulfill({ json: exchange });
+        : route.fulfill({ json: exchangeResult });
       if (p === '/listings/' + id(4)) return route.fulfill({ json: listing(4) });
       if (p === '/listings/' + id(5)) return route.fulfill({ json: listing(5) });
       if (p === '/me/notifications') return route.fulfill({ json: { items: [], nextCursor: null, unreadCount: 0 } });
@@ -107,7 +130,39 @@ try {
     await page.getByLabel(/^Email/).fill(user.email);
     await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-    await page.getByRole('link', { name: 'Nhắn với đối tác', exact: true }).click();
+    const openChat = page.getByRole('button', { name: /^Nhắn cho / });
+    const drawer = page.locator('dialog').filter({ has: page.getByRole('region', { name: /Tin nhắn Đổi sách/ }) });
+    await expect(openChat).toBeVisible();
+    await page.waitForFunction(() => !document.querySelector('[data-paper-storm]'));
+    const position = () => page.locator('main h1').evaluate(node => node.getBoundingClientRect().left);
+    for (const dismiss of [
+      () => drawer.getByRole('button', { name: 'Đóng tin nhắn' }).click(),
+      () => page.keyboard.press('Escape'),
+    ]) {
+      const before = await position();
+      await openChat.click();
+      await expect(drawer).toBeVisible();
+      await drawer.evaluate(node => {
+        node.addEventListener('animationstart', event => {
+          if (event.target !== node || event.pseudoElement || !node.hasAttribute('data-closing')) return;
+          const root = getComputedStyle(document.documentElement);
+          node.dataset.testExit = JSON.stringify({
+            open: node.open, locked: root.overflowY === 'hidden', gutter: root.scrollbarGutter,
+            left: document.querySelector('main h1').getBoundingClientRect().left,
+          });
+        });
+      });
+      await dismiss();
+      await expect(drawer).toBeHidden();
+      const closed = page.locator('dialog[data-test-exit]');
+      assert.deepEqual(JSON.parse(await closed.getAttribute('data-test-exit', { timeout: 2000 })), {
+        open: true, locked: true, gutter: 'stable', left: before,
+      });
+      await closed.evaluate(node => delete node.dataset.testExit);
+      await expect(openChat).toBeFocused();
+      assert.equal(await position(), before);
+    }
+    await openChat.click();
     const chat = page.getByRole('region', { name: /Tin nhắn Đổi sách/ });
     await expect(chat.getByText('Tin thử 501', { exact: true })).toBeVisible();
     await expect(chat.getByText('Tin thử 461', { exact: true })).toHaveCount(0);
@@ -121,8 +176,68 @@ try {
     await expect(chat.getByRole('alert')).toContainText('Bạn hiện không thể xem tin nhắn', { timeout: 16000 });
     await expect(chat.getByText('Tin thử 501', { exact: true })).toHaveCount(0);
     await expect(chat.getByRole('button', { name: 'Gửi tin nhắn', exact: true })).toHaveCount(0);
+    messagesFailure = 0;
+    exchangeResult = { ...exchange, status: 'ResolutionPending', revision: 8,
+      initiatorDeposit: 300000, recipientDeposit: 100000, diffAmount: 200000, diffPayerId: user.id,
+      initiatorShippedAt: now, recipientReceivedAt: now,
+      returnResolution: {
+        phase: 'ReturnOrdered', ownerId: user.id, holderId: other.id, listingId: exchange.initiatorListingId,
+        note: 'Đã xác minh một bên nhận sách và quá hạn gửi.',
+        evidenceDueAt: now, appealDueAt: new Date(Date.now() + 48 * 3600000).toISOString(),
+        effectiveAt: null, appeals: [], returnDueAt: new Date(Date.now() + 120 * 3600000).toISOString(),
+        trackingCode: null, returnedAt: null, checkDueAt: null, outcome: null,
+        compensation: 0, ownerDeposit: 300000, holderDeposit: 100000, differenceAmount: 200000, differencePayerId: user.id,
+      },
+    };
+    await page.goto(origin + '/login?returnUrl=' + encodeURIComponent('/exchange/' + exchange.id));
+    await page.getByLabel(/^Email/).fill(user.email);
+    await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
+    await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+    const panel = page.getByRole('region', { name: 'Đã có quyết định trả sách', exact: true });
+    await expect(panel.getByText(/cọc của bạn và .*tiền bù bạn đã nộp/)).toBeVisible();
+    await panel.getByRole('button', { name: 'Gửi kháng nghị', exact: true }).click();
+    await panel.getByRole('textbox', { name: 'Nội dung gửi' }).fill('Xin đối chiếu thêm bằng chứng giao nhận.');
+    await panel.locator('form').getByRole('button', { name: 'Gửi kháng nghị', exact: true }).click();
+    await page.getByRole('button', { name: /Thử lại thao tác|Thử lại yêu cầu/ }).click();
+    await expect(panel.getByText(/Đã có kháng nghị/)).toBeVisible();
+    assert.equal(returnCommands.length, 2);
+    assert.deepEqual(returnCommands[0], returnCommands[1]);
+    await page.screenshot({ path: path.join(out, 'return-appeal-' + width + '.png'), fullPage: true });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    exchangeResult = { ...exchangeResult, revision: 10, statements: [], returnResolution: {
+      ...exchangeResult.returnResolution, phase: 'Evidence', note: 'Bổ sung biên nhận bàn giao.',
+      appeals: [], evidenceDueAt: new Date(Date.now() + 48 * 3600000).toISOString(),
+    } };
+    await panel.getByRole('button', { name: 'Cập nhật hồ sơ', exact: true }).click();
+    const task = page.getByRole('region', { name: 'Việc cần làm', exact: true });
+    await expect(task.getByRole('heading', { name: 'Bổ sung thông tin bàn giao', exact: true })).toBeVisible();
+    const evidence = page.getByRole('region', { name: 'Bằng chứng sự cố', exact: true });
+    await expect(evidence.getByLabel('Chọn bằng chứng')).toBeVisible();
+    const statement = page.getByRole('region', { name: 'Giải trình của bạn', exact: true });
+    await expect(statement.getByText('Chưa gửi giải trình', { exact: true })).toBeVisible();
+    const overview = page.getByRole('region', { name: 'Thông tin đối chiếu', exact: true });
+    const overviewBox = await overview.boundingBox();
+    const taskBox = await task.boundingBox();
+    const evidenceBox = await evidence.boundingBox();
+    assert.ok(taskBox && evidenceBox && overviewBox);
+    assert.ok(overviewBox.y >= evidenceBox.y + evidenceBox.height && Math.abs(overviewBox.x - taskBox.x) < 4);
+    if (width === 1440) {
+      assert.ok(Math.abs(taskBox.y - evidenceBox.y) < 4 && evidenceBox.x >= taskBox.x + taskBox.width);
+    } else {
+      assert.ok(evidenceBox.y >= taskBox.y + taskBox.height);
+    }
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await task.getByRole('button', { name: 'Gửi giải trình', exact: true }).click();
+    const editor = page.getByRole('form', { name: 'Gửi giải trình', exact: true });
+    await editor.getByRole('textbox', { name: 'Nội dung gửi' }).fill('Tôi đã bàn giao sách tại điểm hẹn.');
+    await editor.getByRole('button', { name: 'Gửi giải trình', exact: true }).click();
+    await expect(task.getByRole('heading', { name: 'Đã gửi giải trình', exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Giải trình của bạn', exact: true }))
+      .toContainText('Tôi đã bàn giao sách tại điểm hẹn.');
+    await expect(statement.getByText('Chưa gửi giải trình', { exact: true })).toHaveCount(0);
+    await expect(task.getByRole('button', { name: 'Gửi thêm giải trình', exact: true })).toBeEnabled();
     assert.deepEqual(errors, []);
-    console.log(`PASS exchange finance recovery ${width}: stale warning/amounts, denied redaction, read-only retry`);
+    console.log(`PASS exchange finance recovery ${width}: stale warning/amounts, denied redaction, read-only retry, return appeal with exact replay`);
     await context.close();
   }
 } finally {

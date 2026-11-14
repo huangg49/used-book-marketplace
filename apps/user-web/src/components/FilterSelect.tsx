@@ -17,6 +17,8 @@ export interface FilterSelectProps {
   onChange: (value: string) => void;
   /** false: a plain dropdown for short lists; typing never filters. */
   searchable?: boolean;
+  nativeOnNarrow?: boolean;
+  disabled?: boolean;
 }
 function subscribeViewport(notify: () => void) {
   const media = window.matchMedia("(max-width: 900px)");
@@ -38,12 +40,15 @@ export function FilterSelect({
   options,
   onChange,
   searchable = true,
+  nativeOnNarrow = true,
+  disabled = false,
 }: FilterSelectProps) {
   const narrow = useSyncExternalStore(
     subscribeViewport,
     narrowSnapshot,
     () => true,
   );
+  const useNative = nativeOnNarrow && narrow;
   const root = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const native = useRef<HTMLSelectElement>(null);
@@ -53,28 +58,30 @@ export function FilterSelect({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [placement, setPlacement] = useState<CSSProperties>({});
-  const expanded = open && !narrow;
+  if (disabled && open) setOpen(false);
+  const expanded = open && !useNative && !disabled;
   const selected =
     options.find((option) => option.value === value)?.label || "";
   const matches = searchable
-    ? options.filter((option) => fold(option.label).includes(fold(query.trim())))
+    ? options.filter((option) =>
+        fold(option.label).includes(fold(query.trim())),
+      )
     : options;
   const activeId =
     expanded && matches[active] ? `${id}-option-${active}` : undefined;
 
   function show() {
+    if (disabled) return;
     const rect = root.current?.getBoundingClientRect();
     if (!rect) return;
     const below = window.innerHeight - rect.bottom - 16;
     const above = rect.top - 16;
     const upward =
       below < Math.min(288, options.length * 36 + 12) && above > below;
+    const width = Math.min(rect.width, Math.max(0, window.innerWidth - 32));
     setPlacement({
-      left: Math.max(
-        16,
-        Math.min(rect.left, window.innerWidth - rect.width - 16),
-      ),
-      width: rect.width,
+      left: Math.max(16, Math.min(rect.left, window.innerWidth - width - 16)),
+      width,
       maxHeight: Math.min(288, Math.max(72, (upward ? above : below) - 6)),
       ...(upward
         ? { bottom: window.innerHeight - rect.top + 6 }
@@ -91,11 +98,11 @@ export function FilterSelect({
   }
   function choose(next: string) {
     setOpen(false);
-    onChange(next);
+    if (!disabled) onChange(next);
   }
   useEffect(() => {
-    if (narrow && focused.current) native.current?.focus();
-  }, [narrow]);
+    if (useNative && focused.current) native.current?.focus();
+  }, [useNative]);
   useEffect(() => {
     if (!expanded) return;
     const outside = (event: PointerEvent) => {
@@ -105,7 +112,11 @@ export function FilterSelect({
     };
     const close = () => setOpen(false);
     const scroll = (event: Event) => {
-      if (!popup.current?.contains(event.target as Node)) close();
+      if (!(
+        event.target instanceof Node && popup.current?.contains(event.target)
+      )) {
+        close();
+      }
     };
     document.addEventListener("pointerdown", outside);
     window.addEventListener("resize", close);
@@ -119,15 +130,21 @@ export function FilterSelect({
     };
   }, [expanded]);
   useEffect(() => {
-    if (expanded)
-      popup.current
-        ?.querySelector('[data-active="true"]')
-        ?.scrollIntoView({ block: "nearest" });
+    const list = popup.current;
+    const option = list?.querySelector('[data-active="true"]');
+    if (!expanded || !list || !option) return;
+    const listRect = list.getBoundingClientRect();
+    const optionRect = option.getBoundingClientRect();
+    if (optionRect.top < listRect.top) {
+      list.scrollTop -= listRect.top - optionRect.top;
+    } else if (optionRect.bottom > listRect.bottom) {
+      list.scrollTop += optionRect.bottom - listRect.bottom;
+    }
   }, [expanded, active]);
 
   return (
     <div className={styles.root} ref={root}>
-      {narrow ? (
+      {useNative ? (
         <>
           <select
             ref={native}
@@ -135,6 +152,7 @@ export function FilterSelect({
             aria-label={label}
             className={styles.native}
             value={value}
+            disabled={disabled}
             onChange={(event) => onChange(event.target.value)}
           >
             {options.map((option) => (
@@ -153,6 +171,7 @@ export function FilterSelect({
             className={styles.control}
             data-searchable={searchable}
             readOnly={!searchable}
+            disabled={disabled}
             role="combobox"
             aria-label={label}
             aria-expanded={expanded}

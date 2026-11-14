@@ -46,8 +46,7 @@ export class CarrierSimulatorAdapter implements ICarrierAdapter {
   async createShipment(order: ShipmentOrderInput): Promise<{ trackingCode: string; fee: number }> {
     const fee = await this.calculateFee(order.sender, order.receiver);
 
-    // Tự sinh mã vận đơn giả lập theo định dạng chuẩn GHN
-    const prefix = order.carrierCode === 'GHTK' ? 'GHTK' : 'GHN';
+    const prefix = order.carrierCode === 'SIMULATOR' ? 'DEMO' : order.carrierCode === 'GHTK' ? 'GHTK' : 'GHN';
     const timestampSuffix = Date.now().toString().slice(-6);
     const rand = Math.floor(Math.random() * 900 + 100);
     const trackingCode = `${prefix}${timestampSuffix}${rand}VN`;
@@ -57,8 +56,8 @@ export class CarrierSimulatorAdapter implements ICarrierAdapter {
       orderId: order.orderId,
       carrier: this.carrierName,
       fee,
-      status: 'IN_TRANSIT',
-      description: 'Bưu tá đã lấy hàng thành công tại điểm gửi. Đang trung chuyển qua bưu cục TP.HCM.',
+      status: 'READY_TO_PICK',
+      description: 'Đã tạo vận đơn, đang chờ bưu tá lấy sách.',
       updatedAt: new Date(),
       sender: order.sender,
       receiver: order.receiver,
@@ -75,10 +74,10 @@ export class CarrierSimulatorAdapter implements ICarrierAdapter {
     if (!existing) {
       return {
         trackingCode,
-        status: 'IN_TRANSIT',
+        status: 'READY_TO_PICK',
         carrier: this.carrierName,
         updatedAt: new Date(),
-        description: 'Bưu phẩm đang được vận chuyển trên tuyến đường bưu chính.',
+        description: 'Chưa có mốc lấy sách trong bộ mô phỏng.',
       };
     }
 

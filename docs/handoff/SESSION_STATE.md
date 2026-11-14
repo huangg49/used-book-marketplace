@@ -1,3 +1,691 @@
+# Tích hợp bản demo lên main — 14/11/2026
+
+- Worktree tích hợp ghép bản demo `6435707c` với GitHub `main` tại `955d29e6`.
+  Giữ cập nhật đấu giá từ main, một bảng gợi ý giá trong form đăng sách và
+  thứ tự migration `0076`–`0079`. Giữ replay phiếu phân xử cũ theo ADR 0057
+  và đưa luồng một bên trả sách theo ADR 0089 vào cùng gói để review.
+- Khung chat Exchange giữ avatar chữ cái, tên và mã phiếu. Bỏ chỉ báo online
+  vì API chưa cung cấp trạng thái hiện diện. Giao nhận cũ chỉ hiện xác nhận
+  vận đơn nếu không có dữ liệu đăng ký hãng để suy ra mốc lấy sách.
+- Qua contract, docs, build API/Admin/Member, typecheck React Native, unit
+  API/Member/session-client, Exchange E2E trên Mongo QA và hai đường nâng
+  cấp Mongo. Chromium Admin Exchange dùng fixture HTTP với đăng nhập API QA.
+  Bài test tính phí hãng dùng HTTP giả lập.
+- Review trước squash theo [TEAMWORK](../TEAMWORK.md), gồm owner và reviewer
+  thứ hai cho phần quyền, tranh chấp và tiền. Các gate phát hành ở
+  [READINESS](READINESS.md) giữ nguyên.
+
+# Hiệu ứng đóng khung chat Đổi sách — 14/11/2026
+
+Nút X và Escape cho khung chat trượt sang phải trong 190 ms, đồng thời làm
+mờ lớp phủ. Modal giữ khóa cuộn và khoảng chừa thanh cuộn đến hết hiệu ứng,
+sau đó trả focus về nút mở chat. Build Member web và Chromium với API giả
+lập kiểm hiệu ứng và vị trí phiếu ở 390/1440 px với reduced motion bật.
+
+# Cố định vị trí Khung Chat và đưa Bộ đếm Ký tự lên hàng Tiêu đề — 14/11/2026
+
+Khắc phục triệt để hiện tượng giật cục và đẩy trồi thanh chat khi bắt đầu gõ tin nhắn (`ChatPanel`):
+- Đưa bộ đếm ký tự (`.charCount`, ví dụ `0/2000`, `4/2000`) lên cùng hàng với nhãn "Tin nhắn" thông qua container `.inputHeaderRow` (`display: flex; justify-content: space-between; align-items: baseline`).
+- Loại bỏ hoàn toàn khối hiển thị động ở dưới cùng của form nhập tin.
+- Khi người dùng bắt đầu gõ hoặc xóa chữ, khung nhập (`.inputForm`) cố định 100% tọa độ y, không bị nhảy giật hay co giãn chiều cao vùng nhập.
+- Build và Playwright test PASS 100% trên cả 390px và 1440px.
+
+# Giữ vị trí phiếu khi mở khung chat — 14/11/2026
+
+Giữ `scrollbar-gutter: stable` của trang trong khi khung chat khóa cuộn.
+Chromium với thanh cuộn 16 px và API giả lập xác nhận phiếu ở 1440 px từng
+lệch 8 px sang phải. Sau sửa, vị trí và chiều rộng giữ nguyên ở 1440/390 px.
+Cuộn nền vẫn bị khóa và Escape trả focus về nút mở chat.
+
+# Cân bằng trục dọc Header Khung Chat Drawer — 14/11/2026
+
+Điều chỉnh dãn cách dòng và căn chỉnh khối định danh đối tác (`.identity` trong `ExchangeChatDrawer`) khớp chính xác với chiều cao avatar tròn (44px / 2.75rem):
+- Khóa chiều cao khối chữ `.identity` bằng đúng chiều cao Avatar `2.75rem` (`44px`), căn giữa trục dọc (`justify-content: center`).
+- Thu gọn khoảng cách giữa tên và mã giao dịch xuống còn `2px`, tối ưu `line-height: 1.15` cho tiêu đề và dòng mã giao dịch bưu chính.
+- Mép trên của tên người dùng căn thẳng hàng với đỉnh cong của Avatar, mép dưới của mã giao dịch căn ngang bằng với đáy của Avatar và chấm xanh online, triệt tiêu hoàn toàn cảm giác lệch trục và thừa khoảng trống.
+- Build và Playwright test PASS 100% trên cả 390px và 1440px.
+
+# Tối giản và làm thoáng Khung Chat Drawer Đổi sách — 14/11/2026
+
+Lược bỏ thanh dải sách (`drawerContextRibbon`) và băng nút câu thoại nhanh (`quickChips`) theo phản hồi của người dùng:
+- Giúp khung chat thoáng đãng, tập trung trọn vẹn vào dòng tin nhắn và nội dung trao đổi giữa hai bên độc giả.
+- Giữ nguyên toàn bộ cấu trúc định danh bưu chính cao cấp: Avatar nổi bật kèm chấm online xanh, tên đối tác kèm nhãn vai trò, mã giao dịch dấu bưu chính lưu trữ monospace, bong bóng thư từ bất đối xứng (`18px 18px 4px 18px` / `18px 18px 18px 4px`) và khung soạn tin dạng viên thuốc nổi bo tròn 24px.
+- Build và Playwright test PASS 100% trên 390px và 1440px.
+
+# Tân trang toàn diện Khung Chat Drawer Đổi sách (Archival Postal Chat Drawer) — 14/11/2026
+
+Tân trang toàn diện ngăn kéo tin nhắn (`ExchangeChatDrawer` & `ChatPanel`) theo thẩm mỹ thư từ lưu trữ bưu cục sách (Archival Postal aesthetic), giải quyết tình trạng khung chat trống trải, thiếu ngữ cảnh và thô sơ:
+1. **Header định danh & Dấu mộc lưu trữ (Identity & Archival Stamp)**:
+   - Avatar viền nổi kép đỏ rượu kèm chấm xanh trực tuyến (Online Dot).
+   - Tên đối tác rõ ràng kèm huy hiệu vai trò `[Đối tác]`.
+   - Mã giao dịch định dạng dấu bưu chính lưu trữ với font monospace trên nền thẻ kraft ngà (`#f4eddf`, viền `#d9cbbd`).
+   - Nút đóng quay 90 độ khi hover, tuân thủ nghiêm ngặt quy chuẩn focus viền wine sát mép 03/11 (`outline-offset: 0`).
+2. **Thanh dải ngữ cảnh giao dịch (Exchange Context Ribbon)**:
+   - Ghim cố định ngay dưới header khi ở dạng drawer (`[Gửi ↗] Tựa sách ⇄ [Nhận ↙] Tựa sách`).
+   - Giúp hai bên luôn nắm rõ cuốn sách đang đàm phán mà không chiếm diện tích vùng tin nhắn.
+3. **Bong bóng thư từ & Trạng thái trống chào đón (Bubbles & Empty State)**:
+   - Bong bóng bất đối xứng hiện đại (`18px 18px 4px 18px` cho người gửi, `18px 18px 18px 4px` cho đối tác) với độ đổ bóng nhẹ ấm áp.
+   - Trạng thái chưa có tin nhắn: Thẻ viền nét đứt phong thư (`.emptyDrawerCard`) với biểu tượng thư từ và lời chào khuyến khích kết nối trao đổi.
+4. **Băng gợi ý câu thoại nhanh & Khung soạn tin dạng viên thuốc nổi (Quick Chips & Pill Composer)**:
+   - Băng nút gợi ý nhanh cuộn ngang (`.quickChips`) giúp người dùng chọn nhanh các câu hỏi thường gặp ("Sách còn nguyên vẹn không bạn?", "Bạn tính gửi qua bưu cục nào?", v.v.).
+   - Khung nhập tin nhắn dạng viên thuốc bo tròn mềm mại (`border-radius: 24px`, viền `#d9cbbd`, focus highlight rượu vang), nút gửi tròn màu đỏ rượu hover phóng to mượt mà.
+5. **Kiểm tra và tương thích**:
+   - Typecheck PASS 0 lỗi (`tsc -b`).
+   - Production Build PASS (`vite build`).
+   - Playwright test PASS 100% trên cả 390px và 1440px (`exchange-finance-recovery.mjs`).
+
+# Phiếu gửi yêu cầu hỗ trợ — 14/11/2026
+
+Bộ chọn giao dịch ưu tiên tên sách và chiều gửi/nhận, để mã, đối tác và trạng thái
+ở dòng phụ. Sau khi chọn, danh sách thu thành một hàng tóm tắt và phần mô tả
+được nhấn rõ hơn. Chuyển hướng dẫn vào cạnh ô mô tả và nút gửi.
+Build Member web và Chromium trên Mongo QA riêng PASS, gồm tìm/tải thêm,
+đổi qua hai giao dịch giữ nguyên bản nháp và gửi đúng đối tượng, màn 320 px chữ
+130% và kiểm luồng hỗ trợ xuyên Member/Admin.
+Khung chọn dùng nền be, mục đang mở dùng đỏ rượu và chữ kem. Khi mục Đang
+diễn ra trống, nút Xem giao dịch đã đóng mở Lịch sử và chuyển focus đến mục đó.
+Chromium với API giả lập kiểm ở 320 px chữ 130% và 1440 px, bản nháp còn nguyên.
+
+# Ngăn tin nhắn trên phiếu Đổi sách — 14/11/2026
+
+Header ngăn chat hiển thị avatar chữ cái, tên đối tác và mã từ chính phiếu.
+Ảnh hồ sơ người khác chưa có API Member để đọc. Làm gọn trạng thái trống,
+bong bóng và khung soạn. Build Member web và Chromium với API giả lập
+ở 390/1440 px kiểm header, bản nháp, Escape/trả focus, lịch sử và phục hồi.
+Kiểm thêm bố cục 320 px với chữ 130%.
+Chữ trong bong bóng tin gửi dùng màu kem trên nền đỏ rượu. Chromium kiểm
+màu thực tế của cả tin gửi và tin nhận với dữ liệu giả lập.
+
+# Nền họa tiết in trên giấy cho Chat và Đổi sách — 14/11/2026
+
+Theo hướng chủ dự án chọn, thay dải sticker bằng họa tiết nét mảnh nâu mực
+và đỏ rượu nhạt. Một lớp dùng chung trong MainLayout trôi từ trên phải xuống
+dưới trái, lặp theo đúng kích thước ô họa tiết. Tăng độ rõ ở mép, làm dịu
+vùng giữa và tạm dừng khi tab ẩn hoặc vùng chính rời viewport.
+Build, detector và Chromium 1440/390 px với dữ liệu giả lập PASS. Kiểm chiều
+trôi, chu kỳ, tab ẩn, forced-colors và phạm vi route. Bản trước lưu local
+trong `.tmp/reading-backdrop-before-print/` để đối chiếu.
+
+# Thu gọn thanh tiến trình Đổi sách — 14/11/2026
+
+Sửa trên checkout demo `codex/admin-exchange-dispute-ui` đang có thay đổi local.
+Theo tham chiếu sidebar Admin, toàn ô của bước hiện tại dùng nền đỏ rượu
+và chữ sáng. Bước đang xem lại dùng nền kem; hai dấu hiệu cùng hiện trong
+lịch sử. Số hoặc dấu tích đặt cạnh tên trên màn rộng và ở trên tên trên màn
+hẹp. Giữ điều kiện mở và thao tác quay về bước hiện tại.
+Build Member web và browser Exchange Finance Recovery với API giả lập PASS
+ở 390/1440 px. Kiểm thêm thanh tiến trình tại 320 px chữ 130%, Enter/Tab,
+trả focus và forced-colors. Không có lần chạy native.
+
+# Thiết kế lại Thanh Tiến trình 5 Bước Đổi Sách (Bookmark Journey Rail) — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`. Tái thiết kế toàn diện thanh 5 bước tiến trình đổi sách (`ExchangeSteps`) theo phong cách thước đo lộ trình sách cổ điển (Bookmark Journey Rail), giải quyết triệt để vấn đề thanh quá mờ nhạt và mất cân đối thị giác:
+- **Mặt phẳng hộp thước đo lộ trình (`.steps`)**: Sử dụng nền giấy ngà ấm áp chuyển sắc nhẹ (`linear-gradient(180deg, #ffffff 0%, #fbf6ee 100%)`), bo góc 20px, viền kép chỉ sách sang trọng (`border: 1.5px solid #d9cbbe`), đổ bóng 3 lớp (`0 4px 20px rgba(40, 25, 20, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9)`), tách biệt hoàn toàn khỏi nền dossier của trang.
+- **Đường ray tiến trình phát sáng (Illuminated Progress Rail)**:
+  - Rãnh ngầm dẫn hướng (`ol::before`): Đường rãnh chìm 4px màu be da cổ điển (`#ebdcd0`), bo tròn 99px và đổ bóng chìm nhẹ.
+  - Dải sáng tiến trình (`ol::after`): Tự động tính toán theo tỉ lệ bước thực tế (`--progress-pct`), phủ dải màu chuyển tiếp từ xanh ngọc bích tri thức (`#254337`) qua xanh ngọc đậm (`#3e6b5c`) đến đỏ rượu Lật Lại (`#5c0202`), có quầng sáng lan tỏa 10px.
+- **Hệ thống trạm mốc đồng nhất & Cấu trúc 2 tầng (Two-line Milestone Stations)**:
+  - Tất cả 5 bước đều có khung viên nang bao bọc riêng (`min-height: 58px; padding: 8px 12px; border-radius: 14px;`), không còn hiện tượng 1 bước có khung còn 4 bước trần trụi.
+  - Cấu trúc 2 dòng rõ ràng: Nhãn phụ dập nổi `BƯỚC 1` ... `BƯỚC 5` (uppercase micro-tag `0.6875rem`) nằm trên tiêu đề chính (`0.9375rem`), tạo nhịp điệu cân bằng thị giác.
+  - **Bước hoàn thành (`data-completed`)**: Dấu ấn ngọc bích 32px nguyên khối (`#254337`) với dấu tích trắng sắc sảo, nền viên nang xanh nhạt (`rgba(235, 245, 238, 0.45)`).
+  - **Bước hiện tại (`data-current`)**: Thẻ hồ sơ trắng nổi bật (`#ffffff`), viền đỏ rượu 2px, dấu ấn sáp đỏ 34px (`#5c0202`) có viền bảo chứng kép và chữ số đậm 850, tiêu đề đỏ rượu nổi bật.
+  - **Bước xem lại lịch sử (`data-selected`)**: Phủ màu vàng giấy ngà dập nổi (`#fcf8db`, viền `#d4be72`).
+  - **Bước chưa tới (`unavailable`)**: Dấu ấn trắng viền nét đứt (`2px dashed #cfc0b0`), nhãn màu cát trầm thanh thoát.
+- **Tương thích di động (Mobile container query <= 680px)**: Tự động căn giữa, đường ray tiến trình chuyển lên cao chạy qua tâm dấu ấn (top 22px), ẩn nhãn `Bước X` để nhường chỗ cho tiêu đề wrap 2 dòng mượt mà.
+- Typecheck (`tsc -b`), build (`vite build`) và Playwright test suite `exchange-finance-recovery.mjs` (390px & 1440px) đều PASS 100%.
+
+# Refactor Giao diện 5 Bước Đổi Sách & Nền Chuyển Động Chibi (Taste v2 & Impeccable) — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`. Nâng cấp toàn diện giao diện 5 bước đổi sách
+(`ExchangeSteps` & `ExchangeHistory`) và hoàn thiện mặt phẳng đỡ hồ sơ (`ExchangeDetailPage`):
+- **Đường ray hành trình liên tục (Journey Rail Stepper)**: Thêm trục nối ngầm xuyên suốt
+  5 bước (`.steps ol::before`), định hình rõ chuỗi hành trình. Phân cấp thị giác chuẩn mực:
+  bước hoàn thành mang huy hiệu tích ngọc bích (`#ebf5ee`/`#254337`), bước hiện tại mang sắc
+  đỏ rượu vang Lật Lại kèm quầng sáng bảo chứng (`#5c0202`), bước đang xem lại lịch sử nổi bật
+  với sắc vàng giấy ngà (`#fcf8db`), bước chưa tới dịu nền (`#f8f4ec`).
+- **Dải băng lưu trữ đối chiếu (Archive Dossier Banner)**: Thay thế hoàn toàn thẻ `h2` tranh chấp
+  thị giác cũ bằng dải thông điệp hồ sơ trang nhã: huy hiệu `Clock` "Bản lưu trữ đối chiếu",
+  tiêu đề phân định rõ "Xem lại bước N: [Tên bước]" và lời giải thích yên tâm cho bạn đọc;
+  nút quay về bước hiện tại màu đỏ rượu nguyên khối sắc sảo.
+- **Hồ sơ sách đối xứng (Dual Book Dossier)**: Bìa sách chuẩn tỉ lệ 3:4 có gáy sách và đổ bóng
+  chiều sâu; tựa sách font serif sắc nét; thẻ tình trạng và giá trị sách dập nổi nhẹ; phân
+  biệt trang nhã giữa "Bạn gửi ↗" (tông đỏ ấm) và "Bạn nhận ↙" (tông xanh ngọc bích tri thức).
+- **Phiếu cân bằng tài chính & Ký quỹ an toàn (Financial Equilibrium Ledger)**: Chuyển đổi 3 ô
+  bảng đơn điệu thành các thẻ cam kết tài chính độc lập có icon `ShieldCheck`, nêu rõ cọc của bạn,
+  cọc của đối tác và tiền bù kèm chỉ dẫn ký quỹ Lật Lại bảo chứng.
+- **Header & Điều hướng hồ sơ**: Mã phiếu `#HEX` được dập nổi dạng tem lưu trữ monospace;
+  nút quay lại và nút nhắn tin đối tác bo góc nguyên khối; toàn bộ focus tuân thủ nghiêm ngặt
+  quy chuẩn 03/11 (`outline: 2px solid var(--shop-wine); outline-offset: 0;`).
+- Typecheck, build và Playwright test suite `exchange-finance-recovery.mjs` (390px & 1440px)
+  đều PASS 100%.
+
+# Nền chuyển động Chibi Vector và Thẻ hồ sơ đỡ giao diện Chat / Đổi sách — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`. Thay thế toàn bộ nền cũ trên `MainLayout`
+bằng nền chuyển động băng chuyền chéo (Diagonal Infinite Marquee) với các sticker vector
+Chibi Lật Lại (8 biểu tượng: sách đỏ dát vàng, mắt kính, sách mở, cú thủ thư, tách trà
+tim, chồi lá bookmark, chồng sách, ngòi bút cổ điển):
+- Chuyển động so le 2 chiều (dải lẻ trôi lên ↗, dải chẵn trôi xuống ↙) ở tốc độ siêu êm
+  dịu 120s, góc nghiêng -25°, độ mờ nền 0.65 tạo không gian đọc sách ấm áp.
+- Tối ưu hiệu năng triệt để: loại bỏ toàn bộ `backdrop-filter: blur()`, bật `contain: strict`,
+  giảm số lượng DOM xuống ~450 phần tử, đảm bảo 60fps mượt mà không còn giật lag.
+- Bổ sung khung thẻ đỡ giao diện (Paper Dossier Surface) trên `/exchange/:id` (`.exchangeSheet`)
+  và `/exchange` (`.container`): nền giấy ngà sang trọng (`rgba(255, 252, 245, 0.97)`),
+  bo góc 20px, viền chỉ sách (`#d9cbbd`) và đổ bóng chiều sâu 3 lớp. Giúp toàn bộ văn bản,
+  tiêu đề và các bước giao nhận nổi bật hoàn toàn, tách biệt 100% khỏi các họa tiết di chuyển phía sau.
+- Build, typecheck, và Playwright suite `exchange-finance-recovery.mjs` (390px & 1440px) đều PASS.
+
+# Nền chuyển động Chat và Đổi sách trên Member Web — 14/11/2026
+
+Checkout demo `codex/admin-exchange-dispute-ui` tại `7203be4c`. MainLayout
+dùng chung họa tiết sách và dấu trang WebP cho Chat, trang tìm sách để đổi và
+phiếu trao đổi 5 bước. Nền trôi từ trên phải xuống dưới trái, giữ cùng lớp khi
+đổi bước và tạm dừng khi tab ẩn hoặc vùng chính rời viewport.
+
+Build Member Web, kiểm tra trực tiếp trên Chromium 1440px/390px, bộ test phục
+hồi tài chính trao đổi và 64 ca workspace Chat với dữ liệu giả lập đều PASS.
+Bộ Chat đầy đủ timeout ở nút “Thương lượng mua” sau khi hủy đề nghị, tái hiện
+với layout trước khi đổi nền. Chờ chủ dự án xem nhịp và màu trong checkout demo.
+
+# Giao diện khiếu nại trao đổi Admin — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`, base `64f32cde`. Refactor thẩm mỹ danh sách
+khiếu nại trao đổi theo phương án Hồ sơ phân xử sách cao cấp (Judicial Book Dossier)
+chuẩn Taste v2 và Impeccable (Operate & Care):
+- Tách từng ca khiếu nại thành thẻ hồ sơ độc lập trên nền kệ sách (`--shop-shelf`),
+  hiệu ứng đổ bóng và viền ấm nhẹ khi hover.
+- Đầu hồ sơ: mã hồ sơ `#HEX` in đậm, huy hiệu thẩm quyền Admin (`ShieldAlert`), thời
+  điểm mở thụ lý kèm biểu tượng đồng hồ và nhãn giai đoạn ngữ nghĩa (`.stage`).
+- Khán đài phân xử hai bên (Judicial Arena): đặt song song bên khởi tạo và bên nhận
+  đề xuất đối xứng qua cầu nối trao đổi (`exchangeBridge` với `ArrowLeftRight`),
+  hiển thị avatar người dùng, vai trò, tên đối soát và tựa sách tham gia trao đổi.
+- Khối trích dẫn sự cố: viền chỉ đỏ rượu sát mép (`border-left: 3.5px solid var(--shop-wine)`),
+  tiêu đề "Căn cứ khiếu nại" kèm icon tệp hồ sơ và mô tả tóm tắt 2 dòng.
+- Chân hồ sơ: viên nang ký quỹ (`.escrowCapsule`) với số tiền đang giữ nổi bật và
+  nút điều hướng đỏ rượu nguyên khối "Mở hồ sơ →" có focus sát mép chuẩn quy tắc 03/11.
+- Tương thích đa thiết bị: container queries tự động xếp dọc ở màn hình nhỏ (< 48rem, < 30rem),
+  không vỡ chữ hoặc tràn ngang ở 1440/390/320 px với 130% font zoom.
+Admin web build, typecheck, 250 unit tests và Playwright suite `exchange-resolution-safety.mjs`
+đều PASS toàn bộ.
+
+# Giao diện hồ sơ khiếu nại & đối soát Member Web — 14/11/2026
+
+Nhánh `codex/admin-exchange-dispute-ui`, base `64f32cde`. Redesign toàn diện trải nghiệm
+xử lý tranh chấp cho bạn đọc (`ExchangeReturnPanel` và `ExchangeEvidencePanel`):
+- Bổ sung thanh thông điệp bảo chứng tâm lý (`assuranceBanner`): trấn an an toàn tiền cọc
+  và quyền lợi trong lúc Admin thụ lý.
+- Header hồ sơ trang trọng: Kicker "Hồ sơ khiếu nại", tiêu đề giai đoạn rõ nét, nhãn vai
+  trò bạn đọc dạng thẻ bo tròn thanh lịch (`Bạn là chủ sách`).
+- Khối chỉ đạo từ Admin (`request`): viền chỉ đỏ rượu sát mép trái, bố cục typography sắc sảo.
+- Thẻ thông số đối chiếu (`facts`): Hạn bổ sung/kháng nghị đếm ngược trực quan, số tiền cọc
+  và tiền bù được bảo chứng nổi bật, giữ trọn vẹn văn bản hợp đồng kiểm thử.
+- Khối bằng chứng sự cố (`ExchangeEvidencePanel`): Khu vực xem trước tệp media được đóng
+  khung cân đối, loại bỏ khoảng trống xám vô nghĩa, ảnh thu nhỏ có viền bo và bóng nhẹ.
+- Đồng bộ hệ thống nút CTA đỏ rượu nguyên khối và viền focus sát mép chuẩn quy chuẩn 03/11.
+Member web build, typecheck, và Playwright browser suite `exchange-finance-recovery.mjs`
+ở cả 390px và 1440px đều PASS.
+
+Rà lại bản Gemini khi có nhiều hồ sơ và nhiều sách. Giữ kiểu thẻ, avatar
+và hiệu ứng hover. Danh sách hiển thị 10 hồ sơ/trang, tìm theo mã, người
+hoặc mọi tựa sách và giữ ngữ cảnh khi quay lại từ chi tiết. Thẻ hiện số
+cuốn còn lại, chi tiết liệt kê từng cuốn theo chiều giao. Build Admin và
+Chromium với 25 hồ sơ mô phỏng, phiếu 5 cuốn, màn 1440/390/320 px PASS.
+Phân trang ở frontend trên tập hồ sơ API hiện trả về.
+
+Member web chỉnh cụm khiếu nại trên phiếu trao đổi. Đưa trạng thái, yêu
+cầu Admin, hạn và tiền đang giữ vào cùng hồ sơ. Gom nút giải trình khi
+form mở, thêm focus và sửa nhãn tệp. Giữ lối phục hồi thao tác khi chưa
+rõ kết quả. Build, 8 ca ActionCard và Chromium local phiếu #B57A9858
+với An/Bình ở 1440/390 px PASS. Kiểm form đến trước bước gửi.
+
+Admin hiển thị giải trình của hai bên trên chi tiết khiếu nại. Đọc nội dung
+đã gửi qua nhật ký và receipt đúng phiếu, giới hạn người đang phụ trách.
+API E2E kiểm hai người gửi, replay và quyền đọc. Admin build và Chromium
+QA PASS. API demo đã nạp bản mới, hồ sơ #B57A9858 hiện một giải trình có sẵn.
+
+Bản thử riêng cho danh sách và chi tiết Admin cùng bước 5 Member web
+tại [exchange-dispute](../../apps/user-web/design-previews/exchange-dispute/index.html).
+Ca mô phỏng An–Bình cho phép gửi giải trình ở Member và xem ngay ở Admin.
+Chromium kiểm tìm kiếm, đổi màn, gửi thử, focus, tải lại và màn
+1440/1024/390/320 px (320 px chữ 130%). Chủ dự án đã duyệt đưa vào web.
+
+Áp vào danh sách Admin, chi tiết Admin và bước 5 Member. Danh sách gọn
+theo hàng, giữ tìm kiếm/phân trang. Chi tiết đặt hai chiều với ảnh sách
+từ bản chụp, gom giải trình và tệp. Member ưu tiên việc cần làm và xem
+lại nội dung của mình sau khi máy chủ ghi nhận. API phân quyền theo người
+gửi hoặc người phụ trách, không đổi lệnh xử lý. Build cả ba app, API E2E
+và Admin Chromium QA PASS. Phiếu local #B57A9858 đã kiểm đọc giải trình
+cũ, hai ảnh tải được và form Member đến trước bước gửi.
+
+Bước 5 Member web dùng hai cột khi đủ chiều rộng nội dung. Giải trình và
+thao tác nằm cạnh bằng chứng, sách và khoản giữ. Màn hẹp tự xếp một cột.
+Đo Chromium local #B57A9858 tại 1440×900, cạnh dưới vùng chọn tệp từ
+1450 xuống 622 px tính từ đầu trang. Kiểm thêm 1024/390/320 px.
+Thông tin đối chiếu dùng hàng riêng dưới hai cột để cân chiều cao.
+Hiện trạng thái chưa gửi giải trình khi API trả danh sách rỗng.
+
+# Trang gửi yêu cầu hỗ trợ — 13/11/2026
+
+Nhánh `codex/support-request-redesign`, base `16ba9585`. Member web tách phần
+chọn giao dịch và phần mô tả. Bộ chọn có hai mục Đang diễn ra và Lịch sử,
+tìm theo tên sách, đối tác hoặc mã. Phiếu trao đổi hiện sách gửi/nhận từ bản
+chụp. API hỗ trợ loại phiếu demo đã lưu trữ khỏi danh sách và liên kết mới.
+Đọc Mongo local xác nhận giữa hai tài khoản demo có một phiếu đang diễn ra,
+sáu phiếu lưu trữ và không có phiếu đã đóng còn hiển thị.
+
+Chromium với Mongo QA riêng đã qua tìm sách/mã, phân trang lịch sử, từ chối
+phiếu đã lưu trữ và lưu đúng giao dịch. Kiểm ở 1440 px và 320 px chữ 130%.
+API/Member web build và OpenAPI qua kiểm tra. Member web unit 485/486, ca
+ShippingTrackingCard hiện hành còn lệch câu hiển thị. API demo port 3000
+còn chạy bản cũ do lệnh restart bị môi trường chặn.
+
+Bổ sung 14/11 trên nhánh `codex/support-ui-redesign` từ `64f32cde`. Căn tiêu đề
+danh sách, gửi yêu cầu và chi tiết hồ sơ theo khung Ví. Đồng bộ lề mobile của
+Đánh giá. Giữ bố cục Gemini và sửa nút gửi, nhãn trạng thái, nút tạo trùng,
+phân trang giao dịch và chữ vỡ ở 320 px. Bỏ lời hứa 24 giờ và bảo đảm ký quỹ
+khỏi nội dung hỗ trợ. Member web lint/build và browser với Mongo QA PASS.
+Browser so vị trí tiêu đề Ví, Đánh giá và Hỗ trợ ở 1440/768/320 px.
+
+Trang Hỗ trợ dùng FilterSelect của Member web cho cả bốn bộ chọn trên
+desktop và mobile. Sửa màu hover nút gửi và khoảng trống tiêu đề mobile.
+Chromium với Mongo QA qua kiểm tra bàn phím, chạm 320 px, màu nút và
+khóa bộ chọn trong lúc chờ gửi lại. Member web build/typecheck PASS.
+
+# Tua thời hạn trao đổi trên phiếu và hồ sơ Admin — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `d6885a54`. OpenAPI 0.79.0 và
+migration 0079. Member web có nút tua hạn phản hồi, cọc, gửi, vận chuyển và
+kiểm tra. Hồ sơ Admin đang phụ trách có nút tua hạn bằng chứng, kháng nghị,
+trả sách và kiểm tra sách hoàn. Chỉ bật cho hai tài khoản demo local. Xem
+[cách bật](ENV_HANDOFF.md). Nghiệm thu native và hãng thật chưa chạy.
+
+DB local dọn sáu phiếu, 14 bài cũ của An/Bình và hoàn các khoản đang giữ ở
+bốn phiếu. Phiếu có bút toán được lưu nội bộ để đối soát. Mỗi người có ba
+bài trao đổi mới đã duyệt, không có phiếu mới. Chromium với HTTP/Mongo QA
+đã bấm tua hạn gửi trên Member và tua hạn bổ sung bằng chứng trên Admin.
+Suite Exchange qua 62 ca. Đối soát sổ cái local cân bằng.
+
+# Chờ đủ hai vận đơn trước khi shipper lấy sách — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `807c899a`, OpenAPI 0.78.0. API tách
+`registeredAt` khỏi `shippedAt`. Member web hiện **Chờ đủ hai đơn** hoặc **Chờ
+shipper lấy sách**. Trình mô phỏng `/driver` chỉ ghi lấy kiện mới khi hai bên
+đã lưu mã riêng và còn trong hạn 72 giờ. Worker hủy và hoàn các khoản nếu chưa
+lấy kiện nào, hoặc mở hồ sơ giữ tiền và sách khi mới lấy một kiện. Giao trực
+tiếp vẫn ghi nhận theo từng chiều. Mốc gửi cũ giữ nguyên. Xem
+[ADR0089](../adr/0089-one-sided-exchange-return.md).
+
+Chromium trên HTTP/Mongo QA với media giả đã kiểm từ lưu hai mã đến nút lấy
+sách và trạng thái trên phiếu Member. Mongo QA qua 61 ca trao đổi, gồm hết
+hạn, hoàn qua sổ cái, giữ sách khi đã lấy một kiện và chặn lệnh gửi lặp. API/Member web local
+đã kiểm HTTP. Phiên demo Windows có tiến trình quét riêng hạn gửi; cài đặt
+chuẩn dùng `pnpm dev:orders`. Nghiệm thu người thật, native và điều phối hãng
+thật chưa chạy.
+
+# Nút tua hạn gửi trên phiếu trao đổi demo — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `89901a49`. Phiếu Member web
+hiện **Qua hạn gửi sách · Demo** dưới hạn gửi của đối tác. Chỉ người đã ghi
+nhận giao trực tiếp trên phiếu đủ cọc, đã được bật riêng trong cấu hình local,
+thấy nút. Lệnh API0.77 dùng cùng đường mở tranh chấp với worker hết hạn. Lệnh
+giữ nguyên thông tin gửi/nhận, tiền và sách, có receipt/audit và phục hồi đúng key.
+
+Phiếu `a4650f66` trên DB local chính đã ghi nhận An gửi mô phỏng, Bình chưa
+bấm nhận và chưa gửi. Nút còn sẵn cho người dùng. Chromium local đã bấm từ An
+trên phiếu kiểm thử `2dedff0a` và kiểm hai tài khoản chuyển tới hồ sơ sự cố.
+Kiểm thêm nút ở 390/1440 px, 4 ca HTTP một chiều trên Mongo QA và 158 unit
+session-client. Xem [cách bật](ENV_HANDOFF.md). Tua hạn tại các bước Admin còn mở.
+
+# Admin xác minh giao sách khi người nhận im lặng — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `65641555`. API0.76 và
+migration 0078 thêm mốc xác minh riêng, giữ trạng thái khiếu nại, cọc và
+tiền bù. Admin được phân công chọn bằng chứng đã tải xong và ghi căn cứ.
+Member web thấy kết quả. Bước tiếp theo là yêu cầu hai bên bổ sung bằng
+chứng, rồi chờ hạn xử lý theo [ADR0089](../adr/0089-one-sided-exchange-return.md).
+
+DB local chính đã áp dụng 0078. Phiếu `990053c6` chờ xác minh, Bình chưa
+ghi nhận gửi và chưa bấm nhận. Tệp mẫu ghi rõ dữ liệu demo, đã tải qua API
+vào bucket bằng chứng đang cấu hình. Admin web local 5173 đã kiểm đăng nhập,
+nhận phụ trách, xem biên nhận mẫu và mở hộp xác nhận. Lệnh xác minh của phiếu
+demo để người dùng tự thực hiện. Member web 5174 đã kiểm đọc tệp trên phiếu.
+
+Mongo QA kiểm 3 ca trao đổi một chiều gồm quyền, bằng chứng, replay đồng
+thời và giữ tiền. Hai ca nâng cấp migration qua. Build API, typecheck hai web
+và Chromium Admin với HTTP fixture qua, gồm xác minh và chuyển sang yêu cầu
+bổ sung bằng chứng. Nút tua hạn trên phiếu và nghiệm thu người thật còn mở.
+
+# Xác nhận nhận sách khi đối tác chưa gửi — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, tích hợp nghiệp vụ từ `b4486d6b`
+vào phiếu Member web tại `c4146062`. [ADR0089](../adr/0089-one-sided-exchange-return.md)
+đi cùng OpenAPI 0.75.0 và migration 0077. Mỗi chiều xác nhận riêng. Khi chỉ
+An gửi, Bình có thể xác nhận ở **Bạn nhận** và vẫn thấy nút gửi ở **Bạn gửi**.
+Phiếu của An ghi đối tác đã nhận và còn chờ đối tác gửi. Bước hiện tại vẫn
+là **Giao nhận** cho đến khi đủ hai chiều. Quá hạn một chiều giữ tiền và mở
+đường xử lý sự cố, theo quyền và trạng thái API.
+
+PASS 57 ca HTTP Exchange trên Mongo QA, gồm hai kết quả trả sách/bồi thường,
+và hai ca nâng cấp thứ tự migration trên Mongo QA. Build API/Member, typecheck
+Admin, 486 unit Member và các ca Chromium giả lập về hạn và phục hồi lệnh qua.
+DB local đã áp dụng 0077 và API local đã nạp bản mới. Chromium 1440/390 bấm
+An ghi gửi và Bình xác nhận nhận qua API thật, rồi kiểm trạng thái/hạn trên cả
+hai tài khoản. Phiếu `af7e4fb8` giữ 90.000đ từ ví An, 110.000đ từ ví Bình. Phiếu kiểm tra
+`17a6bd36` là ca hai bên đã nhận riêng.
+
+Gói này dừng ở mốc giao nhận một chiều trên bản local. Nút tua hạn tại phiếu,
+nghiệm thu bàn xử lý Admin với người thật và thiết bị RN còn mở.
+
+# Thanh bước và form gửi sách trên phiếu trao đổi — 13/11/2026
+
+Nhánh `codex/exchange-progress-web`, base `5665f44a`. Phiếu Member web
+và phiếu trong hội thoại dùng thanh bước Đề nghị, Đặt cọc, Giao nhận,
+Kiểm tra, Kết quả. Khi đủ cọc, cùng phiếu chuyển sang Giao nhận. Các bước
+đã có dữ liệu mở để xem lại thỏa thuận, khoản cọc, hành trình và hạn kiểm
+tra. Phiếu luôn đánh dấu bước đang diễn ra. Đề nghị trong hội thoại vẫn
+mở từ hội thoại đã liên kết.
+
+Form trong mục Bạn gửi dùng lệnh gửi và phục hồi cũ, giữ nội dung đã nhập
+khi thu gọn, xem lại bước cũ hoặc máy chủ từ chối lần lưu. Sau khi ghi nhận,
+mã vận đơn hiện tại chiều gửi. Link thông báo về đúng chiều và có thể mở
+hành trình ở chế độ chỉ xem khi phiếu đã sang bước sau.
+
+Build, lint (cảnh báo cũ), 484 unit, browser kiểm ví/hạn và Chromium
+320/390/768/1440 qua. Chromium giả lập API kiểm tự chuyển bước, xem lại,
+giữ bản nháp, lỗi lưu và thông báo. Browser với Nest/Mongo QA riêng kiểm
+tạo, chấp nhận, hủy, giữ lệnh khi mất phản hồi, từ chối đặt cọc và 403.
+Đã đọc phiếu local `285a732a` qua cả hai tài khoản An và Bình. Chưa gửi
+kiện trong phiếu demo hoặc kiểm hãng vận chuyển thật.
+
+Đầu phiếu chỉ hiện một liên kết quay lại. Chromium 320/1440 kiểm mở từ
+Hội thoại và mở trực tiếp, căn icon cùng hàng và về đúng danh sách.
+
+Hai màn xem lại dùng bố cục riêng trên cùng phiếu. Đề nghị đặt hai nhóm
+sách cạnh nhau, giữ phần mở tình trạng và tóm tắt cọc, tiền bù. Đặt cọc
+hiện tổng, thời điểm ghi nhận và các khoản theo từng bên. Chromium
+320/390/768/1440 kiểm cả hai vai trên phiếu local `285a732a` ở chế độ đọc,
+cùng ca giả lập tiêu đề dài và chỉ một bên đặt cọc. Build và 484 unit qua.
+
+Màn Giao nhận đặt hai chiều cạnh nhau trên desktop và xếp dọc khi hẹp.
+Hạn gửi nằm cùng trạng thái và nút tạo đơn. Địa chỉ, hành trình, hỗ trợ và
+đề nghị hủy vẫn mở từ phiếu. Chromium 320–1440 kiểm phiếu local của cả
+hai vai, địa chỉ bằng bàn phím và giữ bản nháp. Ca giả lập kiểm gửi, nhận
+lỗi lưu, thử lại, thông báo và chuyển bước. Build và 484 unit qua.
+
+Phần địa chỉ nhận gom người nhận, số điện thoại, địa chỉ và nút sao chép.
+Dùng tên khu vực từ danh mục dịch vụ khi có và tránh lặp ở cuối địa chỉ.
+Chromium 320/390/768/1440 kiểm hai vai trên phiếu local, mở và sao chép
+bằng bàn phím, phản hồi khi trình duyệt từ chối clipboard. Build và 484 unit qua.
+
+Màn Kiểm tra sách đặt hạn riêng và thao tác cạnh sách đã nhận. Mỗi bên
+xem được tình trạng theo phiếu, xác nhận đã kiểm tra và báo sự cố trong
+hạn của mình. Xác nhận kiểm tra không rút ngắn hạn. Phiếu dùng luồng
+phục hồi lệnh hiện có rồi mở Bằng chứng sự cố khi báo cáo được ghi nhận.
+Chromium giả lập API kiểm hai hạn khác nhau, 320–1440 px, xác nhận,
+hết hạn, mất phản hồi và thử lại đúng lệnh. Build, 485 unit và browser
+kiểm hạn qua. Phiếu demo local vẫn dùng để bắt đầu từ Giao nhận.
+
+# Giao nhận hai chiều trên phiếu trao đổi Member web — 13/11/2026
+
+Nhánh `codex/exchange-handover-web`, base `10cab58a`. Phiếu đã đủ cọc mở
+màn **Giao nhận sách** với hai chiều **Bạn gửi** và **Bạn nhận**. Mỗi chiều có
+sách, số cuốn, trạng thái và phần mở địa chỉ hoặc hành trình. Tạo đơn và xác
+nhận nhận sách nằm ngay tại chiều tương ứng, dùng lệnh và phục hồi hiện có.
+Xác nhận nhận kiện mở hạn kiểm tra riêng của người nhận. Tin nhắn, thỏa thuận,
+hỗ trợ và thao tác báo sự cố vẫn mở được từ phiếu.
+
+Thông báo đối tác đã gửi mở chiều **Bạn nhận** của đúng phiếu. Sự kiện nhận
+sách hiện dùng chung cho lệnh người dùng và cập nhật vận chuyển có thể báo cả
+hai thành viên, nên thông báo đó mở tổng quan hai chiều. Sau khi cả hai nhận,
+phiếu chuyển sang phần kiểm tra đang có.
+
+Build, typecheck, 484 unit Member web và Chromium ở 320/390/768/1440 px qua.
+Chromium dùng API giả lập để thử cả hai vai, phiếu 3 đổi 1, thông báo mở đúng
+chiều, xác nhận bằng bàn phím và chuyển sang kiểm tra. Hai ca NestJS qua trên
+Mongo QA riêng, bao gồm vòng đời trao đổi và hai hạn kiểm tra độc lập. Phiếu
+local `717a774f` được đọc qua API, đang chờ hai bên đặt cọc. Chưa nghiệm thu
+người dùng, giao nhận thật hoặc Admin. Bước tiếp theo là màn kiểm tra sách và
+điểm vào báo sự cố từ phía người nhận.
+
+# Gợi ý sách theo mong muốn khi gửi đề nghị — 13/11/2026
+
+Member web xếp sách trong kệ theo số tiêu chí tác giả/thể loại khớp với bài
+đang muốn nhận. Dùng tên đã chuẩn hóa dấu/chữ hoa và nhánh thể loại từ taxonomy
+hiện có. Nhãn giải thích vì sao sách được gợi ý, lựa chọn vẫn do thành viên
+quyết định. Ghi chú mong muốn vẫn hiển thị trong mục đang tìm.
+
+Màn chọn sách dùng danh sách liền hàng, giá và ô chọn tách cột trên desktop.
+Khối sách muốn nhận giữ bìa lớn hơn, tên đối tác và mục xem mong muốn. Sách
+khớp có nền nhẹ và nhãn, sách đã chọn có dấu tích và tổng giá trị ở cuối.
+Chromium local kiểm hai vai ở 320/390/768/1440 px, chọn bằng phím, xem lại
+và quay lại. Build Member web và 482 unit qua.
+
+Đã thêm hai bài đã duyệt cho mỗi tài khoản An và Bình trong DB local chính.
+Ẩn hai bài trùng của Bình chưa gắn giao dịch để giữ giới hạn năm bài. Chromium
+local qua hai tài khoản ở 320/390/768/1440 px, kiểm xếp hạng, nhãn, chọn sách
+ngoài gợi ý bằng bàn phím và giữ lựa chọn khi quay lại từ màn xem lại. Dừng
+trước gửi đề nghị. Build và 482 unit Member web qua.
+
+# Đề xuất sách thay thế trên Member web — 13/11/2026
+
+Nhánh `codex/exchange-replacement-web`, base `4ceb61c0`. Bên đến lượt phản hồi
+mở hộp chọn sách thay thế trong kệ đủ điều kiện. Hộp hiện sách trên phiếu hiện
+tại và tính cọc, tiền bù của đề nghị mới từ giá trị sách. Nút gửi ghim ở đáy
+hộp trên mobile. Phiếu giữ cùng ID, đổi lượt phản hồi và hiện số tiền mới từ
+API. Danh sách Trao đổi của tôi hiện nhãn Chờ bạn phản hồi theo lượt thực tế.
+Dùng command counter, revision và đối soát mất phản hồi hiện có.
+
+Tên sách trong hộp thay thế chiếm đúng số dòng thực tế, tối đa hai, ở cả ba phần:
+sách trên phiếu, kệ chọn sách và đề nghị mới. Giá hoặc tác giả nằm sát tên một
+dòng. Tên dài hiện dấu ba chấm, hover xem tên đầy đủ. Chromium đã kiểm tên ngắn,
+tên dài và bố cục ở 320/390/768/1440 px, đã xem phiếu demo local ở 390/1440 px.
+Danh sách sách thay thế có chiều cao tối đa theo màn hình và cuộn riêng khi
+dài. Chromium QA với bốn lựa chọn đã kiểm cuộn chuột, chọn bằng bàn phím và
+nút gửi trên màn hẹp ở 320 px. Nút tải trang tiếp theo nằm dưới danh sách.
+
+Thẻ Trao đổi của tôi hiện số cuốn ngay cạnh nhãn nhận/gửi. Mỗi bên hiện tối đa
+hai tên và ảnh bìa, báo số còn lại trong phiếu chi tiết. Tổng giá trị đổi nằm
+dưới danh sách, tiền bù ở giữa. Chromium local đã kiểm phiếu An–Bình 2↔1 từ
+cả hai tài khoản ở 320/390/768/1440 px và nút mở đúng phiếu. Build web qua.
+
+Đầu phiếu chờ phản hồi dùng tiêu đề gọn và tên đối tác ở khối riêng, giữ mã
+phiếu cùng hàng với lối về danh sách. Trạng thái chờ nằm cạnh thao tác và ghi
+chú chưa giữ sách hay trừ tiền nằm cạnh bảng tiền. Chromium local đã kiểm hai
+vai trên phiếu sửa lại ở 320/390/768/1440 px, thêm ca tên dài qua fixture đọc.
+
+Phiếu chi tiết nhiều cuốn hiện số lượng và tổng giá trị từng bên, liệt kê đủ
+sách theo hàng có bìa nhỏ và tình trạng mở riêng. Hai nhóm cao theo nội dung
+và xếp dọc khi thiếu chỗ. Phiếu 1↔1 giữ bố cục bìa lớn. Build Member web qua.
+Chromium ở 320/390/768/1440 px đã kiểm phiếu local 1↔1, 2↔1 của cả hai tài
+khoản, thêm 3↔1 và 5↔1 qua fixture đọc, gồm tên dài và mở tình trạng bằng phím.
+
+Đã kiểm trên Member web local 5174 bằng An/Bình đến bước xem số tiền của sách
+thay thế. Phiếu demo mới trong Mongo local chính còn chờ Bình gửi, kèm ba bài
+đã duyệt cho hai tài khoản. Phiếu đã chờ đặt cọc trước đó vẫn dùng được.
+Chromium với API/Mongo QA riêng và storage fake đã kiểm luồng Bình gửi, mất
+phản hồi và gửi lại đúng mã/nội dung, An chấp nhận cùng phiếu, bàn phím và bố
+cục 320/390/768/1440 px. Hồi quy Expo web, build và 482 unit Member web đã qua.
+Chưa kiểm thiết bị native. Bước tiếp theo là màn chọn sách để gửi đề nghị.
+
+# Tên đối tác dài trên phiếu đổi sách — 13/11/2026
+
+Nhánh local `codex/exchange-long-names`, base `51df7c85`.
+Tiêu đề phiếu đề nghị và đặt cọc dùng nhãn cố định theo trạng thái. Tên đối tác
+ở dòng riêng và thu gọn trong nút chat. Tiền bù ghi theo bên trả/nhận để tên dài
+không đẩy nút đặt cọc xuống dưới.
+Chromium với dữ liệu giả đã kiểm tên dài và tên liền 80 ký tự ở các cỡ
+320/390/1440 px. Đã mở phiếu local của An và Bình, kiểm hộp xác nhận và chat.
+
+# Bố cục phiếu đặt cọc trên Member web — 13/11/2026
+
+Nhánh local `codex/exchange-funding-redesign`, base `e3310a7c`.
+Phiếu đang chờ đặt cọc đặt hai bìa sách cạnh bảng tiền trên màn rộng. Màn hẹp
+đặt tiền và nút nộp trước, sách sau. Dùng bìa đã lưu trên phiếu, nhãn gửi/nhận,
+số tiền và hạn thực tế. Tin nhắn mở từ nút cạnh mục hỗ trợ.
+
+Đã xem phiếu An và Bình trên Chromium với dữ liệu local ở 1440 và 390 px,
+kiểm thêm khung chat ở 320 px. Đã kiểm mở xác nhận, Escape, trả focus và giữ bản
+nháp chat. Không gửi lệnh đặt cọc hoặc tin nhắn khi kiểm phiếu local.
+
+# Đặt cọc và thu gọn tin nhắn trên phiếu đổi sách — 13/11/2026
+
+Nhánh local `codex/exchange-funding-ui`, base `2293090c` của checkout demo.
+Phiếu Member web đưa cọc, tiền bù, hạn và nút đặt cọc lên đầu trang. Hộp xác
+nhận đọc số dư khả dụng từ ví; thiếu tiền thì dẫn đến ví. Sau khi một bên nộp,
+phiếu hiện người còn phải nộp. Khi cả hai nộp đủ, phiếu đưa thao tác gửi sách
+hiện có lên đầu trang. Dùng lại command và cơ chế đối soát kết quả của Exchange.
+
+Tin nhắn mở từ nút có tên đối tác trên phiếu, trượt bên phải ở desktop và chiếm
+màn hình ở mobile. Bản nháp còn khi đóng/mở. Số tin mới dựa trên trang tin mới
+nhất và mốc đã xem của tab, theo tài khoản/phiếu. Phiếu nhúng trong hội thoại
+vẫn dùng workspace và cơ chế chat riêng.
+
+Đã kiểm giao diện hai vai trên giao dịch local của chủ dự án, không gửi lệnh
+đặt cọc. Chromium với API/Mongo QA riêng đã kiểm hai lượt đặt cọc, mất phản hồi
+và replay, số dư và trạng thái chuẩn bị gửi. Build, 482 unit web, browser hạn
+đặt cọc, cache ví, chat/phân trang và hồi quy hội thoại đều qua. Bước tiếp theo
+là màn gửi và nhận sách từng chiều.
+Hồi quy mất phản hồi, replay và đổi phiên đã qua trên Member web và Expo web.
+
+# Gửi đề nghị đổi sách trên Member web — 13/11/2026
+
+Nhánh local `codex/exchange-proposal-entry`, base `f36c44b9` của checkout demo.
+Trang sách mở màn chọn sách, xem lại cọc và tiền bù, rồi gửi đề nghị theo
+FR-X01–X02. Phiếu chờ phản hồi có hành động và hạn ở đầu trang. Thông báo
+mở đúng phiếu cho bên nhận. Nếu đã có hội thoại đang hoạt động cho cuốn sách,
+màn soạn dẫn người dùng tiếp tục ở đó theo quyền chuyển chế độ hiện có.
+
+Đã thử hai tài khoản và sách đã duyệt trên Mongo local chính, đến màn xem lại.
+Gửi đề nghị, mất phản hồi, gửi lại cùng mã và nội dung, và mở phiếu từ thông báo
+đã chạy trên Chromium với API/Mongo QA riêng và ảnh fixture. Ca đề nghị chưa
+giữ sách và chưa giữ tiền. Build, 482 unit web, browser chi tiết sách và hồi
+quy hội thoại trao đổi đã qua. Các bước đồng ý, đặt cọc và giao nhận tiếp tục
+dùng màn hiện có. Bước thiết kế tiếp theo là xác nhận đề nghị và đặt cọc.
+
+# Tra giá cho đầu sách chờ duyệt — 10–11/11/2026
+
+Nhánh `codex/price-lookup-pending`, base `f9fc82af`, commit subject
+`feat(price-assist): look up verified prices before catalog approval`.
+Member web ở bước 4 tra giá từ đầu sách đã xác nhận hoặc yêu cầu chờ duyệt của
+chính người bán. Khi chưa có kết quả, người bán có thể xem lại hoặc nhập giá.
+Giá từ nhà sách được xác minh theo ISBN hoặc tên sản phẩm, tác giả và tập/ấn bản
+đã khai. Gợi ý cho sách chờ duyệt ở mức tham khảo `Limited`. Lượt tra, nguồn và
+gợi ý theo revision. Sửa ấn bản không dùng lại giá cũ. Xem [ADR0029](../adr/0029-online-price-lookup.md).
+
+Kiểm contract/routes, API và web typecheck/lint, web build, 90 unit giá, 481 unit
+web, 28 ca schema trên Mongo QA. Hai bộ HTTP giá và tự duyệt dùng provider/trang
+giả lập trên Mongo QA. Chromium 390/1440 px kiểm đang tra, chưa có nguồn, nhập tay
+và hết hạn. Live adapter OpenAI tìm hai lượt cho *One Piece Strong Words – Tập II*,
+không có URL để xác minh. Với *Dế Mèn phiêu lưu ký* ISBN `9786042030540`, xác minh
+một giá nhà sách 40.000 đ. Chưa nghiệm thu toàn hành trình với provider thật hoặc native.
+
+Ngày 10/11 đã áp migration `0076-online-price-catalog-revision` trên Mongo demo
+local và bật OpenAI qua cấu hình riêng của API demo. API 3000 và Member web
+5174 phản hồi sau khi khởi động lại lúc đó.
+
+Ngày 11/11 kiểm lại tại `6deb66b5`: API build và contract/routes PASS, 90 unit giá,
+19 ca HTTP giá với adapter giả lập, 61 ca Mongo QA (8 skip import/failover),
+481 unit web và 14 ca Chromium của panel ở 390/1440 px PASS.
+Chromium 1440 px qua bước 1–4 dùng Nest/Mongo QA, ảnh mẫu, storage giả lập,
+OpenAI tìm nguồn thật và NVIDIA soạn khoảng giá. Cả hai sách chờ duyệt đều
+bắt đầu tra ngay và giữ giá người bán đã nhập. *One Piece Strong Words – Tập II*
+kết thúc với 0 nguồn xác minh, báo thiếu nguồn và nút nhập tay đưa focus về ô giá.
+*Dế Mèn phiêu lưu ký* ISBN `9786042030540`: một lượt trả HTTP 503 do đầu ra mô hình
+không đạt kiểm tra. Lượt chạy lại từ fixture mới có nguồn nhà sách 40.000 đ,
+trả khoảng 16.000–21.000 đ mức `Limited`, và áp mức 16.000 đ sau khi xác nhận.
+Chưa kiểm Gemini thật, Supabase thật, native hay gửi duyệt cuối luồng ở lượt
+chạy đầu tiên.
+
+Checkpoint `fix(user-web): keep verified price reference available when AI fails`
+trên `codex/price-lookup-pending`, base `6deb66b5`. Bước 4 hiện khoảng tham chiếu
+còn hiệu lực trước khi AI trả lời, giữ nguồn và nút chọn khi AI lỗi, bỏ thông
+báo đang tra cũ. Đọc lại tham chiếu nếu nguồn có thể xuất hiện giữa lần đọc
+đầu và lúc AI lỗi. Khi tra xong mà thiếu nguồn, hiển thị một thông báo và nút
+đưa focus về ô giá bán. Giá chỉ đổi sau xác nhận, lưu giá tham chiếu như giá nhập tay.
+
+Web build/typecheck, lint (cảnh báo ngoài phạm vi), 482 unit và 32 ca Chromium
+giả lập (16 panel, 12 hết hạn tham chiếu, 4 đăng cuốn tiếp theo) PASS.
+Chromium 1440 px với Nest/Mongo QA, storage giả lập và OpenAI tra nguồn thật:
+*Dế Mèn* có nguồn 40.000 đ. Model soạn được tiêm đầu ra sai, trả HTTP 503.
+Khoảng tham chiếu 16.000–24.000 đ hiện trước và sau lỗi. Xác nhận 16.000 đ rồi
+gửi duyệt thành công. *One Piece Tập II* có 0 nguồn, nhập tay và gửi duyệt
+thành công. Hai bài ở `PendingReview`, không ghi áp dụng giá AI. QA dọn fixture.
+Chưa có review độc lập và tích hợp remote. Bước tiếp: review diff theo base main.
+
+Checkpoint `feat(price-assist): show lookup results automatically on member web`
+trên `codex/price-lookup-pending`, base `af5aa892`. Bước 4 tự đọc tiến độ qua
+`price-reference` sau khi người bán yêu cầu. Khi có nguồn, hiện khoảng tham chiếu
+và cho yêu cầu AI riêng. Nếu thiếu nguồn, báo kết quả và cho nhập tay. Đọc tiến
+độ tối đa 13 lần mỗi yêu cầu, dừng khi có kết quả hoặc rời bước 4. Khi đọc lỗi,
+người bán có thể xem lại thủ công. API đọc đúng revision, qua quyền chủ bài,
+không tạo gợi ý hoặc gọi provider. Xem [ADR0029](../adr/0029-online-price-lookup.md).
+
+API/web build và lint, contract/routes, 90 unit giá, 19 ca HTTP trên Mongo QA,
+482 unit web, 158 unit session-client, 28 ca Chromium giả lập PASS. Chromium
+nối Nest/Mongo QA thật với finder/trang nguồn/storage giả lập: *Dế Mèn* tự hiện
+khoảng tham chiếu rồi gửi duyệt với mức đã xác nhận, *One Piece Tập II* tự báo
+thiếu nguồn rồi gửi duyệt với giá nhập tay. Mỗi bài chỉ có một yêu cầu gợi ý
+ban đầu, không có áp dụng giá AI. Đã dọn fixture; chưa chạy provider thật hoặc
+native ở checkpoint này. Chưa push; cần review độc lập trước tích hợp.
+
+# Thiết kế lại bước 4 Đăng sách — 10/11/2026
+
+Nhánh `codex/sell-step-four-layout` từ `359e84fa`. Bước 4 tách lựa chọn hình thức,
+giá, tiêu chí đổi và nơi gửi. Khung giá đặt cạnh giá bán, hiển thị tiến độ và
+kết quả trước, mở riêng lý do và nguồn. Tiêu chí đổi và giới hạn đăng bài thu
+gọn. Xem [brief Đăng sách](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-sellbookpage-tsx.md).
+
+Member web build/typecheck, lint, 20 unit và 45 ca Chromium với API giả lập.
+Kiểm 320/390/1440 px, giữ giá/tiêu chí khi đổi hình thức, chọn địa chỉ, sách bộ,
+đấu giá, trạng thái tra giá và gợi ý hết hạn. Dev server phục vụ mã mới cổng 5174.
+Khi đầu sách chờ duyệt, khung giá đánh dấu Tùy chọn và ưu tiên nút Nhập giá bán
+để đưa focus về ô giá. Kiểm tra lại sau khi duyệt là thao tác phụ. Hai viewport
+Chromium xác nhận Nhập giá bán không phát sinh lượt yêu cầu trợ lý.
+
+# OpenAI cho tra giá online và Autofill — 10/11/2026
+
+Nhánh `codex/openai-listing-assist`, base demo `9df78db9` có cùng cây source với
+`main` tại `966e14e5`. Hai luồng chọn provider riêng theo [ENV_HANDOFF](ENV_HANDOFF.md).
+Tra online chọn OpenAI rồi Gemini khi gặp lỗi tạm thời, cùng lease đầu sách, vẫn
+đọc và xác minh giá trên trang nhà sách. Autofill chọn OpenAI rồi NVIDIA khi lỗi
+tạm thời, giữ ảnh cận tự động ở lượt chính và trả ngay kết quả hợp lệ dù thiếu trường.
+Cấu hình cũ vẫn chạy. Model soạn khoảng giá và pipeline tự duyệt giữ cấu hình riêng.
+
+Kiểm 498 unit, 58 ca HTTP qua Mongo QA riêng (`latlai_openai_final_test`), API
+typecheck/build/lint, contract và docs. Provider, ảnh và trang nhà sách trong
+kiểm thử tự động là giả lập.
+
+Chạy thật trên adapter tại `99a3d116`, không ghi MongoDB. OpenAI và NVIDIA cùng đọc
+năm in 1963 ở *Cao Lãnh*. OpenAI đọc thêm Kinh Thi và lần in ở *Âm thanh và cuồng nộ*,
+đọc đúng Cảo Thơm ở *Á-Nam thi tuyển*, nhưng nhầm tựa *9 đêm*. Mẫu bốn cuốn chưa đủ
+nghiệm thu. Tra giá mặc định OpenAI không trả URL cho *Dế Mèn phiêu lưu ký* ISBN
+`9786042030540` (hai lượt), Gemini thật trả 429. Truy vấn thử giới hạn vào Kim Đồng
+tìm được trang 45.000 đ, nhưng `checkPage` lúc đó cũng chấp nhận các ấn bản khác vì
+ISBN chỉ hiện trong thân trang. Đã sửa bộ xác minh theo [ADR0029](../adr/0029-online-price-lookup.md).
+Chạy lại cùng 5 trang Kim Đồng qua `SafePageFetcher` và `checkPage`: giữ trang đúng
+ISBN với giá 45.000 đ, loại cả 4 trang sai ISBN. Lượt xác minh trang không gọi lại
+provider, không ghi MongoDB.
+
+Tra OpenAI nay ưu tiên domain khớp tên NXB trong danh sách được phép, mở rộng một lần
+nếu chưa có nguồn qua kiểm tra. Trang có tham số theo dõi chỉ được tính một nguồn.
+Chạy service với OpenAI và các trang thật, dùng bộ lưu giả lập: *Dế Mèn phiêu lưu ký*
+trả đúng một nguồn Kim Đồng, ISBN khớp, giá 45.000 đ, khoảng 7 giây, một lượt tìm.
+*Mắt biếc* đã mở rộng sau khi NXB Trẻ timeout nhưng vẫn thiếu nguồn đã xác minh.
+*Cao Lãnh* không có nguồn. Chưa thử lại hạn mức Gemini hoặc nghiệm thu qua giao diện.
+Cấu hình API đang chạy chưa đổi.
+
+Đã giới hạn hai lỗi truy cập liên tiếp cho mỗi nhà sách trong một lượt tra. Thiếu
+nguồn do lỗi truy cập thử lại sau 24 giờ, thiếu nguồn bình thường sau 7 ngày.
+Phát lại bốn URL thật NXB Trẻ của *Mắt biếc* qua service và bộ tải trang, với đầu ra
+tìm kiếm và bộ lưu giả lập: hai lần tải timeout, hai URL còn lại được bỏ qua, tổng
+khoảng 5 giây và trạng thái nội bộ `PageUnavailable` với hạn thử lại 24 giờ.
+
+Nhánh `codex/price-catalog-feedback` xử lý thông báo khi đầu sách chờ duyệt và
+chưa có nguồn giá. Backend trả `R-NEED-CATALOG-APPROVAL` và cache theo trạng thái
+danh mục. Member web hiện một kết quả, giữ đường nhập giá tay và giữ khoảng
+tham chiếu khi có giá trị. Kiểm 33 unit API, 29 ca HTTP trên Mongo QA riêng và
+Chromium ở 390/1440 px với dữ liệu mẫu.
+
 # Review gợi ý giá sách — 11/11/2026
 
 Nhánh `codex/price-assist-review` từ main `807cef3bff2fd3188f38405b08f67c56e0f26164`.
@@ -97,6 +785,14 @@ Chromium. Kiểm bố cục/lỗi ở 320, 390 và 1440 px. Các ca API trong br
 dùng dữ liệu giả lập. Bản xem trước local cổng 5175 trả 200 cho trang Đăng
 sách, health và tra danh mục. Chưa nghiệm thu với tài khoản hoặc AI thật.
 Bước 2 là phạm vi tiếp theo sau khi xem lại bước 1.
+
+Nhánh `codex/autofill-photo-guidance` từ `98a15704` gom gợi ý chụp thêm thành
+một cụm nền giấy đậm hơn, ở đầu phần mở rộng các mục chưa đọc. Dòng hướng dẫn
+đi cạnh nhau trên màn rộng, tự xuống dòng trên màn hẹp. Kiểm build/typecheck,
+lint, 2 unit và 16 ca Chromium với API giả lập, gồm bố cục và bàn phím tại 320,
+390 và 1440 px. Dev server cổng 5174 đã phục vụ mã mới.
+Đã bỏ nhãn lặp “Bước n/5” ở đầu nội dung từng bước. Thanh điều hướng vẫn hiển thị
+các bước và đánh dấu bước hiện tại.
 
 Đồng bộ `main` tại `86e6b2bb` trong PR #105. Giữ cả hai phần bàn giao khi
 gộp tài liệu. Bản tích hợp dùng nền sáng đã chọn cho Autofill. Sửa lỗi mở

@@ -13,7 +13,7 @@ export function ExchangeContext({ detail }: { detail: ExchangeDetail }) {
       <header>
         <h3>Sách và thỏa thuận</h3>
         <p>
-          Phiếu #{detail.transactionCode} · Với {detail.partner.username}
+          Phiếu #{detail.transactionCode} · Với <span title={detail.partner.username}>{detail.partner.username}</span>
         </p>
       </header>
       {[
@@ -41,7 +41,7 @@ export function ExchangeContext({ detail }: { detail: ExchangeDetail }) {
                   )}
                 </div>
                 <div>
-                  <strong>{book.title}</strong>
+                  <strong dir="auto" title={book.title}>{book.title}</strong>
                   <p>{book.author}</p>
                   <span>
                     {conditions[book.condition as keyof typeof conditions] ??

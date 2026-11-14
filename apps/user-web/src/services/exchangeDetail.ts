@@ -35,6 +35,11 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     createdAt: ex.createdAt,
     status: mapExchangeStatus(ex, actor.id),
     rawStatus: ex.status,
+    returnResolution: ex.returnResolution,
+    statements: ex.statements,
+    demoShippingAdvanceAvailable: ex.demoShippingAdvanceAvailable,
+    demoDeadline: ex.demoDeadline,
+    outboundDeliveryVerification: ex.outboundDeliveryVerification,
     hasAgreementSnapshot: Boolean(ex.agreement),
     lastProposedById: ex.lastProposedById ?? ex.initiatorId,
     canViewerAccept:
@@ -75,6 +80,8 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     cancellationRequestedAt: ex.cancellationRequestedAt ?? undefined,
     viewerFundedAt:
       (initiator ? ex.initiatorFundedAt : ex.recipientFundedAt) ?? undefined,
+    partnerFundedAt:
+      (initiator ? ex.recipientFundedAt : ex.initiatorFundedAt) ?? undefined,
     viewerFundingAmount:
       (initiator ? ex.initiatorDeposit : ex.recipientDeposit) +
       (ex.diffPayerId === actor.id ? ex.diffAmount : 0),
@@ -205,6 +212,11 @@ export function confirmSent(
 }
 export function confirmReceived(id: string, revision: number) {
   return exchangeCommand(`/exchanges/${id}/receive`, {
+    expectedVersion: revision,
+  });
+}
+export function advanceDemoShipping(id: string, revision: number) {
+  return exchangeCommand(`/exchanges/${id}/demo-advance-shipping`, {
     expectedVersion: revision,
   });
 }

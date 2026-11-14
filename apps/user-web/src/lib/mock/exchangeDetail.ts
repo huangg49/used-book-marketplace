@@ -1,3 +1,4 @@
+import type { DemoExchangeDeadline, ExchangeReturnResolution, ExchangeStatement } from "@used-books/session-client";
 import type { ExchangeStatus, ExchangeBook, ExchangeUser } from './exchangeMine';
 
 export type ViewerRole = 'proposer' | 'recipient';
@@ -24,9 +25,15 @@ export interface ExchangeDetail {
   deliveryMethod?: 'meetup' | 'shipping';
   revision?: number;
   rawStatus?: string;
+  statements?: ExchangeStatement[];
+  returnResolution?: ExchangeReturnResolution;
+  demoShippingAdvanceAvailable?: boolean;
+  demoDeadline?: DemoExchangeDeadline;
+  outboundDeliveryVerification?: { verifiedAt: string; note: string };
   lastProposedById?: string | null;
   canViewerAccept?: boolean;
   viewerFundedAt?: string;
+  partnerFundedAt?: string;
   viewerFundingAmount?: number;
   fundingDeadline?: string;
   proposalExpiresAt?: string;
@@ -45,8 +52,8 @@ export interface ExchangeDetail {
   partnerCompletedAt?: string;
   viewerAddress?: { recipientName: string; phone: string; detail: string; localityCode?: string | null; serviceAreaCode?: string | null };
   partnerAddress?: { recipientName: string; phone: string; detail: string; localityCode?: string | null; serviceAreaCode?: string | null };
-  viewerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null; lastEvent?: string | null; lastEventAt?: string | null };
-  partnerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null; lastEvent?: string | null; lastEventAt?: string | null };
+  viewerShipment?: ExchangeShipment;
+  partnerShipment?: ExchangeShipment;
   hasViewerReviewed: boolean;
   closedBy?: 'viewer' | 'partner' | 'both';
   shippingDeadline?: string;
@@ -61,6 +68,19 @@ export interface ExchangeDetail {
   cancellationRequestedBy?: 'Initiator' | 'Recipient' | null;
   cancellationRequestedAt?: string | null;
 }
+
+type ExchangeShipment = {
+  method: 'carrier' | 'direct';
+  carrierCode?: string | null;
+  carrierName?: string | null;
+  trackingCode?: string | null;
+  meetupLocation?: string | null;
+  notes?: string | null;
+  registeredAt?: string | null;
+  shippedAt?: string | null;
+  lastEvent?: string | null;
+  lastEventAt?: string | null;
+};
 
 export interface ChatMessage {
   id: string;

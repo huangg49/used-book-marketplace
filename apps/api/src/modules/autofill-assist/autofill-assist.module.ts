@@ -6,7 +6,9 @@ import { MediaModule } from '../media/media.module.js';
 import { AutofillAssistController } from './autofill-assist.controller.js';
 import { AutofillAssistService } from './autofill-assist.service.js';
 import { AutofillImages, StorageAutofillImages } from './autofill-images.js';
-import { AutofillModel, autofillModelFromConfig } from './autofill-model.js';
+import {
+  AutofillModel, autofillModelFromConfig, NvidiaAutofillModel, nvidiaAutofillModelFromConfig,
+} from './autofill-model.js';
 import { CatalogRecoveryService } from './catalog-recovery.service.js';
 import { IsbnMatchesService } from './isbn-matches.service.js';
 import { IsbnBarcodeReader } from './isbn-barcode-reader.js';
@@ -31,10 +33,15 @@ const reader = (config: ConfigService) => (key: string) => {
       useFactory: (config: ConfigService): AutofillModel | null =>
         autofillModelFromConfig(reader(config)),
     },
+    {
+      provide: NvidiaAutofillModel,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => nvidiaAutofillModelFromConfig(reader(config)),
+    },
     { provide: AutofillImages, useClass: StorageAutofillImages },
   ],
   controllers: [AutofillAssistController],
-  // ADR 0061: the listing auto review worker reuses the vision provider.
-  exports: [AutofillModel, AutofillImages, IsbnBarcodeReader],
+  // ADR 0061: the review worker stays on its validated NVIDIA pipeline.
+  exports: [NvidiaAutofillModel, AutofillImages, IsbnBarcodeReader],
 })
 export class AutofillAssistModule {}

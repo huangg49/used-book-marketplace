@@ -302,78 +302,84 @@
 /* Card Body (Two Sides & Swap Indicator) */
 .cardBody {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 20px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(5.5rem, auto) minmax(0, 1fr);
+  gap: clamp(10px, 2vw, 20px);
+  align-items: stretch;
 }
 
 .bookSide {
-  display: flex;
-  gap: 14px;
-  align-items: center;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 8px;
   min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--shop-line);
+  border-radius: 10px;
+  background: #f3f6ee;
+}
+
+.bookSide[data-sending] {
+  background: var(--shop-paper);
+}
+
+.bookSideHeading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 0;
+  font-size: .8125rem;
+  font-weight: 650;
+  color: var(--shop-muted);
+}
+
+.bookCount {
+  font-size: 1.125rem;
+  line-height: 1.3;
+  font-weight: 750;
+  color: var(--shop-ink);
+  white-space: nowrap;
+}
+
+.bookList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.bookRow {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
 }
 
 .bookCoverBox {
-  width: 72px;
-  height: 98px;
-  flex-shrink: 0;
-  border-radius: 8px;
+  width: 34px;
+  aspect-ratio: 3 / 4;
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(40, 25, 20, 0.12);
-  border: 1px solid #e2d2bf;
-  position: relative;
-  background: #f5eddc;
+  border: 1px solid var(--shop-line);
 }
 
 .coverImage {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  padding: 0;
 }
-
-.multiBadge {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  background: rgba(40, 25, 20, 0.88);
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
+.coverImage img { object-fit: contain; }
+.coverImage svg { width: 16px; height: 16px; }
+.coverImage svg + span { display: none; }
 
 .bookDetails {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-}
-
-.sideTag {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 4px;
-  align-self: flex-start;
-  margin-bottom: 2px;
-}
-
-.sideTagReceive {
-  background: #e8f5e9;
-  color: #1b5e20;
-  border: 1px solid #c8e6c9;
-}
-
-.sideTagGive {
-  background: #fbe9e7;
-  color: #bf360c;
-  border: 1px solid #ffccbc;
 }
 
 .bookTitle {
@@ -387,6 +393,7 @@
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 }
 
 .bookAuthor {
@@ -399,12 +406,24 @@
 }
 
 .bookPrice {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--shop-line);
   font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--shop-wine);
-  margin: 2px 0 0;
+  color: var(--shop-muted);
+  margin: 0;
+}
+
+.bookPrice strong {
+  color: var(--shop-ink);
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.bookRemainder { margin: 0; color: var(--shop-muted); font-size: .8125rem; }
 
 /* Swap Indicator in Center */
 .swapConnector {
@@ -413,7 +432,6 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 0 8px;
   flex-shrink: 0;
 }
 
@@ -436,29 +454,28 @@
   color: #71717a;
 }
 
-.compBadge {
+.compensation {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
   font-size: 0.75rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 9999px;
   text-align: center;
-  white-space: nowrap;
   line-height: 1.3;
+  color: var(--shop-muted);
 }
 
-.compUserPays {
-  background: #fbe9e7;
-  color: #bf360c;
-  border: 1px solid #ffccbc;
+.compensation strong {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.compOtherPays {
-  background: #e8f5e9;
-  color: #1b5e20;
-  border: 1px solid #c8e6c9;
-}
+.compUserPays { color: var(--shop-wine); }
+.compOtherPays { color: #1b5e20; }
 
 .compNone {
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-weight: 650;
   background: #f4eddf;
   color: var(--shop-muted);
   border: 1px solid #e0d1c0;
@@ -600,15 +617,27 @@
 /* Pagination */
 
 /* Responsive */
-@media (max-width: 840px) {
+@media (max-width: 700px) {
   .cardBody {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
   }
 
   .swapConnector {
     flex-direction: row;
-    padding: 8px 0;
+  }
+
+  .swapIconBox {
+    width: 30px;
+    height: 30px;
+  }
+
+  .swapIconBox svg { width: 16px; height: 16px; }
+
+  .compensation {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .cardFooter {

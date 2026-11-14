@@ -31,6 +31,8 @@ chưa có custody, allocations, effective decision, assignment và appeal protoc
 
 ## Mở lại thực thi
 
+[ADR0089](0089-one-sided-exchange-return.md) bổ sung luồng riêng cho một chiều đã giao có xác nhận và chiều còn lại quá hạn gửi. Lệnh cũ vẫn chỉ phục vụ replay.
+
 Cần gói riêng có quyết định hiệu lực, custody/return và điều kiện duyệt lại,
 phân bổ từng nguồn tiền, thẩm quyền300.000đ/escalation, assignment/independence,
 kháng nghị48h và review người thật theo TEAMWORK. Không bật lại bằng env flag,

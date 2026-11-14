@@ -30,6 +30,13 @@ const labels = {
   Review: 'Đánh giá',
   Member: 'Thành viên',
 };
+const closedStates = [
+  'Completed',
+  'Cancelled',
+  'Rejected',
+  'Expired',
+  'PaymentExpired',
+];
 const isTransaction = (
   type: Target['type'],
 ): type is keyof typeof transactions => type in transactions;
@@ -61,16 +68,56 @@ export class SupportTargetsService {
       if (!isTransaction(type))
         invalidField('type', 'Chọn loại giao dịch của bạn.');
       const q = String(query.q ?? '').trim();
+      const view = String(query.view ?? '');
+      const searchId = q.replace(/^#/, '');
+      const isCode =
+        /^[a-f0-9]{4,8}$/i.test(searchId) ||
+        /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(searchId);
       // Only aggregation/page reads use this common document view.
       const collection = tx.c[
         transactions[type]
       ] as unknown as BoundCollection<Document>;
       const pipeline = this.transactionPipeline(type, actor._id);
+      if (view)
+        pipeline.push({
+          $match: {
+            [type === 'Exchange' ? 'status' : 'state']:
+              view === 'History'
+                ? { $in: closedStates }
+                : { $nin: closedStates },
+          },
+        });
       if (q)
         pipeline.push({
           $match: {
             $or: [
               { title: { $regex: regexLiteral(q), $options: 'i' } },
+              ...(type === 'Exchange'
+                ? [
+                    {
+                      initiatorTitles: {
+                        $regex: regexLiteral(q),
+                        $options: 'i',
+                      },
+                    },
+                    {
+                      recipientTitles: {
+                        $regex: regexLiteral(q),
+                        $options: 'i',
+                      },
+                    },
+                  ]
+                : []),
+              ...(isCode
+                ? [
+                    {
+                      _id: {
+                        $regex: '^' + regexLiteral(searchId),
+                        $options: 'i',
+                      },
+                    },
+                  ]
+                : []),
               {
                 'peer.displayName': { $regex: regexLiteral(q), $options: 'i' },
               },
@@ -83,7 +130,7 @@ export class SupportTargetsService {
         {
           kind: 'time',
           ascending: false,
-          scope: { actor: actor._id, type, q },
+          scope: { actor: actor._id, type, q, ...(view ? { view } : {}) },
           limit: Number(query.limit ?? 10),
           cursor: query.cursor as string | undefined,
         },
@@ -96,6 +143,7 @@ export class SupportTargetsService {
           this.transactionOption(
             type,
             rows.find((r) => r._id === id)!,
+            actor._id,
           ),
         ),
         nextCursor: page.nextCursor,
@@ -119,7 +167,7 @@ export class SupportTargetsService {
           ])
           .toArray();
         if (!rows[0]) throw notFound();
-        return this.transactionOption(type, rows[0]);
+        return this.transactionOption(type, rows[0], actor._id);
       }
       let label: string = labels[type],
         description: string | null = null,
@@ -176,7 +224,12 @@ export class SupportTargetsService {
       first = exchange ? 'initiatorId' : 'buyerId',
       second = exchange ? 'recipientId' : 'sellerId';
     return [
-      { $match: { $or: [{ [first]: owner }, { [second]: owner }] } },
+      {
+        $match: {
+          ...(exchange ? { demoArchivedAt: { $exists: false } } : {}),
+          $or: [{ [first]: owner }, { [second]: owner }],
+        },
+      },
       {
         $set: {
           peerId: {
@@ -227,14 +280,45 @@ export class SupportTargetsService {
               },
             },
           ]
-        : [{ $set: { title: labels.Exchange } }]),
+        : [
+            {
+              $set: {
+                initiatorTitles: {
+                  $ifNull: ['$agreement.initiatorBooks.book.title', []],
+                },
+                recipientTitles: {
+                  $cond: [
+                    { $ifNull: ['$agreement.recipientBook.book.title', false] },
+                    ['$agreement.recipientBook.book.title'],
+                    [],
+                  ],
+                },
+              },
+            },
+          ]),
     ];
   }
   private transactionOption(
     type: keyof typeof transactions,
     row: Document,
+    owner: string,
   ): Option {
+    const titles = (value: unknown) =>
+      Array.isArray(value)
+        ? value.flatMap((title) => readable(title, 500) ?? []).slice(0, 5)
+        : [];
+    const initiator = row.initiatorId === owner;
     return {
+      ...(type === 'Exchange'
+        ? {
+            booksToGive: titles(
+              initiator ? row.initiatorTitles : row.recipientTitles,
+            ),
+            booksToReceive: titles(
+              initiator ? row.recipientTitles : row.initiatorTitles,
+            ),
+          }
+        : {}),
       target: { type, id: row._id as string },
       label: readable(row.title, 500) ?? labels[type],
       description: labels[type],

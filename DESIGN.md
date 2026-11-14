@@ -914,7 +914,7 @@ no remote integration.
 Card navigation expands into the Chat workspace over420ms and returns over340ms.
 Cover/title travel separately; content crossfades at native text dimensions.
 Only the selected card participates. Navbar scroll morph is paused during the
-move, with the autumn background retained. Owner-keyed layout memory restores
+move, with the page background outside the snapshot. Owner-keyed layout memory restores
 inbox filter/reveal/scroll on Back. A pending authorized read opens the same
 paper frame with loading/retry; transaction controls await actual room data.
 Without browser View Transitions support, links keep ordinary navigation.
@@ -929,11 +929,14 @@ appears only for an active empty
 conversation, centered with the greeting; never in a history error or expired room.
 These are decorative, noninteractive details, not transaction or presence signals.
 
-On19/10 the owner retained the approved18/10 soft3D autumn book-desk illustration
-as the Chat inbox/room background after viewing an alternative image. It is a
-Chat-only fixed viewport-cover layer in MainLayout, with opaque paper/shelf
-content and12px mobile outside clearance. Navigating away removes it; Sell keeps
-its archival desk. Reuse the exact `autumn-book-desk.webp` from6394dc4.
+From 14/11, Chat and the five-step Exchange workspace share a reading pattern
+behind the existing paper content. Small pastel books and bookmarks sit on a
+warm paper ground. The transparent `reading-pattern.webp` tile repeats every
+384px (320px on mobile). A fixed decorative layer in MainLayout moves exactly
+one tile left and down per loop, over 168s (144s on mobile). It stays live through
+Chat view transitions and step changes, pauses when the main region is outside
+the viewport or the tab is hidden, and leaves with the route. The owner's motion
+policy applies. The decoration is hidden in forced colors.
 
 The agreement sheet now groups mode, price and price entry as its primary content.
 Before acceptance the listing price leads; after acceptance the agreed wine price

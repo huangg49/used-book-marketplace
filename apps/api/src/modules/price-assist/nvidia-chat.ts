@@ -36,6 +36,7 @@ export interface NvidiaChatOptions {
   model: string;
   // Covers every attempt, so callers keep one bound per call.
   timeoutMs: number;
+  retry?: boolean;
   baseUrl?: string;
   fetcher?: typeof fetch;
 }
@@ -224,7 +225,7 @@ export async function nvidiaChat(
   // The first attempt leaves room for a second only when the bound allows one
   // (25 s: 16 s, then 9 s; 20 s: 11 s, then 9 s).
   const firstLimit =
-    options.timeoutMs >= 2 * RETRY_MIN_LEFT_MS + RETRY_DELAY_MS
+    options.retry !== false && options.timeoutMs >= 2 * RETRY_MIN_LEFT_MS + RETRY_DELAY_MS
       ? options.timeoutMs - RETRY_MIN_LEFT_MS - RETRY_DELAY_MS
       : options.timeoutMs;
   let attempts = 0;
@@ -246,6 +247,7 @@ export async function nvidiaChat(
     const wait =
       result.waitMs ?? RETRY_DELAY_MS + Math.floor(Math.random() * RETRY_JITTER_MS);
     if (
+      options.retry === false ||
       attempts >= 2 ||
       !result.retryable ||
       wait > RETRY_MAX_WAIT_MS ||

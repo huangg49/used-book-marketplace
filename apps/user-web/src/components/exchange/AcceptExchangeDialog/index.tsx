@@ -24,6 +24,7 @@ import { z } from 'zod';
 import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
 import type { CounterOfferData } from '../CounterDialog';
 import { getWalletSummary } from '../../../services/wallet';
+import { serviceAreasQuery } from '../../../services/service-areas';
 import { session } from '../../../lib/session';
 import { BookCover } from '../../BookCover';
 import { formatVnd } from '../../../lib/routes';
@@ -43,13 +44,6 @@ const addressBookSchema = z.object({
       version: z.number().int(),
     }),
   ),
-});
-
-const serviceAreasSchema = z.object({
-  code: z.literal('HCM-DEMO-v1'),
-  name: z.literal('TP.HCM'),
-  demoOnly: z.literal(true),
-  localities: z.array(z.object({ code: z.string(), label: z.string() })),
 });
 
 const addressReceiptSchema = z.object({
@@ -117,8 +111,7 @@ export function AcceptExchangeDialog({
   });
 
   const areas = useQuery({
-    queryKey: ['service-areas'],
-    queryFn: () => session.request('/service-areas', serviceAreasSchema),
+    ...serviceAreasQuery,
     enabled: isOpen,
   });
 

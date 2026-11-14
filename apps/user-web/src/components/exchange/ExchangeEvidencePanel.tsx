@@ -1,3 +1,4 @@
+import { Paperclip, Upload } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -22,10 +23,12 @@ export function ExchangeEvidencePanel({
   id,
   revision,
   userId,
+  compact = false,
 }: {
   id: string;
   revision: number;
   userId: string;
+  compact?: boolean;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -152,20 +155,24 @@ export function ExchangeEvidencePanel({
   }
 
   return (
-    <section aria-label="Bằng chứng sự cố" className={ui.panelCard}>
+    <section aria-label="Bằng chứng sự cố" className={ui.panelCard} data-compact={compact || undefined}>
       {/* Header gọn gàng tối đa */}
       <div className={ui.panelHeader}>
-        <h3 className={ui.title}>Bằng chứng sự cố</h3>
+        <div className={ui.panelHeaderLeft}>
+          <h3 className={ui.title}><Paperclip size={18} aria-hidden="true" /> Bằng chứng sự cố</h3>
+          <p className={ui.subtitle}>Hình ảnh kiện sách, biên nhận hoặc video ngắn để làm căn cứ đối soát.</p>
+        </div>
       </div>
 
       {/* Upload & Preview Area */}
       <div className={ui.uploadArea}>
         {!file && !pending ? (
           <label className={ui.dropzone}>
+            <Upload className={ui.dropzoneIcon} size={21} aria-hidden="true" />
             <span className={ui.dropzoneTitle}>
-              {resumeId ? "Chọn lại tệp để gửi tiếp" : "Chọn ảnh hoặc video"}
+              {resumeId ? "Chọn lại tệp để gửi tiếp" : "Chọn tệp bằng chứng"}
             </span>
-            <span className={ui.dropzoneHint}>JPG, PNG, MP4</span>
+            <span className={ui.dropzoneHint}>JPG, PNG, WEBP, PDF hoặc MP4</span>
             <input
               aria-label="Chọn bằng chứng"
               className={ui.hiddenFileInput}
@@ -255,7 +262,7 @@ export function ExchangeEvidencePanel({
       <div className={ui.listSection}>
         <h4 className={ui.listTitle}>Bằng chứng đã gửi</h4>
 
-        {list.isPending && <p className={ui.emptyText}>Đang tải...</p>}
+        {list.isPending && <p className={ui.emptyText} role="status">Đang tải bằng chứng…</p>}
 
         {list.isError ? (
           <p className={ui.errorAlert}>
@@ -264,7 +271,7 @@ export function ExchangeEvidencePanel({
               Thử lại
             </button>
           </p>
-        ) : !list.data?.items.length ? (
+        ) : list.isPending ? null : !list.data?.items.length ? (
           <p className={ui.emptyText}>Chưa có bằng chứng nào.</p>
         ) : (
           <ul className={ui.evidenceList}>

@@ -9,7 +9,7 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import type { RoleCode } from '../src/database/mongo/documents.js';
 import { AutofillImages } from '../src/modules/autofill-assist/autofill-images.js';
-import { AutofillModel } from '../src/modules/autofill-assist/autofill-model.js';
+import { AutofillModel, NvidiaAutofillModel } from '../src/modules/autofill-assist/autofill-model.js';
 import { AUTO_REVIEWER_ID } from '../src/modules/listings/auto-review-facts.js';
 import { POLICY_VERSION } from '../src/modules/listings/auto-review-policy.js';
 import {
@@ -311,7 +311,7 @@ describe('AI listing auto review with MongoDB', () => {
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(AutofillModel)
+      .overrideProvider(NvidiaAutofillModel)
       .useValue(new FakeModel())
       .overrideProvider(AutofillImages)
       .useValue({ dataUrl })
