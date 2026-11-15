@@ -1,3 +1,53 @@
+# Chốt điều kiện tua hạn kiểm tra Exchange — 15/11/2026
+
+- Sau hai xác nhận kiểm tra, cả hai tài khoản demo mới thấy và dùng được nút
+  Tua hạn kiểm tra. API kiểm điều kiện khi đọc phiếu và khi chạy lệnh giữ khóa
+  trên phiếu. Xác nhận vẫn giữ hạn 72 giờ riêng của mỗi bên theo ADR 0050.
+- OpenAPI, generated contract, API lint/typecheck/build, API unit 510/510,
+  Member web lint/build và unit 490/490 đã qua. Chromium dùng HTTP fixture ở
+  390/1440 px kiểm nút sau khi chưa ai, một người và cả hai đã xác nhận.
+- Exchange E2E 65/65 trên Mongo QA ở `f5ea94c6`, gồm từ chối tua khi thiếu
+  xác nhận, chặn revision cũ và giữ nguyên hai dấu thời gian sau tất toán.
+- Checkout demo dùng nhánh local `codex/demo-ready-exchange` ghép bản sửa
+  với sidebar Staff/Admin `f99810de`. Admin typecheck và unit 250/250 đã qua
+  trên bản ghép. Chromium Staff/Admin kiểm quyền và số tiền trên giao diện
+  với fixture HTTP.
+- Khi đưa bản sửa lên máy demo, áp migration 0080 rồi bật đồng bộ API,
+  worker và web. Tài khoản demo vẫn dùng danh sách cho phép hiện có.
+
+# Sửa xác nhận kiểm tra và tua hạn demo Exchange — 15/11/2026
+
+- Nối nút Xác nhận đã kiểm tra với lệnh complete. Hai xác nhận vẫn giữ hai
+  hạn kiểm tra theo ADR 0050. Nút Tua hạn kiểm tra · Demo gọi demo-advance
+  riêng và báo trước kết quả tất toán.
+- Tua hạn yêu cầu cả hai tài khoản nằm trong danh sách demo. Worker và lệnh
+  tua hạn giữ nguyên mốc xác nhận thật, chỉ ghi mốc hoàn tất giao dịch.
+- Màn Staff hiển thị khoản tiền bù hoàn về ví của bên đã nộp, kể cả khi cọc
+  của họ được dùng để bồi thường. Màn trước xác nhận và hộp thoại dùng cùng
+  số tiền.
+- Chromium Member 390/1440 px bắt đúng hai POST và revision riêng. Chromium
+  Admin kiểm số tiền ở trang và hộp thoại. Hai bài dùng HTTP fixture cho
+  tình huống UI. API/Member build, API unit 510/510, Member unit 490/490,
+  Admin typecheck, contract và docs đã qua. Exchange E2E 65/65 trên Mongo QA
+  kiểm danh sách demo, hai hạn kiểm tra và mốc xác nhận trước/sau tất toán.
+
+# Staff phân xử khiếu nại ở bước kiểm tra Exchange — 15/11/2026
+
+- Nhánh `codex/exchange-inspection-staff`, base `0c4329fd` (PR #111).
+  Chủ dự án xác nhận Staff được phân công có quyền ra phán quyết sau khi cả
+  hai đã nhận sách. Contract 0.80 và API kiểm cùng phạm vi. Bồi thường trực
+  tiếp xử lý phiếu một cuốn mỗi bên. Ca trả sách một chiều giữ ADR 0089.
+- Migration `0080-exchange-inspection-verdict` lưu quyết định trên phiếu,
+  khôi phục từ biên nhận tương ứng nếu có, không ghi bút toán mới khi nâng
+  cấp. Member web đọc đúng bên được bồi thường và cuốn sách liên quan.
+- Contract/routes, lint/typecheck, API/Member build, Member unit (490),
+  Mongo QA (61 pass, 8 skip) và Chromium Admin/Member đã qua. Chromium dùng
+  HTTP fixture cho tình huống UI. Exchange E2E 65/65 trên Mongo QA kiểm Staff
+  trên ngưỡng 300.000đ, hồ sơ sai phạm vi, replay và bên nhận bồi thường.
+  Hai đường nâng cấp validator và ca điền phán quyết từ biên nhận đã qua.
+- Gói ở worktree riêng. Khi triển khai cần áp 0080 trước khi bật API mới và
+  đồng bộ Member web. Điều kiện release và kiểm thử native theo READINESS.
+
 # Sidebar bàn vận hành Staff/Admin — 15/11/2026
 
 - Nhánh `codex/staff-admin-sidebar`, base `0c4329fd`. Menu dùng chung

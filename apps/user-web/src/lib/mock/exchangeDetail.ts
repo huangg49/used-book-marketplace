@@ -60,7 +60,7 @@ export interface ExchangeDetail {
   disputedAt?: string;
   disputeReason?: string;
   disputedBy?: string;
-  resolutionDecision?: 'RefundBoth' | 'CompleteExchange' | null;
+  resolutionDecision?: 'RefundBoth' | 'CompleteExchange' | 'CompensateInitiator' | 'CompensateRecipient' | null;
   resolutionReason?: string | null;
   resolvedBy?: string | null;
   resolvedAt?: string | null;

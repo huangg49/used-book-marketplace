@@ -15,7 +15,8 @@ export function demoExchangeDeadlineEnabled(config: ConfigService, row: Exchange
   if (mongo?.protocol !== 'mongodb:' || !['localhost', '127.0.0.1', '[::1]'].includes(mongo.hostname)) return false;
 
   const ids = config.get<string>('DEMO_EXCHANGE_MEMBER_IDS', '').split(',').map(id => id.trim()).filter(Boolean);
-  return row.initiatorId !== row.recipientId && (ids.length === 0 || [row.initiatorId, row.recipientId].every(id => ids.includes(id)));
+  return row.initiatorId !== row.recipientId &&
+    ids.includes(row.initiatorId) && ids.includes(row.recipientId);
 }
 
 export function currentDemoDeadline(row: ExchangeDoc, now: Date, operations: boolean): Deadline | undefined {
@@ -25,7 +26,9 @@ export function currentDemoDeadline(row: ExchangeDoc, now: Date, operations: boo
       case 'AcceptedAwaitingFunding': return row.fundingDeadline ? 'Funding' : undefined;
       case 'Preparing': return row.shippingDeadline && !hasExchangeDispute(row) ? 'Shipping' : undefined;
       case 'InTransit': return !row.initiatorReceivedAt || !row.recipientReceivedAt ? 'Transit' : undefined;
-      case 'Delivered': return !hasExchangeDispute(row) && inspectionDeadlines(row).all ? 'Inspection' : undefined;
+      case 'Delivered':
+        return row.initiatorCompletedAt && row.recipientCompletedAt &&
+          !hasExchangeDispute(row) && inspectionDeadlines(row).all ? 'Inspection' : undefined;
     }
     return;
   }

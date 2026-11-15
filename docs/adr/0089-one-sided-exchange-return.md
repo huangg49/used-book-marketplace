@@ -22,3 +22,7 @@
 - Contract 0.76.0 và migration 0078 thêm xác minh giao ban đầu cho Admin và kết quả chỉ đọc trên Member web. Dùng lại phân công, bằng chứng riêng và lệnh phục hồi của hồ sơ.
 - Member web và Admin/Staff web dùng API thật. Bàn vận hành xem tệp riêng qua service có kiểm phân công; các lệnh cũ giữ replay dưới quyền hiện tại. Các thay đổi state, tiền, bài đăng, audit, receipt và vi phạm khi chi nằm trong một transaction.
 - Gói có phạm vi local/QA. Trước phát hành cần review người thật về tiền/quyền, thử xuyên vai trò và nghiệm thu RN. Xem [READINESS](../handoff/READINESS.md).
+
+- Ngày 15/11, ca cả hai đã nhận sách rồi mới phân xử có quyền riêng theo phần
+  cập nhật của [ADR0057](0057-exchange-resolution-safety.md). Ngưỡng Staff
+  300.000đ và thời hạn ở ADR này áp dụng cho quy trình trả sách một chiều.

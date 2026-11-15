@@ -55,6 +55,11 @@ review source and gate before changing or extending completion.
 
 ## Exchange hiện hành — deadline và nghĩa vụ cũ
 
+15/11/2026: [ADR0057](../adr/0057-exchange-resolution-safety.md) cập nhật phạm
+vi PR #111. Staff/Admin độc lập và được phân công có quyền phân xử ca kiểm tra
+khi cả hai chiều đã giao nhận và phiếu có đủ funding. Bồi thường trực tiếp chỉ
+xử lý phiếu một sách mỗi bên. Các ca khác dùng quy trình phù hợp phạm vi.
+
 13/11/2026: [ADR0089](../adr/0089-one-sided-exchange-return.md) bổ sung một chiều
 đã nhận, chiều kia quá hạn gửi. Quyết định có hạn phản hồi và kháng nghị, rồi theo
 dõi chặng hoàn. Chỉ bồi thường từ cọc của bên giữ sách khi hồ sơ đủ bằng chứng,

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.79.0
+  version: 0.80.0
 
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
@@ -11212,7 +11212,10 @@ paths:
     post:
       operationId: advanceDemoExchangeDeadline
       tags: [Exchanges]
-      description: Apply the current exchange deadline on an allowlisted local simulation. Does not attest pickup, receipt or dispute evidence.
+      description: >-
+        Apply the current exchange deadline on an allowlisted local simulation.
+        Inspection can be advanced only after both participants acknowledge inspection.
+        Does not attest pickup, receipt or dispute evidence.
       security: [{ bearerAuth: [] }]
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
@@ -11769,12 +11772,13 @@ paths:
         - Exchanges
       summary: resolveExchangeDispute
       description: >-
-        ACTIVE independent STAFF/ADMIN only. New decisions through this legacy endpoint are
-        currently rejected with 409 InvalidState: the legacy command cannot establish custody,
-        allocations, authority limits or an effective decision after appeal. No money, listing,
-        exchange, audit or notification mutation is committed on rejection. Historical receipts
-        may still be replayed with the original key and body after current session, role and
-        participant-independence checks; replay does not repeat their financial effects.
+        An active, independent STAFF or ADMIN assigned to the case may resolve a funded
+        inspection dispute once both shipments and receipts are recorded. CompleteExchange
+        settles the original agreement. CompensateInitiator or CompensateRecipient settles
+        compensation immediately on one-book-per-side exchanges. RefundBoth is available only
+        to replay an existing receipt. Out-of-scope or unassigned new decisions return
+        409 InvalidState. Replays require the original key and body and current role, session
+        and participant independence, without repeating any financial effects.
       security:
         - bearerAuth: []
       parameters:
@@ -23598,6 +23602,7 @@ components:
         returnResolution:
           $ref: '#/components/schemas/ExchangeReturnResolution'
         demoDeadline:
+          description: The current demo deadline, when eligible. Inspection is available only after both participants acknowledge inspection.
           $ref: '#/components/schemas/DemoExchangeDeadline'
         demoShippingAdvanceAvailable:
           type: boolean

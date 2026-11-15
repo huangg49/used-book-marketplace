@@ -112,14 +112,17 @@ riêng; agent không tự gửi các file chứa secret cho người khác.
 
 Đặt `DEMO_EXCHANGE_DEADLINES_ENABLED=true` và điền
 `DEMO_EXCHANGE_MEMBER_IDS` bằng ID hai tài khoản demo trong `apps/api/.env`.
-Khởi động lại API. Chỉ hai người tham gia nằm trong danh sách mới thấy nút
-trên Member web. Phần khiếu nại dùng nút trên hồ sơ của Admin đang phụ trách.
+Khởi động lại API. Cả hai người tham gia phải nằm trong danh sách để sử dụng
+nút trên Member web. Danh sách trống sẽ tắt thao tác. Phần khiếu nại dùng nút
+trên hồ sơ của Admin đang phụ trách.
 Chế độ này yêu cầu development/test, Mongo loopback và ví mô phỏng.
 
 Member có thể tua hạn phản hồi, đặt cọc, gửi, vận chuyển và kiểm tra. Admin
 có thể tua hạn bổ sung bằng chứng, kháng nghị, trả sách và kiểm tra sách hoàn.
-Tua hạn dùng kết quả hết hạn hiện hành. Các thao tác giao nhận, quyết định,
-đối chiếu bằng chứng và thực hiện quyết định vẫn có nút riêng.
+Tua hạn dùng kết quả hết hạn hiện hành. Tại bước kiểm tra, nút Tua hạn
+kiểm tra · Demo áp dụng kết quả hết hạn cho cả hai bên. Nút Xác nhận đã kiểm
+tra chỉ ghi nhận xác nhận của người bấm. Các thao tác giao nhận, đối chiếu
+bằng chứng và phán quyết vẫn có nút riêng.
 
 ### Cấu hình cũ cho một phiếu
 

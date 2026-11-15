@@ -36,7 +36,7 @@ import {
 import { recordViolation } from '../auctions/member-violations.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
-import { exchangeReturnChange, oneSidedReturn, oneSidedShipment, pendingOutboundDelivery, resolutionMessage, returnResolutionView, verifyOutboundDelivery } from './exchange-return-resolution.js';
+import { exchangeReturnChange, hasInspectionHandover, oneSidedReturn, pendingOutboundDelivery, resolutionMessage, returnResolutionView, verifyOutboundDelivery } from './exchange-return-resolution.js';
 import { notifyExchange } from './exchange-notifications.js';
 import { EXCHANGE_INSPECTION_MS, hasExchangeDispute, inspectionDeadlines, inspectionMaySettle } from './exchange-inspection.js';
 import { currentDemoDeadline, closeDemoDisputeWindow, demoExchangeDeadlineEnabled } from './exchange-demo-deadline.js';
@@ -219,7 +219,7 @@ export class ExchangesService {
     const deadlines = inspectionDeadlines(row);
     return {
       id: row._id,
-      ...(oneSidedShipment(row) && oneSidedReturn(row) && row.status === 'ResolutionPending' ? { canStartReturnResolution: true } : {}),
+      ...(oneSidedReturn(row) && row.status === 'ResolutionPending' ? { canStartReturnResolution: true } : {}),
       ...(pendingOutboundDelivery(row) ? { canVerifyOutboundDelivery: true } : {}),
       ...(row.outboundDeliveryVerification ? { outboundDeliveryVerification: {
         verifiedAt: row.outboundDeliveryVerification.verifiedAt.toISOString(),
@@ -1805,18 +1805,14 @@ export class ExchangesService {
       );
     }
 
-    const setFields: Record<string, unknown> = {
-      status: 'Completed',
-      completedAt: now,
-      updatedAt: now,
-    };
-    if (!exchange.initiatorCompletedAt) setFields.initiatorCompletedAt = now;
-    if (!exchange.recipientCompletedAt) setFields.recipientCompletedAt = now;
-
     const next = await tx.c.exchanges.findOneAndUpdate(
       { _id: exchange._id, revision: exchange.revision, status: 'Delivered' },
       {
-        $set: setFields,
+        $set: {
+          status: 'Completed',
+          completedAt: now,
+          updatedAt: now,
+        },
         $inc: { revision: 1 },
       },
       { returnDocument: 'after' },
@@ -2050,8 +2046,8 @@ export class ExchangesService {
     });
   }
 
-  // ADR 0057: retain historical receipt recovery, but fail closed for new
-  // decisions. ADR 0089 uses a separate command and effective decision.
+  // Historical receipts retain their original replay rules. New decisions
+  // require an assigned inspection dispute with both handovers recorded.
   resolveDispute(
     context: CommandContext,
     id: string,
@@ -2088,12 +2084,21 @@ export class ExchangesService {
           if (exchange.revision !== body.expectedVersion) throw conflict();
 
           if (body.decision === 'RefundBoth') {
-            throw invalidState('Quyết định cũ chỉ dùng để đối chiếu kết quả đã ghi. Hãy xử lý trong hồ sơ trả sách.');
+            throw invalidState('Hoàn cả hai theo quyết định cũ chỉ dùng để đối chiếu biên nhận đã ghi.');
+          }
+          if (
+            !hasInspectionHandover(exchange) ||
+            !exchange.initiatorFundedAt ||
+            !exchange.recipientFundedAt ||
+            !exchange.disputedAt ||
+            exchange.returnResolution
+          ) {
+            throw invalidState('Chỉ phân xử tại đây khi cả hai đã đặt cọc và xác nhận nhận sách.');
           }
 
           const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
           if (!assignment || assignment.assigneeId !== actor._id) {
-            throw invalidState('Quyết định cũ chỉ dùng để đối chiếu kết quả đã ghi. Hãy xử lý trong hồ sơ trả sách.');
+            throw invalidState('Bạn cần nhận phụ trách hồ sơ trước khi ra phán quyết.');
           }
 
           const trimmedReason = body.reason.trim();
@@ -2145,17 +2150,20 @@ export class ExchangesService {
               'ExchangeCompleted',
               [next.initiatorId, next.recipientId],
               now,
-              { reason: `Phán quyết từ quản trị viên: ${trimmedReason}` },
+              { reason: `Phán quyết của người phụ trách: ${trimmedReason}` },
             );
 
             await tx.c.exchange_messages.insertOne({
               _id: randomUUID(),
               exchangeId: exchange._id,
               senderId: actor._id,
-              body: `[Phán quyết của Quản trị viên]\nQuyết định: Bác khiếu nại & Hoàn tất trao đổi\nLý do: ${trimmedReason}`,
+              body: `[Phán quyết của người phụ trách]\nQuyết định: Bác khiếu nại & Hoàn tất trao đổi\nLý do: ${trimmedReason}`,
               sentAt: now,
             });
           } else if (body.decision === 'CompensateInitiator' || body.decision === 'CompensateRecipient') {
+            if (this.getInitiatorListingIds(exchange).length !== 1) {
+              throw invalidState('Bồi thường theo phán quyết này áp dụng cho phiếu một sách mỗi bên.');
+            }
             const victimIsInitiator = body.decision === 'CompensateInitiator';
             const defaulterId = victimIsInitiator ? exchange.recipientId : exchange.initiatorId;
             const damagedListingId = victimIsInitiator ? exchange.recipientListingId : exchange.initiatorListingId;
@@ -2197,6 +2205,7 @@ export class ExchangesService {
                 $set: {
                   status: 'Cancelled',
                   cancelReason: 'DisputeResolvedRefund',
+                  resolutionDecision: body.decision,
                   cancelledBy: 'Staff',
                   cancelledAt: now,
                   resolutionReason: trimmedReason,
@@ -2211,12 +2220,7 @@ export class ExchangesService {
             );
             if (!next) throw conflict();
 
-            const resolvedExchange: ExchangeDoc = {
-              ...next,
-              resolutionDecision: body.decision,
-            };
-
-            await this.ledger.settleExchangeReturn(tx, resolvedExchange, receiptId, now);
+            await this.ledger.settleExchangeReturn(tx, next, receiptId, now);
             await recordViolation(tx, {
               userId: defaulterId,
               kind: 'ExchangeReturnDefault',
@@ -2227,18 +2231,18 @@ export class ExchangesService {
 
             await notifyExchange(
               tx,
-              resolvedExchange,
+              next,
               'ExchangeCancelled',
-              [resolvedExchange.initiatorId, resolvedExchange.recipientId],
+              [next.initiatorId, next.recipientId],
               now,
-              { reason: `Phán quyết từ quản trị viên: Bồi thường hư hại cho bên bị hại. Lý do: ${trimmedReason}` },
+              { reason: `Phán quyết của người phụ trách: Bồi thường hư hại cho bên bị hại. Lý do: ${trimmedReason}` },
             );
 
             await tx.c.exchange_messages.insertOne({
               _id: randomUUID(),
               exchangeId: exchange._id,
               senderId: actor._id,
-              body: `[Phán quyết của Quản trị viên]\nQuyết định: Bồi thường thiệt hại cho ${
+              body: `[Phán quyết của người phụ trách]\nQuyết định: Bồi thường thiệt hại cho ${
                 victimIsInitiator ? 'Bên khởi tạo' : 'Bên nhận đề xuất'
               }\nLý do: ${trimmedReason}`,
               sentAt: now,
@@ -2247,18 +2251,12 @@ export class ExchangesService {
             throw invalidField('/decision', 'Quyết định phán quyết không hợp lệ.');
           }
 
-          const finalExchange = body.decision === 'CompleteExchange' ? next : {
-            ...next,
-            resolutionDecision: body.decision,
-          };
-
           this.logger.log(
             JSON.stringify({
               event: 'exchangeDisputeResolved',
               exchangeId: exchange._id,
               decision: body.decision,
               resolvedBy: actor._id,
-              reason: trimmedReason,
             }),
           );
 
@@ -2273,7 +2271,8 @@ export class ExchangesService {
               body.decision === 'CompleteExchange'
                 ? 'ExchangeDisputeCompleted'
                 : 'ExchangeDisputeCompensated',
-            exchange: this.view(finalExchange),
+            reason: trimmedReason,
+            exchange: this.view(next),
           };
         },
       },
