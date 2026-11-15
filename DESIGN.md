@@ -1028,6 +1028,18 @@ In the trade facts section, all three values use16px with shared baseline
 alignment: mode600/ink, actual money700/wine, null amount400/muted. Do not style
 the text "Không áp dụng" as a monetary amount. Other metadata keeps its scale.
 
+### Admin listing dossier — 15/11/2026
+
+The current listing revision uses a compact paper heading with a wine rule,
+visible moderation status, a wrapping book title, and a summary strip with the
+seller's declared condition first. The queue and decision rail yield more width
+to the reader. The first evidence section presents the actual submitted photo
+before supporting text and bundle inventory. Its zoom caption sits below the
+image. On narrow screens, keep one dossier scroller and the existing jump to
+the decision form. The checklist uses ruled paper rows and a selected tint, with
+progress still driven by the reviewer's checks. Catalog requests, historical
+galleries, media readiness and decision permissions keep their own behavior.
+
 ## Web motion consistency — owner request, 02/11/2026
 
 Member web, Admin/Staff and Expo web keep their authored animations and effects

@@ -149,14 +149,16 @@ function DetailContent({
         value.state.visibility !== "Removed" &&
         !value.state.deletedAt));
   return (
-    <div className={styles.detail}>
-      <Link
-        className="back-link"
-        to={reviewReturnPath(kind, location.state)}
-        state={{ reviewOverview: true }}
-      >
-        ← Về danh sách
-      </Link>
+    <div className={`${styles.detail} ${kind === "listings" ? styles.listingDetail : ""}`}>
+      {kind !== "listings" && (
+        <Link
+          className="back-link"
+          to={reviewReturnPath(kind, location.state)}
+          state={{ reviewOverview: true }}
+        >
+          ← Về danh sách
+        </Link>
+      )}
       {result.isLoading && <p role="status">Đang mở hồ sơ…</p>}
       {result.error && (
         <ErrorNotice
@@ -175,7 +177,7 @@ function DetailContent({
               aria-label="Nội dung và bằng chứng"
               tabIndex={0}
             >
-              <header className="detail-heading" ref={recordHeader}>
+              <header className={`detail-heading ${isListing ? styles.listingHeading : ""}`} ref={recordHeader}>
                 <div>
                   <h2 className={styles.recordTitle} ref={heading} tabIndex={-1}>
                     {"state" in value
@@ -192,7 +194,9 @@ function DetailContent({
                     </h3>
                   )}
                 </div>
-                <span className="status-label">{labels[status] || status}</span>
+                <span className="status-label" data-state={status}>
+                  {labels[status] || status}
+                </span>
               </header>
               {"state" in value && (
                 <>
@@ -201,19 +205,19 @@ function DetailContent({
                     aria-label="Tóm tắt bản sách"
                   >
                     <div>
+                      <dt>Tình trạng khai báo</dt>
+                      <dd>
+                        {labels[value.currentRevision.content.condition || ""] ||
+                          "Chưa khai báo"}
+                      </dd>
+                    </div>
+                    <div>
                       <dt>Hình thức</dt>
                       <dd>
                         {value.channel === "Auction"
                           ? "Đấu giá"
                           : labels[value.currentRevision.content.mode || ""] ||
                             "Chưa khai báo"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Tình trạng khai báo</dt>
-                      <dd>
-                        {labels[value.currentRevision.content.condition || ""] ||
-                          "Chưa khai báo"}
                       </dd>
                     </div>
                     <div className={styles.summaryPrice}>
@@ -240,42 +244,7 @@ function DetailContent({
                         </dd>
                       </div>
                     )}
-                    <div>
-                      <dt>Ảnh bản sách</dt>
-                      <dd>{value.currentRevision.content.mediaIds.length} ảnh</dd>
-                    </div>
                   </dl>
-                  {pending && value.catalogStatus !== "Confirmed" && (
-                    <div className={styles.catalogGate} role="note">
-                      <BookMarked
-                        className={styles.gateIcon}
-                        size={23}
-                        aria-hidden="true"
-                      />
-                      <div>
-                        <strong>
-                          {value.catalogStatus === "Rejected"
-                            ? "Đầu sách đã bị từ chối"
-                            : "Đầu sách đang chờ xác nhận"}
-                        </strong>
-                        <p>
-                          Bài đã gửi thành công. Cần xác nhận đầu sách trước khi
-                          duyệt bài này.
-                        </p>
-                      </div>
-                      {canReviewCatalog(user) &&
-                      value.currentRevision.content.bookId ? (
-                        <Link
-                          to={`/review/catalog-requests/${value.currentRevision.content.bookId}`}
-                        >
-                          Mở yêu cầu đầu sách{" "}
-                          <ArrowUpRight size={17} aria-hidden="true" />
-                        </Link>
-                      ) : (
-                        <span>Chờ Admin xử lý đầu sách</span>
-                      )}
-                    </div>
-                  )}
                 </>
               )}
               {"state" in value && (
@@ -332,21 +301,43 @@ function DetailContent({
                     className={styles.evidencePanel}
                     hidden={view !== "content"}
                   >
-                    {value.channel === "Auction" && (
-                      <Notice>
-                        <strong>Sách đấu giá</strong>
-                        <p className="prose">
-                          Bài này không lên kệ mua/đổi. Giá là giá trị khai báo
-                          (mức bồi thường tối đa), không phải giá bán. Sau khi
-                          duyệt, sách còn được kiểm tra tại điểm trước khi mở
-                          phiên.
-                        </p>
-                      </Notice>
-                    )}
                     <ContentView
                       value={value.currentRevision}
                       listingId={id}
                       onPhotoReady={onPhotoReady}
+                      primary
+                      auction={value.channel === "Auction"}
+                      afterPhotos={pending && value.catalogStatus !== "Confirmed" && (
+                        <div className={styles.catalogGate} role="note">
+                          <BookMarked
+                            className={styles.gateIcon}
+                            size={23}
+                            aria-hidden="true"
+                          />
+                          <div>
+                            <strong>
+                              {value.catalogStatus === "Rejected"
+                                ? "Đầu sách đã bị từ chối"
+                                : "Đầu sách đang chờ xác nhận"}
+                            </strong>
+                            <p>
+                              Bài đã gửi thành công. Cần xác nhận đầu sách trước khi
+                              duyệt bài này.
+                            </p>
+                          </div>
+                          {canReviewCatalog(user) &&
+                          value.currentRevision.content.bookId ? (
+                            <Link
+                              to={`/review/catalog-requests/${value.currentRevision.content.bookId}`}
+                            >
+                              Mở yêu cầu đầu sách{" "}
+                              <ArrowUpRight size={17} aria-hidden="true" />
+                            </Link>
+                          ) : (
+                            <span>Chờ Admin xử lý đầu sách</span>
+                          )}
+                        </div>
+                      )}
                     />
                     <details className={styles.reference} open>
                       <summary>

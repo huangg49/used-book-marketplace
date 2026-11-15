@@ -338,7 +338,7 @@
   border: 1px solid var(--desk-line);
   border-radius: 16px;
   background: var(--shop-shelf);
-  container-type: inline-size;
+  container: review-dossier / inline-size;
 }
 .sequence {
   flex: none;
@@ -429,10 +429,6 @@
   background: var(--shop-wine);
   color: var(--shop-paper);
 }
-.detail :global(.detail-heading):has(+ .reviewSummary) {
-  margin-bottom: 0;
-  border-radius: 14px 14px 0 0;
-}
 .detail :global(.detail-heading) > div {
   display: flex;
   flex-direction: column;
@@ -454,28 +450,6 @@
   font-size: 12px;
   line-height: 1.6;
 }
-.bookName {
-  margin: 0;
-  max-width: 55ch;
-  font:
-    700 28px/1.4 "Be Vietnam Pro",
-    sans-serif;
-  letter-spacing: -0.025em;
-  overflow-wrap: anywhere;
-  color: var(--shop-paper);
-}
-.bookName :global(.listing-authors) {
-  display: block;
-  margin-top: 8px;
-  color: var(--shop-cream);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.7;
-  letter-spacing: 0;
-}
-.bookName :global(.short-id) {
-  display: none;
-}
 .detail :global(.status-label) {
   flex: none;
   padding: 6px 10px;
@@ -486,38 +460,109 @@
   font-size: 12px;
   white-space: nowrap;
 }
-.reviewSummary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px 28px;
-  margin: 0 0 24px;
-  padding: 16px 24px 20px;
-  background: var(--shop-wine);
-  color: var(--shop-paper);
-  border-radius: 0 0 14px 14px;
-  border-top: 1px solid
-    color-mix(in srgb, var(--shop-cream) 24%, var(--shop-wine));
+.detail .listingHeading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--desk-line);
+  border-top: 3px solid var(--shop-wine);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--desk-paper);
+  color: var(--shop-ink);
 }
-.reviewSummary > div {
-  flex: 1 1 auto;
+.detail .listingHeading > div {
+  display: contents;
+}
+.listingHeading .recordTitle {
+  grid-area: 1 / 1;
+  min-width: 0;
+  width: fit-content;
+  color: var(--shop-wine);
+  font-size: 12px;
+  font-weight: 650;
+}
+.detail .listingHeading :global(.status-label) {
+  grid-area: 1 / 2;
+  color: var(--shop-wine);
+  background: color-mix(in srgb, var(--shop-wine) 8%, var(--desk-paper));
+  border-radius: 6px;
+}
+.detail .listingHeading :global(.status-label[data-state="PendingReview"]) {
+  background: color-mix(in srgb, var(--shop-yellow) 28%, var(--desk-paper));
+}
+.detail .listingHeading :global(.status-label[data-state="Approved"]) {
+  background: color-mix(in srgb, var(--shop-mint) 45%, var(--desk-paper));
+  color: var(--shop-ink);
+}
+.bookName {
+  grid-area: 2 / 1 / auto / -1;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 720;
+  line-height: 1.32;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  color: var(--shop-ink);
+}
+.bookName :global(.listing-authors) {
+  display: block;
+  margin-top: 5px;
+  color: var(--desk-muted);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.55;
+  letter-spacing: 0;
+}
+.bookName :global(.short-id) {
+  display: none;
+}
+.detail .listingHeading p {
+  grid-area: 3 / 1 / auto / -1;
+  color: var(--desk-muted);
+  font-size: 11px;
+}
+.reviewSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  margin: 0 0 12px;
+  padding: 11px 16px 12px;
+  border: 1px solid var(--desk-line);
+  border-radius: 0 0 12px 12px;
+  background: color-mix(in srgb, var(--shop-shelf) 64%, var(--desk-paper));
 }
 .reviewSummary dt {
-  margin-bottom: 6px;
-  color: var(--shop-cream);
-  font-size: 12px;
+  margin: 0 0 3px;
+  color: var(--desk-muted);
+  font-size: 11px;
+  line-height: 1.45;
 }
 .reviewSummary dd {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
-  font-weight: 600;
+  color: var(--shop-ink);
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .reviewSummary .summaryPrice dd {
-  font-size: 24px;
-  line-height: 1.2;
-  color: var(--shop-yellow);
-  font-weight: 700;
+  color: var(--shop-wine);
+  font-weight: 720;
+}
+@container review-dossier (min-width: 454px) {
+  .bookName {
+    font-size: 24px;
+  }
+  .reviewSummary {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-template-columns: none;
+  }
 }
 .catalogGate {
   display: flex;
@@ -989,7 +1034,7 @@
   color: var(--shop-cream);
   background: var(--shop-wine);
 }
-@container (min-width:740px) {
+@container review-dossier (min-width: 740px) {
   .detail {
     display: flex;
     flex-direction: column;
@@ -1048,13 +1093,6 @@
   .filters :global(.button) {
     padding-inline: 2px;
     font-size: 11px;
-  }
-  .reviewSummary {
-    gap: 16px;
-    padding: 16px;
-  }
-  .reviewSummary > div {
-    flex-basis: calc(50% - 8px);
   }
 }
 @media (max-width: 760px) {
@@ -1140,5 +1178,98 @@
   :global(div):has(> :global(.workspace-frame) .workspace) > :global(header) {
     position: static;
     flex: none;
+  }
+}
+
+.listingPageHeading {
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  min-height: 44px;
+  margin-bottom: 12px;
+}
+.listingPageHeading h1,
+.listingPageHeading .queueToggle {
+  margin: 0;
+}
+.listingPageHeading .queueToggle {
+  align-self: center;
+}
+.listingDesk .sequence {
+  flex-wrap: wrap;
+  min-height: 44px;
+  gap: 0 12px;
+  padding: 2px 16px;
+}
+.listingDesk .sequence > span {
+  margin-inline-end: auto;
+}
+.listingDesk .sequenceBack {
+  min-height: 40px;
+  margin-inline-end: 8px;
+}
+.listingDetail .evidenceNav {
+  margin-bottom: 12px;
+}
+.listingDetail .catalogGate {
+  margin-bottom: 16px;
+  padding-block: 12px;
+}
+.listingDetail :global(.decision-panel) {
+  padding: 16px;
+  border-top: 3px solid var(--shop-wine);
+}
+.listingDetail :global(.decision-panel h3) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  padding: 0 0 10px;
+  margin: 0 0 10px;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid var(--desk-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  font-size: 16px;
+}
+.listingDetail :global(.decision-panel > .muted) {
+  margin-bottom: 10px;
+}
+.listingDetail :global(.decision-panel fieldset) {
+  margin: 14px 0;
+}
+.listingDetail :global(.check) {
+  margin: 0;
+  padding: 9px 6px;
+  border-radius: 0;
+  border-bottom-color: var(--desk-line);
+  background: var(--desk-paper);
+}
+.listingDetail :global(.check:has(input:checked)) {
+  border-color: color-mix(in srgb, var(--shop-mint) 76%, var(--shop-control));
+  border-radius: 6px;
+}
+@container (min-width: 981px) {
+  .desk.listingDesk {
+    grid-template-columns: clamp(258px, 24%, 284px) minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+@container review-dossier (min-width: 740px) {
+  .listingDetail {
+    padding-inline: 16px;
+  }
+  .listingDetail :global(.detail-layout) {
+    grid-template-columns: minmax(0, 1fr) clamp(234px, 31%, 284px);
+    gap: 14px;
+  }
+}
+@media (max-width: 760px) {
+  .listingDetail {
+    padding-inline: 12px;
+  }
+  .detail .listingHeading,
+  .reviewSummary {
+    padding-inline: 12px;
   }
 }

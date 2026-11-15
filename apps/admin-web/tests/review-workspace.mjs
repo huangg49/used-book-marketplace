@@ -17,7 +17,19 @@ let fixture, vite, browser;
 const checks = [];
 const record = (name) => checks.push(name);
 try {
-  fixture = await createTestApi({ corsOrigin: origin, listingCount: 3 });
+  const apiRequire = createRequire(new URL("../../api/package.json", import.meta.url));
+  const photoBytes = await apiRequire("sharp")(
+    path.join(root, "apps/user-web/public/illustrations/truyen-kieu.webp"),
+  ).png().toBuffer();
+  fixture = await createTestApi({
+    corsOrigin: origin,
+    listingCount: 3,
+    photoBytes,
+    catalogMetadata: {
+      title: "Truyện Kiều — Bản chú giải có đối chiếu văn bản và tranh minh họa",
+      authors: ["Nguyễn Du"],
+    },
+  });
   vite = spawn(
     process.execPath,
     [
@@ -79,9 +91,28 @@ try {
   await page
     .getByRole("button", { name: "Xem lớn ảnh 1", exact: true })
     .waitFor();
-  await page
-    .getByRole("button", { name: "Xem lớn ảnh 1", exact: true })
-    .click();
+  const preview = page.getByRole("button", { name: "Xem lớn ảnh 1", exact: true });
+  const bookTitle = page.getByRole("heading", { name: /^Truyện Kiều.*Nguyễn Du$/, level: 3 });
+  await expect(bookTitle).toBeVisible();
+  for (const [width, height] of [[1440, 900], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const image = await preview.locator("img").boundingBox();
+    const summary = await page.locator('dl[aria-label="Tóm tắt bản sách"]').boundingBox();
+    const photoBoundary = await preview.evaluate(el => {
+      const reader = el.closest('[aria-label="Nội dung và bằng chứng"]');
+      return (getComputedStyle(reader).overflowY === "auto"
+        ? reader
+        : el.closest("[data-review-dossier]")).getBoundingClientRect().bottom;
+    });
+    assert(image && summary && image.y > summary.y + summary.height, "Keep the condition summary directly before photo evidence");
+    await page.screenshot({ path: path.join(artifacts, `pending-${width}.png`) });
+    assert(image.y + (width > 1000 ? image.height : 140) <= photoBoundary + 1,
+      `Book photo clips too early at ${width}×${height}: top=${image.y}, bottom limit=${photoBoundary}`);
+  }
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  record("long book title, seller condition and actual image remain above the fold on desktop and mobile");
+  await preview.click();
   await page
     .getByRole("dialog", { name: "Xem lớn ảnh 1", exact: true })
     .waitFor();
@@ -136,10 +167,20 @@ try {
     assert.equal(catalogReads, 0, "Staff must not request the Admin-only catalog detail");
     record("Staff sees the Admin prerequisite with no catalog action or unauthorized catalog read");
   } finally { await staffPage.close(); }
+  await page.bringToFront();
   await page.setViewportSize({ width: 1600, height: 1000 });
   for (const [width, height] of [[1920, 1080], [1440, 900], [1100, 900], [768, 1024], [390, 844], [1920, 600], [390, 500]]) {
     await page.setViewportSize({ width, height });
-    await assertReviewScrollOwnership(page);
+    try {
+      await assertReviewScrollOwnership(page);
+    } catch (cause) {
+      const active = await page.evaluate(() => {
+        const el = document.activeElement;
+        return { label: el?.getAttribute("aria-label"), scrollTop: el?.scrollTop,
+          scrollHeight: el?.scrollHeight, clientHeight: el?.clientHeight };
+      });
+      throw new Error(`Review scroll ownership failed at ${width}×${height}: ${JSON.stringify(active)}`, { cause });
+    }
     const toggle = page.getByRole("button", { name: "Mở hàng chờ", exact: true });
     if (await toggle.isVisible()) {
       await toggle.click();

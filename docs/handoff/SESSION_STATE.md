@@ -1,3 +1,16 @@
+# Bàn duyệt bài đăng ưu tiên ảnh — 15/11/2026
+
+- Checkout demo ở nhánh `codex/admin-review-photo-first`, base `305a8dff`.
+  Hồ sơ dùng nền giấy, tách trạng thái duyệt, đưa tình trạng khai báo và ảnh
+  lên đầu luồng đọc. Màn hẹp đặt hàng chờ cạnh tiêu đề và giữ lối tắt tới
+  phiếu quyết định. Cảnh báo đầu sách vẫn liên kết đúng hồ sơ.
+- Admin lint, typecheck qua build, 250/250 unit và build/bundle budget đã
+  qua. Chromium 15 nhóm kiểm, 0 lỗi trang với Nest/Mongo QA và storage
+  giả lập. Kiểm tên dài, ảnh ở màn đầu, phóng ảnh, cuộn bàn phím,
+  phân quyền Admin/Staff, lưu bản nháp khi hủy rời và duyệt bài có ACK.
+- Chỉ thay giao diện duyệt bài đăng, sử dụng dữ liệu phiên bản đang mở.
+  Tích hợp GitHub và nghiệm thu người dùng vẫn chờ.
+
 # Chốt điều kiện tua hạn kiểm tra Exchange — 15/11/2026
 
 - Sau hai xác nhận kiểm tra, cả hai tài khoản demo mới thấy và dùng được nút

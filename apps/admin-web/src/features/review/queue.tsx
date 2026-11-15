@@ -3,6 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   BookOpen,
   PanelLeft,
@@ -34,7 +35,7 @@ import {
 } from "./contracts";
 import { ListingTitle } from "./ListingTitle";
 import { QueueCover } from "./QueueCover";
-import { reviewQueuePath } from "./review-navigation";
+import { reviewQueuePath, reviewReturnPath } from "./review-navigation";
 import styles from "./ReviewWorkspace.module.css";
 import { EmptyArt } from "../../core/EmptyArt";
 
@@ -140,34 +141,38 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
     ai,
     queuePath,
   ]);
+  const queueToggle = selectedId && (
+    <Button
+      className={styles.queueToggle}
+      aria-expanded={showQueue}
+      aria-controls="review-queue"
+      onClick={() => setShowQueue(!showQueue)}
+    >
+      <PanelLeft size={18} aria-hidden="true" />
+      {showQueue ? "Ẩn hàng chờ" : "Mở hàng chờ"}
+    </Button>
+  );
   return (
     <div className={styles.workspace}>
-      <header className={styles.heading}>
+      <header className={`${styles.heading} ${kind === "listings" && selectedId ? styles.listingPageHeading : ""}`}>
         <div>
           <h1>{kind === "listings" ? "Bài đăng sách" : "Yêu cầu đầu sách"}</h1>
-          <p>
-            {kind === "listings"
-              ? "Kiểm tra từng bản sách trước khi đến tay người đọc mới."
-              : "Kiểm tra tên sách, tác giả và thông tin xuất bản trước khi đưa vào danh mục dùng chung."}
-          </p>
+          {(!selectedId || kind !== "listings") && (
+            <p>
+              {kind === "listings"
+                ? "Kiểm tra tình trạng và ảnh của từng bản sách."
+                : "Kiểm tra tên sách, tác giả và thông tin xuất bản trước khi đưa vào danh mục dùng chung."}
+            </p>
+          )}
         </div>
         <div className={styles.headerMeta}>
           <span>Không gian kiểm duyệt</span>
           <strong>{labels[status]}</strong>
         </div>
+        {kind === "listings" && queueToggle}
       </header>
-      {selectedId && (
-        <Button
-          className={styles.queueToggle}
-          aria-expanded={showQueue}
-          aria-controls="review-queue"
-          onClick={() => setShowQueue(!showQueue)}
-        >
-          <PanelLeft size={18} aria-hidden="true" />
-          {showQueue ? "Ẩn hàng chờ" : "Mở hàng chờ"}
-        </Button>
-      )}
-      <div className={styles.desk}>
+      {kind !== "listings" && queueToggle}
+      <div className={`${styles.desk} ${kind === "listings" ? styles.listingDesk : ""}`}>
         <section
           id="review-queue"
           aria-label="Hàng chờ kiểm duyệt"
@@ -399,6 +404,16 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                 className={styles.sequence}
                 aria-label="Chuyển hồ sơ trong danh sách đã tải"
               >
+                {kind === "listings" && (
+                  <Link
+                    className={styles.sequenceBack}
+                    to={reviewReturnPath(kind, location.state)}
+                    state={{ reviewOverview: true }}
+                  >
+                    <ArrowLeft size={16} aria-hidden="true" />
+                    Về danh sách
+                  </Link>
+                )}
                 <span>
                   {selectedIndex >= 0
                     ? `Hồ sơ ${selectedIndex + 1} / ${items.length} đã tải`
