@@ -1050,6 +1050,10 @@ and keep the action row in view when returning to the photo. Folding preserves
 the existing draft and moves focus to its trigger. Reveal the reason field when
 the reviewer chooses rejection. Keep the native final confirmation dialog and
 identify the actual listing and revision before submission.
+The pane moves in over 220 ms and out over 170 ms, horizontally in the split
+layout and vertically in the single column. The read area and queue keep their
+layout through the exit. Interrupted motion resumes from the current position.
+The leave confirmation remains available while the pane is folded.
 
 ## Web motion consistency — owner request, 02/11/2026
 

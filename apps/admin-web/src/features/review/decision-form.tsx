@@ -1,4 +1,5 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ArrowUpRight, CircleAlert, ClipboardCheck } from "lucide-react";
 import { Link, useBlocker } from "react-router-dom";
 import { session } from "../../core/session";
@@ -64,6 +65,8 @@ export function DecisionForm({
   const [intent, setIntent] = useState<Intent>();
   const dialog = useRef<HTMLDialogElement>(null);
   const leaveDialog = useRef<HTMLDialogElement>(null);
+  const stayButton = useRef<HTMLButtonElement>(null);
+  const leaveTitleId = useId();
   const registerGuard = useContext(LeaveGuard);
   const reasonInput = useRef<HTMLTextAreaElement>(null);
   const recoveryButton = useRef<HTMLButtonElement>(null);
@@ -92,8 +95,21 @@ export function DecisionForm({
     if (error !== undefined && !busy) recoveryButton.current?.focus();
   }, [error, busy]);
   useEffect(() => {
-    if (blocker.state === "blocked") leaveDialog.current?.showModal();
-    else leaveDialog.current?.close();
+    const prompt = leaveDialog.current;
+    if (!prompt) return;
+    if (blocker.state !== "blocked") {
+      prompt.close();
+      return;
+    }
+    prompt.showModal();
+    const focusStay = () => {
+      if (prompt.open && !prompt.contains(prompt.ownerDocument.activeElement))
+        stayButton.current?.focus({ preventScroll: true });
+    };
+    focusStay();
+    // Closing the previous modal can restore focus after this prompt opens.
+    const frame = requestAnimationFrame(focusStay);
+    return () => cancelAnimationFrame(frame);
   }, [blocker.state]);
   useEffect(() => {
     if (!dirty) return;
@@ -198,6 +214,42 @@ export function DecisionForm({
       dialog.current?.close();
     }
   }
+  const leavePrompt = (
+    <dialog
+      ref={leaveDialog}
+      className={styles.leavePrompt}
+      aria-labelledby={leaveTitleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        if (blocker.state === "blocked") blocker.reset();
+      }}
+    >
+      <h3 id={leaveTitleId}>Rời hồ sơ đang xem?</h3>
+      <p>
+        {intent
+          ? "Yêu cầu chưa được đối chiếu xong. Nếu rời đi, hãy tải lại hồ sơ để kiểm tra kết quả trước khi quyết định tiếp."
+          : "Các ô kiểm tra và lý do chưa gửi sẽ bị bỏ."}
+      </p>
+      <div className="actions">
+        <Button
+          ref={stayButton}
+          onClick={() => {
+            if (blocker.state === "blocked") blocker.reset();
+          }}
+        >
+          Ở lại hồ sơ
+        </Button>
+        <Button
+          disabled={busy}
+          onClick={() => {
+            if (blocker.state === "blocked") blocker.proceed();
+          }}
+        >
+          Rời hồ sơ
+        </Button>
+      </div>
+    </dialog>
+  );
   return (
     <aside className="decision-panel" aria-label="Quyết định kiểm duyệt">
       <h3>
@@ -386,39 +438,7 @@ export function DecisionForm({
           </Button>
         </div>
       </dialog>
-      <dialog
-        ref={leaveDialog}
-        aria-labelledby="leave-title"
-        onCancel={(event) => {
-          event.preventDefault();
-          if (blocker.state === "blocked") blocker.reset();
-        }}
-      >
-        <h3 id="leave-title">Rời hồ sơ đang xem?</h3>
-        <p>
-          {intent
-            ? "Yêu cầu chưa được đối chiếu xong. Nếu rời đi, hãy tải lại hồ sơ để kiểm tra kết quả trước khi quyết định tiếp."
-            : "Các ô kiểm tra và lý do chưa gửi sẽ bị bỏ."}
-        </p>
-        <div className="actions">
-          <Button
-            autoFocus
-            onClick={() => {
-              if (blocker.state === "blocked") blocker.reset();
-            }}
-          >
-            Ở lại hồ sơ
-          </Button>
-          <Button
-            disabled={busy}
-            onClick={() => {
-              if (blocker.state === "blocked") blocker.proceed();
-            }}
-          >
-            Rời hồ sơ
-          </Button>
-        </div>
-      </dialog>
+      {kind === "listings" ? createPortal(leavePrompt, document.body) : leavePrompt}
     </aside>
   );
 }

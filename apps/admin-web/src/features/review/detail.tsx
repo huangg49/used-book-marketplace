@@ -19,6 +19,7 @@ import {
 import type { CurrentUser } from "@used-books/session-client";
 import { canReview, canReviewCatalog, session } from "../../core/session";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { motionVisible, watchMotionBoundary } from "../../core/motion-boundary";
 import { catalog, labels, listing, type Kind } from "./contracts";
 import { BookReference, ContentView, History, MetadataView } from "./readers";
 import { DecisionForm } from "./decision-form";
@@ -84,7 +85,11 @@ function DetailContent({
   const decisionTrigger = useRef<HTMLButtonElement>(null);
   const focusAfterChange = useRef<"decision" | "photo" | "trigger" | null>(null);
   const decisionId = useId();
-  const [decisionOpen, setDecisionOpen] = useState(false);
+  const [decisionPhase, setDecisionPhase] = useState<"closed" | "open" | "closing">("closed");
+  const decisionOpen = decisionPhase === "open";
+  const decisionVisible = decisionPhase !== "closed";
+  const decisionAnimation = useRef<Animation | null>(null);
+  const interruptedFrame = useRef<Keyframe | null>(null);
   const [checkedCount, setCheckedCount] = useState(0);
 
   useLayoutEffect(() => {
@@ -93,7 +98,79 @@ function DetailContent({
     if (target === "decision") focusReviewPart(decisionArea.current);
     if (target === "photo") focusReviewPart(photoArea.current);
     if (target === "trigger") focusReviewPart(decisionTrigger.current);
-  }, [decisionOpen, view]);
+  }, [decisionPhase, view]);
+
+  useLayoutEffect(() => {
+    const panel = decisionArea.current;
+    if (kind !== "listings" || decisionPhase === "closed" || !panel) return;
+    const closing = decisionPhase === "closing";
+    const complete = () => {
+      if (!closing) return;
+      if (panel.ownerDocument.activeElement === decisionTrigger.current)
+        focusAfterChange.current = "trigger";
+      setDecisionPhase("closed");
+    };
+    const previousFrame = interruptedFrame.current;
+    interruptedFrame.current = null;
+    if (!motionVisible(panel) || typeof panel.animate !== "function") {
+      complete();
+      return;
+    }
+
+    const split = getComputedStyle(panel).overflowY === "auto";
+    const rest = { transform: "none", opacity: 1 };
+    const offset = {
+      transform: split ? "translateX(18px)" : "translateY(12px)",
+      opacity: 0,
+    };
+    let animation: Animation;
+    try {
+      animation = panel.animate(
+        closing ? [previousFrame ?? rest, offset] : [previousFrame ?? offset, rest],
+        {
+          duration: closing ? 170 : 220,
+          easing: closing ? "cubic-bezier(.4,0,1,1)" : "cubic-bezier(.16,1,.3,1)",
+          fill: "both",
+        },
+      );
+    } catch {
+      complete();
+      return;
+    }
+
+    decisionAnimation.current = animation;
+    let active = true;
+    let unwatch = () => {};
+    const settle = () => {
+      if (!active) return;
+      active = false;
+      unwatch();
+      decisionAnimation.current = null;
+      if (!closing) animation.cancel();
+      complete();
+    };
+    unwatch = watchMotionBoundary(panel, settle);
+    void animation.finished.then(settle, settle);
+    return () => {
+      active = false;
+      unwatch();
+      decisionAnimation.current = null;
+      animation.cancel();
+    };
+  }, [decisionPhase, kind]);
+
+  function rememberDecisionFrame() {
+    const panel = decisionArea.current;
+    if (!panel || !decisionAnimation.current) return;
+    const { transform, opacity } = getComputedStyle(panel);
+    interruptedFrame.current = { transform, opacity };
+  }
+  function closeDecision() {
+    if (!decisionOpen || pendingCommand) return;
+    rememberDecisionFrame();
+    decisionTrigger.current?.focus({ preventScroll: true });
+    setDecisionPhase("closing");
+  }
   const onPhotoReady = useCallback(
     (mediaId: string, ready: boolean) =>
       setPhotos((previous) =>
@@ -183,7 +260,7 @@ function DetailContent({
     <div
       className={`${styles.detail} ${kind === "listings" ? styles.listingDetail : ""}`}
       data-listing-dossier={isListing ? "" : undefined}
-      data-listing-decision-open={isListing && decisionOpen ? "" : undefined}
+      data-listing-decision-open={isListing && decisionVisible ? "" : undefined}
     >
       {kind !== "listings" && (
         <Link
@@ -318,8 +395,9 @@ function DetailContent({
                       if (decisionOpen) {
                         focusReviewPart(decisionArea.current);
                       } else {
+                        rememberDecisionFrame();
                         focusAfterChange.current = "decision";
-                        setDecisionOpen(true);
+                        setDecisionPhase("open");
                       }
                     }}
                   >
@@ -481,7 +559,16 @@ function DetailContent({
               role="region"
               aria-label="Phiếu quyết định"
               id={decisionId}
-              hidden={Boolean(isListing && !decisionOpen)}
+              hidden={Boolean(isListing && !decisionVisible)}
+              inert={isListing && decisionPhase === "closing"}
+              onKeyDown={isListing ? (event) => {
+                if (
+                  event.key !== "Escape" || event.defaultPrevented || pendingCommand ||
+                  (event.target instanceof Element && event.target.closest("dialog[open]"))
+                ) return;
+                event.preventDefault();
+                closeDecision();
+              } : undefined}
             >
               {isListing && (
                 <div className={styles.decisionTools}>
@@ -501,10 +588,7 @@ function DetailContent({
                   </Button>
                   <Button
                     disabled={pendingCommand}
-                    onClick={() => {
-                      focusAfterChange.current = "trigger";
-                      setDecisionOpen(false);
-                    }}
+                    onClick={closeDecision}
                   >
                     <PanelRightClose size={16} aria-hidden="true" />
                     Gập phiếu

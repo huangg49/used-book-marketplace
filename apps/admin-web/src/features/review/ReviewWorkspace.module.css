@@ -1274,13 +1274,6 @@
   background: var(--desk-paper);
   border-color: var(--shop-line);
 }
-.listingDetail[data-listing-decision-open] .decision {
-  animation: revealDecision 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-@keyframes revealDecision {
-  from { opacity: 0.65; }
-  to { opacity: 1; }
-}
 .decisionSubject {
   display: grid;
   gap: 5px;
@@ -1413,4 +1406,15 @@
   .reviewToolbar .openDecision > svg {
     display: none;
   }
+}
+
+.leavePrompt {
+  max-width: min(440px, calc(100vw - 32px));
+}
+.leavePrompt :global(.actions) {
+  display: grid;
+  gap: 10px;
+}
+.leavePrompt :global(.actions .button) {
+  min-height: 44px;
 }

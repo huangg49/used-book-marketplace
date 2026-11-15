@@ -10,6 +10,10 @@
   Nest/Mongo QA và storage giả lập kiểm quyền, gập/mở, giữ bản nháp,
   duyệt/từ chối/gỡ bài, gửi lại cùng key sau mất phản hồi và xử lý phiên bản cũ.
   Kiểm thêm bảy khung màn hình, phóng ảnh và cuộn độc lập bằng bàn phím.
+- Nối tiếp `eb3da0f8`: phiếu trượt khi mở 220 ms và khi gập 170 ms. Giữ
+  bố cục tới hết hiệu ứng đóng. Chromium kiểm trượt theo hai trục, Escape,
+  mở lại giữa hiệu ứng và giữ bản nháp khi preference giảm chuyển động bật.
+  Cảnh báo rời hồ sơ vẫn mở và nhận focus khi phiếu đang gập, nếu có bản nháp.
 
 # Bàn duyệt bài đăng ưu tiên ảnh — 15/11/2026
 

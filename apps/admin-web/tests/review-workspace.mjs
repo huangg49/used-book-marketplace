@@ -82,6 +82,23 @@ try {
     "queue entry opens oldest loaded dossier without an extra welcome step",
   );
   const decision = page.getByRole("region", { name: "Phiếu quyết định", exact: true });
+  const decisionNode = page.locator('[aria-label="Phiếu quyết định"]');
+  const pauseDecisionMotion = (control) => control.evaluate(async (button) => {
+    button.click();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    const panel = document.querySelector('[aria-label="Phiếu quyết định"]');
+    const animation = panel.getAnimations()[0];
+    if (!animation) return null;
+    animation.pause();
+    animation.currentTime = 60;
+    return {
+      frames: animation.effect.getKeyframes(),
+      duration: animation.effect.getTiming().duration,
+      visible: !panel.hidden,
+      inert: panel.inert,
+    };
+  });
+  const finishDecisionMotion = () => decisionNode.evaluate(panel => panel.getAnimations()[0]?.finish());
   const openDecision = (target = page) => target.getByRole("button", { name: "Kiểm duyệt bài đăng", exact: true });
   await expect(decision).toBeHidden();
   await expect(openDecision()).toHaveAttribute("aria-expanded", "false");
@@ -116,7 +133,12 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
   const queue = page.getByRole("region", { name: "Hàng chờ kiểm duyệt", exact: true });
   await expect(queue).toBeVisible();
-  await openDecision().click();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const entry = await pauseDecisionMotion(openDecision());
+  assert(entry && entry.duration >= 180 && /translateX/.test(entry.frames[0].transform));
+  assert.equal(entry.visible, true);
+  assert.equal(entry.inert, false);
+  await finishDecisionMotion();
   await expect(decision).toBeFocused();
   await expect(queue).toBeHidden();
   await expect(preview).toBeInViewport();
@@ -129,11 +151,32 @@ try {
   const reasonField = decision.getByLabel("Lý do từ chối", { exact: true });
   await expect(reasonField).toBeFocused();
   await reasonField.fill("Ảnh bìa và tình trạng cần được đối chiếu thêm.");
-  await decision.getByRole("button", { name: "Gập phiếu", exact: true }).click();
-  await expect(decision).toBeHidden();
+  const fold = () => decision.getByRole("button", { name: "Gập phiếu", exact: true });
+  const exit = await pauseDecisionMotion(fold());
+  assert(exit && exit.duration >= 140 && /translateX/.test(exit.frames.at(-1).transform));
+  assert.equal(exit.visible, true, "The split layout stays in place for the exit frames");
+  assert.equal(exit.inert, true, "The retreating checklist is no longer interactive");
+  await expect(queue).toBeHidden();
+  await expect(openDecision()).toBeFocused();
+  const reversed = await pauseDecisionMotion(openDecision());
+  assert(reversed && /^matrix/.test(reversed.frames[0].transform), "Rapid reopen starts at the interrupted position");
+  await finishDecisionMotion();
+  await expect(decision.getByRole("checkbox").first()).toBeChecked();
+
+  const finalExit = await pauseDecisionMotion(fold());
+  assert(finalExit?.visible);
+  await finishDecisionMotion();
+  await expect(decisionNode).toHaveAttribute("hidden", "");
   await expect(openDecision()).toBeFocused();
   await expect(openDecision()).toContainText("1/6");
   await expect(queue).toBeVisible();
+  await page.getByRole("link", { name: "Về danh sách", exact: true }).click();
+  const foldedLeave = page.getByRole("dialog", { name: "Rời hồ sơ đang xem?", exact: true });
+  await expect(foldedLeave).toBeVisible();
+  const stay = foldedLeave.getByRole("button", { name: "Ở lại hồ sơ", exact: true });
+  await expect(stay).toBeFocused();
+  await stay.click();
+  await expect(openDecision()).toContainText("1/6");
   await openDecision().click();
   await expect(decision.getByRole("checkbox").first()).toBeChecked();
   await expect(reasonField).toHaveValue("Ảnh bìa và tình trạng cần được đối chiếu thêm.");
@@ -149,13 +192,22 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Tới phiếu duyệt", exact: true }).click();
   await expect(decision).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(decisionNode).toHaveAttribute("hidden", "");
+  await expect(openDecision()).toBeFocused();
+  const mobileEntry = await pauseDecisionMotion(openDecision());
+  assert(mobileEntry && /translateY/.test(mobileEntry.frames[0].transform));
+  await finishDecisionMotion();
+  await expect(decision).toBeFocused();
   await page.screenshot({ path: path.join(artifacts, "decision-390.png") });
   await decision.getByRole("button", { name: "Về ảnh", exact: true }).click();
   await expect(page.getByRole("region", { name: "Ảnh người đăng gửi", exact: true })).toBeFocused();
   await expect(preview).toBeInViewport();
   await expect(page.getByRole("button", { name: "Tới phiếu duyệt", exact: true })).toBeInViewport();
   await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   record("optional nonmodal decision, queue collapse, preserved checks and rejection draft, exact confirmation subject and mobile return to photo");
+  record("desktop and mobile motion under reduced preference, inert exit with reserved layout, keyboard close and interrupted reopen");
   await preview.click();
   await page
     .getByRole("dialog", { name: "Xem lớn ảnh 1", exact: true })
