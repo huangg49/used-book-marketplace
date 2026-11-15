@@ -724,14 +724,15 @@ giấy. Không thêm thư viện từ ví dụ sidebar tham khảo.
   Nút đầu đổi mở cố định↔thu gọn; native popover cuối sidebar chọn mode, dùng
   radio/keyboard/Escape. localStorage chỉ chứa version/mode, lỗi ghi báo giữ
   trong phiên; không lưu session/token. Route/mobile không ghi đè preference.
-  Nút mở/thu gọn có nhãn và trạng thái; link luôn có tên
-  accessible/title, giữ aria-current ở cả route chi tiết con. Header logo/pin
-  cùng hàng, Dashboard/Quản lý không thêm heading thị giác; account/logout chung
-  hàng cuối, chữ dài có ellipsis và tooltip đầy đủ. Active dùng nền giấy/chữ wine.
-  Nav và lỗi logout không hiện scrollbar ở Firefox/WebKit; giữ wheel/Tab ở khung
-  quá nhỏ để không cắt chức năng. Màn cao≤720px, mobile hoặc>9link chuyển sang
-  disclosure theo nhóm (một nhóm mở), ưu tiên nhóm chứa route hiện tại; Dashboard
-  và directory không bị gập. Các nút tương tác vẫn có target44px.
+  Nút mở/thu gọn có nhãn và trạng thái. Link giữ tên và aria-current ở cả
+  route chi tiết con. Header logo/pin cùng hàng, account/logout ở cuối.
+  Nav và lỗi logout giữ wheel/Tab trong vùng cuộn.
+- Từ 15/11, desktop và mobile dùng một cách chia nhóm. Tổng quan và các nhóm
+  còn một mục theo quyền là link trực tiếp. Kiểm duyệt, Hỗ trợ & khiếu nại,
+  Giao nhận tại điểm, Tài khoản & ví và Mô phỏng mở theo nhóm khi có nhiều mục.
+  Mở một nhóm tại một thời điểm. Route mới mở nhóm tương ứng và đưa link hiện
+  tại vào vùng cuộn. Đổi bộ lọc trong cùng trang giữ lựa chọn đóng/mở đang dùng.
+  Link hiện tại dùng nền kem và chữ wine. Điều khiển cao tối thiểu 44px.
 - Mobile≤720px: nút Menu mở native dialog; Escape/X/backdrop đóng, native focus
   containment/return, khóa scroll nền và cleanup khi đổi viewport/unmount.
   Dialog chỉ đóng theo location key sau khi Router nhận điều hướng, giữ guard
@@ -739,8 +740,8 @@ giấy. Không thêm thư viện từ ví dụ sidebar tham khảo.
 - [navigationGroups](../../apps/admin-web/src/features/navigation/navigation.ts)
   dùng các capability helper hiện có, không suy ADMIN thành STAFF/TEST_OPERATOR.
   Không có menu protected trước profile hợp lệ hoặc cho tài khoản inactive.
-  Dashboard đã nối source API theo quyền, không còn nhãn Mock; Report vẫn
-  disabled/Sắp triển khai vì chưa có endpoint báo cáo. Xem
+  Tổng quan, hướng dẫn công việc và tìm kiếm nhanh lấy từ cùng danh sách.
+  Menu hiển thị các chức năng có màn hình sử dụng được. Xem
   [bảng API Admin](../features/ADMIN_API_CONNECTIONS.md).
 - Logout vẫn do Workspace gọi session, giữ guard. Lỗi logout hiển thị ở account
   để đọc được trong mobile dialog; lỗi buộc rail mở cho tới khi retry xóa lỗi.

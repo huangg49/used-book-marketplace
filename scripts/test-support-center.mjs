@@ -724,7 +724,8 @@ try {
   await button(member, "Gửi yêu cầu").click();
   await member.waitForURL(/\/support\/[0-9a-f-]{36}$/);
   await admin
-    .getByRole("link", { name: "Trung tâm xử lý", exact: true })
+    .getByRole("navigation", { name: "Khu vực quản trị" })
+    .getByRole("link", { name: "Yêu cầu hỗ trợ", exact: true })
     .first()
     .click();
   await admin.waitForURL(adminOrigin + "/support");

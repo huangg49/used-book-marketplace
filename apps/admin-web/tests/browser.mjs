@@ -138,11 +138,22 @@ try {
   assert.equal(await commandDialog.getByRole("option").count(), 1);
   await commandInput.press("Enter");
   await p.waitForURL(origin + "/users");
+  const nav = p.getByRole("navigation", { name: "Khu vực quản trị" });
+  const accounts = nav.getByRole("button", { name: "Tài khoản & ví", exact: true });
+  const cases = nav.getByRole("button", { name: "Hỗ trợ & khiếu nại", exact: true });
+  await expectBrowser(accounts).toHaveAttribute("aria-expanded", "true");
+  await expectBrowser(nav.getByRole("link", { name: "Quản lý người dùng", exact: true }))
+    .toHaveAttribute("aria-current", "page");
+  await cases.focus();
+  await p.keyboard.press("Enter");
   const directorySearch = p.getByLabel("Tìm theo tên hoặc email", { exact: true });
   await directorySearch.fill("staff@");
   await directorySearch.press("Enter");
   await p.waitForURL((url) => url.searchParams.get("q") === "staff@");
   await focused(directorySearch);
+  await expectBrowser(cases).toHaveAttribute("aria-expanded", "true");
+  await expectBrowser(accounts).toHaveAttribute("aria-expanded", "false");
+  await expectBrowser(nav.getByRole("region", { name: "Tài khoản & ví", exact: true })).toHaveAttribute("data-current", "true");
   await p.getByRole("combobox", { name: "Trạng thái", exact: true }).click();
   await p.getByRole("option", { name: "Đang hoạt động", exact: true }).click();
   await p.waitForURL((url) => url.searchParams.get("status") === "ACTIVE");
@@ -172,7 +183,7 @@ try {
   await p.unroute("**/operations/users?*", failDirectory);
   await click(p, "Thử tải lại");
   await p.getByText(/Đang giữ danh sách lần tải trước/).waitFor({ state: "hidden" });
-  await p.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await p.getByRole("link", { name: "Tổng quan", exact: true }).click();
   await p.getByRole("heading", { name: /^Tổng quan\.?$/, exact: true }).waitFor();
   await p.goBack();
   await p.getByRole("heading", { name: "Người dùng", level: 1 }).waitFor();
@@ -182,7 +193,7 @@ try {
   await click(p, "Xóa bộ lọc");
   await p.waitForURL(origin + "/users");
   assert.equal(await directorySearch.inputValue(), "");
-  await p.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await p.getByRole("link", { name: "Tổng quan", exact: true }).click();
   // Wait for the lazy destination before opening a shell modal: the route's
   // completion deliberately closes palettes belonging to the previous page.
   await p.getByRole("heading", { name: /^Tổng quan\.?$/, exact: true }).waitFor();
@@ -204,7 +215,7 @@ try {
   assert(await p.locator("#admin-navigation-panel").evaluate(node => getComputedStyle(node).scrollbarWidth === "none"), "Sidebar must not show a scrollbar");
   assert(await p.locator("#admin-navigation-panel").evaluate(node => node.scrollHeight <= node.clientHeight + 1), "Default Admin menu must fit at desktop height");
   await p.setViewportSize({ width: 1440, height: 640 });
-  const operationsGroup = p.getByRole("button", { name: "Điểm & đấu giá", exact: true });
+  const operationsGroup = p.getByRole("button", { name: "Giao nhận tại điểm", exact: true });
   await operationsGroup.click();
   assert.equal(await operationsGroup.getAttribute("aria-expanded"), "true");
   assert.equal(await p.getByRole("button", { name: "Kiểm duyệt", exact: true }).getAttribute("aria-expanded"), "false");
@@ -232,7 +243,7 @@ try {
   // Dashboard shelf uses the same private media path as the full review desk.
   // Verify image failure/retry without changing any application data.
   await p.route("http://127.0.0.1:3010/**", route => route.abort("failed"));
-  await p.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await p.getByRole("link", { name: "Tổng quan", exact: true }).click();
   await p.getByRole("heading", { name: "Kệ sách chờ duyệt", exact: true }).waitFor();
   const shelf = p.getByRole("list", { name: "Chọn hồ sơ để xem nhanh" });
   const shelfBooks = shelf.getByRole("button");
@@ -281,13 +292,15 @@ try {
   await p.getByRole("dialog", { name: "Điều hướng quản trị", exact: true }).waitFor();
   await shot(p, "queue-320-large");
   assert(
-    await p.getByRole("link", { name: "Dashboard", exact: true }).evaluate((anchor) => {
+    await p.getByRole("link", { name: "Tổng quan", exact: true }).evaluate((anchor) => {
       const label = anchor.querySelector("span").getBoundingClientRect();
       const link = anchor.getBoundingClientRect();
       return label.left >= link.left && label.right <= link.right;
     }),
-    "Dashboard label must stay inside its navigation link",
+    "Overview label must stay inside its navigation link",
   );
+  const accountGroup = p.getByRole("button", { name: "Tài khoản & ví", exact: true });
+  await accountGroup.click();
   const userLink = p.getByRole("link", { name: "Quản lý người dùng", exact: true });
   assert(await userLink.isVisible(), "Admin navigation remains available at 320px");
   await p.keyboard.press("Escape");
@@ -301,6 +314,7 @@ try {
   await p.getByRole("dialog", { name: "Điều hướng quản trị", exact: true }).waitFor({ state: "hidden" });
   await shot(p, "users-320-large");
   await mobileMenu.click();
+  await click(p, "Kiểm duyệt");
   const listingLink = p.getByRole("link", { name: "Bài đăng sách", exact: true });
   await listingLink.focus();
   await p.keyboard.press("Enter");

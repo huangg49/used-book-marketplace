@@ -1,3 +1,19 @@
+# Sidebar bàn vận hành Staff/Admin — 15/11/2026
+
+- Nhánh `codex/staff-admin-sidebar`, base `0c4329fd`. Menu dùng chung
+  danh sách theo capability cho sidebar, tìm kiếm nhanh và hướng dẫn công
+  việc. Khiếu nại Đổi sách về nhóm hồ sơ, tách giao nhận tại điểm với quản
+  lý phiên. Di chuyển rút tiền/người dùng vào Tài khoản & ví và dọn mục Report
+  chưa có màn sử dụng.
+- Nhóm một mục đi thẳng. Nhóm nhiều mục mở theo đường dẫn hiện tại trên
+  desktop/rail/mobile. Đổi bộ lọc trên cùng trang giữ trạng thái nhóm và
+  đóng mở có keyboard/focus. Giữ ba chế độ sidebar hiện có.
+- Admin unit 250/250, typecheck, lint, build và Admin Chromium/Mongo QA đã
+  qua. Support Chromium đã qua luồng mở lại danh sách từ menu. Ảnh Chromium
+  ghi Admin-only và Staff tại 1440 px, Admin tại 390 px và
+  320 px ở chữ 135%, kiểm link hiện tại trong vùng cuộn. Tài khoản QA và
+  storage giả lập. Mọi endpoint, vai trò và gate phát hành dùng quy tắc hiện hành.
+
 # Tích hợp bản demo lên main — 14/11/2026
 
 - Worktree tích hợp ghép bản demo `6435707c` với GitHub `main` tại `955d29e6`.
