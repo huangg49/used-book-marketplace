@@ -16,7 +16,7 @@ import { ExchangesService } from '../src/modules/exchanges/exchanges.service.js'
 import { ExchangeExpiryWorker } from '../src/modules/exchanges/exchange-expiry.service.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { Gate } from './helpers/mongo-gate.js';
-import { applyCollectionSpecs, currentCollections } from '../src/database/mongo/migrations/index.js';
+import { applyCollectionSpecs, currentCollections, migrations } from '../src/database/mongo/migrations/index.js';
 import { exchangeInspectionDeadlinesMigration } from '../src/database/mongo/migrations/0039-exchange-inspection-deadlines.js';
 
 const storage = {
@@ -2757,6 +2757,66 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await post('/operations/exchanges/' + ex.id + '/resolve', decisionBody(ex.revision, decision), staff).expect(409);
       await post('/operations/exchanges/' + ex.id + '/resolve', decisionBody(ex.revision, decision), admin).expect(409);
       expect(await effects(ex.id)).toEqual(before);
+    });
+
+    it('rejects assigned inspection verdicts until both parties have received their books', async () => {
+      const ex = await disputedExchange();
+      const operations = '/operations/exchanges/' + ex.id;
+      await post(operations + '/evidence-access', {
+        expectedVersion: 0, reason: 'QA: nhận hồ sơ kiểm tra sách.',
+      }, staff).expect(200);
+      const before = await effects(ex.id);
+      for (const decision of ['CompleteExchange', 'CompensateRecipient']) {
+        await post(operations + '/resolve', decisionBody(ex.revision, decision), staff).expect(409);
+      }
+      expect(await effects(ex.id)).toEqual(before);
+    });
+
+    it('lets the assigned Staff compensate the other party in a funded inspection dispute exactly once', async () => {
+      const ex = await disputedExchange(true);
+      const operations = '/operations/exchanges/' + ex.id;
+      const member = '/exchanges/' + ex.id;
+      const verdict = decisionBody(ex.revision, 'CompensateRecipient');
+      const key = randomUUID();
+      expect(ex.disputedBy).toBe(user1.id);
+      expect(ex.initiatorDeposit + ex.recipientDeposit + ex.diffAmount).toBeGreaterThan(300000);
+      await post(operations + '/evidence-access', {
+        expectedVersion: 0, reason: 'QA: đã nhận hồ sơ kiểm tra sách.',
+      }, staff).expect(200);
+
+      const before = await effects(ex.id);
+      await post(operations + '/resolve', verdict, admin).expect(409);
+      await post(operations + '/resolve', { ...verdict, expectedVersion: ex.revision - 1 }, staff).expect(409);
+      await post(operations + '/return-resolution', {
+        expectedVersion: ex.revision, action: 'RequestEvidence', note: 'QA: yêu cầu bổ sung bằng chứng.',
+      }, staff).expect(409);
+      expect(await effects(ex.id)).toEqual(before);
+
+      const settled = (await post(operations + '/resolve', verdict, staff, key).expect(200)).body;
+      expect(settled).toMatchObject({
+        status: 'Cancelled',
+        resolutionDecision: verdict.decision,
+        returnResolution: { ownerId: user2.id, outcome: 'Compensated', compensation: ex.initiatorDeposit },
+      });
+      expect((await get(member, user2).expect(200)).body).toMatchObject({
+        resolutionDecision: verdict.decision, returnResolution: settled.returnResolution,
+      });
+      const after = await effects(ex.id);
+      expect(after.exchange.resolutionDecision).toBe(verdict.decision);
+      expect(after.journals.filter(j => j.type === 'ExchangeNonReturnCompensation')).toHaveLength(1);
+      expect(after.listings.find(l => l._id === ex.initiatorListingId)?.trade).toBe('ClosedUnavailable');
+      const replay = await post(operations + '/resolve', verdict, staff, key).expect(200);
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+      expect(replay.body).toEqual(settled);
+      expect(await effects(ex.id)).toEqual(after);
+      expect((await reconcile()).balanced).toBe(true);
+
+      // Reproduce a prior verdict that was stored only in the command receipt.
+      await db.c.exchanges.updateOne({ _id: ex.id }, { $unset: { resolutionDecision: '' } });
+      const migration = migrations.find(m => m.id === '0080-exchange-inspection-verdict')!;
+      await migration.up(db.client.db(), db.client);
+      expect(await effects(ex.id)).toEqual(after);
+      expect((await reconcile()).balanced).toBe(true);
     });
 
     it('blocks Staff and Admin participants before even replaying a legacy receipt; filters their queue', async () => {

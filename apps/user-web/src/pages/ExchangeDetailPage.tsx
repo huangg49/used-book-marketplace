@@ -363,9 +363,9 @@ function ExchangeDetailContent({
   const standaloneSheet = !embedded && (proposal || funding);
   const handoverNavigation = { target: handoverTarget, navigationKey: location.key };
   const recoveringAction = Boolean(pendingExchange(detail.id) || exchangeAcknowledged(detail.id));
-  const bookOwner = detail.returnResolution?.ownerId === detail.viewer.id;
-  const returnBooks = bookOwner ? detail.giveBooks : detail.receiveBooks;
-  const caseBook = returnBooks.find((book) => book.id === detail.returnResolution?.listingId);
+  const caseBookId = detail.returnResolution?.listingId;
+  const outgoingCaseBook = detail.giveBooks.find((book) => book.id === caseBookId);
+  const caseBook = outgoingCaseBook ?? detail.receiveBooks.find((book) => book.id === caseBookId);
   const returnResolution = detail.revision ? detail.returnResolution : undefined;
   const evidence = detail.rawStatus === "ResolutionPending" && (
     <ExchangeEvidencePanel
@@ -438,7 +438,7 @@ function ExchangeDetailContent({
           evidence={evidence}
           statements={detail.statements}
           caseBook={caseBook && { title: caseBook.title, coverUrl: caseBook.coverUrl,
-            confirmed: Boolean(bookOwner ? detail.partnerShipping.receivedAt : detail.viewerShipping.receivedAt) }}
+            confirmed: Boolean(outgoingCaseBook ? detail.partnerShipping.receivedAt : detail.viewerShipping.receivedAt) }}
           disputeReason={detail.disputeReason}
           returnAddress={detail.partnerAddress}
           blocked={recoveringAction}

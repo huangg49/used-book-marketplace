@@ -278,7 +278,7 @@ export function ActionCard(props: Props) {
     instructions =
       detail.resolutionDecision === "CompleteExchange" &&
       detail.resolutionReason
-        ? `Trao đổi đã hoàn tất theo phán quyết của Quản trị viên: "${detail.resolutionReason}". Khoản cọc bảo chứng và tiền bù đã được tất toán.`
+        ? `Trao đổi đã hoàn tất theo phán quyết của người phụ trách: "${detail.resolutionReason}". Khoản cọc bảo chứng và tiền bù đã được tất toán.`
         : "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
   } else if (detail.status === "RESOLUTION_PENDING") {
     instructions = detail.disputeReason
@@ -291,7 +291,7 @@ export function ActionCard(props: Props) {
       detail.returnResolution?.outcome
         ? "Hồ sơ trả sách đã xử lý xong. Xem từng khoản đã ghi vào ví bên dưới."
         : detail.cancelReason === "DisputeResolvedRefund" && detail.resolutionReason
-        ? `Giao dịch đã hủy theo phán quyết của Quản trị viên: "${detail.resolutionReason}". Toàn bộ tiền cọc và tiền bù đã được hoàn lại 100% về ví của bạn.`
+        ? `Giao dịch đã hủy theo phán quyết của người phụ trách: "${detail.resolutionReason}". Toàn bộ tiền cọc và tiền bù đã được hoàn lại 100% về ví của bạn.`
         : detail.cancelReason === "MutualAgreement"
           ? "Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ 100% tiền cọc và tiền bù đã được hoàn lại về ví của hai bên và sách đã được mở lại trên kệ."
           : detail.cancelReason === "ShippingExpired"

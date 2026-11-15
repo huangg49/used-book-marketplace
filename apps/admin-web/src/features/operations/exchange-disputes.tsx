@@ -804,9 +804,10 @@ function InspectionDisputeActions({
   const diffPayerIsInitiator = item.diffPayerId === item.initiatorId;
   const diffPayerIsRecipient = item.diffPayerId === item.recipientId;
 
-  const defaultDecision = isComplainantRecipient
+  const canCompensate = (item.initiatorListingIds?.length ?? 1) === 1;
+  const defaultDecision = canCompensate && isComplainantRecipient
     ? "CompensateRecipient"
-    : isComplainantInitiator
+    : canCompensate && isComplainantInitiator
       ? "CompensateInitiator"
       : "CompleteExchange";
 
@@ -844,7 +845,7 @@ function InspectionDisputeActions({
         isPositive: false,
         detail: `Tịch thu toàn bộ cọc · Nhận 1 điểm vi phạm · Sách bị đóng`,
       },
-      footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + (diffPayerIsRecipient && diffAmount > 0 ? diffAmount : 0))} về ví`,
+      footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + diffAmount)} về ví`,
     },
     CompleteExchange: {
       label: "Bác khiếu nại (Hoàn tất trao đổi, hoàn 100% cọc)",
@@ -884,7 +885,7 @@ function InspectionDisputeActions({
         isPositive: false,
         detail: `Tịch thu toàn bộ cọc · Nhận 1 điểm vi phạm · Sách bị đóng`,
       },
-      footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + (diffPayerIsInitiator && diffAmount > 0 ? diffAmount : 0))} về ví`,
+      footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + diffAmount)} về ví`,
     },
   };
 
@@ -914,17 +915,19 @@ function InspectionDisputeActions({
                   disabled={locked}
                   onChange={(e) => setDecision(e.target.value as any)}
                 >
-                  <option value="CompensateRecipient">
+                  <option value="CompensateRecipient" disabled={!canCompensate}>
                     {decisionMeta.CompensateRecipient.label}
                   </option>
                   <option value="CompleteExchange">
                     {decisionMeta.CompleteExchange.label}
                   </option>
-                  <option value="CompensateInitiator">
+                  <option value="CompensateInitiator" disabled={!canCompensate}>
                     {decisionMeta.CompensateInitiator.label}
                   </option>
                 </select>
               </label>
+
+              {!canCompensate && <p className="muted">Bồi thường tại đây áp dụng cho phiếu có một cuốn sách mỗi bên.</p>}
 
               <div className={styles.settlementCard}>
                 <div className={styles.settlementHeader}>

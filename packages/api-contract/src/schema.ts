@@ -3973,7 +3973,7 @@ export interface paths {
         put?: never;
         /**
          * resolveExchangeDispute
-         * @description ACTIVE independent STAFF/ADMIN only. New decisions through this legacy endpoint are currently rejected with 409 InvalidState: the legacy command cannot establish custody, allocations, authority limits or an effective decision after appeal. No money, listing, exchange, audit or notification mutation is committed on rejection. Historical receipts may still be replayed with the original key and body after current session, role and participant-independence checks; replay does not repeat their financial effects.
+         * @description An active, independent STAFF or ADMIN assigned to the case may resolve a funded inspection dispute once both shipments and receipts are recorded. CompleteExchange settles the original agreement. CompensateInitiator or CompensateRecipient settles compensation immediately on one-book-per-side exchanges. RefundBoth is available only to replay an existing receipt. Out-of-scope or unassigned new decisions return 409 InvalidState. Replays require the original key and body and current role, session and participant independence, without repeating any financial effects.
          */
         post: operations["resolveExchangeDispute"];
         delete?: never;

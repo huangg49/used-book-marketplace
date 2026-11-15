@@ -1,3 +1,20 @@
+# Staff phân xử khiếu nại ở bước kiểm tra Exchange — 15/11/2026
+
+- Nhánh `codex/exchange-inspection-staff`, base `0c4329fd` (PR #111).
+  Chủ dự án xác nhận Staff được phân công có quyền ra phán quyết sau khi cả
+  hai đã nhận sách. Contract 0.80 và API kiểm cùng phạm vi. Bồi thường trực
+  tiếp xử lý phiếu một cuốn mỗi bên. Ca trả sách một chiều giữ ADR 0089.
+- Migration `0080-exchange-inspection-verdict` lưu quyết định trên phiếu,
+  khôi phục từ biên nhận tương ứng nếu có, không ghi bút toán mới khi nâng
+  cấp. Member web đọc đúng bên được bồi thường và cuốn sách liên quan.
+- Contract/routes, lint/typecheck, API/Member build, Member unit (490),
+  Mongo QA (61 pass, 8 skip) và Chromium Admin/Member đã qua. Chromium dùng
+  HTTP fixture cho tình huống UI. Exchange E2E 65/65 trên Mongo QA kiểm Staff
+  trên ngưỡng 300.000đ, hồ sơ sai phạm vi, replay và bên nhận bồi thường.
+  Hai đường nâng cấp validator và ca điền phán quyết từ biên nhận đã qua.
+- Gói ở worktree riêng. Khi triển khai cần áp 0080 trước khi bật API mới và
+  đồng bộ Member web. Điều kiện release và kiểm thử native theo READINESS.
+
 # Tích hợp bản demo lên main — 14/11/2026
 
 - Worktree tích hợp ghép bản demo `6435707c` với GitHub `main` tại `955d29e6`.

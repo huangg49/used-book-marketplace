@@ -247,8 +247,22 @@ try {
     await page.screenshot({ path: path.join(artifacts, `return-detail-${width}.png`), fullPage: true });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Detail overflow at ${width}px`);
   }
+  eligible = false;
+  current = { ...item, recipientShippedAt: now, initiatorReceivedAt: now, recipientReceivedAt: now,
+    initiatorListingIds: item.agreement.initiatorBooks.map(book => book.listingId) };
+  await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
+  const verdict = page.getByLabel('Phương án phán quyết');
+  await expect(verdict).toHaveValue('CompleteExchange');
+  await expect(verdict.locator('option[value="CompensateRecipient"]')).toHaveJSProperty("disabled", true);
+  await expect(verdict.locator('option[value="CompensateInitiator"]')).toHaveJSProperty("disabled", true);
+  current = { ...current, initiatorListingIds: [item.initiatorListingId],
+    agreement: { ...item.agreement, initiatorBooks: item.agreement.initiatorBooks.slice(0, 1) } };
+  await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
+  await expect(verdict.locator('option[value="CompensateRecipient"]')).toHaveJSProperty("disabled", false);
+  await verdict.selectOption('CompensateRecipient');
+  await expect(verdict).toHaveValue('CompensateRecipient');
   assert.deepEqual(errors, []);
-  console.log('PASS: held queue, read-only out-of-scope case, assignment, return evidence request, same key/body after lost ACK, error/retry/empty, 1440/390/320 + 130% text. UI HTTP fixtures.');
+  console.log('PASS: held queue, read-only out-of-scope case, assignment, return evidence request, same key/body after lost ACK, error/retry/empty, inspection compensation eligibility, 1440/390/320 + 130% text. UI HTTP fixtures.');
 } finally {
   await browser?.close();
   server?.kill();

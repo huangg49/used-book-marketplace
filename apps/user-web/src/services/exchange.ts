@@ -165,7 +165,7 @@ export const exchangeSchema = z.object({
     .optional(),
   cancellationRequestedAt: date,
   resolutionDecision: z
-    .enum(["RefundBoth", "CompleteExchange"])
+    .enum(["RefundBoth", "CompleteExchange", "CompensateInitiator", "CompensateRecipient"])
     .nullable()
     .optional(),
   resolutionReason: z.string().nullable().optional(),
