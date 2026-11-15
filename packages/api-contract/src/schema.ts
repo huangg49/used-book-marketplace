@@ -3654,7 +3654,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Apply the current exchange deadline on an allowlisted local simulation. Does not attest pickup, receipt or dispute evidence. */
+        /** @description Apply the current exchange deadline on an allowlisted local simulation. Inspection can be advanced only after both participants acknowledge inspection. Does not attest pickup, receipt or dispute evidence. */
         post: operations["advanceDemoExchangeDeadline"];
         delete?: never;
         options?: never;
@@ -8125,6 +8125,7 @@ export interface components {
                 recipient: components["schemas"]["ExchangeDisputeParticipant"] | null;
             };
             returnResolution?: components["schemas"]["ExchangeReturnResolution"];
+            /** @description The current demo deadline, when eligible. Inspection is available only after both participants acknowledge inspection. */
             demoDeadline?: components["schemas"]["DemoExchangeDeadline"];
             /** @description The current member can simulate this local demo exchange's shipping deadline. */
             demoShippingAdvanceAvailable?: boolean;

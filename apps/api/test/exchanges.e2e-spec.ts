@@ -2273,19 +2273,34 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         const delivered = (await post(inspectionPath + '/receive', {
           expectedVersion: firstReceipt.revision,
         }, user2).expect(200)).body;
+        const advanceInspection = (revision: number) =>
+          post(inspectionPath + '/demo-advance', { deadline: 'Inspection', expectedVersion: revision }, user1);
+        expect((await get(inspectionPath, user1).expect(200)).body).not.toHaveProperty('demoDeadline');
+        await advanceInspection(delivered.revision).expect(409);
+
         const acknowledged = (await post(inspectionPath + '/complete', {
           expectedVersion: delivered.revision,
         }, user1).expect(200)).body;
         expect(acknowledged).toMatchObject({ status: 'Delivered', completedAt: null, recipientCompletedAt: null });
-        const completed = (await post(inspectionPath + '/demo-advance', {
-          deadline: 'Inspection', expectedVersion: acknowledged.revision,
-        }, user1).expect(200)).body;
+        expect((await get(inspectionPath, user1).expect(200)).body).not.toHaveProperty('demoDeadline');
+        await advanceInspection(acknowledged.revision).expect(409);
+
+        const bothAcknowledged = (await post(inspectionPath + '/complete', {
+          expectedVersion: acknowledged.revision,
+        }, user2).expect(200)).body;
+        expect(bothAcknowledged).toMatchObject({ status: 'Delivered', completedAt: null });
+        expect(bothAcknowledged.recipientCompletedAt).toEqual(expect.any(String));
+        for (const user of [user1, user2]) {
+          expect((await get(inspectionPath, user).expect(200)).body.demoDeadline).toBe('Inspection');
+        }
+        await advanceInspection(acknowledged.revision).expect(409);
+        const completed = (await advanceInspection(bothAcknowledged.revision).expect(200)).body;
         expect(completed).toMatchObject({
           status: 'Completed',
           initiatorReceivedAt: delivered.initiatorReceivedAt,
           recipientReceivedAt: delivered.recipientReceivedAt,
           initiatorCompletedAt: acknowledged.initiatorCompletedAt,
-          recipientCompletedAt: null,
+          recipientCompletedAt: bothAcknowledged.recipientCompletedAt,
         });
 
         const proposalA = await createApprovedListing(user1, 100000, 'Both');

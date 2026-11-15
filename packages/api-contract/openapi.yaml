@@ -11212,7 +11212,10 @@ paths:
     post:
       operationId: advanceDemoExchangeDeadline
       tags: [Exchanges]
-      description: Apply the current exchange deadline on an allowlisted local simulation. Does not attest pickup, receipt or dispute evidence.
+      description: >-
+        Apply the current exchange deadline on an allowlisted local simulation.
+        Inspection can be advanced only after both participants acknowledge inspection.
+        Does not attest pickup, receipt or dispute evidence.
       security: [{ bearerAuth: [] }]
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
@@ -23599,6 +23602,7 @@ components:
         returnResolution:
           $ref: '#/components/schemas/ExchangeReturnResolution'
         demoDeadline:
+          description: The current demo deadline, when eligible. Inspection is available only after both participants acknowledge inspection.
           $ref: '#/components/schemas/DemoExchangeDeadline'
         demoShippingAdvanceAvailable:
           type: boolean

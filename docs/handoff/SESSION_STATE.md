@@ -1,3 +1,14 @@
+# Chốt điều kiện tua hạn kiểm tra Exchange — 15/11/2026
+
+- Sau hai xác nhận kiểm tra, cả hai tài khoản demo mới thấy và dùng được nút
+  Tua hạn kiểm tra. API kiểm điều kiện khi đọc phiếu và khi chạy lệnh giữ khóa
+  trên phiếu. Xác nhận vẫn giữ hạn 72 giờ riêng của mỗi bên theo ADR 0050.
+- OpenAPI, generated contract, API lint/typecheck/build, API unit 510/510,
+  Member web lint/build và unit 490/490 đã qua. Chromium dùng HTTP fixture ở
+  390/1440 px kiểm nút sau khi chưa ai, một người và cả hai đã xác nhận.
+- Khi đưa bản sửa lên máy demo, áp migration 0080 rồi bật đồng bộ API,
+  worker và web. Tài khoản demo vẫn dùng danh sách cho phép hiện có.
+
 # Sửa xác nhận kiểm tra và tua hạn demo Exchange — 15/11/2026
 
 - Nối nút Xác nhận đã kiểm tra với lệnh complete. Hai xác nhận vẫn giữ hai

@@ -248,7 +248,7 @@ try {
     await expect(statement.getByText('Chưa gửi giải trình', { exact: true })).toHaveCount(0);
     await expect(task.getByRole('button', { name: 'Gửi thêm giải trình', exact: true })).toBeEnabled();
     const inspectionDeadline = new Date(Date.now() + 72 * 3600000).toISOString();
-    exchangeResult = { ...exchange, status: 'Delivered', revision: 20, demoDeadline: 'Inspection',
+    exchangeResult = { ...exchange, status: 'Delivered', revision: 20,
       initiatorShippedAt: now, recipientShippedAt: now, initiatorReceivedAt: now, recipientReceivedAt: now,
       initiatorInspectionDeadline: inspectionDeadline, recipientInspectionDeadline: inspectionDeadline, inspectionDeadline };
     await page.goto(origin + '/login?returnUrl=' + encodeURIComponent('/exchange/' + exchange.id));
@@ -257,11 +257,19 @@ try {
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
     const acknowledge = page.getByRole('button', { name: 'Xác nhận đã kiểm tra', exact: true });
     const fastForward = page.getByRole('button', { name: /Tua .*kiểm tra.*Demo/ });
-    await expect(fastForward).toBeVisible();
+    await expect(acknowledge).toBeVisible();
+    await expect(fastForward).toHaveCount(0);
     await acknowledge.click();
     await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận nghiệm thu', exact: true }).click();
     await expect(page.getByText('Bạn đã xác nhận kiểm tra', { exact: true })).toBeVisible();
+    await expect(fastForward).toHaveCount(0);
     assert.deepEqual(inspectionCommands, [{ command: 'complete', body: { expectedVersion: 20 } }]);
+
+    // The partner acknowledges from their own session. The page reads the next revision via polling.
+    exchangeResult = { ...exchangeResult, revision: 22, recipientCompletedAt: new Date().toISOString(),
+      demoDeadline: 'Inspection' };
+    await expect(page.getByText('Cả hai bên đã xác nhận kiểm tra', { exact: true })).toBeVisible({ timeout: 12000 });
+    await expect(fastForward).toBeEnabled();
     await fastForward.click();
     const demoDialog = page.getByRole('dialog');
     await expect(demoDialog).toContainText('hoàn cọc và chuyển tiền bù theo thỏa thuận');
@@ -269,7 +277,7 @@ try {
     await expect(page.getByText(/Trao đổi đã hoàn tất thành công/)).toBeVisible();
     assert.deepEqual(inspectionCommands, [
       { command: 'complete', body: { expectedVersion: 20 } },
-      { command: 'demo-advance', body: { expectedVersion: 21, deadline: 'Inspection' } },
+      { command: 'demo-advance', body: { expectedVersion: 22, deadline: 'Inspection' } },
     ]);
     assert.deepEqual(errors, []);
     console.log(`PASS exchange finance recovery ${width}: stale read, denied access, exact appeal replay, distinct inspection commands`);
