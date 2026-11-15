@@ -11,6 +11,7 @@ import type {
   ExchangeCancelReason,
   ExchangeCancelledBy,
   ExchangeDoc,
+  ExchangeReturnDoc,
   ExchangeShipmentSnapshot,
   ListingDoc,
 } from '../../database/mongo/documents.js';
@@ -35,7 +36,7 @@ import {
 import { recordViolation } from '../auctions/member-violations.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
-import { exchangeReturnChange, oneSidedReturn, pendingOutboundDelivery, resolutionMessage, returnResolutionView, verifyOutboundDelivery } from './exchange-return-resolution.js';
+import { exchangeReturnChange, oneSidedReturn, oneSidedShipment, pendingOutboundDelivery, resolutionMessage, returnResolutionView, verifyOutboundDelivery } from './exchange-return-resolution.js';
 import { notifyExchange } from './exchange-notifications.js';
 import { EXCHANGE_INSPECTION_MS, hasExchangeDispute, inspectionDeadlines, inspectionMaySettle } from './exchange-inspection.js';
 import { currentDemoDeadline, closeDemoDisputeWindow, demoExchangeDeadlineEnabled } from './exchange-demo-deadline.js';
@@ -218,7 +219,7 @@ export class ExchangesService {
     const deadlines = inspectionDeadlines(row);
     return {
       id: row._id,
-      ...(oneSidedReturn(row) && row.status === 'ResolutionPending' ? { canStartReturnResolution: true } : {}),
+      ...(oneSidedShipment(row) && oneSidedReturn(row) && row.status === 'ResolutionPending' ? { canStartReturnResolution: true } : {}),
       ...(pendingOutboundDelivery(row) ? { canVerifyOutboundDelivery: true } : {}),
       ...(row.outboundDeliveryVerification ? { outboundDeliveryVerification: {
         verifiedAt: row.outboundDeliveryVerification.verifiedAt.toISOString(),
@@ -1804,14 +1805,18 @@ export class ExchangesService {
       );
     }
 
+    const setFields: Record<string, unknown> = {
+      status: 'Completed',
+      completedAt: now,
+      updatedAt: now,
+    };
+    if (!exchange.initiatorCompletedAt) setFields.initiatorCompletedAt = now;
+    if (!exchange.recipientCompletedAt) setFields.recipientCompletedAt = now;
+
     const next = await tx.c.exchanges.findOneAndUpdate(
       { _id: exchange._id, revision: exchange.revision, status: 'Delivered' },
       {
-        $set: {
-          status: 'Completed',
-          completedAt: now,
-          updatedAt: now,
-        },
+        $set: setFields,
         $inc: { revision: 1 },
       },
       { returnDocument: 'after' },
@@ -2076,8 +2081,200 @@ export class ExchangesService {
             );
           return exchange;
         },
-        mutate: async () => {
-          throw invalidState('Quyết định cũ chỉ dùng để đối chiếu kết quả đã ghi. Hãy xử lý trong hồ sơ trả sách.');
+        mutate: async (tx, actor, initialExchange, receiptId) => {
+          await tx.lock('exchanges', [initialExchange._id]);
+          const exchange = await this.exchange(tx, initialExchange._id);
+          if (exchange.status !== 'ResolutionPending') throw invalidState();
+          if (exchange.revision !== body.expectedVersion) throw conflict();
+
+          if (body.decision === 'RefundBoth') {
+            throw invalidState('Quyết định cũ chỉ dùng để đối chiếu kết quả đã ghi. Hãy xử lý trong hồ sơ trả sách.');
+          }
+
+          const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
+          if (!assignment || assignment.assigneeId !== actor._id) {
+            throw invalidState('Quyết định cũ chỉ dùng để đối chiếu kết quả đã ghi. Hãy xử lý trong hồ sơ trả sách.');
+          }
+
+          const trimmedReason = body.reason.trim();
+          if (trimmedReason.length < 10)
+            throw invalidField('/reason', 'Nhập lý do phán quyết ít nhất 10 ký tự.');
+          const now = await tx.now();
+          let next: ExchangeDoc | null = null;
+
+          if (body.decision === 'CompleteExchange') {
+            const initIds = this.getInitiatorListingIds(exchange);
+            const allIds = [...initIds, exchange.recipientListingId];
+            const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+            for (const listingId of allIds) {
+              const listing = lockedMap.get(listingId);
+              if (listing && listing.trade === 'Reserved') {
+                await this.listings.project(
+                  tx,
+                  listing._id,
+                  listing.version,
+                  'Reserved',
+                  'Exchanged',
+                );
+              }
+            }
+
+            next = await tx.c.exchanges.findOneAndUpdate(
+              { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
+              {
+                $set: {
+                  status: 'Completed',
+                  completedAt: now,
+                  resolutionDecision: 'CompleteExchange',
+                  resolutionReason: trimmedReason,
+                  resolvedBy: actor._id,
+                  resolvedAt: now,
+                  updatedAt: now,
+                },
+                $inc: { revision: 1 },
+              },
+              { returnDocument: 'after' },
+            );
+            if (!next) throw conflict();
+
+            await this.ledger.settleExchange(tx, next, now);
+
+            await notifyExchange(
+              tx,
+              next,
+              'ExchangeCompleted',
+              [next.initiatorId, next.recipientId],
+              now,
+              { reason: `Phán quyết từ quản trị viên: ${trimmedReason}` },
+            );
+
+            await tx.c.exchange_messages.insertOne({
+              _id: randomUUID(),
+              exchangeId: exchange._id,
+              senderId: actor._id,
+              body: `[Phán quyết của Quản trị viên]\nQuyết định: Bác khiếu nại & Hoàn tất trao đổi\nLý do: ${trimmedReason}`,
+              sentAt: now,
+            });
+          } else if (body.decision === 'CompensateInitiator' || body.decision === 'CompensateRecipient') {
+            const victimIsInitiator = body.decision === 'CompensateInitiator';
+            const defaulterId = victimIsInitiator ? exchange.recipientId : exchange.initiatorId;
+            const damagedListingId = victimIsInitiator ? exchange.recipientListingId : exchange.initiatorListingId;
+            const victimListingId = victimIsInitiator ? exchange.initiatorListingId : exchange.recipientListingId;
+
+            const resolution: ExchangeReturnDoc = {
+              phase: 'Closed',
+              note: trimmedReason,
+              evidenceDueAt: null,
+              appealDueAt: null,
+              appeals: [],
+              decisionBy: actor._id,
+              effectiveAt: now,
+              returnDueAt: null,
+              trackingCode: null,
+              returnedAt: null,
+              checkDueAt: null,
+              outcome: 'Compensated',
+              evidenceId: null,
+              dispatchedAt: null,
+              settlementReceiptId: receiptId,
+            };
+
+            const allIds = [damagedListingId, victimListingId];
+            const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+            const damagedListing = lockedMap.get(damagedListingId);
+            if (damagedListing && damagedListing.trade === 'Reserved') {
+              await this.listings.project(tx, damagedListing._id, damagedListing.version, 'Reserved', 'ClosedUnavailable');
+            }
+            const victimListing = lockedMap.get(victimListingId);
+            if (victimListing && victimListing.trade === 'Reserved') {
+              await this.listings.project(tx, victimListing._id, victimListing.version, 'Reserved', 'Available');
+              await this.listings.requireRevision(tx, victimListing._id);
+            }
+
+            next = await tx.c.exchanges.findOneAndUpdate(
+              { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
+              {
+                $set: {
+                  status: 'Cancelled',
+                  cancelReason: 'DisputeResolvedRefund',
+                  cancelledBy: 'Staff',
+                  cancelledAt: now,
+                  resolutionReason: trimmedReason,
+                  resolvedBy: actor._id,
+                  resolvedAt: now,
+                  returnResolution: resolution,
+                  updatedAt: now,
+                },
+                $inc: { revision: 1 },
+              },
+              { returnDocument: 'after' },
+            );
+            if (!next) throw conflict();
+
+            const resolvedExchange: ExchangeDoc = {
+              ...next,
+              resolutionDecision: body.decision,
+            };
+
+            await this.ledger.settleExchangeReturn(tx, resolvedExchange, receiptId, now);
+            await recordViolation(tx, {
+              userId: defaulterId,
+              kind: 'ExchangeReturnDefault',
+              sourceId: exchange._id,
+              recordedAt: now,
+              receiptId,
+            });
+
+            await notifyExchange(
+              tx,
+              resolvedExchange,
+              'ExchangeCancelled',
+              [resolvedExchange.initiatorId, resolvedExchange.recipientId],
+              now,
+              { reason: `Phán quyết từ quản trị viên: Bồi thường hư hại cho bên bị hại. Lý do: ${trimmedReason}` },
+            );
+
+            await tx.c.exchange_messages.insertOne({
+              _id: randomUUID(),
+              exchangeId: exchange._id,
+              senderId: actor._id,
+              body: `[Phán quyết của Quản trị viên]\nQuyết định: Bồi thường thiệt hại cho ${
+                victimIsInitiator ? 'Bên khởi tạo' : 'Bên nhận đề xuất'
+              }\nLý do: ${trimmedReason}`,
+              sentAt: now,
+            });
+          } else {
+            throw invalidField('/decision', 'Quyết định phán quyết không hợp lệ.');
+          }
+
+          const finalExchange = body.decision === 'CompleteExchange' ? next : {
+            ...next,
+            resolutionDecision: body.decision,
+          };
+
+          this.logger.log(
+            JSON.stringify({
+              event: 'exchangeDisputeResolved',
+              exchangeId: exchange._id,
+              decision: body.decision,
+              resolvedBy: actor._id,
+              reason: trimmedReason,
+            }),
+          );
+
+          return {
+            entityType: 'Exchange',
+            entityId: next._id,
+            initiatorListingId: next.initiatorListingId,
+            version: next.revision,
+            state: (next.status === 'Cancelled' ? 'Cancelled' : next.status) as Wire['ExchangeStatus'],
+            decidedAt: now,
+            event:
+              body.decision === 'CompleteExchange'
+                ? 'ExchangeDisputeCompleted'
+                : 'ExchangeDisputeCompensated',
+            exchange: this.view(finalExchange),
+          };
         },
       },
     );
@@ -2258,7 +2455,7 @@ export class ExchangesService {
           }
           return row;
         },
-        mutate: async (tx, _actor, row) => {
+        mutate: async (tx, actor, row) => {
           if (row.revision !== body.expectedVersion) throw conflict();
           const now = await tx.now();
           if (currentDemoDeadline(row, now, operations) !== body.deadline) throw invalidState();
@@ -2281,7 +2478,12 @@ export class ExchangesService {
       });
   }
 
-  private async applyDemoDeadline(tx: Tx, row: ExchangeDoc, now: Date, deadline: Wire['DemoExchangeDeadline']) {
+  private async applyDemoDeadline(
+    tx: Tx,
+    row: ExchangeDoc,
+    now: Date,
+    deadline: Wire['DemoExchangeDeadline'],
+  ) {
     switch (deadline) {
       case 'Proposal': return this.expireProposalTx(tx, row, now, true);
       case 'Funding': return this.expireExchangeTx(tx, row, now, true);
