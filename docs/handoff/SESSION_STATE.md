@@ -14,6 +14,9 @@
   bố cục tới hết hiệu ứng đóng. Chromium kiểm trượt theo hai trục, Escape,
   mở lại giữa hiệu ứng và giữ bản nháp khi preference giảm chuyển động bật.
   Cảnh báo rời hồ sơ vẫn mở và nhận focus khi phiếu đang gập, nếu có bản nháp.
+- Nối tiếp `086ace34`: ba trạng thái bài đăng dùng chung một hàng, bộ lọc AI
+  dùng PaperSelect theo trạng thái và giữ số hồ sơ đã tải. Kiểm bàn phím,
+  URL lọc và viewport 320 px bằng Chromium với dữ liệu AI đã dựng trong Mongo QA.
 
 # Bàn duyệt bài đăng ưu tiên ảnh — 15/11/2026
 

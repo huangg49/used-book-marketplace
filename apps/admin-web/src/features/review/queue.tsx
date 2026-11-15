@@ -22,6 +22,7 @@ import {
 import type { CurrentUser } from "@used-books/session-client";
 import { canReview, canReviewCatalog, session } from "../../core/session";
 import { Button, CursorPagination } from "../../core/ui";
+import { PaperSelect } from "../../core/PaperSelect";
 import { ListFeedback } from "../../core/list-feedback";
 import { useListMotion } from "../../core/task-motion";
 import {
@@ -196,7 +197,11 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
             </Button>
           </div>
           <div className={styles.filters}>
-            <div className="tabs" aria-label="Lọc trạng thái">
+            <div
+              className={kind === "listings" ? styles.statusFilters : "tabs"}
+              role="group"
+              aria-label="Lọc trạng thái"
+            >
               {filters.map((value) => (
                 <Button
                   key={value}
@@ -210,26 +215,18 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
               ))}
             </div>
             {aiFilters.length > 0 && (
-              <div className="tabs" aria-label="Lọc theo kết quả của AI">
-                <Button
-                  aria-pressed={!ai}
-                  onClick={() => {
-                    if (ai) setParams({ status });
+              <div className={styles.aiFilter}>
+                <PaperSelect
+                  label="Lọc theo AI"
+                  value={ai}
+                  choices={[
+                    ["", "Tất cả"],
+                    ...aiFilters.map((value) => [value, aiFilterLabels[value]] as const),
+                  ]}
+                  onChange={(value) => {
+                    if (ai !== value) setParams(value ? { status, ai: value } : { status });
                   }}
-                >
-                  Tất cả
-                </Button>
-                {aiFilters.map((value) => (
-                  <Button
-                    key={value}
-                    aria-pressed={ai === value}
-                    onClick={() => {
-                      if (ai !== value) setParams({ status, ai: value });
-                    }}
-                  >
-                    {aiFilterLabels[value]}
-                  </Button>
-                ))}
+                />
               </div>
             )}
           </div>

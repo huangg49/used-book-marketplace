@@ -154,6 +154,78 @@
   color: var(--shop-wine);
   box-shadow: inset 0 -2px var(--shop-wine);
 }
+.filters .statusFilters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 58%, var(--desk-paper));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--shop-shelf) 70%, var(--desk-paper));
+}
+.filters .statusFilters :global(.button) {
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 3px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
+}
+.filters .statusFilters :global(.button:hover:not(:disabled)) {
+  color: var(--shop-wine);
+  background: color-mix(in srgb, var(--shop-wine) 5%, var(--desk-paper));
+}
+.filters .statusFilters :global(.button[aria-pressed="true"]),
+.filters .statusFilters :global(.button[aria-pressed="true"]:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--shop-wine) 11%, var(--desk-paper));
+  color: var(--shop-wine);
+  font-weight: 650;
+}
+.aiFilter {
+  margin-top: 10px;
+}
+.aiFilter > div {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.aiFilter :global([role="combobox"]) {
+  min-width: 0;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+.aiFilter :global([role="combobox"]) > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.aiFilter :global([role="listbox"]) {
+  border-radius: 9px;
+}
+.listingDesk .queueHead {
+  padding: 12px 14px 7px 18px;
+}
+.listingDesk .queueHead :global(.button) {
+  width: 44px;
+  min-height: 44px;
+  border-radius: 8px;
+  color: var(--shop-wine);
+}
+.listingDesk .queueHead :global(.button:hover:not(:disabled)) {
+  background: var(--shop-shelf);
+  border-color: var(--desk-line);
+}
+.listingDesk .queueSummary {
+  padding: 10px 18px 13px;
+  font-variant-numeric: tabular-nums;
+}
 .queueSummary,
 .queueTime {
   margin: 0;

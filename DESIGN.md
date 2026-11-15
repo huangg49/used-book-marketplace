@@ -1055,6 +1055,10 @@ layout and vertically in the single column. The read area and queue keep their
 layout through the exit. Interrupted motion resumes from the current position.
 The leave confirmation remains available while the pane is folded.
 
+The listing queue uses three equal status controls on a cream rail and a
+single AI select beneath it. Only show AI outcomes available for the active
+status. Keep the actual loaded count and queue sort shown below the filters.
+
 ## Web motion consistency — owner request, 02/11/2026
 
 Member web, Admin/Staff and Expo web keep their authored animations and effects
