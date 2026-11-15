@@ -338,7 +338,7 @@ export function ActionCard(props: Props) {
   const demoEffect = detail.demoDeadline === "Proposal" ? "Phiếu sẽ hết hạn phản hồi."
     : detail.demoDeadline === "Funding" ? "Phiếu sẽ hủy và hoàn khoản đã nộp."
     : detail.demoDeadline === "Shipping" && pickupCount === 0 ? "Phiếu sẽ hủy và hoàn các khoản đã nộp."
-    : detail.demoDeadline === "Inspection" ? "Phiếu sẽ hoàn cọc và chuyển tiền bù theo thỏa thuận."
+    : detail.demoDeadline === "Inspection" ? "Demo sẽ tua qua hạn kiểm tra của cả hai bên, hoàn tất phiếu, hoàn cọc và chuyển tiền bù theo thỏa thuận."
     : "Phiếu sẽ chuyển sang xử lý sự cố. Tiền và sách tiếp tục được giữ.";
 
   async function handleCounterSubmit(data: CounterOfferData, revision = detail.revision!) {
@@ -624,19 +624,7 @@ export function ActionCard(props: Props) {
         <ExchangeInspection detail={detail} expired={inspectionExpired} awaitingResult={expired}>
           {!blocked && actions.length > 0 && (
             <div className={styles.inspectionActions}>
-              {!detail.viewerCompletedAt && actions.includes("advanceDemoShipping") && (
-                <button
-                  type="button"
-                  className={styles.btnPrimary}
-                  disabled={busy}
-                  onClick={() => void open("advanceDemoShipping")}
-                >
-                  {detail.partnerCompletedAt
-                    ? "Đồng ý nhận cọc & Hoàn tất ngay"
-                    : "Hoàn tất sớm & Nhận cọc ngay"}
-                </button>
-              )}
-              {actions.includes("complete") && !actions.includes("advanceDemoShipping") && (
+              {actions.includes("complete") && (
                 <button
                   type="button"
                   className={styles.btnPrimary}
@@ -656,6 +644,7 @@ export function ActionCard(props: Props) {
                   Báo sự cố
                 </button>
               )}
+              {demoAdvance}
             </div>
           )}
         </ExchangeInspection>
@@ -775,15 +764,7 @@ export function ActionCard(props: Props) {
         isOpen={!!action}
         onClose={() => setAction(undefined)}
         maxWidth={action === "dispute" ? "640px" : undefined}
-        description={
-          action === "advanceDemoShipping" && detail.status === "INSPECTING"
-            ? detail.partnerCompletedAt
-              ? "Đối tác đã kiểm tra sách và đồng ý hoàn tất sớm. Khi bạn bấm xác nhận, sàn Lật Lại sẽ lập tức hoàn 100% tiền cọc về ví cho cả hai bên và hoàn tất giao dịch."
-              : "Bạn xác nhận sách đã nhận đúng mô tả và muốn kết thúc sớm 72h. Yêu cầu sẽ được gửi tới đối tác. Khi đối tác cũng xác nhận đồng ý, tiền cọc của cả hai bên sẽ được hoàn về ví ngay lập tức."
-            : action === "advanceDemoShipping"
-              ? demoEffect
-              : undefined
-        }
+        description={action === "advanceDemoShipping" ? demoEffect : undefined}
         title={
           action === "cancel" && detail.status === "FUNDING"
             ? "Hủy trao đổi"
@@ -793,10 +774,6 @@ export function ActionCard(props: Props) {
               : "Đề nghị hủy giao dịch"
             : action === "reject" && detail.status === "WAITING_YOU_SEND"
               ? "Từ chối yêu cầu hủy"
-              : action === "advanceDemoShipping" && detail.status === "INSPECTING"
-                ? detail.partnerCompletedAt
-                  ? "Đồng thuận hoàn tất giao dịch"
-                  : "Đề nghị hoàn tất sớm & Nhận cọc"
               : action === "advanceDemoShipping" ? demoLabel : action
                 ? labels[action]
                 : ""
@@ -814,10 +791,6 @@ export function ActionCard(props: Props) {
                   ? "Hủy trao đổi"
                 : action === "reject" && detail.status === "WAITING_YOU_SEND"
                   ? "Từ chối hủy"
-                  : action === "advanceDemoShipping" && detail.status === "INSPECTING"
-                    ? detail.partnerCompletedAt
-                      ? "Đồng ý & Nhận cọc ngay"
-                      : "Gửi yêu cầu hoàn tất"
                   : action === "advanceDemoShipping" ? "Xác nhận tua hạn" : action
                     ? labels[action]
                     : "Xác nhận"

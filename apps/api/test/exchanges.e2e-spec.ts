@@ -736,8 +736,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(rec2Res.body.status).toBe('Delivered');
     expect(rec2Res.body.inspectionDeadline).toBeDefined();
 
-    // 7. Early Satisfaction / Inspection Acceptance ("Nghiệm thu hài lòng")
-    // User1 confirms satisfaction -> mutual completion requires both sides
+    // 7. Inspection acknowledgements preserve the existing settlement deadline.
     const comp1Res = await post(
       `/exchanges/${exchangeId}/complete`,
       { expectedVersion: rec2Res.body.revision },
@@ -810,9 +809,13 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     await worker.tick(new Date(earlierDeadline.getTime() + 1));
     expect((await db.c.exchanges.findOne({ _id: ex.id }))?.status).toBe('Delivered');
     await worker.tick(new Date(Date.parse(second.inspectionDeadline) - 1));
-    expect((await db.c.exchanges.findOne({ _id: ex.id }))?.status).toBe('Delivered');
+    const beforeExpiry = await db.c.exchanges.findOne({ _id: ex.id });
+    expect(beforeExpiry?.status).toBe('Delivered');
     await worker.tick(new Date(Date.parse(second.inspectionDeadline)));
-    expect((await db.c.exchanges.findOne({ _id: ex.id }))?.status).toBe('Completed');
+    const afterExpiry = await db.c.exchanges.findOne({ _id: ex.id });
+    expect(afterExpiry?.status).toBe('Completed');
+    expect(afterExpiry?.initiatorCompletedAt).toEqual(beforeExpiry?.initiatorCompletedAt);
+    expect(afterExpiry?.recipientCompletedAt).toEqual(beforeExpiry?.recipientCompletedAt);
     expect((await reconcile()).balanced).toBe(true);
   });
 
@@ -2238,6 +2241,11 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         config.set(flag, 'false');
         await post(path + '/demo-advance', command, user1).expect(404);
         config.set(flag, 'true');
+        for (const allowedIds of ['', unsent.initiatorId]) {
+          config.set(allow, allowedIds);
+          expect((await get(path, user1).expect(200)).body.demoDeadline).toBeUndefined();
+          await post(path + '/demo-advance', command, user1).expect(404);
+        }
         config.set(allow, [unsent.initiatorId, unsent.recipientId].join(','));
         expect((await get(path, user1).expect(200)).body.demoDeadline).toBe('Shipping');
         await post(path + '/demo-advance', command, outsider).expect(404);
@@ -2265,11 +2273,20 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         const delivered = (await post(inspectionPath + '/receive', {
           expectedVersion: firstReceipt.revision,
         }, user2).expect(200)).body;
-        const completed = (await post(inspectionPath + '/demo-advance', {
-          deadline: 'Inspection', expectedVersion: delivered.revision,
+        const acknowledged = (await post(inspectionPath + '/complete', {
+          expectedVersion: delivered.revision,
         }, user1).expect(200)).body;
-        expect(completed).toMatchObject({ status: 'Completed',
-          initiatorReceivedAt: delivered.initiatorReceivedAt, recipientReceivedAt: delivered.recipientReceivedAt });
+        expect(acknowledged).toMatchObject({ status: 'Delivered', completedAt: null, recipientCompletedAt: null });
+        const completed = (await post(inspectionPath + '/demo-advance', {
+          deadline: 'Inspection', expectedVersion: acknowledged.revision,
+        }, user1).expect(200)).body;
+        expect(completed).toMatchObject({
+          status: 'Completed',
+          initiatorReceivedAt: delivered.initiatorReceivedAt,
+          recipientReceivedAt: delivered.recipientReceivedAt,
+          initiatorCompletedAt: acknowledged.initiatorCompletedAt,
+          recipientCompletedAt: null,
+        });
 
         const proposalA = await createApprovedListing(user1, 100000, 'Both');
         const proposalB = await createApprovedListing(user2, 100000, 'Both');

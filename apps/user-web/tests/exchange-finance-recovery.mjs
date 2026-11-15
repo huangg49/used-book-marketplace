@@ -1,4 +1,4 @@
-// Production chat route; synthetic HTTP only, no API process, DB or money commands.
+// Production Member web routes with synthetic HTTP and no API process or database.
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
@@ -41,6 +41,7 @@ try {
     page.on('pageerror', error => errors.push(error.message));
     let failure = 0, standalone = false, messagesFailure = 0, exchangeResult = exchange;
     const returnCommands = [];
+    const inspectionCommands = [];
     const messageCursors = [];
     await context.route('**/api/v1/**', route => {
       const request = route.request(), p = new URL(request.url()).pathname.slice('/api/v1'.length);
@@ -64,6 +65,16 @@ try {
           } };
           return route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } });
         }
+        return route.fulfill({ json: exchangeResult });
+      }
+      if (p === '/exchanges/' + exchange.id + '/complete' || p === '/exchanges/' + exchange.id + '/demo-advance') {
+        assert.equal(request.method(), 'POST');
+        const command = p.split('/').at(-1);
+        inspectionCommands.push({ command, body: request.postDataJSON() });
+        const revision = exchangeResult.revision + 1;
+        exchangeResult = command === 'complete'
+          ? { ...exchangeResult, revision, initiatorCompletedAt: now }
+          : { ...exchangeResult, revision, status: 'Completed', completedAt: now, demoDeadline: undefined };
         return route.fulfill({ json: exchangeResult });
       }
       assert.equal(request.method(), 'GET', 'Recovery must only read existing state');
@@ -236,8 +247,32 @@ try {
       .toContainText('Tôi đã bàn giao sách tại điểm hẹn.');
     await expect(statement.getByText('Chưa gửi giải trình', { exact: true })).toHaveCount(0);
     await expect(task.getByRole('button', { name: 'Gửi thêm giải trình', exact: true })).toBeEnabled();
+    const inspectionDeadline = new Date(Date.now() + 72 * 3600000).toISOString();
+    exchangeResult = { ...exchange, status: 'Delivered', revision: 20, demoDeadline: 'Inspection',
+      initiatorShippedAt: now, recipientShippedAt: now, initiatorReceivedAt: now, recipientReceivedAt: now,
+      initiatorInspectionDeadline: inspectionDeadline, recipientInspectionDeadline: inspectionDeadline, inspectionDeadline };
+    await page.goto(origin + '/login?returnUrl=' + encodeURIComponent('/exchange/' + exchange.id));
+    await page.getByLabel(/^Email/).fill(user.email);
+    await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
+    await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+    const acknowledge = page.getByRole('button', { name: 'Xác nhận đã kiểm tra', exact: true });
+    const fastForward = page.getByRole('button', { name: /Tua .*kiểm tra.*Demo/ });
+    await expect(fastForward).toBeVisible();
+    await acknowledge.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận nghiệm thu', exact: true }).click();
+    await expect(page.getByText('Bạn đã xác nhận kiểm tra', { exact: true })).toBeVisible();
+    assert.deepEqual(inspectionCommands, [{ command: 'complete', body: { expectedVersion: 20 } }]);
+    await fastForward.click();
+    const demoDialog = page.getByRole('dialog');
+    await expect(demoDialog).toContainText('hoàn cọc và chuyển tiền bù theo thỏa thuận');
+    await demoDialog.getByRole('button', { name: 'Xác nhận tua hạn', exact: true }).click();
+    await expect(page.getByText(/Trao đổi đã hoàn tất thành công/)).toBeVisible();
+    assert.deepEqual(inspectionCommands, [
+      { command: 'complete', body: { expectedVersion: 20 } },
+      { command: 'demo-advance', body: { expectedVersion: 21, deadline: 'Inspection' } },
+    ]);
     assert.deepEqual(errors, []);
-    console.log(`PASS exchange finance recovery ${width}: stale warning/amounts, denied redaction, read-only retry, return appeal with exact replay`);
+    console.log(`PASS exchange finance recovery ${width}: stale read, denied access, exact appeal replay, distinct inspection commands`);
     await context.close();
   }
 } finally {

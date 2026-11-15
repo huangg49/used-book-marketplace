@@ -1805,18 +1805,14 @@ export class ExchangesService {
       );
     }
 
-    const setFields: Record<string, unknown> = {
-      status: 'Completed',
-      completedAt: now,
-      updatedAt: now,
-    };
-    if (!exchange.initiatorCompletedAt) setFields.initiatorCompletedAt = now;
-    if (!exchange.recipientCompletedAt) setFields.recipientCompletedAt = now;
-
     const next = await tx.c.exchanges.findOneAndUpdate(
       { _id: exchange._id, revision: exchange.revision, status: 'Delivered' },
       {
-        $set: setFields,
+        $set: {
+          status: 'Completed',
+          completedAt: now,
+          updatedAt: now,
+        },
         $inc: { revision: 1 },
       },
       { returnDocument: 'after' },

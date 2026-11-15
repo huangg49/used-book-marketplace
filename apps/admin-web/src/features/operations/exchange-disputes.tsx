@@ -840,10 +840,10 @@ function InspectionDisputeActions({
       },
       party2: {
         name: initiatorName,
-        role: "Bên vi phạm · Làm hỏng sách",
-        amount: `-${money(initiatorDeposit)}`,
-        isPositive: false,
-        detail: `Tịch thu toàn bộ cọc · Nhận 1 điểm vi phạm · Sách bị đóng`,
+        role: "Bên chịu bồi thường",
+        amount: diffPayerIsInitiator && diffAmount > 0 ? `+${money(diffAmount)}` : money(0),
+        isPositive: diffPayerIsInitiator && diffAmount > 0,
+        detail: `Dùng ${money(initiatorDeposit)} cọc để bồi thường${diffPayerIsInitiator && diffAmount > 0 ? ` · Hoàn ${money(diffAmount)} tiền bù` : ""} · Ghi nhận vi phạm · Đóng bài đăng`,
       },
       footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + diffAmount)} về ví`,
     },
@@ -880,10 +880,10 @@ function InspectionDisputeActions({
       },
       party2: {
         name: recipientName,
-        role: "Bên vi phạm · Làm hỏng sách",
-        amount: `-${money(recipientDeposit)}`,
-        isPositive: false,
-        detail: `Tịch thu toàn bộ cọc · Nhận 1 điểm vi phạm · Sách bị đóng`,
+        role: "Bên chịu bồi thường",
+        amount: diffPayerIsRecipient && diffAmount > 0 ? `+${money(diffAmount)}` : money(0),
+        isPositive: diffPayerIsRecipient && diffAmount > 0,
+        detail: `Dùng ${money(recipientDeposit)} cọc để bồi thường${diffPayerIsRecipient && diffAmount > 0 ? ` · Hoàn ${money(diffAmount)} tiền bù` : ""} · Ghi nhận vi phạm · Đóng bài đăng`,
       },
       footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + diffAmount)} về ví`,
     },
@@ -957,7 +957,7 @@ function InspectionDisputeActions({
                       <span>{active.party2.name}</span>
                       <span className={styles.settlementPartyRole}>({active.party2.role})</span>
                     </div>
-                    <div className={active.party2.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNegative}>
+                    <div className={active.party2.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNeutral}>
                       {active.party2.amount}
                     </div>
                   </div>
@@ -1008,7 +1008,7 @@ function InspectionDisputeActions({
                 <div className={styles.settlementPartyBlock}>
                   <div className={styles.settlementPartyRow}>
                     <strong>{active.party2.name}</strong>
-                    <span className={active.party2.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNegative}>
+                    <span className={active.party2.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNeutral}>
                       {active.party2.amount}
                     </span>
                   </div>

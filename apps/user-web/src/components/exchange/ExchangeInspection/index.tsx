@@ -41,13 +41,13 @@ export function ExchangeInspection({ detail, expired, awaitingResult, children }
             <p className={styles.status} role="status">
               <CheckCircle2 size={17} aria-hidden="true" />
               {detail.partnerCompletedAt
-                ? "Cả hai bên đã xác nhận hoàn tất"
-                : "Bạn đã đồng ý nhận cọc sớm (Đang chờ đối tác đồng thuận)"}
+                ? "Cả hai bên đã xác nhận kiểm tra"
+                : "Bạn đã xác nhận kiểm tra"}
             </p>
           ) : detail.partnerCompletedAt ? (
             <p className={styles.status} role="status">
               <CheckCircle2 size={17} aria-hidden="true" />
-              Đối tác đã kiểm tra sách và đồng ý nhận cọc sớm!
+              Đối tác đã xác nhận kiểm tra
             </p>
           ) : (
             <p className={styles.intro}>Đối chiếu sách với tình trạng đã ghi nhận trong phiếu.</p>

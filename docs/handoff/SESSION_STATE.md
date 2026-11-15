@@ -1,3 +1,19 @@
+# Sửa xác nhận kiểm tra và tua hạn demo Exchange — 15/11/2026
+
+- Nối nút Xác nhận đã kiểm tra với lệnh complete. Hai xác nhận vẫn giữ hai
+  hạn kiểm tra theo ADR 0050. Nút Tua hạn kiểm tra · Demo gọi demo-advance
+  riêng và báo trước kết quả tất toán.
+- Tua hạn yêu cầu cả hai tài khoản nằm trong danh sách demo. Worker và lệnh
+  tua hạn giữ nguyên mốc xác nhận thật, chỉ ghi mốc hoàn tất giao dịch.
+- Màn Staff hiển thị khoản tiền bù hoàn về ví của bên đã nộp, kể cả khi cọc
+  của họ được dùng để bồi thường. Màn trước xác nhận và hộp thoại dùng cùng
+  số tiền.
+- Chromium Member 390/1440 px bắt đúng hai POST và revision riêng. Chromium
+  Admin kiểm số tiền ở trang và hộp thoại. Hai bài dùng HTTP fixture cho
+  tình huống UI. API/Member build, API unit 510/510, Member unit 490/490,
+  Admin typecheck, contract và docs đã qua. Exchange E2E 65/65 trên Mongo QA
+  kiểm danh sách demo, hai hạn kiểm tra và mốc xác nhận trước/sau tất toán.
+
 # Staff phân xử khiếu nại ở bước kiểm tra Exchange — 15/11/2026
 
 - Nhánh `codex/exchange-inspection-staff`, base `0c4329fd` (PR #111).
