@@ -10,7 +10,7 @@ import {
   languageLabel,
   facetDefinitions,
 } from "@used-books/api-contract/catalog-taxonomy";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type Ref } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { session } from "../../core/session";
 import { Button, CursorPagination, ErrorNotice, Notice } from "../../core/ui";
@@ -157,12 +157,14 @@ export function ContentView({
   primary = false,
   auction = false,
   afterPhotos,
+  photoRef,
 }: {
   value: Revision;
   listingId: string;
   primary?: boolean;
   auction?: boolean;
   afterPhotos?: ReactNode;
+  photoRef?: Ref<HTMLElement>;
   onPhotoReady?: (id: string, ready: boolean) => void;
 }) {
   const c = value.content;
@@ -197,7 +199,12 @@ export function ContentView({
     <>
       {!primary && bundleSection}
 
-      <section className={primary ? `section ${contentStyles.photoEvidence}` : "section"}>
+      <section
+        className={primary ? `section ${contentStyles.photoEvidence}` : "section"}
+        ref={photoRef}
+        tabIndex={photoRef ? -1 : undefined}
+        aria-label={photoRef ? "Ảnh người đăng gửi" : undefined}
+      >
         <div className="section-heading">
           <h3>
             <Camera size={20} aria-hidden="true" />

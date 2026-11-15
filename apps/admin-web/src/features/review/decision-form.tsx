@@ -1,4 +1,4 @@
-import { useContext, useEffect, useId, useRef, useState } from "react";
+import { useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUpRight, CircleAlert, ClipboardCheck } from "lucide-react";
 import { Link, useBlocker } from "react-router-dom";
 import { session } from "../../core/session";
@@ -29,6 +29,9 @@ export function DecisionForm({
   removal = false,
   bundle = false,
   onRecorded,
+  onChecklistProgress,
+  subject,
+  revisionNumber,
 }: {
   kind: Kind;
   id: string;
@@ -44,9 +47,13 @@ export function DecisionForm({
   removal?: boolean;
   bundle?: boolean;
   onRecorded?: (intent: Intent) => void;
+  onChecklistProgress?: (count: number) => void;
+  subject?: ReactNode;
+  revisionNumber?: number;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [reason, setReason] = useState("");
+  const [rejectReasonOpen, setRejectReasonOpen] = useState(false);
   const [choice, setChoice] = useState<
     "Approve" | "Confirm" | "Reject" | "Remove" | null
   >(null);
@@ -99,6 +106,15 @@ export function DecisionForm({
   }, [dirty]);
   const locked = disabled || busy || !!intent || !!done;
   const approvalHintId = useId();
+  const reasonId = useId();
+  const listingReview = kind === "listings" && !removal;
+  const showReason = !listingReview || rejectReasonOpen;
+  useEffect(() => {
+    onChecklistProgress?.(checked.size);
+  }, [checked.size, onChecklistProgress]);
+  useLayoutEffect(() => {
+    if (rejectReasonOpen) reasonInput.current?.focus();
+  }, [rejectReasonOpen]);
   const showApprovalGate =
     kind === "listings" && !removal && !done && !intent &&
     (!canApprove || !photosReady);
@@ -107,6 +123,10 @@ export function DecisionForm({
     (kind === "catalog-requests" ||
       (checked.size === (bundle ? 7 : 6) && photosReady));
   const select = (decision: typeof choice) => {
+    if (decision === "Reject" && listingReview && !rejectReasonOpen) {
+      setRejectReasonOpen(true);
+      return;
+    }
     if (
       (decision === "Reject" || decision === "Remove") &&
       !validReason(reason)
@@ -228,31 +248,33 @@ export function DecisionForm({
             ))}
         </fieldset>
       )}
-      <div className="field">
-        <label htmlFor="decision-reason">
-          {removal ? "Lý do gỡ bài" : "Lý do từ chối"}
-        </label>
-        <textarea
-          id="decision-reason"
-          ref={reasonInput}
-          rows={4}
-          value={reason}
-          disabled={locked}
-          aria-invalid={reasonError}
-          aria-describedby="reason-hint"
-          onChange={(event) => {
-            setReason(event.target.value);
-            setReasonError(false);
-          }}
-        />
+      <div hidden={!showReason}>
+        <div className="field">
+          <label htmlFor={reasonId}>
+            {removal ? "Lý do gỡ bài" : "Lý do từ chối"}
+          </label>
+          <textarea
+            id={reasonId}
+            ref={reasonInput}
+            rows={4}
+            value={reason}
+            disabled={locked}
+            aria-invalid={reasonError}
+            aria-describedby={`${reasonId}-hint`}
+            onChange={(event) => {
+              setReason(event.target.value);
+              setReasonError(false);
+            }}
+          />
+        </div>
+        <p id={`${reasonId}-hint`} className={reasonError ? "field-error" : "muted"}>
+          {reasonError
+            ? "Nhập lý do từ 10 đến 1.000 ký tự để người đăng biết cách sửa."
+            : removal
+              ? "Bắt buộc từ 10–1.000 ký tự. Người đăng sẽ đọc được lý do này."
+              : "Chỉ bắt buộc khi từ chối. Nói rõ phần cần sửa, từ 10–1.000 ký tự."}
+        </p>
       </div>
-      <p id="reason-hint" className={reasonError ? "field-error" : "muted"}>
-        {reasonError
-          ? "Nhập lý do từ 10 đến 1.000 ký tự để người đăng biết cách sửa."
-          : removal
-            ? "Bắt buộc từ 10–1.000 ký tự. Người đăng sẽ đọc được lý do này."
-            : "Chỉ bắt buộc khi từ chối. Nói rõ phần cần sửa, từ 10–1.000 ký tự."}
-      </p>
       {error !== undefined && <ErrorNotice error={error} />}
       {intent && !done && (
         <Notice tone="warning">
@@ -321,7 +343,7 @@ export function DecisionForm({
                 {kind === "listings" ? "Duyệt bài đăng" : "Xác nhận đầu sách"}
               </Button>
               <Button disabled={locked} onClick={() => select("Reject")}>
-                Từ chối có lý do
+                {listingReview && rejectReasonOpen ? "Tiếp tục từ chối" : "Từ chối có lý do"}
               </Button>
             </>
           )}
@@ -342,6 +364,12 @@ export function DecisionForm({
             ? "Bài sẽ ngừng công khai. Người đăng không thể tự mở lại; nội dung và lý do được giữ để đối chiếu. Thao tác này không xử lý giao dịch."
             : "Quyết định sẽ được lưu vào lịch sử của bản gửi đang xem."}
         </p>
+        {subject && (
+          <div className={styles.decisionSubject}>
+            <strong>{subject}</strong>
+            <span>#{id.slice(0, 8)} · Bản gửi {revisionNumber}</span>
+          </div>
+        )}
         {(choice === "Reject" || choice === "Remove") && (
           <blockquote className="prose">{reason.trim()}</blockquote>
         )}

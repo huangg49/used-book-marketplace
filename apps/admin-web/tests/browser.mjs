@@ -116,7 +116,7 @@ try {
       .locator(`a[href='/review/listings/${fixture.listings[index]}?status=PendingReview']`)
       .first()
       .click();
-    await p.getByLabel("Lý do từ chối", { exact: true }).waitFor();
+    await click(p, "Kiểm duyệt bài đăng");
   };
   const p = await page();
   let releaseQueue;
@@ -357,6 +357,7 @@ try {
       .isDisabled(),
   );
   await click(p, "Từ chối có lý do");
+  await click(p, "Tiếp tục từ chối");
   await focused(p.getByLabel("Lý do từ chối", { exact: true }));
   assert.equal(
     await p
@@ -374,13 +375,13 @@ try {
   assert.equal(await p.getByRole("dialog", { name: "Đi tới đâu?", exact: true }).count(), 0);
   await click(p, "Ở lại hồ sơ");
   assert.equal(await p.getByRole("checkbox", { checked: true }).count(), 6);
-  await p.getByRole("link", { name: "← Về danh sách", exact: true }).click();
+  await p.getByRole("link", { name: "Về danh sách", exact: true }).click();
   await p.getByRole("dialog").waitFor();
   await focused(p.getByRole("button", { name: "Ở lại hồ sơ", exact: true }));
   await shot(p, "leave-guard-1440");
   await p.keyboard.press("Escape");
   await p.getByRole("dialog").waitFor({ state: "hidden" });
-  await focused(p.getByRole("link", { name: "← Về danh sách", exact: true }));
+  await focused(p.getByRole("link", { name: "Về danh sách", exact: true }));
   assert.equal(await p.getByRole("checkbox", { checked: true }).count(), 6);
   await p.screenshot({
     path: path.join(artifacts, "listing-1440.png"),
@@ -415,22 +416,23 @@ try {
   await nextReview.waitFor();
   assert.equal(await nextReview.getAttribute("href"), `/review/listings/${fixture.listings[1]}`);
   await nextReview.click();
-  await p.getByLabel("Lý do từ chối", { exact: true }).waitFor();
+  await p.getByRole("button", { name: "Kiểm duyệt bài đăng", exact: true }).waitFor();
   assert.equal(await p.getByRole("checkbox", { checked: true }).count(), 0);
   await focused(p.getByRole("heading", { name: "Hồ sơ bài đăng", exact: true }));
-  const returnToQueue = p.getByRole("link", { name: "← Về danh sách", exact: true });
+  const returnToQueue = p.getByRole("link", { name: "Về danh sách", exact: true });
   assert.equal(await returnToQueue.getAttribute("href"), "/review/listings?status=PendingReview");
   await returnToQueue.click();
   await click(p, "Đã duyệt");
   await p.getByRole("link", { name: "Đọc hồ sơ 1", exact: true }).click();
-  assert.equal(await p.getByRole("link", { name: "← Về danh sách", exact: true }).getAttribute("href"), "/review/listings?status=Approved");
-  await p.getByRole("link", { name: "← Về danh sách", exact: true }).click();
+  assert.equal(await p.getByRole("link", { name: "Về danh sách", exact: true }).getAttribute("href"), "/review/listings?status=Approved");
+  await p.getByRole("link", { name: "Về danh sách", exact: true }).click();
   assert.equal(await p.getByRole("button", { name: "Đã duyệt", exact: true }).getAttribute("aria-pressed"), "true");
   await openListing(p, 1);
+  await click(p, "Từ chối có lý do");
   await p
     .getByLabel("Lý do từ chối", { exact: true })
     .fill("Vui lòng bổ sung ảnh rõ phần trang bị gạch chân.");
-  await click(p, "Từ chối có lý do");
+  await click(p, "Tiếp tục từ chối");
   await click(p, "Xác nhận quyết định");
   await p.locator(".status-label").filter({ hasText: "Đã từ chối" }).waitFor();
   await p.setViewportSize({ width: 390, height: 844 });
@@ -480,6 +482,7 @@ try {
   await openListing(p, 1);
   await p.locator(".status-label").filter({ hasText: "Chờ duyệt" }).waitFor();
   await p.getByText("Đã bổ sung ảnh rõ phần trang bị gạch chân.").waitFor();
+  await click(p, "Từ chối có lý do");
   await p.getByLabel("Lý do từ chối", { exact: true }).fill("Bản nháp lý do vẫn ở đây.");
   await p.getByRole("checkbox").first().check();
   await click(p, "Đối chiếu bản gửi");
@@ -502,14 +505,16 @@ try {
   // Two real sessions view the same version. The second must reconcile a 409.
   const second = await page();
   await login(second, `/review/listings/${fixture.listings[2]}?source=handoff#main`);
+  await click(second, "Kiểm duyệt bài đăng");
   await second.getByRole("checkbox").first().waitFor();
   for (const checkbox of await second.getByRole("checkbox").all())
     await checkbox.check();
   await openListing(p, 2);
+  await click(p, "Từ chối có lý do");
   await p
     .getByLabel("Lý do từ chối", { exact: true })
     .fill("Cần mô tả rõ phần gáy sách trước khi duyệt.");
-  await click(p, "Từ chối có lý do");
+  await click(p, "Tiếp tục từ chối");
   await click(p, "Xác nhận quyết định");
   await p.locator(".status-label").filter({ hasText: "Đã từ chối" }).waitFor();
   await click(second, "Duyệt bài đăng");
@@ -665,6 +670,7 @@ try {
     .locator(`a[href='/review/listings/${fixture.listings[0]}?status=Approved']`)
     .first()
     .click();
+  await click(removal, "Kết quả kiểm duyệt");
   await removal.getByLabel("Lý do gỡ bài", { exact: true }).fill("short");
   await click(removal, "Gỡ bài đăng");
   await removal

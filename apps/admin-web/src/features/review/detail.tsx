@@ -1,9 +1,11 @@
 import { dateText, money } from "../../core/format";
 import { invalidateDashboard } from "../../core/dashboard-cache";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowDownToLine,
+  ArrowLeft,
+  ClipboardCheck,
+  PanelRightClose,
   BookMarked,
   ArrowUpRight,
   ChevronDown,
@@ -33,6 +35,11 @@ import {
   recordedDecision,
   type RecordedDecision,
 } from "./decision-feedback";
+
+function focusReviewPart(element: HTMLElement | null) {
+  element?.scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
+  element?.focus({ preventScroll: true });
+}
 
 export function Detail() {
   const { kind, id } = useParams();
@@ -73,6 +80,20 @@ function DetailContent({
   const recordHeader = useRef<HTMLElement>(null);
   const readingArea = useRef<HTMLDivElement>(null);
   const decisionArea = useRef<HTMLDivElement>(null);
+  const photoArea = useRef<HTMLElement>(null);
+  const decisionTrigger = useRef<HTMLButtonElement>(null);
+  const focusAfterChange = useRef<"decision" | "photo" | "trigger" | null>(null);
+  const decisionId = useId();
+  const [decisionOpen, setDecisionOpen] = useState(false);
+  const [checkedCount, setCheckedCount] = useState(0);
+
+  useLayoutEffect(() => {
+    const target = focusAfterChange.current;
+    focusAfterChange.current = null;
+    if (target === "decision") focusReviewPart(decisionArea.current);
+    if (target === "photo") focusReviewPart(photoArea.current);
+    if (target === "trigger") focusReviewPart(decisionTrigger.current);
+  }, [decisionOpen, view]);
   const onPhotoReady = useCallback(
     (mediaId: string, ready: boolean) =>
       setPhotos((previous) =>
@@ -148,8 +169,22 @@ function DetailContent({
       (value.state.trade === "Available" &&
         value.state.visibility !== "Removed" &&
         !value.state.deletedAt));
+  const reviewAction = decisionOpen
+    ? "Tới phiếu duyệt"
+    : !pending
+      ? "Kết quả kiểm duyệt"
+      : decisionAllowed
+        ? "Kiểm duyệt"
+        : "Xem phiếu duyệt";
+  const draftProgress = isListing && !decisionOpen && decisionAllowed && checkedCount > 0
+    ? `${checkedCount}/${value.currentRevision.content.bundle ? 7 : 6}`
+    : null;
   return (
-    <div className={`${styles.detail} ${kind === "listings" ? styles.listingDetail : ""}`}>
+    <div
+      className={`${styles.detail} ${kind === "listings" ? styles.listingDetail : ""}`}
+      data-listing-dossier={isListing ? "" : undefined}
+      data-listing-decision-open={isListing && decisionOpen ? "" : undefined}
+    >
       {kind !== "listings" && (
         <Link
           className="back-link"
@@ -248,52 +283,55 @@ function DetailContent({
                 </>
               )}
               {"state" in value && (
-                <nav className={styles.evidenceNav} aria-label="Nội dung hồ sơ">
+                <div className={styles.reviewToolbar}>
+                  <nav className={styles.evidenceNav} aria-label="Nội dung hồ sơ">
+                    <Button
+                      aria-pressed={view === "content"}
+                      onClick={() => setView("content")}
+                    >
+                      Nội dung & ảnh
+                    </Button>
+                    <Button
+                      aria-pressed={view === "compare"}
+                      onClick={() => {
+                        setView("compare");
+                        setComparisonOpened(true);
+                      }}
+                    >
+                      Đối chiếu bản gửi
+                    </Button>
+                    <Button
+                      aria-pressed={view === "history"}
+                      onClick={() => setView("history")}
+                    >
+                      Lịch sử
+                    </Button>
+                  </nav>
                   <Button
-                    aria-pressed={view === "content"}
-                    onClick={() => setView("content")}
-                  >
-                    Nội dung & ảnh
-                  </Button>
-                  <Button
-                    aria-pressed={view === "compare"}
+                    ref={decisionTrigger}
+                    className={styles.openDecision}
+                    aria-controls={decisionId}
+                    aria-expanded={decisionOpen}
+                    aria-label={reviewAction === "Kiểm duyệt" ? "Kiểm duyệt bài đăng" : undefined}
+                    aria-describedby={draftProgress ? `${decisionId}-progress` : undefined}
                     onClick={() => {
-                      setView("compare");
-                      setComparisonOpened(true);
+                      if (decisionOpen) {
+                        focusReviewPart(decisionArea.current);
+                      } else {
+                        focusAfterChange.current = "decision";
+                        setDecisionOpen(true);
+                      }
                     }}
                   >
-                    Đối chiếu bản gửi
+                    <ClipboardCheck size={17} aria-hidden="true" />
+                    {reviewAction}
+                    {draftProgress && (
+                      <span id={`${decisionId}-progress`} className={styles.draftCount}>
+                        {draftProgress}
+                      </span>
+                    )}
                   </Button>
-                  <Button
-                    aria-pressed={view === "history"}
-                    onClick={() => setView("history")}
-                  >
-                    Lịch sử
-                  </Button>
-                  <Button
-                    className={styles.jumpDecision}
-                    aria-label="Đi tới phiếu quyết định"
-                    title="Đi tới phiếu quyết định"
-                    onClick={() => {
-                      const target = decisionArea.current;
-                      const dossier = target?.closest<HTMLElement>(
-                        "[data-review-dossier]",
-                      );
-                      if (target && dossier)
-                        dossier.scrollTo({
-                          top:
-                            target.getBoundingClientRect().top -
-                            dossier.getBoundingClientRect().top +
-                            dossier.scrollTop -
-                            dossier.clientTop,
-                          behavior: "instant",
-                        });
-                      target?.focus({ preventScroll: true });
-                    }}
-                  >
-                    <ArrowDownToLine size={17} aria-hidden="true" />
-                  </Button>
-                </nav>
+                </div>
               )}
               {"state" in value ? (
                 <>
@@ -306,6 +344,7 @@ function DetailContent({
                       listingId={id}
                       onPhotoReady={onPhotoReady}
                       primary
+                      photoRef={photoArea}
                       auction={value.channel === "Auction"}
                       afterPhotos={pending && value.catalogStatus !== "Confirmed" && (
                         <div className={styles.catalogGate} role="note">
@@ -441,7 +480,37 @@ function DetailContent({
               tabIndex={0}
               role="region"
               aria-label="Phiếu quyết định"
+              id={decisionId}
+              hidden={Boolean(isListing && !decisionOpen)}
             >
+              {isListing && (
+                <div className={styles.decisionTools}>
+                  <Button
+                    className={styles.backToPhoto}
+                    onClick={() => {
+                      if (view === "content") {
+                        focusReviewPart(photoArea.current);
+                      } else {
+                        focusAfterChange.current = "photo";
+                        setView("content");
+                      }
+                    }}
+                  >
+                    <ArrowLeft size={16} aria-hidden="true" />
+                    Về ảnh
+                  </Button>
+                  <Button
+                    disabled={pendingCommand}
+                    onClick={() => {
+                      focusAfterChange.current = "trigger";
+                      setDecisionOpen(false);
+                    }}
+                  >
+                    <PanelRightClose size={16} aria-hidden="true" />
+                    Gập phiếu
+                  </Button>
+                </div>
+              )}
               {decisionRecord && (
                 <DecisionRecord
                   {...decisionRecord}
@@ -524,6 +593,11 @@ function DetailContent({
                   disabled={result.isError || result.isFetching}
                   reconcile={reconcile}
                   onPending={setPendingCommand}
+                  onChecklistProgress={isListing ? setCheckedCount : undefined}
+                  subject={isListing ? (
+                    <ListingTitle value={value} canReadPendingCatalog={canReviewCatalog(user)} />
+                  ) : undefined}
+                  revisionNumber={value.currentRevision.number}
                   onRecorded={(intent) =>
                     setRecorded(recordedDecision(intent, kind, id))
                   }

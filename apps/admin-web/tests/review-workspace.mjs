@@ -81,9 +81,10 @@ try {
   record(
     "queue entry opens oldest loaded dossier without an extra welcome step",
   );
-  await expect(
-    page.getByRole("button", { name: "Duyệt bài đăng", exact: true }),
-  ).toBeDisabled();
+  const decision = page.getByRole("region", { name: "Phiếu quyết định", exact: true });
+  const openDecision = (target = page) => target.getByRole("button", { name: "Kiểm duyệt bài đăng", exact: true });
+  await expect(decision).toBeHidden();
+  await expect(openDecision()).toHaveAttribute("aria-expanded", "false");
   await page.getByRole("link", { name: /Mở yêu cầu đầu sách/ }).waitFor();
   record(
     "pending catalog remains an explicit approval gate with an exact catalog deep link",
@@ -106,12 +107,55 @@ try {
         : el.closest("[data-review-dossier]")).getBoundingClientRect().bottom;
     });
     assert(image && summary && image.y > summary.y + summary.height, "Keep the condition summary directly before photo evidence");
-    await page.screenshot({ path: path.join(artifacts, `pending-${width}.png`) });
+    await page.screenshot({ path: path.join(artifacts, `reading-${width}.png`) });
     assert(image.y + (width > 1000 ? image.height : 140) <= photoBoundary + 1,
       `Book photo clips too early at ${width}×${height}: top=${image.y}, bottom limit=${photoBoundary}`);
   }
   await page.setViewportSize({ width: 1600, height: 1000 });
   record("long book title, seller condition and actual image remain above the fold on desktop and mobile");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const queue = page.getByRole("region", { name: "Hàng chờ kiểm duyệt", exact: true });
+  await expect(queue).toBeVisible();
+  await openDecision().click();
+  await expect(decision).toBeFocused();
+  await expect(queue).toBeHidden();
+  await expect(preview).toBeInViewport();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(decision.getByLabel("Lý do từ chối", { exact: true })).toBeHidden();
+  await page.screenshot({ path: path.join(artifacts, "decision-1440.png") });
+
+  await decision.getByRole("checkbox").first().check();
+  await decision.getByRole("button", { name: "Từ chối có lý do", exact: true }).click();
+  const reasonField = decision.getByLabel("Lý do từ chối", { exact: true });
+  await expect(reasonField).toBeFocused();
+  await reasonField.fill("Ảnh bìa và tình trạng cần được đối chiếu thêm.");
+  await decision.getByRole("button", { name: "Gập phiếu", exact: true }).click();
+  await expect(decision).toBeHidden();
+  await expect(openDecision()).toBeFocused();
+  await expect(openDecision()).toContainText("1/6");
+  await expect(queue).toBeVisible();
+  await openDecision().click();
+  await expect(decision.getByRole("checkbox").first()).toBeChecked();
+  await expect(reasonField).toHaveValue("Ảnh bìa và tình trạng cần được đối chiếu thêm.");
+  await decision.getByRole("button", { name: "Tiếp tục từ chối", exact: true }).click();
+  const rejectDialog = page.getByRole("dialog", { name: "Từ chối?", exact: true });
+  await expect(rejectDialog).toContainText("Truyện Kiều");
+  await expect(rejectDialog).toContainText("Ảnh bìa và tình trạng cần được đối chiếu thêm.");
+  await page.screenshot({ path: path.join(artifacts, "decision-confirm-1440.png") });
+  await rejectDialog.getByRole("button", { name: "Quay lại kiểm tra", exact: true }).click();
+  await reasonField.fill("");
+  await decision.getByRole("checkbox").first().uncheck();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Tới phiếu duyệt", exact: true }).click();
+  await expect(decision).toBeFocused();
+  await page.screenshot({ path: path.join(artifacts, "decision-390.png") });
+  await decision.getByRole("button", { name: "Về ảnh", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Ảnh người đăng gửi", exact: true })).toBeFocused();
+  await expect(preview).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Tới phiếu duyệt", exact: true })).toBeInViewport();
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  record("optional nonmodal decision, queue collapse, preserved checks and rejection draft, exact confirmation subject and mobile return to photo");
   await preview.click();
   await page
     .getByRole("dialog", { name: "Xem lớn ảnh 1", exact: true })
@@ -159,6 +203,7 @@ try {
     await staffPage.locator('input[type="password"]').fill(password);
     await staffPage.getByRole("button", { name: "Đăng nhập", exact: true }).click();
     await staffPage.getByRole("heading", { name: "Hồ sơ bài đăng", exact: true }).waitFor();
+    await openDecision(staffPage).click();
     for (const box of await staffPage.getByRole("checkbox").all()) await box.check();
     const staffGate = staffPage.getByRole("status", { name: "Điều kiện duyệt bài", exact: true });
     await expect(staffGate).toContainText("Cần Admin xác nhận đầu sách");
@@ -195,7 +240,7 @@ try {
       assert.equal(await page.evaluate(() => scrollY), 0);
       await queue.evaluate(el => el.scrollTo({ top: 0, behavior: "instant" }));
       await page.getByRole("button", { name: "Ẩn hàng chờ", exact: true }).click();
-      const jump = page.getByRole("button", { name: "Đi tới phiếu quyết định", exact: true });
+      const jump = page.getByRole("button", { name: "Tới phiếu duyệt", exact: true });
       if (await jump.isVisible()) {
         const pageHeading = page.getByRole("heading", { name: "Bài đăng sách", exact: true });
         const headingY = (await pageHeading.boundingBox()).y;
@@ -215,6 +260,9 @@ try {
       exact: true,
     }),
   ).toHaveAttribute("value", "1");
+  if (!(await reasonField.isVisible())) {
+    await decision.getByRole("button", { name: "Từ chối có lý do", exact: true }).click();
+  }
   await page
     .getByLabel("Lý do từ chối", { exact: true })
     .fill("Lý do đang nhập chưa gửi đi");
@@ -239,7 +287,9 @@ try {
   await expect(page).toHaveURL(new RegExp(fixture.listings[1]));
   await expect(reader.locator(".record-id")).toHaveText(`Mã hồ sơ: ${fixture.listings[1]}`);
   assert.equal(await reader.evaluate(el => el.scrollTop), 0, "New dossier starts at the top of the reader");
-  assert.equal(await page.getByRole("region", { name: "Phiếu quyết định", exact: true }).evaluate(el => el.scrollTop), 0, "New dossier starts at the top of the decision pane");
+  await expect(decision).toBeHidden();
+  await openDecision().click();
+  assert.equal(await decision.evaluate(el => el.scrollTop), 0, "New dossier starts at the top of the decision pane");
   await expect(page.getByRole("checkbox").first()).not.toBeChecked();
   await expect(
     page.getByRole("progressbar", {
@@ -286,6 +336,7 @@ try {
   await page
     .getByRole("button", { name: "Xem lớn ảnh 1", exact: true })
     .waitFor();
+  await openDecision().click();
   for (const box of await page.getByRole("checkbox").all()) await box.check();
   await expect(
     page.getByRole("button", { name: "Duyệt bài đăng", exact: true }),

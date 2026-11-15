@@ -1,3 +1,16 @@
+# Mở phiếu duyệt bài đăng theo nhu cầu — 15/11/2026
+
+- Checkout demo dùng `codex/admin-review-photo-first`, nối tiếp `e91f9e77`.
+  Hồ sơ mở ở chế độ đọc rộng. Kiểm duyệt mở phiếu kề ảnh trên desktop,
+  tự thu hàng chờ khi thiếu chiều ngang. Trên điện thoại, Về ảnh giữ nút
+  Tới phiếu duyệt trong màn hình để đối chiếu qua lại.
+- Gập phiếu giữ checklist và lý do đang nhập trên cùng hồ sơ. Lý do hiện
+  khi chọn từ chối. Modal xác nhận hiển thị tên sách, mã và bản gửi đang xem.
+- Admin lint, unit 250/250 và production build qua. Hai bộ Chromium với
+  Nest/Mongo QA và storage giả lập kiểm quyền, gập/mở, giữ bản nháp,
+  duyệt/từ chối/gỡ bài, gửi lại cùng key sau mất phản hồi và xử lý phiên bản cũ.
+  Kiểm thêm bảy khung màn hình, phóng ảnh và cuộn độc lập bằng bàn phím.
+
 # Bàn duyệt bài đăng ưu tiên ảnh — 15/11/2026
 
 - Checkout demo ở nhánh `codex/admin-review-photo-first`, base `305a8dff`.

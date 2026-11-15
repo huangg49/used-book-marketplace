@@ -1040,6 +1040,17 @@ the decision form. The checklist uses ruled paper rows and a selected tint, with
 progress still driven by the reviewer's checks. Catalog requests, historical
 galleries, media readiness and decision permissions keep their own behavior.
 
+### Admin listing decision disclosure — 15/11/2026
+
+The listing dossier opens in reading mode with the full reader width. The
+Kiểm duyệt action reveals a nonmodal decision pane while keeping the evidence
+available. At medium workspace widths, allow the reviewer to reopen the queue
+through its disclosure. In a single-column dossier, take focus to the decision
+and keep the action row in view when returning to the photo. Folding preserves
+the existing draft and moves focus to its trigger. Reveal the reason field when
+the reviewer chooses rejection. Keep the native final confirmation dialog and
+identify the actual listing and revision before submission.
+
 ## Web motion consistency — owner request, 02/11/2026
 
 Member web, Admin/Staff and Expo web keep their authored animations and effects

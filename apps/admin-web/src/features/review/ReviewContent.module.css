@@ -139,3 +139,9 @@
   font-size: 12px;
   line-height: 1.65;
 }
+
+@container review-dossier (max-width: 739px) {
+  .photoEvidence {
+    scroll-margin-block-start: 76px;
+  }
+}
