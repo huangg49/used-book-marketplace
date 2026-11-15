@@ -2459,7 +2459,7 @@ export class ExchangesService {
           if (row.revision !== body.expectedVersion) throw conflict();
           const now = await tx.now();
           if (currentDemoDeadline(row, now, operations) !== body.deadline) throw invalidState();
-          const result = await this.applyDemoDeadline(tx, row, now, body.deadline, operations ? undefined : actor._id);
+          const result = await this.applyDemoDeadline(tx, row, now, body.deadline);
           if (!result) throw invalidState();
           const exchange = result.exchange;
           return {
@@ -2483,49 +2483,13 @@ export class ExchangesService {
     row: ExchangeDoc,
     now: Date,
     deadline: Wire['DemoExchangeDeadline'],
-    actorId?: string,
   ) {
     switch (deadline) {
       case 'Proposal': return this.expireProposalTx(tx, row, now, true);
       case 'Funding': return this.expireExchangeTx(tx, row, now, true);
       case 'Shipping': return this.expireShippingTx(tx, row, now, true);
       case 'Transit': return this.expireTransitTx(tx, row, now, true);
-      case 'Inspection': {
-        const isParticipant = row.initiatorId === actorId || row.recipientId === actorId;
-        if (!actorId || !isParticipant) {
-          return this.expireInspectionTx(tx, row, now, true);
-        }
-        const isInitiator = row.initiatorId === actorId;
-        const myCompleted = isInitiator ? row.initiatorCompletedAt : row.recipientCompletedAt;
-        const partnerCompleted = isInitiator ? row.recipientCompletedAt : row.initiatorCompletedAt;
-
-        // If partner has not confirmed yet, clicking this records my confirmation first:
-        if (!partnerCompleted) {
-          if (myCompleted) throw invalidState();
-          const setFields: Record<string, unknown> = { updatedAt: now };
-          if (isInitiator) {
-            setFields.initiatorCompletedAt = now;
-          } else {
-            setFields.recipientCompletedAt = now;
-          }
-          const next = await tx.c.exchanges.findOneAndUpdate(
-            { _id: row._id, revision: row.revision, status: 'Delivered' },
-            { $set: setFields, $inc: { revision: 1 } },
-            { returnDocument: 'after' },
-          );
-          return next ? { exchange: this.view(next) } : null;
-        }
-
-        // Both sides have now confirmed: partner previously, and actor now!
-        if (!myCompleted) {
-          if (isInitiator) {
-            row.initiatorCompletedAt = now;
-          } else {
-            row.recipientCompletedAt = now;
-          }
-        }
-        return this.expireInspectionTx(tx, row, now, true);
-      }
+      case 'Inspection': return this.expireInspectionTx(tx, row, now, true);
       default: {
         const resolution = closeDemoDisputeWindow(row, deadline, now);
         if (!resolution) return null;
