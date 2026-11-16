@@ -1,3 +1,13 @@
+# Trang 404 Staff/Admin web — 16/11/2026
+
+- Nhánh `codex/ops-not-found-page` nối từ `52125179`. Route không khớp
+  hiện khung 404 trong bàn vận hành, đưa focus vào tiêu đề và có nút
+  về Tổng quan. Lối về bàn kiểm duyệt chỉ hiện theo quyền Staff/Admin.
+- Admin build, lint và 251 unit đã qua. Chromium với HTTP fixture kiểm
+  desktop 1440 px, mobile 390 px, 320 px với chữ 130%, điều hướng bàn phím
+  và lối mở menu. Vai trò vận hành thử và Member được kiểm riêng.
+  Chưa cập nhật main.
+
 # Chọn giao dịch trong phản ánh Member web — 16/11/2026
 
 - Nhánh `codex/member-support-picker-polish` nối từ `60306f72`. Ô tìm và nút
