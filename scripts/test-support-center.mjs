@@ -584,7 +584,9 @@ try {
   );
   await chooseSupportOption(member, "Loại yêu cầu", "Phản ánh giao dịch");
   await chooseSupportOption(member, "Đối tượng liên quan", "Trao đổi sách");
-  const search = member.getByLabel("Tìm theo tên sách, người giao dịch hoặc mã", { exact: true });
+  const search = member
+    .getByRole("region", { name: "Chọn nội dung liên quan", exact: true })
+    .getByRole("searchbox", { name: "Tên sách, đối tác hoặc mã giao dịch", exact: true });
   const currentCode = "#" + currentId.slice(0, 8).toUpperCase();
   const archivedCode = "#" + archivedId.slice(0, 8).toUpperCase();
   await expect(member.getByRole("radio")).toHaveCount(1);
