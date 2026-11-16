@@ -1,3 +1,14 @@
+# Chọn giao dịch trong phản ánh Member web — 16/11/2026
+
+- Nhánh `codex/member-support-picker-polish` nối từ `60306f72`. Ô tìm và nút
+  Tìm cùng hàng trên mobile. Mỗi giao dịch xếp tên và mã trước, nội dung
+  sách gửi/nhận và trạng thái/ngày sau. Tóm tắt giao dịch đã chọn giữ ngày
+  để đối chiếu. Vẫn tải theo cursor, giữ bản nháp khi đổi giao dịch.
+- Build, lint và 490 unit Member web đã qua. Browser với HTTP fixture kiểm
+  tìm theo mã, Lịch sử, tải thêm, lỗi 403/503, đổi/giữ giao dịch, focus và
+  tên sách dài ở 320 px với chữ 130%, 390 px và đối chiếu desktop 1440 px.
+  Bộ tham số URL qua 30 ca fixture. Chưa cập nhật main.
+
 # Tổng quan Staff/Admin trên điện thoại — 16/11/2026
 
 - Nhánh `codex/mobile-ops-overview` nối từ `7b0b5ae3`. Khung hàng chờ
