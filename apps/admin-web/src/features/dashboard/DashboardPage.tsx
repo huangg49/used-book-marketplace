@@ -144,61 +144,20 @@ export function DashboardPage() {
               Đang giữ thống kê lần trước; chưa cập nhật được.
             </p>
           )}
-          <dl className={styles.metrics} aria-label="Số liệu kiểm duyệt">
-            <SkyMetric value={totals?.submitted ?? null} days={days} />
-            <ForestMetric value={totals?.processed ?? null} days={days} />
-            <AquariumMetric
-              value={
-                data
-                  ? data.pending.listings + (data.pending.catalog ?? 0)
-                  : null
-              }
-              catalog={canReviewCatalog(user)}
-            />
-          </dl>
           <div className={styles.overviewLayout}>
-            {data ? (
-              <ModerationChart key={days} data={data} />
-            ) : (
-              <section
-                className={styles.chartLoading}
-                aria-label="Nhịp kiểm duyệt"
-              >
-                <h2>Nhịp kiểm duyệt</h2>
-                <p role="status">
-                  {overview.isPending
-                    ? "Đang lấy thống kê…"
-                    : "Chưa tải được biểu đồ."}
-                </p>
-              </section>
-            )}
             <aside
               className={styles.workboard}
               aria-labelledby="workboard-title"
+              data-focus-inverse
             >
               <header>
-                <div className={styles.workboardBadge}>
-                  <span className={styles.workboardDot} aria-hidden="true" />
-                  <span>Hàng chờ trực ban</span>
-                </div>
                 <h2 id="workboard-title">
-                  {emptyQueue ? (
-                    <>
-                      Hàng chờ <br />
-                      đã trống.
-                    </>
-                  ) : (
-                    <>
-                      Đến lượt <br />
-                      xử lý.
-                    </>
-                  )}
+                  {!data
+                    ? "Hàng chờ kiểm duyệt"
+                    : emptyQueue
+                      ? "Hàng chờ đã trống"
+                      : "Đến lượt xử lý"}
                 </h2>
-                <p>
-                  {emptyQueue
-                    ? "Hiện chưa có hồ sơ chờ kiểm duyệt."
-                    : "Mở một hàng chờ để tiếp tục công việc."}
-                </p>
               </header>
               <div className={styles.workLinks}>
                 <Link to="/review/listings?status=PendingReview">
@@ -229,9 +188,40 @@ export function DashboardPage() {
                       minute: "2-digit",
                       timeZone: "Asia/Ho_Chi_Minh",
                     }).format(new Date(data.serverTime))
-                  : "Chờ dữ liệu thống kê"}
+                  : overview.isError
+                    ? "Chưa tải được số hồ sơ"
+                    : "Đang tải số hồ sơ…"}
               </p>
             </aside>
+            <dl className={styles.metrics} aria-label="Số liệu kiểm duyệt">
+              <SkyMetric value={totals?.submitted ?? null} days={days} />
+              <ForestMetric value={totals?.processed ?? null} days={days} />
+              <AquariumMetric
+                value={
+                  data
+                    ? data.pending.listings + (data.pending.catalog ?? 0)
+                    : null
+                }
+                catalog={canReviewCatalog(user)}
+              />
+            </dl>
+            <div className={styles.chartSlot}>
+              {data ? (
+                <ModerationChart key={days} data={data} />
+              ) : (
+                <section
+                  className={styles.chartLoading}
+                  aria-label="Nhịp kiểm duyệt"
+                >
+                  <h2>Nhịp kiểm duyệt</h2>
+                  <p role="status">
+                    {overview.isPending
+                      ? "Đang lấy thống kê…"
+                      : "Chưa tải được biểu đồ."}
+                  </p>
+                </section>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -245,7 +235,7 @@ export function DashboardPage() {
           retry={() => void shelf.refetch()}
         />
       )}
-      <div className={points ? styles.bottomGrid : styles.singleBottom}>
+      <div className={styles.bottomGrid} data-has-capacity={Boolean(points)}>
         <section className={styles.attention} aria-labelledby="attention-title">
           <header className={styles.sectionHeader}>
             <h2 id="attention-title">

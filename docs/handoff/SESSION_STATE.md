@@ -1,3 +1,15 @@
+# Tổng quan Staff/Admin trên điện thoại — 16/11/2026
+
+- Nhánh `codex/mobile-ops-overview` nối từ `7b0b5ae3`. Khung hàng chờ
+  nằm trước số liệu và biểu đồ trên màn hình hẹp, hiển thị số hồ sơ và
+  lối vào theo quyền. Desktop giữ biểu đồ và hàng chờ cạnh nhau.
+  Thẻ Việc tại điểm của Staff dùng một khung để nhãn có đủ chiều rộng.
+- Admin lint, build và 251 unit đã qua. Chromium với Mongo QA và storage
+  giả kiểm riêng desktop 1440 px, Admin 390 px, Staff 320 px với chữ 130%,
+  thứ tự Tab, đích liên kết, kích thước vùng chạm và tràn ngang.
+  Bộ browser tổng dừng ở kỳ vọng cũ về giá hiện trên hàng danh sách bài đăng.
+  Chưa cập nhật main.
+
 # Danh sách đơn trực tiếp Member web — 16/11/2026
 
 - Nhánh `codex/member-order-list-polish` nối từ checkout demo `c8c622cd`.

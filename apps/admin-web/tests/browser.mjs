@@ -97,6 +97,43 @@ try {
     );
     await p.screenshot({ path: path.join(artifacts, name + ".png"), fullPage: true });
   };
+  const dashboardQueue = (p) => p.getByRole("complementary", {
+    name: /Đến lượt xử lý|Hàng chờ đã trống/,
+  });
+  const checkDashboard = async (p, width, admin, largeText = false) => {
+    await p.setViewportSize({ width, height: 844 });
+    if (largeText) await p.addStyleTag({ content: "html{font-size:130% !important}" });
+    const refresh = p.getByRole("button", { name: "Cập nhật tổng quan" });
+    await expectBrowser(refresh).toBeEnabled();
+    await p.evaluate(() => document.fonts.ready);
+    await p.evaluate(() => window.scrollTo(0, 0));
+    const queue = dashboardQueue(p);
+    await queue.waitFor();
+    const metrics = p.locator('[aria-label="Số liệu kiểm duyệt"]');
+    const boardBox = await queue.boundingBox();
+    const metricsBox = await metrics.boundingBox();
+    if (width <= 720) {
+      assert(boardBox.y + boardBox.height <= metricsBox.y, "Mobile queue must appear before statistics");
+      const links = await queue.getByRole("link").all();
+      for (const link of links) {
+        const box = await link.boundingBox();
+        assert(box.height >= 44 && box.y + box.height < 844, "Queues must be tappable on the first screen");
+      }
+    } else {
+      assert(metricsBox.y + metricsBox.height <= boardBox.y, "Desktop retains its statistics row above the chart and queue");
+    }
+    const listingQueue = queue.getByRole("link", { name: /^Bài đăng sách/ });
+    assert.equal(await listingQueue.getAttribute("href"), "/review/listings?status=PendingReview");
+    const catalogQueue = queue.getByRole("link", { name: /^Đầu sách/ });
+    assert.equal(await catalogQueue.count(), admin ? 1 : 0);
+    if (admin) assert.equal(await catalogQueue.getAttribute("href"), "/review/catalog-requests?status=Pending");
+    if (!admin) {
+      const pointTasks = p.getByRole("region", { name: "Việc tại điểm" });
+      assert.equal((await pointTasks.boundingBox()).width, boardBox.width);
+    }
+    await shot(p, `dashboard-${admin ? "admin" : "staff"}-${width}`);
+    return listingQueue;
+  };
   const login = async (
     p,
     route = "/review/listings",
@@ -185,6 +222,9 @@ try {
   await p.getByText(/Đang giữ danh sách lần tải trước/).waitFor({ state: "hidden" });
   await p.getByRole("link", { name: "Tổng quan", exact: true }).click();
   await p.getByRole("heading", { name: /^Tổng quan\.?$/, exact: true }).waitFor();
+  await checkDashboard(p, 1440, true);
+  await checkDashboard(p, 390, true);
+  await p.setViewportSize({ width: 1440, height: 1000 });
   await p.goBack();
   await p.getByRole("heading", { name: "Người dùng", level: 1 }).waitFor();
   assert.equal(await directorySearch.inputValue(), "staff@");
@@ -574,6 +614,13 @@ try {
       .count(),
     0,
   );
+  await staff.getByRole("link", { name: "Tổng quan", exact: true }).click();
+  const staffQueue = await checkDashboard(staff, 320, false, true);
+  await staff.getByRole("button", { name: "Cập nhật tổng quan" }).focus();
+  await staff.keyboard.press("Tab");
+  await focused(staffQueue);
+  await staffQueue.press("Enter");
+  await expectBrowser(staff).toHaveURL(/\/review\/listings(?:\/[^?]+)?\?status=PendingReview$/);
   const member = await page();
   await login(member, "/review/listings", "member@operations.test");
   await member
