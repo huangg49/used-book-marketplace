@@ -199,3 +199,38 @@
     height: 56dvh;
   }
 }
+
+.gallery[data-primary] .preview {
+  min-height: 0;
+  gap: 2px;
+  padding: 12px 12px 0;
+  border: 1px solid var(--shop-line);
+  background: color-mix(in srgb, var(--shop-shelf) 60%, var(--shop-line));
+}
+.gallery[data-primary] .preview > img {
+  min-width: 0;
+  height: clamp(166px, 27dvh, 312px);
+}
+.gallery[data-primary] .preview > span {
+  position: static;
+  justify-self: end;
+  min-height: 40px;
+  padding: 5px 0;
+  background: transparent;
+  box-shadow: none;
+}
+.gallery[data-primary] .thumbnails {
+  margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+  .gallery[data-primary] .preview > img {
+    height: clamp(152px, 23dvh, 220px);
+  }
+}
+
+@container review-dossier (min-width: 740px) {
+  [data-listing-dossier]:not([data-listing-decision-open]) .gallery[data-primary] .preview > img {
+    height: clamp(216px, 32dvh, 380px);
+  }
+}

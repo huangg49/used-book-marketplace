@@ -584,7 +584,9 @@ try {
   );
   await chooseSupportOption(member, "Loại yêu cầu", "Phản ánh giao dịch");
   await chooseSupportOption(member, "Đối tượng liên quan", "Trao đổi sách");
-  const search = member.getByLabel("Tìm theo tên sách, người giao dịch hoặc mã", { exact: true });
+  const search = member
+    .getByRole("region", { name: "Chọn nội dung liên quan", exact: true })
+    .getByRole("searchbox", { name: "Tên sách, đối tác hoặc mã giao dịch", exact: true });
   const currentCode = "#" + currentId.slice(0, 8).toUpperCase();
   const archivedCode = "#" + archivedId.slice(0, 8).toUpperCase();
   await expect(member.getByRole("radio")).toHaveCount(1);
@@ -724,7 +726,8 @@ try {
   await button(member, "Gửi yêu cầu").click();
   await member.waitForURL(/\/support\/[0-9a-f-]{36}$/);
   await admin
-    .getByRole("link", { name: "Trung tâm xử lý", exact: true })
+    .getByRole("navigation", { name: "Khu vực quản trị" })
+    .getByRole("link", { name: "Yêu cầu hỗ trợ", exact: true })
     .first()
     .click();
   await admin.waitForURL(adminOrigin + "/support");

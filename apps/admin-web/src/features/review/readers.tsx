@@ -1,3 +1,4 @@
+import contentStyles from "./ReviewContent.module.css";
 import { ReviewGallery } from "./ReviewGallery";
 import { BookReferenceCard } from "./BookReferenceCard";
 import referenceStyles from "./BookReference.module.css";
@@ -9,7 +10,7 @@ import {
   languageLabel,
   facetDefinitions,
 } from "@used-books/api-contract/catalog-taxonomy";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode, type Ref } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { session } from "../../core/session";
 import { Button, CursorPagination, ErrorNotice, Notice } from "../../core/ui";
@@ -153,36 +154,57 @@ export function ContentView({
   value,
   listingId,
   onPhotoReady,
+  primary = false,
+  auction = false,
+  afterPhotos,
+  photoRef,
 }: {
   value: Revision;
   listingId: string;
+  primary?: boolean;
+  auction?: boolean;
+  afterPhotos?: ReactNode;
+  photoRef?: Ref<HTMLElement>;
   onPhotoReady?: (id: string, ready: boolean) => void;
 }) {
   const c = value.content;
+  const bundle = c.bundle;
+  const bundleSection = bundle && (
+    <section className="section" aria-label="Danh sách bộ sách">
+      <h3>
+        {bundle.title} · Bộ{" "}
+        {bundle.items.length} cuốn
+      </h3>
+      <p>
+        Bán, giao và trả nguyên bộ. Đối chiếu ảnh toàn bộ bộ sách với từng
+        cuốn/tập bên dưới.
+      </p>
+      <ol>
+        {bundle.items.map((item, index) => (
+          <li key={index}>
+            <strong>{item.label}</strong> · {labels[item.condition]}
+            {item.notes && <p>{item.notes}</p>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+  const photoNote = (
+    <p className={primary ? contentStyles.photoNote : "muted"}>
+      Ảnh giúp đối chiếu tình trạng sách. Ảnh không xác nhận sách chính hãng
+      hay quyền sở hữu.
+    </p>
+  );
   return (
     <>
-      {value.content.bundle && (
-        <section className="section" aria-label="Danh sách bộ sách">
-          <h3>
-            {value.content.bundle.title} · Bộ{" "}
-            {value.content.bundle.items.length} cuốn
-          </h3>
-          <p>
-            Bán, giao và trả nguyên bộ. Đối chiếu ảnh toàn bộ bộ sách với từng
-            cuốn/tập bên dưới.
-          </p>
-          <ol>
-            {value.content.bundle.items.map((item, index) => (
-              <li key={index}>
-                <strong>{item.label}</strong> · {labels[item.condition]}
-                {item.notes && <p>{item.notes}</p>}
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      {!primary && bundleSection}
 
-      <section className="section">
+      <section
+        className={primary ? `section ${contentStyles.photoEvidence}` : "section"}
+        ref={photoRef}
+        tabIndex={photoRef ? -1 : undefined}
+        aria-label={photoRef ? "Ảnh người đăng gửi" : undefined}
+      >
         <div className="section-heading">
           <h3>
             <Camera size={20} aria-hidden="true" />
@@ -190,19 +212,30 @@ export function ContentView({
           </h3>
           <span>{c.mediaIds.length} ảnh</span>
         </div>
-        <p className="muted">
-          Xem rõ từng ảnh để đối chiếu. Ảnh cung cấp không chứng minh sách chính
-          hãng hay quyền sở hữu.
-        </p>
+        {!primary && photoNote}
         <ReviewGallery
           key={value.id}
           listingId={listingId}
           ids={c.mediaIds}
           revisionNumber={value.number}
           onReady={onPhotoReady}
+          primary={primary}
         />
+        {primary && photoNote}
       </section>
+      {afterPhotos}
       <ListingCondition content={c} />
+      {primary && bundleSection}
+      {auction && (
+        <Notice>
+          <strong>Sách đấu giá</strong>
+          <p className="prose">
+            Bài này không lên kệ mua/đổi. Giá là giá trị khai báo
+            (mức bồi thường tối đa). Sau khi duyệt, sách còn được kiểm tra tại
+            điểm trước khi mở phiên.
+          </p>
+        </Notice>
+      )}
       <section className="section">
         <h3>
           <Wallet size={20} aria-hidden="true" />

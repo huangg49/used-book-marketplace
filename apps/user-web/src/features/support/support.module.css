@@ -629,9 +629,9 @@
 
 .selectedTarget {
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px 14px;
-  padding: 10px 14px;
+  align-items: start;
+  gap: 10px 12px;
+  padding: 14px;
   background: color-mix(in srgb, var(--shop-wine) 5%, var(--shop-paper));
 }
 
@@ -680,7 +680,7 @@
   gap: 6px;
   background: transparent;
   border: 0;
-  padding: 4px 8px;
+  padding: 6px 0;
   color: var(--shop-wine);
   font-weight: 700;
   font-size: 0.8125rem;
@@ -708,8 +708,16 @@
 }
 
 .targetViews {
-  display: flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  align-self: start;
+  justify-self: start;
+  width: min(100%, 21rem);
+  padding: 4px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-paper);
 }
 
 .page .targetViews button {
@@ -717,8 +725,9 @@
   background: transparent;
   color: var(--shop-ink);
   font-weight: 600;
-  padding: 6px 7px;
+  padding: 6px 8px;
   font-size: 0.8125rem;
+  line-height: 1.35;
 }
 
 .page .targetViews button[aria-pressed="true"] {
@@ -734,20 +743,20 @@
 }
 
 .targetSearch {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 8px;
 }
 
 .targetSearch label {
-  flex-basis: 100%;
-  font-size: 0.875rem;
-  font-weight: 600;
+  grid-column: 1 / -1;
+  font-size: 0.8125rem;
+  font-weight: 650;
 }
 
 .page .targetSearch input {
-  flex: 1 1 200px;
   min-width: 0;
+  padding-inline: 10px;
   background: var(--shop-paper);
 }
 
@@ -755,10 +764,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 16px;
-  background: transparent;
+  justify-content: center;
+  padding: 6px 12px;
+  background: var(--shop-paper);
   border: 1px solid var(--shop-line);
   border-radius: 8px;
+  color: var(--shop-wine);
   font-weight: 650;
   font-size: 0.875rem;
 }
@@ -769,18 +780,23 @@
   color: var(--shop-wine);
 }
 
-.targetEmpty {
+.targetFeedback {
   border-top: 1px solid var(--shop-line);
-  padding-top: 12px;
+  margin: 0;
+  padding: 12px 0 0;
   color: var(--shop-muted);
   font-size: 0.875rem;
 }
 
-.targetEmpty p {
+.targetFeedback p {
   margin: 0;
 }
 
-.page .targetEmpty button {
+.targetFeedback[role="alert"] {
+  color: var(--shop-error);
+}
+
+.page .targetFeedback button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -792,25 +808,46 @@
   text-align: start;
 }
 
-.targetEmpty button svg {
+.targetFeedback button svg,
+.targetSearch button svg {
   flex: none;
 }
 
-.page .targetEmpty button:hover:not(:disabled) {
+.page .targetFeedback button:hover:not(:disabled),
+.page .moreTargets:hover:not(:disabled) {
   border-color: var(--shop-wine);
 }
 
+.page .moreTargets {
+  justify-self: start;
+  color: var(--shop-wine);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
 .targetOptions {
-  border-block: 1px solid var(--shop-line);
+  border: 1px solid var(--shop-line);
+  border-radius: 10px;
+  background: var(--shop-paper);
 }
 
 .targetOption {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 8px;
+  padding: 14px;
   cursor: pointer;
   transition: background-color 150ms ease;
+}
+
+.targetOption:first-child {
+  border-start-start-radius: 9px;
+  border-start-end-radius: 9px;
+}
+
+.targetOption:last-child {
+  border-end-start-radius: 9px;
+  border-end-end-radius: 9px;
 }
 
 .targetOption + .targetOption {
@@ -842,17 +879,29 @@
 
 .targetDescription {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   width: 100%;
+}
+
+.targetIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2px 12px;
 }
 
 .targetName {
   font-weight: 700;
   color: var(--shop-ink);
+  min-width: 0;
 }
 
 .targetCode {
+  color: var(--shop-wine);
+  font-size: 0.75rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -890,13 +939,14 @@
   align-content: start;
 }
 
+.bookPair strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 .bookPair small {
   color: var(--shop-muted);
   font-size: 0.75rem;
-}
-
-.selectedTarget .bookPair strong {
-  font-size: 0.875rem;
 }
 
 .selectedTarget .pickerFeedback,
@@ -1080,8 +1130,23 @@
 }
 
 @container (max-width: 460px) {
+  .chooseTarget {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .targetViews {
+    width: 100%;
+  }
+
+  .targetOption {
+    gap: 9px;
+    padding: 12px 10px;
+  }
+
   .bookPair {
     grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
   }
 }
 
@@ -1123,8 +1188,8 @@
     justify-self: start;
   }
 
-  .targetViews {
-    flex-wrap: wrap;
+  .composeMainCard {
+    padding: 16px;
   }
 
   .contextFields {

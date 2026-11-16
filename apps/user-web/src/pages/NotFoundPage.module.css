@@ -1,0 +1,107 @@
+.page {
+  display: grid;
+  place-items: center;
+  min-block-size: 60vh;
+  padding: clamp(1.5rem, 7vw, 5rem) clamp(1rem, 5vw, 3rem);
+  background: var(--shop-shelf);
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.35fr);
+  align-items: center;
+  inline-size: min(100%, 56rem);
+  border: 1px solid var(--shop-line);
+  border-radius: 16px;
+  background: var(--shop-paper);
+}
+
+.code {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  min-block-size: 100%;
+  padding: 1.25rem;
+  border-radius: 15px 0 0 15px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font: 400 clamp(3.5rem, 11vw, 8.5rem)/1 var(--shop-display);
+  letter-spacing: -0.035em;
+}
+
+.content {
+  min-inline-size: 0;
+  padding: clamp(1.25rem, 5vw, 3.5rem);
+}
+
+.content h1 {
+  margin: 0;
+  color: var(--shop-wine);
+  font: 400 clamp(1.8rem, 3.6vw, 3rem)/1.16 var(--shop-display);
+  text-wrap: balance;
+}
+
+.content p {
+  margin: 0.75rem 0 0;
+  max-inline-size: 35ch;
+  color: var(--shop-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block-start: 1.5rem;
+}
+
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.actions svg {
+  flex: none;
+}
+
+.actions .primary {
+  border-color: var(--shop-wine);
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+
+.actions .primary:hover {
+  border-color: var(--shop-wine-hover);
+  background: var(--shop-wine-hover);
+}
+
+.actions .secondary:hover {
+  border-color: var(--shop-control);
+  background: var(--shop-shelf);
+}
+
+@media (max-width: 720px) {
+  .panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .code {
+    justify-items: start;
+    border-radius: 15px 15px 0 0;
+  }
+
+  .actions a {
+    flex: 1 1 max-content;
+    justify-content: center;
+    text-align: center;
+  }
+}

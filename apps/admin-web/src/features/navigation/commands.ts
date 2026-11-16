@@ -12,7 +12,7 @@ const details: Record<string, [string, string]> = {
   '/transaction-reviews':['Kiểm duyệt đánh giá và phản hồi sau công bố','review danh gia uy tin phan hoi bang chung'],
   "/dashboard": [
     "Kệ sách chờ duyệt và các khu vực vận hành",
-    "tong quan ban bien tap ke sach home",
+    "tong quan dashboard ban bien tap ke sach home",
   ],
   "/statistics": [
     "Xem doanh thu nền tảng theo khoảng ngày",
@@ -25,6 +25,22 @@ const details: Record<string, [string, string]> = {
   "/review/catalog-requests": [
     "Kiểm tra và xác nhận thông tin đầu sách",
     "catalog tac gia isbn nha xuat ban",
+  ],
+  "/ai-review-checks": [
+    "Đối chiếu các bài đã được AI tự duyệt",
+    "tu duyet ai hau kiem moderation",
+  ],
+  "/operations/exchange-disputes": [
+    "Đối chiếu bằng chứng và xử lý khiếu nại Đổi sách",
+    "tranh chap doi sach phan xu boi thuong exchange dispute",
+  ],
+  "/support": [
+    "Tiếp nhận yêu cầu hỗ trợ và phản ánh",
+    "trung tam xu ly phan anh ticket support",
+  ],
+  "/withdrawals": [
+    "Đối chiếu và xử lý yêu cầu rút tiền",
+    "rut tien vi chuyen khoan withdrawal",
   ],
   "/users": [
     "Tra cứu tài khoản và thông tin người dùng",

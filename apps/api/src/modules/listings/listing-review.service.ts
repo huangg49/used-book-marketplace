@@ -27,7 +27,7 @@ import {
   type Actor,
   type CommandContext,
 } from '../commands/mongo-command.service.js';
-import { ContractInput } from '../commands/contract-input.service.js';
+import { ContractInput, normalizeSearch } from '../commands/contract-input.service.js';
 import {
   conflict,
   DomainError,
@@ -36,7 +36,7 @@ import {
   invalidField,
   type Wire,
 } from '../commands/domain-error.js';
-import { MongoPageService } from '../commands/mongo-page.service.js';
+import { MongoPageService, regexLiteral } from '../commands/mongo-page.service.js';
 import {
   checkListing,
   loadListing,
@@ -455,6 +455,12 @@ export class ListingReviewService {
       reviewer(actor);
       const moderation = String(query.moderation ?? 'PendingReview');
       const aiOutcome = query.aiOutcome ? String(query.aiOutcome) : null;
+      const q = normalizeSearch(String(query.q ?? ''));
+      const code = q.replace(/^#/, '');
+      const byId = /^[0-9a-f]{8}(?:-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/.test(code);
+      const byTitle = Boolean(q) && !byId;
+      const canReadPendingCatalog = actor.roles.some(({ role }) => role === 'ADMIN');
+      const titleMatch = { $regex: regexLiteral(q) };
       const page = await this.pages.page(
         tx.c.listings,
         [
@@ -463,6 +469,7 @@ export class ListingReviewService {
               deletedAt: null,
               visibility: { $ne: 'Removed' },
               moderation,
+              ...(byId ? { _id: code.length === 8 ? { $regex: `^${code}-` } : code } : {}),
             },
           },
           {
@@ -493,6 +500,33 @@ export class ListingReviewService {
                 },
               ]
             : []),
+          ...(byTitle ? [
+            {
+              $lookup: {
+                from: 'catalog_books',
+                localField: 'r.bookId',
+                foreignField: '_id',
+                pipeline: [{ $project: { titleKey: 1, status: 1 } }],
+                as: 'searchBook',
+              },
+            },
+            {
+              $match: {
+                $or: [
+                  { 'r.bundleSearchText': titleMatch },
+                  {
+                    'r.bundle': null,
+                    searchBook: {
+                      $elemMatch: {
+                        titleKey: titleMatch,
+                        ...(canReadPendingCatalog ? {} : { status: 'Confirmed' }),
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ] : []),
           { $project: { key: '$r.submittedAt' } },
         ],
         {
@@ -503,6 +537,8 @@ export class ListingReviewService {
             actor: actor._id,
             moderation,
             ...(aiOutcome ? { aiOutcome } : {}),
+            ...(byId ? { listingCode: code } : {}),
+            ...(byTitle ? { q, canReadPendingCatalog } : {}),
           },
           limit: Number(query.limit),
           cursor: query.cursor as string | undefined,

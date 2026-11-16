@@ -16,7 +16,7 @@ import { ExchangesService } from '../src/modules/exchanges/exchanges.service.js'
 import { ExchangeExpiryWorker } from '../src/modules/exchanges/exchange-expiry.service.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { Gate } from './helpers/mongo-gate.js';
-import { applyCollectionSpecs, currentCollections } from '../src/database/mongo/migrations/index.js';
+import { applyCollectionSpecs, currentCollections, migrations } from '../src/database/mongo/migrations/index.js';
 import { exchangeInspectionDeadlinesMigration } from '../src/database/mongo/migrations/0039-exchange-inspection-deadlines.js';
 
 const storage = {
@@ -736,8 +736,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(rec2Res.body.status).toBe('Delivered');
     expect(rec2Res.body.inspectionDeadline).toBeDefined();
 
-    // 7. Early Satisfaction / Inspection Acceptance ("Nghiệm thu hài lòng")
-    // User1 confirms satisfaction -> mutual completion requires both sides
+    // 7. Inspection acknowledgements preserve the existing settlement deadline.
     const comp1Res = await post(
       `/exchanges/${exchangeId}/complete`,
       { expectedVersion: rec2Res.body.revision },
@@ -810,9 +809,13 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     await worker.tick(new Date(earlierDeadline.getTime() + 1));
     expect((await db.c.exchanges.findOne({ _id: ex.id }))?.status).toBe('Delivered');
     await worker.tick(new Date(Date.parse(second.inspectionDeadline) - 1));
-    expect((await db.c.exchanges.findOne({ _id: ex.id }))?.status).toBe('Delivered');
+    const beforeExpiry = await db.c.exchanges.findOne({ _id: ex.id });
+    expect(beforeExpiry?.status).toBe('Delivered');
     await worker.tick(new Date(Date.parse(second.inspectionDeadline)));
-    expect((await db.c.exchanges.findOne({ _id: ex.id }))?.status).toBe('Completed');
+    const afterExpiry = await db.c.exchanges.findOne({ _id: ex.id });
+    expect(afterExpiry?.status).toBe('Completed');
+    expect(afterExpiry?.initiatorCompletedAt).toEqual(beforeExpiry?.initiatorCompletedAt);
+    expect(afterExpiry?.recipientCompletedAt).toEqual(beforeExpiry?.recipientCompletedAt);
     expect((await reconcile()).balanced).toBe(true);
   });
 
@@ -2238,6 +2241,11 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         config.set(flag, 'false');
         await post(path + '/demo-advance', command, user1).expect(404);
         config.set(flag, 'true');
+        for (const allowedIds of ['', unsent.initiatorId]) {
+          config.set(allow, allowedIds);
+          expect((await get(path, user1).expect(200)).body.demoDeadline).toBeUndefined();
+          await post(path + '/demo-advance', command, user1).expect(404);
+        }
         config.set(allow, [unsent.initiatorId, unsent.recipientId].join(','));
         expect((await get(path, user1).expect(200)).body.demoDeadline).toBe('Shipping');
         await post(path + '/demo-advance', command, outsider).expect(404);
@@ -2265,11 +2273,35 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         const delivered = (await post(inspectionPath + '/receive', {
           expectedVersion: firstReceipt.revision,
         }, user2).expect(200)).body;
-        const completed = (await post(inspectionPath + '/demo-advance', {
-          deadline: 'Inspection', expectedVersion: delivered.revision,
+        const advanceInspection = (revision: number) =>
+          post(inspectionPath + '/demo-advance', { deadline: 'Inspection', expectedVersion: revision }, user1);
+        expect((await get(inspectionPath, user1).expect(200)).body).not.toHaveProperty('demoDeadline');
+        await advanceInspection(delivered.revision).expect(409);
+
+        const acknowledged = (await post(inspectionPath + '/complete', {
+          expectedVersion: delivered.revision,
         }, user1).expect(200)).body;
-        expect(completed).toMatchObject({ status: 'Completed',
-          initiatorReceivedAt: delivered.initiatorReceivedAt, recipientReceivedAt: delivered.recipientReceivedAt });
+        expect(acknowledged).toMatchObject({ status: 'Delivered', completedAt: null, recipientCompletedAt: null });
+        expect((await get(inspectionPath, user1).expect(200)).body).not.toHaveProperty('demoDeadline');
+        await advanceInspection(acknowledged.revision).expect(409);
+
+        const bothAcknowledged = (await post(inspectionPath + '/complete', {
+          expectedVersion: acknowledged.revision,
+        }, user2).expect(200)).body;
+        expect(bothAcknowledged).toMatchObject({ status: 'Delivered', completedAt: null });
+        expect(bothAcknowledged.recipientCompletedAt).toEqual(expect.any(String));
+        for (const user of [user1, user2]) {
+          expect((await get(inspectionPath, user).expect(200)).body.demoDeadline).toBe('Inspection');
+        }
+        await advanceInspection(acknowledged.revision).expect(409);
+        const completed = (await advanceInspection(bothAcknowledged.revision).expect(200)).body;
+        expect(completed).toMatchObject({
+          status: 'Completed',
+          initiatorReceivedAt: delivered.initiatorReceivedAt,
+          recipientReceivedAt: delivered.recipientReceivedAt,
+          initiatorCompletedAt: acknowledged.initiatorCompletedAt,
+          recipientCompletedAt: bothAcknowledged.recipientCompletedAt,
+        });
 
         const proposalA = await createApprovedListing(user1, 100000, 'Both');
         const proposalB = await createApprovedListing(user2, 100000, 'Both');
@@ -2757,6 +2789,66 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await post('/operations/exchanges/' + ex.id + '/resolve', decisionBody(ex.revision, decision), staff).expect(409);
       await post('/operations/exchanges/' + ex.id + '/resolve', decisionBody(ex.revision, decision), admin).expect(409);
       expect(await effects(ex.id)).toEqual(before);
+    });
+
+    it('rejects assigned inspection verdicts until both parties have received their books', async () => {
+      const ex = await disputedExchange();
+      const operations = '/operations/exchanges/' + ex.id;
+      await post(operations + '/evidence-access', {
+        expectedVersion: 0, reason: 'QA: nhận hồ sơ kiểm tra sách.',
+      }, staff).expect(200);
+      const before = await effects(ex.id);
+      for (const decision of ['CompleteExchange', 'CompensateRecipient']) {
+        await post(operations + '/resolve', decisionBody(ex.revision, decision), staff).expect(409);
+      }
+      expect(await effects(ex.id)).toEqual(before);
+    });
+
+    it('lets the assigned Staff compensate the other party in a funded inspection dispute exactly once', async () => {
+      const ex = await disputedExchange(true);
+      const operations = '/operations/exchanges/' + ex.id;
+      const member = '/exchanges/' + ex.id;
+      const verdict = decisionBody(ex.revision, 'CompensateRecipient');
+      const key = randomUUID();
+      expect(ex.disputedBy).toBe(user1.id);
+      expect(ex.initiatorDeposit + ex.recipientDeposit + ex.diffAmount).toBeGreaterThan(300000);
+      await post(operations + '/evidence-access', {
+        expectedVersion: 0, reason: 'QA: đã nhận hồ sơ kiểm tra sách.',
+      }, staff).expect(200);
+
+      const before = await effects(ex.id);
+      await post(operations + '/resolve', verdict, admin).expect(409);
+      await post(operations + '/resolve', { ...verdict, expectedVersion: ex.revision - 1 }, staff).expect(409);
+      await post(operations + '/return-resolution', {
+        expectedVersion: ex.revision, action: 'RequestEvidence', note: 'QA: yêu cầu bổ sung bằng chứng.',
+      }, staff).expect(409);
+      expect(await effects(ex.id)).toEqual(before);
+
+      const settled = (await post(operations + '/resolve', verdict, staff, key).expect(200)).body;
+      expect(settled).toMatchObject({
+        status: 'Cancelled',
+        resolutionDecision: verdict.decision,
+        returnResolution: { ownerId: user2.id, outcome: 'Compensated', compensation: ex.initiatorDeposit },
+      });
+      expect((await get(member, user2).expect(200)).body).toMatchObject({
+        resolutionDecision: verdict.decision, returnResolution: settled.returnResolution,
+      });
+      const after = await effects(ex.id);
+      expect(after.exchange.resolutionDecision).toBe(verdict.decision);
+      expect(after.journals.filter(j => j.type === 'ExchangeNonReturnCompensation')).toHaveLength(1);
+      expect(after.listings.find(l => l._id === ex.initiatorListingId)?.trade).toBe('ClosedUnavailable');
+      const replay = await post(operations + '/resolve', verdict, staff, key).expect(200);
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+      expect(replay.body).toEqual(settled);
+      expect(await effects(ex.id)).toEqual(after);
+      expect((await reconcile()).balanced).toBe(true);
+
+      // Reproduce a prior verdict that was stored only in the command receipt.
+      await db.c.exchanges.updateOne({ _id: ex.id }, { $unset: { resolutionDecision: '' } });
+      const migration = migrations.find(m => m.id === '0080-exchange-inspection-verdict')!;
+      await migration.up(db.client.db(), db.client);
+      expect(await effects(ex.id)).toEqual(after);
+      expect((await reconcile()).balanced).toBe(true);
     });
 
     it('blocks Staff and Admin participants before even replaying a legacy receipt; filters their queue', async () => {
