@@ -2,7 +2,6 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import HomePage from '../pages/HomePage';
 import { VNPayReturnGate } from '../pages/VNPayReturnGate';
-import { NotFoundPage } from '../pages/NotFoundPage';
 import { AppRouteLayout } from './AppRouteLayout';
 import { RouteError, RoutePending } from './RouteFeedback';
 
@@ -38,6 +37,7 @@ export const router = createBrowserRouter([
           { path: '/auctions/:id', lazy: () => import('../pages/AuctionDetailPage').then(m => ({ Component: m.AuctionDetailPage })) },
           { path: '/guide', lazy: () => import('../pages/MemberGuidePage').then(m => ({ Component: m.MemberGuidePage })) },
           { path: '/members/:id', lazy: () => import('../pages/MemberReputationPage').then(m => ({ Component: m.MemberReputationPage })) },
+          { path: '/404', lazy: () => import('../pages/NotFoundPage').then(m => ({ Component: m.NotFoundPage })) },
         ],
       },
       // Dashboard routes — dùng DashboardLayout
@@ -86,7 +86,6 @@ export const router = createBrowserRouter([
         ],
       },
       // Catch-all
-      { path: '/404', element: <NotFoundPage /> },
       { path: '*', element: <Navigate to="/404" replace /> },
     ],
   },

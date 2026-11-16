@@ -1,46 +1,37 @@
+import { useEffect, useRef } from 'react';
+import { ArrowLeft, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ROUTES } from '../lib/routes';
+import styles from './NotFoundPage.module.css';
 
 export function NotFoundPage() {
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    heading.current?.focus({ preventScroll: true });
+  }, []);
+
   return (
-    <main
-      style={{
-        minHeight: '60dvh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '3rem 1rem',
-        background: '#F5EFDF',
-        textAlign: 'center',
-      }}
-    >
-      <p
-        style={{
-          fontFamily: 'Lora, serif',
-          fontSize: '5rem',
-          color: '#963F28',
-          lineHeight: 1,
-          margin: '0 0 1rem',
-        }}
-      >
-        404
-      </p>
-      <h1 style={{ color: '#214B40', marginBottom: '0.75rem' }}>
-        Không tìm thấy trang
-      </h1>
-      <p style={{ color: '#6b6254', marginBottom: '2rem' }}>
-        Trang bạn đang tìm không tồn tại hoặc đã bị di chuyển.
-      </p>
-      <Link
-        to="/"
-        style={{
-          color: '#214B40',
-          fontWeight: 700,
-          textDecoration: 'underline',
-        }}
-      >
-        Về trang chủ
-      </Link>
-    </main>
+    <section className={styles.page} aria-labelledby="member-not-found">
+      <div className={styles.panel}>
+        <span className={styles.code} aria-hidden="true">404</span>
+        <div className={styles.content}>
+          <h1 id="member-not-found" ref={heading} tabIndex={-1}>
+            Không tìm thấy trang
+          </h1>
+          <p>Có thể đường dẫn đã thay đổi hoặc địa chỉ được nhập sai.</p>
+          <div className={styles.actions}>
+            <Link to={ROUTES.search} className={styles.primary} data-focus-inverse>
+              <Search size={18} aria-hidden="true" />
+              Tìm sách
+            </Link>
+            <Link to={ROUTES.home} className={styles.secondary}>
+              <ArrowLeft size={18} aria-hidden="true" />
+              Về trang chủ
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

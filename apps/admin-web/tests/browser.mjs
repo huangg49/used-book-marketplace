@@ -156,12 +156,6 @@ try {
     await click(p, "Kiểm duyệt bài đăng");
   };
   const p = await page();
-  let releaseQueue;
-  const queueGate = new Promise((resolve) => { releaseQueue = resolve; });
-  await p.route("**/operations/listings?*", async (route) => {
-    await queueGate;
-    await route.abort("failed");
-  });
   await login(p, "/");
   await p
     .getByRole("heading", { name: /^Tổng quan\.?$/, exact: true })
@@ -262,6 +256,12 @@ try {
   await p.getByRole("link", { name: "Sự cố tại điểm", exact: true }).waitFor();
   await p.getByRole("button", { name: "Kiểm duyệt", exact: true }).click();
   await p.setViewportSize({ width: 1440, height: 1000 });
+  let releaseQueue;
+  const queueGate = new Promise((resolve) => { releaseQueue = resolve; });
+  await p.route("**/operations/listings?*", async (route) => {
+    await queueGate;
+    await route.abort("failed");
+  });
   await p.getByRole("link", { name: "Bài đăng sách", exact: true }).click();
   await p
     .getByRole("heading", { name: "Bài đăng sách" })
@@ -277,9 +277,14 @@ try {
   await retry.focus();
   await p.keyboard.press("Enter");
   await p.locator(".queue-row").nth(2).waitFor();
-  assert.match(await p.locator(".queue-row").first().innerText(), /Giá bán: 125\.000/);
-  assert.match(await p.locator(".queue-row").first().innerText(), /Giá trị đổi: 150\.000/);
   await shot(p, "queue-1440");
+  const pricedListing = p.locator(`a[href="/review/listings/${fixture.listings[0]}?status=PendingReview"]`);
+  await pricedListing.click();
+  const prices = p.locator('dl[aria-label="Tóm tắt bản sách"]');
+  await expectBrowser(prices.locator("div").filter({ has: p.getByText("Giá bán", { exact: true }) }))
+    .toContainText(/125\.000/);
+  await expectBrowser(prices.locator("div").filter({ has: p.getByText("Giá trị đổi", { exact: true }) }))
+    .toContainText(/150\.000/);
   // Dashboard shelf uses the same private media path as the full review desk.
   // Verify image failure/retry without changing any application data.
   await p.route("http://127.0.0.1:3010/**", route => route.abort("failed"));

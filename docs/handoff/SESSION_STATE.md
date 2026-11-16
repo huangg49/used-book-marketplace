@@ -1,3 +1,15 @@
+# Hoàn tất các màn lỗi web và bộ kiểm hàng chờ — 16/11/2026
+
+- Nhánh `codex/ui-release-readiness` nối từ `73991a63`. Khu hỗ trợ Staff/Admin
+  có lối về Tổng quan ở cả danh sách và chi tiết bị chặn quyền. Trang 404 Member
+  web dùng thanh điều hướng chung, có lối tìm sách và về trang chủ.
+- Bộ Chromium Admin tổng đã qua với Mongo QA và storage giả. Kịch bản kiểm
+  giá mở đúng hồ sơ và so khớp cả giá bán lẫn giá trị đổi. Giả lập lỗi hàng
+  chờ bắt đầu sau phần kiểm Tổng quan.
+- Build và lint hai app web, 251 unit Admin, 490 unit Member, 510 unit API
+  và kiểm OpenAPI đã qua. Chromium với HTTP fixture kiểm riêng hai màn lỗi
+  ở desktop và mobile 320 px với chữ 130%, gồm keyboard và quyền Staff/Admin.
+
 # Trang 404 Staff/Admin web — 16/11/2026
 
 - Nhánh `codex/ops-not-found-page` nối từ `52125179`. Route không khớp
