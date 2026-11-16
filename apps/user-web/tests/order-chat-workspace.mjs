@@ -246,6 +246,48 @@ try {
   const b = await makePage("buyer");
   await goto(b, "/orders");
   await b.getByRole("heading", { name: "Đơn hàng của tôi", exact: true }).waitFor();
+  const roleFilters = b.getByRole("group", { name: "Lọc theo vai trò", exact: true });
+  const statusFilters = b.getByRole("group", { name: "Lọc theo trạng thái", exact: true });
+  const shortcuts = b.getByRole("navigation", { name: "Giao dịch và hướng dẫn liên quan" });
+  for (const [name, href] of [
+    ["Đơn thắng đấu giá", "/my-auctions"],
+    ["Trao đổi của tôi", "/exchange/mine"],
+    ["Cách mua sách", "/guide?task=buy"],
+  ]) {
+    const link = shortcuts.getByRole("link", { name, exact: true });
+    await link.waitFor();
+    assert.equal(await link.getAttribute("href"), href);
+  }
+  const orderLink = b.locator(`a[href="/chat/orders/${negotiated.id}"]`);
+  await orderLink.waitFor();
+  await b.evaluate(() => document.fonts.ready);
+  await roleFilters.getByRole("button", { name: /^Tất cả/ }).click();
+  await b.screenshot({ path: path.join(out, "direct-orders-desktop.png") });
+  await b.setViewportSize({ width: 320, height: 844 });
+  await b.evaluate(() => document.documentElement.style.fontSize = "130%");
+  const sales = roleFilters.getByRole("button", { name: /^Đơn bán/ });
+  await sales.focus();
+  await sales.press("Enter");
+  assert.equal(await sales.getAttribute("aria-pressed"), "true");
+  await b.getByRole("heading", { name: "Không có đơn hàng phù hợp bộ lọc" }).waitFor();
+  await roleFilters.evaluate(group =>
+    Promise.allSettled(group.getAnimations({ subtree: true }).map(animation => animation.finished)),
+  );
+  await b.screenshot({ path: path.join(out, "direct-orders-mobile320.png") });
+  assert.ok(await b.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await b.getByRole("button", { name: "Xóa bộ lọc", exact: true }).click();
+  const all = roleFilters.getByRole("button", { name: /^Tất cả/ });
+  assert.equal(await all.getAttribute("aria-pressed"), "true");
+  assert.ok(await all.evaluate(button => button === document.activeElement));
+  const completed = statusFilters.getByRole("button", { name: "Đã hoàn tất", exact: true });
+  await completed.click();
+  assert.equal(await completed.getAttribute("aria-pressed"), "true");
+  await orderLink.waitFor({ state: "hidden" });
+  await b.getByRole("button", { name: "Xóa bộ lọc", exact: true }).click();
+  await orderLink.waitFor();
+  await b.setViewportSize({ width: 1440, height: 1100 });
+  await b.evaluate(() => document.documentElement.style.fontSize = "100%");
+
   await b.locator(`a[href="/chat/orders/${negotiated.id}"]`).click();
   await b.waitForURL(`**/chat/${negotiated.conversationId}`);
   const br = orderRegion(b);

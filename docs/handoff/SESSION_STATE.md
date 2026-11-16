@@ -1,3 +1,14 @@
+# Danh sách đơn trực tiếp Member web — 16/11/2026
+
+- Nhánh `codex/member-order-list-polish` nối từ checkout demo `c8c622cd`.
+  Trang Đơn hàng của tôi ưu tiên vai trò mua/bán và trạng thái, đặt các lối
+  sang đơn thắng đấu giá, trao đổi và hướng dẫn vào hàng riêng bên dưới.
+  Chỉ hiện số theo vai trò khi đã tải hết các trang. Kết quả lọc rỗng có
+  nút xóa bộ lọc và trả focus về nút Tất cả.
+- Build, lint và 490 unit Member web đã qua. Chromium dùng HTTP fixture,
+  kiểm đích của ba liên kết, tiêu chí lọc, xóa bộ lọc, 320 px chữ 130% và
+  liên kết vào đúng đơn/hội thoại. Chưa cập nhật main.
+
 # Hàng chờ duyệt bài đăng dài — 16/11/2026
 
 - Tiếp nối `a53406f2` trên `codex/admin-review-photo-first`. Hàng chờ dùng

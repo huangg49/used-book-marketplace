@@ -288,7 +288,7 @@ try {
   await p.getByRole("link", { name: /^Đơn mua\/bán trực tiếp/ }).click();
   await p
     .getByRole("link", {
-      name: "Đơn thắng đấu giá ở Đấu giá của tôi",
+      name: "Đơn thắng đấu giá",
       exact: true,
     })
     .waitFor();
