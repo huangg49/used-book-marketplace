@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.80.0
+  version: 0.81.0
 
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
@@ -3219,6 +3219,19 @@ paths:
               - Approved
               - Escalated
               - None
+        - in: query
+          name: q
+          required: false
+          description: >
+            Search across the filtered queue by title or bundle label (case and
+            accent insensitive), a full listing UUID, or its displayed eight
+            hexadecimal characters with an optional leading #. Pending or
+            rejected catalog titles are searchable only by Admin. A changed
+            search requires a new cursor.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 160
       responses:
         "200":
           description: Successful read.

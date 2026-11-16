@@ -11039,6 +11039,8 @@ export interface operations {
                 moderation?: "PendingReview" | "Approved" | "Rejected";
                 /** @description Filter by what the AI reviewer concluded about the current revision. None means it has not looked at it. */
                 aiOutcome?: "Approved" | "Escalated" | "None";
+                /** @description Search across the filtered queue by title or bundle label (case and accent insensitive), a full listing UUID, or its displayed eight hexadecimal characters with an optional leading #. Pending or rejected catalog titles are searchable only by Admin. A changed search requires a new cursor. */
+                q?: string;
             };
             header?: never;
             path?: never;

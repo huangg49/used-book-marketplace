@@ -1,11 +1,12 @@
 // Focused UI regression: real Nest/Mongo *_test, fake storage; never the local app DB.
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { chromium, expect } from "playwright/test";
-import { createTestApi, root, password } from "./test-api.mjs";
+import { createTestApi, root, base, password } from "./test-api.mjs";
 import { assertReviewThumbnailGeometry } from "./review-gallery-geometry.mjs";
 import { assertReviewScrollOwnership } from "./review-scroll-geometry.mjs";
 
@@ -448,6 +449,104 @@ try {
   record(
     "1440/768/390 layouts preserve content without horizontal page overflow",
   );
+  // Extend the disposable queue past page one with schema-valid submitted rows.
+  const listings = fixture.db.collection("listings");
+  const revisions = fixture.db.collection("listing_revisions");
+  const listingSample = await listings.findOne({ _id: fixture.listings[1] });
+  const revisionSample = await revisions.findOne({ _id: listingSample.currentRevisionId });
+  const submitted = Date.now();
+  const extraListings = Array.from({ length: 22 }, (_, index) => {
+    const listingId = randomUUID(), revisionId = randomUUID();
+    const timestamp = new Date(submitted + index);
+    const bookId = index === 21 ? fixture.extraId : revisionSample.bookId;
+    return {
+      listing: { ...listingSample, _id: listingId, currentRevisionId: revisionId, updatedAt: timestamp },
+      revision: { ...revisionSample, _id: revisionId, listingId, bookId, submittedAt: timestamp },
+    };
+  });
+  await revisions.insertMany(extraListings.map(row => row.revision));
+  await listings.insertMany(extraListings.map(row => row.listing));
+  const lateId = extraListings[20].listing._id;
+  const pendingCatalogId = extraListings[21].listing._id;
+  const admin = await fixture.api("/auth/login", null, { email: "admin@operations.test", password });
+  const staff = await fixture.api("/auth/login", null, { email: "staff@operations.test", password });
+  const readQueue = (token, filters) => fetch(`${base}/operations/listings?${new URLSearchParams(filters)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const readItems = async (token, filters) => {
+    const response = await readQueue(token, filters);
+    assert.equal(response.status, 200);
+    return response.json();
+  };
+  const firstPage = await readItems(staff.accessToken, { limit: "20", aiOutcome: "None" });
+  assert.equal(firstPage.items.length, 20);
+  assert(firstPage.nextCursor);
+  assert(!firstPage.items.some(row => row.id === lateId));
+  const search = await readItems(staff.accessToken, { q: "TRUYEN KIEU", limit: "20", aiOutcome: "None" });
+  const searchPageTwo = await readItems(staff.accessToken, { q: "truyen kieu", limit: "20", aiOutcome: "None", cursor: search.nextCursor });
+  assert(searchPageTwo.items.some(row => row.id === lateId));
+  assert(!searchPageTwo.items.some(row => search.items.some(first => first.id === row.id)));
+  assert.equal((await readQueue(staff.accessToken, { q: "chu giai", limit: "20", aiOutcome: "None", cursor: search.nextCursor })).status, 400);
+  assert.equal((await readQueue(fixture.member.accessToken, { q: lateId })).status, 403);
+  assert.deepEqual((await readItems(staff.accessToken, { q: lateId })).items.map(row => row.id), [lateId]);
+  assert.deepEqual((await readItems(staff.accessToken, { q: ".*" })).items, []);
+  assert.deepEqual((await readItems(staff.accessToken, { q: "dau sach can bo sung" })).items, []);
+  assert.deepEqual((await readItems(admin.accessToken, { q: "dau sach can bo sung" })).items.map(row => row.id), [pendingCatalogId]);
+  record("backend searches the entire filtered queue, supports accent-insensitive paging, literal search, exact ID, and protects pending catalog titles");
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("link", { name: "Bài đăng sách", exact: true }).click();
+  await page.getByRole("button", { name: "Cập nhật danh sách", exact: true }).click();
+  await expect(queue.locator(".queue-row")).toHaveCount(20);
+  const list = queue.getByRole("region", { name: "Danh sách hồ sơ", exact: true });
+  const finder = queue.getByRole("searchbox", { name: "Tên sách hoặc mã hồ sơ", exact: true });
+  const fixedY = (await finder.boundingBox()).y;
+  const rowHeight = (await queue.locator(".queue-row").first().boundingBox()).height;
+  assert(rowHeight <= 96, `Compact review row is too tall: ${rowHeight}`);
+  await page.screenshot({ path: path.join(artifacts, "long-queue-1440.png") });
+  await list.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  assert(Math.abs((await finder.boundingBox()).y - fixedY) <= 1, "Filters must stay fixed while the results scroll");
+  await queue.getByRole("button", { name: "Xem thêm hồ sơ", exact: true }).click();
+  await expect(queue.locator(".queue-row")).toHaveCount(24);
+  const lastRow = queue.getByRole("link", { name: "Đọc hồ sơ 24", exact: true });
+  await lastRow.scrollIntoViewIfNeeded();
+  const queueOffset = await list.evaluate(node => node.scrollTop);
+  assert(queueOffset > 0);
+  await lastRow.click();
+  await expect(page).toHaveURL(url => url.pathname.endsWith(pendingCatalogId));
+  await page.getByRole("link", { name: "Về danh sách", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/review/listings");
+  await expect(page.getByRole("heading", { name: "Chọn bài để kiểm duyệt", exact: true })).toBeVisible();
+  await expect.poll(() => list.evaluate(node => node.scrollTop)).toBe(queueOffset);
+
+  const shortCode = "#" + lateId.slice(0, 8).toUpperCase();
+  await finder.fill(shortCode);
+  await finder.press("Enter");
+  await expect(page).toHaveURL(url => url.searchParams.get("q") === shortCode);
+  await expect(queue.locator(".queue-row")).toHaveCount(1);
+  await expect(finder).toBeFocused();
+  await expect(queue.locator(".queue-row")).toContainText(shortCode);
+  await queue.getByRole("link", { name: "Đọc hồ sơ 1", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname.endsWith(lateId) && url.searchParams.get("q") === shortCode);
+  await page.getByRole("link", { name: "Về danh sách", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/review/listings" && url.searchParams.get("q") === shortCode);
+  await expect(finder).toHaveValue(shortCode);
+
+  await page.setViewportSize({ width: 390, height: 500 });
+  await finder.fill("khong co tieu de nay");
+  await finder.press("Enter");
+  await expect(queue.getByRole("heading", { name: "Không tìm thấy hồ sơ phù hợp.", exact: true })).toBeVisible();
+  await queue.getByRole("button", { name: "Xóa tìm kiếm", exact: true }).click();
+  await expect(finder).toHaveValue("");
+  await expect(finder).toBeFocused();
+  await expect(page).toHaveURL(url => url.pathname === "/review/listings" && !url.searchParams.has("q"));
+  await expect(queue.locator(".queue-row")).toHaveCount(24);
+  const mobileList = await list.boundingBox();
+  await page.screenshot({ path: path.join(artifacts, "long-queue-390.png") });
+  assert(mobileList && mobileList.height > 100, `Keep room for results on a short screen: ${mobileList?.height}px`);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  record("compact rows, fixed filter controls, pagination, short-code search, Back context and mobile clear");
+
   assert.equal(errors.length, 0);
   await writeFile(
     path.join(artifacts, "result.json"),

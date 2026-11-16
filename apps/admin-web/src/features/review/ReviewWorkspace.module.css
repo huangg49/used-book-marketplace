@@ -343,7 +343,6 @@
 .queue :global(.short-id) {
   display: none;
 }
-.queue :global(.queue-prices),
 .queue :global(.queue-row p) {
   display: flex;
   flex-wrap: wrap;
@@ -1489,4 +1488,157 @@
 }
 .leavePrompt :global(.actions .button) {
   min-height: 44px;
+}
+
+.listingDesk .queue {
+  overflow: hidden;
+}
+.listingDesk .queueScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-control) transparent;
+  scroll-padding-block: 6px;
+}
+.queueSearch {
+  display: flex;
+  gap: 5px;
+  margin: 10px 14px 0;
+}
+.searchField {
+  display: flex;
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+.searchField input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 9px;
+  border: 1px solid var(--desk-line);
+  border-radius: 7px;
+  background: var(--desk-paper);
+  color: var(--shop-ink);
+  font: inherit;
+  font-size: 0.75rem;
+}
+.searchField:has(.clearSearch) input {
+  padding-inline-end: 41px;
+}
+.searchField input::-webkit-search-cancel-button {
+  display: none;
+}
+.queueSearch > :global(.button),
+.searchField .clearSearch {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 7px;
+  box-shadow: none;
+  color: var(--shop-wine);
+}
+.queueSearch > :global(.button) {
+  background: color-mix(in srgb, var(--shop-wine) 6%, var(--desk-paper));
+}
+.searchField .clearSearch {
+  position: absolute;
+  inset: 1px 1px 1px auto;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+.listingDesk .queue :global(.queue-row) {
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  padding: 8px 9px;
+  gap: 8px;
+}
+.listingDesk .queueCover {
+  width: 44px;
+  height: 54px;
+}
+.listingDesk .queueCover > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.listingDesk .queueCover:has(> button) > svg {
+  display: none;
+}
+.listingDesk .queueCover > button {
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  justify-content: center;
+  font-size: 0;
+  gap: 0;
+}
+.queue :global(.queue-row) .listingRowLink,
+.queue :global(.queue-row).selected .listingRowLink {
+  grid-column: 2;
+  min-height: 50px;
+  min-width: 0;
+  padding: 5px 2px;
+  gap: 5px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--shop-ink);
+  font-weight: 400;
+}
+.queue :global(.queue-row) .listingRowLink > svg {
+  flex: none;
+  color: var(--shop-wine);
+}
+.listingRowLink .queueIdentity h2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0 0 4px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  text-align: left;
+}
+.listingRowMeta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  color: var(--desk-muted);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.listingRowMeta > span {
+  color: var(--shop-wine);
+  font-weight: 650;
+}
+.listingRowAi {
+  display: block;
+  margin-top: 4px;
+  color: var(--shop-wine);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+@media (max-height: 650px) {
+  .workspace:has(.listingDesk) .heading {
+    margin-bottom: 8px;
+  }
+  .workspace:has(.listingDesk) .heading p {
+    display: none;
+  }
+  .listingDesk .queueTime {
+    display: none;
+  }
+  .listingDesk .queueHead {
+    padding-block: 2px;
+  }
+  .listingDesk .queueSummary {
+    padding-block: 5px;
+  }
 }

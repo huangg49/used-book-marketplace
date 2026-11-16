@@ -1058,6 +1058,10 @@ The leave confirmation remains available while the pane is folded.
 The listing queue uses three equal status controls on a cream rail and a
 single AI select beneath it. Only show AI outcomes available for the active
 status. Keep the actual loaded count and queue sort shown below the filters.
+Listing rows show a compact thumbnail, the title, the short listing ID, and
+submission time. The queue controls stay visible while results scroll. The
+search submits title or ID with the active filters to the queue API. Keep the
+query and the loaded list position when returning from a dossier.
 
 ## Web motion consistency — owner request, 02/11/2026
 

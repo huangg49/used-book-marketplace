@@ -1,13 +1,16 @@
-import { dateText, money } from "../../core/format";
+import { dateText } from "../../core/format";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type UIEvent } from "react";
 import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
   BookOpen,
+  ChevronRight,
   PanelLeft,
   RefreshCw,
+  Search,
+  X,
 } from "lucide-react";
 import {
   Link,
@@ -36,7 +39,12 @@ import {
 } from "./contracts";
 import { ListingTitle } from "./ListingTitle";
 import { QueueCover } from "./QueueCover";
-import { reviewQueuePath, reviewReturnPath } from "./review-navigation";
+import {
+  REVIEW_SEARCH_MAX_LENGTH,
+  reviewQueuePath,
+  reviewReturnPath,
+  reviewSearchText,
+} from "./review-navigation";
 import styles from "./ReviewWorkspace.module.css";
 import { EmptyArt } from "../../core/EmptyArt";
 
@@ -53,6 +61,10 @@ const aiFilterLabels: Record<string, string> = {
 };
 // Only numeric positions live here. Dossiers, private URLs and decisions never do.
 const queueScroll = new Map<string, number>();
+const queueStamp = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
 
 export function Queue() {
   const { kind = "listings" } = useParams();
@@ -70,8 +82,10 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
   const location = useLocation();
   const selectedId = useMatch("/review/:kind/:id")?.params.id;
   const [showQueue, setShowQueue] = useState(false);
-  const listRef = useRef<HTMLElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const queueRef = useRef<HTMLElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const [params, setParams] = useSearchParams();
   const filters =
     kind === "listings"
@@ -84,13 +98,38 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
   const ai = aiFilters.includes(params.get("ai") || "")
     ? params.get("ai")!
     : "";
-  const positionKey = `${user.id}/${kind}/${status}/${ai}`;
-  const queuePath = `${reviewQueuePath(kind, status)}${ai ? `&ai=${ai}` : ""}`;
+  const q = kind === "listings" ? reviewSearchText(params.get("q")) : "";
+  useLayoutEffect(() => {
+    if (searchInput.current) searchInput.current.value = q;
+  }, [q]);
+  const positionKey = JSON.stringify([user.id, kind, status, ai, q]);
+  const queuePath = reviewQueuePath(kind, status, { ai, q });
+  const queueQuery = queuePath.slice(`/review/${kind}`.length);
+  function applyFilters(nextStatus: string, nextAi: string, nextQuery: string) {
+    if (kind === "catalog-requests") {
+      setParams({ status: nextStatus });
+      return;
+    }
+    const returnTo = reviewQueuePath(kind, nextStatus, { ai: nextAi, q: nextQuery });
+    setParams(returnTo.slice(returnTo.indexOf("?")), {
+      state: selectedId
+        ? { reviewReturnTo: returnTo }
+        : q || nextQuery ? { reviewOverview: true } : undefined,
+    });
+  }
+  function rememberScroll(event: UIEvent<HTMLElement>) {
+    if (queueScroll.size > 40) queueScroll.clear();
+    queueScroll.set(positionKey, event.currentTarget.scrollTop);
+  }
   const result = useInfiniteQuery({
-    queryKey: ["queue", kind, status, user.id, ...(ai ? [ai] : [])],
+    queryKey: ["queue", kind, status, user.id, ...(ai ? [ai] : []), ...(q ? [{ q }] : [])],
     initialPageParam: "",
     queryFn: async ({ pageParam }) => {
-      const path = `/operations/${kind}?${kind === "listings" ? "moderation" : "status"}=${status}${ai ? `&aiOutcome=${ai}` : ""}&limit=20${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`;
+      const query = new URLSearchParams({ [kind === "listings" ? "moderation" : "status"]: status, limit: "20" });
+      if (ai) query.set("aiOutcome", ai);
+      if (q) query.set("q", q);
+      if (pageParam) query.set("cursor", pageParam);
+      const path = `/operations/${kind}?${query}`;
       return kind === "listings"
         ? session.request(path, pageOf(listing))
         : session.request(path, pageOf(catalog));
@@ -106,12 +145,11 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
     items.map((item) => `${item.id}:${item.version}`).join("/"),
   );
   useLayoutEffect(() => {
-    if (listRef.current)
-      listRef.current.scrollTop = queueScroll.get(positionKey) ?? 0;
-  }, [positionKey, selectedId, items.length]);
+    const scroller = kind === "listings" ? listRef.current : queueRef.current;
+    if (scroller) scroller.scrollTop = queueScroll.get(positionKey) ?? 0;
+  }, [kind, positionKey, selectedId, items.length, showQueue]);
   const selectedIndex = items.findIndex((item) => item.id === selectedId);
-  const itemPath = (id: string) =>
-    `/review/${kind}/${id}?status=${status}${ai ? `&ai=${ai}` : ""}`;
+  const itemPath = (id: string) => `/review/${kind}/${id}${queueQuery}`;
   const firstId = items[0]?.id;
   // Start with actual work, once. An explicit Back keeps the list open; an open
   // dossier is never switched by polling or by a new first item in the queue.
@@ -120,12 +158,13 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
       kind !== "listings" ||
       selectedId ||
       !firstId ||
+      q ||
       !result.isSuccess ||
       (location.state as { reviewOverview?: boolean } | null)?.reviewOverview
     )
       return;
     navigate(
-      `/review/${kind}/${firstId}?status=${status}${ai ? `&ai=${ai}` : ""}`,
+      `/review/${kind}/${firstId}${queueQuery}`,
       {
         replace: true,
         state: { reviewReturnTo: queuePath },
@@ -138,8 +177,8 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
     result.isSuccess,
     location.state,
     navigate,
-    status,
-    ai,
+    q,
+    queueQuery,
     queuePath,
   ]);
   const queueToggle = selectedId && (
@@ -177,12 +216,9 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
         <section
           id="review-queue"
           aria-label="Hàng chờ kiểm duyệt"
-          ref={listRef}
+          ref={queueRef}
           tabIndex={0}
-          onScroll={(event) => {
-            if (queueScroll.size > 40) queueScroll.clear();
-            queueScroll.set(positionKey, event.currentTarget.scrollTop);
-          }}
+          onScroll={kind === "catalog-requests" ? rememberScroll : undefined}
           className={`${styles.queue} ${selectedId && !showQueue ? styles.mobileHidden : ""}`}
         >
           <div className={styles.queueHead}>
@@ -207,7 +243,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                   key={value}
                   aria-pressed={status === value}
                   onClick={() => {
-                    if (status !== value) setParams({ status: value });
+                    if (status !== value) applyFilters(value, "", q);
                   }}
                 >
                   {labels[value]}
@@ -224,17 +260,58 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                     ...aiFilters.map((value) => [value, aiFilterLabels[value]] as const),
                   ]}
                   onChange={(value) => {
-                    if (ai !== value) setParams(value ? { status, ai: value } : { status });
+                    if (ai !== value) applyFilters(status, value, q);
                   }}
                 />
               </div>
             )}
           </div>
+          {kind === "listings" && (
+            <form
+              className={styles.queueSearch}
+              role="search"
+              aria-label="Tìm hồ sơ bài đăng"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const next = reviewSearchText(String(new FormData(event.currentTarget).get("q") ?? ""));
+                if (next !== q) applyFilters(status, ai, next);
+              }}
+            >
+              <div className={styles.searchField}>
+                <input
+                  ref={searchInput}
+                  type="search"
+                  name="q"
+                  defaultValue={q}
+                  maxLength={REVIEW_SEARCH_MAX_LENGTH}
+                  aria-label="Tên sách hoặc mã hồ sơ"
+                  placeholder="Tên sách hoặc #mã"
+                />
+                {q && (
+                  <Button
+                    className={styles.clearSearch}
+                    aria-label="Xóa tìm kiếm"
+                    onClick={() => {
+                      searchInput.current?.focus();
+                      applyFilters(status, ai, "");
+                    }}
+                  >
+                    <X size={15} aria-hidden="true" />
+                  </Button>
+                )}
+              </div>
+              <Button type="submit" aria-label="Tìm hồ sơ" title="Tìm hồ sơ">
+                <Search size={17} aria-hidden="true" />
+              </Button>
+            </form>
+          )}
           <p className={styles.queueSummary}>
             {items.length} hồ sơ đã tải · Cũ nhất trước
           </p>
           <div
             className={styles.queueScroll}
+            ref={kind === "listings" ? listRef : undefined}
+            onScroll={kind === "listings" ? rememberScroll : undefined}
             role="region"
             aria-label="Danh sách hồ sơ"
           >
@@ -242,8 +319,8 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
             {result.isSuccess && items.length === 0 && (
               <div className="empty">
                 <EmptyArt variant="review" />
-                <h2>Chưa có hồ sơ ở mục này.</h2>
-                <p>Danh sách sẽ cập nhật khi có lần gửi phù hợp.</p>
+                <h2>{q ? "Không tìm thấy hồ sơ phù hợp." : "Chưa có hồ sơ ở mục này."}</h2>
+                <p>{q ? "Thử tên khác, mã hồ sơ hoặc đổi bộ lọc." : "Danh sách sẽ cập nhật khi có lần gửi phù hợp."}</p>
               </div>
             )}
             <div
@@ -289,86 +366,73 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                 links[index]?.focus();
               }}
             >
-              {items.map((item, index) => (
-                <article
-                  className={`queue-row ${selectedId === item.id ? styles.selected : ""}`}
-                  key={item.id}
-                  data-motion-key={item.id}
-                  data-motion-revision={item.version}
-                >
-                  {"state" in item && <QueueCover value={item} />}
-                  <div className={styles.queueIdentity}>
-                    <div className="row-meta">
-                      <span>
-                        {
-                          labels[
-                            "state" in item
-                              ? item.state.moderation
-                              : item.status
-                          ]
-                        }
-                      </span>
-                      <span>Bản {item.currentRevision.number}</span>
-                      {"state" in item && item.autoReview && (
-                        <span>{aiFilterLabels[item.autoReview.outcome]}</span>
-                      )}
-                    </div>
-                    <h2>
-                      <Link
-                        to={itemPath(item.id)}
-                        aria-current={
-                          selectedId === item.id ? "page" : undefined
-                        }
-                        state={{
-                          reviewReturnTo: queuePath,
-                        }}
-                      >
-                        {"state" in item ? (
-                          <ListingTitle value={item} canReadPendingCatalog={canReviewCatalog(user)} />
-                        ) : (
-                          item.currentRevision.metadata.title
-                        )}
-                      </Link>
-                    </h2>
-                    {"state" in item ? (
-                      <div className="queue-prices muted">
-                        {item.currentRevision.content.salePrice != null && (
-                          <span>
-                            Giá bán:{" "}
-                            {money(item.currentRevision.content.salePrice)}
-                          </span>
-                        )}
-                        {item.currentRevision.content.exchangeValue != null && (
-                          <span>
-                            Giá trị đổi:{" "}
-                            {money(item.currentRevision.content.exchangeValue)}
-                          </span>
-                        )}
-                        <span>
-                          {item.currentRevision.content.mediaIds.length} ảnh
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="muted">
-                        {item.currentRevision.metadata.authors.join(" · ")} ·{" "}
-                        {item.currentRevision.metadata.publisher ||
-                          "Chưa có nhà xuất bản"}
-                      </p>
-                    )}
-                    <p className={styles.submittedTime}>
-                      {dateText(item.currentRevision.submittedAt)}
-                    </p>
-                  </div>
-                  <Link
-                    className="read-link"
-                    to={itemPath(item.id)}
-                    state={{ reviewReturnTo: queuePath }}
-                    aria-label={`Đọc hồ sơ ${index + 1}`}
+              {items.map((item, index) => {
+                const selected = selectedId === item.id;
+                const link = {
+                  to: itemPath(item.id),
+                  state: { reviewReturnTo: queuePath },
+                  "aria-current": selected ? "page" as const : undefined,
+                };
+                return (
+                  <article
+                    className={`queue-row ${selected ? styles.selected : ""}`}
+                    key={item.id}
+                    data-motion-key={item.id}
+                    data-motion-revision={item.version}
                   >
-                    Đọc hồ sơ <span aria-hidden="true">↗</span>
-                  </Link>
-                </article>
-              ))}
+                    {"state" in item ? (
+                      <>
+                        <QueueCover value={item} />
+                        <Link
+                          {...link}
+                          className={`read-link ${styles.listingRowLink}`}
+                          aria-label={`Đọc hồ sơ ${index + 1}`}
+                          aria-describedby={`queue-title-${item.id}`}
+                        >
+                          <div className={styles.queueIdentity}>
+                            <h2 id={`queue-title-${item.id}`}>
+                              <ListingTitle value={item} canReadPendingCatalog={canReviewCatalog(user)} />
+                            </h2>
+                            <div className={styles.listingRowMeta}>
+                              <span>#{item.id.slice(0, 8).toUpperCase()}</span>
+                              {item.currentRevision.submittedAt && (
+                                <time
+                                  dateTime={item.currentRevision.submittedAt}
+                                  title={dateText(item.currentRevision.submittedAt)}
+                                >
+                                  {queueStamp.format(new Date(item.currentRevision.submittedAt))}
+                                </time>
+                              )}
+                            </div>
+                            {item.autoReview && (
+                              <span className={styles.listingRowAi}>{aiFilterLabels[item.autoReview.outcome]}</span>
+                            )}
+                          </div>
+                          <ChevronRight size={16} aria-hidden="true" />
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.queueIdentity}>
+                          <div className="row-meta">
+                            <span>{labels[item.status]}</span>
+                            <span>Bản {item.currentRevision.number}</span>
+                          </div>
+                          <h2><Link {...link}>{item.currentRevision.metadata.title}</Link></h2>
+                          <p className="muted">
+                            {item.currentRevision.metadata.authors.join(" · ")} ·{" "}
+                            {item.currentRevision.metadata.publisher || "Chưa có nhà xuất bản"}
+                          </p>
+                          <p className={styles.submittedTime}>{dateText(item.currentRevision.submittedAt)}</p>
+                        </div>
+                        <Link {...link} className="read-link" aria-label={`Đọc hồ sơ ${index + 1}`}>
+                          Đọc hồ sơ <span aria-hidden="true">↗</span>
+                        </Link>
+                      </>
+                    )}
+                  </article>
+                );
+              })}
             </div>
             <CursorPagination
               pageCount={result.data?.pages.length ?? 0}
@@ -404,7 +468,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                 {kind === "listings" && (
                   <Link
                     className={styles.sequenceBack}
-                    to={reviewReturnPath(kind, location.state)}
+                    to={reviewReturnPath(kind, location.state ?? { reviewReturnTo: queuePath })}
                     state={{ reviewOverview: true }}
                   >
                     <ArrowLeft size={16} aria-hidden="true" />

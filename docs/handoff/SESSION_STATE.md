@@ -1,3 +1,17 @@
+# Hàng chờ duyệt bài đăng dài — 16/11/2026
+
+- Tiếp nối `a53406f2` trên `codex/admin-review-photo-first`. Hàng chờ dùng
+  dòng gọn, giữ bộ lọc và tìm kiếm ở đầu, cuộn và tải thêm 20 hồ sơ mỗi lượt.
+  Mở hồ sơ rồi quay lại giữ từ khóa và vị trí danh sách.
+- OpenAPI 0.81.0 thêm `q` cho `GET /operations/listings`. Tìm không dấu
+  theo tên hoặc mã hồ sơ, giới hạn theo trạng thái và AI trước khi phân trang.
+  Staff tìm tên đầu sách đã xác nhận, Admin tìm được cả tên đầu sách chờ duyệt.
+  Không cần migration. Chạy API và Admin web cùng phiên bản để dùng tìm kiếm.
+- Admin unit 251/251, API unit 510/510, build hai app và kiểm contract đã qua.
+  Chromium kiểm 19 nhóm trên dữ liệu Mongo QA với 24 hồ sơ chờ, gồm tìm xuyên
+  trang, quyền Staff/Admin, cursor sai bộ lọc, giữ vị trí và mobile 390 × 500.
+  Ảnh dùng storage giả lập. DB demo và main chưa cập nhật.
+
 # Mở phiếu duyệt bài đăng theo nhu cầu — 15/11/2026
 
 - Checkout demo dùng `codex/admin-review-photo-first`, nối tiếp `e91f9e77`.
