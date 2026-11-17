@@ -1401,7 +1401,7 @@
 
 @media (max-width: 600px) {
   .page {
-    padding: 16px 10px 48px;
+    padding-bottom: 48px;
   }
   .pageHeader h1 {
     font-size: 1.625rem;

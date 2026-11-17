@@ -73,6 +73,12 @@ directory thành viên mới. Form giữ tiêu đề/nội dung trong memory khi
 dung và quay lại qua entry mới; scope theo account, logout xóa. Pending create
 vẫn ưu tiên bản gửi gốc, không dùng resolver lỗi để đổi body/key hoặc chặn replay.
 
+Bộ chọn giao dịch ưu tiên mục Đang diễn ra. Mục Lịch sử chứa giao dịch đã
+đóng. Có thể tìm bằng tên sách, tên đối tác hoặc mã hiển thị. Trao đổi hiển thị
+sách gửi và sách nhận từ bản chụp thỏa thuận. Hồ sơ cũ thiếu bản chụp dùng mã
+giao dịch và thời điểm để nhận biết. Phiếu trao đổi demo đã lưu trữ bị loại
+khỏi danh sách và thao tác gắn mới, đồng thời giữ dữ liệu phục vụ đối soát.
+
 ## Đánh giá và thông báo
 
 ### Tích hợp với AI tự duyệt trên main —02/11/2026

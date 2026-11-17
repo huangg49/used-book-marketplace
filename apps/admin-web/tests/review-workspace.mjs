@@ -1,11 +1,12 @@
 // Focused UI regression: real Nest/Mongo *_test, fake storage; never the local app DB.
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { chromium, expect } from "playwright/test";
-import { createTestApi, root, password } from "./test-api.mjs";
+import { createTestApi, root, base, password } from "./test-api.mjs";
 import { assertReviewThumbnailGeometry } from "./review-gallery-geometry.mjs";
 import { assertReviewScrollOwnership } from "./review-scroll-geometry.mjs";
 
@@ -17,7 +18,19 @@ let fixture, vite, browser;
 const checks = [];
 const record = (name) => checks.push(name);
 try {
-  fixture = await createTestApi({ corsOrigin: origin, listingCount: 3 });
+  const apiRequire = createRequire(new URL("../../api/package.json", import.meta.url));
+  const photoBytes = await apiRequire("sharp")(
+    path.join(root, "apps/user-web/public/illustrations/truyen-kieu.webp"),
+  ).png().toBuffer();
+  fixture = await createTestApi({
+    corsOrigin: origin,
+    listingCount: 3,
+    photoBytes,
+    catalogMetadata: {
+      title: "Truyện Kiều — Bản chú giải có đối chiếu văn bản và tranh minh họa",
+      authors: ["Nguyễn Du"],
+    },
+  });
   vite = spawn(
     process.execPath,
     [
@@ -69,9 +82,27 @@ try {
   record(
     "queue entry opens oldest loaded dossier without an extra welcome step",
   );
-  await expect(
-    page.getByRole("button", { name: "Duyệt bài đăng", exact: true }),
-  ).toBeDisabled();
+  const decision = page.getByRole("region", { name: "Phiếu quyết định", exact: true });
+  const decisionNode = page.locator('[aria-label="Phiếu quyết định"]');
+  const pauseDecisionMotion = (control) => control.evaluate(async (button) => {
+    button.click();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    const panel = document.querySelector('[aria-label="Phiếu quyết định"]');
+    const animation = panel.getAnimations()[0];
+    if (!animation) return null;
+    animation.pause();
+    animation.currentTime = 60;
+    return {
+      frames: animation.effect.getKeyframes(),
+      duration: animation.effect.getTiming().duration,
+      visible: !panel.hidden,
+      inert: panel.inert,
+    };
+  });
+  const finishDecisionMotion = () => decisionNode.evaluate(panel => panel.getAnimations()[0]?.finish());
+  const openDecision = (target = page) => target.getByRole("button", { name: "Kiểm duyệt bài đăng", exact: true });
+  await expect(decision).toBeHidden();
+  await expect(openDecision()).toHaveAttribute("aria-expanded", "false");
   await page.getByRole("link", { name: /Mở yêu cầu đầu sách/ }).waitFor();
   record(
     "pending catalog remains an explicit approval gate with an exact catalog deep link",
@@ -79,9 +110,106 @@ try {
   await page
     .getByRole("button", { name: "Xem lớn ảnh 1", exact: true })
     .waitFor();
-  await page
-    .getByRole("button", { name: "Xem lớn ảnh 1", exact: true })
-    .click();
+  const preview = page.getByRole("button", { name: "Xem lớn ảnh 1", exact: true });
+  const bookTitle = page.getByRole("heading", { name: /^Truyện Kiều.*Nguyễn Du$/, level: 3 });
+  await expect(bookTitle).toBeVisible();
+  for (const [width, height] of [[1440, 900], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const image = await preview.locator("img").boundingBox();
+    const summary = await page.locator('dl[aria-label="Tóm tắt bản sách"]').boundingBox();
+    const photoBoundary = await preview.evaluate(el => {
+      const reader = el.closest('[aria-label="Nội dung và bằng chứng"]');
+      return (getComputedStyle(reader).overflowY === "auto"
+        ? reader
+        : el.closest("[data-review-dossier]")).getBoundingClientRect().bottom;
+    });
+    assert(image && summary && image.y > summary.y + summary.height, "Keep the condition summary directly before photo evidence");
+    await page.screenshot({ path: path.join(artifacts, `reading-${width}.png`) });
+    assert(image.y + (width > 1000 ? image.height : 140) <= photoBoundary + 1,
+      `Book photo clips too early at ${width}×${height}: top=${image.y}, bottom limit=${photoBoundary}`);
+  }
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  record("long book title, seller condition and actual image remain above the fold on desktop and mobile");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const queue = page.getByRole("region", { name: "Hàng chờ kiểm duyệt", exact: true });
+  await expect(queue).toBeVisible();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const entry = await pauseDecisionMotion(openDecision());
+  assert(entry && entry.duration >= 180 && /translateX/.test(entry.frames[0].transform));
+  assert.equal(entry.visible, true);
+  assert.equal(entry.inert, false);
+  await finishDecisionMotion();
+  await expect(decision).toBeFocused();
+  await expect(queue).toBeHidden();
+  await expect(preview).toBeInViewport();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(decision.getByLabel("Lý do từ chối", { exact: true })).toBeHidden();
+  await page.screenshot({ path: path.join(artifacts, "decision-1440.png") });
+
+  await decision.getByRole("checkbox").first().check();
+  await decision.getByRole("button", { name: "Từ chối có lý do", exact: true }).click();
+  const reasonField = decision.getByLabel("Lý do từ chối", { exact: true });
+  await expect(reasonField).toBeFocused();
+  await reasonField.fill("Ảnh bìa và tình trạng cần được đối chiếu thêm.");
+  const fold = () => decision.getByRole("button", { name: "Gập phiếu", exact: true });
+  const exit = await pauseDecisionMotion(fold());
+  assert(exit && exit.duration >= 140 && /translateX/.test(exit.frames.at(-1).transform));
+  assert.equal(exit.visible, true, "The split layout stays in place for the exit frames");
+  assert.equal(exit.inert, true, "The retreating checklist is no longer interactive");
+  await expect(queue).toBeHidden();
+  await expect(openDecision()).toBeFocused();
+  const reversed = await pauseDecisionMotion(openDecision());
+  assert(reversed && /^matrix/.test(reversed.frames[0].transform), "Rapid reopen starts at the interrupted position");
+  await finishDecisionMotion();
+  await expect(decision.getByRole("checkbox").first()).toBeChecked();
+
+  const finalExit = await pauseDecisionMotion(fold());
+  assert(finalExit?.visible);
+  await finishDecisionMotion();
+  await expect(decisionNode).toHaveAttribute("hidden", "");
+  await expect(openDecision()).toBeFocused();
+  await expect(openDecision()).toContainText("1/6");
+  await expect(queue).toBeVisible();
+  await page.getByRole("link", { name: "Về danh sách", exact: true }).click();
+  const foldedLeave = page.getByRole("dialog", { name: "Rời hồ sơ đang xem?", exact: true });
+  await expect(foldedLeave).toBeVisible();
+  const stay = foldedLeave.getByRole("button", { name: "Ở lại hồ sơ", exact: true });
+  await expect(stay).toBeFocused();
+  await stay.click();
+  await expect(openDecision()).toContainText("1/6");
+  await openDecision().click();
+  await expect(decision.getByRole("checkbox").first()).toBeChecked();
+  await expect(reasonField).toHaveValue("Ảnh bìa và tình trạng cần được đối chiếu thêm.");
+  await decision.getByRole("button", { name: "Tiếp tục từ chối", exact: true }).click();
+  const rejectDialog = page.getByRole("dialog", { name: "Từ chối?", exact: true });
+  await expect(rejectDialog).toContainText("Truyện Kiều");
+  await expect(rejectDialog).toContainText("Ảnh bìa và tình trạng cần được đối chiếu thêm.");
+  await page.screenshot({ path: path.join(artifacts, "decision-confirm-1440.png") });
+  await rejectDialog.getByRole("button", { name: "Quay lại kiểm tra", exact: true }).click();
+  await reasonField.fill("");
+  await decision.getByRole("checkbox").first().uncheck();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Tới phiếu duyệt", exact: true }).click();
+  await expect(decision).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(decisionNode).toHaveAttribute("hidden", "");
+  await expect(openDecision()).toBeFocused();
+  const mobileEntry = await pauseDecisionMotion(openDecision());
+  assert(mobileEntry && /translateY/.test(mobileEntry.frames[0].transform));
+  await finishDecisionMotion();
+  await expect(decision).toBeFocused();
+  await page.screenshot({ path: path.join(artifacts, "decision-390.png") });
+  await decision.getByRole("button", { name: "Về ảnh", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Ảnh người đăng gửi", exact: true })).toBeFocused();
+  await expect(preview).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Tới phiếu duyệt", exact: true })).toBeInViewport();
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  record("optional nonmodal decision, queue collapse, preserved checks and rejection draft, exact confirmation subject and mobile return to photo");
+  record("desktop and mobile motion under reduced preference, inert exit with reserved layout, keyboard close and interrupted reopen");
+  await preview.click();
   await page
     .getByRole("dialog", { name: "Xem lớn ảnh 1", exact: true })
     .waitFor();
@@ -128,6 +256,7 @@ try {
     await staffPage.locator('input[type="password"]').fill(password);
     await staffPage.getByRole("button", { name: "Đăng nhập", exact: true }).click();
     await staffPage.getByRole("heading", { name: "Hồ sơ bài đăng", exact: true }).waitFor();
+    await openDecision(staffPage).click();
     for (const box of await staffPage.getByRole("checkbox").all()) await box.check();
     const staffGate = staffPage.getByRole("status", { name: "Điều kiện duyệt bài", exact: true });
     await expect(staffGate).toContainText("Cần Admin xác nhận đầu sách");
@@ -136,10 +265,20 @@ try {
     assert.equal(catalogReads, 0, "Staff must not request the Admin-only catalog detail");
     record("Staff sees the Admin prerequisite with no catalog action or unauthorized catalog read");
   } finally { await staffPage.close(); }
+  await page.bringToFront();
   await page.setViewportSize({ width: 1600, height: 1000 });
   for (const [width, height] of [[1920, 1080], [1440, 900], [1100, 900], [768, 1024], [390, 844], [1920, 600], [390, 500]]) {
     await page.setViewportSize({ width, height });
-    await assertReviewScrollOwnership(page);
+    try {
+      await assertReviewScrollOwnership(page);
+    } catch (cause) {
+      const active = await page.evaluate(() => {
+        const el = document.activeElement;
+        return { label: el?.getAttribute("aria-label"), scrollTop: el?.scrollTop,
+          scrollHeight: el?.scrollHeight, clientHeight: el?.clientHeight };
+      });
+      throw new Error(`Review scroll ownership failed at ${width}×${height}: ${JSON.stringify(active)}`, { cause });
+    }
     const toggle = page.getByRole("button", { name: "Mở hàng chờ", exact: true });
     if (await toggle.isVisible()) {
       await toggle.click();
@@ -154,7 +293,7 @@ try {
       assert.equal(await page.evaluate(() => scrollY), 0);
       await queue.evaluate(el => el.scrollTo({ top: 0, behavior: "instant" }));
       await page.getByRole("button", { name: "Ẩn hàng chờ", exact: true }).click();
-      const jump = page.getByRole("button", { name: "Đi tới phiếu quyết định", exact: true });
+      const jump = page.getByRole("button", { name: "Tới phiếu duyệt", exact: true });
       if (await jump.isVisible()) {
         const pageHeading = page.getByRole("heading", { name: "Bài đăng sách", exact: true });
         const headingY = (await pageHeading.boundingBox()).y;
@@ -174,6 +313,9 @@ try {
       exact: true,
     }),
   ).toHaveAttribute("value", "1");
+  if (!(await reasonField.isVisible())) {
+    await decision.getByRole("button", { name: "Từ chối có lý do", exact: true }).click();
+  }
   await page
     .getByLabel("Lý do từ chối", { exact: true })
     .fill("Lý do đang nhập chưa gửi đi");
@@ -198,7 +340,9 @@ try {
   await expect(page).toHaveURL(new RegExp(fixture.listings[1]));
   await expect(reader.locator(".record-id")).toHaveText(`Mã hồ sơ: ${fixture.listings[1]}`);
   assert.equal(await reader.evaluate(el => el.scrollTop), 0, "New dossier starts at the top of the reader");
-  assert.equal(await page.getByRole("region", { name: "Phiếu quyết định", exact: true }).evaluate(el => el.scrollTop), 0, "New dossier starts at the top of the decision pane");
+  await expect(decision).toBeHidden();
+  await openDecision().click();
+  assert.equal(await decision.evaluate(el => el.scrollTop), 0, "New dossier starts at the top of the decision pane");
   await expect(page.getByRole("checkbox").first()).not.toBeChecked();
   await expect(
     page.getByRole("progressbar", {
@@ -245,6 +389,7 @@ try {
   await page
     .getByRole("button", { name: "Xem lớn ảnh 1", exact: true })
     .waitFor();
+  await openDecision().click();
   for (const box of await page.getByRole("checkbox").all()) await box.check();
   await expect(
     page.getByRole("button", { name: "Duyệt bài đăng", exact: true }),
@@ -304,6 +449,104 @@ try {
   record(
     "1440/768/390 layouts preserve content without horizontal page overflow",
   );
+  // Extend the disposable queue past page one with schema-valid submitted rows.
+  const listings = fixture.db.collection("listings");
+  const revisions = fixture.db.collection("listing_revisions");
+  const listingSample = await listings.findOne({ _id: fixture.listings[1] });
+  const revisionSample = await revisions.findOne({ _id: listingSample.currentRevisionId });
+  const submitted = Date.now();
+  const extraListings = Array.from({ length: 22 }, (_, index) => {
+    const listingId = randomUUID(), revisionId = randomUUID();
+    const timestamp = new Date(submitted + index);
+    const bookId = index === 21 ? fixture.extraId : revisionSample.bookId;
+    return {
+      listing: { ...listingSample, _id: listingId, currentRevisionId: revisionId, updatedAt: timestamp },
+      revision: { ...revisionSample, _id: revisionId, listingId, bookId, submittedAt: timestamp },
+    };
+  });
+  await revisions.insertMany(extraListings.map(row => row.revision));
+  await listings.insertMany(extraListings.map(row => row.listing));
+  const lateId = extraListings[20].listing._id;
+  const pendingCatalogId = extraListings[21].listing._id;
+  const admin = await fixture.api("/auth/login", null, { email: "admin@operations.test", password });
+  const staff = await fixture.api("/auth/login", null, { email: "staff@operations.test", password });
+  const readQueue = (token, filters) => fetch(`${base}/operations/listings?${new URLSearchParams(filters)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const readItems = async (token, filters) => {
+    const response = await readQueue(token, filters);
+    assert.equal(response.status, 200);
+    return response.json();
+  };
+  const firstPage = await readItems(staff.accessToken, { limit: "20", aiOutcome: "None" });
+  assert.equal(firstPage.items.length, 20);
+  assert(firstPage.nextCursor);
+  assert(!firstPage.items.some(row => row.id === lateId));
+  const search = await readItems(staff.accessToken, { q: "TRUYEN KIEU", limit: "20", aiOutcome: "None" });
+  const searchPageTwo = await readItems(staff.accessToken, { q: "truyen kieu", limit: "20", aiOutcome: "None", cursor: search.nextCursor });
+  assert(searchPageTwo.items.some(row => row.id === lateId));
+  assert(!searchPageTwo.items.some(row => search.items.some(first => first.id === row.id)));
+  assert.equal((await readQueue(staff.accessToken, { q: "chu giai", limit: "20", aiOutcome: "None", cursor: search.nextCursor })).status, 400);
+  assert.equal((await readQueue(fixture.member.accessToken, { q: lateId })).status, 403);
+  assert.deepEqual((await readItems(staff.accessToken, { q: lateId })).items.map(row => row.id), [lateId]);
+  assert.deepEqual((await readItems(staff.accessToken, { q: ".*" })).items, []);
+  assert.deepEqual((await readItems(staff.accessToken, { q: "dau sach can bo sung" })).items, []);
+  assert.deepEqual((await readItems(admin.accessToken, { q: "dau sach can bo sung" })).items.map(row => row.id), [pendingCatalogId]);
+  record("backend searches the entire filtered queue, supports accent-insensitive paging, literal search, exact ID, and protects pending catalog titles");
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("link", { name: "Bài đăng sách", exact: true }).click();
+  await page.getByRole("button", { name: "Cập nhật danh sách", exact: true }).click();
+  await expect(queue.locator(".queue-row")).toHaveCount(20);
+  const list = queue.getByRole("region", { name: "Danh sách hồ sơ", exact: true });
+  const finder = queue.getByRole("searchbox", { name: "Tên sách hoặc mã hồ sơ", exact: true });
+  const fixedY = (await finder.boundingBox()).y;
+  const rowHeight = (await queue.locator(".queue-row").first().boundingBox()).height;
+  assert(rowHeight <= 96, `Compact review row is too tall: ${rowHeight}`);
+  await page.screenshot({ path: path.join(artifacts, "long-queue-1440.png") });
+  await list.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  assert(Math.abs((await finder.boundingBox()).y - fixedY) <= 1, "Filters must stay fixed while the results scroll");
+  await queue.getByRole("button", { name: "Xem thêm hồ sơ", exact: true }).click();
+  await expect(queue.locator(".queue-row")).toHaveCount(24);
+  const lastRow = queue.getByRole("link", { name: "Đọc hồ sơ 24", exact: true });
+  await lastRow.scrollIntoViewIfNeeded();
+  const queueOffset = await list.evaluate(node => node.scrollTop);
+  assert(queueOffset > 0);
+  await lastRow.click();
+  await expect(page).toHaveURL(url => url.pathname.endsWith(pendingCatalogId));
+  await page.getByRole("link", { name: "Về danh sách", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/review/listings");
+  await expect(page.getByRole("heading", { name: "Chọn bài để kiểm duyệt", exact: true })).toBeVisible();
+  await expect.poll(() => list.evaluate(node => node.scrollTop)).toBe(queueOffset);
+
+  const shortCode = "#" + lateId.slice(0, 8).toUpperCase();
+  await finder.fill(shortCode);
+  await finder.press("Enter");
+  await expect(page).toHaveURL(url => url.searchParams.get("q") === shortCode);
+  await expect(queue.locator(".queue-row")).toHaveCount(1);
+  await expect(finder).toBeFocused();
+  await expect(queue.locator(".queue-row")).toContainText(shortCode);
+  await queue.getByRole("link", { name: "Đọc hồ sơ 1", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname.endsWith(lateId) && url.searchParams.get("q") === shortCode);
+  await page.getByRole("link", { name: "Về danh sách", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/review/listings" && url.searchParams.get("q") === shortCode);
+  await expect(finder).toHaveValue(shortCode);
+
+  await page.setViewportSize({ width: 390, height: 500 });
+  await finder.fill("khong co tieu de nay");
+  await finder.press("Enter");
+  await expect(queue.getByRole("heading", { name: "Không tìm thấy hồ sơ phù hợp.", exact: true })).toBeVisible();
+  await queue.getByRole("button", { name: "Xóa tìm kiếm", exact: true }).click();
+  await expect(finder).toHaveValue("");
+  await expect(finder).toBeFocused();
+  await expect(page).toHaveURL(url => url.pathname === "/review/listings" && !url.searchParams.has("q"));
+  await expect(queue.locator(".queue-row")).toHaveCount(24);
+  const mobileList = await list.boundingBox();
+  await page.screenshot({ path: path.join(artifacts, "long-queue-390.png") });
+  assert(mobileList && mobileList.height > 100, `Keep room for results on a short screen: ${mobileList?.height}px`);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  record("compact rows, fixed filter controls, pagination, short-code search, Back context and mobile clear");
+
   assert.equal(errors.length, 0);
   await writeFile(
     path.join(artifacts, "result.json"),

@@ -27,6 +27,8 @@ export const historyLabels = {
   AuctionBidHold: "Đấu giá · Giữ tiền",
   AuctionBidRelease: "Đấu giá · Trả lại tiền giữ",
   AuctionDepositSellerShare: "Đấu giá · Nhận một phần tiền cọc",
+  ExchangeReturnRefund: "Trao đổi · Hoàn khoản đã nộp",
+  ExchangeNonReturnCompensation: "Trao đổi · Bồi thường sách chưa trả",
 } satisfies Record<WalletHistoryItem["type"], string>;
 
 export const topupLabels = {

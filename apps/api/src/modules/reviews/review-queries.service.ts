@@ -186,6 +186,7 @@ export class ReviewQueries {
       const counts = await Promise.all([
         tx.c.exchanges.countDocuments({
           status: 'Completed',
+          demoArchivedAt: { $exists: false },
           $or: [{ initiatorId: id }, { recipientId: id }],
         }),
         tx.c.direct_orders.countDocuments({

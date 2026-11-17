@@ -246,10 +246,10 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | FR-X04 | Chấp nhận phải khớp revision, kiểm tra lại hai listing rồi giữ đồng thời; thất bại một bên thì không giữ bên nào. Các đề xuất cạnh tranh bị đóng với lý do Unavailable. |
 | FR-X05 | Từng bên nộp đủ cọc; bên bù nộp thêm tiền bù. Mỗi bên funding trọn nghĩa vụ của mình trong một lần; chưa đủ toàn giao dịch thì chưa cho tạo pickup hợp lệ. |
 | FR-X06 | Hết POL-05 khi chưa đủ funding: hủy, hoàn từng khoản đã giữ đúng người, giải phóng reservation hợp lệ. Thanh toán đến muộn không hồi sinh Exchange. |
-| FR-X07 | Khi đủ funding: DirectDelivery mở POL-06 và hai Shipment; ViaPoint mở POL-30 và intake hai cuốn, chỉ tạo Shipment cho các chặng chọn carrier. Hiển thị tiến độ hai cuốn và điểm. |
+| FR-X07 | Khi đủ funding: DirectDelivery mở POL-06 và hai Shipment. Khi gửi qua hãng, chỉ mở lấy kiện khi đã lưu đủ hai mã vận đơn riêng và còn trong hạn. Khi gặp trực tiếp, mỗi bên xác nhận phần sách mình nhận. ViaPoint mở POL-30 và intake hai cuốn, chỉ tạo Shipment cho các chặng chọn carrier. Hiển thị tiến độ hai cuốn và điểm. |
 | FR-X08 | Mỗi bên nhận sách có hạn kiểm tra riêng; một bên nhận trước không làm hết quyền bên nhận sau; không hoàn cọc toàn giao dịch khi mới một chiều đủ điều kiện. |
 | FR-X09 | Hoàn tất khi cả hai chiều hợp lệ, hết hai hạn kiểm tra và không tranh chấp: hoàn hai cọc, chuyển bù, đóng cả hai listing Exchanged. |
-| FR-X10 | Không gửi, chỉ gửi một chiều, thất lạc, sai mô tả hoặc hoàn thất bại phải tạo/ghép dispute; giữ tiền và sách theo thực tế, không tự tịch thu cọc. |
+| FR-X10 | DirectDelivery hết POL-06 mà chưa bàn giao kiện nào thì hủy, hoàn các khoản đã nộp và giải phóng sách. Chỉ gửi một chiều, thất lạc, sai mô tả hoặc hoàn thất bại phải tạo/ghép dispute; giữ tiền và sách theo thực tế, không tự tịch thu cọc. |
 | FR-X11 | Hủy trước funding hoặc khi funding chưa đủ và chưa pickup: bên tham gia được rút; hoàn khoản đã nộp, lưu sự kiện hủy; sau đủ funding cần cả hai đồng ý và chưa pickup, hoặc quyết định xử lý. |
 
 ### 5.6 Ví và rút tiền

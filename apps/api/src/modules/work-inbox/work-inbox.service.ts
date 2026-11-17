@@ -249,6 +249,7 @@ export class WorkInboxService {
             [
               {
                 $match: {
+                  demoArchivedAt: { $exists: false },
                   $or: [{ initiatorId: actor._id }, { recipientId: actor._id }],
                   status: {
                     $nin: ['Completed', 'Cancelled', 'Rejected', 'Expired'],

@@ -635,7 +635,11 @@ describe('Private packaging evidence: real MongoDB, HTTP and Sharp', () => {
     db.c.audit_events.countDocuments({ contextId, action });
   const budgetTotal = async () => {
     let total = 0;
-    for (const name of ['listing_media', 'order_packaging_evidence'] as const) {
+    for (const name of [
+      'listing_media',
+      'order_packaging_evidence',
+      'exchange_evidence',
+    ] as const) {
       const [row] = await db.c[name]
         .aggregate<{ total: number }>([
           { $group: { _id: null, total: { $sum: '$reservedBytes' } } },

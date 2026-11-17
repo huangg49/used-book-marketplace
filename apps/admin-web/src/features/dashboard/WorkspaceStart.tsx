@@ -7,6 +7,14 @@ const hints: Record<string, string> = {
     "Duyệt bài đăng của một bản sách; mở chi tiết để xem ảnh và phiên bản trước quyết định.",
   "/review/catalog-requests":
     "Duyệt thông tin đầu sách. Đầu sách khác với bài đăng một bản sách cụ thể.",
+  "/ai-review-checks":
+    "Đối chiếu các bài tự duyệt bằng AI và xem hồ sơ cần kiểm tra lại.",
+  "/operations/exchange-disputes":
+    "Xem khiếu nại Đổi sách, tình trạng giao nhận và bằng chứng trong hồ sơ.",
+  "/support":
+    "Tiếp nhận phản ánh, phân công xử lý và trả lời trong từng yêu cầu.",
+  "/withdrawals":
+    "Đối chiếu yêu cầu rút tiền, thông tin chi và trạng thái của hồ sơ.",
   "/transaction-reviews":
     "Xử lý đánh giá và phản hồi đã đủ điều kiện công bố. Điểm thấp tự nó không phải vi phạm.",
   "/operations/intakes":
@@ -27,8 +35,8 @@ const hints: Record<string, string> = {
     "Tra cứu tài khoản và quyền hiện tại. Danh bạ không tự cấp quyền khóa hoặc mở tài khoản.",
 };
 export function WorkspaceStart({ user }: { user: CurrentUser }) {
-  const groups = navigationGroups(user).filter((g) =>
-    ["review", "operations", "management"].includes(g.id),
+  const groups = navigationGroups(user).filter(
+    (group) => group.id !== "workspace" && group.id !== "simulation",
   );
   if (!groups.length) return null;
   return (

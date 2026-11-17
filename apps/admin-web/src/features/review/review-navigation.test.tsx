@@ -68,6 +68,14 @@ describe("review return context", () => {
       ).toBe(`/review/catalog-requests?status=${status}`);
     },
   );
+  it("preserves a scoped listing search and strips it from another review kind", () => {
+    expect(reviewReturnPath("listings", {
+      reviewReturnTo: "/review/listings?status=PendingReview&ai=None&q=%23AB12CD34&redirect=%2Fusers",
+    })).toBe("/review/listings?status=PendingReview&ai=None&q=%23AB12CD34");
+    expect(reviewReturnPath("catalog-requests", {
+      reviewReturnTo: "/review/catalog-requests?status=Pending&q=hidden",
+    })).toBe("/review/catalog-requests?status=Pending");
+  });
   it("rejects external, cross-kind and malformed return routes rather than navigating untrusted history state", () => {
     for (const state of [
       null,

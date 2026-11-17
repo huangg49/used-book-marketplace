@@ -25,6 +25,7 @@ const labels: Record<string, string> = {
   complete: "xác nhận kiểm tra",
   cancel: "hủy",
   dispute: "báo sự cố",
+  "demo-advance-shipping": "tua hạn gửi sách demo",
 };
 export function ExchangeRecoveryPanel({
   id,

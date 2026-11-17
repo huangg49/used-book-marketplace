@@ -53,7 +53,7 @@ try {
   await expect(page).toHaveURL(detailUrl);
   await expect(add()).toBeEnabled();
   await expect(page.getByRole("link", { name: "Mua ngay", exact: true })).toHaveAttribute("href", `/buy-now/${id}`);
-  await expect(page.getByRole("link", { name: "Gửi đề nghị đổi sách", exact: true })).toHaveAttribute("href", `/chat/start/${id}?intent=Exchange`);
+  await expect(page.getByRole("link", { name: "Đề nghị đổi sách", exact: true })).toHaveAttribute("href", `/exchange/new?book=${id}`);
   checks.push("Both listing keeps real buy-now and exchange entry routes, one main purchase action");
 
   const opener = page.getByRole("button", { name: "Xem ảnh lớn", exact: true });
@@ -116,7 +116,7 @@ try {
     const prices = page.locator('[data-book-detail] [class*="prices"]');
     assert.equal(await prices.locator(":scope > div").count(), mode === "Both" ? 2 : 1);
     if (mode === "Exchange") {
-      await expect(page.getByRole("link", { name: "Gửi đề nghị đổi sách", exact: true })).toHaveAttribute("href", `/chat/start/${id}?intent=Exchange`);
+      await expect(page.getByRole("link", { name: "Đề nghị đổi sách", exact: true })).toHaveAttribute("href", `/exchange/new?book=${id}`);
       await expect(page.getByRole("link", { name: "Thêm vào giỏ sách", exact: true })).toHaveCount(0);
     }
   }

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { shrinkForModel } from '../../src/modules/autofill-assist/autofill-images.js';
-import { autofillModelFromConfig } from '../../src/modules/autofill-assist/autofill-model.js';
+import { nvidiaAutofillModelFromConfig } from '../../src/modules/autofill-assist/autofill-model.js';
 import { IsbnBarcodeReader } from '../../src/modules/autofill-assist/isbn-barcode-reader.js';
 import { bytesOf, photoSignal } from '../../src/modules/listings/auto-review-photos.js';
 import { runAutoReviewPipeline } from '../../src/modules/listings/auto-review-pipeline.js';
@@ -47,7 +47,7 @@ const limit = Number(flag('limit') ?? Infinity);
 const only = flag('only');
 const resultsPath = join(root, 'incoming', 'results.json');
 
-const model = autofillModelFromConfig((key) => process.env[key]);
+const model = nvidiaAutofillModelFromConfig((key) => process.env[key]);
 if (!model) {
   console.error('Provider not configured: AUTOFILL_ENABLED and AUTOFILL_API_KEY are required.');
   process.exit(2);

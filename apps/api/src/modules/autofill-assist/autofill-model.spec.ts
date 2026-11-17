@@ -2,7 +2,7 @@ import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { PriceModelError } from '../price-assist/price-model.js';
 import { AUTOFILL_IMAGE_PROFILE, MAX_INLINE_IMAGE_BYTES, prepareAutofillImages, shrinkForModel } from './autofill-images.js';
-import { autofillModelFromConfig, NvidiaAutofillModel } from './autofill-model.js';
+import { autofillModelFromConfig, NvidiaAutofillModel, OpenAiAutofillModel } from './autofill-model.js';
 
 // Adapter-only tests with a stubbed fetch: no network, no real key.
 const reply = (body: unknown, status = 200) =>
@@ -113,6 +113,52 @@ describe('photo shrinking for the provider', () => {
     expect(detail.length).toBeLessThanOrEqual(MAX_INLINE_IMAGE_BYTES);
     expect(await sharp(detail).metadata()).toMatchObject({ width: 640 });
     expect(await prepareAutofillImages([prose], true)).toEqual(full.slice(0, 1));
+  });
+});
+
+describe('OpenAI autofill adapter', () => {
+  it('sends full photos and the close-up to Responses, with no saved response', async () => {
+    let body: Record<string, unknown> = {};
+    const fetcher: typeof fetch = async (url, init) => {
+      expect(url).toBe('https://api.openai.com/v1/responses');
+      body = JSON.parse(String(init?.body));
+      return reply({
+        status: 'completed', model: 'gpt-5.4-mini-2026-03-17',
+        output: [{ type: 'message', content: [{ type: 'output_text', text: '{"title":"Mắt biếc"}' }] }],
+        usage: { input_tokens: 21, output_tokens: 9 },
+      })(url, init);
+    };
+    const model = new OpenAiAutofillModel({ apiKey: 'test', model: 'gpt-5.4-mini', timeoutMs: 1000, fetcher }, null);
+    const photos = ['data:image/jpeg;base64,YQ==', 'data:image/jpeg;base64,Yg=='];
+    await expect(model.read('rules', 'last image is a close-up', photos)).resolves.toEqual({
+      output: { title: 'Mắt biếc' }, model: 'gpt-5.4-mini-2026-03-17', inputTokens: 21, outputTokens: 9,
+    });
+    expect(body).toMatchObject({ store: false, instructions: 'rules', input: [{ role: 'user', content: [
+      { type: 'input_text', text: 'last image is a close-up' },
+      ...photos.map((image_url) => ({ type: 'input_image', image_url, detail: 'high' })),
+    ] }] });
+  });
+
+  it.each([[429, true], [503, true], [401, false], [400, false]])('routes HTTP %i by transience', async (status, retry) => {
+    const model = new OpenAiAutofillModel({
+      apiKey: 'test', model: 'gpt-5.4-mini', timeoutMs: 1000, fetcher: reply({ error: 'private payload' }, status),
+    }, null);
+    const error = await model.read('rules', 'read', []).catch((e: unknown) => e);
+    expect(error).toMatchObject({ kind: 'ProviderError', message: 'OpenAI request failed', detail: { status } });
+    expect(model.canFallback(error)).toBe(retry);
+    expect(model.fallbackOnEmpty).toBe(false);
+  });
+
+  it('opts into OpenAI separately and only adds NVIDIA fallback when its key exists', () => {
+    const env: Record<string, string> = { AUTOFILL_ENABLED: 'true', AUTOFILL_PROVIDER: 'openai' };
+    const config = (name: string) => env[name];
+    expect(autofillModelFromConfig(config)).toBeNull();
+    env.AUTOFILL_OPENAI_API_KEY = 'test';
+    expect(autofillModelFromConfig(config)).toMatchObject({ model: 'gpt-5.4-mini', fallback: null });
+    env.AUTOFILL_API_KEY = 'other-test';
+    expect(autofillModelFromConfig(config)).toMatchObject({
+      model: 'gpt-5.4-mini', fallback: 'nvidia/nemotron-3.5-super-vl-120b-a12b', supportsDetail: true,
+    });
   });
 });
 

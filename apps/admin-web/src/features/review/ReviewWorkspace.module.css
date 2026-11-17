@@ -154,6 +154,78 @@
   color: var(--shop-wine);
   box-shadow: inset 0 -2px var(--shop-wine);
 }
+.filters .statusFilters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 58%, var(--desk-paper));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--shop-shelf) 70%, var(--desk-paper));
+}
+.filters .statusFilters :global(.button) {
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 3px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
+}
+.filters .statusFilters :global(.button:hover:not(:disabled)) {
+  color: var(--shop-wine);
+  background: color-mix(in srgb, var(--shop-wine) 5%, var(--desk-paper));
+}
+.filters .statusFilters :global(.button[aria-pressed="true"]),
+.filters .statusFilters :global(.button[aria-pressed="true"]:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--shop-wine) 11%, var(--desk-paper));
+  color: var(--shop-wine);
+  font-weight: 650;
+}
+.aiFilter {
+  margin-top: 10px;
+}
+.aiFilter > div {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.aiFilter :global([role="combobox"]) {
+  min-width: 0;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+.aiFilter :global([role="combobox"]) > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.aiFilter :global([role="listbox"]) {
+  border-radius: 9px;
+}
+.listingDesk .queueHead {
+  padding: 12px 14px 7px 18px;
+}
+.listingDesk .queueHead :global(.button) {
+  width: 44px;
+  min-height: 44px;
+  border-radius: 8px;
+  color: var(--shop-wine);
+}
+.listingDesk .queueHead :global(.button:hover:not(:disabled)) {
+  background: var(--shop-shelf);
+  border-color: var(--desk-line);
+}
+.listingDesk .queueSummary {
+  padding: 10px 18px 13px;
+  font-variant-numeric: tabular-nums;
+}
 .queueSummary,
 .queueTime {
   margin: 0;
@@ -271,7 +343,6 @@
 .queue :global(.short-id) {
   display: none;
 }
-.queue :global(.queue-prices),
 .queue :global(.queue-row p) {
   display: flex;
   flex-wrap: wrap;
@@ -338,7 +409,7 @@
   border: 1px solid var(--desk-line);
   border-radius: 16px;
   background: var(--shop-shelf);
-  container-type: inline-size;
+  container: review-dossier / inline-size;
 }
 .sequence {
   flex: none;
@@ -429,10 +500,6 @@
   background: var(--shop-wine);
   color: var(--shop-paper);
 }
-.detail :global(.detail-heading):has(+ .reviewSummary) {
-  margin-bottom: 0;
-  border-radius: 14px 14px 0 0;
-}
 .detail :global(.detail-heading) > div {
   display: flex;
   flex-direction: column;
@@ -454,28 +521,6 @@
   font-size: 12px;
   line-height: 1.6;
 }
-.bookName {
-  margin: 0;
-  max-width: 55ch;
-  font:
-    700 28px/1.4 "Be Vietnam Pro",
-    sans-serif;
-  letter-spacing: -0.025em;
-  overflow-wrap: anywhere;
-  color: var(--shop-paper);
-}
-.bookName :global(.listing-authors) {
-  display: block;
-  margin-top: 8px;
-  color: var(--shop-cream);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.7;
-  letter-spacing: 0;
-}
-.bookName :global(.short-id) {
-  display: none;
-}
 .detail :global(.status-label) {
   flex: none;
   padding: 6px 10px;
@@ -486,38 +531,110 @@
   font-size: 12px;
   white-space: nowrap;
 }
-.reviewSummary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px 28px;
-  margin: 0 0 24px;
-  padding: 16px 24px 20px;
-  background: var(--shop-wine);
-  color: var(--shop-paper);
-  border-radius: 0 0 14px 14px;
-  border-top: 1px solid
-    color-mix(in srgb, var(--shop-cream) 24%, var(--shop-wine));
+.detail .listingHeading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--desk-line);
+  border-top: 3px solid var(--shop-wine);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--desk-paper);
+  color: var(--shop-ink);
 }
-.reviewSummary > div {
-  flex: 1 1 auto;
+.detail .listingHeading > div {
+  display: contents;
+}
+.listingHeading .recordTitle {
+  grid-area: 1 / 1;
+  min-width: 0;
+  width: fit-content;
+  color: var(--shop-wine);
+  font-size: 12px;
+  font-weight: 650;
+}
+.detail .listingHeading :global(.status-label) {
+  grid-area: 1 / 2;
+  color: var(--shop-wine);
+  background: color-mix(in srgb, var(--shop-wine) 8%, var(--desk-paper));
+  border-radius: 6px;
+}
+.detail .listingHeading :global(.status-label[data-state="PendingReview"]) {
+  background: color-mix(in srgb, var(--shop-yellow) 28%, var(--desk-paper));
+}
+.detail .listingHeading :global(.status-label[data-state="Approved"]) {
+  background: color-mix(in srgb, var(--shop-mint) 45%, var(--desk-paper));
+  color: var(--shop-ink);
+}
+.bookName {
+  grid-area: 2 / 1 / auto / -1;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 720;
+  line-height: 1.32;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  color: var(--shop-ink);
+}
+.bookName :global(.listing-authors) {
+  display: block;
+  margin-top: 5px;
+  color: var(--desk-muted);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.55;
+  letter-spacing: 0;
+}
+.bookName :global(.short-id) {
+  display: none;
+}
+.detail .listingHeading p {
+  grid-area: 3 / 1 / auto / -1;
+  color: var(--desk-muted);
+  font-size: 11px;
+}
+.reviewSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  margin: 0 0 12px;
+  padding: 11px 16px 12px;
+  border: 1px solid var(--desk-line);
+  border-radius: 0 0 12px 12px;
+  background: color-mix(in srgb, var(--shop-shelf) 64%, var(--desk-paper));
 }
 .reviewSummary dt {
-  margin-bottom: 6px;
-  color: var(--shop-cream);
-  font-size: 12px;
+  margin: 0 0 3px;
+  color: var(--desk-muted);
+  font-size: 11px;
+  line-height: 1.45;
 }
 .reviewSummary dd {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
-  font-weight: 600;
+  color: var(--shop-ink);
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .reviewSummary .summaryPrice dd {
-  font-size: 24px;
-  line-height: 1.2;
-  color: var(--shop-yellow);
-  font-weight: 700;
+  color: var(--shop-wine);
+  font-weight: 720;
+}
+@container review-dossier (min-width: 454px) {
+  .bookName {
+    font-size: 24px;
+  }
+  .reviewSummary {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-template-columns: none;
+  }
 }
 .catalogGate {
   display: flex;
@@ -600,7 +717,7 @@
   color: var(--desk-muted);
   font-size: 12px;
 }
-.evidenceNav :global(.button):not(.jumpDecision) {
+.evidenceNav :global(.button) {
   flex: 1;
   min-width: 0;
 }
@@ -609,10 +726,6 @@
   background: var(--shop-wine);
   box-shadow: none;
   font-weight: 600;
-}
-.jumpDecision {
-  flex: 0 0 44px;
-  min-width: 44px;
 }
 .detail :global(.section) {
   padding: 20px;
@@ -721,7 +834,7 @@
   background: var(--shop-paper);
   box-shadow: none;
 }
-.detail :global(.decision-panel h3) {
+.detail :global(.decision-panel > h3) {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -989,7 +1102,7 @@
   color: var(--shop-cream);
   background: var(--shop-wine);
 }
-@container (min-width:740px) {
+@container review-dossier (min-width: 740px) {
   .detail {
     display: flex;
     flex-direction: column;
@@ -1004,9 +1117,6 @@
     min-height: 0;
     align-items: stretch;
     gap: 20px;
-  }
-  .jumpDecision {
-    display: none;
   }
   .evidence,
   .decision {
@@ -1048,13 +1158,6 @@
   .filters :global(.button) {
     padding-inline: 2px;
     font-size: 11px;
-  }
-  .reviewSummary {
-    gap: 16px;
-    padding: 16px;
-  }
-  .reviewSummary > div {
-    flex-basis: calc(50% - 8px);
   }
 }
 @media (max-width: 760px) {
@@ -1140,5 +1243,402 @@
   :global(div):has(> :global(.workspace-frame) .workspace) > :global(header) {
     position: static;
     flex: none;
+  }
+}
+
+.listingPageHeading {
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  min-height: 44px;
+  margin-bottom: 12px;
+}
+.listingPageHeading h1,
+.listingPageHeading .queueToggle {
+  margin: 0;
+}
+.listingPageHeading .queueToggle {
+  align-self: center;
+}
+.listingDesk .sequence {
+  flex-wrap: wrap;
+  min-height: 44px;
+  gap: 0 12px;
+  padding: 2px 16px;
+}
+.listingDesk .sequence > span {
+  margin-inline-end: auto;
+}
+.listingDesk .sequenceBack {
+  min-height: 40px;
+  margin-inline-end: 8px;
+}
+.reviewToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 0 14px;
+}
+.reviewToolbar .evidenceNav {
+  flex: 1 1 270px;
+  min-width: 0;
+  margin: 0;
+}
+.reviewToolbar .evidenceNav :global(.button[aria-pressed="true"]) {
+  background: color-mix(in srgb, var(--shop-wine) 8%, var(--desk-paper));
+  color: var(--shop-wine);
+  box-shadow: inset 0 -2px 0 var(--shop-wine);
+}
+.reviewToolbar .openDecision {
+  margin-inline-start: auto;
+  min-height: 48px;
+  gap: 7px;
+  padding: 6px 14px;
+  border-color: var(--shop-wine);
+  border-radius: 9px;
+  background: var(--shop-wine);
+  color: var(--desk-paper);
+  font-size: 12px;
+  font-weight: 650;
+  box-shadow: none;
+}
+.reviewToolbar .openDecision:hover {
+  background: var(--shop-wine-hover);
+}
+.reviewToolbar .openDecision[aria-expanded="true"] {
+  border-color: var(--shop-line);
+  background: var(--desk-paper);
+  color: var(--shop-wine);
+}
+.reviewToolbar .openDecision[aria-expanded="true"]:hover {
+  background: var(--shop-shelf);
+}
+.draftCount {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--shop-paper) 18%, var(--shop-wine));
+  font-variant-numeric: tabular-nums;
+}
+.decision[hidden] {
+  display: none;
+}
+.decisionTools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin: 0 0 8px;
+}
+.decisionTools :global(.button) {
+  flex: 0 1 auto;
+  min-height: 40px;
+  padding: 6px 8px;
+  gap: 6px;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--shop-wine);
+  font-size: 12px;
+}
+.decisionTools :global(.button:hover:not(:disabled)) {
+  background: var(--desk-paper);
+  border-color: var(--shop-line);
+}
+.decisionSubject {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  margin-block: 14px;
+  border: 1px solid var(--desk-line);
+  border-radius: 8px;
+  background: var(--shop-shelf);
+  overflow-wrap: anywhere;
+}
+.decisionSubject > strong {
+  line-height: 1.5;
+  color: var(--shop-ink);
+}
+.decisionSubject > span {
+  color: var(--desk-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.decisionSubject :global(.short-id) {
+  display: none;
+}
+.listingDetail .catalogGate {
+  margin-bottom: 16px;
+  padding-block: 12px;
+}
+.listingDetail :global(.decision-panel) {
+  padding: 16px;
+  border-top: 3px solid var(--shop-wine);
+}
+.listingDetail :global(.decision-panel > h3) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  padding: 0 0 10px;
+  margin: 0 0 10px;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid var(--desk-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  font-size: 16px;
+}
+.listingDetail :global(.decision-panel > .muted) {
+  margin-bottom: 10px;
+}
+.listingDetail :global(.decision-panel fieldset) {
+  margin: 14px 0;
+}
+.listingDetail :global(.check) {
+  margin: 0;
+  padding: 9px 6px;
+  border-radius: 0;
+  border-bottom-color: var(--desk-line);
+  background: var(--desk-paper);
+}
+.listingDetail :global(.check:has(input:checked)) {
+  border-color: color-mix(in srgb, var(--shop-mint) 76%, var(--shop-control));
+  border-radius: 6px;
+}
+@container (min-width: 981px) {
+  .desk.listingDesk {
+    grid-template-columns: clamp(258px, 24%, 284px) minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+@container review-dossier (min-width: 740px) {
+  .listingDetail {
+    padding-inline: 16px;
+  }
+  .listingDetail :global(.detail-layout) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .listingDetail[data-listing-decision-open] :global(.detail-layout) {
+    grid-template-columns: minmax(0, 1fr) clamp(250px, 30%, 320px);
+    gap: 18px;
+  }
+  .listingDetail:not([data-listing-decision-open]) .evidence {
+    padding-inline: 4px 10px;
+  }
+}
+@media (max-width: 760px) {
+  .listingDetail {
+    padding-inline: 12px;
+  }
+  .detail .listingHeading,
+  .reviewSummary {
+    padding-inline: 12px;
+  }
+}
+
+@container (min-width: 981px) and (max-width: 1180px) {
+  .desk.listingDesk:has([data-listing-decision-open]) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .listingDesk:has([data-listing-decision-open]) .mobileHidden,
+  .listingDesk:has([data-listing-decision-open]):not(:has(.mobileHidden)) .dossier,
+  .listingPageHeading:has(+ .listingDesk [data-listing-decision-open]) .headerMeta {
+    display: none;
+  }
+  .listingPageHeading:has(+ .listingDesk [data-listing-decision-open]) .queueToggle {
+    display: inline-flex;
+  }
+}
+@container review-dossier (max-width: 450px) {
+  .reviewToolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .reviewToolbar .evidenceNav {
+    padding: 3px;
+  }
+  .reviewToolbar .evidenceNav :global(.button) {
+    font-size: 10px;
+    padding-inline: 3px;
+    white-space: normal;
+  }
+  .reviewToolbar .openDecision {
+    padding-inline: 8px;
+    max-width: 108px;
+    white-space: normal;
+    line-height: 1.4;
+    text-align: center;
+  }
+  .reviewToolbar .openDecision > svg {
+    display: none;
+  }
+}
+
+.leavePrompt {
+  max-width: min(440px, calc(100vw - 32px));
+}
+.leavePrompt :global(.actions) {
+  display: grid;
+  gap: 10px;
+}
+.leavePrompt :global(.actions .button) {
+  min-height: 44px;
+}
+
+.listingDesk .queue {
+  overflow: hidden;
+}
+.listingDesk .queueScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-control) transparent;
+  scroll-padding-block: 6px;
+}
+.queueSearch {
+  display: flex;
+  gap: 5px;
+  margin: 10px 14px 0;
+}
+.searchField {
+  display: flex;
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+.searchField input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 9px;
+  border: 1px solid var(--desk-line);
+  border-radius: 7px;
+  background: var(--desk-paper);
+  color: var(--shop-ink);
+  font: inherit;
+  font-size: 0.75rem;
+}
+.searchField:has(.clearSearch) input {
+  padding-inline-end: 41px;
+}
+.searchField input::-webkit-search-cancel-button {
+  display: none;
+}
+.queueSearch > :global(.button),
+.searchField .clearSearch {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 7px;
+  box-shadow: none;
+  color: var(--shop-wine);
+}
+.queueSearch > :global(.button) {
+  background: color-mix(in srgb, var(--shop-wine) 6%, var(--desk-paper));
+}
+.searchField .clearSearch {
+  position: absolute;
+  inset: 1px 1px 1px auto;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+.listingDesk .queue :global(.queue-row) {
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  padding: 8px 9px;
+  gap: 8px;
+}
+.listingDesk .queueCover {
+  width: 44px;
+  height: 54px;
+}
+.listingDesk .queueCover > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.listingDesk .queueCover:has(> button) > svg {
+  display: none;
+}
+.listingDesk .queueCover > button {
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  justify-content: center;
+  font-size: 0;
+  gap: 0;
+}
+.queue :global(.queue-row) .listingRowLink,
+.queue :global(.queue-row).selected .listingRowLink {
+  grid-column: 2;
+  min-height: 50px;
+  min-width: 0;
+  padding: 5px 2px;
+  gap: 5px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--shop-ink);
+  font-weight: 400;
+}
+.queue :global(.queue-row) .listingRowLink > svg {
+  flex: none;
+  color: var(--shop-wine);
+}
+.listingRowLink .queueIdentity h2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0 0 4px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  text-align: left;
+}
+.listingRowMeta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  color: var(--desk-muted);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.listingRowMeta > span {
+  color: var(--shop-wine);
+  font-weight: 650;
+}
+.listingRowAi {
+  display: block;
+  margin-top: 4px;
+  color: var(--shop-wine);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+@media (max-height: 650px) {
+  .workspace:has(.listingDesk) .heading {
+    margin-bottom: 8px;
+  }
+  .workspace:has(.listingDesk) .heading p {
+    display: none;
+  }
+  .listingDesk .queueTime {
+    display: none;
+  }
+  .listingDesk .queueHead {
+    padding-block: 2px;
+  }
+  .listingDesk .queueSummary {
+    padding-block: 5px;
   }
 }

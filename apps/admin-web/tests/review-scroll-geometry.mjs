@@ -47,18 +47,27 @@ export async function assertReviewScrollOwnership(page) {
   await page.waitForTimeout(120);
   assert.equal(await page.evaluate(() => scrollY), 0, "Wheel must not chain to the document");
   assert(Math.abs((await heading.boundingBox()).y - fixedHeading.y) <= 1);
-  await scroller.focus();
-  await page.keyboard.press("Home");
-  await page.keyboard.press("Control+Home");
-  await scroller.evaluate(el => el.scrollTo({ top: 0, behavior: "instant" }));
-  await page.keyboard.press("PageDown");
-  await page.waitForFunction(({ label, own }) => document.querySelector(own ? `[aria-label="${label}"]` : "[data-review-dossier]").scrollTop > 0, { label: "Nội dung và bằng chứng", own: geometry.ownScroll });
+  async function pageDown(pane) {
+    await pane.evaluate(el => el.scrollTo({ top: 0, behavior: "instant" }));
+    await pane.focus();
+    assert.equal(await pane.evaluate(el => el.ownerDocument.activeElement === el), true);
+    await pane.evaluate(el => {
+      delete el.dataset.qaKeyboardScrollSettled;
+      const onEnd = () => {
+        if (el.scrollTop <= 0) return;
+        el.dataset.qaKeyboardScrollSettled = "true";
+        el.removeEventListener("scrollend", onEnd);
+      };
+      el.addEventListener("scrollend", onEnd);
+    });
+    await page.keyboard.press("PageDown");
+    // The browser animates PageDown. Compare pane offsets after it has settled.
+    await page.waitForFunction(() => document.activeElement?.dataset.qaKeyboardScrollSettled === "true");
+  }
+  await pageDown(scroller);
   if (geometry.ownScroll) {
     const before = await reader.evaluate(el => el.scrollTop);
-    await decision.focus();
-    await page.keyboard.press("PageDown");
-    await page.waitForTimeout(180);
-    assert(await decision.evaluate(el => el.scrollTop > 0), "Decision must support keyboard scrolling");
+    await pageDown(decision);
     assert.equal(await reader.evaluate(el => el.scrollTop), before, "Decision keyboard scrolling must not move the reader");
     await decision.evaluate(el => el.scrollTo({ top: 0, behavior: "instant" }));
   }

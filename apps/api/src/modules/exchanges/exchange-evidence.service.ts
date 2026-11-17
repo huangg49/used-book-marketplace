@@ -64,7 +64,7 @@ export class ExchangeEvidenceService {
     assigned = true,
   ) {
     const e = await tx.c.exchanges.findOne({ _id: id });
-    if (!e) throw notFound();
+    if (!e || e.demoArchivedAt) throw notFound();
     if (operations) {
       staff(actor);
       if ([e.initiatorId, e.recipientId].includes(actor._id))

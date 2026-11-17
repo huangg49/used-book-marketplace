@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { Send, ArrowDown } from 'lucide-react';
+import { Send, ArrowDown, MessageCircle } from 'lucide-react';
 import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, clipChatMessage } from '@used-books/session-client';
 import type { ExchangeUser } from '../../../lib/mock/exchangeMine';
 import type { ChatMessage } from '../../../lib/mock/exchangeDetail';
 import styles from './ChatPanel.module.css';
 
 interface ChatPanelProps {
+    inDrawer?: boolean;
+    visible?: boolean;
     messages: ChatMessage[];
     partner: ExchangeUser;
     onSendMessage: (text: string) => Promise<void>;
@@ -25,7 +27,7 @@ interface ChatPanelProps {
     onLoadOlder?: () => Promise<{ isFetchNextPageError: boolean }>;
 }
 
-export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavailable, giveBooks, receiveBooks, statusText, guidance, isLoading, loadError, isRefreshing, onRetry, hasOlder, isLoadingOlder, olderError, onLoadOlder }: ChatPanelProps) {
+export function ChatPanel({ inDrawer, visible = true, messages, partner, onSendMessage, isReadOnly, unavailable, giveBooks, receiveBooks, statusText, guidance, isLoading, loadError, isRefreshing, onRetry, hasOlder, isLoadingOlder, olderError, onLoadOlder }: ChatPanelProps) {
     const [inputText, setInputText] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -65,12 +67,12 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
     };
 
     useEffect(() => {
-        if (messages.length > 0) {
+        if (visible && messages.length > 0) {
             if (!showScrollBtn) {
                 scrollToBottom();
             }
         }
-    }, [messages.length, showScrollBtn]);
+    }, [messages.length, showScrollBtn, visible]);
 
     useEffect(() => {
         scrollToBottom();
@@ -104,7 +106,8 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
     };
 
     return (
-        <section id="exchange-chat" className={styles.chatContainer} data-unavailable={unavailable || undefined} aria-label={`Tin nhắn Đổi sách với ${partner.username}`}>
+        <section id="exchange-chat" className={styles.chatContainer} data-drawer={inDrawer || undefined} data-unavailable={unavailable || undefined} aria-label={`Tin nhắn Đổi sách với ${partner.username}`}>
+            {!inDrawer && <>
             <div className={styles.chatHeader}>
                 <div className={styles.avatar}>
                     {partner.username.charAt(0).toUpperCase()}
@@ -122,6 +125,8 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                 <p>{guidance}</p>
                 {!isReadOnly && <a href="#exchange-actions">Xem bước tiếp theo trong giao dịch</a>}
             </div>
+            </>}
+
             {loadError && <div className={styles.loadError} role="alert"><p>{unavailable ? "Bạn hiện không thể xem tin nhắn trong giao dịch này." : "Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại."}</p><button type="button" onClick={onRetry} disabled={isRefreshing}>Tải lại tin nhắn</button></div>}
 
             <div 
@@ -140,7 +145,17 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                     </div>
                 )}
                 {isLoading && <p role="status">Đang tải tin nhắn trao đổi…</p>}
-                {!isLoading && !loadError && messages.length === 0 && <div className={styles.emptyState}><h3>Trao đổi về những cuốn sách này</h3><p>Hỏi về tình trạng sách hoặc thông tin giao nhận. Các thay đổi đề nghị cần được xác nhận trong phần Hành động của bạn.</p></div>}
+                {!isLoading && !loadError && messages.length === 0 && <div className={styles.emptyState}>
+                    {inDrawer ? (
+                        <div className={styles.emptyDrawerCard}>
+                            <div className={styles.emptyIconCircle}>
+                                <MessageCircle size={28} strokeWidth={2} aria-hidden="true" />
+                            </div>
+                            <h3>Hộp thoại thư từ trao đổi</h3>
+                            <p>Gửi lời chào đến <strong>{partner.username}</strong> để hẹn lịch giao nhận hoặc trao đổi về tình trạng sách nhé!</p>
+                        </div>
+                    ) : <><h3>Trao đổi về những cuốn sách này</h3><p>Hỏi về tình trạng sách hoặc thông tin giao nhận. Các thay đổi đề nghị cần được xác nhận trong phần Hành động của bạn.</p></>}
+                </div>}
                 {messages.map((msg) => {
                     const isMine = msg.senderRole === 'viewer';
                     const isSystem = msg.senderRole === 'system';
@@ -182,15 +197,22 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                     </div>
                 ) : (
                     <form onSubmit={handleSend}>
-                        <label htmlFor="chatInput" className={styles.inputLabel}>Nhắn cho {partner.username}</label>
+                        <div className={styles.inputHeaderRow}>
+                            <label htmlFor="chatInput" className={styles.inputLabel}>{inDrawer ? "Tin nhắn" : `Nhắn cho ${partner.username}`}</label>
+                            {!isReadOnly && !unavailable && (
+                                <span className={styles.charCount} aria-live="polite">
+                                    {[...inputText].length}/{CHAT_MESSAGE_LIMIT}
+                                </span>
+                            )}
+                        </div>
                         {sendError && <p className={styles.sendError} role="alert">{sendError}</p>}
-                        <div className={styles.inputForm}>
+                        <div className={styles.inputForm} data-focus-surface={inDrawer || undefined}>
                         <textarea 
                             id="chatInput"
                             value={inputText}
                             onChange={(e) => { setInputText(clipChatMessage(e.target.value)); setSendError(undefined); }}
                             onKeyDown={handleKeyDown}
-                            placeholder="Trao đổi về sách hoặc việc giao nhận…"
+                            placeholder={inDrawer ? "Viết tin nhắn…" : "Trao đổi về sách hoặc việc giao nhận…"}
                             className={styles.textarea}
                             rows={1}
                             disabled={isSending}
@@ -200,9 +222,6 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                         </button>
                         </div>
                     </form>
-                )}
-                {!isReadOnly && !unavailable && (
-                    <div className={styles.charCount}>{[...inputText].length}/{CHAT_MESSAGE_LIMIT}</div>
                 )}
             </div>
         </section>

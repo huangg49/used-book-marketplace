@@ -21,11 +21,13 @@ export function ReviewGallery({
   ids,
   onReady,
   revisionNumber,
+  primary = false,
 }: {
   listingId: string;
   ids: string[];
   onReady?: (id: string, ready: boolean) => void;
   revisionNumber: number;
+  primary?: boolean;
 }) {
   const captionId = useId();
   const [active, setActive] = useState(0);
@@ -116,7 +118,7 @@ export function ReviewGallery({
   const next = (active + 1) % ids.length;
   const previous = (active - 1 + ids.length) % ids.length;
   return (
-    <div className={styles.gallery} ref={root} tabIndex={-1}>
+    <div className={styles.gallery} data-primary={primary || undefined} ref={root} tabIndex={-1}>
       {ids.length === 0 && <p className="muted">Bản gửi này chưa có ảnh.</p>}
       {current && ready[active] && (
         <button

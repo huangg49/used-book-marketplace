@@ -2,15 +2,17 @@ import { usePagedCollection } from "../components/Pagination/usePagedCollection"
 import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ApiError } from "@used-books/session-client";
 import {
+  ArrowLeftRight,
   ArrowRight,
   BookOpen,
   Calendar,
   CheckCircle2,
   Clock,
-  Filter,
+  Gavel,
+  List,
   MessageCircle,
   Package,
   ShoppingBag,
@@ -39,6 +41,13 @@ export function DirectOrderPage() {
 type RoleFilter = "all" | "Buyer" | "Seller";
 type StatusFilter = "all" | "in_progress" | "completed" | "cancelled";
 
+const STATUS_FILTERS = [
+  { value: "all", label: "Tất cả trạng thái" },
+  { value: "in_progress", label: "Đang xử lý" },
+  { value: "completed", label: "Đã hoàn tất" },
+  { value: "cancelled", label: "Đã hủy / hết hạn" },
+] as const;
+
 const IN_PROGRESS_STATES = [
   "AwaitingPayment",
   "PendingSellerConfirmation",
@@ -53,6 +62,7 @@ export function DirectOrderListPage() {
   const auth = useSession();
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const allOrdersFilter = useRef<HTMLButtonElement>(null);
 
   const pages = useInfiniteQuery({
     queryKey: [
@@ -91,35 +101,25 @@ export function DirectOrderListPage() {
   }, [inaccessible, resetPagination]);
   const filteredItems = collection.items;
 
-  const buyerCount = useMemo(
-    () => allItems.filter((o) => o.role === "Buyer").length,
-    [allItems],
-  );
-  const sellerCount = useMemo(
-    () => allItems.filter((o) => o.role === "Seller").length,
-    [allItems],
-  );
+  const buyerCount = allItems.filter((order) => order.role === "Buyer").length;
+  const sellerCount = allItems.filter((order) => order.role === "Seller").length;
+  const roleOptions = [
+    { value: "all", label: "Tất cả", count: allItems.length, icon: List },
+    { value: "Buyer", label: "Đơn mua", count: buyerCount, icon: ShoppingBag },
+    { value: "Seller", label: "Đơn bán", count: sellerCount, icon: Store },
+  ] as const;
 
   return (
     <div className={styles.container}>
-      {/* Page Header */}
-      <header className={styles.dashboardHeader}>
+      <header className={`${styles.dashboardHeader} ${styles.listHeader}`}>
         <div>
           <h1 className={styles.dashboardTitle}>Đơn hàng của tôi</h1>
           <p className={styles.dashboardSubtitle}>
-            Đây là đơn mua/bán trực tiếp. Mở chi tiết để xem bước tiếp theo và thời hạn của từng đơn.
+            Theo dõi đơn mua và bán trực tiếp.
           </p>
         </div>
-
-        {allItems.length > 0 && (
-          <div className={styles.statsBadge}>
-            <span className={styles.statsNum}>{allItems.length}</span>
-            <span className={styles.statsLabel}>{pages.hasNextPage ? "Đơn đã tải" : "Tổng số đơn"}</span>
-          </div>
-        )}
       </header>
 
-      <nav className={styles.filterBar} aria-label="Loại giao dịch"><Link to="/my-auctions">Đơn thắng đấu giá ở Đấu giá của tôi</Link><Link to="/exchange/mine">Trao đổi của tôi</Link><Link to="/guide?task=buy">Cách mua sách</Link></nav>
       {auth.status !== "authenticated" ? (
         <div className={styles.loginCard}>
           <ShoppingBag size={40} aria-hidden="true" />
@@ -131,67 +131,55 @@ export function DirectOrderListPage() {
         </div>
       ) : (
         <>
-          {/* Filter Bar */}
-          <div className={styles.filterBar}>
-            {/* Role Tabs */}
-            <div className={styles.roleTabs} role="tablist" aria-label="Lọc theo vai trò">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={roleFilter === "all"}
-                className={`${styles.roleTab} ${roleFilter === "all" ? styles.roleTabActive : ""}`}
-                onClick={() => setRoleFilter("all")}
-              >
-                <span>Tất cả</span>
-                {!inaccessible && <span className={styles.tabBadge}>{allItems.length}</span>}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={roleFilter === "Buyer"}
-                className={`${styles.roleTab} ${roleFilter === "Buyer" ? styles.roleTabActive : ""}`}
-                onClick={() => setRoleFilter("Buyer")}
-              >
-                <ShoppingBag size={14} aria-hidden="true" />
-                <span>Đơn mua</span>
-                {!inaccessible && <span className={styles.tabBadge}>{buyerCount}</span>}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={roleFilter === "Seller"}
-                className={`${styles.roleTab} ${roleFilter === "Seller" ? styles.roleTabActive : ""}`}
-                onClick={() => setRoleFilter("Seller")}
-              >
-                <Store size={14} aria-hidden="true" />
-                <span>Đơn bán</span>
-                {!inaccessible && <span className={styles.tabBadge}>{sellerCount}</span>}
-              </button>
+          <div className={styles.orderControls}>
+            <div className={styles.filterBar}>
+              <div className={styles.roleTabs} role="group" aria-label="Lọc theo vai trò">
+                {roleOptions.map(({ value, label, count, icon: Icon }) => (
+                  <button
+                    key={value}
+                    ref={value === "all" ? allOrdersFilter : undefined}
+                    type="button"
+                    aria-pressed={roleFilter === value}
+                    className={styles.roleTab}
+                    onClick={() => setRoleFilter(value)}
+                  >
+                    <Icon size={15} aria-hidden="true" />
+                    <span>{label}</span>
+                    {!inaccessible && pages.data && !pages.hasNextPage && (
+                      <span className={styles.tabBadge}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className={styles.statusChips} role="group" aria-label="Lọc theo trạng thái">
+                {STATUS_FILTERS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={statusFilter === value}
+                    className={styles.chip}
+                    onClick={() => setStatusFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Status Filter Chips */}
-            <div className={styles.statusChips} role="group" aria-label="Lọc theo trạng thái">
-              <span className={styles.filterIconLabel}>
-                <Filter size={13} aria-hidden="true" />
-              </span>
-              {(
-                [
-                  { value: "all", label: "Tất cả trạng thái" },
-                  { value: "in_progress", label: "Đang xử lý" },
-                  { value: "completed", label: "Đã hoàn tất" },
-                  { value: "cancelled", label: "Đã hủy / hết hạn" },
-                ] as const
-              ).map((chip) => (
-                <button
-                  key={chip.value}
-                  type="button"
-                  className={`${styles.chip} ${statusFilter === chip.value ? styles.chipActive : ""}`}
-                  onClick={() => setStatusFilter(chip.value)}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
+            <nav className={styles.relatedLinks} aria-label="Giao dịch và hướng dẫn liên quan">
+              <Link to={ROUTES.myAuctions}>
+                <Gavel size={16} aria-hidden="true" /> Đơn thắng đấu giá
+              </Link>
+              <Link to={ROUTES.exchangeMine}>
+                <ArrowLeftRight size={16} aria-hidden="true" /> Trao đổi của tôi
+              </Link>
+              <Link to="/guide?task=buy">
+                <BookOpen size={16} aria-hidden="true" /> Cách mua sách
+              </Link>
+            </nav>
           </div>
 
           {/* Loading Skeleton */}
@@ -230,7 +218,7 @@ export function DirectOrderListPage() {
           {!pages.isPending && !pages.isError && filteredItems.length === 0 && (
             <div className={styles.emptyCard}>
               <div className={styles.emptyIconWrap}>
-                <BookOpen size={36} aria-hidden="true" />
+                <ShoppingBag size={29} aria-hidden="true" />
               </div>
               <h3>
                 {pages.hasNextPage
@@ -243,19 +231,33 @@ export function DirectOrderListPage() {
                 {pages.hasNextPage
                   ? "Bấm Sau để tìm tiếp trong những đơn cũ hơn, hoặc đổi bộ lọc."
                   : allItems.length === 0
-                  ? "Khám phá hàng ngàn bản sách cũ trên kệ hoặc đăng cuốn sách của bạn để kết nối với người đọc khác."
+                  ? "Tìm một bản sách để mua hoặc đăng sách bạn muốn bán."
                   : "Thử thay đổi bộ lọc vai trò hoặc trạng thái để xem các đơn hàng khác."}
               </p>
-              <div className={styles.emptyActions}>
-                <Link className={styles.primaryBtn} to={ROUTES.search}>
-                  <BookOpen size={16} aria-hidden="true" />
-                  <span>Tìm sách để mua</span>
-                </Link>
-                <Link className={styles.secondaryBtn} to={ROUTES.sell}>
-                  <Package size={16} aria-hidden="true" />
-                  <span>Đăng bán sách của bạn</span>
-                </Link>
-              </div>
+              {(roleFilter !== "all" || statusFilter !== "all") ? (
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={() => {
+                    allOrdersFilter.current?.focus();
+                    setRoleFilter("all");
+                    setStatusFilter("all");
+                  }}
+                >
+                  Xóa bộ lọc
+                </button>
+              ) : allItems.length === 0 && !pages.hasNextPage ? (
+                <div className={styles.emptyActions}>
+                  <Link className={styles.primaryBtn} to={ROUTES.search}>
+                    <BookOpen size={16} aria-hidden="true" />
+                    Tìm sách để mua
+                  </Link>
+                  <Link className={styles.secondaryBtn} to={ROUTES.sell}>
+                    <Package size={16} aria-hidden="true" />
+                    Đăng bán sách
+                  </Link>
+                </div>
+              ) : null}
             </div>
           )}
 

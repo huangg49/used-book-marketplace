@@ -97,6 +97,43 @@ try {
     );
     await p.screenshot({ path: path.join(artifacts, name + ".png"), fullPage: true });
   };
+  const dashboardQueue = (p) => p.getByRole("complementary", {
+    name: /Đến lượt xử lý|Hàng chờ đã trống/,
+  });
+  const checkDashboard = async (p, width, admin, largeText = false) => {
+    await p.setViewportSize({ width, height: 844 });
+    if (largeText) await p.addStyleTag({ content: "html{font-size:130% !important}" });
+    const refresh = p.getByRole("button", { name: "Cập nhật tổng quan" });
+    await expectBrowser(refresh).toBeEnabled();
+    await p.evaluate(() => document.fonts.ready);
+    await p.evaluate(() => window.scrollTo(0, 0));
+    const queue = dashboardQueue(p);
+    await queue.waitFor();
+    const metrics = p.locator('[aria-label="Số liệu kiểm duyệt"]');
+    const boardBox = await queue.boundingBox();
+    const metricsBox = await metrics.boundingBox();
+    if (width <= 720) {
+      assert(boardBox.y + boardBox.height <= metricsBox.y, "Mobile queue must appear before statistics");
+      const links = await queue.getByRole("link").all();
+      for (const link of links) {
+        const box = await link.boundingBox();
+        assert(box.height >= 44 && box.y + box.height < 844, "Queues must be tappable on the first screen");
+      }
+    } else {
+      assert(metricsBox.y + metricsBox.height <= boardBox.y, "Desktop retains its statistics row above the chart and queue");
+    }
+    const listingQueue = queue.getByRole("link", { name: /^Bài đăng sách/ });
+    assert.equal(await listingQueue.getAttribute("href"), "/review/listings?status=PendingReview");
+    const catalogQueue = queue.getByRole("link", { name: /^Đầu sách/ });
+    assert.equal(await catalogQueue.count(), admin ? 1 : 0);
+    if (admin) assert.equal(await catalogQueue.getAttribute("href"), "/review/catalog-requests?status=Pending");
+    if (!admin) {
+      const pointTasks = p.getByRole("region", { name: "Việc tại điểm" });
+      assert.equal((await pointTasks.boundingBox()).width, boardBox.width);
+    }
+    await shot(p, `dashboard-${admin ? "admin" : "staff"}-${width}`);
+    return listingQueue;
+  };
   const login = async (
     p,
     route = "/review/listings",
@@ -116,15 +153,9 @@ try {
       .locator(`a[href='/review/listings/${fixture.listings[index]}?status=PendingReview']`)
       .first()
       .click();
-    await p.getByLabel("Lý do từ chối", { exact: true }).waitFor();
+    await click(p, "Kiểm duyệt bài đăng");
   };
   const p = await page();
-  let releaseQueue;
-  const queueGate = new Promise((resolve) => { releaseQueue = resolve; });
-  await p.route("**/operations/listings?*", async (route) => {
-    await queueGate;
-    await route.abort("failed");
-  });
   await login(p, "/");
   await p
     .getByRole("heading", { name: /^Tổng quan\.?$/, exact: true })
@@ -138,11 +169,22 @@ try {
   assert.equal(await commandDialog.getByRole("option").count(), 1);
   await commandInput.press("Enter");
   await p.waitForURL(origin + "/users");
+  const nav = p.getByRole("navigation", { name: "Khu vực quản trị" });
+  const accounts = nav.getByRole("button", { name: "Tài khoản & ví", exact: true });
+  const cases = nav.getByRole("button", { name: "Hỗ trợ & khiếu nại", exact: true });
+  await expectBrowser(accounts).toHaveAttribute("aria-expanded", "true");
+  await expectBrowser(nav.getByRole("link", { name: "Quản lý người dùng", exact: true }))
+    .toHaveAttribute("aria-current", "page");
+  await cases.focus();
+  await p.keyboard.press("Enter");
   const directorySearch = p.getByLabel("Tìm theo tên hoặc email", { exact: true });
   await directorySearch.fill("staff@");
   await directorySearch.press("Enter");
   await p.waitForURL((url) => url.searchParams.get("q") === "staff@");
   await focused(directorySearch);
+  await expectBrowser(cases).toHaveAttribute("aria-expanded", "true");
+  await expectBrowser(accounts).toHaveAttribute("aria-expanded", "false");
+  await expectBrowser(nav.getByRole("region", { name: "Tài khoản & ví", exact: true })).toHaveAttribute("data-current", "true");
   await p.getByRole("combobox", { name: "Trạng thái", exact: true }).click();
   await p.getByRole("option", { name: "Đang hoạt động", exact: true }).click();
   await p.waitForURL((url) => url.searchParams.get("status") === "ACTIVE");
@@ -172,8 +214,11 @@ try {
   await p.unroute("**/operations/users?*", failDirectory);
   await click(p, "Thử tải lại");
   await p.getByText(/Đang giữ danh sách lần tải trước/).waitFor({ state: "hidden" });
-  await p.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await p.getByRole("link", { name: "Tổng quan", exact: true }).click();
   await p.getByRole("heading", { name: /^Tổng quan\.?$/, exact: true }).waitFor();
+  await checkDashboard(p, 1440, true);
+  await checkDashboard(p, 390, true);
+  await p.setViewportSize({ width: 1440, height: 1000 });
   await p.goBack();
   await p.getByRole("heading", { name: "Người dùng", level: 1 }).waitFor();
   assert.equal(await directorySearch.inputValue(), "staff@");
@@ -182,7 +227,7 @@ try {
   await click(p, "Xóa bộ lọc");
   await p.waitForURL(origin + "/users");
   assert.equal(await directorySearch.inputValue(), "");
-  await p.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await p.getByRole("link", { name: "Tổng quan", exact: true }).click();
   // Wait for the lazy destination before opening a shell modal: the route's
   // completion deliberately closes palettes belonging to the previous page.
   await p.getByRole("heading", { name: /^Tổng quan\.?$/, exact: true }).waitFor();
@@ -204,13 +249,19 @@ try {
   assert(await p.locator("#admin-navigation-panel").evaluate(node => getComputedStyle(node).scrollbarWidth === "none"), "Sidebar must not show a scrollbar");
   assert(await p.locator("#admin-navigation-panel").evaluate(node => node.scrollHeight <= node.clientHeight + 1), "Default Admin menu must fit at desktop height");
   await p.setViewportSize({ width: 1440, height: 640 });
-  const operationsGroup = p.getByRole("button", { name: "Điểm & đấu giá", exact: true });
+  const operationsGroup = p.getByRole("button", { name: "Giao nhận tại điểm", exact: true });
   await operationsGroup.click();
   assert.equal(await operationsGroup.getAttribute("aria-expanded"), "true");
   assert.equal(await p.getByRole("button", { name: "Kiểm duyệt", exact: true }).getAttribute("aria-expanded"), "false");
   await p.getByRole("link", { name: "Sự cố tại điểm", exact: true }).waitFor();
   await p.getByRole("button", { name: "Kiểm duyệt", exact: true }).click();
   await p.setViewportSize({ width: 1440, height: 1000 });
+  let releaseQueue;
+  const queueGate = new Promise((resolve) => { releaseQueue = resolve; });
+  await p.route("**/operations/listings?*", async (route) => {
+    await queueGate;
+    await route.abort("failed");
+  });
   await p.getByRole("link", { name: "Bài đăng sách", exact: true }).click();
   await p
     .getByRole("heading", { name: "Bài đăng sách" })
@@ -226,13 +277,18 @@ try {
   await retry.focus();
   await p.keyboard.press("Enter");
   await p.locator(".queue-row").nth(2).waitFor();
-  assert.match(await p.locator(".queue-row").first().innerText(), /Giá bán: 125\.000/);
-  assert.match(await p.locator(".queue-row").first().innerText(), /Giá trị đổi: 150\.000/);
   await shot(p, "queue-1440");
+  const pricedListing = p.locator(`a[href="/review/listings/${fixture.listings[0]}?status=PendingReview"]`);
+  await pricedListing.click();
+  const prices = p.locator('dl[aria-label="Tóm tắt bản sách"]');
+  await expectBrowser(prices.locator("div").filter({ has: p.getByText("Giá bán", { exact: true }) }))
+    .toContainText(/125\.000/);
+  await expectBrowser(prices.locator("div").filter({ has: p.getByText("Giá trị đổi", { exact: true }) }))
+    .toContainText(/150\.000/);
   // Dashboard shelf uses the same private media path as the full review desk.
   // Verify image failure/retry without changing any application data.
   await p.route("http://127.0.0.1:3010/**", route => route.abort("failed"));
-  await p.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await p.getByRole("link", { name: "Tổng quan", exact: true }).click();
   await p.getByRole("heading", { name: "Kệ sách chờ duyệt", exact: true }).waitFor();
   const shelf = p.getByRole("list", { name: "Chọn hồ sơ để xem nhanh" });
   const shelfBooks = shelf.getByRole("button");
@@ -281,13 +337,15 @@ try {
   await p.getByRole("dialog", { name: "Điều hướng quản trị", exact: true }).waitFor();
   await shot(p, "queue-320-large");
   assert(
-    await p.getByRole("link", { name: "Dashboard", exact: true }).evaluate((anchor) => {
+    await p.getByRole("link", { name: "Tổng quan", exact: true }).evaluate((anchor) => {
       const label = anchor.querySelector("span").getBoundingClientRect();
       const link = anchor.getBoundingClientRect();
       return label.left >= link.left && label.right <= link.right;
     }),
-    "Dashboard label must stay inside its navigation link",
+    "Overview label must stay inside its navigation link",
   );
+  const accountGroup = p.getByRole("button", { name: "Tài khoản & ví", exact: true });
+  await accountGroup.click();
   const userLink = p.getByRole("link", { name: "Quản lý người dùng", exact: true });
   assert(await userLink.isVisible(), "Admin navigation remains available at 320px");
   await p.keyboard.press("Escape");
@@ -301,6 +359,7 @@ try {
   await p.getByRole("dialog", { name: "Điều hướng quản trị", exact: true }).waitFor({ state: "hidden" });
   await shot(p, "users-320-large");
   await mobileMenu.click();
+  await click(p, "Kiểm duyệt");
   const listingLink = p.getByRole("link", { name: "Bài đăng sách", exact: true });
   await listingLink.focus();
   await p.keyboard.press("Enter");
@@ -343,6 +402,7 @@ try {
       .isDisabled(),
   );
   await click(p, "Từ chối có lý do");
+  await click(p, "Tiếp tục từ chối");
   await focused(p.getByLabel("Lý do từ chối", { exact: true }));
   assert.equal(
     await p
@@ -360,13 +420,13 @@ try {
   assert.equal(await p.getByRole("dialog", { name: "Đi tới đâu?", exact: true }).count(), 0);
   await click(p, "Ở lại hồ sơ");
   assert.equal(await p.getByRole("checkbox", { checked: true }).count(), 6);
-  await p.getByRole("link", { name: "← Về danh sách", exact: true }).click();
+  await p.getByRole("link", { name: "Về danh sách", exact: true }).click();
   await p.getByRole("dialog").waitFor();
   await focused(p.getByRole("button", { name: "Ở lại hồ sơ", exact: true }));
   await shot(p, "leave-guard-1440");
   await p.keyboard.press("Escape");
   await p.getByRole("dialog").waitFor({ state: "hidden" });
-  await focused(p.getByRole("link", { name: "← Về danh sách", exact: true }));
+  await focused(p.getByRole("link", { name: "Về danh sách", exact: true }));
   assert.equal(await p.getByRole("checkbox", { checked: true }).count(), 6);
   await p.screenshot({
     path: path.join(artifacts, "listing-1440.png"),
@@ -401,22 +461,23 @@ try {
   await nextReview.waitFor();
   assert.equal(await nextReview.getAttribute("href"), `/review/listings/${fixture.listings[1]}`);
   await nextReview.click();
-  await p.getByLabel("Lý do từ chối", { exact: true }).waitFor();
+  await p.getByRole("button", { name: "Kiểm duyệt bài đăng", exact: true }).waitFor();
   assert.equal(await p.getByRole("checkbox", { checked: true }).count(), 0);
   await focused(p.getByRole("heading", { name: "Hồ sơ bài đăng", exact: true }));
-  const returnToQueue = p.getByRole("link", { name: "← Về danh sách", exact: true });
+  const returnToQueue = p.getByRole("link", { name: "Về danh sách", exact: true });
   assert.equal(await returnToQueue.getAttribute("href"), "/review/listings?status=PendingReview");
   await returnToQueue.click();
   await click(p, "Đã duyệt");
   await p.getByRole("link", { name: "Đọc hồ sơ 1", exact: true }).click();
-  assert.equal(await p.getByRole("link", { name: "← Về danh sách", exact: true }).getAttribute("href"), "/review/listings?status=Approved");
-  await p.getByRole("link", { name: "← Về danh sách", exact: true }).click();
+  assert.equal(await p.getByRole("link", { name: "Về danh sách", exact: true }).getAttribute("href"), "/review/listings?status=Approved");
+  await p.getByRole("link", { name: "Về danh sách", exact: true }).click();
   assert.equal(await p.getByRole("button", { name: "Đã duyệt", exact: true }).getAttribute("aria-pressed"), "true");
   await openListing(p, 1);
+  await click(p, "Từ chối có lý do");
   await p
     .getByLabel("Lý do từ chối", { exact: true })
     .fill("Vui lòng bổ sung ảnh rõ phần trang bị gạch chân.");
-  await click(p, "Từ chối có lý do");
+  await click(p, "Tiếp tục từ chối");
   await click(p, "Xác nhận quyết định");
   await p.locator(".status-label").filter({ hasText: "Đã từ chối" }).waitFor();
   await p.setViewportSize({ width: 390, height: 844 });
@@ -466,6 +527,7 @@ try {
   await openListing(p, 1);
   await p.locator(".status-label").filter({ hasText: "Chờ duyệt" }).waitFor();
   await p.getByText("Đã bổ sung ảnh rõ phần trang bị gạch chân.").waitFor();
+  await click(p, "Từ chối có lý do");
   await p.getByLabel("Lý do từ chối", { exact: true }).fill("Bản nháp lý do vẫn ở đây.");
   await p.getByRole("checkbox").first().check();
   await click(p, "Đối chiếu bản gửi");
@@ -488,14 +550,16 @@ try {
   // Two real sessions view the same version. The second must reconcile a 409.
   const second = await page();
   await login(second, `/review/listings/${fixture.listings[2]}?source=handoff#main`);
+  await click(second, "Kiểm duyệt bài đăng");
   await second.getByRole("checkbox").first().waitFor();
   for (const checkbox of await second.getByRole("checkbox").all())
     await checkbox.check();
   await openListing(p, 2);
+  await click(p, "Từ chối có lý do");
   await p
     .getByLabel("Lý do từ chối", { exact: true })
     .fill("Cần mô tả rõ phần gáy sách trước khi duyệt.");
-  await click(p, "Từ chối có lý do");
+  await click(p, "Tiếp tục từ chối");
   await click(p, "Xác nhận quyết định");
   await p.locator(".status-label").filter({ hasText: "Đã từ chối" }).waitFor();
   await click(second, "Duyệt bài đăng");
@@ -555,6 +619,13 @@ try {
       .count(),
     0,
   );
+  await staff.getByRole("link", { name: "Tổng quan", exact: true }).click();
+  const staffQueue = await checkDashboard(staff, 320, false, true);
+  await staff.getByRole("button", { name: "Cập nhật tổng quan" }).focus();
+  await staff.keyboard.press("Tab");
+  await focused(staffQueue);
+  await staffQueue.press("Enter");
+  await expectBrowser(staff).toHaveURL(/\/review\/listings(?:\/[^?]+)?\?status=PendingReview$/);
   const member = await page();
   await login(member, "/review/listings", "member@operations.test");
   await member
@@ -651,6 +722,7 @@ try {
     .locator(`a[href='/review/listings/${fixture.listings[0]}?status=Approved']`)
     .first()
     .click();
+  await click(removal, "Kết quả kiểm duyệt");
   await removal.getByLabel("Lý do gỡ bài", { exact: true }).fill("short");
   await click(removal, "Gỡ bài đăng");
   await removal

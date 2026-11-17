@@ -7,9 +7,12 @@
 .main {
   min-height: 60vh;
 }
-.main[data-chat="true"] {
+.main[data-chat="true"],
+.main[data-exchange="true"] {
   position: relative;
   isolation: isolate;
+}
+.main[data-chat="true"] {
   min-height: calc(100dvh - 76px);
   display: flow-root;
 }
@@ -21,15 +24,6 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-}
-.main[data-chat="true"]::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: var(--sell-desk-ground, #f5eddc)
-    url("/illustrations/posting/autumn-book-desk.webp") center / cover no-repeat;
 }
 .main[data-exchange="true"] {
   /* Bridge the retained exchange components to the current member brand. */

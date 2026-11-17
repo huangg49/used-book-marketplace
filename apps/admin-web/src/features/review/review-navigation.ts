@@ -28,12 +28,31 @@ export async function loadNextReviewPage(
       );
 }
 
-export function reviewQueuePath(kind: Kind, status?: string) {
+export const REVIEW_SEARCH_MAX_LENGTH = 160;
+
+export function reviewSearchText(value: string | null) {
+  return (value ?? "").trim().slice(0, REVIEW_SEARCH_MAX_LENGTH);
+}
+
+export function reviewQueuePath(
+  kind: Kind,
+  status?: string,
+  filters?: { ai?: string; q?: string },
+) {
   const allowed =
     kind === "listings"
       ? ["PendingReview", "Approved", "Rejected"]
       : ["Pending", "Confirmed", "Rejected"];
-  return `/review/${kind}${status && allowed.includes(status) ? `?status=${status}` : ""}`;
+  const params = new URLSearchParams();
+  if (status && allowed.includes(status)) params.set("status", status);
+  if (kind === "listings") {
+    if (params.has("status") && filters?.ai && ["Approved", "Escalated", "None"].includes(filters.ai))
+      params.set("ai", filters.ai);
+    const q = reviewSearchText(filters?.q ?? null);
+    if (q) params.set("q", q);
+  }
+  const suffix = params.toString();
+  return `/review/${kind}${suffix ? `?${suffix}` : ""}`;
 }
 export function reviewReturnPath(kind: Kind, state: unknown) {
   if (
@@ -46,11 +65,10 @@ export function reviewReturnPath(kind: Kind, state: unknown) {
   const [path, query = ""] = state.reviewReturnTo.split("?");
   if (path !== `/review/${kind}`) return reviewQueuePath(kind);
   const params = new URLSearchParams(query);
-  const base = reviewQueuePath(kind, params.get("status") ?? undefined);
-  const ai = params.get("ai");
-  return ai && ["Approved", "Escalated", "None"].includes(ai) && base.includes("?")
-    ? `${base}&ai=${ai}`
-    : base;
+  return reviewQueuePath(kind, params.get("status") ?? undefined, {
+    ai: params.get("ai") ?? undefined,
+    q: params.get("q") ?? undefined,
+  });
 }
 export function pendingReviewPath(kind: Kind) {
   return reviewQueuePath(

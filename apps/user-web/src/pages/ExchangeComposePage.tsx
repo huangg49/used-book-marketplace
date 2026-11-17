@@ -1,657 +1,355 @@
-import { useState, useEffect } from "react";
-import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
-import {
-  useSearchParams,
-  useNavigate,
-  Link,
-  useLocation,
-  Navigate,
-} from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowDownLeft, ArrowLeft, ArrowRight, Check, ChevronDown } from "lucide-react";
+import { ApiError } from "@used-books/session-client";
+import { categoryPath, foldCatalogText } from "@used-books/api-contract/catalog-taxonomy";
 import { z } from "zod";
-import {
-  BookmarkPlus,
-  Library,
-  ArrowLeft,
-  Send,
-  Search,
-  FileText,
-  PlusCircle,
-} from "lucide-react";
-import { BrandIcon } from "../components/BrandIcon";
+import { BookCover } from "../components/BookCover";
+import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { ROUTES, formatVnd } from "../lib/routes";
+import { conditions } from "../lib/listing-labels";
 import { getPublicListing, getPublicPhoto } from "../services/public-listings";
-import {
-  getMyListings,
-  getMyBookIdentity,
-  getMyPhoto,
-} from "../services/my-listings";
-import {
-  exchangeCommand,
-  exchangeError,
-  pendingProposal,
-  createdExchange,
-  exchangeIdentity,
-} from "../services/exchange";
-import { BookCover } from "../components/BookCover";
-import { ConfirmDialog } from "../components/ConfirmDialog";
+import { getMyListings, getMyBookIdentity } from "../services/my-listings";
+import { getPurchaseConversations } from "../services/purchase-conversations";
+import { exchangeCommand, exchangeError, pendingProposal, createdExchange, exchangeIdentity } from "../services/exchange";
 import styles from "./ExchangeComposePage.module.css";
 
 const addressBookSchema = z.object({
-  version: z.number().int(),
-  items: z.array(
-    z.object({
-      id: z.string().uuid(),
-      recipientName: z.string(),
-      phone: z.string(),
-      serviceAreaCode: z.string(),
-      localityCode: z.string(),
-      detail: z.string(),
-      isDefault: z.boolean(),
-      version: z.number().int(),
-    }),
-  ),
+  items: z.array(z.object({
+    id: z.string().uuid(),
+    detail: z.string(),
+    isDefault: z.boolean(),
+  })),
 });
 
 async function inventory() {
-  const rows = [];
+  const books = [];
   let cursor: string | undefined;
   do {
     const page = await getMyListings("Approved", cursor, 50);
-    rows.push(
-      ...page.items.filter(
-        (row) =>
-          row.state.trade === "Available" &&
-          row.state.visibility === "Visible" &&
-          ["Exchange", "Both"].includes(row.currentRevision.content.mode ?? ""),
-      ),
-    );
+    books.push(...page.items.filter(({ state, currentRevision, catalogStatus }) => {
+      const content = currentRevision.content;
+      return state.trade === "Available" && state.visibility === "Visible" &&
+        catalogStatus === "Confirmed" && !content.bundle &&
+        (content.exchangeValue ?? 0) > 0 && (content.mediaIds?.length ?? 0) > 0 &&
+        (content.mode === "Exchange" || content.mode === "Both");
+    }));
     cursor = page.nextCursor ?? undefined;
   } while (cursor);
-  return Promise.all(
-    rows.map(async (row) => {
-      const bookId =
-        row.currentRevision.bookId ?? row.currentRevision.content.bookId;
-      if (!bookId) throw new Error("Bài đăng thiếu thông tin sách.");
-      const book = await getMyBookIdentity(bookId, row.catalogStatus);
-      let coverUrl: string | undefined;
-      const photo = row.currentRevision.content.mediaIds?.[0];
-      if (photo) {
-        try {
-          coverUrl = (await getMyPhoto(row.id, photo)).url;
-        } catch {
-          /* optional cover */
-        }
-      }
-      return {
-        id: row.id,
-        title: book.title,
-        author: book.authors.join(", "),
-        category: book.category ?? "",
-        value: row.currentRevision.content.exchangeValue ?? 0,
-        coverUrl,
-      };
-    }),
+  return Promise.all(books.map(async (row) => {
+    const revision = row.currentRevision;
+    const book = await getMyBookIdentity((revision.bookId ?? revision.content.bookId)!, row.catalogStatus);
+    const photo = await getPublicPhoto(row.id, revision.content.mediaIds![0]).catch(() => undefined);
+    return {
+      id: row.id,
+      title: book.title,
+      author: book.authors.join(", "),
+      authors: book.authors,
+      category: book.category,
+      value: revision.content.exchangeValue ?? 0,
+      coverUrl: photo?.url,
+    };
+  }));
+}
+
+function OfferBook({ title, author, coverUrl, value, match }: {
+  title: string;
+  author: string;
+  coverUrl?: string;
+  value: number;
+  match?: { id: string; label: string };
+}) {
+  return (
+    <div className={styles.book}>
+      <div className={styles.cover} aria-hidden="true"><BookCover title={title} coverUrl={coverUrl} /></div>
+      <div className={styles.bookText}>
+        <strong className={styles.bookTitle} title={title}>{title}</strong>
+        {author && <span className={styles.author} title={author}>{author}</span>}
+        {match && <span id={match.id} className={styles.matchLabel}>{match.label}</span>}
+      </div>
+      <span className={styles.value}>{formatVnd(value)}</span>
+    </div>
   );
 }
 
-function checkMatch(
-  myBook: { title: string; author: string; category?: string },
-  pref?: {
-    targetCategory?: string | null;
-    targetAuthor?: string | null;
-    targetDescription?: string | null;
-  } | null,
-) {
-  if (!pref) return null;
-  const matchAuthor = Boolean(
-    pref.targetAuthor &&
-    pref.targetAuthor.trim() &&
-    myBook.author
-      .toLowerCase()
-      .includes(pref.targetAuthor.toLowerCase().trim()),
-  );
-  const matchCat = Boolean(
-    pref.targetCategory &&
-    pref.targetCategory.trim() &&
-    myBook.category &&
-    (myBook.category
-      .toLowerCase()
-      .includes(pref.targetCategory.toLowerCase().trim()) ||
-      pref.targetCategory
-        .toLowerCase()
-        .includes(myBook.category.toLowerCase().trim())),
-  );
-  let matchDesc = false;
-  if (pref.targetDescription && pref.targetDescription.trim()) {
-    const descWords = pref.targetDescription
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((w) => w.length >= 3);
-    matchDesc = descWords.some((w) => myBook.title.toLowerCase().includes(w));
-  }
-
-  if (matchAuthor) {
-    return `Đúng gu đối tác · ${pref.targetAuthor}`;
-  }
-  if (matchCat) {
-    return `Đúng thể loại đối tác tìm · ${pref.targetCategory}`;
-  }
-  if (matchDesc) {
-    return "Đúng cuốn đối tác mong muốn";
-  }
-  return null;
+function preferenceKey(value?: string | null) {
+  return foldCatalogText(value ?? "").trim().replace(/\s+/g, " ");
 }
-function LegacyExchangeComposePage() {
+
+function ExchangeCompose({ listingId }: { listingId: string | null }) {
   const auth = useSession();
-  const navigate = useNavigate();
+  const actorId = auth.status === "authenticated" ? auth.user.id : undefined;
   const location = useLocation();
-  const [params] = useSearchParams();
-  const id = pendingProposal()?.recipientListingId ?? params.get("book");
-  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
-    const p = pendingProposal();
-    if (p?.initiatorListingIds && p.initiatorListingIds.length > 0) {
-      return p.initiatorListingIds;
-    }
-    if (p?.initiatorListingId) return [p.initiatorListingId];
-    return [];
-  });
-  const [search, setSearch] = useState("");
-  const [preview, setPreview] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const retained = pendingProposal();
+  const id = retained?.recipientListingId ?? listingId;
+  const [selectedIds, setSelectedIds] = useState<string[]>(() =>
+    retained?.initiatorListingIds ?? (retained?.initiatorListingId ? [retained.initiatorListingId] : []));
+  const [review, setReview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [unresolved, setUnresolved] = useState(() => !!pendingProposal());
+  const [deliveryAddressId, setDeliveryAddressId] = useState<string>();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const moveFocus = useRef(false);
+  const sending = useRef(false);
+  useEffect(() => {
+    if (moveFocus.current) {
+      heading.current?.focus();
+      moveFocus.current = false;
+    }
+  }, [review]);
+
   const target = useQuery({
     queryKey: ["exchange-target", id],
-    staleTime: 0,
-    enabled: !!id && auth.status === "authenticated",
+    enabled: Boolean(id && actorId),
+    retry: false,
     queryFn: async () => {
-      const listing = await getPublicListing(id!);
-      let coverUrl: string | undefined;
-      if (listing.photos[0]) {
-        try {
-          coverUrl = (await getPublicPhoto(listing.id, listing.photos[0].id))
-            .url;
-        } catch {
-          /* optional cover */
-        }
-      }
-      return { ...listing, coverUrl };
+      const book = await getPublicListing(id!);
+      const photo = book.photos[0] ? await getPublicPhoto(book.id, book.photos[0].id).catch(() => undefined) : undefined;
+      return { ...book, coverUrl: photo?.url };
     },
   });
   const mine = useQuery({
-    staleTime: 0,
-    queryKey: [
-      "exchange-inventory",
-      auth.status === "authenticated" ? auth.user.id : undefined,
-    ],
+    queryKey: ["exchange-inventory", actorId],
     queryFn: inventory,
-    enabled: auth.status === "authenticated",
+    enabled: Boolean(id && actorId),
+    retry: false,
   });
   const addresses = useQuery({
-    queryKey: ["address-book"],
+    queryKey: ["exchange-compose-addresses", actorId],
     queryFn: () => session.request("/me/addresses", addressBookSchema),
-    enabled: auth.status === "authenticated",
+    enabled: Boolean(id && actorId),
+    retry: false,
   });
-  const [deliveryAddressId, setDeliveryAddressId] = useState<string>("");
-  useEffect(() => {
-    if (addresses.data?.items?.length && !deliveryAddressId) {
-      const def = addresses.data.items.find((a) => a.isDefault);
-      setDeliveryAddressId(def ? def.id : addresses.data.items[0].id);
-    }
-  }, [addresses.data, deliveryAddressId]);
-
-  const chosenBooks = (mine.data ?? []).filter((book) =>
-    selectedIds.includes(book.id),
-  );
-  const hasChosen = chosenBooks.length > 0;
-  const targetBook = target.data;
-  const eligible =
-    targetBook &&
-    auth.status === "authenticated" &&
-    targetBook.seller.id !== auth.user.id &&
-    ["Exchange", "Both"].includes(targetBook.mode);
-
-  const totalOfferValue = chosenBooks.reduce(
-    (sum, book) => sum + (book.value ?? 0),
-    0,
-  );
-  const diff =
-    hasChosen && targetBook
-      ? (targetBook.exchangeValue ?? 0) - totalOfferValue
-      : 0;
-  const moneyText =
-    diff > 0
-      ? `Bạn bù thêm ${formatVnd(diff)}`
-      : diff < 0
-        ? `Đối tác bù thêm ${formatVnd(-diff)}`
-        : "Trao đổi ngang giá";
-
-  const toggleBook = (bookId: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(bookId)
-        ? prev.filter((item) => item !== bookId)
-        : [...prev, bookId],
-    );
-  };
+  const conversations = useQuery({
+    queryKey: ["purchase-conversations", actorId],
+    queryFn: getPurchaseConversations,
+    enabled: Boolean(id && actorId && !retained),
+    retry: false,
+  });
+  const book = target.data;
+  const activeRoom = conversations.data?.find(room =>
+    room.status === "Active" && room.listingId === id && room.buyer.id === actorId);
+  const chosen = (mine.data ?? []).filter(item => selectedIds.includes(item.id));
+  const ownValue = chosen.reduce((total, item) => total + item.value, 0);
+  const targetValue = book?.exchangeValue ?? 0;
+  const difference = targetValue - ownValue;
+  const addressId = deliveryAddressId ?? addresses.data?.items.find(item => item.isDefault)?.id ??
+    addresses.data?.items[0]?.id ?? "";
+  const bookPath = id ? ROUTES.bookDetail(id) : ROUTES.exchange;
+  const created = id && createdExchange(id);
+  const available = book && book.seller.id !== actorId && !book.bundle && book.photos.length > 0 &&
+    (book.mode === "Exchange" || book.mode === "Both") && targetValue > 0 &&
+    (book.purchaseAvailability.status === "Available" ||
+      (book.purchaseAvailability.status === "InNegotiation" && Boolean(activeRoom)));
 
   async function submit() {
-    const retained = pendingProposal();
-    if (busy || (!retained && (!hasChosen || !eligible))) return;
+    const previous = pendingProposal();
+    if (sending.current || (!previous && (!available || !book || !chosen.length))) return;
+    sending.current = true;
     setBusy(true);
     setError("");
     const identity = exchangeIdentity();
     try {
-      const result = await exchangeCommand(
-        "/exchanges",
-        retained ?? {
-          initiatorListingId: chosenBooks[0].id,
-          initiatorListingIds: chosenBooks.map((b) => b.id),
-          recipientListingId: targetBook!.id,
-          deliveryAddressId: deliveryAddressId || undefined,
-        },
-      );
+      const result = await exchangeCommand("/exchanges", previous ?? {
+        initiatorListingId: chosen[0].id,
+        initiatorListingIds: chosen.map(item => item.id),
+        recipientListingId: book!.id,
+        ...(addressId ? { deliveryAddressId: addressId } : {}),
+      });
       if (exchangeIdentity() !== identity) return;
-      setUnresolved(false);
+      void queryClient.invalidateQueries({ queryKey: ["exchangeTransactions", actorId] });
+      void queryClient.invalidateQueries({ queryKey: ["exchangeCounts", actorId] });
       navigate(ROUTES.exchangeDetail(result.id), { replace: true });
     } catch (failure) {
-      if (exchangeIdentity() !== identity) return;
-      setError(exchangeError(failure));
-      setUnresolved(!!pendingProposal());
+      if (exchangeIdentity() === identity) {
+        setError(exchangeError(failure));
+        if (!pendingProposal()) {
+          void target.refetch();
+          void mine.refetch();
+        }
+      }
     } finally {
+      sending.current = false;
       if (exchangeIdentity() === identity) setBusy(false);
     }
   }
+
+  function changeStep(next: boolean) {
+    moveFocus.current = true;
+    setError("");
+    setReview(next);
+  }
+
   if (auth.status === "anonymous") {
-    const returnUrl = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/login?returnUrl=${returnUrl}`} replace />;
+    return <Navigate replace to={`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`} />;
   }
-  if (auth.status !== "authenticated") {
-    return (
-      <div className={styles.container} role="status">
-        <p>Đang kiểm tra đăng nhập…</p>
-      </div>
-    );
+  if (!actorId) return <div className={styles.page} role="status">Đang kiểm tra đăng nhập…</div>;
+  if (retained?.conversationId) {
+    return <Navigate replace to={ROUTES.chat(retained.conversationId)} />;
   }
-  if (unresolved && (!hasChosen || !eligible || target.isError || mine.isError))
+  if (retained && (!busy || !review)) {
     return (
-      <div className={styles.container}>
-        <h1 className={styles.pageTitle}>Xác nhận đề nghị trước</h1>
-        <p>
-          Đề nghị trước chưa rõ kết quả. Bản sách có thể đã được giữ; thử lại
-          vẫn gửi đúng mã và nội dung đã xác nhận.
-        </p>
-        {error && (
-          <p role="alert" className={styles.errorText}>
-            {error}
-          </p>
-        )}
-        <button
-          className={styles.btnPrimary}
-          disabled={busy}
-          onClick={() => void submit()}
-        >
-          {busy ? "Đang xác nhận…" : "Thử lại đề nghị trước"}
+      <div className={styles.page}>
+        <h1>Kiểm tra đề nghị vừa gửi</h1>
+        <p role="status">Chưa nhận được kết quả. Thử lại để kiểm tra đúng đề nghị này.</p>
+        {error && <p className={styles.error} role="alert">{error}</p>}
+        <button className={styles.primary} disabled={busy} onClick={() => void submit()}>
+          {busy ? "Đang kiểm tra…" : "Thử lại đề nghị"}
         </button>
       </div>
     );
-  if (target.isLoading || mine.isLoading)
+  }
+  if (created) return <Navigate replace to={ROUTES.exchangeDetail(created)} />;
+
+  const missing = target.error instanceof ApiError && target.error.status === 404;
+  const failed = !missing && (target.isError || mine.isError || conversations.isError);
+  if (failed || missing || !id || (book && !conversations.isPending && !available)) {
     return (
-      <div className={styles.container} role="status">
-        Đang tải sách để trao đổi…
+      <div className={styles.page}>
+        <h1>{failed ? "Chưa tải được thông tin đổi sách" : "Cuốn sách này chưa thể đổi"}</h1>
+        {failed && <button className={styles.primary} onClick={() => {
+          void target.refetch();
+          void mine.refetch();
+          void conversations.refetch();
+        }}>Thử lại</button>}
+        <Link className={styles.back} to={ROUTES.exchange}>Tìm sách khác</Link>
       </div>
     );
-  if (target.isError || mine.isError)
+  }
+  if (target.isPending || mine.isPending || conversations.isPending || !book) {
+    return <div className={styles.page} role="status">Đang tải sách…</div>;
+  }
+  if (activeRoom) {
     return (
-      <div className={styles.container} role="alert">
-        <h2>Chưa tải được sách</h2>
-        <p>Kiểm tra kết nối và tải lại. Bài đăng có thể không còn công khai.</p>
-        <button
-          className={styles.btnSecondary}
-          onClick={() => {
-            void target.refetch();
-            void mine.refetch();
-          }}
-        >
-          Thử lại
-        </button>
+      <div className={styles.page}>
+        <Link className={styles.back} to={bookPath}><ArrowLeft size={17} aria-hidden="true" /> Về trang sách</Link>
+        <h1>Bạn đã có hội thoại với {book.seller.displayName}</h1>
+        <p>Mở hội thoại để tiếp tục đổi cuốn <strong>{book.book.title}</strong>.</p>
+        <Link className={styles.primary} to={activeRoom.terms?.mode === "Exchange"
+          ? ROUTES.chat(activeRoom.id)
+          : `/chat/start/${book.id}?intent=Exchange`}>Mở hội thoại <ArrowRight size={17} aria-hidden="true" /></Link>
       </div>
     );
-  if (!targetBook || !eligible)
-    return (
-      <div className={styles.container}>
-        <div className={styles.emptyState}>
-          <h2>Bản sách chưa phù hợp để trao đổi</h2>
-          <p>Chọn bài đăng của người khác đang cho phép đổi sách.</p>
-          <Link className={styles.emptyStateBtn} to="/books?mode=Exchange">
-            Tìm sách để đổi
-          </Link>
-        </div>
-      </div>
-    );
+  }
+
+  const targetBook = <OfferBook title={book.book.title} author={book.book.authors.join(", ")} coverUrl={book.coverUrl} value={targetValue} />;
+  const preferences = book.exchangePreferences;
+  const wants = [preferences?.targetCategory, preferences?.targetAuthor, preferences?.targetDescription].filter(Boolean);
+  const wantedAuthor = preferenceKey(preferences?.targetAuthor);
+  const wantedCategory = preferenceKey(preferences?.targetCategory);
+  const options = (mine.data ?? []).map(item => {
+    const authorMatch = !!wantedAuthor && item.authors.some(author => preferenceKey(author) === wantedAuthor);
+    const categoryMatch = !!wantedCategory && (preferenceKey(item.category) === wantedCategory ||
+      (!!item.category && categoryPath(item.category).some(category =>
+        category.id === wantedCategory || preferenceKey(category.label) === wantedCategory)));
+    const label = authorMatch && categoryMatch ? "Khớp tác giả và thể loại"
+      : authorMatch ? "Khớp tác giả" : categoryMatch ? "Khớp thể loại" : undefined;
+    return { item, label, priority: Number(authorMatch) + Number(categoryMatch) };
+  }).sort((a, b) => b.priority - a.priority);
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.pageTitle}>Soạn đề nghị trao đổi</h1>
-        <p className={styles.pageSubtitle}>
-          Chọn một hoặc nhiều bản sách của bạn để đổi với người đọc tiếp theo.
-        </p>
-      </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (hasChosen) {
-            setError("");
-            setPreview(true);
-          } else setError("Chọn ít nhất một bản sách của bạn để gửi đề nghị.");
-        }}
-      >
-        <div className={styles.grid}>
-          <div className={styles.leftCol}>
-            <div className={styles.card}>
-              <div className={styles.cardHeader}>
-                <BookmarkPlus className={styles.icon} />
-                <h2>Sách bạn muốn nhận</h2>
-              </div>
-              <div className={styles.targetBookInfo}>
-                <div className={styles.targetBookCover}>
-                  <BookCover
-                    title={targetBook.book.title}
-                    index={0}
-                    coverUrl={targetBook.coverUrl}
-                  />
-                </div>
-                <h3 className={styles.targetBookTitle}>
-                  {targetBook.book.title}
-                </h3>
-                <p className={styles.targetBookAuthor}>
-                  {targetBook.book.authors.join(", ")}
-                </p>
-              </div>
-              <div className={styles.targetBookDetails}>
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Tình trạng</span>
-                  <span className={styles.detailValue}>
-                    {targetBook.condition}
-                  </span>
-                </div>
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Giá trị đổi</span>
-                  <span className={styles.detailValue}>
-                    {formatVnd(targetBook.exchangeValue ?? 0)}
-                  </span>
-                </div>
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Người đăng</span>
-                  <span className={styles.detailValue}>
-                    {targetBook.seller.displayName}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              className={styles.backBtn}
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft size={16} /> Quay lại chọn sách khác
-            </button>
-          </div>
-          <div className={styles.rightCol}>
-            <div className={`${styles.card} ${styles.cardThemePaper}`}>
-              <div className={styles.cardHeader}>
-                <Library className={styles.icon} />
-                <h2>Chọn sách của bạn để đổi</h2>
-                <span className={styles.selectionBadge}>
-                  Đã chọn {chosenBooks.length} cuốn
-                </span>
-              </div>
-
-              {targetBook?.exchangePreferences &&
-                Boolean(
-                  targetBook.exchangePreferences.targetCategory ||
-                  targetBook.exchangePreferences.targetAuthor ||
-                  targetBook.exchangePreferences.targetDescription,
-                ) && (
-                  <div className={styles.prefBanner}>
-                    <div className={styles.prefBannerHeader}>
-                      <BrandIcon size={16} />
-                      <span>🎯 Tiêu chí mong muốn của chủ sách:</span>
-                    </div>
-                    <div className={styles.prefDetails}>
-                      {targetBook.exchangePreferences.targetCategory && (
-                        <div>
-                          <strong>Thể loại tìm kiếm:</strong>{" "}
-                          {targetBook.exchangePreferences.targetCategory}
-                        </div>
-                      )}
-                      {targetBook.exchangePreferences.targetAuthor && (
-                        <div>
-                          <strong>Tác giả tìm kiếm:</strong>{" "}
-                          {targetBook.exchangePreferences.targetAuthor}
-                        </div>
-                      )}
-                      {targetBook.exchangePreferences.targetDescription && (
-                        <div>
-                          <strong>Ghi chú:</strong>{" "}
-                          {targetBook.exchangePreferences.targetDescription}
-                        </div>
-                      )}
-                      {(mine.data ?? []).some((b) =>
-                        checkMatch(b, targetBook.exchangePreferences),
-                      ) ? (
-                        <div
-                          style={{
-                            marginTop: 6,
-                            color: "#92540c",
-                            fontWeight: 600,
-                          }}
-                        >
-                          ✨ Tuyệt vời! Tủ sách của bạn có cuốn phù hợp với mong
-                          muốn đối tác (được ưu tiên xếp đầu).
-                        </div>
-                      ) : (
-                        <div
-                          style={{ marginTop: 6, color: "var(--ink-muted)" }}
-                        >
-                          💡 Bạn vẫn có thể chọn sách khác trên kệ của mình để
-                          trao đổi và bù tiền nếu cần.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              <label htmlFor="exchange-search" className={styles.label}>
-                <Search size={16} /> Tìm trong kệ của bạn
-              </label>
-              <input
-                id="exchange-search"
-                className={styles.searchInput}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                disabled={unresolved || busy}
-              />
-              {!mine.data?.length && (
-                <p>Kệ chưa có bản sách được duyệt và đang cho phép đổi.</p>
-              )}
-              <div className={styles.bookGrid}>
-                {[...(mine.data ?? [])]
-                  .map((book) => ({
-                    ...book,
-                    matchReason: checkMatch(
-                      book,
-                      targetBook?.exchangePreferences,
-                    ),
-                  }))
-                  .sort((a, b) => {
-                    if (a.matchReason && !b.matchReason) return -1;
-                    if (!a.matchReason && b.matchReason) return 1;
-                    return 0;
-                  })
-                  ?.filter((book) =>
-                    `${book.title} ${book.author}`
-                      .toLocaleLowerCase("vi")
-                      .includes(search.toLocaleLowerCase("vi")),
-                  )
-                  .map((book) => {
-                    const isChecked = selectedIds.includes(book.id);
-                    return (
-                      <label
-                        className={styles.selectableCard}
-                        data-selected={isChecked}
-                        key={book.id}
-                      >
-                        <div className={styles.checkboxWrapper}>
-                          <input
-                            type="checkbox"
-                            name="exchange-book"
-                            value={book.id}
-                            checked={isChecked}
-                            disabled={busy || unresolved}
-                            onChange={() => toggleBook(book.id)}
-                          />
-                        </div>
-                        <div className={styles.selectBookCover}>
-                          <BookCover
-                            title={book.title}
-                            index={0}
-                            coverUrl={book.coverUrl}
-                          />
-                        </div>
-                        <div className={styles.selectBookInfo}>
-                          <p className={styles.selectBookTitle}>{book.title}</p>
-                          <p className={styles.selectBookAuthor}>
-                            {book.author}
-                          </p>
-                          <p>{formatVnd(book.value)}</p>
-                          {book.matchReason && (
-                            <span className={styles.matchedBadge}>
-                              <BrandIcon size={12} /> {book.matchReason}
-                            </span>
-                          )}
-                        </div>
-                      </label>
-                    );
-                  })}
-                <Link className={styles.addBookCard} to={ROUTES.sell}>
-                  <PlusCircle size={32} /> Đăng thêm sách
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className={styles.bottomSection}>
-          <div className={styles.card}>
-            <div className={styles.formSectionHeader}>
-              <FileText className={styles.icon} />
-              <h2>Chi tiết đề nghị trao đổi</h2>
-            </div>
-            <div className={styles.formGrid}>
-              <div className={styles.formGroupBox}>
-                <h3>Bù tiền</h3>
-                <p>
-                  {hasChosen ? moneyText : "Chọn sách để xem khoản chênh lệch."}
-                </p>
-                <p className={styles.helpTextDesc}>
-                  Máy chủ tính tiền bù từ tổng giá trị đổi của các bản sách hai
-                  bên.
-                </p>
-              </div>
-              <div className={styles.formGroupBox}>
-                <h3>Địa chỉ nhận sách của bạn</h3>
-                {addresses.data?.items && addresses.data.items.length > 0 ? (
-                  <select
-                    className={styles.select}
-                    value={deliveryAddressId}
-                    onChange={(e) => setDeliveryAddressId(e.target.value)}
-                    disabled={busy}
-                  >
-                    {addresses.data.items.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.recipientName} · {item.phone} · {item.detail} (
-                        {item.localityCode})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className={styles.helpTextDesc}>
-                    Chưa có địa chỉ lưu sẵn. Bạn có thể thêm địa chỉ nhận hàng
-                    tại trang Tài khoản.
-                  </p>
-                )}
-                <p className={styles.helpTextDesc}>
-                  Đối tác sẽ thấy địa chỉ này để gửi sách cho bạn sau khi cả hai
-                  bên đặt cọc.
-                </p>
-              </div>
-            </div>
-            {error && (
-              <p role="alert" className={styles.errorText}>
-                {error}
-              </p>
-            )}
-            <div className={styles.formActions}>
-              <button
-                className={styles.btnPrimary}
-                type="submit"
-                disabled={!hasChosen || busy}
-              >
-                <Send size={18} />{" "}
-                {unresolved ? "Thử lại đề nghị trước" : "Xem lại đề nghị"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </form>
-      <ConfirmDialog
-        isOpen={preview}
-        onClose={() => setPreview(false)}
-        title="Xem lại đề nghị"
-        confirmText={unresolved ? "Thử lại đề nghị trước" : "Gửi đề nghị"}
-        isBusy={busy}
-        onConfirm={() => void submit()}
-      >
-        <div className={styles.summarySection}>
-          <strong>Bạn nhận:</strong> {targetBook.book.title} (
-          {formatVnd(targetBook.exchangeValue ?? 0)})
-        </div>
-        <div className={styles.summarySection}>
-          <strong>Bạn giao ({chosenBooks.length} cuốn):</strong>
-          <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
-            {chosenBooks.map((b) => (
-              <li key={b.id} style={{ marginBottom: 4 }}>
-                {b.title} — {formatVnd(b.value)}
-              </li>
-            ))}
-          </ul>
-          {chosenBooks.length > 1 && (
-            <div style={{ marginTop: 6, fontWeight: 600 }}>
-              Tổng giá trị giao: {formatVnd(totalOfferValue)}
-            </div>
-          )}
-        </div>
-        <div className={styles.summarySection}>{moneyText}</div>
-        {deliveryAddressId && addresses.data?.items && (
-          <div className={styles.summarySection}>
-            <strong>Địa chỉ nhận của bạn:</strong>{" "}
-            {(() => {
-              const a = addresses.data.items.find(
-                (item) => item.id === deliveryAddressId,
-              );
-              return a ? `${a.recipientName} (${a.phone}) - ${a.detail}` : "";
-            })()}
-          </div>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        {review ? (
+          <button className={styles.back} type="button" disabled={busy} onClick={() => changeStep(false)}><ArrowLeft size={17} aria-hidden="true" /> Đổi lựa chọn</button>
+        ) : (
+          <Link className={styles.back} to={bookPath}><ArrowLeft size={17} aria-hidden="true" /> Về trang sách</Link>
         )}
-        <p>Máy chủ kiểm tra lại tình trạng bài đăng khi gửi.</p>
-        {error && (
-          <p role="alert" className={styles.errorText}>
-            {error}
+        <h1 ref={heading} tabIndex={-1}>{review ? "Xem lại đề nghị" : "Chọn sách để đổi"}</h1>
+      </header>
+      <div className={styles.layout}>
+        <section className={styles.target} aria-labelledby="target-book">
+          <h2 id="target-book"><ArrowDownLeft size={17} aria-hidden="true" /> Bạn muốn nhận</h2>
+          {targetBook}
+          <p className={styles.meta}>
+            <span className={styles.owner}>Của <strong dir="auto" title={book.seller.displayName}>{book.seller.displayName}</strong></span>
+            <span>{conditions[book.condition]}</span>
           </p>
-        )}
-      </ConfirmDialog>
+          {wants.length > 0 && (
+            <details className={styles.disclosure}>
+              <summary>Mong muốn của đối tác <ChevronDown size={16} aria-hidden="true" /></summary>
+              <p>{wants.join(" · ")}</p>
+            </details>
+          )}
+        </section>
+        <section className={styles.work} aria-labelledby="own-books">
+          <h2 id="own-books">{review ? "Bạn đề nghị gửi" : "Sách của bạn"}</h2>
+          {review ? (
+            <>
+              <ul className={styles.bookList}>
+                {chosen.map(item => <li key={item.id}><OfferBook {...item} /></li>)}
+              </ul>
+              {chosen.length > 0 && (
+                <section className={styles.amounts} aria-labelledby="proposal-money">
+                  <h2 id="proposal-money">Nếu hai bên đồng ý</h2>
+                  <dl>
+                    <div><dt>Cọc của bạn</dt><dd>{formatVnd(targetValue)}</dd></div>
+                    <div><dt>{difference < 0 ? `Tiền bù của ${book.seller.displayName}` : "Tiền bù của bạn"}</dt><dd>{formatVnd(Math.abs(difference))}</dd></div>
+                    <div className={styles.total}><dt>Bạn cần nộp</dt><dd>{formatVnd(targetValue + Math.max(0, difference))}</dd></div>
+                    <div><dt>{book.seller.displayName} cần nộp</dt><dd>{formatVnd(ownValue + Math.max(0, -difference))}</dd></div>
+                  </dl>
+                  <p>Gửi đề nghị chưa giữ sách hay trừ tiền.</p>
+                </section>
+              )}
+              {addresses.isError && (
+                <p role="status">Chưa tải được địa chỉ nhận sách. <button className={styles.textButton} onClick={() => void addresses.refetch()}>Tải lại địa chỉ</button></p>
+              )}
+              {addresses.data && addresses.data.items.length > 0 && (
+                <details className={styles.disclosure}>
+                  <summary>Địa chỉ nhận sách <ChevronDown size={16} aria-hidden="true" /></summary>
+                  <select aria-label="Địa chỉ nhận sách" value={addressId} onChange={e => setDeliveryAddressId(e.target.value)} disabled={busy}>
+                    {addresses.data.items.map(item => <option key={item.id} value={item.id}>{item.detail}</option>)}
+                  </select>
+                </details>
+              )}
+              {chosen.length !== selectedIds.length && (
+                <p className={styles.error} role="alert">Sách đã chọn vừa thay đổi. Hãy quay lại và chọn sách còn khả dụng.</p>
+              )}
+              {error && <p className={styles.error} role="alert">{error}</p>}
+              <button type="button" className={styles.primary} disabled={busy || addresses.isPending || chosen.length !== selectedIds.length || !chosen.length} onClick={() => void submit()}>
+                {busy ? "Đang gửi…" : "Gửi đề nghị"} <ArrowRight size={17} aria-hidden="true" />
+              </button>
+            </>
+          ) : mine.data?.length ? (
+            <>
+              <div className={styles.options} role="group" aria-labelledby="own-books">
+                {options.map(({ item, label }) => (
+                  <label className={styles.option} key={item.id} data-selected={selectedIds.includes(item.id)}
+                    data-matched={label ? true : undefined} data-focus-surface="">
+                    <OfferBook {...item} match={label ? { id: `match-${item.id}`, label } : undefined} />
+                    <span className={styles.selection}>
+                      <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={event => {
+                        const checked = event.target.checked;
+                        setSelectedIds(previous => checked ? [...previous, item.id] : previous.filter(value => value !== item.id));
+                      }} aria-label={item.title} aria-describedby={label ? `match-${item.id}` : undefined} />
+                      <span className={styles.check} aria-hidden="true"><Check size={13} strokeWidth={3} /></span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className={styles.footer}>
+                <div className={styles.selectionTotal} role="status">
+                  {chosen.length ? (
+                    <><strong>{chosen.length} cuốn đã chọn</strong><span>Tổng giá trị đổi {formatVnd(ownValue)}</span></>
+                  ) : <span>Chọn ít nhất một cuốn.</span>}
+                </div>
+                <button className={styles.primary} type="button" disabled={!chosen.length} onClick={() => changeStep(true)}>
+                  Xem lại đề nghị <ArrowRight size={17} aria-hidden="true" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>Bạn chưa có sách đã duyệt và đang mở đổi.</p>
+              <Link className={styles.primary} to={ROUTES.sell}>Đăng sách</Link>
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
@@ -660,15 +358,5 @@ export default function ExchangeComposePage() {
   const identity = useExchangeRecovery();
   const [params] = useSearchParams();
   const id = params.get("book");
-  const created = id ? createdExchange(id) : undefined;
-  if (created)
-    return (
-      <section role="status">
-        <p>Đề nghị đã được tạo. Mở để xem trạng thái, không cần gửi lại.</p>
-        <Link to={ROUTES.exchangeDetail(created)}>Xem đề nghị đã tạo</Link>
-      </section>
-    );
-  if (id && !pendingProposal())
-    return <Navigate replace to={`/chat/start/${id}?intent=Exchange`} />;
-  return <LegacyExchangeComposePage key={identity} />;
+  return <ExchangeCompose key={identity + ":" + id} listingId={id} />;
 }

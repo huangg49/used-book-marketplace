@@ -914,7 +914,7 @@ no remote integration.
 Card navigation expands into the Chat workspace over420ms and returns over340ms.
 Cover/title travel separately; content crossfades at native text dimensions.
 Only the selected card participates. Navbar scroll morph is paused during the
-move, with the autumn background retained. Owner-keyed layout memory restores
+move, with the page background outside the snapshot. Owner-keyed layout memory restores
 inbox filter/reveal/scroll on Back. A pending authorized read opens the same
 paper frame with loading/retry; transaction controls await actual room data.
 Without browser View Transitions support, links keep ordinary navigation.
@@ -929,11 +929,14 @@ appears only for an active empty
 conversation, centered with the greeting; never in a history error or expired room.
 These are decorative, noninteractive details, not transaction or presence signals.
 
-On19/10 the owner retained the approved18/10 soft3D autumn book-desk illustration
-as the Chat inbox/room background after viewing an alternative image. It is a
-Chat-only fixed viewport-cover layer in MainLayout, with opaque paper/shelf
-content and12px mobile outside clearance. Navigating away removes it; Sell keeps
-its archival desk. Reuse the exact `autumn-book-desk.webp` from6394dc4.
+From 14/11, Chat and the five-step Exchange workspace share a reading pattern
+behind the existing paper content. Small pastel books and bookmarks sit on a
+warm paper ground. The transparent `reading-pattern.webp` tile repeats every
+384px (320px on mobile). A fixed decorative layer in MainLayout moves exactly
+one tile left and down per loop, over 168s (144s on mobile). It stays live through
+Chat view transitions and step changes, pauses when the main region is outside
+the viewport or the tab is hidden, and leaves with the route. The owner's motion
+policy applies. The decoration is hidden in forced colors.
 
 The agreement sheet now groups mode, price and price entry as its primary content.
 Before acceptance the listing price leads; after acceptance the agreed wine price
@@ -1024,6 +1027,41 @@ becomes a disclosure regardless of the surrounding sidebar's viewport breakpoint
 In the trade facts section, all three values use16px with shared baseline
 alignment: mode600/ink, actual money700/wine, null amount400/muted. Do not style
 the text "Không áp dụng" as a monetary amount. Other metadata keeps its scale.
+
+### Admin listing dossier — 15/11/2026
+
+The current listing revision uses a compact paper heading with a wine rule,
+visible moderation status, a wrapping book title, and a summary strip with the
+seller's declared condition first. The queue and decision rail yield more width
+to the reader. The first evidence section presents the actual submitted photo
+before supporting text and bundle inventory. Its zoom caption sits below the
+image. On narrow screens, keep one dossier scroller and the existing jump to
+the decision form. The checklist uses ruled paper rows and a selected tint, with
+progress still driven by the reviewer's checks. Catalog requests, historical
+galleries, media readiness and decision permissions keep their own behavior.
+
+### Admin listing decision disclosure — 15/11/2026
+
+The listing dossier opens in reading mode with the full reader width. The
+Kiểm duyệt action reveals a nonmodal decision pane while keeping the evidence
+available. At medium workspace widths, allow the reviewer to reopen the queue
+through its disclosure. In a single-column dossier, take focus to the decision
+and keep the action row in view when returning to the photo. Folding preserves
+the existing draft and moves focus to its trigger. Reveal the reason field when
+the reviewer chooses rejection. Keep the native final confirmation dialog and
+identify the actual listing and revision before submission.
+The pane moves in over 220 ms and out over 170 ms, horizontally in the split
+layout and vertically in the single column. The read area and queue keep their
+layout through the exit. Interrupted motion resumes from the current position.
+The leave confirmation remains available while the pane is folded.
+
+The listing queue uses three equal status controls on a cream rail and a
+single AI select beneath it. Only show AI outcomes available for the active
+status. Keep the actual loaded count and queue sort shown below the filters.
+Listing rows show a compact thumbnail, the title, the short listing ID, and
+submission time. The queue controls stay visible while results scroll. The
+search submits title or ID with the active filters to the queue API. Keep the
+query and the loaded list position when returning from a dossier.
 
 ## Web motion consistency — owner request, 02/11/2026
 

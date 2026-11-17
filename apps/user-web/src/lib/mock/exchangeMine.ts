@@ -28,6 +28,7 @@ export interface ExchangeItem {
     createdAt: string; // ISO
     tab: ExchangeTab;
     status: ExchangeStatus;
+    needsProposalReply?: boolean;
     partner: ExchangeUser;
     receiveBooks: ExchangeBook[];
     giveBooks: ExchangeBook[];

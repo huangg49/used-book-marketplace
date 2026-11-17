@@ -22,12 +22,15 @@ xác nhận từng trường. Không gì được lưu vào bài đăng hay danh
    như gợi ý giá (Draft/Rejected, hoặc Approved và Available), không phải bộ sách.
    Ảnh phải thuộc bài đăng, `Ready`, chưa purge.
 2. Gửi provider **chỉ ảnh sách** (bản derivative đã bỏ EXIF/GPS, thu nhỏ JPEG tối đa 1536 px và ≤ 180 KB mỗi ảnh)
-   và lời dặn cố định. Với model mặc định, có thể gửi kèm tối đa một ảnh cận
+   và lời dặn cố định. Với OpenAI hoặc model NVIDIA mặc định, có thể gửi kèm tối đa một ảnh cận
    sinh từ cùng bộ ảnh trong một lần gọi. Không gửi id người dùng/bài đăng, email,
    địa chỉ, ghi chú tình trạng, session hay token.
-3. Provider **NVIDIA NIM**, model mặc định `nvidia/nemotron-3.5-super-vl-120b-a12b`
-   (model VL v1 dự kiến ban đầu đã hết hạn 26/08/2026). Một model dự phòng tùy chọn chỉ được gọi **một lần** khi lần đầu
-   không đọc được tên sách và còn hạn mức; cả hai tính vào ngân sách.
+3. Mặc định **NVIDIA NIM**, model `nvidia/nemotron-3.5-super-vl-120b-a12b`, với model
+   dự phòng nội bộ theo cấu hình hiện có. `AUTOFILL_PROVIDER=openai` chọn Responses API,
+   mặc định `gpt-5.4-mini`. Khi có key NVIDIA, dùng NVIDIA tối đa một lần với ảnh toàn trang
+   sau timeout, lỗi kết nối hoặc HTTP 408/429/5xx của OpenAI. Hai provider chia ngân sách
+   `AUTOFILL_TIMEOUT_MS` theo tỷ lệ 60/40. Kết quả hợp lệ nhưng thiếu trường được trả ngay.
+   Hai lượt gọi tính vào cùng lượt Autofill và ngân sách chi phí chung.
 4. Prompt yêu cầu JSON (không bắt buộc structured output vì không phải VLM nào cũng hỗ
    trợ), suy luận tắt, và kiểm lại phía server: độ dài như
    `CatalogMetadata`, năm 1400..năm hiện tại, ngôn ngữ chuẩn hóa BCP-47, ISBN chuẩn hóa
@@ -39,11 +42,13 @@ xác nhận từng trường. Không gì được lưu vào bài đăng hay danh
    gợi ý chụp bìa/trang bản quyền rõ hơn). Lỗi provider/timeout/hết hạn mức → 503,
    giới hạn → 429; client luôn giữ nhập tay và dữ liệu đã gõ.
 7. Gọi provider **sau commit**: cùng một transaction kiểm quyền, replay theo key, cache
-   theo dấu vân tay (sha256 các ảnh, model, lời dặn và cấu hình thu ảnh) trong 24 giờ, giữ chỗ hạn mức và ghi bản
+   theo dấu vân tay (sha256 các ảnh, model chính và dự phòng, lời dặn và cấu hình thu ảnh) trong 24 giờ, giữ chỗ hạn mức và ghi bản
    `Pending`. Một yêu cầu đang chạy/người; 3 lần/bài đăng/phút; mặc định 10 lần/người/
    ngày (`AUTOFILL_USER_DAILY_LIMIT`). Chi phí cộng vào **ngân sách ngày chung** với trợ
    lý gợi ý giá (`price_assist_usage`, `global:<ngày>`).
-8. Cờ `AUTOFILL_ENABLED=false` mặc định; key `AUTOFILL_API_KEY` chỉ ở `.env` của API.
+8. Cờ `AUTOFILL_ENABLED=false` mặc định. `AUTOFILL_API_KEY` (NVIDIA) và
+   `AUTOFILL_OPENAI_API_KEY` chỉ ở `.env` của API. Tác vụ tự duyệt dùng cấu hình NVIDIA riêng
+   qua các biến NVIDIA hiện có và gate ở [ADR0063](0063-ai-listing-review-hardening.md).
 
 ## 3. Client
 
@@ -56,12 +61,12 @@ giả.
 
 Không tạo bài đăng/yêu cầu danh mục tự động; không đọc chữ viết tay của chủ cũ hay
 thông tin cá nhân trong ảnh; không xác minh tính xác thực, tình trạng, giá; không gửi ảnh
-cho dịch vụ khác ngoài provider đã cấu hình; không lưu ảnh ở provider (API không lưu
-theo điều khoản công bố — cần chủ dự án kiểm lại khi lên production).
+cho dịch vụ khác ngoài provider đã cấu hình. OpenAI dùng `store: false` cho phản hồi.
+Cần xác nhận điều khoản xử lý và lưu dữ liệu của từng provider trước production.
 
 ## 5. Hệ quả
 
-- Ảnh sách rời hệ thống tới NVIDIA khi người bán bấm. Cần ghi trong chính sách quyền
+- Ảnh sách rời hệ thống tới provider đã cấu hình khi người bán bấm. Cần ghi trong chính sách quyền
   riêng tư nếu ra ngoài demo.
 - Chất lượng chữ tiếng Việt có dấu trên bìa cũ chưa được đo; cần bộ thử 20–30 ảnh thật
   trước khi bật demo (ngưỡng đề xuất: ≥ 80% đúng tên sách, 0 ISBN sai checksum lọt ra).

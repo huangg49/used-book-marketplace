@@ -241,11 +241,6 @@ export function BookDetailPage() {
                 {!isOwner && !held && (
                   <Link className={styles.primary} to={`/buy-now/${book.id}`}>{book.bundle ? "Mua cả bộ" : "Mua ngay"} <ArrowUpRight size={18} aria-hidden="true" /></Link>
                 )}
-                {["Exchange", "Both"].includes(book.mode) && !isOwner && !held && (
-                  <Link className={styles.secondary} to={`/chat/start/${book.id}?intent=Exchange`}>
-                    Gửi đề nghị đổi sách <ArrowUpRight size={18} aria-hidden="true" />
-                  </Link>
-                )}
               </div>
               {held && !orderConversation && state.status === 'authenticated' && (
                 <Link className={styles.secondary} to="/orders">Xem đơn hàng của tôi</Link>
@@ -299,6 +294,12 @@ export function BookDetailPage() {
           )}
           {["Exchange", "Both"].includes(book.mode) && (
             <section className={styles.purchase}>
+              <h2>Đổi sách</h2>
+              {!isOwner && !book.bundle && (!held || (book.purchaseAvailability.status === "InNegotiation" && activeConversation)) && (
+                <Link className={book.salePrice === null ? styles.primary : styles.secondary} to={ROUTES.exchangeCompose(book.id)}>
+                  Đề nghị đổi sách <ArrowUpRight size={18} aria-hidden="true" />
+                </Link>
+              )}
               {book.exchangePreferences &&
                 (book.exchangePreferences.targetCategory ||
                   book.exchangePreferences.targetAuthor ||
@@ -332,23 +333,10 @@ export function BookDetailPage() {
                     )}
                   </div>
                 )}
-              <p className={styles.exchangeNote}>
-                {isOwner
-                  ? "Đây là bản sách của bạn. Theo dõi đề nghị trong Trao đổi của tôi."
-                  : held
-                    ? "Bản sách đang được giữ cho giao dịch hiện tại."
-                    : "Chọn một bản sách trong kệ của bạn để đề nghị đổi. Máy chủ tính tiền bù theo giá trị đổi."}
-              </p>
+              {held && !isOwner && !activeConversation && <p className={styles.exchangeNote}>Bản sách đang được giữ cho giao dịch hiện tại.</p>}
               {isOwner ? (
                 <Link className={styles.primary} to={ROUTES.exchangeMine}>
                   Trao đổi của tôi
-                </Link>
-              ) : book.salePrice === null && !held ? (
-                <Link
-                  className={styles.primary}
-                  to={`/chat/start/${book.id}?intent=Exchange`}
-                >
-                  Gửi đề nghị đổi sách <ArrowUpRight size={18} aria-hidden="true" />
                 </Link>
               ) : null}
             </section>

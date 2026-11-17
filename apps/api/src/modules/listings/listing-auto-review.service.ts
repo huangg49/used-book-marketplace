@@ -4,7 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Json } from '../../database/mongo/documents.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import { AutofillImages } from '../autofill-assist/autofill-images.js';
-import { AutofillModel } from '../autofill-assist/autofill-model.js';
+import { AutofillModel, NvidiaAutofillModel } from '../autofill-assist/autofill-model.js';
 import { IsbnBarcodeReader } from '../autofill-assist/isbn-barcode-reader.js';
 import { DomainError } from '../commands/domain-error.js';
 import {
@@ -103,7 +103,7 @@ export class ListingAutoReviewService {
     private readonly images: AutofillImages,
     private readonly barcode: IsbnBarcodeReader,
     // Null while the provider is unconfigured; a union type needs an explicit token.
-    @Inject(AutofillModel) private readonly model: AutofillModel | null,
+    @Inject(NvidiaAutofillModel) private readonly model: AutofillModel | null,
   ) {}
 
   private setting = (key: string, fallback: number) => {

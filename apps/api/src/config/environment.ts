@@ -254,13 +254,16 @@ function optionalProviderModel(env: Record<string, unknown>, key: string): strin
   return value;
 }
 
-// Photo autofill (ADR 0048): NVIDIA NIM vision model, off unless enabled. The
+// Photo autofill (ADR 0048): off unless enabled. The
 // key is read only by the API process; cost counts toward the shared daily
 // price-assist budget.
 export function validateAutofill(env: Record<string, unknown>) {
   const enabled = String(env.AUTOFILL_ENABLED ?? 'false');
   if (!['true', 'false'].includes(enabled))
     throw new Error('AUTOFILL_ENABLED must be true or false.');
+  const provider = String(env.AUTOFILL_PROVIDER || 'nvidia');
+  if (provider !== 'nvidia' && provider !== 'openai')
+    throw new Error('AUTOFILL_PROVIDER must be nvidia or openai.');
   const apiKey = String(env.AUTOFILL_API_KEY ?? '');
   if (apiKey.startsWith('replace-'))
     throw new Error('AUTOFILL_API_KEY still holds the example value.');
@@ -271,6 +274,9 @@ export function validateAutofill(env: Record<string, unknown>) {
     throw new Error('AUTOFILL_FALLBACK_MODEL is invalid.');
   return {
     AUTOFILL_ENABLED: enabled,
+    AUTOFILL_PROVIDER: provider,
+    AUTOFILL_OPENAI_API_KEY: optionalProviderKey(env, 'AUTOFILL_OPENAI_API_KEY'),
+    AUTOFILL_OPENAI_MODEL: optionalProviderModel(env, 'AUTOFILL_OPENAI_MODEL'),
     AUTOFILL_API_KEY: apiKey,
     AUTOFILL_MODEL: model,
     AUTOFILL_FALLBACK_MODEL: fallback,

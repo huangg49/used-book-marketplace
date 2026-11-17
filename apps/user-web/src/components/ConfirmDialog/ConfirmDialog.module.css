@@ -118,6 +118,26 @@
   opacity: 0.6;
   cursor: default;
 }
+@media (max-width: 640px) {
+  .dialog[data-sticky-footer] { scroll-padding-bottom: 84px; }
+  .dialog[data-sticky-footer] .content { padding: 16px; }
+  .dialog[data-sticky-footer] .body { margin-bottom: 0; }
+  .dialog[data-sticky-footer] .closeBtn { min-width: 44px; min-height: 44px; margin: -8px -8px -8px 0; }
+  .dialog[data-sticky-footer] .footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    flex-flow: row nowrap;
+    align-items: stretch;
+    gap: 8px;
+    margin: 8px -16px -16px;
+    padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+    background: var(--shop-paper);
+    border-top: 1px solid var(--shop-line);
+  }
+  .dialog[data-sticky-footer] .footer button { width: auto; }
+  .dialog[data-sticky-footer] .btnConfirm { flex: 1; }
+}
 @media (max-width: 420px) {
   .content {
     padding: 22px;
