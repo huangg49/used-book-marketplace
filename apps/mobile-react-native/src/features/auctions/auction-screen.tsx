@@ -30,6 +30,7 @@ import { AuctionCover } from "./components/auction-cover";
 import { conditions as conditionLabels } from "../shelf/contracts";
 import {
   AUCTION_MAX_PRICE,
+  AUCTION_MIN_BIDDERS_FLOOR,
   amountError,
   auctionErrorText,
   auctionOptions,
@@ -83,6 +84,11 @@ const STATE_LABEL: Record<AuctionState, string> = {
   Cancelled: "Đã hủy",
   PaymentExpired: "Người thắng không thanh toán đúng hạn",
   SecondChanceOffered: "Người thắng không thanh toán; đang mời người trả giá cao thứ hai",
+};
+
+const STATE_BADGE_LABEL: Partial<Record<AuctionState, string>> = {
+  SecondChanceOffered: "Cơ hội thứ hai",
+  PaymentExpired: "Quá hạn thanh toán",
 };
 // Same wording as user-web: only a won or bought auction has a final price.
 const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
@@ -479,7 +485,11 @@ function AuctionBody({
                 ? stitchTokens.wineDark
                 : scheduled
                   ? stitchTokens.wineAlpha85
-                  : stitchTokens.subtleGray,
+                  : auction.state === "SecondChanceOffered"
+                    ? stitchTokens.orangeBurned
+                    : auction.state === "PaymentExpired"
+                      ? stitchTokens.darkRed
+                      : stitchTokens.subtleGray,
               paddingHorizontal: 10,
               paddingVertical: 5,
               borderRadius: 6,
@@ -507,7 +517,7 @@ function AuctionBody({
               }}
               numberOfLines={1}
             >
-              {STATE_LABEL[auction.state].toUpperCase()}
+              {(STATE_BADGE_LABEL[auction.state] ?? STATE_LABEL[auction.state]).toUpperCase()}
             </AppText>
           </View>
 
@@ -707,6 +717,18 @@ function AuctionBody({
         now={now}
       />
 
+      {/* Warning Notice for Special Auction States */}
+      {auction.state === "SecondChanceOffered" && (
+        <Notice tone="warning">
+          Người thắng không thanh toán; đang mời người trả giá cao thứ hai.
+        </Notice>
+      )}
+      {auction.state === "PaymentExpired" && (
+        <Notice tone="warning">
+          Người thắng không thanh toán đúng hạn.
+        </Notice>
+      )}
+
       {/* 3. Title & Author & Condition & Format Pills */}
       <View style={{ gap: space.xs }}>
         <AppText kind="bookTitle" color={colors.ink} accessibilityRole="header">
@@ -795,6 +817,14 @@ function AuctionBody({
             </AppText>
           </View>
         </View>
+
+        {/* ADR 0078: the seller and members who registered or bid flag a problem to Admin.
+            Placed right under book identity so title, author and reporting stay together. */}
+        {memberId && !ownerError && (ownerIntake || me) ? (
+          <View style={{ marginTop: 4 }}>
+            <AuctionFlag auction={auction} owner={memberId} />
+          </View>
+        ) : null}
       </View>
 
       {/* 4. Price & Bid Stats Card (3D Red Ombre) */}
@@ -1143,14 +1173,12 @@ function AuctionBody({
         <Notice>
           {auction.state === "OnHold"
             ? `Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.${auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${time(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ""}`
-            : closeReasonText(auction) ?? "Phiên không còn nhận trả giá."}
+            : auction.state === "SecondChanceOffered"
+              ? "Người thắng không thanh toán; đang mời người trả giá cao thứ hai."
+              : closeReasonText(auction) ?? "Phiên không còn nhận trả giá."}
         </Notice>
       )}
       </View>
-      {/* ADR 0078: the seller and members who registered or bid flag a problem to Admin. */}
-      {memberId && !ownerError && (ownerIntake || me) ? (
-        <AuctionFlag auction={auction} owner={memberId} />
-      ) : null}
       <History
         auction={auction}
         open={open}
@@ -1226,6 +1254,11 @@ function BidPanel({
   });
   // ADR 0075: the amount already held for this auction counts toward a raise.
   const heldHere = me?.heldAmount ?? 0;
+  // A rival's bid arrives by push/polling and releases this hold; re-read the wallet
+  // so the available amount does not stay at the value cached while leading.
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+  }, [heldHere, queryClient]);
   const available = wallet.data ? wallet.data.available + heldHere : null;
   const price = auction.currentPrice ?? auction.startPrice;
 
@@ -1628,7 +1661,7 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
     case "Register":
       return {
         title: `Đặt cọc ${formatVnd(amount)} để đăng ký?`,
-        message: `Ví giữ ${formatVnd(amount)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy; bạn có thể rút đăng ký trước khi phiên đủ ${auction.minBidders ?? 2} người. Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`,
+        message: `Ví giữ ${formatVnd(amount)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người (hoặc, khi đã đủ, tới 72 giờ trước giờ mở). Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc không được hoàn.`,
         confirm: "Đặt cọc và đăng ký",
       };
     case "SecondChanceAccept":

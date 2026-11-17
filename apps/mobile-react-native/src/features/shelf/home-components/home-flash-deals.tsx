@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Icon, StatePanel, formatVnd, stitchTokens } from "../../../core/ui";
+import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
 import type { PublicAuctionSummary } from "../../auctions/contracts";
 import { AuctionCover } from "../../auctions/components/auction-cover";
 import { formatRemaining } from "../../auctions/auctions-model";
@@ -70,15 +70,49 @@ export function HomeLiveAuctions({
         </Pressable>
       </View>
 
-      {loading && !items.length ? <StatePanel loading title="Đang tải phiên đấu giá…" /> : null}
-      {error ? <StatePanel title="Chưa tải được phiên đấu giá" action={onRetry ? { label: "Thử lại", onPress: onRetry } : undefined} /> : null}
-      {!loading && !error && !items.length ? <StatePanel title="Chưa có phiên đang diễn ra" message="Bạn có thể xem các phiên sắp mở trong mục Đấu giá." /> : null}
+      {loading && !items.length ? (
+        <View style={styles.compactNoticeBox}>
+          <AppText kind="small" color={stitchTokens.roseBrown}>
+            Đang tải phiên đấu giá…
+          </AppText>
+        </View>
+      ) : null}
+      {error ? (
+        <View style={styles.compactNoticeBox}>
+          <AppText kind="small" color={stitchTokens.flashRed}>
+            Chưa tải được phiên đấu giá
+          </AppText>
+          {onRetry ? (
+            <Pressable onPress={onRetry} style={styles.retryBtn}>
+              <AppText kind="small" style={styles.retryText}>
+                Thử lại
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+      {!loading && !error && !items.length ? (
+        <View style={styles.compactEmptyBox}>
+          <View style={styles.compactEmptyIcon}>
+            <Icon name="book" size={16} color={stitchTokens.wine} />
+          </View>
+          <View style={styles.compactEmptyTextGroup}>
+            <AppText kind="heading" style={styles.compactEmptyTitle}>
+              Chưa có phiên đang diễn ra
+            </AppText>
+            <AppText kind="small" style={styles.compactEmptyMessage}>
+              Bạn có thể xem các phiên sắp mở trong mục Đấu giá.
+            </AppText>
+          </View>
+        </View>
+      ) : null}
       {/* Horizontal Cards Scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollList}
-      >
+      {items.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollList}
+        >
         {items.map((item) => {
           // Placeholder cards have no real auction behind them.
           const real = !!item.listingId;
@@ -143,6 +177,7 @@ export function HomeLiveAuctions({
           );
         })}
       </ScrollView>
+      ) : null}
     </View>
   );
 }
@@ -153,10 +188,10 @@ export { HomeLiveAuctions as HomeFlashDeals };
 const styles = StyleSheet.create({
   container: {
     backgroundColor: stitchTokens.white,
-    marginTop: 10,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    marginHorizontal: 12,
+    borderRadius: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
     borderColor: stitchTokens.canvasWhite,
     elevation: 2,
     shadowColor: stitchTokens.black,
@@ -169,7 +204,65 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 12,
-    marginBottom: 10,
+    marginBottom: 8,
+  },
+  compactNoticeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: stitchTokens.cardWarmLight,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 8,
+    marginHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  retryBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: stitchTokens.parchment,
+  },
+  retryText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+  },
+  compactEmptyBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 10,
+    marginHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 10,
+  },
+  compactEmptyIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.amberBg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: stitchTokens.amberBorder,
+  },
+  compactEmptyTextGroup: {
+    flex: 1,
+    gap: 2,
+  },
+  compactEmptyTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  compactEmptyMessage: {
+    fontSize: 11,
+    color: stitchTokens.roseBrown,
   },
   titleWithCountdown: {
     flexDirection: "row",

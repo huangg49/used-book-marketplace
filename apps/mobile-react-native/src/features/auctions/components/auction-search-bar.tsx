@@ -27,66 +27,84 @@ export function AuctionSearchBar({
 }: AuctionSearchBarProps) {
   return (
     <View style={styles.container}>
-      {/* 1. Khung đăng sách rút gọn & tích hợp nút (?) hướng dẫn */}
+      {/* 1. Khung đăng sách & Quản lý phiên đấu giá */}
       {onSendToAuctionPress && (
         <View style={styles.sellerBanner}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đấu giá sách của bạn"
-            onPress={onSendToAuctionPress}
-            style={styles.sellerBannerLeft}
-          >
-            <View style={styles.sellerBannerIconCircle}>
-              <Icon name="gavel" size={15} color={stitchTokens.whiteSurface} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                <AppText kind="bold" style={styles.sellerBannerTitle}>
-                  Đấu giá sách của bạn
+          {/* Header Row: Tiêu đề & Thông tin trạm */}
+          <View style={styles.sellerBannerTopRow}>
+            <View style={styles.sellerBannerTitleGroup}>
+              <View style={styles.sellerBannerIconCircle}>
+                <Icon name="gavel" size={14} color={stitchTokens.whiteSurface} />
+              </View>
+              <AppText kind="bold" style={styles.sellerBannerTitle}>
+                Đấu giá sách của bạn
+              </AppText>
+              <View style={styles.badgeHcm}>
+                <AppText kind="small" style={styles.badgeHcmText}>
+                  TP.HCM
                 </AppText>
-                <View style={styles.badgeHcm}>
-                  <AppText kind="small" style={styles.badgeHcmText}>
-                    TP.HCM
+              </View>
+            </View>
+
+            {onGuidePress && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Hướng dẫn tham gia đấu giá"
+                hitSlop={8}
+                onPress={onGuidePress}
+                style={styles.guideHelpBtn}
+              >
+                <AppText kind="bold" style={styles.guideHelpText}>
+                  ?
+                </AppText>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Action Buttons Row: 2 nút chia đều, rõ ràng, không bao giờ bị đè */}
+          <View style={styles.sellerBannerActionsRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Xem phiên của bạn"
+              onPress={onHistoryPress}
+              style={({ pressed }) => [
+                styles.bannerBtnHistory,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Icon name="gavel" size={13} color={stitchTokens.gold} />
+              <AppText kind="bold" style={styles.bannerBtnHistoryText}>
+                Phiên của bạn
+              </AppText>
+              {historyCount > 0 && (
+                <View style={styles.bannerBadgeCount}>
+                  <AppText kind="small" style={styles.bannerBadgeCountText}>
+                    {historyCount}
                   </AppText>
                 </View>
-                {onGuidePress && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Hướng dẫn tham gia đấu giá"
-                    hitSlop={8}
-                    onPress={onGuidePress}
-                    style={styles.guideHelpBtn}
-                  >
-                    <AppText kind="bold" style={styles.guideHelpText}>
-                      ?
-                    </AppText>
-                  </Pressable>
-                )}
-              </View>
-              <AppText kind="small" numberOfLines={1} style={styles.sellerBannerSubtitle}>
-                Gửi sách tại điểm TP.HCM • Nhân viên kiểm định • Mở sàn
-              </AppText>
-            </View>
-          </Pressable>
+              )}
+            </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đăng sách ngay"
-            onPress={onSendToAuctionPress}
-            style={({ pressed }) => [
-              styles.sellerBannerCta,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <AppText kind="bold" style={styles.sellerBannerCtaText}>
-              Đăng sách
-            </AppText>
-            <Icon name="chevronRight" size={12} color={stitchTokens.wineDark} />
-          </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đăng sách đấu giá ngay"
+              onPress={onSendToAuctionPress}
+              style={({ pressed }) => [
+                styles.bannerBtnCreate,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Icon name="plus" size={13} color={stitchTokens.wineDark} />
+              <AppText kind="bold" style={styles.bannerBtnCreateText}>
+                Đăng sách mới
+              </AppText>
+              <Icon name="chevronRight" size={12} color={stitchTokens.wineDark} />
+            </Pressable>
+          </View>
         </View>
       )}
 
-      {/* 2. Thanh search & Bộ lọc & Lịch sử đặt bên dưới khung đăng sách */}
+      {/* 2. Thanh search đặt bên dưới khung đăng sách */}
       <View style={styles.searchBarRow}>
         <View style={styles.searchInputWrapper}>
           <Icon name="search" size={16} color={stitchTokens.subtleGray} />
@@ -98,89 +116,16 @@ export function AuctionSearchBar({
             style={styles.searchInput}
           />
           {search ? (
-            <Pressable onPress={() => onSearchChange("")} style={{ padding: 4 }}>
-              <Icon name="close" size={14} color={stitchTokens.subtleGray} />
-            </Pressable>
-          ) : onFilterPress ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Mở bộ lọc"
-              onPress={onFilterPress}
-              style={{ padding: 4, position: "relative" }}
+              accessibilityLabel="Xóa từ khóa tìm kiếm"
+              onPress={() => onSearchChange("")}
+              style={{ padding: 4 }}
             >
-              <Icon
-                name="tune"
-                size={16}
-                color={
-                  activeFilterCount > 0
-                    ? stitchTokens.wineDark
-                    : stitchTokens.subtleGray
-                }
-              />
-              {activeFilterCount > 0 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: 2,
-                    right: 2,
-                    width: 7,
-                    height: 7,
-                    borderRadius: 4,
-                    backgroundColor: stitchTokens.crimson,
-                  }}
-                />
-              )}
+              <Icon name="close" size={14} color={stitchTokens.subtleGray} />
             </Pressable>
-          ) : (
-            <Icon name="tune" size={16} color={stitchTokens.subtleGray} />
-          )}
+          ) : null}
         </View>
-
-        {onFilterPress && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mở bộ lọc"
-            onPress={onFilterPress}
-            style={({ pressed }) => [
-              styles.filterBtn,
-              activeFilterCount > 0 && styles.filterBtnActive,
-              pressed && { opacity: 0.8 },
-            ]}
-          >
-            <Icon
-              name="filterList"
-              size={18}
-              color={
-                activeFilterCount > 0
-                  ? stitchTokens.whiteSurface
-                  : stitchTokens.wine
-              }
-            />
-            {activeFilterCount > 0 && (
-              <View style={styles.filterBadge}>
-                <AppText kind="small" style={styles.filterBadgeText}>
-                  {activeFilterCount}
-                </AppText>
-              </View>
-            )}
-          </Pressable>
-        )}
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Lịch sử đấu giá"
-          onPress={onHistoryPress}
-          style={({ pressed }) => [styles.historyBtn, pressed && { opacity: 0.8 }]}
-        >
-          <Icon name="gavel" size={18} color={stitchTokens.wine} />
-          {historyCount > 0 && (
-            <View style={styles.historyBadge}>
-              <AppText kind="small" style={styles.historyBadgeText}>
-                {historyCount}
-              </AppText>
-            </View>
-          )}
-        </Pressable>
       </View>
     </View>
   );
@@ -221,75 +166,13 @@ const styles = StyleSheet.create({
     color: stitchTokens.deepCocoa,
     paddingVertical: 0,
   },
-  historyBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  filterBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  filterBtnActive: {
-    backgroundColor: stitchTokens.wineDark,
-    borderColor: stitchTokens.wineDark,
-  },
-  filterBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    minWidth: 17,
-    height: 17,
-    borderRadius: 9,
-    paddingHorizontal: 4,
-    backgroundColor: stitchTokens.crimson,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: stitchTokens.white,
-  },
-  historyBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    width: 17,
-    height: 17,
-    borderRadius: 9,
-    backgroundColor: stitchTokens.flashRed,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  historyBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: stitchTokens.white,
-  },
   sellerBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: stitchTokens.wineDark,
     borderWidth: 1.5,
     borderColor: stitchTokens.wineLight,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingVertical: 10,
     gap: 8,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
@@ -297,16 +180,21 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  sellerBannerLeft: {
-    flex: 1,
+  sellerBannerTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
+  },
+  sellerBannerTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
   },
   sellerBannerIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: stitchTokens.whiteAlpha25,
     borderWidth: 1,
     borderColor: stitchTokens.whiteAlpha40,
@@ -314,7 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sellerBannerTitle: {
-    fontSize: 12.5,
+    fontSize: 13,
     color: stitchTokens.whiteSurface,
   },
   badgeHcm: {
@@ -330,8 +218,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   guideHelpBtn: {
-    width: 17,
-    height: 17,
+    width: 18,
+    height: 18,
     borderRadius: 9,
     backgroundColor: stitchTokens.whiteAlpha25,
     borderWidth: 1,
@@ -345,24 +233,67 @@ const styles = StyleSheet.create({
     color: stitchTokens.whiteSurface,
     lineHeight: 13,
   },
-  sellerBannerSubtitle: {
-    fontSize: 10.5,
-    color: stitchTokens.whiteAlpha85,
-    marginTop: 1,
-  },
-  sellerBannerCta: {
+
+  // Actions Row (2 buttons)
+  sellerBannerActionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 8,
+  },
+  bannerBtnHistory: {
+    flex: 1,
+    height: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.whiteAlpha25,
+    borderWidth: 1,
+    borderColor: stitchTokens.whiteAlpha40,
+    borderRadius: 8,
+    position: "relative",
+    paddingHorizontal: 6,
+  },
+  bannerBtnHistoryText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: stitchTokens.whiteSurface,
+  },
+  bannerBadgeCount: {
+    position: "absolute",
+    top: -5,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.flashRed,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: stitchTokens.wineDark,
+  },
+  bannerBadgeCountText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: stitchTokens.white,
+  },
+  bannerBtnCreate: {
+    flex: 1,
+    height: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
     backgroundColor: stitchTokens.whiteSurface,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: stitchTokens.goldLight,
+    paddingHorizontal: 6,
   },
-  sellerBannerCtaText: {
-    fontSize: 10.5,
+  bannerBtnCreateText: {
+    fontSize: 11.5,
+    fontWeight: "700",
     color: stitchTokens.wineDark,
   },
 });

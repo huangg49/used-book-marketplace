@@ -128,12 +128,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
 
   const auctionListings = listings.data?.items ?? [];
   const eligibleListings = auctionListings.filter(auctionEligible);
-  const unfinishedListings = auctionListings.filter(
-    (l) =>
-      ["Draft", "PendingReview", "Rejected"].includes(l.state.moderation) &&
-      l.state.visibility !== "Removed" &&
-      !l.state.deletedAt,
-  );
   const openPoints = points.data?.items ?? [];
 
   // 2. Form states
@@ -368,6 +362,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
         {focusId && (
           <View style={{ gap: 12 }}>
@@ -411,7 +406,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
           <>
             <SendToAuctionBookPicker
               eligibleListings={eligibleListings}
-              unfinishedListings={unfinishedListings}
               selectedListingId={listingId}
               onSelectListing={(id) => {
                 setListingId(id);

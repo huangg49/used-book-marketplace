@@ -24,6 +24,8 @@ export function Screen({
   centerContent = false,
   onScroll,
   scrollEventThrottle = 16,
+  background,
+  canvasColor,
 }: React.PropsWithChildren<{
   header?: React.ReactNode;
   footer?: React.ReactNode;
@@ -34,17 +36,19 @@ export function Screen({
   centerContent?: boolean;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEventThrottle?: number;
+  background?: React.ReactNode;
+  canvasColor?: string;
 }>) {
   const inset = useSafeAreaInsets();
   const shelf = appearance === "shelf";
   const browse = appearance === "browse";
   const home = appearance === "home";
   const detail = appearance === "detail";
-  const canvas = home || detail
+  const canvas = canvasColor ?? (home || detail
     ? stitchTokens.creamBg
     : shelf || browse
       ? colorRoles.shelfCanvas
-      : colors.paper;
+      : colors.paper);
   const navigationFooter = footerAppearance === "navigation";
   return (
     <SafeAreaView
@@ -52,6 +56,21 @@ export function Screen({
       style={{ flex: 1, backgroundColor: canvas }}
     >
       <StatusBar style={home || shelf ? "light" : "dark"} />
+      {background ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 0,
+          }}
+        >
+          {background}
+        </View>
+      ) : null}
       {shelf && (
         <View
           pointerEvents="none"

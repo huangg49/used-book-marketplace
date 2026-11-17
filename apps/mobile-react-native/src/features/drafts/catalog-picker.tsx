@@ -122,25 +122,7 @@ export function BookIdentity({
         </View>
       );
     }
-    return (
-      <View
-        style={{
-          alignItems: "center",
-          justifyContent: "center",
-          paddingBottom: space.xs,
-          borderBottomWidth: 1,
-          borderColor: stitchTokens.peachBorder,
-        }}
-      >
-        <AppText
-          kind="heading"
-          color={stitchTokens.wineDark}
-          style={{ textAlign: "center" }}
-        >
-          Chưa chọn đầu sách
-        </AppText>
-      </View>
-    );
+    return null;
   }
   if (read.isPending) return <AppText kind="small">Đang tải tên sách…</AppText>;
   if (!read.data)

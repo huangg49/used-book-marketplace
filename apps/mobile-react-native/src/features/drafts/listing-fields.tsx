@@ -491,19 +491,22 @@ export function PricingFields({
       value: "Sale" as const,
       title: "Bán trực tiếp",
       subtitle: "Nhận tiền VND",
-      desc: "Chuyền sách lấy tiền mặt",
+      desc: "Chuyển sách lấy tiền mặt",
+      icon: "wallet" as const,
     },
     {
       value: "Exchange" as const,
       title: "Trao đổi Sách",
       subtitle: "Đổi đọc tác phẩm",
       desc: "Giao lưu đổi sách cùng bạn đọc",
+      icon: "sync" as const,
     },
     {
       value: "Both" as const,
       title: "Cả bán & đổi",
       subtitle: "Linh hoạt nhất",
       desc: "Người mua chọn hình thức",
+      icon: "tag" as const,
     },
   ];
 
@@ -537,15 +540,15 @@ export function PricingFields({
                   {
                     flex: 1,
                     padding: space.sm,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: isSelected ? stitchTokens.roseWarmSurface : stitchTokens.warmIvory,
                     borderWidth: isSelected ? 2 : 1,
                     borderColor: isSelected ? stitchTokens.wine : stitchTokens.borderWarm,
-                    gap: 4,
+                    gap: 6,
                     shadowColor: isSelected ? stitchTokens.wine : stitchTokens.black,
                     shadowOffset: { width: 0, height: 1 },
                     shadowOpacity: isSelected ? 0.12 : 0.04,
-                    shadowRadius: 2,
+                    shadowRadius: 3,
                     elevation: isSelected ? 2 : 1,
                   },
                   (pressed || disabled) && { opacity: disabled ? 0.5 : 0.8 },
@@ -558,6 +561,39 @@ export function PricingFields({
                     alignItems: "center",
                   }}
                 >
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: isSelected ? stitchTokens.wine : stitchTokens.parchment,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Icon
+                      name={m.icon}
+                      size={14}
+                      color={isSelected ? stitchTokens.gold : stitchTokens.wine}
+                    />
+                  </View>
+                  {isSelected ? (
+                    <View
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        backgroundColor: stitchTokens.verifiedGreen,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon name="check" size={11} color={stitchTokens.white} />
+                    </View>
+                  ) : null}
+                </View>
+
+                <View style={{ gap: 2 }}>
                   <AppText
                     kind="bold"
                     color={stitchTokens.wineDark}
@@ -565,33 +601,18 @@ export function PricingFields({
                   >
                     {m.title}
                   </AppText>
-                  {isSelected ? (
-                    <View
-                      style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: 8,
-                        backgroundColor: stitchTokens.wine,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon name="check" size={10} color={stitchTokens.gold} />
-                    </View>
-                  ) : null}
+                  <AppText
+                    kind="small"
+                    color={isSelected ? stitchTokens.wine : stitchTokens.subtleGray}
+                    style={{ fontSize: 10.5, fontWeight: "700" }}
+                  >
+                    {m.subtitle}
+                  </AppText>
                 </View>
 
                 <AppText
-                  kind="label"
-                  color={isSelected ? stitchTokens.wine : stitchTokens.subtleGray}
-                  style={{ fontSize: 11, fontWeight: "600" }}
-                >
-                  {m.subtitle}
-                </AppText>
-
-                <AppText
                   kind="small"
-                  color={stitchTokens.subtleGray}
+                  color={stitchTokens.slateWarm}
                   style={{ fontSize: 10, lineHeight: 13 }}
                   numberOfLines={2}
                 >

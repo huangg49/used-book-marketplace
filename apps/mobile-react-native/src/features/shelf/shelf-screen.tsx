@@ -118,7 +118,7 @@ export function ShelfScreen() {
       footerAppearance="navigation"
       compactFooter
     >
-      <View style={{ gap: space.lg }}>
+      <View style={{ gap: space.md }}>
         {/* 1. Hero Promo Banner Carousel */}
         <HomeBanner
           onExplorePress={() => {
