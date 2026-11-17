@@ -121,14 +121,19 @@ export function CollectionDispatch({ item, ...context }: Props) {
       label="Giao sách cho hãng vận chuyển"
       title="Giao sách cho hãng vận chuyển."
       intro="Đóng gói sách theo biên bản, dán nhãn địa chỉ bên dưới rồi giao cho hãng vận chuyển mô phỏng. Không đưa sách cho người khác tại quầy."
-      fields={() =>
-        d && (
-          <p className="muted">
-            {d.recipientName} · {d.phone} · {d.detail}
+      fields={() => (
+        <>
+          {d && (
+            <p className="muted">
+              {d.recipientName} · {d.phone} · {d.detail}
+            </p>
+          )}
+          <p className="muted" style={{ marginTop: "0.5rem" }}>
+            ⚡ <strong>Chế độ mô phỏng:</strong> Sau khi bàn giao cho hãng, đơn sẽ lập tức xuất hiện tại mục <strong>Mô phỏng → Hãng vận chuyển</strong> để bạn giả lập giao hàng thành công.
           </p>
-        )
-      }
-      submitLabel="Đã giao cho hãng"
+        </>
+      )}
+      submitLabel="Xác nhận giao cho hãng (Demo)"
       confirmTitle="Xác nhận đã giao sách cho hãng?"
       confirmBody={
         <p>
@@ -145,7 +150,7 @@ export function CollectionDispatch({ item, ...context }: Props) {
         receipt.state === "InTransit"
           ? {
               tone: "success",
-              text: `Đã ghi nhận giao cho hãng. Đơn đang được giao tới ${d?.recipientName ?? item.recipientName}.`,
+              text: `Đã ghi nhận giao cho hãng. Đơn đang được giao tới ${d?.recipientName ?? item.recipientName}. Hãy vào mục Mô phỏng → Hãng vận chuyển để báo kết quả giao hàng.`,
               close: true,
             }
           : {

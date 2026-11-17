@@ -25,6 +25,13 @@ const atLocalHour = (at: Date, hour: number) => {
 };
 
 export function isPointOpen(at: Date) {
+  if (
+    process.env.NODE_ENV !== 'test' &&
+    (process.env.DEMO_BYPASS_POINT_HOURS === 'true' ||
+      process.env.NODE_ENV === 'development')
+  ) {
+    return true;
+  }
   const hour = localHour(at);
   return hour >= OPEN_HOUR && hour < CLOSE_HOUR;
 }
