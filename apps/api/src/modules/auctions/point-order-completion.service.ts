@@ -22,6 +22,7 @@ import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.s
 import { ReservationsService } from '../reservations/reservations.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import { AuctionClock } from './auction-clock.js';
+import { DemoSkipPolicy } from './demo-skip.policy.js';
 import { checkAuction } from './auction-invariants.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
@@ -48,6 +49,7 @@ export class PointOrderCompletionService {
     private readonly points: HandoverPointsService,
     private readonly listings: ListingCommitmentPolicy,
     private readonly clock: AuctionClock,
+    private readonly demo: DemoSkipPolicy,
   ) {}
 
   private async order(tx: Tx, id: string) {
@@ -285,6 +287,52 @@ export class PointOrderCompletionService {
   // Worker: an Inspection Order whose window has passed without a claim is
   // settled once. The book stays with the buyer, so the listing ends Sold and
   // the slot, commitment and both contexts close in the same commit.
+  /** Demo only: end the inspection window now; settle() then applies the
+   * normal payout, listing and context transitions. */
+  demoAdvance(
+    context: CommandContext,
+    id: string,
+    body: Wire['AuctionVersionCommand'],
+  ) {
+    let settling = false;
+    return this.commands
+      .runAuction(context, 'advanceDemoPointOrder', id, body, {
+        authorize: async (tx, actor) => {
+          member(actor);
+          this.demo.assertEnabled();
+          const o = await this.order(tx, id);
+          if (o.buyerId !== actor._id && o.sellerId !== actor._id)
+            throw notFound();
+          return o;
+        },
+        mutate: async (tx) => {
+          await tx.lock('point_orders', [id]);
+          const o = await this.order(tx, id);
+          if (o.version !== body.expectedVersion) throw conflict();
+          const now = await this.clock.decision(tx, context.auth);
+          if (
+            o.state !== 'Inspection' ||
+            !o.inspectionDeadline ||
+            now >= o.inspectionDeadline
+          )
+            throw invalidState('Đơn không còn chờ hết thời hạn kiểm tra.');
+          const next = await this.transition(
+            tx,
+            o,
+            { inspectionDeadline: now },
+            now,
+          );
+          settling = true;
+          return PointOrdersService.change(
+            next,
+            now,
+            'PointOrderInspectionSkipped',
+          );
+        },
+      })
+      .then((receipt) => (settling ? this.settle(id) : receipt));
+  }
+
   settle(id: string) {
     return this.commands.systemAuction('PointOrderSettlement', id, {
       discover: async (tx) => {

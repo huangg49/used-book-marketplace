@@ -289,6 +289,50 @@ export class AuctionsController {
   read(@Param('auctionId') id: string) {
     return this.bidding.readPublic(this.input.uuid(id));
   }
+  // Demo only: a party skips the scheduled-open or end wait; the normal close
+  // command still decides the winner. The gate is checked in the service.
+  @Post('auctions/:auctionId/demo-advance')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  demoAdvance(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.demoAdvance(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
+  // Demo only: ends the inspection window now; settle() performs the payout.
+  @Post('point-orders/:orderId/demo-advance')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  demoPointOrder(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.completion.demoAdvance(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
+
   @Get('auctions/:auctionId/photos/:mediaId')
   @Public()
   photo(@Param('auctionId') id: string, @Param('mediaId') mediaId: string) {

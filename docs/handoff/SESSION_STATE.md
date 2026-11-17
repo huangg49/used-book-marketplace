@@ -1,3 +1,19 @@
+# Bỏ qua chờ cho demo — 17/11/2026
+
+- Nhánh `test/auction-journey-registration`. Member web có nút “Bỏ qua chờ”
+  chỉ hiện khi API bật `DEMO_SKIP_ENABLED=true` (development/test, Mongo local
+  và `PAYMENT_SIMULATOR_SECRET`): mở hoặc chốt phiên đấu giá ngay, và kết thúc
+  hạn kiểm tra của đơn ViaPoint. Lệnh chỉ dời hạn thật; `close`/`settle` chuẩn
+  vẫn chọn người thắng, giải ngân và ghi sổ. Exchange, đơn trực tiếp và đánh
+  giá giữ các nút demo sẵn có.
+- Bước chờ Staff/hãng vận chuyển và quyết định Admin vẫn dùng bàn vận hành;
+  nút phía Member không cấp quyền Admin. Cần đặt `DEMO_SKIP_ENABLED=true`
+  trong `apps/api/.env` của máy demo rồi khởi động lại API.
+- API typecheck, Member web tsc/lint/build, 10 test cổng demo, 548/549 unit
+  API (test tắt tiến trình Windows hỏng do môi trường) và test
+  `point-order-wallet-cache` đã qua. Chưa chạy lại toàn bộ hành trình
+  Mongo/browser của đấu giá.
+
 # Hoàn tất các màn lỗi web và bộ kiểm hàng chờ — 16/11/2026
 
 - Nhánh `codex/ui-release-readiness` nối từ `73991a63`. Khu hỗ trợ Staff/Admin

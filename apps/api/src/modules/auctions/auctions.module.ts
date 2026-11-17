@@ -14,6 +14,8 @@ import { AuctionIntakesService } from './auction-intakes.service.js';
 import { AuctionOperationsController } from './auction-operations.controller.js';
 import { AuctionWorker } from './auction-worker.service.js';
 import { AuctionsController } from './auctions.controller.js';
+import { AuctionDemoController } from './auction-demo.controller.js';
+import { DemoSkipPolicy } from './demo-skip.policy.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { PointCollectionService } from './point-collection.service.js';
@@ -47,9 +49,11 @@ import { PointIncidentsService } from './point-incidents.service.js';
     AuctionWorker,
     AuctionLiveService,
     AuctionGateway,
+    DemoSkipPolicy,
   ],
   controllers: [
     AuctionsController,
+    AuctionDemoController,
     AuctionOperationsController,
     PointAdministrationController,
   ],

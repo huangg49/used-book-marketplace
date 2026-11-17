@@ -34,6 +34,7 @@ import {
   type CurrentActor,
 } from '../commands/mongo-command.service.js';
 import { AuctionClock } from './auction-clock.js';
+import { DemoSkipPolicy } from './demo-skip.policy.js';
 import {
   apply,
   EngineError,
@@ -125,6 +126,7 @@ export class AuctionBiddingService {
     private readonly pages: MongoPageService,
     private readonly ledger: LedgerService,
     config: ConfigService,
+    private readonly demo: DemoSkipPolicy,
   ) {
     // Only the test harness may switch the ADR 0071 check off, for historical
     // suites whose bidders were never funded; a dedicated suite keeps it on.
@@ -981,6 +983,72 @@ export class AuctionBiddingService {
         return this.change(next, now, 'AuctionOpened', actor._id, reason);
       },
     });
+  }
+
+  /**
+   * Demo only: stop waiting for the scheduled open or the auction end. The
+   * normal close command still decides the winner, so bids, deposits and the
+   * ledger follow the same rules as a real deadline.
+   */
+  demoAdvance(
+    context: CommandContext,
+    id: string,
+    body: Wire['AuctionVersionCommand'],
+  ) {
+    let closing: { version: number } | null = null;
+    return this.commands
+      .runAuction(context, 'advanceDemoAuction', id, body, {
+        discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+        authorize: async (tx, actor) => {
+          member(actor);
+          this.demo.assertEnabled();
+          const a = await this.auction(tx, id);
+          if (a.sellerId === actor._id || a.winnerId === actor._id) return a;
+          const reg = await tx.c.auction_registrations.findOne({
+            _id: `${id}:${actor._id}`,
+          });
+          const bid = await tx.c.auction_bidders.findOne({
+            _id: `${id}:${actor._id}`,
+          });
+          if (!reg && !bid) throw notFound();
+          return a;
+        },
+        mutate: async (tx, actor) => {
+          await tx.lock('auctions', [id]);
+          const a = await this.auction(tx, id);
+          if (a.version !== body.expectedVersion) throw conflict();
+          const now = await this.clock.decision(tx, context.auth);
+          if (a.state !== 'Active')
+            throw invalidState('Phiên không còn chờ để bỏ qua.');
+          if (phaseOf(a, now) === 'Scheduled') {
+            const fields = startNowFields(a, now);
+            if (!fields)
+              throw invalidState(
+                'Phiên chưa đủ người đăng ký tối thiểu nên chưa mở được.',
+              );
+            const opened = await this.update(tx, a, fields, now);
+            return this.change(
+              opened,
+              now,
+              'AuctionDemoOpened',
+              actor._id,
+              'Bỏ qua chờ mở phiên (demo)',
+            );
+          }
+          if (phaseOf(a, now) !== 'Live')
+            throw invalidState('Phiên không còn chờ để bỏ qua.');
+          const ended = await this.update(tx, a, { endAt: now }, now);
+          closing = { version: ended.version };
+          return this.change(
+            ended,
+            now,
+            'AuctionDemoEnded',
+            actor._id,
+            'Bỏ qua chờ kết thúc phiên (demo)',
+          );
+        },
+      })
+      .then((receipt) => (closing ? this.close(id, closing.version) : receipt));
   }
 
   // Every cancellation (Admin, seller, report, ADR 0079 ceilings) ends here:

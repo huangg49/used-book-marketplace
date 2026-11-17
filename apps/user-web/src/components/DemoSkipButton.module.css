@@ -1,0 +1,44 @@
+.wrap {
+  margin: 12px 0 0;
+}
+
+.skip {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px dashed #8a1538;
+  border-radius: 8px;
+  background: #fff7f9;
+  color: #6b1029;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.skip:hover:not(:disabled) {
+  background: #fde9ee;
+}
+
+.skip:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.skip:focus-visible {
+  box-shadow: 0 0 0 2px #8a1538;
+  outline: none;
+}
+
+.note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6b5b5f;
+}
+
+.error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #a0182f;
+}

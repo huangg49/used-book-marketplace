@@ -244,3 +244,14 @@
 .lowerRow label { flex: 1 1 100%; font-weight: 600; color: var(--shop-ink); }
 .lowerRow input { width: 88px; min-height: 44px; padding: 0 10px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; font-variant-numeric: tabular-nums; }
 .lowerRow button { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ADR 0044: home delivery for the auction winner. */
+.addressForm { display: grid; gap: 10px; }
+.addressForm :global(fieldset) { border: 0; padding: 0; margin: 0; }
+.deliveryTotals { display: grid; gap: 6px; margin: 4px 0; padding: 10px 12px; border: 1px solid var(--shop-line); border-radius: 8px; background: var(--shop-shelf); font-size: .8125rem; }
+.deliveryTotals > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.deliveryTotals dt { color: var(--shop-muted); }
+.deliveryTotals dd { margin: 0; font-variant-numeric: tabular-nums; }
+.deliveryTotals > div:last-child { padding-top: 6px; border-top: 1px solid var(--shop-line); }
+.deliveryTotals > div:last-child dt { color: var(--shop-ink); font-weight: 600; }
+.deliveryTotals > div:last-child dd { color: var(--shop-wine); font-weight: 700; }

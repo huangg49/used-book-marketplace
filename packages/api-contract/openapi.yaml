@@ -8766,6 +8766,149 @@ paths:
           $ref: "#/components/responses/ListingError"
         "403":
           $ref: "#/components/responses/ListingError"
+  /demo/skip:
+    get:
+      operationId: getDemoSkipStatus
+      tags:
+        - Auctions
+      description: The calling Member sees whether the local demo skip gate is enabled
+        (development/test, local MongoDB and the explicit switch). The controls still recheck
+        the actor and entity.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoSkipStatus"
+  /auctions/{auctionId}/demo-advance:
+    post:
+      operationId: advanceDemoAuction
+      tags:
+        - Auctions
+      description: Local demo only. A seller, registrant or bidder moves the scheduled open or the
+        auction end to now. The normal close command still decides the winner, refunds holds and
+        writes the ledger; nothing is bypassed. Refused unless the demo gate is enabled.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/demo-advance:
+    post:
+      operationId: advanceDemoPointOrder
+      tags:
+        - Auctions
+      description: Local demo only. The buyer or seller ends an inspection window now; the normal
+        settle command then applies payout, listing completion and context closure. Delivery, collection
+        and Admin decisions keep their own staff flows.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /auctions/{auctionId}/photos/{mediaId}:
     get:
       operationId: getAuctionPhoto
@@ -21332,6 +21475,14 @@ components:
             price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf
             price or set a bid. If omitted for compatibility, uses the revision salePrice, then
             exchangeValue, then startPrice. Never recalculated from later bids.
+    DemoSkipStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
     AuctionVersionCommand:
       type: object
       additionalProperties: false

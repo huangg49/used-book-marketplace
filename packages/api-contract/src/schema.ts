@@ -2913,6 +2913,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/demo/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The calling Member sees whether the local demo skip gate is enabled (development/test, local MongoDB and the explicit switch). The controls still recheck the actor and entity. */
+        get: operations["getDemoSkipStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/demo-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Local demo only. A seller, registrant or bidder moves the scheduled open or the auction end to now. The normal close command still decides the winner, refunds holds and writes the ledger; nothing is bypassed. Refused unless the demo gate is enabled. */
+        post: operations["advanceDemoAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/{orderId}/demo-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Local demo only. The buyer or seller ends an inspection window now; the normal settle command then applies payout, listing completion and context closure. Delivery, collection and Admin decisions keep their own staff flows. */
+        post: operations["advanceDemoPointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions/{auctionId}/photos/{mediaId}": {
         parameters: {
             query?: never;
@@ -7288,6 +7339,9 @@ export interface components {
             depositAmount?: number | null;
             /** @description Protective value snapshotted at intake (ADR 0049). Not capped by the auction price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
+        };
+        DemoSkipStatus: {
+            enabled: boolean;
         };
         AuctionVersionCommand: {
             expectedVersion: number;
@@ -14513,6 +14567,103 @@ export interface operations {
             400: components["responses"]["ListingError"];
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
+        };
+    };
+    getDemoSkipStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoSkipStatus"];
+                };
+            };
+        };
+    };
+    advanceDemoAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    advanceDemoPointOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
         };
     };
     getAuctionPhoto: {

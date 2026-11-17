@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { MapPin, Plus } from "lucide-react";
 import { addressDetailLabel } from "../lib/address-detail-label";
 import styles from "../pages/PurchaseFlow.module.css";
@@ -16,6 +16,7 @@ export function PurchaseAddressFields({
   form,
   onChange,
   localities,
+  note,
 }: {
   addresses: (PurchaseAddressForm & { id: string; isDefault: boolean })[];
   selected: string;
@@ -23,6 +24,8 @@ export function PurchaseAddressFields({
   form: PurchaseAddressForm;
   onChange: (value: PurchaseAddressForm) => void;
   localities: { code: string; label: string }[];
+  /** Replaces the direct-sale sentence when another flow ships to this address. */
+  note?: ReactNode;
 }) {
   const group = useId();
   const isSaved = addresses.some((item) => item.id === selected);
@@ -127,8 +130,10 @@ export function PurchaseAddressFields({
         </div>
       )}
       <p className={styles.note}>
-        <MapPin size={16} aria-hidden="true" /> Giao trực tiếp từ người bán,
-        giữa TP.HCM, Bình Dương và Vũng Tàu.
+        <MapPin size={16} aria-hidden="true" />
+        {note ?? (
+          <>Giao trực tiếp từ người bán, giữa TP.HCM, Bình Dương và Vũng Tàu.</>
+        )}
       </p>
     </>
   );

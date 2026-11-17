@@ -56,7 +56,9 @@ export async function startApi(root = repoRoot) {
           [nest, "start", "--watch", "--no-shell", "--preserveWatchOutput"],
           { cwd: app, env: config.env },
         );
-        await waitForApi(config.port, group.abort.signal);
+        await waitForApi(config.port, group.abort.signal, {
+          timeoutMs: 240_000,
+        });
         if (group.abort.signal.aborted) return await group.done;
         group.start("media", process.execPath, ["dist/media-worker.js"], {
           cwd: app,

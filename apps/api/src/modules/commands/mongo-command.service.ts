@@ -234,6 +234,7 @@ export type AuctionOperation =
   | 'closeAuctionBeforeStart'
   | 'acceptAuctionSecondChance'
   | 'declineAuctionSecondChance'
+  | 'advanceDemoAuction'
   | 'payPointOrder'
   | 'acceptPointOrderReport'
   | 'rejectPointOrderReport'
@@ -243,7 +244,8 @@ export type AuctionOperation =
   | 'claimPointOrder'
   | 'receivePointOrderReturn'
   | 'dispatchPointOrder'
-  | 'recordPointDelivery';
+  | 'recordPointDelivery'
+  | 'advanceDemoPointOrder';
 type EvidenceChange = {
   entityType: 'ExchangeEvidence';
   event?: string;
