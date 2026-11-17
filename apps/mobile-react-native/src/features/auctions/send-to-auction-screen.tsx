@@ -362,6 +362,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
         {focusId && (
           <View style={{ gap: 12 }}>

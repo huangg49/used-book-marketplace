@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens, type TextFieldRef } from "../../../core/ui";
 import { AUCTION_FORMATS, auctionDepositFor, depositChoices, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_CAP, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -77,8 +77,10 @@ export function SendToAuctionPricing({
   defaultExpanded = true,
 }: SendToAuctionPricingProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const inputRef = useRef<TextFieldRef>(null);
   const [prevMinBidders, setPrevMinBidders] = useState(minBidders);
   const [biddersInput, setBiddersInput] = useState(String(minBidders));
+  const [isBiddersFocused, setIsBiddersFocused] = useState(false);
 
   if (prevMinBidders !== minBidders) {
     setPrevMinBidders(minBidders);
@@ -101,7 +103,12 @@ export function SendToAuctionPricing({
     }
   };
 
+  const handleBiddersFocus = () => {
+    setIsBiddersFocused(true);
+  };
+
   const handleBiddersBlur = () => {
+    setIsBiddersFocused(false);
     const n = Number(biddersInput);
     if (!biddersInput || isNaN(n) || n < AUCTION_MIN_BIDDERS_FLOOR) {
       setBiddersInput(String(AUCTION_MIN_BIDDERS_FLOOR));
@@ -109,6 +116,9 @@ export function SendToAuctionPricing({
     } else if (n > AUCTION_MIN_BIDDERS_CAP) {
       setBiddersInput(String(AUCTION_MIN_BIDDERS_CAP));
       onChangeMinBidders(AUCTION_MIN_BIDDERS_CAP);
+    } else {
+      setBiddersInput(String(n));
+      onChangeMinBidders(n);
     }
   };
 
@@ -425,6 +435,7 @@ export function SendToAuctionPricing({
                     disabled={disabled}
                     onPress={() => {
                       onChangeMinBidders(n);
+                      setPrevMinBidders(n);
                       setBiddersInput(String(n));
                     }}
                     style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
@@ -445,6 +456,7 @@ export function SendToAuctionPricing({
                   onPress={() => {
                     const next = Math.max(AUCTION_MIN_BIDDERS_FLOOR, minBidders - 1);
                     onChangeMinBidders(next);
+                    setPrevMinBidders(next);
                     setBiddersInput(String(next));
                   }}
                   style={[
@@ -455,23 +467,44 @@ export function SendToAuctionPricing({
                   <AppText kind="bold" style={styles.stepperBtnText}>−</AppText>
                 </Pressable>
 
-                <View style={[styles.biddersInputContainer, isInvalidBidders && styles.inputWrapperError]}>
-                  <TextInput
-                    value={biddersInput}
-                    onChangeText={handleBiddersTextChange}
-                    onBlur={handleBiddersBlur}
-                    keyboardType="number-pad"
-                    editable={!disabled}
-                    placeholder="4"
-                    placeholderTextColor={stitchTokens.subtleGray}
-                    accessibilityLabel="Số người đăng ký tối thiểu"
-                    style={styles.biddersTextInput}
-                    maxLength={4}
-                  />
-                  <AppText kind="bold" style={styles.biddersSuffix}>
-                    người đăng ký
-                  </AppText>
-                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Nhập số người đăng ký"
+                  disabled={disabled}
+                  onPress={() => inputRef.current?.focus()}
+                  style={[
+                    styles.biddersInputContainer,
+                    isBiddersFocused && styles.biddersInputContainerFocused,
+                    isInvalidBidders && styles.inputWrapperError,
+                  ]}
+                >
+                  <View style={styles.biddersCluster} pointerEvents="box-none">
+                    <TextInput
+                      ref={inputRef}
+                      value={biddersInput}
+                      onChangeText={handleBiddersTextChange}
+                      onFocus={handleBiddersFocus}
+                      onBlur={handleBiddersBlur}
+                      keyboardType="number-pad"
+                      editable={!disabled}
+                      placeholder="4"
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      accessibilityLabel="Số người đăng ký tối thiểu"
+                      underlineColorAndroid="transparent"
+                      style={[
+                        styles.biddersTextInput,
+                        {
+                          width: Math.max(22, (biddersInput.length || 1) * 11 + 6),
+                        },
+                        Platform.OS === "web" ? ({ outlineStyle: "none", outlineWidth: 0 } as any) : null,
+                      ]}
+                      maxLength={4}
+                    />
+                    <AppText pointerEvents="none" kind="bold" style={styles.biddersSuffix}>
+                      người đăng ký
+                    </AppText>
+                  </View>
+                </Pressable>
 
                 <Pressable
                   accessibilityRole="button"
@@ -480,6 +513,7 @@ export function SendToAuctionPricing({
                   onPress={() => {
                     const next = Math.min(AUCTION_MIN_BIDDERS_CAP, minBidders + 1);
                     onChangeMinBidders(next);
+                    setPrevMinBidders(next);
                     setBiddersInput(String(next));
                   }}
                   style={[
@@ -801,22 +835,36 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.white,
     borderWidth: 1,
     borderColor: stitchTokens.goldBorderAlpha35,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  biddersInputContainerFocused: {
+    borderColor: stitchTokens.wineDark,
+    borderWidth: 1.5,
+  },
+  biddersCluster: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    justifyContent: "center",
+    height: "100%",
   },
   biddersTextInput: {
-    flex: 1,
+    height: "100%",
     fontSize: 16,
     fontWeight: "700",
     color: stitchTokens.wineDark,
     paddingVertical: 0,
+    paddingHorizontal: 0,
     textAlign: "center",
+    borderWidth: 0,
+    backgroundColor: "transparent",
   },
   biddersSuffix: {
-    fontSize: 12,
+    fontSize: 13,
     color: stitchTokens.wineDark,
-    opacity: 0.8,
+    opacity: 0.85,
+    marginLeft: 4,
   },
   fieldLabel: {
     fontSize: 13,
