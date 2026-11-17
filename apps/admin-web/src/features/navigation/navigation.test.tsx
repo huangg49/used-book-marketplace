@@ -22,7 +22,7 @@ describe("workspace navigation permissions", () => {
       "/operations/incidents",
     ]);
   });
-  it("does not give an Admin without Staff the custody desks or carrier simulator", () => {
+  it("gives Admin the auction intake desk while reserving collection and simulation for their own roles", () => {
     expect(paths({ ...base, roles: ["ADMIN"] })).toEqual([
       "/dashboard",
       "/statistics",
@@ -32,6 +32,7 @@ describe("workspace navigation permissions", () => {
       "/transaction-reviews",
       "/operations/exchange-disputes",
       "/support",
+      "/operations/intakes",
       "/operations/resolutions",
       "/operations/incidents",
       "/operations/escalations",
@@ -95,6 +96,7 @@ describe("sidebar route semantics", () => {
     expect(html).toContain('aria-label="Tổng quan"');
     expect(html).not.toContain("mock-nav-label");
     expect(html).not.toContain("Sắp triển khai");
-    expect(html).not.toContain('href="/operations/intakes"');
+    expect(html).toContain('href="/operations/intakes"');
+    expect(html).not.toContain('href="/operations/collections"');
   });
 });

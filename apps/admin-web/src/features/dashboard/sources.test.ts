@@ -11,11 +11,11 @@ describe("dashboard API sources", () => {
   it("limits Staff to review and assigned-point lists", () => {
     expect(paths(["STAFF"])).toEqual(["/operations/listings?moderation=PendingReview&limit=20", "/operations/auction-intakes", "/operations/point-orders", "/operations/incidents"]);
   });
-  it("does not infer Staff or TEST_OPERATOR from ADMIN", () => {
+  it("does not infer Staff collection or TEST_OPERATOR from ADMIN, but allows auction intakes", () => {
     const sources = paths(["ADMIN"]);
     expect(sources).toContain("/operations/users?limit=20");
     expect(sources).toContain("/operations/incident-fund");
-    expect(sources).not.toContain("/operations/auction-intakes");
+    expect(sources).toContain("/operations/auction-intakes");
     expect(sources).not.toContain("/operations/point-orders");
     expect(sources).not.toContain("/operations/simulator/point-deliveries");
   });

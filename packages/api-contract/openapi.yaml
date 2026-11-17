@@ -7416,7 +7416,7 @@ paths:
       operationId: listPointAuctionIntakes
       tags:
         - Auctions
-      description: ACTIVE STAFF with a current assignment. Intakes at the assigned points that need
+      description: ACTIVE STAFF with a current assignment or ADMIN. Intakes at the assigned points (or all points for ADMIN) that need
         receipt, inspection, opening or reclaim.
       x-implementation-status: implemented
       security:
@@ -7456,7 +7456,7 @@ paths:
       operationId: receiveAuctionIntake
       tags:
         - Auctions
-      description: Assigned STAFF independent of the seller records the physical self drop-off before the
+      description: Assigned STAFF or ADMIN independent of the seller records the physical self drop-off before the
         deadline with a private shelf code.
       x-implementation-status: implemented
       security:
@@ -7523,7 +7523,7 @@ paths:
       operationId: inspectAuctionIntake
       tags:
         - Auctions
-      description: Assigned independent STAFF records condition inspection Pass, Fail or NeedsEvidence with the FR-T01 checklist against the frozen
+      description: Assigned independent STAFF or ADMIN records condition inspection Pass, Fail or NeedsEvidence with the FR-T01 checklist against the frozen
         revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity.
       x-implementation-status: implemented
       security:
@@ -7592,7 +7592,7 @@ paths:
         - Auctions
       deprecated: true
       description: "Superseded by publishAuction (ADR 0047), kept for operations tooling. Assigned
-        independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server
+        independent STAFF or ADMIN opens a Passed intake while the seller is still ACTIVE: startAt is server
         time and the auction runs 24 hours."
       x-implementation-status: implemented
       security:
@@ -7659,7 +7659,7 @@ paths:
       operationId: reclaimAuctionIntake
       tags:
         - Auctions
-      description: Assigned independent STAFF records that the seller collected the book. Releases the
+      description: Assigned independent STAFF or ADMIN records that the seller collected the book. Releases the
         slot and exclusive commitment; the listing returns to Available.
       x-implementation-status: implemented
       security:
@@ -7792,7 +7792,7 @@ paths:
       operationId: decideAuctionIntakeEvidence
       tags:
         - Auctions
-      description: Assigned STAFF other than the one who asked for evidence decides Pass or Fail after the seller answered, or Fail after the deadline passed without an answer. NeedsEvidence never becomes Pass on its own.
+      description: Assigned STAFF or ADMIN other than the one who asked for evidence decides Pass or Fail after the seller answered, or Fail after the deadline passed without an answer. NeedsEvidence never becomes Pass on its own.
       x-implementation-status: implemented
       security:
         - bearerAuth: []

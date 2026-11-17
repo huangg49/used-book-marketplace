@@ -1,6 +1,7 @@
 import type { CurrentUser } from "@used-books/session-client";
 import {
   canEnterWorkspace,
+  canOperateIntake,
   canOperatePoint,
   canResolve,
   canReview,
@@ -63,7 +64,7 @@ const workspaceGroups: RouteGroup[] = [
     label: "Giao nhận tại điểm",
     icon: "operations",
     items: [
-      { label: "Nhận sách đấu giá", to: "/operations/intakes", icon: "intake", visibleTo: canOperatePoint },
+      { label: "Nhận sách đấu giá", to: "/operations/intakes", icon: "intake", visibleTo: canOperateIntake },
       { label: "Giao sách", to: "/operations/collections", icon: "collection", visibleTo: canOperatePoint },
       { label: "Xử lý đơn tại điểm", to: "/operations/resolutions", icon: "resolution", visibleTo: canResolve },
       { label: "Sự cố tại điểm", to: "/operations/incidents", icon: "incident", visibleTo: canSeePointIncidents },

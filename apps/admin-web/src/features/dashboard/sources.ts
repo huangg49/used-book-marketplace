@@ -2,6 +2,7 @@ import type { CurrentUser } from "@used-books/session-client";
 import type { z } from "zod";
 import type { Request } from "../../core/command";
 import {
+  canOperateIntake,
   canOperatePoint,
   canResolve,
   canReview,
@@ -156,7 +157,7 @@ export function dashboardSources(user: CurrentUser): DashboardSource[] {
         }),
       ),
     );
-  if (canOperatePoint(user))
+  if (canOperateIntake(user))
     sources.push(
       source(
         {
@@ -179,6 +180,9 @@ export function dashboardSources(user: CurrentUser): DashboardSource[] {
             })),
         }),
       ),
+    );
+  if (canOperatePoint(user))
+    sources.push(
       source(
         {
           id: "collections",

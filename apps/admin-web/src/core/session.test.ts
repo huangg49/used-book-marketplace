@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CurrentUser } from "@used-books/session-client";
 import {
   canEnterWorkspace,
+  canOperateIntake,
   canOperatePoint,
   canResolve,
   canReview,
@@ -54,25 +55,30 @@ describe("point operations gates", () => {
     "rejects %s for point desks and resolutions",
     (role) => {
       const user = { ...base, roles: [role] } satisfies CurrentUser;
+      expect(canOperateIntake(user)).toBe(false);
       expect(canOperatePoint(user)).toBe(false);
       expect(canResolve(user)).toBe(false);
     },
   );
-  it("gives staff the point desks but not resolutions", () => {
+  it("gives staff both intake and collection point desks but not resolutions", () => {
     const user = { ...base, roles: ["STAFF"] } satisfies CurrentUser;
+    expect(canOperateIntake(user)).toBe(true);
     expect(canOperatePoint(user)).toBe(true);
     expect(canResolve(user)).toBe(false);
   });
-  it("keeps point desks from an admin without the staff role", () => {
+  it("gives admin auction intake approval while keeping collection desks to staff", () => {
     const user = { ...base, roles: ["ADMIN"] } satisfies CurrentUser;
+    expect(canOperateIntake(user)).toBe(true);
     expect(canOperatePoint(user)).toBe(false);
     expect(canResolve(user)).toBe(true);
   });
   it("rejects every inactive status even with both roles", () => {
     const user = { ...base, roles: ["STAFF", "ADMIN"] } satisfies CurrentUser;
+    expect(canOperateIntake(user)).toBe(true);
     expect(canOperatePoint(user)).toBe(true);
     expect(canResolve(user)).toBe(true);
     for (const status of ["RESTRICTED", "LOCKED"] as const) {
+      expect(canOperateIntake({ ...user, status })).toBe(false);
       expect(canOperatePoint({ ...user, status })).toBe(false);
       expect(canResolve({ ...user, status })).toBe(false);
     }

@@ -274,8 +274,8 @@ export class AuctionIntakesService {
     if (closed.modifiedCount !== 1) throw conflict();
     return this.transition(tx, i, { state: 'Sold', closedAt: now }, now);
   }
-  // STAFF role with a current assignment at the intake point, independent of
-  // the seller. ADMIN alone cannot receive, inspect, open or reclaim.
+  // STAFF role with a current assignment at the intake point, or ADMIN, independent
+  // of the seller.
   private async staff(
     tx: Tx,
     actor: CurrentActor,
@@ -283,15 +283,19 @@ export class AuctionIntakesService {
     now: Date,
   ) {
     requireActive(actor);
-    if (!actor.roles.some((r) => r.role === 'STAFF'))
-      throw forbidden('Chỉ nhân viên điểm được thực hiện thao tác này.');
+    const isStaff = actor.roles.some((r) => r.role === 'STAFF');
+    const isAdmin = actor.roles.some((r) => r.role === 'ADMIN');
+    if (!isStaff && !isAdmin)
+      throw forbidden('Chỉ nhân viên điểm hoặc quản trị viên được thực hiện thao tác này.');
     if (actor._id === i.sellerId)
       throw new DomainError(
         403,
         'SelfReviewForbidden',
-        'Nhân viên không được xử lý sách của chính mình.',
+        'Không được xử lý sách của chính mình.',
       );
-    await this.points.requireAssigned(tx, actor._id, i.pointId, now);
+    if (!isAdmin) {
+      await this.points.requireAssigned(tx, actor._id, i.pointId, now);
+    }
   }
 
   // -------------------------------------------------------------- seller
@@ -774,7 +778,7 @@ export class AuctionIntakesService {
           throw new DomainError(
             403,
             'SelfReviewForbidden',
-            'Một nhân viên khác phải xem xét bằng chứng bạn đã yêu cầu.',
+            'Một nhân viên hoặc quản trị viên khác phải xem xét bằng chứng bạn đã yêu cầu.',
           );
         if (!i.evidenceSubmittedAt && now < i.evidenceDeadline!)
           throw new DomainError(
@@ -1279,17 +1283,25 @@ export class AuctionIntakesService {
   listForStaff(auth: Actor): Promise<Wire['AuctionIntakeList']> {
     return this.commands.read(auth, async (tx, actor) => {
       requireActive(actor);
-      if (!actor.roles.some((r) => r.role === 'STAFF'))
-        throw forbidden('Chỉ nhân viên điểm được xem danh sách này.');
-      const pointIds = await this.points.assignedPointIds(
-        tx,
-        actor._id,
-        await this.mongo.now(),
-      );
+      const isStaff = actor.roles.some((r) => r.role === 'STAFF');
+      const isAdmin = actor.roles.some((r) => r.role === 'ADMIN');
+      if (!isStaff && !isAdmin)
+        throw forbidden('Chỉ nhân viên điểm hoặc quản trị viên được xem danh sách này.');
+      const pointFilter = isAdmin
+        ? {}
+        : {
+            pointId: {
+              $in: await this.points.assignedPointIds(
+                tx,
+                actor._id,
+                await this.mongo.now(),
+              ),
+            },
+          };
       const rows = await tx.c.auction_intakes
         .find(
           {
-            pointId: { $in: pointIds },
+            ...pointFilter,
             sellerId: { $ne: actor._id },
             state: { $nin: ['Cancelled', 'Reclaimed'] },
           },
