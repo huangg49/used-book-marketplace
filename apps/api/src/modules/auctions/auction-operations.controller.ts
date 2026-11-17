@@ -150,12 +150,12 @@ export class AuctionOperationsController {
   }
 
   @Get('auction-intakes')
-  @Roles('STAFF')
+  @Roles('STAFF', 'ADMIN')
   list(@Req() req: AuthenticatedRequest) {
     return this.intakes.listForStaff(req.auth);
   }
   @Post('auction-intakes/:intakeId/receive')
-  @Roles('STAFF')
+  @Roles('STAFF', 'ADMIN')
   @HttpCode(200)
   receive(
     @Param('intakeId') id: string,
@@ -173,7 +173,7 @@ export class AuctionOperationsController {
     );
   }
   @Post('auction-intakes/:intakeId/inspect')
-  @Roles('STAFF')
+  @Roles('STAFF', 'ADMIN')
   @HttpCode(200)
   inspect(
     @Param('intakeId') id: string,
@@ -191,7 +191,7 @@ export class AuctionOperationsController {
     );
   }
   @Post('auction-intakes/:intakeId/evidence-decision')
-  @Roles('STAFF')
+  @Roles('STAFF', 'ADMIN')
   @HttpCode(200)
   decideEvidence(
     @Param('intakeId') id: string,
@@ -209,7 +209,7 @@ export class AuctionOperationsController {
     );
   }
   @Post('auction-intakes/:intakeId/open')
-  @Roles('STAFF')
+  @Roles('STAFF', 'ADMIN')
   @HttpCode(200)
   open(
     @Param('intakeId') id: string,
@@ -227,7 +227,7 @@ export class AuctionOperationsController {
     );
   }
   @Post('auction-intakes/:intakeId/reclaim')
-  @Roles('STAFF')
+  @Roles('STAFF', 'ADMIN')
   @HttpCode(200)
   reclaim(
     @Param('intakeId') id: string,

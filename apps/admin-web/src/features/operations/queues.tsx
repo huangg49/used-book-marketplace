@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
-import { canOperatePoint, canResolve, session } from "../../core/session";
+import { canOperateIntake, canOperatePoint, canResolve, session } from "../../core/session";
 import { AssignmentNote } from "./assignment-note";
 import { AuctionCancel, AuctionHoldDecision, AuctionScheduledDecision } from "./auction-actions";
 import {
@@ -38,7 +38,7 @@ import { refetchWhileClosed, useQueuePanel, type Row } from "./queue-panel";
 
 export function IntakeQueue() {
   const user = useOutletContext<CurrentUser>();
-  if (!canOperatePoint(user)) return <Forbidden />;
+  if (!canOperateIntake(user)) return <Forbidden />;
   return <IntakeQueueContent userId={user.id} />;
 }
 function intakeMeta(item: Intake) {
@@ -123,8 +123,8 @@ function IntakeQueueContent({ userId }: { userId: string }) {
             {item.state === "NeedsEvidence" &&
               item.evidenceRequestedBy === userId && (
                 <p>
-                  Bạn đã yêu cầu bằng chứng; một nhân viên khác tại điểm sẽ
-                  quyết định.
+                  Bạn đã yêu cầu bằng chứng; một nhân viên hoặc quản trị viên
+                  khác sẽ quyết định.
                 </p>
               )}
           </>

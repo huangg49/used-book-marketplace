@@ -1474,7 +1474,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     validates('HandoverPointList', points.body);
 
     const id = created.body.intakeId;
-    // Not assigned at point A, ADMIN alone, or before receipt: no progress.
+    // Not assigned at point A or before receipt: no progress.
     await cmd(
       'post',
       `/operations/auction-intakes/${id}/receive`,
@@ -1485,7 +1485,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       'post',
       `/operations/auction-intakes/${id}/receive`,
       { expectedVersion: 1, shelfCode: 'A-02' },
-      admin,
+      seller,
     ).expect(403);
     await cmd(
       'post',
@@ -1509,6 +1509,74 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(
       await db.c.point_slots.countDocuments({ listingId: l.id, active: true }),
     ).toBe(0);
+  });
+
+  it('allows ADMIN to list, receive and approve auction intake like staff', async () => {
+    const seller = await actor();
+    const l = await saleListing(seller);
+    const { body } = await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(l),
+      seller,
+    ).expect(200);
+    const id = body.intakeId;
+
+    // Admin can list intakes across points
+    const adminList = await call('get', '/operations/auction-intakes', admin).expect(200);
+    expect(adminList.body.items.some((i: { id: string }) => i.id === id)).toBe(true);
+
+    // Admin receives the auction book at point
+    const received = await cmd(
+      'post',
+      `/operations/auction-intakes/${id}/receive`,
+      { expectedVersion: 1, shelfCode: 'ADM-01' },
+      admin,
+    ).expect(200);
+    expect(received.body.state).toBe('Received');
+
+    // Admin inspects and approves (Pass) the auction intake
+    const passed = await cmd(
+      'post',
+      `/operations/auction-intakes/${id}/inspect`,
+      {
+        expectedVersion: 2,
+        outcome: 'Pass',
+        checklist: {
+          titleEditionMatches: true,
+          privateMarksMatch: true,
+          coverPagesMatch: true,
+          notesAccessoriesMatch: true,
+          suspectedCopy: false,
+        },
+      },
+      admin,
+    ).expect(200);
+    expect(passed.body.state).toBe('Passed');
+  });
+
+  it('prevents ADMIN from approving their own auction intake (SelfReviewForbidden)', async () => {
+    const adminSeller = await actor(['ADMIN', 'MEMBER']);
+    const l = await saleListing(adminSeller);
+    const { body } = await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(l),
+      adminSeller,
+    ).expect(200);
+    const id = body.intakeId;
+
+    // Admin seller is omitted from their own intake list
+    const adminList = await call('get', '/operations/auction-intakes', adminSeller).expect(200);
+    expect(adminList.body.items.some((i: { id: string }) => i.id === id)).toBe(false);
+
+    // Admin cannot receive their own book
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${id}/receive`,
+      { expectedVersion: 1, shelfCode: 'ADM-SELF' },
+      adminSeller,
+    ).expect(403);
   });
 
   it('AC-AU01: failed inspection never opens and goes to reclaim', async () => {

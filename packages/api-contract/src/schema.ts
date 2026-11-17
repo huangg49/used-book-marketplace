@@ -2541,7 +2541,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description ACTIVE STAFF with a current assignment. Intakes at the assigned points that need receipt, inspection, opening or reclaim. */
+        /** @description ACTIVE STAFF with a current assignment or ADMIN. Intakes at the assigned points (or all points for ADMIN) that need receipt, inspection, opening or reclaim. */
         get: operations["listPointAuctionIntakes"];
         put?: never;
         post?: never;
@@ -2560,7 +2560,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assigned STAFF independent of the seller records the physical self drop-off before the deadline with a private shelf code. */
+        /** @description Assigned STAFF or ADMIN independent of the seller records the physical self drop-off before the deadline with a private shelf code. */
         post: operations["receiveAuctionIntake"];
         delete?: never;
         options?: never;
@@ -2577,7 +2577,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assigned independent STAFF records condition inspection Pass, Fail or NeedsEvidence with the FR-T01 checklist against the frozen revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity. */
+        /** @description Assigned independent STAFF or ADMIN records condition inspection Pass, Fail or NeedsEvidence with the FR-T01 checklist against the frozen revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity. */
         post: operations["inspectAuctionIntake"];
         delete?: never;
         options?: never;
@@ -2596,7 +2596,7 @@ export interface paths {
         put?: never;
         /**
          * @deprecated
-         * @description Superseded by publishAuction (ADR 0047), kept for operations tooling. Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server time and the auction runs 24 hours.
+         * @description Superseded by publishAuction (ADR 0047), kept for operations tooling. Assigned independent STAFF or ADMIN opens a Passed intake while the seller is still ACTIVE: startAt is server time and the auction runs 24 hours.
          */
         post: operations["openAuction"];
         delete?: never;
@@ -2614,7 +2614,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assigned independent STAFF records that the seller collected the book. Releases the slot and exclusive commitment; the listing returns to Available. */
+        /** @description Assigned independent STAFF or ADMIN records that the seller collected the book. Releases the slot and exclusive commitment; the listing returns to Available. */
         post: operations["reclaimAuctionIntake"];
         delete?: never;
         options?: never;
@@ -2648,7 +2648,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assigned STAFF other than the one who asked for evidence decides Pass or Fail after the seller answered, or Fail after the deadline passed without an answer. NeedsEvidence never becomes Pass on its own. */
+        /** @description Assigned STAFF or ADMIN other than the one who asked for evidence decides Pass or Fail after the seller answered, or Fail after the deadline passed without an answer. NeedsEvidence never becomes Pass on its own. */
         post: operations["decideAuctionIntakeEvidence"];
         delete?: never;
         options?: never;

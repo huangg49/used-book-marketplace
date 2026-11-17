@@ -1,5 +1,5 @@
 import type { CurrentUser } from "@used-books/session-client";
-import { canEnterWorkspace, canOperatePoint, canResolve, canReview, canReviewCatalog, canSimulate } from "../../core/session";
+import { canEnterWorkspace, canOperateIntake, canOperatePoint, canResolve, canReview, canReviewCatalog, canSimulate } from "../../core/session";
 
 export type NavigationIcon = "dashboard" | "statistics" | "books" | "catalog" | "intake" | "collection" | "incident" | "resolution" | "auction" | "overdue" | "point" | "users" | "carrier";
 export type NavigationItem = { label: string; to: string; icon: NavigationIcon };
@@ -40,7 +40,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
   }
 
   // 3. Điểm & đấu giá: Xếp tuần tự từ Thiết lập trạm -> Phiên đấu giá -> Nhận sách -> Giao sách -> Xử lý đơn/sự cố/quá hạn
-  if (canOperatePoint(user) || canResolve(user)) {
+  if (canOperateIntake(user) || canOperatePoint(user) || canResolve(user)) {
     const items: NavigationItem[] = [];
     if (canResolve(user)) {
       items.push(
@@ -48,9 +48,13 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
         { label: "Phiên đấu giá", to: "/operations/auctions", icon: "auction" },
       );
     }
-    if (canOperatePoint(user)) {
+    if (canOperateIntake(user)) {
       items.push(
         { label: "Nhận sách đấu giá", to: "/operations/intakes", icon: "intake" },
+      );
+    }
+    if (canOperatePoint(user)) {
+      items.push(
         { label: "Giao sách", to: "/operations/collections", icon: "collection" },
       );
     }
