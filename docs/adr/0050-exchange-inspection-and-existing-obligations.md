@@ -15,6 +15,8 @@ not authorize a new completion/dispute product or close READINESS gates.
   requires both receipts, both elapsed deadlines and no retained dispute evidence.
   `ResolutionPending` and any retained dispute fields remain blockers even if
   another legacy writer changes the state to `Delivered`.
+  Automatic expiration and the separately labelled demo deadline command finish
+  eligible exchanges without recording an acknowledgement for either member.
 - The obsolete `EXCHANGE_INSPECTION_HOURS` setting cannot shorten these windows.
   Migration `0039-exchange-inspection-deadlines` adds participant deadline fields
   and backfills active received records from receipt times, preserving a longer

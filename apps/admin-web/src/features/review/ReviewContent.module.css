@@ -123,3 +123,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.photoEvidence:global(.section) {
+  padding: 13px;
+}
+.photoEvidence :global(.section-heading) {
+  margin-bottom: 9px;
+}
+.photoEvidence :global(.section-heading h3) {
+  font-size: 16px;
+}
+.photoEvidence .photoNote {
+  margin: 10px 0 0;
+  color: var(--shop-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+@container review-dossier (max-width: 739px) {
+  .photoEvidence {
+    scroll-margin-block-start: 76px;
+  }
+}

@@ -46,135 +46,154 @@
   max-width: 65ch;
 }
 
-.statsBadge {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  background: #faf6f0;
-  border: 1px solid rgba(217, 203, 189, 0.7);
-  border-radius: 10px;
-  padding: 8px 16px;
+.listHeader {
+  padding: 0;
+  margin-bottom: 20px;
+  border: 0;
 }
 
-.statsNum {
-  font-family: var(--shop-display, Anton, sans-serif);
-  font-size: 1.5rem;
-  color: #892824;
-  line-height: 1;
+.orderControls {
+  margin-bottom: 22px;
+  border: 1px solid var(--shop-line);
+  border-radius: 14px;
+  background: var(--shop-paper);
 }
-
-.statsLabel {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--shop-muted, #716157);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-top: 2px;
-}
-
-/* --------------------------------------------------------------------------
-   FILTER BAR (Role Tabs & Status Chips)
-   -------------------------------------------------------------------------- */
 
 .filterBar {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 14px;
+}
+
+.roleTabs,
+.statusChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
 }
 
 .roleTabs {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #f4eee5;
   padding: 4px;
   border-radius: 10px;
-  width: fit-content;
+  background: var(--shop-shelf);
 }
 
-.roleTab {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--shop-muted, #716157);
-  font-size: 0.84375rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 180ms ease;
-}
-
-.roleTab:hover {
-  color: var(--shop-ink, #281914);
-}
-
-.roleTabActive {
-  background: #ffffff;
-  color: #892824 !important;
-  font-weight: 700;
-  box-shadow: 0 2px 6px rgba(40, 25, 20, 0.08);
-}
-
-.tabBadge {
+.roleTab,
+.chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9999px;
-  background: #ebe2d5;
-  color: var(--shop-ink, #281914);
+  gap: 6px;
+  min-height: 44px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--shop-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 160ms ease-out, color 160ms ease-out;
+}
+
+.roleTab:hover,
+.chip:hover {
+  color: var(--shop-wine);
+  background: color-mix(in srgb, var(--shop-wine) 6%, var(--shop-paper));
+}
+
+.roleTab[aria-pressed="true"] {
+  background: var(--shop-wine);
+  color: var(--shop-paper);
+}
+
+.tabBadge {
+  padding: 1px 5px;
+  min-width: 1.3em;
+  border-radius: 5px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.roleTabActive .tabBadge {
-  background: #fde8e7;
-  color: #892824;
+.chip[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--shop-wine) 9%, var(--shop-paper));
+  color: var(--shop-wine);
+  border-color: color-mix(in srgb, var(--shop-wine) 22%, var(--shop-line));
 }
 
-.statusChips {
+.relatedLinks {
   display: flex;
-  align-items: center;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 0 14px;
+  padding: 1px 14px;
+  border-top: 1px solid var(--shop-line);
 }
 
-.filterIconLabel {
+.relatedLinks a {
   display: inline-flex;
   align-items: center;
-  color: var(--shop-muted, #716157);
-  margin-right: 2px;
+  gap: 7px;
+  min-height: 44px;
+  padding-inline: 5px;
+  border-radius: 6px;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  text-decoration: none;
 }
 
-.chip {
-  padding: 6px 14px;
-  border-radius: 9999px;
-  border: 1px solid rgba(217, 203, 189, 0.7);
-  background: #ffffff;
-  color: var(--shop-muted, #716157);
-  font-size: 0.78125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 160ms ease;
+.relatedLinks svg {
+  flex: none;
+  color: var(--shop-wine);
 }
 
-.chip:hover {
-  border-color: #892824;
-  color: #892824;
-  background: #faf6f0;
+.relatedLinks a:hover {
+  color: var(--shop-wine);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.chipActive {
-  background: #892824 !important;
-  border-color: #892824 !important;
-  color: #fffcf5 !important;
-  box-shadow: 0 2px 6px rgba(137, 40, 36, 0.2);
+@media (max-width: 540px) {
+  .filterBar,
+  .relatedLinks {
+    padding-inline: 8px;
+  }
+  .roleTabs,
+  .statusChips {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .statusChips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .roleTab {
+    gap: 4px;
+    padding-inline: 2px;
+    flex-wrap: wrap;
+  }
+  .roleTab svg {
+    display: none;
+  }
+  .relatedLinks {
+    gap: 0 7px;
+  }
+}
+
+@media (forced-colors: active) {
+  .roleTab[aria-pressed="true"],
+  .chip[aria-pressed="true"] {
+    border-color: Highlight;
+    color: Highlight;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -367,10 +386,10 @@
    -------------------------------------------------------------------------- */
 
 .emptyCard {
-  background: #ffffff;
-  border: 1px dashed rgba(217, 203, 189, 0.9);
-  border-radius: 16px;
-  padding: 48px 24px;
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-line);
+  border-radius: 14px;
+  padding: clamp(28px, 5vw, 42px) 18px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -378,14 +397,14 @@
 }
 
 .emptyIconWrap {
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  background: #faf6f0;
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: var(--shop-shelf);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #d97706;
+  color: var(--shop-wine);
   margin-bottom: 16px;
 }
 
@@ -404,6 +423,14 @@
   max-width: 44ch;
 }
 
+.emptyCard button,
+.emptyActions a {
+  min-height: 44px;
+}
+
+.emptyCard button {
+  cursor: pointer;
+}
 .emptyActions {
   display: flex;
   align-items: center;
@@ -664,10 +691,6 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
-  }
-
-  .statsBadge {
-    align-self: flex-start;
   }
 
   .cardBody {

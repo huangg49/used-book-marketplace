@@ -14,7 +14,6 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 
 export interface SendToAuctionBookPickerProps {
   readonly eligibleListings: PrivateDraft[];
-  // ADR 0042: the seller's own Auction listings still being written or reviewed.
   readonly unfinishedListings?: PrivateDraft[];
   readonly selectedListingId: string | null;
   readonly onSelectListing: (id: string) => void;
@@ -29,18 +28,10 @@ export interface SendToAuctionBookPickerProps {
   readonly defaultExpanded?: boolean;
 }
 
-const unfinishedStatus: Record<string, string> = {
-  Draft: "Bản nháp · cần hoàn thiện",
-  PendingReview: "Đang chờ duyệt",
-  Rejected: "Cần chỉnh sửa theo góp ý",
-};
-
 export function SendToAuctionBookPicker({
   eligibleListings,
-  unfinishedListings = [],
   selectedListingId,
   onSelectListing,
-  onOpenListing,
   onCreateListing,
   creating = false,
   createError = null,
@@ -153,74 +144,28 @@ export function SendToAuctionBookPicker({
             </View>
           ) : null}
 
-          {/* Unfinished auction listings */}
-          {!isLoading && unfinishedListings.length > 0 && (
-            <View style={styles.listContainer}>
-              {unfinishedListings.map((item) => (
-                <Pressable
-                  key={item.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Mở sách đấu giá, ${unfinishedStatus[item.state.moderation] ?? item.state.moderation}`}
-                  disabled={disabled || !onOpenListing}
-                  onPress={() => onOpenListing?.(item.id)}
-                  style={({ pressed }) => [
-                    styles.bookCard,
-                    pressed && { opacity: 0.88 },
-                  ]}
-                >
-                  <View style={styles.coverWrapper}>
-                    <DraftCoverPhoto
-                      listingId={item.id}
-                      mediaId={item.currentRevision.content.mediaIds?.[0]}
-                      label="Ảnh bìa sách đấu giá"
-                    />
-                  </View>
-                  <View style={styles.bookDetails}>
-                    <View style={styles.tagRow}>
-                      <View style={styles.tagPill}>
-                        <AppText kind="small" style={styles.tagPillText}>
-                          {(unfinishedStatus[item.state.moderation] ?? item.state.moderation).toLocaleUpperCase("vi")}
-                        </AppText>
-                      </View>
-                    </View>
-                    {item.currentRevision.content.bookId ? (
-                      <BookIdentity id={item.currentRevision.content.bookId} compact />
-                    ) : (
-                      <AppText kind="small" style={styles.bookAuthor}>
-                        Chưa chọn đầu sách
-                      </AppText>
-                    )}
-                  </View>
-                  <Icon name="chevronRight" size={18} color={stitchTokens.wineDark} />
-                </Pressable>
-              ))}
-            </View>
-          )}
-
           {/* Loading state */}
           {isLoading && (
             <View style={styles.centerLoading}>
-          <ActivityIndicator size="small" color={stitchTokens.wine} />
-          <AppText kind="small" style={{ color: stitchTokens.subtleGray, marginTop: 6 }}>
-            Đang tải sách đấu giá...
-          </AppText>
-        </View>
-      )}
+              <ActivityIndicator size="small" color={stitchTokens.wine} />
+              <AppText kind="small" style={{ color: stitchTokens.subtleGray, marginTop: 6 }}>
+                Đang tải sách đấu giá...
+              </AppText>
+            </View>
+          )}
 
-      {/* Empty state */}
-      {!isLoading && !loadError && eligibleListings.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Icon name="book" size={28} color={stitchTokens.subtleGray} />
-          <AppText kind="bold" style={styles.emptyTitle}>
-            Chưa có sách đấu giá đã duyệt
-          </AppText>
-          <AppText kind="small" style={styles.emptyDesc}>
-            {unfinishedListings.length > 0
-              ? "Sách ở trên sẽ chọn được tại đây sau khi được duyệt."
-              : "Tạo sách đấu giá mới; sau khi được duyệt bạn chọn sách để gửi tới điểm."}
-          </AppText>
-        </View>
-      )}
+          {/* Empty state */}
+          {!isLoading && !loadError && eligibleListings.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Icon name="book" size={28} color={stitchTokens.subtleGray} />
+              <AppText kind="bold" style={styles.emptyTitle}>
+                Chưa có sách đấu giá đã duyệt
+              </AppText>
+              <AppText kind="small" style={styles.emptyDesc}>
+                Tạo sách đấu giá mới; sau khi được duyệt bạn chọn sách để gửi tới điểm.
+              </AppText>
+            </View>
+          )}
 
       {/* Book cards list */}
       {!isLoading && eligibleListings.length > 0 && (

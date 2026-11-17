@@ -1,9 +1,11 @@
 import { dateText, money } from "../../core/format";
 import { invalidateDashboard } from "../../core/dashboard-cache";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowDownToLine,
+  ArrowLeft,
+  ClipboardCheck,
+  PanelRightClose,
   BookMarked,
   ArrowUpRight,
   ChevronDown,
@@ -17,6 +19,7 @@ import {
 import type { CurrentUser } from "@used-books/session-client";
 import { canReview, canReviewCatalog, session } from "../../core/session";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { motionVisible, watchMotionBoundary } from "../../core/motion-boundary";
 import { catalog, labels, listing, type Kind } from "./contracts";
 import { BookReference, ContentView, History, MetadataView } from "./readers";
 import { DecisionForm } from "./decision-form";
@@ -33,6 +36,11 @@ import {
   recordedDecision,
   type RecordedDecision,
 } from "./decision-feedback";
+
+function focusReviewPart(element: HTMLElement | null) {
+  element?.scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
+  element?.focus({ preventScroll: true });
+}
 
 export function Detail() {
   const { kind, id } = useParams();
@@ -73,6 +81,96 @@ function DetailContent({
   const recordHeader = useRef<HTMLElement>(null);
   const readingArea = useRef<HTMLDivElement>(null);
   const decisionArea = useRef<HTMLDivElement>(null);
+  const photoArea = useRef<HTMLElement>(null);
+  const decisionTrigger = useRef<HTMLButtonElement>(null);
+  const focusAfterChange = useRef<"decision" | "photo" | "trigger" | null>(null);
+  const decisionId = useId();
+  const [decisionPhase, setDecisionPhase] = useState<"closed" | "open" | "closing">("closed");
+  const decisionOpen = decisionPhase === "open";
+  const decisionVisible = decisionPhase !== "closed";
+  const decisionAnimation = useRef<Animation | null>(null);
+  const interruptedFrame = useRef<Keyframe | null>(null);
+  const [checkedCount, setCheckedCount] = useState(0);
+
+  useLayoutEffect(() => {
+    const target = focusAfterChange.current;
+    focusAfterChange.current = null;
+    if (target === "decision") focusReviewPart(decisionArea.current);
+    if (target === "photo") focusReviewPart(photoArea.current);
+    if (target === "trigger") focusReviewPart(decisionTrigger.current);
+  }, [decisionPhase, view]);
+
+  useLayoutEffect(() => {
+    const panel = decisionArea.current;
+    if (kind !== "listings" || decisionPhase === "closed" || !panel) return;
+    const closing = decisionPhase === "closing";
+    const complete = () => {
+      if (!closing) return;
+      if (panel.ownerDocument.activeElement === decisionTrigger.current)
+        focusAfterChange.current = "trigger";
+      setDecisionPhase("closed");
+    };
+    const previousFrame = interruptedFrame.current;
+    interruptedFrame.current = null;
+    if (!motionVisible(panel) || typeof panel.animate !== "function") {
+      complete();
+      return;
+    }
+
+    const split = getComputedStyle(panel).overflowY === "auto";
+    const rest = { transform: "none", opacity: 1 };
+    const offset = {
+      transform: split ? "translateX(18px)" : "translateY(12px)",
+      opacity: 0,
+    };
+    let animation: Animation;
+    try {
+      animation = panel.animate(
+        closing ? [previousFrame ?? rest, offset] : [previousFrame ?? offset, rest],
+        {
+          duration: closing ? 170 : 220,
+          easing: closing ? "cubic-bezier(.4,0,1,1)" : "cubic-bezier(.16,1,.3,1)",
+          fill: "both",
+        },
+      );
+    } catch {
+      complete();
+      return;
+    }
+
+    decisionAnimation.current = animation;
+    let active = true;
+    let unwatch = () => {};
+    const settle = () => {
+      if (!active) return;
+      active = false;
+      unwatch();
+      decisionAnimation.current = null;
+      if (!closing) animation.cancel();
+      complete();
+    };
+    unwatch = watchMotionBoundary(panel, settle);
+    void animation.finished.then(settle, settle);
+    return () => {
+      active = false;
+      unwatch();
+      decisionAnimation.current = null;
+      animation.cancel();
+    };
+  }, [decisionPhase, kind]);
+
+  function rememberDecisionFrame() {
+    const panel = decisionArea.current;
+    if (!panel || !decisionAnimation.current) return;
+    const { transform, opacity } = getComputedStyle(panel);
+    interruptedFrame.current = { transform, opacity };
+  }
+  function closeDecision() {
+    if (!decisionOpen || pendingCommand) return;
+    rememberDecisionFrame();
+    decisionTrigger.current?.focus({ preventScroll: true });
+    setDecisionPhase("closing");
+  }
   const onPhotoReady = useCallback(
     (mediaId: string, ready: boolean) =>
       setPhotos((previous) =>
@@ -148,15 +246,31 @@ function DetailContent({
       (value.state.trade === "Available" &&
         value.state.visibility !== "Removed" &&
         !value.state.deletedAt));
+  const reviewAction = decisionOpen
+    ? "Tới phiếu duyệt"
+    : !pending
+      ? "Kết quả kiểm duyệt"
+      : decisionAllowed
+        ? "Kiểm duyệt"
+        : "Xem phiếu duyệt";
+  const draftProgress = isListing && !decisionOpen && decisionAllowed && checkedCount > 0
+    ? `${checkedCount}/${value.currentRevision.content.bundle ? 7 : 6}`
+    : null;
   return (
-    <div className={styles.detail}>
-      <Link
-        className="back-link"
-        to={reviewReturnPath(kind, location.state)}
-        state={{ reviewOverview: true }}
-      >
-        ← Về danh sách
-      </Link>
+    <div
+      className={`${styles.detail} ${kind === "listings" ? styles.listingDetail : ""}`}
+      data-listing-dossier={isListing ? "" : undefined}
+      data-listing-decision-open={isListing && decisionVisible ? "" : undefined}
+    >
+      {kind !== "listings" && (
+        <Link
+          className="back-link"
+          to={reviewReturnPath(kind, location.state)}
+          state={{ reviewOverview: true }}
+        >
+          ← Về danh sách
+        </Link>
+      )}
       {result.isLoading && <p role="status">Đang mở hồ sơ…</p>}
       {result.error && (
         <ErrorNotice
@@ -175,7 +289,7 @@ function DetailContent({
               aria-label="Nội dung và bằng chứng"
               tabIndex={0}
             >
-              <header className="detail-heading" ref={recordHeader}>
+              <header className={`detail-heading ${isListing ? styles.listingHeading : ""}`} ref={recordHeader}>
                 <div>
                   <h2 className={styles.recordTitle} ref={heading} tabIndex={-1}>
                     {"state" in value
@@ -192,7 +306,9 @@ function DetailContent({
                     </h3>
                   )}
                 </div>
-                <span className="status-label">{labels[status] || status}</span>
+                <span className="status-label" data-state={status}>
+                  {labels[status] || status}
+                </span>
               </header>
               {"state" in value && (
                 <>
@@ -201,19 +317,19 @@ function DetailContent({
                     aria-label="Tóm tắt bản sách"
                   >
                     <div>
+                      <dt>Tình trạng khai báo</dt>
+                      <dd>
+                        {labels[value.currentRevision.content.condition || ""] ||
+                          "Chưa khai báo"}
+                      </dd>
+                    </div>
+                    <div>
                       <dt>Hình thức</dt>
                       <dd>
                         {value.channel === "Auction"
                           ? "Đấu giá"
                           : labels[value.currentRevision.content.mode || ""] ||
                             "Chưa khai báo"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Tình trạng khai báo</dt>
-                      <dd>
-                        {labels[value.currentRevision.content.condition || ""] ||
-                          "Chưa khai báo"}
                       </dd>
                     </div>
                     <div className={styles.summaryPrice}>
@@ -240,91 +356,60 @@ function DetailContent({
                         </dd>
                       </div>
                     )}
-                    <div>
-                      <dt>Ảnh bản sách</dt>
-                      <dd>{value.currentRevision.content.mediaIds.length} ảnh</dd>
-                    </div>
                   </dl>
-                  {pending && value.catalogStatus !== "Confirmed" && (
-                    <div className={styles.catalogGate} role="note">
-                      <BookMarked
-                        className={styles.gateIcon}
-                        size={23}
-                        aria-hidden="true"
-                      />
-                      <div>
-                        <strong>
-                          {value.catalogStatus === "Rejected"
-                            ? "Đầu sách đã bị từ chối"
-                            : "Đầu sách đang chờ xác nhận"}
-                        </strong>
-                        <p>
-                          Bài đã gửi thành công. Cần xác nhận đầu sách trước khi
-                          duyệt bài này.
-                        </p>
-                      </div>
-                      {canReviewCatalog(user) &&
-                      value.currentRevision.content.bookId ? (
-                        <Link
-                          to={`/review/catalog-requests/${value.currentRevision.content.bookId}`}
-                        >
-                          Mở yêu cầu đầu sách{" "}
-                          <ArrowUpRight size={17} aria-hidden="true" />
-                        </Link>
-                      ) : (
-                        <span>Chờ Admin xử lý đầu sách</span>
-                      )}
-                    </div>
-                  )}
                 </>
               )}
               {"state" in value && (
-                <nav className={styles.evidenceNav} aria-label="Nội dung hồ sơ">
+                <div className={styles.reviewToolbar}>
+                  <nav className={styles.evidenceNav} aria-label="Nội dung hồ sơ">
+                    <Button
+                      aria-pressed={view === "content"}
+                      onClick={() => setView("content")}
+                    >
+                      Nội dung & ảnh
+                    </Button>
+                    <Button
+                      aria-pressed={view === "compare"}
+                      onClick={() => {
+                        setView("compare");
+                        setComparisonOpened(true);
+                      }}
+                    >
+                      Đối chiếu bản gửi
+                    </Button>
+                    <Button
+                      aria-pressed={view === "history"}
+                      onClick={() => setView("history")}
+                    >
+                      Lịch sử
+                    </Button>
+                  </nav>
                   <Button
-                    aria-pressed={view === "content"}
-                    onClick={() => setView("content")}
-                  >
-                    Nội dung & ảnh
-                  </Button>
-                  <Button
-                    aria-pressed={view === "compare"}
+                    ref={decisionTrigger}
+                    className={styles.openDecision}
+                    aria-controls={decisionId}
+                    aria-expanded={decisionOpen}
+                    aria-label={reviewAction === "Kiểm duyệt" ? "Kiểm duyệt bài đăng" : undefined}
+                    aria-describedby={draftProgress ? `${decisionId}-progress` : undefined}
                     onClick={() => {
-                      setView("compare");
-                      setComparisonOpened(true);
+                      if (decisionOpen) {
+                        focusReviewPart(decisionArea.current);
+                      } else {
+                        rememberDecisionFrame();
+                        focusAfterChange.current = "decision";
+                        setDecisionPhase("open");
+                      }
                     }}
                   >
-                    Đối chiếu bản gửi
+                    <ClipboardCheck size={17} aria-hidden="true" />
+                    {reviewAction}
+                    {draftProgress && (
+                      <span id={`${decisionId}-progress`} className={styles.draftCount}>
+                        {draftProgress}
+                      </span>
+                    )}
                   </Button>
-                  <Button
-                    aria-pressed={view === "history"}
-                    onClick={() => setView("history")}
-                  >
-                    Lịch sử
-                  </Button>
-                  <Button
-                    className={styles.jumpDecision}
-                    aria-label="Đi tới phiếu quyết định"
-                    title="Đi tới phiếu quyết định"
-                    onClick={() => {
-                      const target = decisionArea.current;
-                      const dossier = target?.closest<HTMLElement>(
-                        "[data-review-dossier]",
-                      );
-                      if (target && dossier)
-                        dossier.scrollTo({
-                          top:
-                            target.getBoundingClientRect().top -
-                            dossier.getBoundingClientRect().top +
-                            dossier.scrollTop -
-                            dossier.clientTop,
-                          behavior: "instant",
-                        });
-                      target?.focus({ preventScroll: true });
-                    }}
-                  >
-                    <ArrowDownToLine size={17} aria-hidden="true" />
-                  </Button>
-                </nav>
+                </div>
               )}
               {"state" in value ? (
                 <>
@@ -332,21 +417,44 @@ function DetailContent({
                     className={styles.evidencePanel}
                     hidden={view !== "content"}
                   >
-                    {value.channel === "Auction" && (
-                      <Notice>
-                        <strong>Sách đấu giá</strong>
-                        <p className="prose">
-                          Bài này không lên kệ mua/đổi. Giá là giá trị khai báo
-                          (mức bồi thường tối đa), không phải giá bán. Sau khi
-                          duyệt, sách còn được kiểm tra tại điểm trước khi mở
-                          phiên.
-                        </p>
-                      </Notice>
-                    )}
                     <ContentView
                       value={value.currentRevision}
                       listingId={id}
                       onPhotoReady={onPhotoReady}
+                      primary
+                      photoRef={photoArea}
+                      auction={value.channel === "Auction"}
+                      afterPhotos={pending && value.catalogStatus !== "Confirmed" && (
+                        <div className={styles.catalogGate} role="note">
+                          <BookMarked
+                            className={styles.gateIcon}
+                            size={23}
+                            aria-hidden="true"
+                          />
+                          <div>
+                            <strong>
+                              {value.catalogStatus === "Rejected"
+                                ? "Đầu sách đã bị từ chối"
+                                : "Đầu sách đang chờ xác nhận"}
+                            </strong>
+                            <p>
+                              Bài đã gửi thành công. Cần xác nhận đầu sách trước khi
+                              duyệt bài này.
+                            </p>
+                          </div>
+                          {canReviewCatalog(user) &&
+                          value.currentRevision.content.bookId ? (
+                            <Link
+                              to={`/review/catalog-requests/${value.currentRevision.content.bookId}`}
+                            >
+                              Mở yêu cầu đầu sách{" "}
+                              <ArrowUpRight size={17} aria-hidden="true" />
+                            </Link>
+                          ) : (
+                            <span>Chờ Admin xử lý đầu sách</span>
+                          )}
+                        </div>
+                      )}
                     />
                     <details className={styles.reference} open>
                       <summary>
@@ -450,7 +558,43 @@ function DetailContent({
               tabIndex={0}
               role="region"
               aria-label="Phiếu quyết định"
+              id={decisionId}
+              hidden={Boolean(isListing && !decisionVisible)}
+              inert={isListing && decisionPhase === "closing"}
+              onKeyDown={isListing ? (event) => {
+                if (
+                  event.key !== "Escape" || event.defaultPrevented || pendingCommand ||
+                  (event.target instanceof Element && event.target.closest("dialog[open]"))
+                ) return;
+                event.preventDefault();
+                closeDecision();
+              } : undefined}
             >
+              {isListing && (
+                <div className={styles.decisionTools}>
+                  <Button
+                    className={styles.backToPhoto}
+                    onClick={() => {
+                      if (view === "content") {
+                        focusReviewPart(photoArea.current);
+                      } else {
+                        focusAfterChange.current = "photo";
+                        setView("content");
+                      }
+                    }}
+                  >
+                    <ArrowLeft size={16} aria-hidden="true" />
+                    Về ảnh
+                  </Button>
+                  <Button
+                    disabled={pendingCommand}
+                    onClick={closeDecision}
+                  >
+                    <PanelRightClose size={16} aria-hidden="true" />
+                    Gập phiếu
+                  </Button>
+                </div>
+              )}
               {decisionRecord && (
                 <DecisionRecord
                   {...decisionRecord}
@@ -533,6 +677,11 @@ function DetailContent({
                   disabled={result.isError || result.isFetching}
                   reconcile={reconcile}
                   onPending={setPendingCommand}
+                  onChecklistProgress={isListing ? setCheckedCount : undefined}
+                  subject={isListing ? (
+                    <ListingTitle value={value} canReadPendingCatalog={canReviewCatalog(user)} />
+                  ) : undefined}
+                  revisionNumber={value.currentRevision.number}
                   onRecorded={(intent) =>
                     setRecorded(recordedDecision(intent, kind, id))
                   }

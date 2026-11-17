@@ -287,5 +287,16 @@ export const stitchTokens = {
   crimsonBolt: "#8E1E32",
   crimsonDeepText: "#721022",
   scrimDarkCrimson: "rgba(28, 5, 9, 0.55)",
+
+  // Autumn Theme tokens
+  autumnSkyPeach: "#FFF2E8",
+  autumnAmberGlow: "#FFE4CE",
+  autumnWarmOrange: "#F27A24",
+  autumnMapleRed: "#D3432B",
+  autumnGinkgoGold: "#EFA825",
+  autumnChestnutBrown: "#7E3E1A",
+  autumnLeafRust: "#C35427",
+  autumnLeafGold: "#E09C2A",
+  autumnSoftSun: "#FFF9F2",
 } as const;
 

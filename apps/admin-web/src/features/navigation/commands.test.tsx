@@ -73,6 +73,9 @@ describe("command catalogue and Vietnamese search", () => {
         "/review/catalog-requests",
       );
     expect(findCommands(commands, "tai khoan")[0].to).toBe("/users");
+    expect(findCommands(commands, "dashboard")[0].to).toBe("/dashboard");
+    expect(findCommands(commands, "tranh chap doi sach")[0].to).toBe("/operations/exchange-disputes");
+    expect(findCommands(commands, "trung tam xu ly")[0].to).toBe("/support");
     expect(findCommands(commands, "quy su co")[0].to).toBe(
       "/operations/incidents",
     );

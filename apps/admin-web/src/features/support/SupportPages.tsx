@@ -35,15 +35,19 @@ import { Button, CursorPagination, Notice } from "../../core/ui";
 import { dateText } from "../../core/format";
 import styles from "./support.module.css";
 import { EmptyArt } from "../../core/EmptyArt";
+import { WorkspaceRecovery } from "../navigation/WorkspaceRecovery";
+
+const supportAccessDenied = (
+  <WorkspaceRecovery
+    code="403"
+    title="Bạn chưa có quyền xử lý hỗ trợ"
+    description="Khu vực này dành cho tài khoản Admin đang hoạt động."
+  />
+);
 
 export function SupportQueuePage() {
   const user = useOutletContext<CurrentUser>();
-  if (!canResolve(user))
-    return (
-      <Notice tone="warning">
-        Cần quyền Admin đang hoạt động để xử lý phản ánh.
-      </Notice>
-    );
+  if (!canResolve(user)) return supportAccessDenied;
   return <SupportQueue key={user.id} owner={user.id} />;
 }
 function SupportQueue({ owner }: { owner: string }) {
@@ -232,8 +236,7 @@ export function SupportDetailPage() {
   const user = useOutletContext<CurrentUser>(),
     { caseId = "" } = useParams(),
     [params] = useSearchParams();
-  if (!canResolve(user))
-    return <Notice tone="warning">Cần quyền Admin đang hoạt động.</Notice>;
+  if (!canResolve(user)) return supportAccessDenied;
   return (
     <SupportRecord
       key={`${user.id}:${caseId}`}

@@ -181,7 +181,10 @@ try {
   await page.getByRole("link", { name: new RegExp(`Hồ sơ #${id.slice(0, 8)}`) }).click();
   const panel = page.getByRole("region", { name: "Đánh giá của AI" });
   await panel.waitFor();
+  await page.getByRole("button", { name: "Kết quả kiểm duyệt", exact: true }).click();
   await expect(page.getByText("AI đã tự duyệt bài đăng.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Gập phiếu", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Phiếu quyết định", exact: true })).toBeHidden();
   await expect(panel.getByText("không phải quyết định của người kiểm duyệt", { exact: false })).toBeVisible();
   await expect(panel.getByText("Dữ kiện hệ thống ghi nhận")).toBeVisible();
   await expect(panel.getByText("Nhận định của mô hình")).toBeVisible();
@@ -251,17 +254,62 @@ try {
   // entry to inspect filters without racing that initial navigation.
   await page.getByRole("link", { name: "Bài đăng sách", exact: true }).click();
   await page.waitForURL(url => url.pathname === `/review/listings/${id}`);
-  await page.getByRole("link", { name: "← Về danh sách", exact: true }).click();
+  await page.getByRole("link", { name: "Về danh sách", exact: true }).click();
   await page.waitForURL(url => url.pathname === "/review/listings");
-  await page.getByRole("button", { name: "AI chuyển người duyệt", exact: true }).click();
+  const queue = page.getByRole("region", { name: "Hàng chờ kiểm duyệt", exact: true });
+  const statuses = queue.getByRole("group", { name: "Lọc trạng thái" });
+  await expect(statuses.getByRole("button", { name: "Chờ duyệt", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const widths = await statuses.getByRole("button").evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().width));
+  assert.equal(widths.length, 3);
+  assert(Math.max(...widths) - Math.min(...widths) <= 1, "Status choices should share the same width");
+  const aiFilter = queue.getByRole("combobox", { name: "Lọc theo AI", exact: true });
+  const options = queue.getByRole("listbox", { name: "Lọc theo AI", exact: true });
+  await expect(aiFilter).toHaveText("Tất cả");
+  const captureFilters = async (width, maxHeight) => {
+    await page.evaluate(() => document.fonts.ready);
+    const clip = await queue.boundingBox();
+    assert(clip, "Queue must be visible for the filter capture");
+    await page.screenshot({
+      path: path.join(artifacts, `queue-filters-${width}.png`),
+      clip: { ...clip, height: Math.min(clip.height, maxHeight) },
+    });
+  };
+  await captureFilters(1440, 218);
+
+  await aiFilter.press("Enter");
+  await expect(options).toBeVisible();
+  await aiFilter.press("Escape");
+  await expect(options).toBeHidden();
+  await expect(aiFilter).toBeFocused();
+  await aiFilter.press("Enter");
+  await aiFilter.press("ArrowDown");
+  await aiFilter.press("Enter");
   await expect(page).toHaveURL(/ai=Escalated/);
   await expect(page.getByText("Chưa có hồ sơ ở mục này.")).toBeVisible();
-  await page.getByRole("button", { name: "AI chưa xem", exact: true }).click();
+  await expect(aiFilter).toHaveText("AI chuyển người duyệt");
+
+  await page.setViewportSize({ width: 320, height: 560 });
+  await aiFilter.click();
+  const unseen = options.getByRole("option", { name: "AI chưa xem", exact: true });
+  await expect(unseen).toBeInViewport();
+  await options.evaluate(node => Promise.allSettled(node.getAnimations().map(animation => animation.finished)));
+  await captureFilters(320, 332);
+  await unseen.click();
   await page.waitForURL(url => url.pathname === `/review/listings/${id}` && url.searchParams.get("ai") === "None");
   await page.getByRole("region", { name: "Bàn đọc hồ sơ", exact: true }).waitFor();
-  const openQueue = page.getByRole("button", { name: "Mở hàng chờ", exact: true });
-  if (await openQueue.isVisible()) await openQueue.click();
-  await page.locator(`a[href*="/review/listings/${id}"]`).first().waitFor();
+  await page.getByRole("button", { name: "Mở hàng chờ", exact: true }).click();
+  await expect(aiFilter).toHaveText("AI chưa xem");
+  await expect(queue.locator(`a[href*="/review/listings/${id}"][href*="ai=None"]`).first()).toBeVisible();
+  await statuses.getByRole("button", { name: "Đã duyệt", exact: true }).click();
+  await expect(page).toHaveURL(/status=Approved$/);
+  await expect(aiFilter).toHaveText("Tất cả");
+  await aiFilter.click();
+  await expect(options.getByRole("option")).toHaveCount(2);
+  await options.getByRole("option", { name: "AI đã duyệt", exact: true }).click();
+  await expect(page).toHaveURL(/status=Approved&ai=Approved$/);
+  await statuses.getByRole("button", { name: "Đã từ chối", exact: true }).click();
+  await expect(page).toHaveURL(/status=Rejected$/);
+  await expect(aiFilter).toHaveCount(0);
   assert.deepEqual(errors, []);
   console.log("Admin AI review browser checks: PASS");
 } finally {

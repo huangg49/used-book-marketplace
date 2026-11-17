@@ -7,7 +7,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, matchPath, NavLink, useLocation } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import {
   BookCheck,
@@ -15,8 +15,10 @@ import {
   ChevronDown,
   ClipboardCheck,
   Clock,
+  FlaskConical,
   Gavel,
   Handshake,
+  Headset,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -25,11 +27,14 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Scale,
+  ScanSearch,
   Search,
   ChartNoAxesCombined,
+  Star,
   TriangleAlert,
   Truck,
   UsersRound,
+  Wallet,
   Warehouse,
   X,
 } from "lucide-react";
@@ -38,6 +43,7 @@ import { Button, ErrorNotice } from "../../core/ui";
 import {
   navigationGroups,
   workspaceRole,
+  type NavigationGroup,
   type NavigationIcon,
 } from "./navigation";
 import styles from "./WorkspaceShell.module.css";
@@ -52,17 +58,14 @@ const subscribeMobile = (listener: () => void) => {
   return () => media.removeEventListener("change", listener);
 };
 const getMobile = () => window.matchMedia(mobileQuery).matches;
-const subscribeShort = (listener: () => void) => {
-  const media = window.matchMedia("(max-height: 720px)");
-  media.addEventListener("change", listener);
-  return () => media.removeEventListener("change", listener);
-};
-const getShort = () => window.matchMedia("(max-height: 720px)").matches;
 const icons: Record<NavigationIcon, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
   statistics: ChartNoAxesCombined,
   books: BookCheck,
   catalog: BookPlus,
+  review: ClipboardCheck,
+  rating: Star,
+  ai: ScanSearch,
   intake: PackageCheck,
   collection: Handshake,
   incident: TriangleAlert,
@@ -71,98 +74,89 @@ const icons: Record<NavigationIcon, typeof LayoutDashboard> = {
   overdue: Clock,
   point: MapPin,
   users: UsersRound,
+  wallet: Wallet,
+  support: Headset,
+  operations: Warehouse,
+  simulation: FlaskConical,
   carrier: Truck,
 };
+
+const isDisclosureGroup = (group: NavigationGroup) =>
+  Boolean(group.icon) && group.items.length > 1;
 
 export function SidebarNavigation({
   user,
   busy = false,
-  compact = false,
+  visible = true,
 }: {
   user?: CurrentUser;
   busy?: boolean;
-  compact?: boolean;
+  visible?: boolean;
 }) {
   const groups = navigationGroups(user);
-  const location = useLocation();
+  const { pathname } = useLocation();
+  const nav = useRef<HTMLElement>(null);
   const [disclosure, setDisclosure] = useState<{
-    key: string;
+    pathname: string;
     group: string | null;
   }>();
   const activeGroup = groups.find((group) =>
-    group.items.some(
-      (item) =>
-        location.pathname === item.to ||
-        location.pathname.startsWith(item.to + "/"),
-    ),
+    group.items.some((item) => matchPath({ path: item.to, end: false }, pathname)),
   );
-  const defaultGroup =
-    activeGroup &&
-    activeGroup.id !== "workspace" &&
-    activeGroup.id !== "management"
-      ? activeGroup.id
-      : groups.find((group) => group.id === "review")?.id;
-  const openGroup =
-    disclosure?.key === location.key ? disclosure.group : defaultGroup;
+  const defaultGroup = activeGroup && isDisclosureGroup(activeGroup)
+    ? activeGroup.id
+    : groups.find(isDisclosureGroup)?.id;
+  const openGroup = disclosure?.pathname === pathname ? disclosure.group : defaultGroup;
+
+  useEffect(() => {
+    if (!visible || !activeGroup?.id) return;
+    const frame = requestAnimationFrame(() => {
+      const scrollArea = nav.current?.parentElement;
+      const current = nav.current?.querySelector<HTMLElement>(
+        'a[aria-current="page"]:not([hidden] *)',
+      );
+      if (!scrollArea || !current) return;
+      const viewport = scrollArea.getBoundingClientRect();
+      const item = current.getBoundingClientRect();
+      if (item.top < viewport.top) scrollArea.scrollTop -= viewport.top - item.top + 4;
+      if (item.bottom > viewport.bottom) scrollArea.scrollTop += item.bottom - viewport.bottom + 4;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pathname, activeGroup?.id, visible]);
+
   return (
-    <nav className={styles.navigation} aria-label="Khu vực quản trị">
+    <nav ref={nav} className={styles.navigation} aria-label="Khu vực quản trị">
       {groups.map((group) => {
-        const titled = group.id !== "workspace" && group.id !== "management";
-        const collapsible = compact && titled;
-        const open = !collapsible || group.id === openGroup;
-        const GroupIcon =
-          group.id === "review"
-            ? ClipboardCheck
-            : group.id === "simulation"
-              ? Truck
-              : Warehouse;
+        const GroupIcon = group.icon && isDisclosureGroup(group) ? icons[group.icon] : undefined;
+        const open = !GroupIcon || group.id === openGroup;
         return (
           <section
             className={styles.group}
             key={group.id}
-            aria-labelledby={`nav-${group.id}`}
-            data-titled={titled}
+            aria-labelledby={GroupIcon ? `nav-${group.id}` : undefined}
+            aria-label={GroupIcon ? undefined : group.label}
+            data-group={group.id}
+            data-disclosure={GroupIcon ? true : undefined}
+            data-open={GroupIcon && open ? true : undefined}
+            data-current={GroupIcon && group.id === activeGroup?.id ? true : undefined}
           >
-            <h2
-              id={`nav-${group.id}`}
-              className={styles.groupTitle}
-              data-disclosure={collapsible}
-            >
-              {collapsible ? (
+            {GroupIcon && (
+              <h2 id={`nav-${group.id}`} className={styles.groupTitle}>
                 <button
                   className={styles.groupToggle}
                   type="button"
                   aria-expanded={open}
                   aria-controls={`nav-items-${group.id}`}
                   title={group.label}
-                  onClick={() =>
-                    setDisclosure({
-                      key: location.key,
-                      group: open ? null : group.id,
-                    })
-                  }
+                  onClick={() => setDisclosure({ pathname, group: open ? null : group.id })}
                 >
-                  <GroupIcon
-                    className={styles.groupIcon}
-                    size={18}
-                    aria-hidden="true"
-                  />
+                  <GroupIcon className={styles.groupIcon} size={18} strokeWidth={1.7} aria-hidden="true" />
                   <span>{group.label}</span>
-                  <ChevronDown
-                    className={styles.chevron}
-                    size={15}
-                    aria-hidden="true"
-                  />
+                  <ChevronDown className={styles.chevron} size={15} aria-hidden="true" />
                 </button>
-              ) : (
-                <span>{group.label}</span>
-              )}
-            </h2>
-            <div
-              className={styles.groupItems}
-              id={`nav-items-${group.id}`}
-              hidden={!open}
-            >
+              </h2>
+            )}
+            <div className={styles.groupItems} id={`nav-items-${group.id}`} hidden={!open}>
               {group.items.map((item) => {
                 const Icon = icons[item.icon];
                 return (
@@ -186,17 +180,6 @@ export function SidebarNavigation({
           </section>
         );
       })}
-      {groups.length > 0 && (
-        <div
-          className={styles.upcoming}
-          aria-disabled="true"
-          title="Report · Sắp triển khai"
-        >
-          <ChartNoAxesCombined size={20} strokeWidth={1.7} aria-hidden="true" />
-          <span className={styles.linkLabel}>Report</span>
-          <small className={styles.soon}>Sắp triển khai</small>
-        </div>
-      )}
     </nav>
   );
 }
@@ -221,7 +204,6 @@ export function WorkspaceShell({
   children,
 }: Props) {
   const mobile = useSyncExternalStore(subscribeMobile, getMobile, () => false);
-  const short = useSyncExternalStore(subscribeShort, getShort, () => false);
   const [mode, setMode] = useState(readSidebarMode);
   const [preferenceSaved, setPreferenceSaved] = useState(true);
   const [preview] = useState(createSidebarPreview);
@@ -357,7 +339,7 @@ export function WorkspaceShell({
         >
           <Search size={18} aria-hidden="true" />
           <span className={styles.commandLabel}>Tìm kiếm nhanh</span>
-          <kbd>Ctrl K</kbd>
+          {!mobile && <kbd>Ctrl K</kbd>}
         </button>
       )}
       <div className={styles.scrollArea} id="admin-navigation-panel">
@@ -368,15 +350,7 @@ export function WorkspaceShell({
               : "Đang kiểm tra quyền truy cập…"}
           </p>
         )}
-        <SidebarNavigation
-          user={user}
-          busy={logoutBusy}
-          compact={
-            mobile ||
-            short ||
-            navigationGroups(user).flatMap((group) => group.items).length > 9
-          }
-        />
+        <SidebarNavigation user={user} busy={logoutBusy} visible={!mobile || mobileOpen} />
       </div>
       <SidebarPreferences key={`${location.key}-${mobile}`} mode={mode} saved={preferenceSaved}
         onChange={chooseMode} onHold={preview.hold} />

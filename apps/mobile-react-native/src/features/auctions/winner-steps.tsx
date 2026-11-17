@@ -19,10 +19,13 @@ import {
   presentError,
   radius,
   space,
+  stitchTokens,
 } from "../../core/ui";
 import {
   CLAIM_MIN_LENGTH,
   POINT_HOURS,
+  POINT_HOURS_LABEL,
+  pointReopensAt,
   auctionErrorText,
   createOrderCommand,
   formatRemaining,
@@ -400,6 +403,15 @@ function Report({ order, locked, ask }: { order: PointOrder; locked: boolean; as
   );
 }
 
+const reopenLabel = (iso: string) =>
+  new Date(iso).toLocaleString("vi-VN", {
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+  });
+
 function Collection({
   order,
   issued,
@@ -413,6 +425,9 @@ function Collection({
 }) {
   const remaining = useRemaining(issued?.expiresAt ?? null, issued?.serverTime);
   const live = !!issued?.code && remaining > 0;
+  const reopensAt = pointReopensAt(Date.parse(order.serverTime));
+  const closed = useRemaining(reopensAt, order.serverTime) > 0;
+
   return (
     <View style={{ gap: space.md }}>
       {live ? (
@@ -425,16 +440,30 @@ function Collection({
             Đọc mã này cho nhân viên tại quầy. Mã hết hạn sau {formatRemaining(remaining)}; không gửi mã cho người khác.
           </AppText>
         </View>
+      ) : issued ? (
+        <AppText kind="small" color={colors.muted}>
+          {issued.code === null
+            ? "Mã đã được tạo nhưng không thể hiển thị lại. Hãy lấy mã mới khi đang ở quầy."
+            : "Mã đã hết hạn. Hãy lấy mã mới khi đang ở quầy."}
+        </AppText>
+      ) : closed && reopensAt ? (
+        <View style={{ backgroundColor: stitchTokens.goldLight, padding: space.md, borderRadius: radius.card, borderWidth: 1, borderColor: stitchTokens.goldBorder }}>
+          <AppText kind="small" color={stitchTokens.wineDark}>
+            Điểm đang đóng cửa. Quầy mở lại lúc {reopenLabel(reopensAt)}; hãy lấy mã khi bạn đã ở quầy trong giờ {POINT_HOURS_LABEL}.
+          </AppText>
+        </View>
       ) : (
         <AppText kind="small" color={colors.muted}>
-          {issued
-            ? issued.code === null
-              ? "Mã đã được tạo nhưng không thể hiển thị lại. Hãy lấy mã mới khi đang ở quầy."
-              : "Mã đã hết hạn. Hãy lấy mã mới khi đang ở quầy."
-            : `Chỉ lấy mã khi bạn đã ở quầy, trong giờ ${POINT_HOURS}. Mã có hiệu lực 10 phút; lấy mã mới sẽ hủy mã cũ.`}
+          Chỉ lấy mã khi bạn đã ở quầy, trong giờ {POINT_HOURS_LABEL}. Mã có hiệu lực 10 phút; lấy mã mới sẽ hủy mã cũ.
         </AppText>
       )}
-      <Button wine={!live} secondary={live} title={issued ? "Lấy mã mới" : "Lấy mã nhận sách"} disabled={locked} onPress={onRequest} />
+      <Button
+        wine={!live}
+        secondary={live}
+        title={issued ? "Lấy mã mới" : "Lấy mã nhận sách"}
+        disabled={locked || (closed && !live)}
+        onPress={onRequest}
+      />
       <AppText kind="small" color={colors.muted}>
         Sách ở {order.pointName}.
       </AppText>

@@ -16,7 +16,7 @@ const HOUR = 3_600_000;
 const STAFF_LIMIT = 300_000;
 type Action = Wire['ExchangeReturnCommand']['action'];
 
-export function oneSidedShipment(row: ExchangeDoc) {
+function oneSidedShipment(row: ExchangeDoc) {
   const sent = Boolean(row.initiatorShippedAt);
   const shippedAt = sent ? row.initiatorShippedAt : row.recipientShippedAt;
   const receivedAt = sent ? row.recipientReceivedAt : row.initiatorReceivedAt;
@@ -53,8 +53,18 @@ export function oneSidedShipment(row: ExchangeDoc) {
 
 export function oneSidedReturn(row: ExchangeDoc) {
   const scope = oneSidedShipment(row);
-  if (scope && (scope.receivedAt || row.outboundDeliveryVerification)) return scope;
-  if (row.initiatorShippedAt && row.recipientShippedAt && row.initiatorReceivedAt && row.recipientReceivedAt) {
+  return scope && (scope.receivedAt || row.outboundDeliveryVerification) ? scope : null;
+}
+
+export function hasInspectionHandover(row: ExchangeDoc) {
+  return Boolean(row.initiatorShippedAt && row.recipientShippedAt &&
+    row.initiatorReceivedAt && row.recipientReceivedAt);
+}
+
+export function exchangeSettlementScope(row: ExchangeDoc) {
+  const scope = oneSidedReturn(row);
+  if (scope) return scope;
+  if (row.returnResolution && hasInspectionHandover(row)) {
     const isRecipientComplainant = row.disputedBy === 'Recipient' || row.disputedBy === row.recipientId;
     const victimIsInitiator = row.resolutionDecision === 'CompensateInitiator' ||
       (row.resolutionDecision !== 'CompensateRecipient' && !isRecipientComplainant);
@@ -101,7 +111,7 @@ export async function verifyOutboundDelivery(
 export function returnResolutionView(
   row: ExchangeDoc,
 ): Wire['ExchangeReturnResolution'] {
-  const scope = oneSidedReturn(row)!;
+  const scope = exchangeSettlementScope(row)!;
   const r = row.returnResolution!;
   return {
     ownerId: scope.ownerId,

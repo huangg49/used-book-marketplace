@@ -31,7 +31,7 @@ import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
 import { checkOrder } from '../orders/order-invariants.js';
 import { checkPointOrder } from '../auctions/point-order-invariants.js';
-import { oneSidedReturn } from '../exchanges/exchange-return-resolution.js';
+import { exchangeSettlementScope } from '../exchanges/exchange-return-resolution.js';
 import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
 import {
   FEE_JOURNAL_TYPES,
@@ -1425,7 +1425,7 @@ export class LedgerService {
     }
   }
   async settleExchangeReturn(tx: Tx, exchange: ExchangeDoc, receiptId: string, now: Date) {
-    const scope = oneSidedReturn(exchange);
+    const scope = exchangeSettlementScope(exchange);
     if (!scope || exchange.returnResolution?.settlementReceiptId !== receiptId) throw invalidState();
     const sources = await Promise.all([scope.ownerOrderId, scope.holderOrderId].map((orderId) =>
       tx.c.wallet_accounts.findOne({ orderId, purpose: 'OrderHold' })));
@@ -1458,7 +1458,7 @@ function exchangeReturnJournalRef(receiptId: string, allocation: string) {
 }
 
 function exchangeReturnMoves(exchange: ExchangeDoc) {
-  const scope = oneSidedReturn(exchange);
+  const scope = exchangeSettlementScope(exchange);
   const outcome = exchange.returnResolution?.outcome;
   if (!scope || !outcome) throw new Error('Exchange return allocation requires a final outcome');
   const compensated = outcome === 'Compensated';
@@ -1474,7 +1474,7 @@ function exchangeReturnMoves(exchange: ExchangeDoc) {
 }
 
 async function checkExchangeReturn(tx: Tx, exchange: ExchangeDoc) {
-  const scope = oneSidedReturn(exchange)!;
+  const scope = exchangeSettlementScope(exchange)!;
   const resolution = exchange.returnResolution!;
   const receipt = await tx.c.mutation_receipts.findOne({ _id: resolution.settlementReceiptId! });
   const moves = exchangeReturnMoves(exchange);
@@ -1501,7 +1501,7 @@ async function checkExchangeReturn(tx: Tx, exchange: ExchangeDoc) {
 // Listings can be revised and traded again after return. Check their resulting
 // state only in the settlement transaction, while both listings are locked.
 async function checkExchangeReturnBooks(tx: Tx, exchange: ExchangeDoc) {
-  const scope = oneSidedReturn(exchange)!;
+  const scope = exchangeSettlementScope(exchange)!;
   const [affected, retained] = await Promise.all([
     tx.c.listings.findOne({ _id: scope.listingId }),
     tx.c.listings.findOne({ _id: scope.otherListingId }),

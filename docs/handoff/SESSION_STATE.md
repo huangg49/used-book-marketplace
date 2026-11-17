@@ -1,3 +1,172 @@
+# Hoàn tất các màn lỗi web và bộ kiểm hàng chờ — 16/11/2026
+
+- Nhánh `codex/ui-release-readiness` nối từ `73991a63`. Khu hỗ trợ Staff/Admin
+  có lối về Tổng quan ở cả danh sách và chi tiết bị chặn quyền. Trang 404 Member
+  web dùng thanh điều hướng chung, có lối tìm sách và về trang chủ.
+- Bộ Chromium Admin tổng đã qua với Mongo QA và storage giả. Kịch bản kiểm
+  giá mở đúng hồ sơ và so khớp cả giá bán lẫn giá trị đổi. Giả lập lỗi hàng
+  chờ bắt đầu sau phần kiểm Tổng quan.
+- Build và lint hai app web, 251 unit Admin, 490 unit Member, 510 unit API
+  và kiểm OpenAPI đã qua. Chromium với HTTP fixture kiểm riêng hai màn lỗi
+  ở desktop và mobile 320 px với chữ 130%, gồm keyboard và quyền Staff/Admin.
+
+# Trang 404 Staff/Admin web — 16/11/2026
+
+- Nhánh `codex/ops-not-found-page` nối từ `52125179`. Route không khớp
+  hiện khung 404 trong bàn vận hành, đưa focus vào tiêu đề và có nút
+  về Tổng quan. Lối về bàn kiểm duyệt chỉ hiện theo quyền Staff/Admin.
+- Admin build, lint và 251 unit đã qua. Chromium với HTTP fixture kiểm
+  desktop 1440 px, mobile 390 px, 320 px với chữ 130%, điều hướng bàn phím
+  và lối mở menu. Vai trò vận hành thử và Member được kiểm riêng.
+  Chưa cập nhật main.
+
+# Chọn giao dịch trong phản ánh Member web — 16/11/2026
+
+- Nhánh `codex/member-support-picker-polish` nối từ `60306f72`. Ô tìm và nút
+  Tìm cùng hàng trên mobile. Mỗi giao dịch xếp tên và mã trước, nội dung
+  sách gửi/nhận và trạng thái/ngày sau. Tóm tắt giao dịch đã chọn giữ ngày
+  để đối chiếu. Vẫn tải theo cursor, giữ bản nháp khi đổi giao dịch.
+- Build, lint và 490 unit Member web đã qua. Browser với HTTP fixture kiểm
+  tìm theo mã, Lịch sử, tải thêm, lỗi 403/503, đổi/giữ giao dịch, focus và
+  tên sách dài ở 320 px với chữ 130%, 390 px và đối chiếu desktop 1440 px.
+  Bộ tham số URL qua 30 ca fixture. Chưa cập nhật main.
+
+# Tổng quan Staff/Admin trên điện thoại — 16/11/2026
+
+- Nhánh `codex/mobile-ops-overview` nối từ `7b0b5ae3`. Khung hàng chờ
+  nằm trước số liệu và biểu đồ trên màn hình hẹp, hiển thị số hồ sơ và
+  lối vào theo quyền. Desktop giữ biểu đồ và hàng chờ cạnh nhau.
+  Thẻ Việc tại điểm của Staff dùng một khung để nhãn có đủ chiều rộng.
+- Admin lint, build và 251 unit đã qua. Chromium với Mongo QA và storage
+  giả kiểm riêng desktop 1440 px, Admin 390 px, Staff 320 px với chữ 130%,
+  thứ tự Tab, đích liên kết, kích thước vùng chạm và tràn ngang.
+  Bộ browser tổng dừng ở kỳ vọng cũ về giá hiện trên hàng danh sách bài đăng.
+  Chưa cập nhật main.
+
+# Danh sách đơn trực tiếp Member web — 16/11/2026
+
+- Nhánh `codex/member-order-list-polish` nối từ checkout demo `c8c622cd`.
+  Trang Đơn hàng của tôi ưu tiên vai trò mua/bán và trạng thái, đặt các lối
+  sang đơn thắng đấu giá, trao đổi và hướng dẫn vào hàng riêng bên dưới.
+  Chỉ hiện số theo vai trò khi đã tải hết các trang. Kết quả lọc rỗng có
+  nút xóa bộ lọc và trả focus về nút Tất cả.
+- Build, lint và 490 unit Member web đã qua. Chromium dùng HTTP fixture,
+  kiểm đích của ba liên kết, tiêu chí lọc, xóa bộ lọc, 320 px chữ 130% và
+  liên kết vào đúng đơn/hội thoại. Chưa cập nhật main.
+
+# Hàng chờ duyệt bài đăng dài — 16/11/2026
+
+- Tiếp nối `a53406f2` trên `codex/admin-review-photo-first`. Hàng chờ dùng
+  dòng gọn, giữ bộ lọc và tìm kiếm ở đầu, cuộn và tải thêm 20 hồ sơ mỗi lượt.
+  Mở hồ sơ rồi quay lại giữ từ khóa và vị trí danh sách.
+- OpenAPI 0.81.0 thêm `q` cho `GET /operations/listings`. Tìm không dấu
+  theo tên hoặc mã hồ sơ, giới hạn theo trạng thái và AI trước khi phân trang.
+  Staff tìm tên đầu sách đã xác nhận, Admin tìm được cả tên đầu sách chờ duyệt.
+  Không cần migration. Chạy API và Admin web cùng phiên bản để dùng tìm kiếm.
+- Admin unit 251/251, API unit 510/510, build hai app và kiểm contract đã qua.
+  Chromium kiểm 19 nhóm trên dữ liệu Mongo QA với 24 hồ sơ chờ, gồm tìm xuyên
+  trang, quyền Staff/Admin, cursor sai bộ lọc, giữ vị trí và mobile 390 × 500.
+  Ảnh dùng storage giả lập. DB demo và main chưa cập nhật.
+
+# Mở phiếu duyệt bài đăng theo nhu cầu — 15/11/2026
+
+- Checkout demo dùng `codex/admin-review-photo-first`, nối tiếp `e91f9e77`.
+  Hồ sơ mở ở chế độ đọc rộng. Kiểm duyệt mở phiếu kề ảnh trên desktop,
+  tự thu hàng chờ khi thiếu chiều ngang. Trên điện thoại, Về ảnh giữ nút
+  Tới phiếu duyệt trong màn hình để đối chiếu qua lại.
+- Gập phiếu giữ checklist và lý do đang nhập trên cùng hồ sơ. Lý do hiện
+  khi chọn từ chối. Modal xác nhận hiển thị tên sách, mã và bản gửi đang xem.
+- Admin lint, unit 250/250 và production build qua. Hai bộ Chromium với
+  Nest/Mongo QA và storage giả lập kiểm quyền, gập/mở, giữ bản nháp,
+  duyệt/từ chối/gỡ bài, gửi lại cùng key sau mất phản hồi và xử lý phiên bản cũ.
+  Kiểm thêm bảy khung màn hình, phóng ảnh và cuộn độc lập bằng bàn phím.
+- Nối tiếp `eb3da0f8`: phiếu trượt khi mở 220 ms và khi gập 170 ms. Giữ
+  bố cục tới hết hiệu ứng đóng. Chromium kiểm trượt theo hai trục, Escape,
+  mở lại giữa hiệu ứng và giữ bản nháp khi preference giảm chuyển động bật.
+  Cảnh báo rời hồ sơ vẫn mở và nhận focus khi phiếu đang gập, nếu có bản nháp.
+- Nối tiếp `086ace34`: ba trạng thái bài đăng dùng chung một hàng, bộ lọc AI
+  dùng PaperSelect theo trạng thái và giữ số hồ sơ đã tải. Kiểm bàn phím,
+  URL lọc và viewport 320 px bằng Chromium với dữ liệu AI đã dựng trong Mongo QA.
+
+# Bàn duyệt bài đăng ưu tiên ảnh — 15/11/2026
+
+- Checkout demo ở nhánh `codex/admin-review-photo-first`, base `305a8dff`.
+  Hồ sơ dùng nền giấy, tách trạng thái duyệt, đưa tình trạng khai báo và ảnh
+  lên đầu luồng đọc. Màn hẹp đặt hàng chờ cạnh tiêu đề và giữ lối tắt tới
+  phiếu quyết định. Cảnh báo đầu sách vẫn liên kết đúng hồ sơ.
+- Admin lint, typecheck qua build, 250/250 unit và build/bundle budget đã
+  qua. Chromium 15 nhóm kiểm, 0 lỗi trang với Nest/Mongo QA và storage
+  giả lập. Kiểm tên dài, ảnh ở màn đầu, phóng ảnh, cuộn bàn phím,
+  phân quyền Admin/Staff, lưu bản nháp khi hủy rời và duyệt bài có ACK.
+- Chỉ thay giao diện duyệt bài đăng, sử dụng dữ liệu phiên bản đang mở.
+  Tích hợp GitHub và nghiệm thu người dùng vẫn chờ.
+
+# Chốt điều kiện tua hạn kiểm tra Exchange — 15/11/2026
+
+- Sau hai xác nhận kiểm tra, cả hai tài khoản demo mới thấy và dùng được nút
+  Tua hạn kiểm tra. API kiểm điều kiện khi đọc phiếu và khi chạy lệnh giữ khóa
+  trên phiếu. Xác nhận vẫn giữ hạn 72 giờ riêng của mỗi bên theo ADR 0050.
+- OpenAPI, generated contract, API lint/typecheck/build, API unit 510/510,
+  Member web lint/build và unit 490/490 đã qua. Chromium dùng HTTP fixture ở
+  390/1440 px kiểm nút sau khi chưa ai, một người và cả hai đã xác nhận.
+- Exchange E2E 65/65 trên Mongo QA ở `f5ea94c6`, gồm từ chối tua khi thiếu
+  xác nhận, chặn revision cũ và giữ nguyên hai dấu thời gian sau tất toán.
+- Checkout demo dùng nhánh local `codex/demo-ready-exchange` ghép bản sửa
+  với sidebar Staff/Admin `f99810de`. Admin typecheck và unit 250/250 đã qua
+  trên bản ghép. Chromium Staff/Admin kiểm quyền và số tiền trên giao diện
+  với fixture HTTP.
+- Khi đưa bản sửa lên máy demo, áp migration 0080 rồi bật đồng bộ API,
+  worker và web. Tài khoản demo vẫn dùng danh sách cho phép hiện có.
+
+# Sửa xác nhận kiểm tra và tua hạn demo Exchange — 15/11/2026
+
+- Nối nút Xác nhận đã kiểm tra với lệnh complete. Hai xác nhận vẫn giữ hai
+  hạn kiểm tra theo ADR 0050. Nút Tua hạn kiểm tra · Demo gọi demo-advance
+  riêng và báo trước kết quả tất toán.
+- Tua hạn yêu cầu cả hai tài khoản nằm trong danh sách demo. Worker và lệnh
+  tua hạn giữ nguyên mốc xác nhận thật, chỉ ghi mốc hoàn tất giao dịch.
+- Màn Staff hiển thị khoản tiền bù hoàn về ví của bên đã nộp, kể cả khi cọc
+  của họ được dùng để bồi thường. Màn trước xác nhận và hộp thoại dùng cùng
+  số tiền.
+- Chromium Member 390/1440 px bắt đúng hai POST và revision riêng. Chromium
+  Admin kiểm số tiền ở trang và hộp thoại. Hai bài dùng HTTP fixture cho
+  tình huống UI. API/Member build, API unit 510/510, Member unit 490/490,
+  Admin typecheck, contract và docs đã qua. Exchange E2E 65/65 trên Mongo QA
+  kiểm danh sách demo, hai hạn kiểm tra và mốc xác nhận trước/sau tất toán.
+
+# Staff phân xử khiếu nại ở bước kiểm tra Exchange — 15/11/2026
+
+- Nhánh `codex/exchange-inspection-staff`, base `0c4329fd` (PR #111).
+  Chủ dự án xác nhận Staff được phân công có quyền ra phán quyết sau khi cả
+  hai đã nhận sách. Contract 0.80 và API kiểm cùng phạm vi. Bồi thường trực
+  tiếp xử lý phiếu một cuốn mỗi bên. Ca trả sách một chiều giữ ADR 0089.
+- Migration `0080-exchange-inspection-verdict` lưu quyết định trên phiếu,
+  khôi phục từ biên nhận tương ứng nếu có, không ghi bút toán mới khi nâng
+  cấp. Member web đọc đúng bên được bồi thường và cuốn sách liên quan.
+- Contract/routes, lint/typecheck, API/Member build, Member unit (490),
+  Mongo QA (61 pass, 8 skip) và Chromium Admin/Member đã qua. Chromium dùng
+  HTTP fixture cho tình huống UI. Exchange E2E 65/65 trên Mongo QA kiểm Staff
+  trên ngưỡng 300.000đ, hồ sơ sai phạm vi, replay và bên nhận bồi thường.
+  Hai đường nâng cấp validator và ca điền phán quyết từ biên nhận đã qua.
+- Gói ở worktree riêng. Khi triển khai cần áp 0080 trước khi bật API mới và
+  đồng bộ Member web. Điều kiện release và kiểm thử native theo READINESS.
+
+# Sidebar bàn vận hành Staff/Admin — 15/11/2026
+
+- Nhánh `codex/staff-admin-sidebar`, base `0c4329fd`. Menu dùng chung
+  danh sách theo capability cho sidebar, tìm kiếm nhanh và hướng dẫn công
+  việc. Khiếu nại Đổi sách về nhóm hồ sơ, tách giao nhận tại điểm với quản
+  lý phiên. Di chuyển rút tiền/người dùng vào Tài khoản & ví và dọn mục Report
+  chưa có màn sử dụng.
+- Nhóm một mục đi thẳng. Nhóm nhiều mục mở theo đường dẫn hiện tại trên
+  desktop/rail/mobile. Đổi bộ lọc trên cùng trang giữ trạng thái nhóm và
+  đóng mở có keyboard/focus. Giữ ba chế độ sidebar hiện có.
+- Admin unit 250/250, typecheck, lint, build và Admin Chromium/Mongo QA đã
+  qua. Support Chromium đã qua luồng mở lại danh sách từ menu. Ảnh Chromium
+  ghi Admin-only và Staff tại 1440 px, Admin tại 390 px và
+  320 px ở chữ 135%, kiểm link hiện tại trong vùng cuộn. Tài khoản QA và
+  storage giả lập. Mọi endpoint, vai trò và gate phát hành dùng quy tắc hiện hành.
+
 # Tích hợp bản demo lên main — 14/11/2026
 
 - Worktree tích hợp ghép bản demo `6435707c` với GitHub `main` tại `955d29e6`.

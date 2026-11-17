@@ -1,92 +1,115 @@
 import type { CurrentUser } from "@used-books/session-client";
-import { canEnterWorkspace, canOperateIntake, canOperatePoint, canResolve, canReview, canReviewCatalog, canSimulate } from "../../core/session";
+import {
+  canEnterWorkspace,
+  canOperateIntake,
+  canOperatePoint,
+  canResolve,
+  canReview,
+  canReviewCatalog,
+  canSimulate,
+} from "../../core/session";
 
-export type NavigationIcon = "dashboard" | "statistics" | "books" | "catalog" | "intake" | "collection" | "incident" | "resolution" | "auction" | "overdue" | "point" | "users" | "carrier";
+export type NavigationIcon =
+  | "dashboard" | "statistics" | "books" | "catalog" | "review" | "rating"
+  | "ai" | "intake" | "collection" | "incident" | "resolution" | "auction"
+  | "overdue" | "point" | "operations" | "users" | "wallet" | "carrier"
+  | "support" | "simulation";
+
 export type NavigationItem = { label: string; to: string; icon: NavigationIcon };
-export type NavigationGroup = { id: string; label: string; items: NavigationItem[] };
+export type NavigationGroup = {
+  id: string;
+  label: string;
+  icon?: NavigationIcon;
+  items: NavigationItem[];
+};
 
-// Presentation only. Route/service permission checks remain the authority.
+type Capability = (user: CurrentUser) => boolean;
+type Route = NavigationItem & { visibleTo?: Capability };
+type RouteGroup = Omit<NavigationGroup, "items"> & { items: Route[] };
+
+const canSeePointIncidents: Capability = (user) =>
+  canOperatePoint(user) || canResolve(user);
+
+const workspaceGroups: RouteGroup[] = [
+  {
+    id: "workspace",
+    label: "Tổng quan",
+    items: [
+      { label: "Tổng quan", to: "/dashboard", icon: "dashboard" },
+      { label: "Thống kê", to: "/statistics", icon: "statistics", visibleTo: canReview },
+    ],
+  },
+  {
+    id: "review",
+    label: "Kiểm duyệt",
+    icon: "review",
+    items: [
+      { label: "Đầu sách", to: "/review/catalog-requests", icon: "catalog", visibleTo: canReviewCatalog },
+      { label: "Bài đăng sách", to: "/review/listings", icon: "books", visibleTo: canReview },
+      { label: "Hậu kiểm AI", to: "/ai-review-checks", icon: "ai", visibleTo: canReview },
+      { label: "Đánh giá giao dịch", to: "/transaction-reviews", icon: "rating", visibleTo: canReview },
+    ],
+  },
+  {
+    id: "cases",
+    label: "Hỗ trợ & khiếu nại",
+    icon: "support",
+    items: [
+      { label: "Khiếu nại trao đổi", to: "/operations/exchange-disputes", icon: "resolution", visibleTo: canReview },
+      { label: "Yêu cầu hỗ trợ", to: "/support", icon: "support", visibleTo: canResolve },
+    ],
+  },
+  {
+    id: "operations",
+    label: "Giao nhận tại điểm",
+    icon: "operations",
+    items: [
+      { label: "Nhận sách đấu giá", to: "/operations/intakes", icon: "intake", visibleTo: canOperateIntake },
+      { label: "Giao sách", to: "/operations/collections", icon: "collection", visibleTo: canOperatePoint },
+      { label: "Xử lý đơn tại điểm", to: "/operations/resolutions", icon: "resolution", visibleTo: canResolve },
+      { label: "Sự cố tại điểm", to: "/operations/incidents", icon: "incident", visibleTo: canSeePointIncidents },
+      { label: "Việc quá hạn", to: "/operations/escalations", icon: "overdue", visibleTo: canResolve },
+      { label: "Điểm giao nhận", to: "/operations/points", icon: "point", visibleTo: canResolve },
+    ],
+  },
+  {
+    id: "auctions",
+    label: "Đấu giá",
+    items: [
+      { label: "Phiên đấu giá", to: "/operations/auctions", icon: "auction", visibleTo: canResolve },
+    ],
+  },
+  {
+    id: "management",
+    label: "Tài khoản & ví",
+    icon: "wallet",
+    items: [
+      { label: "Quản lý người dùng", to: "/users", icon: "users", visibleTo: canReviewCatalog },
+      { label: "Yêu cầu rút tiền", to: "/withdrawals", icon: "wallet", visibleTo: canResolve },
+    ],
+  },
+  {
+    id: "simulation",
+    label: "Mô phỏng",
+    icon: "simulation",
+    items: [
+      { label: "Hãng vận chuyển", to: "/simulator/deliveries", icon: "carrier", visibleTo: canSimulate },
+      { label: "Lấy hàng trực tiếp", to: "/simulator/events/pickups", icon: "intake", visibleTo: canSimulate },
+      { label: "Giao hàng trực tiếp", to: "/simulator/events/deliveries", icon: "carrier", visibleTo: canSimulate },
+      { label: "Nạp tiền mô phỏng", to: "/simulator/events/topups", icon: "wallet", visibleTo: canSimulate },
+    ],
+  },
+];
+
+// Route and service guards decide access. The same catalogue feeds navigation and search.
 export function navigationGroups(user: CurrentUser | undefined): NavigationGroup[] {
   if (!user || !canEnterWorkspace(user)) return [];
-  const groups: NavigationGroup[] = [{ id: "workspace", label: "Không gian làm việc", items: [
-    { label: "Dashboard", to: "/dashboard", icon: "dashboard" },
-    ...(canReview(user)
-      ? [{ label: "Thống kê", to: "/statistics", icon: "statistics" as const }]
-      : []),
-  ] }];
-
-  // 1. Quản lý người dùng: Đưa lên vị trí ưu tiên cao, trực tiếp dưới Dashboard cho Quản trị viên
-  if (canReviewCatalog(user)) {
-    groups.push({
-      id: "management",
-      label: "Quản lý",
-      items: [{ label: "Yêu cầu rút tiền", to: "/withdrawals", icon: "resolution" }, { label: "Quản lý người dùng", to: "/users", icon: "users" }, { label: "Trung tâm xử lý", to: "/support", icon: "resolution" }],
-    });
-  }
-
-  // 2. Kiểm duyệt: Xếp tuần tự theo chu trình Đầu sách -> Bài đăng sách -> Đánh giá -> Khiếu nại
-  if (canReview(user)) {
-    const items: NavigationItem[] = [];
-    if (canReviewCatalog(user)) {
-      items.push({ label: "Đầu sách", to: "/review/catalog-requests", icon: "catalog" });
-    }
-    items.push(
-      { label: "Bài đăng sách", to: "/review/listings", icon: "books" },
-      { label: "Hậu kiểm AI", to: "/ai-review-checks", icon: "overdue" },
-      { label: "Đánh giá giao dịch", to: "/transaction-reviews", icon: "books" },
-      { label: "Khiếu nại trao đổi", to: "/operations/exchange-disputes", icon: "resolution" },
-    );
-    groups.push({ id: "review", label: "Kiểm duyệt", items });
-  }
-
-  // 3. Điểm & đấu giá: Xếp tuần tự từ Thiết lập trạm -> Phiên đấu giá -> Nhận sách -> Giao sách -> Xử lý đơn/sự cố/quá hạn
-  if (canOperateIntake(user) || canOperatePoint(user) || canResolve(user)) {
-    const items: NavigationItem[] = [];
-    if (canResolve(user)) {
-      items.push(
-        { label: "Điểm giao nhận", to: "/operations/points", icon: "point" },
-        { label: "Phiên đấu giá", to: "/operations/auctions", icon: "auction" },
-      );
-    }
-    if (canOperateIntake(user)) {
-      items.push(
-        { label: "Nhận sách đấu giá", to: "/operations/intakes", icon: "intake" },
-      );
-    }
-    if (canOperatePoint(user)) {
-      items.push(
-        { label: "Giao sách", to: "/operations/collections", icon: "collection" },
-      );
-    }
-    if (canResolve(user)) {
-      items.push(
-        { label: "Xử lý đơn tại điểm", to: "/operations/resolutions", icon: "resolution" },
-      );
-    }
-    items.push({ label: "Sự cố tại điểm", to: "/operations/incidents", icon: "incident" });
-    if (canResolve(user)) {
-      items.push(
-        { label: "Việc quá hạn", to: "/operations/escalations", icon: "overdue" },
-      );
-    }
-    groups.push({ id: "operations", label: "Điểm & đấu giá", items });
-  }
-
-  // 4. Mô phỏng (dành cho Test Operator)
-  if (canSimulate(user)) {
-    groups.push({
-      id: "simulation",
-      label: "Mô phỏng",
-      items: [
-        { label: "Hãng vận chuyển", to: "/simulator/deliveries", icon: "carrier" },
-        { label: "Lấy hàng trực tiếp", to: "/simulator/events/pickups", icon: "intake" },
-        { label: "Giao hàng trực tiếp", to: "/simulator/events/deliveries", icon: "carrier" },
-        { label: "Nạp tiền mô phỏng", to: "/simulator/events/topups", icon: "resolution" },
-      ],
-    });
-  }
-
-  return groups;
+  return workspaceGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(({ visibleTo }) => !visibleTo || visibleTo(user)),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 export function workspaceRole(user: CurrentUser | undefined) {

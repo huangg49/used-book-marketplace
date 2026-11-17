@@ -288,7 +288,7 @@ try {
   await p.getByRole("link", { name: /^Đơn mua\/bán trực tiếp/ }).click();
   await p
     .getByRole("link", {
-      name: "Đơn thắng đấu giá ở Đấu giá của tôi",
+      name: "Đơn thắng đấu giá",
       exact: true,
     })
     .waitFor();
@@ -493,7 +493,7 @@ try {
     .getByRole("heading", { name: "Đánh giá giao dịch", exact: true })
     .waitFor();
   await ops
-    .getByRole("link", { name: "Dashboard", exact: true })
+    .getByRole("link", { name: "Tổng quan", exact: true })
     .first()
     .click();
   const workGuide = ops.locator("details").filter({

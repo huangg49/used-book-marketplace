@@ -1,7 +1,6 @@
 import { lazy, Suspense, useSyncExternalStore } from "react";
 import {
   createBrowserRouter,
-  Link,
   Navigate,
   RouterProvider,
 } from "react-router-dom";
@@ -13,6 +12,7 @@ import "./task-surfaces.css";
 const AuthenticatedWorkspace = lazy(
   () => import("./features/navigation/AuthenticatedWorkspace"),
 );
+const NotFoundPage = lazy(() => import("./features/navigation/NotFoundPage"));
 
 // Stable lazy components: profile refreshes and URL filter changes must not
 // recreate page types or remount unsent forms. These imports run only when the
@@ -159,15 +159,7 @@ const router = createBrowserRouter([
       { path: "/operations/exchange-disputes/:id", element: <ExchangeDisputeDetailPage /> },
       { path: "/simulator/deliveries", element: <DeliverySimulator /> },
       { path: "/simulator/events/:kind", element: <SimulatorEventsPage /> },
-      {
-        path: "*",
-        element: (
-          <p>
-            Không tìm thấy trang.{" "}
-            <Link to="/review/listings">Về bàn kiểm duyệt</Link>
-          </p>
-        ),
-      },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ]);

@@ -135,9 +135,8 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     await p.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
     "10000",
   );
-  await p
-    .getByText("Nơi gửi đã chọn · Bạn đọc thứ hai", { exact: true })
-    .waitFor();
+  await p.getByText("Đã chọn nơi gửi", { exact: true }).waitFor();
+  await p.getByText("Bạn đọc thứ hai", { exact: true }).waitFor();
   let lostOriginAck = true;
   const originRequests = [];
   await p.route(`**/api/v1/listings/${id}/draft`, async (route) => {

@@ -40,7 +40,15 @@ function TargetDescription({
     : option.label;
   return (
     <span className={styles.targetDescription}>
-      {hasBooks ? (
+      <span className={styles.targetIdentity}>
+        <strong className={styles.targetName}>{identity}</strong>
+        {transaction && (
+          <span className={styles.targetCode}>
+            #{option.target.id.slice(0, 8).toUpperCase()}
+          </span>
+        )}
+      </span>
+      {hasBooks && (
         <span className={styles.bookPair}>
           {give.length > 0 && (
             <span>
@@ -55,14 +63,8 @@ function TargetDescription({
             </span>
           )}
         </span>
-      ) : <strong className={styles.targetName}>{identity}</strong>}
+      )}
       <span className={styles.targetMeta}>
-        {hasBooks && <span>{identity}</span>}
-        {transaction && (
-          <span className={styles.targetCode}>
-            #{option.target.id.slice(0, 8).toUpperCase()}
-          </span>
-        )}
         {option.state && (
           <span className={styles.targetState}
             data-dispute={["Disputed", "ResolutionPending"].includes(option.state) || undefined}>
@@ -72,7 +74,7 @@ function TargetDescription({
         {!exchange && option.partnerName && (
           <span>Với {option.partnerName}</span>
         )}
-        {(!selected || !hasBooks) && option.createdAt && (
+        {option.createdAt && (
           <time dateTime={option.createdAt}>
             {date.format(new Date(option.createdAt))}
           </time>
@@ -265,13 +267,13 @@ export function SupportTargetPicker({
           </div>
           <div className={styles.targetSearch}>
             <label htmlFor="support-target-search">
-              Tìm theo tên sách, người giao dịch hoặc mã
+              Tên sách, đối tác hoặc mã giao dịch
             </label>
             <input
               id="support-target-search"
               ref={searchInput}
               type="search"
-              placeholder="Tên sách, đối tác hoặc #mã"
+              enterKeyHint="search"
               maxLength={120}
               value={input}
               onChange={(e) => {
@@ -279,22 +281,26 @@ export function SupportTargetPicker({
                 if (!e.target.value.trim()) setSearch("");
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   setSearch(input.trim());
                 }
               }}
             />
-            <button type="button" onClick={() => setSearch(input.trim())}>
-              <Search size={16} aria-hidden="true" /> Tìm giao dịch
+            <button
+              type="button"
+              aria-label="Tìm giao dịch"
+              onClick={() => setSearch(input.trim())}
+            >
+              <Search size={16} aria-hidden="true" /> Tìm
             </button>
           </div>
           {options.isPending && active ? (
-            <p role="status">Đang tải giao dịch của bạn…</p>
+            <p className={styles.targetFeedback} role="status">Đang tải giao dịch của bạn…</p>
           ) : null}
           {options.isError ? (
-            <p role="alert">
-              {supportError(options.error)}{" "}
+            <div className={styles.targetFeedback} role="alert">
+              <p>{supportError(options.error)}</p>
               <button
                 type="button"
                 disabled={options.isFetching}
@@ -306,7 +312,7 @@ export function SupportTargetPicker({
               >
                 Tải lại giao dịch
               </button>
-            </p>
+            </div>
           ) : null}
           {!inaccessible && items.length > 0 ? (
             <div
@@ -335,13 +341,13 @@ export function SupportTargetPicker({
             </div>
           ) : null}
           {options.isSuccess && !items.length && options.hasNextPage ? (
-            <p role="status">
+            <p className={styles.targetFeedback} role="status">
               Chưa thấy giao dịch trong dữ liệu đã tải. Bấm “Xem thêm giao dịch”
               để kiểm tra những trang còn lại.
             </p>
           ) : null}
           {options.isSuccess && !items.length && !options.hasNextPage ? (
-            <div className={styles.targetEmpty}>
+            <div className={styles.targetFeedback}>
               <p role="status">
                 {search
                   ? "Không có giao dịch khớp tìm kiếm trong mục này."
@@ -362,6 +368,7 @@ export function SupportTargetPicker({
           {options.hasNextPage && !inaccessible ? (
             <button
               type="button"
+              className={styles.moreTargets}
               disabled={options.isFetching}
               onClick={() =>
                 void options.fetchNextPage({ cancelRefetch: false })

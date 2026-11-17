@@ -370,7 +370,7 @@ try {
     .getByRole("button", { name: "Xóa bài đăng", exact: true })
     .click();
   await click("Thử lại yêu cầu này");
-  await p.getByText("TỦ SÁCH CỦA TÔI · QUẢN LÝ BÀI ĐĂNG", { exact: true }).waitFor();
+  await p.getByRole("button", { name: "+ Đăng Sách Mới Ngay", exact: true }).waitFor();
   assert.equal(
     await fixture.db.collection("mutation_receipts").countDocuments({
       listingId: ownerId,

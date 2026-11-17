@@ -101,6 +101,7 @@
   transform: translateY(1px);
 }
 .metrics {
+  grid-area: metrics;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
@@ -140,8 +141,17 @@
 .overviewLayout {
   display: grid;
   grid-template-columns: minmax(0, 1.9fr) minmax(230px, 0.85fr);
-  gap: 22px;
+  grid-template-areas:
+    "metrics metrics"
+    "chart workboard";
+  gap: 24px 22px;
   align-items: stretch;
+  reading-flow: grid-rows;
+}
+.chartSlot {
+  grid-area: chart;
+  min-width: 0;
+  display: grid;
 }
 .chart,
 .chartLoading {
@@ -447,6 +457,8 @@
   line-height: 1.8;
 }
 .workboard {
+  grid-area: workboard;
+  align-self: start;
   position: relative;
   isolation: isolate;
   display: flex;
@@ -458,29 +470,6 @@
   border: 1px solid #400101;
   box-shadow: 0 4px 20px rgba(92, 2, 2, 0.18), 0 1px 3px rgba(40, 25, 20, 0.08);
 }
-.workboardBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #f7ecd7;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 12px;
-  width: fit-content;
-}
-.workboardDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ff5252;
-  box-shadow: 0 0 6px rgba(255, 82, 82, 0.6);
-}
 .workboard h2 {
   margin: 0;
   font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
@@ -490,9 +479,8 @@
   letter-spacing: -0.02em;
   color: #fff9f5;
 }
-.workboard header p,
 .workboardFoot {
-  margin: 8px 0 0;
+  margin: 0;
   color: rgba(255, 240, 230, 0.78);
   font-size: 13px;
   line-height: 1.6;
@@ -500,7 +488,7 @@
 .workLinks {
   display: grid;
   gap: 10px;
-  margin-block: 20px;
+  margin-block: 20px 14px;
 }
 .workLinks a {
   display: block;
@@ -521,10 +509,6 @@
   transform: translateY(0);
   background: rgba(255, 255, 255, 0.12);
 }
-.workLinks a:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px #fff9f5, 0 0 0 4px var(--shop-wine);
-}
 .workLinks .actionFace {
   display: flex;
   align-items: center;
@@ -536,6 +520,9 @@
 .workLabel {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -548,24 +535,17 @@
   color: #ffffff;
   font-variant-numeric: tabular-nums;
 }
-.workboardFoot {
-  margin-top: auto;
+.workLabel strong,
+.workLinks .actionFace > svg {
+  flex: none;
 }
-.bottomGrid {
+.bottomGrid[data-has-capacity="true"] {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.9fr);
   gap: 20px;
-  background: transparent;
-  border: none;
-  min-width: 0;
 }
-.singleBottom {
+.bottomGrid {
   min-width: 0;
-  padding: 24px;
-  background: #ffffff;
-  border: 1px solid rgba(217, 203, 189, 0.85);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.03), 0 8px 24px -4px rgba(40, 25, 20, 0.06);
 }
 .attention,
 .capacity {
@@ -799,6 +779,7 @@
 @media (max-width: 1180px) {
   .overviewLayout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "workboard" "metrics" "chart";
   }
   .workboard {
     display: grid;
@@ -815,7 +796,7 @@
     grid-column: 1 / -1;
     margin-top: 16px;
   }
-  .bottomGrid {
+  .bottomGrid[data-has-capacity="true"] {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -826,9 +807,21 @@
   .header h1 {
     font-size: 1.75rem;
   }
+  .header {
+    gap: 12px;
+  }
   .headerActions {
     width: 100%;
     justify-content: space-between;
+    gap: 8px;
+  }
+  .period button,
+  .headerActions .refreshButton {
+    height: auto;
+    min-height: 44px;
+  }
+  .overviewLayout {
+    gap: 20px;
   }
   .metrics {
     display: grid;
@@ -862,31 +855,29 @@
   }
   .workboard {
     display: flex;
-    padding: 22px;
+    padding: 16px;
   }
-  .workboard h2 br {
-    display: none;
+  .workboard h2 {
+    font-size: 1.625rem;
   }
   .workLinks {
-    margin-top: 18px;
+    gap: 8px;
+    margin: 14px 0 0;
   }
-  .workLinks a {
-    min-height: 64px;
+  .workLinks .actionFace {
+    min-height: 48px;
+    padding: 8px 10px;
+    gap: 10px;
   }
   .workLabel {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex: 1;
+    font-size: 0.875rem;
   }
   .workboardFoot {
-    margin-top: 14px;
-  }
-  .bottomGrid {
-    grid-template-columns: minmax(0, 1fr);
+    margin-top: 10px;
+    font-size: 0.75rem;
   }
   .attention, .capacity { padding: 24px 20px; }
-  .task .actionFace { gap: 12px; }
+  .task .actionFace { gap: 10px; padding-inline: 0; }
   .taskLabel small { display: none; }
   .pointHeading { flex-wrap: wrap; }
   .pointCount { margin-left: auto; }

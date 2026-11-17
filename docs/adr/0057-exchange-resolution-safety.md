@@ -40,3 +40,24 @@ một lý do văn bản hoặc diễn giải test xanh thành nghiệm thu.
 
 Không migration mới, không sửa migration đã áp dụng, không GHN/carrier/Driver,
 không tác động DB chính. Kết quả kiểm được ghi trong SESSION_STATE của gói.
+
+
+## Phân xử khiếu nại trong bước kiểm tra — 15/11/2026
+
+Chủ dự án xác nhận Staff phụ trách có quyền ra phán quyết khi cả hai đã nhận
+sách. Contract 0.80 giới hạn thao tác trong PR #111 cho Staff/Admin đang hoạt
+động, độc lập và đang được phân công. Phiếu phải còn ResolutionPending, đủ
+funding, có khiếu nại và có mốc gửi/nhận ở cả hai chiều.
+
+Staff hoặc Admin có thể hoàn tất theo thỏa thuận hoặc, với phiếu một cuốn mỗi
+bên, quyết định bồi thường có hiệu lực ngay. Phương án bồi thường đang dùng của
+PR #111 hoàn tiền bù về người đã nộp, hoàn cọc người được bồi thường và chuyển
+cọc còn lại cho người đó. Bài của sách được xác định hư hại bị đóng. Bài còn lại
+về nháp. Đây là phương án có sẵn của gói demo/QA. SRS mục 9.5–9.6 còn có các
+mẫu giữ sách với mức bồi thường điều chỉnh, hoàn hai chiều và xét kháng nghị.
+Các trường hợp đó cần quy trình phân bổ và custody tương ứng trước phát hành.
+
+Phán quyết cũ RefundBoth giữ chế độ replay. Ca một bên đã nhận và bên kia quá
+hạn gửi đi qua ADR 0089, với quy tắc tiền, thời hạn và thẩm quyền riêng.
+Migration 0080 lưu loại phán quyết bồi thường trên phiếu. Dữ liệu từng xử lý chỉ
+điền từ biên nhận khớp phiếu và revision, giữ nguyên bút toán và thời điểm.

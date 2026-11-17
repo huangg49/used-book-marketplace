@@ -22,24 +22,24 @@ describe("workspace navigation permissions", () => {
       "/operations/incidents",
     ]);
   });
-  it("gives an Admin without Staff auction intake approval but not collection desks or carrier simulator", () => {
+  it("gives Admin the auction intake desk while reserving collection and simulation for their own roles", () => {
     expect(paths({ ...base, roles: ["ADMIN"] })).toEqual([
       "/dashboard",
       "/statistics",
-      "/withdrawals",
-      "/users",
-      "/support",
       "/review/catalog-requests",
       "/review/listings",
       "/ai-review-checks",
       "/transaction-reviews",
       "/operations/exchange-disputes",
-      "/operations/points",
-      "/operations/auctions",
+      "/support",
       "/operations/intakes",
       "/operations/resolutions",
       "/operations/incidents",
       "/operations/escalations",
+      "/operations/points",
+      "/operations/auctions",
+      "/users",
+      "/withdrawals",
     ]);
   });
   it("limits TEST_OPERATOR to the dashboard and carrier simulator", () => {
@@ -63,24 +63,27 @@ describe("workspace navigation permissions", () => {
 });
 
 describe("sidebar route semantics", () => {
-  it("keeps the current operations group open in compact mode without hiding the dashboard or directory", () => {
+  it("opens the current operations group for a deep link and keeps the overview visible", () => {
     const html = renderToStaticMarkup(<MemoryRouter initialEntries={["/operations/resolutions/order-1"]}>
-      <SidebarNavigation user={{ ...base, roles: ["ADMIN"] }} compact />
+      <SidebarNavigation user={{ ...base, roles: ["ADMIN"] }} />
     </MemoryRouter>);
     expect(html).toMatch(/aria-expanded="true" aria-controls="nav-items-operations"/);
     expect(html).toMatch(/aria-expanded="false" aria-controls="nav-items-review"/);
     expect(html).toMatch(/id="nav-items-review" hidden=""/);
     expect(html).not.toMatch(/id="nav-items-operations" hidden/);
     expect(html).not.toMatch(/id="nav-items-workspace" hidden/);
-    expect(html).not.toMatch(/id="nav-items-management" hidden/);
+    expect(html).toMatch(/id="nav-items-management" hidden=""/);
   });
-  it("opens review as a compact starting group while preserving simulator access for its own role", () => {
+  it("opens review on overview and exposes Staff’s single complaint destination directly", () => {
     const html = renderToStaticMarkup(<MemoryRouter initialEntries={["/dashboard"]}>
-      <SidebarNavigation user={{ ...base, roles: ["STAFF", "TEST_OPERATOR"] }} compact />
+      <SidebarNavigation user={{ ...base, roles: ["STAFF", "TEST_OPERATOR"] }} />
     </MemoryRouter>);
     expect(html).toMatch(/aria-expanded="true" aria-controls="nav-items-review"/);
     expect(html).toMatch(/aria-expanded="false" aria-controls="nav-items-simulation"/);
     expect(html).toContain('href="/simulator/deliveries"');
+    expect(html).not.toMatch(/id="nav-items-cases" hidden/);
+    expect(html).not.toContain('aria-controls="nav-items-cases"');
+    expect(html).toContain('href="/operations/exchange-disputes"');
     expect(html).not.toContain('href="/users"');
   });
   it("keeps a parent review link active on a detail route and exposes the connected dashboard without a mock label", () => {
@@ -90,9 +93,9 @@ describe("sidebar route semantics", () => {
     const listing = html.match(/<a\b[^>]*href="\/review\/listings"[^>]*>/)?.[0];
     expect(listing).toContain('aria-current="page"');
     expect(listing).toContain('aria-label="Bài đăng sách"');
-    expect(html).toContain('aria-label="Dashboard"');
+    expect(html).toContain('aria-label="Tổng quan"');
     expect(html).not.toContain("mock-nav-label");
-    expect(html).toContain('aria-disabled="true" title="Report · Sắp triển khai"');
+    expect(html).not.toContain("Sắp triển khai");
     expect(html).toContain('href="/operations/intakes"');
     expect(html).not.toContain('href="/operations/collections"');
   });

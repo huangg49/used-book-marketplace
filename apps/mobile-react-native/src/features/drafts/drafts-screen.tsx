@@ -31,6 +31,7 @@ import { executeLifecycle, lifecycleIntent } from "./lifecycle-command";
 import { MemberNavigation } from "../navigation/member-navigation";
 import { useLocalSearchParams, router } from "expo-router";
 import { ApiError } from "@used-books/session-client";
+import { AutumnThemeBackground } from "./autumn-theme-background";
 
 export function DraftsScreen() {
   const { client, state } = useSession(),
@@ -159,6 +160,8 @@ export function DraftsScreen() {
     <Screen
       footer={<MemberNavigation current="/drafts" />}
       footerAppearance="navigation"
+      background={<AutumnThemeBackground />}
+      canvasColor="transparent"
     >
       {/* DangSachHome Header */}
       <View
@@ -167,7 +170,6 @@ export function DraftsScreen() {
           justifyContent: "center",
           marginTop: space.xs,
           marginBottom: 4,
-          gap: 6,
         }}
       >
         <View
@@ -186,31 +188,6 @@ export function DraftsScreen() {
           }}
         >
           <WebBrandLogo scale={0.75} />
-        </View>
-
-        <View
-          style={{
-            paddingHorizontal: 10,
-            paddingVertical: 3,
-            borderRadius: 10,
-            backgroundColor: stitchTokens.terracottaSoft,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-          }}
-        >
-          <Icon name="book" size={12} color={stitchTokens.wine} />
-          <AppText
-            kind="small"
-            color={stitchTokens.wine}
-            style={{
-              fontSize: 10,
-              fontWeight: "700",
-              letterSpacing: 0.5,
-            }}
-          >
-            TỦ SÁCH CỦA TÔI · QUẢN LÝ BÀI ĐĂNG
-          </AppText>
         </View>
       </View>
 

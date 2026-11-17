@@ -3654,7 +3654,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Apply the current exchange deadline on an allowlisted local simulation. Does not attest pickup, receipt or dispute evidence. */
+        /** @description Apply the current exchange deadline on an allowlisted local simulation. Inspection can be advanced only after both participants acknowledge inspection. Does not attest pickup, receipt or dispute evidence. */
         post: operations["advanceDemoExchangeDeadline"];
         delete?: never;
         options?: never;
@@ -3973,7 +3973,7 @@ export interface paths {
         put?: never;
         /**
          * resolveExchangeDispute
-         * @description ACTIVE independent STAFF/ADMIN only. New decisions through this legacy endpoint are currently rejected with 409 InvalidState: the legacy command cannot establish custody, allocations, authority limits or an effective decision after appeal. No money, listing, exchange, audit or notification mutation is committed on rejection. Historical receipts may still be replayed with the original key and body after current session, role and participant-independence checks; replay does not repeat their financial effects.
+         * @description An active, independent STAFF or ADMIN assigned to the case may resolve a funded inspection dispute once both shipments and receipts are recorded. CompleteExchange settles the original agreement. CompensateInitiator or CompensateRecipient settles compensation immediately on one-book-per-side exchanges. RefundBoth is available only to replay an existing receipt. Out-of-scope or unassigned new decisions return 409 InvalidState. Replays require the original key and body and current role, session and participant independence, without repeating any financial effects.
          */
         post: operations["resolveExchangeDispute"];
         delete?: never;
@@ -8125,6 +8125,7 @@ export interface components {
                 recipient: components["schemas"]["ExchangeDisputeParticipant"] | null;
             };
             returnResolution?: components["schemas"]["ExchangeReturnResolution"];
+            /** @description The current demo deadline, when eligible. Inspection is available only after both participants acknowledge inspection. */
             demoDeadline?: components["schemas"]["DemoExchangeDeadline"];
             /** @description The current member can simulate this local demo exchange's shipping deadline. */
             demoShippingAdvanceAvailable?: boolean;
@@ -11038,6 +11039,8 @@ export interface operations {
                 moderation?: "PendingReview" | "Approved" | "Rejected";
                 /** @description Filter by what the AI reviewer concluded about the current revision. None means it has not looked at it. */
                 aiOutcome?: "Approved" | "Escalated" | "None";
+                /** @description Search across the filtered queue by title or bundle label (case and accent insensitive), a full listing UUID, or its displayed eight hexadecimal characters with an optional leading #. Pending or rejected catalog titles are searchable only by Admin. A changed search requires a new cursor. */
+                q?: string;
             };
             header?: never;
             path?: never;

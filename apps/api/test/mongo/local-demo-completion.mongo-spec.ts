@@ -13,6 +13,7 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     '0077-exchange-return-resolution',
     '0078-exchange-outbound-delivery-verification',
     '0079-exchange-demo-archive',
+    '0080-exchange-inspection-verdict',
   );
   const client = await new MongoClient(testUrl(`local_demo_upgrade_${randomUUID().replaceAll('-', '')}_test`)).connect();
   const db = client.db();
@@ -34,11 +35,16 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     const previousExchange = exchangeFlexibleDiffSpecs[0];
     const currentExchange = currentCollections().find(spec => spec.name === 'exchanges')!;
     expect(exchange.options.validator).toEqual(validatorOf(currentExchange));
-    const { returnResolution, outboundDeliveryVerification, demoArchivedAt, ...previousProperties } = currentExchange.schema.properties as Record<string, unknown>;
+    const { returnResolution, outboundDeliveryVerification, demoArchivedAt, resolutionDecision, ...previousProperties } = currentExchange.schema.properties as Record<string, unknown>;
     expect(returnResolution).toBeDefined();
     expect(outboundDeliveryVerification).toBeDefined();
     expect(demoArchivedAt).toEqual({ bsonType: 'date' });
-    expect(previousProperties).toEqual(previousExchange.schema.properties);
+    const { resolutionDecision: previousDecision, ...baselineProperties } =
+      previousExchange.schema.properties as Record<string, { enum?: unknown[] }>;
+    expect(resolutionDecision).toMatchObject({
+      enum: expect.arrayContaining([...previousDecision.enum!, 'CompensateInitiator', 'CompensateRecipient']),
+    });
+    expect(previousProperties).toEqual(baselineProperties);
     expect(currentExchange.expr).toMatchObject({ $and: [previousExchange.expr, expect.any(Object)] });
     expect(appPrivileges(db.databaseName).find(p => p.resource.collection === 'local_demo_order_completions')?.actions).toEqual(['find', 'insert', 'update']);
   } finally { await db.dropDatabase(); await client.close(); }

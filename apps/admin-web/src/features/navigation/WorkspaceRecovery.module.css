@@ -1,0 +1,123 @@
+.page {
+  container-type: inline-size;
+  max-inline-size: 56rem;
+  margin: clamp(1rem, 6vh, 4rem) auto;
+}
+
+.ticket {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(0, 2.4fr);
+  border: 1px solid var(--shop-line);
+  border-radius: 16px;
+  background: var(--shop-paper);
+}
+
+.code {
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  border-start-start-radius: 15px;
+  border-end-start-radius: 15px;
+  border-inline-end: 1px dashed var(--shop-control);
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font: 400 clamp(3.5rem, 12cqi, 7rem)/1 "Anton", "Auth Bricolage", sans-serif;
+  letter-spacing: -0.035em;
+}
+
+.content {
+  min-inline-size: 0;
+  padding: clamp(1.25rem, 5cqi, 3.25rem);
+}
+
+.content h1 {
+  margin: 0;
+  color: var(--shop-wine);
+  font: 700 clamp(1.625rem, 5cqi, 2.75rem)/1.15 "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.content p {
+  max-inline-size: 38ch;
+  margin: 0.75rem 0 0;
+  color: var(--shop-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-block-start: 1.5rem;
+}
+
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-inline-size: 100%;
+  min-block-size: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-decoration: none;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.actions svg {
+  flex: none;
+}
+
+.actions .primary {
+  border-color: var(--shop-wine);
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+
+.actions .primary:hover {
+  border-color: var(--shop-wine-hover);
+  background: var(--shop-wine-hover);
+}
+
+.actions .secondary:hover {
+  border-color: var(--shop-control);
+  background: var(--shop-shelf);
+}
+
+@container (max-width: 36rem) {
+  .ticket {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .code {
+    place-items: center start;
+    padding: 1rem 1.25rem;
+    border-start-end-radius: 15px;
+    border-end-start-radius: 0;
+    border-inline-end: 0;
+    border-block-end: 1px dashed var(--shop-control);
+    font-size: clamp(2.75rem, 11cqi, 4rem);
+  }
+}
+
+@container (max-width: 23rem) {
+  .content,
+  .code {
+    padding-inline: 1rem;
+  }
+
+  .actions a {
+    flex-basis: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    margin-block: 1rem;
+  }
+}

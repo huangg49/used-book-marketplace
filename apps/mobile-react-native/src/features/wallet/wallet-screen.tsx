@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { emptyWalletHistoryFilters, walletHistoryFilters, type WalletHistoryFilters } from "@used-books/session-client";
+import {
+  emptyWalletHistoryFilters,
+  walletHistoryFilters,
+  type WalletHistoryFilters,
+  type Withdrawal,
+} from "@used-books/session-client";
 import { View, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +37,8 @@ import {
   walletDate,
 } from "./wallet-model";
 import { TopupModal } from "./topup-modal";
+import { WithdrawalModal } from "./withdrawal-modal";
+import { WithdrawalDetailModal } from "./withdrawal-detail-modal";
 import type { TopupState } from "./contracts";
 
 const FILTER_TABS = [
@@ -49,6 +56,9 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
   const foreground = useForeground();
 
   const [topupModalVisible, setTopupModalVisible] = useState(false);
+  const [withdrawalModalVisible, setWithdrawalModalVisible] = useState(false);
+  const [selectedWithdrawalId, setSelectedWithdrawalId] = useState<string | null>(null);
+  const [selectedWithdrawalData, setSelectedWithdrawalData] = useState<Withdrawal | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDraft, setFilterDraft] = useState(emptyWalletHistoryFilters);
@@ -254,6 +264,7 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
                 {(
                   [
                     ["Đang giữ cho đơn sách", summary.data.transactionHeld],
+                    ["Đang giữ chờ rút tiền", summary.data.withdrawalHeld],
                     ["Đang giữ cho đấu giá", summary.data.auctionHeld ?? 0],
                     ["Tổng số dư", summary.data.total],
                   ] as const
@@ -284,6 +295,17 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
                   title="Nạp tiền vào ví (VNPay)"
                   onPress={() => setTopupModalVisible(true)}
                 />
+                <Button
+                  secondary
+                  title="Rút tiền về ngân hàng"
+                  disabled={!summary.data.withdrawalsEnabled}
+                  onPress={() => setWithdrawalModalVisible(true)}
+                />
+                {!summary.data.withdrawalsEnabled ? (
+                  <AppText kind="small" color={stitchTokens.wine}>
+                    Tính năng rút tiền hiện đang tạm khóa.
+                  </AppText>
+                ) : null}
                 <Button
                   title="Cập nhật số dư"
                   secondary
@@ -559,6 +581,20 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
                     : item.topupId ? `NẠP-${item.topupId.slice(0, 6).toUpperCase()}`
                       : `SỔ-${item.journalId.slice(0, 6).toUpperCase()}`}
               </AppText>
+              {item.withdrawalId ? (
+                <Pressable
+                  hitSlop={6}
+                  style={{ alignSelf: "flex-start", paddingTop: 2 }}
+                  onPress={() => {
+                    setSelectedWithdrawalData(null);
+                    setSelectedWithdrawalId(item.withdrawalId!);
+                  }}
+                >
+                  <AppText kind="small" color={stitchTokens.wine} style={{ textDecorationLine: "underline" }}>
+                    Xem chi tiết đơn rút & chứng từ →
+                  </AppText>
+                </Pressable>
+              ) : null}
               <AppText kind="small" color={stitchTokens.subtleGray}>
                 Số dư sau ghi nhận: {formatVnd(item.balanceAfter)}
               </AppText>
@@ -599,6 +635,30 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
         ownerId={ownerId}
         onSuccess={() => {
           refresh();
+        }}
+      />
+
+      {/* Withdrawal Modal */}
+      <WithdrawalModal
+        visible={withdrawalModalVisible}
+        available={summary.data?.available ?? 0}
+        enabled={Boolean(summary.data?.withdrawalsEnabled)}
+        onClose={() => setWithdrawalModalVisible(false)}
+        onSuccess={(created) => {
+          setWithdrawalModalVisible(false);
+          refresh();
+          setSelectedWithdrawalData(created);
+          setSelectedWithdrawalId(created.id);
+        }}
+      />
+
+      {/* Withdrawal Detail Modal */}
+      <WithdrawalDetailModal
+        withdrawalId={selectedWithdrawalId}
+        initialData={selectedWithdrawalData}
+        onClose={() => {
+          setSelectedWithdrawalId(null);
+          setSelectedWithdrawalData(null);
         }}
       />
     </Screen>

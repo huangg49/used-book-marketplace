@@ -16,6 +16,8 @@ const user={id:id(1),displayName:'Bạn đọc QA',email:'reader@example.test',r
 const invalid=['constructor','__proto__','toString','unknown'];
 const kinds=['Feedback','Bug','Violation','TransactionIssue'];
 const types=['DirectOrder','Exchange','PointOrder','Auction','Listing','Review','Member'];
+const kindLabels=['Góp ý','Báo lỗi','Báo cáo vi phạm','Phản ánh giao dịch'];
+const typeLabels=['Đơn mua bán','Trao đổi sách','Đơn thắng đấu giá','Phiên đấu giá','Bài đăng','Đánh giá','Thành viên'];
 const destinations={Auction:'/auctions',Listing:'/books',Review:'/account',Member:'/books'};
 const cases=[...invalid.map(value=>({field:'kind',value})),...invalid.map(value=>({field:'type',value})),...types.map((value,i)=>({field:'valid',value,kind:kinds[i%kinds.length]}))];
 const checks=[];let browser;
@@ -61,15 +63,18 @@ try{
    await expect(page.getByLabel('Tiêu đề',{exact:true})).toHaveValue('Yêu cầu hỗ trợ QA');
    await expect(page.getByLabel('Nội dung',{exact:true})).toHaveValue('Nội dung QA kiểm tra tham số loại yêu cầu.');
   }else if(sample.field==='type'){
-   await expect(page.getByLabel('Đối tượng liên quan',{exact:true})).toHaveValue('');
+   await expect(page.getByLabel('Đối tượng liên quan',{exact:true})).toHaveValue(baseline?'':'Không có đối tượng cụ thể');
    await expect(picker).toHaveCount(baseline&&sample.value!=='unknown'?1:0);
    assert.deepEqual(targetReads,[]);
   }else{
-   await expect(page.getByLabel('Loại yêu cầu',{exact:true})).toHaveValue(sample.kind);
-   await expect(page.getByLabel('Đối tượng liên quan',{exact:true})).toHaveValue(sample.value);
+   await expect(page.getByLabel('Loại yêu cầu',{exact:true})).toHaveValue(baseline?sample.kind:kindLabels[kinds.indexOf(sample.kind)]);
+   await expect(page.getByLabel('Đối tượng liên quan',{exact:true})).toHaveValue(baseline?sample.value:typeLabels[types.indexOf(sample.value)]);
    await expect(picker).toBeVisible();
    if(['DirectOrder','Exchange','PointOrder'].includes(sample.value)){
-    await expect(picker.getByText('Bạn chưa có giao dịch thuộc loại này. Chọn loại khác hoặc gửi góp ý không gắn giao dịch.',{exact:true})).toBeVisible();
+    const emptyMessage = baseline
+     ? 'Bạn chưa có giao dịch thuộc loại này. Chọn loại khác hoặc gửi góp ý không gắn giao dịch.'
+     : 'Bạn chưa có giao dịch đang diễn ra.';
+    await expect(picker.getByText(emptyMessage,{exact:true})).toBeVisible();
     assert.deepEqual(targetReads,[sample.value]);
    }else await expect(picker.getByRole('link')).toHaveAttribute('href',destinations[sample.value]);
    assert.equal(posts.length,0);
