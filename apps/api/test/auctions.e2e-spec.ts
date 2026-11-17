@@ -1542,6 +1542,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       {
         expectedVersion: 2,
         outcome: 'Pass',
+        note: null,
         checklist: {
           titleEditionMatches: true,
           privateMarksMatch: true,
