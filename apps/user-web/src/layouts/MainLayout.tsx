@@ -16,7 +16,13 @@ export default function MainLayout() {
   const isChatRoom =
     location.pathname.startsWith("/chat/") && location.pathname !== "/chat";
   const isExchange =
-    location.pathname === "/exchange" || location.pathname.startsWith("/exchange/");
+    location.pathname === "/exchange" ||
+    location.pathname.startsWith("/exchange/") ||
+    location.pathname.startsWith("/buy-now/") ||
+    location.pathname.startsWith("/checkout/") ||
+    location.pathname.startsWith("/orders/");
+  const isBookDetail =
+    location.pathname.startsWith("/books/") && location.pathname !== "/books";
   const chatTransition = useConversationTransition("/chat");
   useEffect(() => {
     if (isChat) return;
@@ -45,8 +51,9 @@ export default function MainLayout() {
         data-chat={isChat || undefined}
         data-chat-room={isChatRoom || undefined}
         data-exchange={isExchange || undefined}
+        data-backdrop={isChat || isExchange || isBookDetail || undefined}
       >
-        {(isChat || isExchange) && <ReadingBackdrop />}
+        {(isChat || isExchange || isBookDetail) && <ReadingBackdrop />}
         <ConversationNavigation>
           <Outlet />
         </ConversationNavigation>

@@ -54,7 +54,6 @@ export function OrderResponse({
     return null;
   return (
     <section className={styles.section} aria-label="Trả lời đơn bán">
-      <h3>Xác nhận đơn bán</h3>
       <p>
         Người mua đã thanh toán. Xác nhận nghĩa là bạn nhận chuẩn bị sách; từ
         chối chuyển đơn sang xử lý hoàn tiền theo quy trình.

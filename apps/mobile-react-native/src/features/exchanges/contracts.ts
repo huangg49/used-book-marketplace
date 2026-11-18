@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { exchangeAgreementSchema } from "@used-books/session-client";
+import {
+  demoExchangeDeadlineSchema,
+  exchangeAgreementSchema,
+  exchangeReturnResolutionSchema,
+  exchangeStatementSchema,
+} from "@used-books/session-client";
 import { stitchTokens } from "../../core/ui/theme";
 
 const uuid = z.string().uuid();
@@ -28,6 +33,17 @@ export const exchangeShipmentInfo = z.object({
 });
 
 export const exchangeSchema = z.object({
+  statements: z.array(exchangeStatementSchema).optional(),
+  returnResolution: exchangeReturnResolutionSchema.optional(),
+  canStartReturnResolution: z.boolean().optional(),
+  demoShippingAdvanceAvailable: z.boolean().optional(),
+  demoDeadline: demoExchangeDeadlineSchema.optional(),
+  outboundDeliveryVerification: z
+    .object({
+      verifiedAt: z.string(),
+      note: z.string(),
+    })
+    .optional(),
   agreement: exchangeAgreementSchema.nullable().optional(),
   id: uuid,
   initiatorId: uuid,
@@ -50,6 +66,7 @@ export const exchangeSchema = z.object({
   recipientDeposit: z.number().int().min(0),
   diffAmount: z.number().int().min(0),
   diffPayerId: uuid.nullable().optional(),
+  negotiatedDiffAmount: z.number().int().min(0).nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   fundingDeadline: dateIso,

@@ -5,6 +5,7 @@ import { ApiError } from "@used-books/session-client";
 import { useRef, useState } from "react";
 import {
   Link,
+  Navigate,
   useNavigate,
   useParams,
   useSearchParams,
@@ -18,8 +19,12 @@ import { formatVnd } from "../lib/routes";
 import { PurchaseDialog } from "../components/PurchaseDialog";
 import { PurchaseAddressFields } from "../components/PurchaseAddressFields";
 import { ListingPhoto } from "../components/BookCard";
-import { MapPin, ArrowRight } from "lucide-react";
+import { SupportLink } from "../features/support/SupportLink";
+import { conditions } from "../lib/listing-labels";
+import { MapPin, ArrowRight, ArrowLeft, ArrowDownLeft, MessageCircle } from "lucide-react";
 import styles from "./PurchaseFlow.module.css";
+import exchangeStyles from "./ExchangeDetailPage.module.css";
+import stepStyles from "../components/exchange/ExchangeSteps/ExchangeSteps.module.css";
 import {
   attachPurchaseQuote,
   getPurchaseConversations,
@@ -81,6 +86,10 @@ function errorText(error: unknown, phase: "address" | "quote" | "attach") {
 export function CheckoutPage() {
   const { listingId = "" } = useParams<{ listingId: string }>();
   const [params] = useSearchParams();
+  const conversationId = params.get("conversationId");
+  if (conversationId) {
+    return <Navigate to={`/chat/${conversationId}`} replace />;
+  }
   const auth = useSession();
   return <CheckoutListing key={`${auth.status === 'authenticated' ? auth.user.id : 'guest'}:${listingId}:${params.get('conversationId') ?? ''}`} />;
 }
@@ -360,79 +369,253 @@ function CheckoutListing() {
     addresses.isError ||
     areas.isPending ||
     areas.isError;
+  const checkoutSteps = [
+    { key: "offer", label: "Đề nghị", state: "active" as const },
+    { key: "payment", label: "Đặt mua", state: "upcoming" as const },
+    { key: "handover", label: "Giao nhận", state: "upcoming" as const },
+    { key: "review", label: "Kiểm tra", state: "upcoming" as const },
+    { key: "outcome", label: "Kết quả", state: "upcoming" as const },
+  ];
+  const partnerName = displayedListing?.seller.displayName ?? "Người bán";
+  const shortCode = (conversationId || listingId).slice(0, 8).toUpperCase();
   return (
-    <section className={styles.page}>
-      <Link className={styles.back} to={`/chat/${conversationId}`}>
-        ← Quay lại hội thoại
-      </Link>
-      <header className={styles.pageHeader}>
-        <h1>Thông tin giao nhận</h1>
-        <p>
-          Gửi địa chỉ nhận sách để người bán tạo đơn với giá đã thỏa
-          thuận.
-        </p>
-      </header>
-      <div className={styles.columns}>
+    <section className={exchangeStyles.exchangeSheet}>
+      <div className={exchangeStyles.handoverNav}>
+        <Link
+          className={exchangeStyles.proposalBack}
+          to={conversationId ? `/chat/${conversationId}` : `/books/${listingId}`}
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>Quay lại hội thoại</span>
+        </Link>
+        {shortCode && (
+          <span className={exchangeStyles.proposalCode}>Phiếu #{shortCode}</span>
+        )}
+      </div>
+
+      <header className={exchangeStyles.handoverHeader}>
         <div>
-          {displayedListing && (
-            <section className={styles.book}>
-              <div className={styles.cover}>
-                <ListingPhoto book={displayedListing} />
+          <h1>Thông tin giao nhận</h1>
+          <p>
+            Thương lượng với <strong>{partnerName}</strong>
+          </p>
+        </div>
+        {conversationId && (
+          <Link
+            to={`/chat/${conversationId}?openChat=1`}
+            className={exchangeStyles.chatLink}
+            style={{ gap: 8, textDecoration: "none" }}
+          >
+            <MessageCircle size={18} aria-hidden="true" />
+            <span>Nhắn cho {partnerName}</span>
+          </Link>
+        )}
+      </header>
+
+      <nav className={stepStyles.steps} aria-label="Tiến độ mua sách">
+        <ol>
+          {checkoutSteps.map((step, index) => (
+            <li
+              key={step.key}
+              data-current={step.state === "active" ? "true" : undefined}
+              data-selected={step.state === "active" ? "true" : undefined}
+            >
+              <span
+                className={stepStyles.step}
+                aria-current={step.state === "active" ? "step" : undefined}
+              >
+                <span className={stepStyles.marker} aria-hidden="true">
+                  {index + 1}
+                </span>
+                <span className={stepStyles.label}>{step.label}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <div className={exchangeStyles.proposalWorkspace}>
+        <div className={exchangeStyles.proposalControls}>
+          <section
+            className={exchangeStyles.proposalActions}
+            aria-label="Thao tác gửi địa chỉ"
+          >
+            <strong>
+              {prepared
+                ? "Đã tạo báo giá giao nhận"
+                : "Bước tiếp theo: Gửi địa chỉ nhận sách"}
+            </strong>
+            <p>
+              Người bán xem thông tin giao nhận, nhập giá sách đã thương lượng
+              và tạo đơn. Bạn thanh toán sau khi kiểm tra đơn.
+            </p>
+            {prepared ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.primary}
+                  disabled={busy || !conversationId}
+                  onClick={() => void confirm()}
+                >
+                  {busy ? "Đang gửi…" : "Gửi báo giá cho người bán"}
+                  <ArrowRight size={18} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className={exchangeStyles.secondaryButton}
+                  onClick={() => setDialogOpen(true)}
+                >
+                  Đổi địa chỉ nhận
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={() => setDialogOpen(true)}
+              >
+                Chọn địa chỉ và tạo báo giá
+                <ArrowRight size={18} aria-hidden="true" />
+              </button>
+            )}
+          </section>
+
+          <div className={exchangeStyles.proposalContact}>
+            <SupportLink type="Listing" id={listingId} />
+          </div>
+        </div>
+
+        <div className={exchangeStyles.proposalLayout}>
+          <section
+            className={exchangeStyles.fundingBooks}
+            aria-labelledby="checkout-sheet-heading"
+          >
+            <h2 id="checkout-sheet-heading">Phiếu gửi địa chỉ nhận sách</h2>
+
+            <div className={exchangeStyles.proposalBooks} data-receive="true">
+              <h3>
+                <ArrowDownLeft size={18} aria-hidden="true" />
+                Sách bạn nhận
+              </h3>
+              {displayedListing && (
+                <div className={exchangeStyles.proposalBook}>
+                  <div aria-hidden="true">
+                    <div>
+                      <ListingPhoto book={displayedListing} />
+                    </div>
+                  </div>
+                  <div>
+                    <strong className={exchangeStyles.proposalBookTitle}>
+                      {listingTitle(displayedListing)}
+                    </strong>
+                    <span className={exchangeStyles.proposalBookAuthor}>
+                      {displayedListing.book.authors.join(", ")}
+                    </span>
+                    {displayedListing.salePrice != null && (
+                      <span className={exchangeStyles.proposalBookPrice}>
+                        {formatVnd(displayedListing.salePrice)}
+                      </span>
+                    )}
+                    <details>
+                      <summary>Tình trạng sách</summary>
+                      <p>
+                        Tình trạng:{" "}
+                        {conditions[displayedListing.condition] ??
+                          displayedListing.condition}
+                        . Người bán: {displayedListing.seller.displayName}.
+                      </p>
+                    </details>
+                  </div>
+                </div>
+              )}
+              {book.isPending && <p role="status">Đang tải thông tin sách…</p>}
+              {book.isError && (
+                <p role="alert" className={styles.error}>
+                  Chưa tải được sách.{" "}
+                  <button
+                    className={styles.textButton}
+                    onClick={() => void book.refetch()}
+                  >
+                    Thử lại
+                  </button>
+                </p>
+              )}
+            </div>
+
+            <div className={exchangeStyles.proposalBooks}>
+              <h3>
+                <MapPin size={18} aria-hidden="true" />
+                Địa chỉ nhận sách
+              </h3>
+              <div
+                className={exchangeStyles.proposalBook}
+                style={{ paddingBlock: 12 }}
+              >
+                <div style={{ display: "none" }} aria-hidden="true" />
+                <div style={{ gridColumn: "1 / -1", gap: 6 }}>
+                  <strong>Giao tận nơi</strong>
+                  <span>
+                    {prepared?.destination ??
+                      (selectedAddress
+                        ? `${selectedAddress.recipientName} · ${selectedAddress.phone} · ${selectedAddress.detail}`
+                        : "Chọn nơi nhận trước khi gửi người bán.")}
+                  </span>
+                  <span className={exchangeStyles.proposalBookPrice}>
+                    {prepared
+                      ? prepared.shipping === 0
+                        ? "Miễn phí giao nhận"
+                        : `Phí giao: ${formatVnd(prepared.shipping)}`
+                      : "Báo giá theo địa chỉ"}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.textButton}
+                    onClick={() => setDialogOpen(true)}
+                  >
+                    Mở form giao nhận
+                    <ArrowRight size={17} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside
+            className={exchangeStyles.proposalAmounts}
+            aria-labelledby="checkout-amounts-heading"
+          >
+            <h2 id="checkout-amounts-heading">Nếu hai bên đồng ý</h2>
+            <dl>
+              <div>
+                <dt>Giá niêm yết</dt>
+                <dd>
+                  {displayedListing?.salePrice != null
+                    ? formatVnd(displayedListing.salePrice)
+                    : "—"}
+                </dd>
               </div>
               <div>
-                <h2>{listingTitle(displayedListing)}</h2>
-                <p>{displayedListing.book.authors.join(", ")}</p>
-                <p>Người bán: {displayedListing.seller.displayName}</p>
+                <dt>Phí giao nhận dự kiến</dt>
+                <dd>
+                  {prepared
+                    ? prepared.shipping === 0
+                      ? "Miễn phí"
+                      : formatVnd(prepared.shipping)
+                    : "Tính theo địa chỉ"}
+                </dd>
               </div>
-            </section>
-          )}
-          {book.isPending && <p role="status">Đang tải thông tin sách…</p>}
-          {book.isError && (
-            <p role="alert" className={styles.error}>
-              Chưa tải được sách.{" "}
-              <button
-                className={styles.textButton}
-                onClick={() => void book.refetch()}
-              >
-                Thử lại
-              </button>
+              <div>
+                <dt>Giá đơn hàng</dt>
+                <dd>
+                  <strong>Theo thỏa thuận</strong>
+                </dd>
+              </div>
+            </dl>
+            <p className={exchangeStyles.proposalAmountNote}>
+              Gửi báo giá chưa giữ sách hay trừ tiền.
             </p>
-          )}
-          <section className={styles.delivery}>
-            <div className={styles.sectionHeading}>
-              <MapPin size={21} aria-hidden="true" />
-              <h2>Địa chỉ nhận sách</h2>
-            </div>
-            <p>
-              {prepared?.destination ??
-                "Chọn nơi nhận trước khi gửi người bán."}
-            </p>
-            <button
-              className={styles.textButton}
-              onClick={() => setDialogOpen(true)}
-            >
-              Mở form giao nhận
-              <ArrowRight size={17} aria-hidden="true" />
-            </button>
-          </section>
+          </aside>
         </div>
-        <aside className={styles.summary}>
-          <h2>Bước tiếp theo</h2>
-          <p>
-            Người bán xem thông tin giao nhận, nhập giá sách đã thương lượng và
-            tạo đơn. Bạn thanh toán sau khi kiểm tra đơn.
-          </p>
-          <button
-            className={styles.primary}
-            onClick={() => setDialogOpen(true)}
-          >
-            {prepared ? "Xem báo giá giao nhận" : "Gửi địa chỉ và báo giá"}
-          </button>
-          <p className={styles.note}>
-            Gửi báo giá chưa giữ sách hoặc trừ tiền. Ví và giao nhận hiện là mô
-            phỏng.
-          </p>
-        </aside>
       </div>
       <PurchaseDialog
         open={dialogOpen}

@@ -200,7 +200,7 @@ export function CreateAuctionPage() {
   // ADR 0074: Challenge keeps the 60 s / 5 min window, Instant ends the auction.
   const [buyNowMode, setBuyNowMode] = useState<BuyNowMode>('Challenge')
   // ADR 0076: format; Dutch adds an opening price and a drop interval.
-  const [auctionType, setAuctionType] = useState<AuctionType>('English')
+  const [auctionType] = useState<AuctionType>('English')
   // ADR 0077: how many registered bidders open the auction.
   const [minBidders, setMinBidders] = useState<number>(AUCTION_MIN_BIDDERS_FLOOR)
   // ADR 0087: null follows the 10% default of the start price.

@@ -4,7 +4,7 @@ import { buyNowError } from "../lib/buy-now-error";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
@@ -20,10 +20,20 @@ import {
 } from "../lib/purchase-listing";
 import { createBuyNowOrder, type BuyNowInput } from "../services/orders";
 import { ListingPhoto } from "../components/BookCard";
-import { MapPin, ArrowRight, Check, Truck } from "lucide-react";
+import { SupportLink } from "../features/support/SupportLink";
+import {
+  MapPin,
+  ArrowRight,
+  ArrowLeft,
+  ArrowDownLeft,
+  Check,
+  MessageCircle,
+} from "lucide-react";
 import { PurchaseDialog } from "../components/PurchaseDialog";
 import { PurchaseAddressFields } from "../components/PurchaseAddressFields";
 import styles from "./PurchaseFlow.module.css";
+import exchangeStyles from "./ExchangeDetailPage.module.css";
+import stepStyles from "../components/exchange/ExchangeSteps/ExchangeSteps.module.css";
 
 const addressSchema = z.object({
   id: z.string().uuid(),
@@ -73,8 +83,25 @@ const definite = (error: unknown) =>
   error instanceof ApiError &&
   [400, 403, 404, 409, 422, 429].includes(error.status);
 
+const BUY_NOW_STEPS = [
+  { id: "address", label: "Địa chỉ nhận" },
+  { id: "confirm", label: "Xác nhận đơn" },
+  { id: "payment", label: "Thanh toán" },
+  { id: "handover", label: "Giao nhận" },
+  { id: "result", label: "Kết quả" },
+] as const;
+
 export function BuyNowPage() {
   const { listingId = "" } = useParams<{ listingId: string }>();
+  const [params] = useSearchParams();
+  if (params.get("legacy") !== "1") {
+    return (
+      <Navigate
+        to={`/chat/start/${listingId}?intent=Negotiation`}
+        replace
+      />
+    );
+  }
   const auth = useSession();
   return (
     <BuyNowListing
@@ -109,7 +136,7 @@ function BuyNowListing() {
     enabled: auth.status === "authenticated",
     retry: false,
   });
-  const [dialogOpen, setDialogOpen] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState("");
   const [form, setForm] = useState({
     recipientName: "",
@@ -131,8 +158,9 @@ function BuyNowListing() {
       : (existing.find((a) => a.id === selected) ??
         existing.find((a) => a.isDefault) ??
         existing[0]);
-  async function prepare(event: React.FormEvent) {
-    event.preventDefault();
+
+  async function prepare(event?: React.FormEvent) {
+    event?.preventDefault();
     if (
       busy ||
       (book.isFetching && !attempt.current) ||
@@ -221,6 +249,7 @@ function BuyNowListing() {
         key: crypto.randomUUID(),
       });
       setUncertain(false);
+      setDialogOpen(false);
     } catch (cause) {
       if (definite(cause)) {
         attempt.current = undefined;
@@ -232,6 +261,7 @@ function BuyNowListing() {
       setBusy(false);
     }
   }
+
   async function place() {
     if (!prepared || busy) return;
     setBusy(true);
@@ -248,9 +278,10 @@ function BuyNowListing() {
       setBusy(false);
     }
   }
+
   if (auth.status !== "authenticated")
     return (
-      <section className={styles.page}>
+      <div className={exchangeStyles.exchangeSheet}>
         <h1>Mua ngay</h1>
         <p>
           {auth.status === "loading"
@@ -264,29 +295,31 @@ function BuyNowListing() {
             Đăng nhập
           </Link>
         )}
-      </section>
+      </div>
     );
   if (book.isPending)
     return (
-      <section className={styles.page} role="status">
+      <div className={exchangeStyles.exchangeSheet} role="status">
         Đang tải sách…
-      </section>
+      </div>
     );
   if (!book.data)
     return (
-      <section className={styles.page}>
+      <div className={exchangeStyles.exchangeSheet}>
         <h1>Chưa tải được sách</h1>
         <p role="alert">Sách có thể đã được gỡ hoặc kết nối đang gián đoạn.</p>
         <button onClick={() => void book.refetch()}>Thử lại</button>
         <Link to="/books">Về kệ sách</Link>
-      </section>
+      </div>
     );
+
   const item = prepared?.listing ?? pendingListing ?? book.data;
   const unavailable =
     item.seller.id === auth.user.id ||
     item.salePrice === null ||
     item.purchaseAvailability.status !== "Available" ||
     !item.fulfillment;
+
   const resetQuote = () => {
     setPrepared(undefined);
     setPendingListing(undefined);
@@ -296,11 +329,7 @@ function BuyNowListing() {
     setAcknowledgedRevision(undefined);
     void book.refetch();
   };
-  const addressText =
-    prepared?.destination ??
-    (selectedAddress
-      ? `${selectedAddress.recipientName} · ${selectedAddress.phone} · ${selectedAddress.detail}`
-      : "Thêm địa chỉ nhận sách.");
+
   const disabled =
     busy ||
     book.isFetching ||
@@ -310,129 +339,337 @@ function BuyNowListing() {
     areas.isPending ||
     addresses.isError ||
     areas.isError;
+
+  const currentStepIdx = prepared ? 1 : 0;
+
   return (
-    <section className={styles.page} aria-labelledby="buy-now-title">
-      <Link className={styles.back} to={`/books/${listingId}`}>
-        ← Xem lại bản sách
-      </Link>
-      <header className={styles.pageHeader}>
-        <h1 id="buy-now-title">Mua ngay</h1>
-        <p>
-          Chọn địa chỉ, xem tổng thanh toán và xác nhận bản sách bạn muốn mua.
-        </p>
-      </header>
-      <ol className={styles.steps} aria-label="Các bước mua sách">
-        <li aria-current={!prepared ? "step" : undefined}>
-          <span>{prepared ? <Check size={16} aria-hidden="true" /> : "1"}</span>
-          Địa chỉ nhận
-        </li>
-        <li aria-current={prepared ? "step" : undefined}>
-          <span>2</span>Xác nhận đơn
-        </li>
-        <li>
-          <span>3</span>Thanh toán
-        </li>
-      </ol>
-      <div className={styles.columns}>
+    <div
+      className={exchangeStyles.exchangeSheet}
+      aria-labelledby="buy-now-title"
+    >
+      <nav
+        className={exchangeStyles.handoverNav}
+        aria-label="Điều hướng phiếu đặt mua"
+      >
+        <Link className={exchangeStyles.proposalBack} to={`/books/${listingId}`}>
+          <ArrowLeft size={18} aria-hidden="true" />
+          Xem lại bản sách
+        </Link>
+        <span className={exchangeStyles.proposalCode}>
+          Phiếu #{listingId.slice(0, 8).toUpperCase()}
+        </span>
+      </nav>
+
+      <header className={exchangeStyles.handoverHeader}>
         <div>
-          <section className={styles.book} aria-label="Bản sách bạn chọn">
-            <div className={styles.cover}>
-              <ListingPhoto book={item} />
-            </div>
-            <div>
-              <h2>{listingTitle(item)}</h2>
-              <p>{item.book.authors.join(", ")}</p>
-              <span className={styles.condition}>
-                {conditions[item.condition]}
-              </span>
-              <p className={styles.price}>{formatVnd(item.salePrice ?? 0)}</p>
-              <p>Người bán: {item.seller.displayName}</p>
-            </div>
-          </section>
-          <section className={styles.delivery}>
-            <div className={styles.sectionHeading}>
-              <MapPin size={21} aria-hidden="true" />
-              <h2>Địa chỉ nhận sách</h2>
-            </div>
-            <p>{addressText}</p>
-            <button
-              type="button"
-              className={styles.textButton}
-              onClick={() => setDialogOpen(true)}
+          <h1 id="buy-now-title">
+            {prepared ? "Xác nhận đơn mua" : "Mua ngay"}
+          </h1>
+          <p>
+            Mua sách từ{" "}
+            <strong dir="auto" title={item.seller.displayName}>
+              {item.seller.displayName}
+            </strong>
+          </p>
+        </div>
+        {item.seller.id !== auth.user.id && (
+          <Link
+            className={exchangeStyles.chatLink}
+            to={`/chat/start/${item.id}?intent=Negotiation&openChat=1`}
+            style={{ gap: 8, textDecoration: "none" }}
+          >
+            <MessageCircle size={18} aria-hidden="true" />
+            <span>Nhắn cho {item.seller.displayName}</span>
+          </Link>
+        )}
+      </header>
+
+      <nav className={stepStyles.steps} aria-label="Các bước mua sách">
+        <ol>
+          {BUY_NOW_STEPS.map(({ id, label }, index) => {
+            const active = index === currentStepIdx;
+            const completed = index < currentStepIdx;
+            return (
+              <li
+                key={id}
+                data-current={active || undefined}
+                data-selected={active || undefined}
+                data-completed={completed || undefined}
+              >
+                <span
+                  className={stepStyles.step}
+                  aria-current={active ? "step" : undefined}
+                >
+                  <span className={stepStyles.marker} aria-hidden="true">
+                    {completed ? <Check size={15} strokeWidth={2.6} /> : index + 1}
+                  </span>
+                  <span className={stepStyles.label}>{label}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+
+      <div className={exchangeStyles.proposalWorkspace}>
+        <div className={exchangeStyles.proposalControls}>
+          <div className={exchangeStyles.proposalActions}>
+            <strong style={{ display: "block", fontSize: "1rem", marginBottom: 6 }}>
+              {prepared
+                ? "Đã sẵn sàng xác nhận đơn mua"
+                : selectedAddress
+                  ? "Xác nhận địa chỉ giao nhận"
+                  : "Thêm địa chỉ nhận sách"}
+            </strong>
+            <p
+              style={{
+                margin: "0 0 14px",
+                color: "var(--shop-muted)",
+                fontSize: "0.875rem",
+                lineHeight: 1.45,
+              }}
             >
               {prepared
-                ? "Xem thông tin giao nhận"
+                ? `Hạn báo giá: ${new Date(prepared.expiresAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} ${new Date(prepared.expiresAt).toLocaleDateString("vi-VN")}`
                 : selectedAddress
-                  ? "Chọn / đổi địa chỉ"
-                  : "Thêm địa chỉ nhận sách"}
-              <ArrowRight size={17} aria-hidden="true" />
-            </button>
-          </section>
-          <details className={styles.details}>
-            <summary>Xem lại tình trạng sách</summary>
-            <p>{item.description}</p>
-            <p>Bìa và gáy: {item.coverNote || "Chưa ghi rõ"}</p>
-            <p>Ruột sách: {item.pages || "Chưa ghi rõ"}</p>
-            <p>
-              {item.hasMissingPages
-                ? "Có trang thiếu theo mô tả người bán."
-                : "Không có trang thiếu theo người bán."}
+                  ? `Giao đến: ${selectedAddress.recipientName} (${selectedAddress.phone})`
+                  : "Chọn hoặc thêm địa chỉ nhận sách trong khu vực TP.HCM để tính tổng thanh toán."}
             </p>
-          </details>
+
+            {error && (
+              <p role="alert" className={styles.error} style={{ marginBottom: 12 }}>
+                {error}
+                {!busy && !uncertain && !createPending && (
+                  <button
+                    type="button"
+                    className={styles.textButton}
+                    onClick={resetQuote}
+                    style={{ marginLeft: 8 }}
+                  >
+                    Tải lại nội dung
+                  </button>
+                )}
+              </p>
+            )}
+
+            {unavailable && !prepared && (
+              <p role="alert" className={styles.error} style={{ marginBottom: 12 }}>
+                {item.seller.id === auth.user.id
+                  ? "Bạn không thể tự mua bản sách của chính mình."
+                  : !item.fulfillment
+                    ? "Bản sách này chưa cấu hình nơi gửi nên chưa thể mua ngay. Hãy nhắn tin với người bán để trao đổi."
+                    : "Bản sách này hiện chưa thể mua ngay. Kiểm tra nơi gửi và trạng thái trên bài đăng."}
+              </p>
+            )}
+
+            {prepared ? (
+              <div style={{ display: "grid", gap: 10 }}>
+                <button
+                  type="button"
+                  className={styles.primary}
+                  style={{ width: "100%", justifyContent: "center" }}
+                  disabled={busy}
+                  onClick={() => void place()}
+                >
+                  {busy
+                    ? "Đang tạo đơn…"
+                    : uncertain
+                      ? "Thử lại cùng đơn mua"
+                      : "Đặt mua và đến thanh toán"}
+                  <ArrowRight size={18} aria-hidden="true" />
+                </button>
+                {!createPending && (
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    style={{ width: "100%", justifyContent: "center" }}
+                    disabled={busy}
+                    onClick={() => {
+                      resetQuote();
+                      setDialogOpen(true);
+                    }}
+                  >
+                    Đổi địa chỉ / lấy báo giá mới
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {selectedAddress && !item.bundle ? (
+                  <button
+                    type="button"
+                    className={styles.primary}
+                    style={{ width: "100%", justifyContent: "center" }}
+                    disabled={disabled}
+                    onClick={() => void prepare()}
+                  >
+                    {busy ? "Đang xác nhận…" : "Xác nhận địa chỉ & Tiếp tục"}
+                    <ArrowRight size={18} aria-hidden="true" />
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={
+                    selectedAddress && !item.bundle
+                      ? styles.secondary
+                      : styles.primary
+                  }
+                  style={{ width: "100%", justifyContent: "center" }}
+                  disabled={unavailable}
+                  onClick={() => setDialogOpen(true)}
+                >
+                  Chọn địa chỉ nhận sách
+                  <ArrowRight size={18} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className={exchangeStyles.proposalContact}>
+            <SupportLink type="Listing" id={item.id} />
+          </div>
         </div>
-        <aside className={styles.summary} aria-label="Tóm tắt đơn mua">
-          <h2>Đơn mua của bạn</h2>
-          <dl>
-            <div>
-              <dt>Tiền sách</dt>
-              <dd>
-                {formatVnd(prepared?.amounts.bookPrice ?? item.salePrice ?? 0)}
-              </dd>
-            </div>
-            {(prepared?.amounts.shippingFee ?? 0) > 0 && (<div>
-              <dt>Phí giao hàng</dt>
-              <dd>
-                {prepared
-                  ? formatVnd(prepared.amounts.shippingFee)
-                  : "Chờ địa chỉ"}
-              </dd>
-            </div>)}
-            <div className={styles.total}>
-              <dt>Tổng thanh toán</dt>
-              <dd>
-                {prepared
-                  ? formatVnd(prepared.amounts.buyerTotal)
-                  : "Chờ xác nhận địa chỉ"}
-              </dd>
-            </div>
-          </dl>
-          <button
-            className={styles.primary}
-            disabled={unavailable && !prepared}
-            onClick={() => setDialogOpen(true)}
+
+        <div className={exchangeStyles.proposalLayout}>
+          <section
+            aria-labelledby="buy-now-facts"
+            className={exchangeStyles.fundingBooks}
           >
-            {prepared ? "Tiếp tục đặt mua" : "Chọn địa chỉ nhận sách"}
-            <ArrowRight size={18} aria-hidden="true" />
-          </button>
-          <p className={styles.note}>
-            Mua theo giá niêm yết, không cần chat hay chờ người bán duyệt lại.
-          </p>
-          <p className={styles.note}>
-            <Truck size={18} aria-hidden="true" />
-            Ví và vận chuyển hiện là mô phỏng của Lật lại.
-          </p>
-          <Link to="/orders">Đơn hàng của tôi</Link>
-        </aside>
+            <h2 id="buy-now-facts">Phiếu đặt mua sách</h2>
+
+            <div className={exchangeStyles.proposalBooks} data-receive="true">
+              <h3>
+                <ArrowDownLeft size={18} aria-hidden="true" />
+                Sách bạn nhận
+              </h3>
+              <div className={exchangeStyles.proposalBook}>
+                <div aria-hidden="true">
+                  <div>
+                    <ListingPhoto book={item} />
+                  </div>
+                </div>
+                <div>
+                  <strong className={exchangeStyles.proposalBookTitle}>
+                    {listingTitle(item)}
+                  </strong>
+                  <span className={exchangeStyles.proposalBookAuthor}>
+                    {item.book.authors.join(", ")}
+                  </span>
+                  <span className={exchangeStyles.proposalBookPrice}>
+                    {formatVnd(item.salePrice ?? 0)}
+                  </span>
+                  <details>
+                    <summary>Tình trạng sách</summary>
+                    <p>
+                      {conditions[item.condition]} · {item.description}
+                    </p>
+                    <p>
+                      Bìa và gáy: {item.coverNote || "Chưa ghi rõ"} · Ruột sách:{" "}
+                      {item.pages || "Chưa ghi rõ"}
+                    </p>
+                    <p>
+                      {item.hasMissingPages
+                        ? "Có trang thiếu theo mô tả người bán."
+                        : "Không có trang thiếu theo người bán."}
+                    </p>
+                  </details>
+                </div>
+              </div>
+            </div>
+
+            <div className={exchangeStyles.proposalBooks}>
+              <h3>
+                <MapPin size={18} aria-hidden="true" />
+                Địa chỉ & Giao nhận
+              </h3>
+              <div
+                className={exchangeStyles.proposalBook}
+                style={{ paddingBlock: 12 }}
+              >
+                <div style={{ display: "none" }} aria-hidden="true" />
+                <div style={{ gridColumn: "1 / -1", gap: 6 }}>
+                  {prepared ? (
+                    <>
+                      <strong>Người nhận đã xác nhận</strong>
+                      <span>{prepared.destination}</span>
+                    </>
+                  ) : selectedAddress ? (
+                    <>
+                      <strong>
+                        {selectedAddress.recipientName} · {selectedAddress.phone}
+                      </strong>
+                      <span>{selectedAddress.detail}</span>
+                    </>
+                  ) : (
+                    <>
+                      <strong>Chưa có địa chỉ nhận sách</strong>
+                      <span>
+                        Bấm &quot;Chọn địa chỉ nhận sách&quot; để thêm nơi nhận.
+                      </span>
+                    </>
+                  )}
+                  <span style={{ marginTop: 4 }}>
+                    Phương thức: Giao trực tiếp (TP.HCM · Bình Dương · Vũng Tàu)
+                  </span>
+                  <span style={{ marginTop: 2 }}>
+                    Người bán: <strong>{item.seller.displayName}</strong> (cam
+                    kết giao trong 48 giờ)
+                  </span>
+                  <details>
+                    <summary>Quy định bảo chứng Mua ngay</summary>
+                    <p>
+                      Đặt mua giữ sách 15 phút để bạn thanh toán qua ví bảo
+                      chứng. Tiền chỉ giải ngân cho người bán sau khi bạn nhận
+                      và kiểm tra sách trong 72 giờ.
+                    </p>
+                  </details>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            className={exchangeStyles.proposalAmounts}
+            aria-label="Tóm tắt đơn mua"
+          >
+            <h2>Nếu xác nhận đặt mua</h2>
+            <dl>
+              <div>
+                <dt>Tiền sách</dt>
+                <dd>
+                  {formatVnd(
+                    prepared?.amounts.bookPrice ?? item.salePrice ?? 0,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Phí giao hàng</dt>
+                <dd>
+                  {prepared
+                    ? formatVnd(prepared.amounts.shippingFee)
+                    : "Miễn phí"}
+                </dd>
+              </div>
+              <div>
+                <dt>Bạn cần nộp</dt>
+                <dd>
+                  <strong>
+                    {formatVnd(
+                      prepared?.amounts.buyerTotal ?? item.salePrice ?? 0,
+                    )}
+                  </strong>
+                </dd>
+              </div>
+            </dl>
+            <p className={exchangeStyles.proposalAmountNote}>
+              {prepared
+                ? "Bấm Đặt mua để tạo đơn và chuyển sang bước thanh toán."
+                : "Chưa giữ sách hay trừ tiền."}
+            </p>
+          </section>
+        </div>
       </div>
-      {unavailable && !prepared && (
-        <p role="alert" className={styles.error}>
-          {item.seller.id === auth.user.id
-            ? "Bạn không thể tự mua bản sách của chính mình."
-            : !item.fulfillment
-              ? "Bản sách này chưa cấu hình nơi gửi nên chưa thể mua ngay. Hãy nhắn tin với người bán để trao đổi."
-              : "Bản sách này hiện chưa thể mua ngay. Kiểm tra nơi gửi và trạng thái trên bài đăng."}
-        </p>
-      )}
+
       <PurchaseDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -535,10 +772,12 @@ function BuyNowListing() {
                 <dt>Tiền sách</dt>
                 <dd>{formatVnd(prepared.amounts.bookPrice)}</dd>
               </div>
-              {(prepared?.amounts.shippingFee ?? 0) > 0 && (<div>
-                <dt>Phí giao hàng</dt>
-                <dd>{formatVnd(prepared.amounts.shippingFee)}</dd>
-              </div>)}
+              {(prepared?.amounts.shippingFee ?? 0) > 0 && (
+                <div>
+                  <dt>Phí giao hàng</dt>
+                  <dd>{formatVnd(prepared.amounts.shippingFee)}</dd>
+                </div>
+              )}
               <div className={styles.total}>
                 <dt>Tổng thanh toán</dt>
                 <dd>{formatVnd(prepared.amounts.buyerTotal)}</dd>
@@ -584,8 +823,8 @@ function BuyNowListing() {
                 localities={areas.data?.localities ?? []}
               />
               <p className={styles.note}>
-                Xem tổng thanh toán chưa giữ sách hoặc trừ tiền. Địa chỉ mới được lưu vào sổ
-                địa chỉ.
+                Xem tổng thanh toán chưa giữ sách hoặc trừ tiền. Địa chỉ mới
+                được lưu vào sổ địa chỉ.
               </p>
               <div className={styles.actions}>
                 <button className={styles.primary} type="submit">
@@ -609,6 +848,6 @@ function BuyNowListing() {
           </form>
         )}
       </PurchaseDialog>
-    </section>
+    </div>
   );
 }

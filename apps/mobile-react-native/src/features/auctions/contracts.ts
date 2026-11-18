@@ -40,7 +40,7 @@ export const publicAuctionSummary = z.object({
   title: z.string(),
   state: z.enum(auctionStates),
   startPrice: z.number().int().min(10000),
-  step: z.union([z.literal(10000), z.literal(50000)]),
+  step: z.number().int().min(1000).max(10_000_000).multipleOf(1000),
   buyNowPrice: z.number().int().nullable(),
   currentPrice: z.number().int().nullable(),
   minimumBid: z.number().int().nullable(),
@@ -227,12 +227,32 @@ export const pointOrder = z.object({
     scope: z.string(),
   }),
   acceptanceDeadline: z.string().nullable(),
+  acceptedAt: z.string().nullable().optional(),
   collectionDeadline: z.string().nullable(),
+  collectedAt: z.string().nullable().optional(),
   inspectionDeadline: z.string().nullable(),
   returnDeadline: z.string().nullable(),
+  refunded: z.boolean().optional(),
+  resolution: z
+    .object({
+      reason: z.enum([
+        "ReportRejected",
+        "RecipientDecisionOverdue",
+        "CollectionOverdue",
+        "InspectionClaim",
+        "ReturnOverdue",
+        "DeliveryFailed",
+      ]),
+      openedAt: z.string(),
+    })
+    .nullable()
+    .optional(),
   serverTime: z.string(),
 });
 export type PointOrder = z.infer<typeof pointOrder>;
+
+export const demoSkipStatus = z.object({ enabled: z.boolean() });
+export type DemoSkipStatus = z.infer<typeof demoSkipStatus>;
 
 export const codeIssued = z.object({
   receipt: auctionReceipt.extend({ codeExpiresAt: z.string().nullable() }),
@@ -277,8 +297,13 @@ export const myIntake = z.object({
   title: z.string(),
   pointId: z.string().uuid(),
   startPrice: z.number().int(),
-  step: z.union([z.literal(10000), z.literal(50000)]),
+  step: z.number().int().min(1000).max(10_000_000).multipleOf(1000),
   buyNowPrice: z.number().int().nullable(),
+  protectiveValue: z.number().int().nullable().optional(),
+  buyNowMode: z.enum(["Challenge", "Instant"]).nullable().optional(),
+  auctionType: z.enum(["English", "Dutch", "SealedFirst", "SealedSecond"]).nullable().optional(),
+  dutchTopPrice: z.number().int().nullable().optional(),
+  dutchIntervalSeconds: z.number().int().nullable().optional(),
   // ADR 0087: the deposit bidders will pay (absent on older servers).
   depositAmount: z.number().int().nullable().optional(),
   dropoffDeadline: z.string(),
@@ -287,6 +312,7 @@ export const myIntake = z.object({
   reclaimReason: z.string().nullable(),
   // N4-12: the point asked for evidence (POL-09, 48 hours, one answer).
   evidenceDeadline: z.string().nullable(),
+  evidenceNote: z.string().nullable().optional(),
   evidenceSubmittedAt: z.string().nullable(),
 });
 export type MyIntake = z.infer<typeof myIntake>;

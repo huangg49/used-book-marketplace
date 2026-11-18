@@ -27,10 +27,12 @@ import {
   stitchTokens,
 } from "../../core/ui";
 import { AuctionCover } from "./components/auction-cover";
+import { DemoSkipButton } from "./components/demo-skip-button";
 import { conditions as conditionLabels } from "../shelf/contracts";
 import {
   AUCTION_MAX_PRICE,
   AUCTION_MIN_BIDDERS_FLOOR,
+  advanceDemoAuction,
   amountError,
   auctionErrorText,
   auctionOptions,
@@ -424,6 +426,7 @@ function AuctionBody({
   retryOwner: () => void;
   refresh: () => Promise<unknown>;
 }) {
+  const { client } = useSession();
   const { auction, history, leaderAlias } = data;
   const open = isOpen(auction, now);
   const scheduled = isScheduled(auction, now);
@@ -1179,6 +1182,18 @@ function AuctionBody({
         </Notice>
       )}
       </View>
+      {signedIn && !ownerError && (ownerIntake || me) && auction.version != null && (scheduled || open) && (
+        <DemoSkipButton
+          label={scheduled ? "Mở phiên ngay · Demo" : "Kết thúc phiên ngay · Demo"}
+          note={
+            scheduled
+              ? "Bỏ qua giờ hẹn mở. Phiên chỉ mở khi đã đủ người đăng ký tối thiểu."
+              : "Chốt phiên ngay; hệ thống chọn người thắng và tạo đơn như khi hết giờ."
+          }
+          run={(key) => advanceDemoAuction(client, auction.id, auction.version!, key)}
+          onDone={refresh}
+        />
+      )}
       <History
         auction={auction}
         open={open}

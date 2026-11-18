@@ -39,6 +39,7 @@ import { ExchangeShippingCard } from "./exchange-shipping-card";
 import { ExchangeSettlementCard } from "./exchange-settlement-card";
 import { ExchangeSafetyTips } from "./exchange-safety-tips";
 import { ExchangeChatBox } from "./exchange-chat-box";
+import { ExchangeReturnAndDemoCard } from "./exchange-return-card";
 import { MemberNavigation } from "../navigation/member-navigation";
 
 export function ExchangeDetailScreen() {
@@ -372,6 +373,13 @@ export function ExchangeDetailScreen() {
               revision={exchange.revision}
             />
           )}
+          <ExchangeReturnAndDemoCard
+            exchange={exchange}
+            userId={currentUserId ?? ""}
+            onReload={async () => {
+              await exchangeQuery.refetch();
+            }}
+          />
           <ExchangeActionsCard
             exchange={exchange}
             isInitiator={isInitiator}

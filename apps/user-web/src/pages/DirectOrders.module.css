@@ -1766,6 +1766,98 @@
   background: #450202;
 }
 
+.purchaseMainCard {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid var(--shop-line, rgba(92, 2, 2, 0.14));
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.purchaseMainCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.purchaseMainCardTitle {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+}
+
+.purchaseMainCardPrice {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--shop-wine, #5c0202);
+}
+
+.purchaseMainCardDesc {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--shop-muted, #716157);
+  line-height: 1.45;
+}
+
+.priceOfferDropdown {
+  border: 1px solid var(--shop-wine, #5c0202);
+  border-radius: 8px;
+  background: var(--shop-wine, #5c0202);
+  overflow: hidden;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.priceOfferDropdown:hover {
+  border-color: #7c2320;
+}
+
+.priceOfferDropdown summary {
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--shop-cream, #fffcf5);
+  background: var(--shop-wine, #5c0202);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  transition: background-color 0.18s ease;
+}
+
+.priceOfferDropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.priceOfferDropdown summary:hover {
+  background: #7c2320;
+  color: #ffffff;
+}
+
+.priceOfferDropdown[open] {
+  background: #fffcf8;
+}
+
+.priceOfferDropdown[open] summary {
+  border-bottom: 1px solid rgba(92, 2, 2, 0.12);
+}
+
+.priceOfferDropdown .negotiationOfferForm {
+  padding: 12px 14px;
+}
+
+.dropdownChevron {
+  transition: transform 0.2s ease;
+}
+
+.priceOfferDropdown[open] .dropdownChevron {
+  transform: rotate(180deg);
+}
+
 .guidanceAccordion {
   border: 1px solid rgba(217, 203, 189, 0.6);
   border-radius: 8px;
@@ -1922,3 +2014,19 @@
 .workspacePage .stepLabel { font-size:.75rem; }
 
 .workspacePage .bookTitle { white-space:normal; overflow:visible; text-overflow:clip; }
+
+.negotiationGrid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 1fr) !important;
+    gap: 16px 22px !important;
+}
+@media (max-width: 860px) {
+    .negotiationGrid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+}
+.negotiationFactsCol {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+}
+

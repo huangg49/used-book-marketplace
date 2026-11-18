@@ -301,10 +301,21 @@ export class ConversationAgreementsService {
     if (
       terms.mode !== 'Negotiation' ||
       terms.pendingProposal ||
-      terms.agreedPrice !== price ||
-      terms.agreedListingRevisionId !== listing?.currentRevisionId
+      (terms.agreedPrice != null ? terms.agreedPrice !== price : false) ||
+      (terms.agreedListingRevisionId && terms.agreedListingRevisionId !== listing?.currentRevisionId)
     )
       throw conflict();
+    if (terms.agreedPrice === null && listing) {
+      await tx.c.conversation_terms.updateOne(
+        { _id: row._id },
+        {
+          $set: {
+            agreedPrice: price,
+            agreedListingRevisionId: listing.currentRevisionId,
+          },
+        },
+      );
+    }
   }
   async prepareExchange(
     tx: Tx,
