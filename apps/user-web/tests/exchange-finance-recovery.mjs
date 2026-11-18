@@ -260,7 +260,7 @@ try {
     await expect(acknowledge).toBeVisible();
     await expect(fastForward).toHaveCount(0);
     await acknowledge.click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận nghiệm thu', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /Xác nhận nghiệm thu/ }).click();
     await expect(page.getByText('Bạn đã xác nhận kiểm tra', { exact: true })).toBeVisible();
     await expect(fastForward).toHaveCount(0);
     assert.deepEqual(inspectionCommands, [{ command: 'complete', body: { expectedVersion: 20 } }]);
