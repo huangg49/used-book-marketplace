@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { AuctionDriverView } from './AuctionDriverView';
+import { DirectDriverView } from './DirectDriverView';
+import { DriverCompleteAction, DriverParcelCard, DriverParcelRoute, DriverWorkspace } from './DriverWorkspace';
 import styles from './DriverPage.module.css';
 
 interface LegData {
@@ -64,6 +67,23 @@ interface RecentOrderSummary {
 }
 
 export function DriverPage() {
+  const [params, setParams] = useSearchParams();
+  const code = params.get('trackingCode')?.trim() ?? '';
+  if (params.get('kind') === 'direct') {
+    return <DirectDriverView key={code} code={code.toUpperCase()}
+      onSearch={(trackingCode) => setParams({ kind: 'direct', trackingCode })} />;
+  }
+  const exchangeLookup = params.has('exchangeId') || params.get('kind') === 'exchange';
+  if (!exchangeLookup && /^LL-[A-Z0-9]{8,32}$/i.test(code)) {
+    const normalized = code.toUpperCase();
+    const demoMode = params.get('demo') === '1';
+    return <AuctionDriverView key={`${normalized}:${demoMode}`} code={normalized} demoMode={demoMode}
+      onSearch={(trackingCode) => setParams({ trackingCode })} />;
+  }
+  return <ExchangeDriverView />;
+}
+
+function ExchangeDriverView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -72,7 +92,6 @@ export function DriverPage() {
   const [recentOrders, setRecentOrders] = useState<RecentOrderSummary[]>([]);
   const [legSteps, setLegSteps] = useState<Record<string, number>>({});
   const [lastAction, setLastAction] = useState<string>('');
-  const [searchInput, setSearchInput] = useState<string>('');
 
   // Xác định bước của bưu kiện: ưu tiên thao tác hiện tại -> sự kiện trong DB -> trạng thái giao
   const currentStep = (() => {
@@ -141,11 +160,9 @@ export function DriverPage() {
     void fetchRecentOrders();
   }, [fetchActiveOrder, fetchRecentOrders, searchParams]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchInput.trim()) return;
-    setSearchParams({ trackingCode: searchInput.trim() });
-    void fetchActiveOrder(searchInput.trim());
+  const handleSearch = (trackingCode: string) => {
+    if (trackingCode === searchParams.get('trackingCode')) void fetchActiveOrder(trackingCode);
+    else setSearchParams({ trackingCode });
   };
 
   const handleSelectRecent = (summary: RecentOrderSummary) => {
@@ -313,38 +330,13 @@ export function DriverPage() {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.mobileFrame}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div>
-            <h1 className={styles.appTitle}>LẬT LẠI EXPRESS 🚚</h1>
-            <p className={styles.driverName}>Bưu tá: Lê Hoàng Nam (#DX-5571)</p>
-          </div>
-          <button
-            type="button"
-            className={styles.refreshBtn}
-            onClick={() => void fetchActiveOrder(undefined, order?.exchangeId, order?.activeLeg)}
-            disabled={loading || submitting}
-          >
-            {loading ? 'Đang tải...' : '🔄 Làm mới'}
-          </button>
-        </div>
-
-        {/* Thanh tìm kiếm / Tra cứu mã vận đơn */}
-        <form onSubmit={handleSearch} className={styles.searchContainer}>
-          <input
-            type="text"
-            className={styles.searchInput}
-            placeholder="Tra cứu mã GHN (vd: GHN49359...)"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <button type="submit" className={styles.searchBtn} disabled={loading || submitting}>
-            Tìm đơn
-          </button>
-        </form>
-
+    <DriverWorkspace
+      subtitle="Bưu tá: Lê Hoàng Nam (#DX-5571)"
+      trackingCode={searchParams.get('trackingCode') ?? ''}
+      searchLocked={loading || submitting}
+      onSearch={handleSearch}
+      refresh={{ loading, disabled: submitting, run: () => void fetchActiveOrder(undefined, order?.exchangeId, order?.activeLeg) }}
+    >
         {/* Quick Chips: Chọn các đơn gần đây trong DB */}
         <div className={styles.chipsSection}>
           <p className={styles.chipsLabel}>Chọn nhanh đơn hàng</p>
@@ -421,63 +413,25 @@ export function DriverPage() {
               </div>
             )}
 
-            {/* Thẻ chi tiết bưu kiện đang chọn */}
-            <div className={styles.orderCard}>
-              <div className={styles.orderHeaderRow}>
-                <div>
-                  <p className={styles.trackingLabel}>
-                    MÃ VẬN ĐƠN GHN ({order.activeLeg === 'initiator' ? 'CHIỀU ĐI' : 'CHIỀU VỀ'})
-                  </p>
-                  <p className={styles.trackingCode}>{order.trackingCode}</p>
-                </div>
-                <div className={styles.feeBadge}>
-                  <p className={styles.feeText}>{order.fee.toLocaleString('vi-VN')} đ</p>
-                  <p className={styles.feeSub}>Cước giao nhận GHN</p>
-                </div>
-              </div>
-
-              <div className={styles.divider} />
-
-              <div className={styles.itemRow}>
-                <span>📚</span>
-                <p className={styles.itemSummary}>{order.itemsSummary}</p>
-              </div>
-
-              {/* Lộ trình giao hàng */}
-              <div className={styles.routeContainer}>
-                {/* Điểm lấy */}
-                <div className={styles.stopRow}>
-                  <div className={styles.stopDotPickup} />
-                  <div>
-                    <p className={styles.stopType}>📍 ĐIỂM LẤY SÁCH (NGƯỜI GỬI)</p>
-                    <p className={styles.personName}>
-                      {order.sender.name} · {order.sender.phone}
-                    </p>
-                    <p className={styles.addressText}>{order.sender.detail}</p>
-                  </div>
-                </div>
-
-                <div className={styles.routeLine} />
-
-                {/* Điểm giao */}
-                <div className={styles.stopRow}>
-                  <div className={styles.stopDotDelivery} />
-                  <div>
-                    <p className={styles.stopType}>🏁 ĐIỂM GIAO SÁCH (NGƯỜI NHẬN)</p>
-                    <p className={styles.personName}>
-                      {order.receiver.name} · {order.receiver.phone}
-                    </p>
-                    <p className={styles.addressText}>{order.receiver.detail}</p>
-                  </div>
-                </div>
-              </div>
-
+            <DriverParcelCard
+              label={`Mã vận đơn (${order.activeLeg === 'initiator' ? 'Chiều đi' : 'Chiều về'})`}
+              trackingCode={order.trackingCode}
+              summary={order.itemsSummary}
+              badge={<div className={styles.feeBadge}>
+                <p className={styles.feeText}>{order.fee.toLocaleString('vi-VN')} đ</p>
+                <p className={styles.feeSub}>Cước giao nhận GHN</p>
+              </div>}
+            >
+              <DriverParcelRoute
+                pickup={{ label: 'Điểm lấy sách (người gửi)', name: `${order.sender.name} · ${order.sender.phone}`, detail: order.sender.detail }}
+                dropoff={{ label: 'Điểm giao sách (người nhận)', name: `${order.receiver.name} · ${order.receiver.phone}`, detail: order.receiver.detail }}
+              />
               {(order.lastEvent || lastAction) && (
                 <div className={styles.lastActionBox}>
                   <strong>Nhật ký vận chuyển:</strong> {order.lastEvent || lastAction}
                 </div>
               )}
-            </div>
+            </DriverParcelCard>
 
             {/* Waiting for partner banner */}
             {order.readyForPickup === false && (
@@ -605,10 +559,16 @@ export function DriverPage() {
                 )}
               </button>
 
-              {/* Step 4 */}
-              <button
-                type="button"
-                className={`${styles.actionBtn} ${order.deliveredAt ? styles.actionBtnFinishDelivered : styles.actionBtnFinish}`}
+              <DriverCompleteAction
+                title={order.deliveredAt ? 'Kiện này đã giao thành công' : '4. Giao thành công & Ký nhận POD'}
+                description={order.deliveredAt
+                  ? (order.lastEvent?.includes('POD')
+                    ? 'Đã bàn giao sách tận tay và ký nhận biên bản POD (Bưu tá xác nhận)'
+                    : 'Người nhận đã xác nhận nhận sách thành công trên ứng dụng')
+                  : 'Xác nhận giao tận tay người nhận, kiểm tra sách và ký nhận POD'}
+                badge={order.deliveredAt || currentStep >= 4 ? '✓ Đã giao' : currentStep >= 3 ? 'Bấm hoàn tất' : 'Chờ đi giao'}
+                delivered={Boolean(order.deliveredAt)}
+                waiting={currentStep < 3}
                 disabled={submitting || simulatingSpeed || order.readyForPickup === false || currentStep < 3 || Boolean(order.deliveredAt)}
                 onClick={() =>
                   void handleUpdateStatus(
@@ -618,28 +578,7 @@ export function DriverPage() {
                     'Giao thành công & Ký nhận POD',
                   )
                 }
-              >
-                <span className={styles.actionBtnIcon}>📸</span>
-                <div className={styles.actionBtnContent}>
-                  <p className={styles.actionBtnTitleWhite}>
-                    {order.deliveredAt ? '✓ KIỆN NÀY ĐÃ GIAO THÀNH CÔNG' : '4. Giao thành công & Ký nhận POD'}
-                  </p>
-                  <p className={styles.actionBtnDescWhite}>
-                    {order.deliveredAt
-                      ? (order.lastEvent?.includes('POD')
-                          ? 'Đã bàn giao sách tận tay và ký nhận biên bản POD (Bưu tá xác nhận)'
-                          : 'Người nhận đã xác nhận nhận sách thành công trên ứng dụng')
-                      : 'Xác nhận giao tận tay người nhận, kiểm tra sách và ký nhận POD'}
-                  </p>
-                </div>
-                {order.deliveredAt || currentStep >= 4 ? (
-                  <span className={styles.stepBadgeDoneWhite}>✓ ĐÃ GIAO</span>
-                ) : currentStep >= 3 ? (
-                  <span className={styles.stepBadgeNextWhite}>Bấm hoàn tất</span>
-                ) : (
-                  <span className={styles.stepBadgeWaitingWhite}>Chờ đi giao</span>
-                )}
-              </button>
+              />
             </div>
 
             {/* Nút kịch bản ngoại lệ (Giao thất bại) */}
@@ -665,10 +604,6 @@ export function DriverPage() {
           </div>
         )}
 
-        <Link to="/" className={styles.backHomeLink}>
-          ← Quay lại Trang chủ Lật Lại
-        </Link>
-      </div>
-    </div>
+    </DriverWorkspace>
   );
 }

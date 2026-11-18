@@ -5,6 +5,7 @@ import type {
   ConversationTermsDoc,
   PurchaseConversationDoc,
   ConversationEventDoc,
+  SaleQuoteDoc,
 } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
@@ -269,6 +270,7 @@ export class ConversationAgreementsService {
       if (proposal.kind === 'Mode') {
         terms.mode = proposal.mode!;
         terms.agreedPrice = null;
+        terms.listedPriceAccepted = false;
         terms.agreedListingRevisionId = null;
         terms.activeExchangeId = null;
         await tx.c.purchase_conversations.updateOne(
@@ -277,6 +279,7 @@ export class ConversationAgreementsService {
         );
       } else {
         terms.agreedPrice = proposal.amount;
+        terms.listedPriceAccepted = false;
         terms.agreedListingRevisionId = proposal.listingRevisionId;
       }
     }
@@ -294,28 +297,49 @@ export class ConversationAgreementsService {
     terms.pendingProposal = null;
     return this.save(tx, row, terms, exists);
   }
+  // The caller holds the conversation and listing locks and has verified the
+  // buyer's quote against the current listing revision.
+  async acceptListedPrice(
+    tx: Tx,
+    row: PurchaseConversationDoc,
+    quote: Pick<SaleQuoteDoc, 'bookPrice' | 'listingRevisionId'>,
+    acceptedPrice: number,
+  ) {
+    const terms = await tx.c.conversation_terms.findOne({ _id: row._id });
+    if (
+      acceptedPrice !== quote.bookPrice ||
+      (terms && (terms.mode !== 'Negotiation' || terms.pendingProposal || terms.activeExchangeId))
+    ) throw conflict();
+    if (terms?.agreedListingRevisionId === quote.listingRevisionId) {
+      if (terms.agreedPrice !== acceptedPrice) throw conflict();
+      if (terms.listedPriceAccepted) return;
+    }
+
+    const agreement = {
+      agreedPrice: acceptedPrice,
+      agreedListingRevisionId: quote.listingRevisionId,
+      listedPriceAccepted: true,
+    };
+    if (terms) {
+      await tx.c.conversation_terms.updateOne({ _id: row._id }, { $set: agreement });
+    } else {
+      await tx.c.conversation_terms.insertOne({ ...this.empty(row._id), ...agreement });
+    }
+    await this.event(tx, row, row.buyerId, 'PriceAccepted', { amount: acceptedPrice });
+  }
+
   async validateOrder(tx: Tx, row: PurchaseConversationDoc, price: number) {
     const terms = await tx.c.conversation_terms.findOne({ _id: row._id });
-    if (!terms) return; // Existing native/legacy commands retain ADR0037 semantics.
+    if (!terms) return false; // Existing native/legacy commands retain ADR0037 semantics.
     const listing = await tx.c.listings.findOne({ _id: row.listingId });
     if (
       terms.mode !== 'Negotiation' ||
       terms.pendingProposal ||
-      (terms.agreedPrice != null ? terms.agreedPrice !== price : false) ||
-      (terms.agreedListingRevisionId && terms.agreedListingRevisionId !== listing?.currentRevisionId)
+      terms.agreedPrice !== price ||
+      terms.agreedListingRevisionId !== listing?.currentRevisionId
     )
       throw conflict();
-    if (terms.agreedPrice === null && listing) {
-      await tx.c.conversation_terms.updateOne(
-        { _id: row._id },
-        {
-          $set: {
-            agreedPrice: price,
-            agreedListingRevisionId: listing.currentRevisionId,
-          },
-        },
-      );
-    }
+    return terms.listedPriceAccepted === true;
   }
   async prepareExchange(
     tx: Tx,

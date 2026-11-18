@@ -105,6 +105,18 @@ export class AuctionsController {
     );
   }
 
+  @Get('point-orders/delivery-tracking/:trackingCode')
+  @ExistingObligation()
+  @Roles('MEMBER', 'TEST_OPERATOR')
+  deliveryTracking(
+    @Param('trackingCode') trackingCode: string,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.collection.deliveryTracking(req.auth, trackingCode);
+  }
+
   @Get('me/point-orders/:orderId')
   @ExistingObligation()
   @Roles('MEMBER')
@@ -311,7 +323,50 @@ export class AuctionsController {
       ),
     );
   }
-  // Demo only: ends the inspection window now; settle() performs the payout.
+  @Post('point-orders/:orderId/demo-start-delivery')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  demoStartPointDelivery(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.demoDelivery('Start', id, body, req, res);
+  }
+
+  @Post('point-orders/:orderId/demo-deliver')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  demoDeliverPointOrder(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.demoDelivery('Deliver', id, body, req, res);
+  }
+
+  private demoDelivery(
+    step: 'Start' | 'Deliver',
+    id: string,
+    body: unknown,
+    req: AuthenticatedRequest,
+    res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.collection.advanceDemoDelivery(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+          step,
+        ),
+        res,
+      ),
+    );
+  }
+  // Demo only: completes the order early through the shared settlement path.
   @Post('point-orders/:orderId/demo-advance')
   @Roles('MEMBER')
   @HttpCode(200)

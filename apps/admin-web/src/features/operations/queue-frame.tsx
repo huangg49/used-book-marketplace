@@ -29,6 +29,7 @@ export function OperationsQueue({
   empty,
   panel,
   extra,
+  presentation,
 }: {
   number: string;
   title: string;
@@ -43,6 +44,7 @@ export function OperationsQueue({
   panel: QueuePanel;
   // A page-level command (e.g. adding a point) shares the notice and refresh.
   extra?: (context: ActionContext) => ReactNode;
+  presentation?: { className: string; listHeader: ReactNode };
 }) {
   const { open, setOpen, pending, setPending, notice, setNotice } = panel;
   const [receiptIndex, setReceiptIndex] = useState<number>();
@@ -73,7 +75,7 @@ export function OperationsQueue({
     () => result.refetch({ throwOnError: true }),
     [result],
   );
-  return (
+  const queue = (
     <>
       <header className="page-heading">
         <h1>{title}</h1>
@@ -114,6 +116,7 @@ export function OperationsQueue({
         </div>
       )}
       <div className="queue-list" ref={list}>
+        {rows.length > 0 && presentation?.listHeader}
         {rows.map((row, index) => {
           const expanded = open === row.id;
           const panelId = `action-${row.id}`;
@@ -127,22 +130,26 @@ export function OperationsQueue({
                 data-motion-key={row.id}
                 data-motion-revision={`${row.status}/${row.meta.join("/")}`}
               >
-                <span className="row-number">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <div className="row-meta">
-                    <span>{row.status}</span>
-                    {row.meta.map((value) => (
-                      <span key={value}>{value}</span>
-                    ))}
-                  </div>
-                  <h2>
-                    {row.title || "Chưa có tên sách"}{" "}
-                    <span className="short-id">/ {row.id.slice(0, 8)}</span>
-                  </h2>
-                  {row.detail && <div className="muted">{row.detail}</div>}
-                </div>
+                {row.summary ?? (
+                  <>
+                    <span className="row-number">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div>
+                      <div className="row-meta">
+                        <span>{row.status}</span>
+                        {row.meta.map((value) => (
+                          <span key={value}>{value}</span>
+                        ))}
+                      </div>
+                      <h2>
+                        {row.title || "Chưa có tên sách"}{" "}
+                        <span className="short-id">/ {row.id.slice(0, 8)}</span>
+                      </h2>
+                      {row.detail && <div className="muted">{row.detail}</div>}
+                    </div>
+                  </>
+                )}
                 {row.action ? (
                   row.action.to ? (
                     <Link to={row.action.to} className="button row-action">
@@ -151,6 +158,7 @@ export function OperationsQueue({
                   ) : (
                     <Button
                       className="row-action"
+                      variant={presentation && !expanded ? "primary" : "default"}
                       aria-expanded={expanded}
                       aria-controls={expanded ? panelId : undefined}
                       disabled={pending}
@@ -195,6 +203,7 @@ export function OperationsQueue({
       </div>
     </>
   );
+  return presentation ? <div className={presentation.className}>{queue}</div> : queue;
 }
 
 export function OperationReceipt({

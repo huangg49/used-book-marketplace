@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { components } from "@used-books/api-contract";
 import { session } from "../lib/session";
 
 export const purchaseMessageSchema = z.object({
@@ -126,13 +127,7 @@ export function getPurchaseMessageHistory(conversationId: string, before?: strin
 }
 export function attachPurchaseQuote(
   conversationId: string,
-  body: {
-    expectedVersion: number;
-    quoteId: string;
-    expectedQuoteVersion: number;
-    expectedListingVersion: number;
-    expectedListingRevisionId: string;
-  },
+  body: components["schemas"]["AttachPurchaseConversationQuote"],
   key: string = crypto.randomUUID(),
 ) {
   return session.request(

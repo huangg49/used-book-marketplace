@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { session } from "../lib/session";
 import { bundleSchema } from "../lib/book-bundle";
+import type { components } from "@used-books/api-contract";
 
 const paymentOrderSchema = z.object({
   id: z.string().uuid(),
@@ -39,6 +40,14 @@ export function getOrderForPayment(orderId: string) {
 export function startDemoOrderCompletion(orderId: string, expectedVersion: number, key: string) {
   return session.request(`/orders/${orderId}/demo-completion`, orderReceiptSchema, {
     method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ expectedVersion }),
+  });
+}
+
+export type DirectDeliveryCommand = components["schemas"]["AdvanceDirectOrderDeliveryJourney"];
+export type DirectDeliveryAction = DirectDeliveryCommand["action"];
+export function advanceDirectDelivery(orderId: string, body: DirectDeliveryCommand, key: string) {
+  return session.request(`/orders/${orderId}/delivery-journey`, orderReceiptSchema, {
+    method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(body),
   });
 }
 
@@ -88,6 +97,18 @@ const orderDetails = paymentOrderSchema.extend({
   canConfirmReceipt: z.boolean().optional().default(false),
   demoCompletionEnabled: z.boolean().optional().default(false),
   demoCompletionAt: z.string().nullable().optional().default(null),
+  deliveryJourney: z.object({
+    trackingCode: z.string().nullable(),
+    pickedUpAt: z.iso.datetime().nullable(),
+    outForDeliveryAt: z.iso.datetime().nullable(),
+    acknowledgedAt: z.iso.datetime().nullable(),
+    issue: z.object({
+      kind: z.enum(["ReportNonReceipt", "ReportCondition"]),
+      openedAt: z.iso.datetime(),
+      supportCaseId: z.uuid(),
+    }).nullable(),
+    actions: z.array(z.enum(["Pickup", "OutForDelivery", "Deliver", "Acknowledge", "ReportNonReceipt", "ReportCondition", "SkipInspection"])),
+  }).optional(),
   deliveredAt: z.iso.datetime().nullable(),
   inspectionDeadline: z.iso.datetime().nullable(),
   carrierReview: z
@@ -139,6 +160,9 @@ const orderDetails = paymentOrderSchema.extend({
 export type DirectOrder = z.infer<typeof orderDetails>;
 export function getOrder(orderId: string) {
   return session.request(`/me/orders/${orderId}`, orderDetails);
+}
+export function getDirectOrderByTrackingCode(code: string) {
+  return session.request(`/me/direct-order-tracking/${encodeURIComponent(code)}`, orderDetails);
 }
 export function openOrderConversation(orderId: string, key: string) {
   return session.request(

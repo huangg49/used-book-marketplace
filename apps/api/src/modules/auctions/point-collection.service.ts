@@ -38,9 +38,11 @@ import {
   type CurrentActor,
 } from '../commands/mongo-command.service.js';
 import { AuctionClock } from './auction-clock.js';
+import { DemoSkipPolicy } from './demo-skip.policy.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import {
   deliveryView,
+  demoOutForDeliveryAt,
   signPointDelivery,
   verifyPointDelivery,
 } from './point-delivery.js';
@@ -78,6 +80,7 @@ export class PointCollectionService {
     private readonly points: HandoverPointsService,
     private readonly clock: AuctionClock,
     private readonly config: ConfigService,
+    private readonly demo: DemoSkipPolicy,
   ) {}
 
   private async order(tx: Tx, id: string) {
@@ -507,61 +510,213 @@ export class PointCollectionService {
       },
       mutate: async (tx, _actor, before, receiptId) => {
         const o = await this.locked(tx, id, before.version);
-        if (o.state !== 'InTransit') throw invalidState();
-        if (o.trackingCode !== event.trackingCode) throw notFound();
         const now = await this.clock.decision(tx, context.auth);
-        const occurredAt = new Date(event.occurredAt);
-        if (
-          occurredAt < o.dispatchedAt! ||
-          occurredAt > now ||
-          occurredAt >= o.deliveryDeadline!
-        )
-          throw new DomainError(
-            422,
-            'VALIDATION_ERROR',
-            'Thời điểm giao phải từ lúc điểm giao cho hãng đến trước hạn giao.',
-          );
-        await tx.c.point_carrier_events.insertOne({
-          _id: event.eventId,
-          orderId: o._id,
-          trackingCode: event.trackingCode,
-          outcome: event.outcome,
-          occurredAt,
-          receivedAt: now,
-          payloadHash: createHash('sha256')
-            .update(canonicalJson(event))
-            .digest('hex'),
-          signature,
-          receiptId,
-        });
-        if (event.outcome === 'Delivered') {
-          const next = await this.transition(
-            tx,
-            o,
-            {
-              state: 'Inspection',
-              collectedAt: occurredAt,
-              inspectionDeadline: new Date(
-                occurredAt.getTime() + INSPECTION_WINDOW_MS,
-              ),
-            },
-            now,
-          );
-          return PointOrdersService.change(next, now, 'PointOrderDelivered');
-        }
-        const next = await this.transition(
+        return this.applyDeliveryOutcome(
           tx,
           o,
-          {
-            state: 'ResolutionPending',
-            resolutionReason: 'DeliveryFailed',
-            resolutionNote: 'Hãng vận chuyển báo giao không thành công.',
-            resolutionOpenedAt: now,
-          },
+          event,
           now,
+          signature,
+          receiptId,
         );
-        return PointOrdersService.change(next, now, 'PointOrderDeliveryFailed');
       },
+    });
+  }
+
+  advanceDemoDelivery(
+    context: CommandContext,
+    id: string,
+    body: Wire['AuctionVersionCommand'],
+    step: 'Start' | 'Deliver',
+  ) {
+    return this.commands.runAuction(
+      context,
+      step === 'Start' ? 'demoStartPointDelivery' : 'demoDeliverPointOrder',
+      id,
+      body,
+      {
+        discover: async (tx) => [(await this.order(tx, id)).sellerId],
+        authorize: async (tx, actor) => {
+          this.demo.assertEnabled();
+          requireActive(actor);
+          return this.buyerOrder(tx, id, actor);
+        },
+        mutate: async (tx, _actor, _before, receiptId) => {
+          const order = await this.locked(tx, id, body.expectedVersion);
+          const now = await this.clock.decision(tx, context.auth);
+          if (
+            order.state !== 'InTransit' ||
+            !order.trackingCode ||
+            !order.deliveryDeadline ||
+            now >= order.deliveryDeadline
+          )
+            throw invalidState(
+              'Đơn cần đang vận chuyển và còn trong hạn giao.',
+            );
+          const started = await demoOutForDeliveryAt(tx, order);
+          if (step === 'Start') {
+            if (started)
+              throw invalidState('Bưu tá đã bắt đầu đi giao kiện này.');
+            const next = await this.transition(tx, order, {}, now);
+            return PointOrdersService.change(
+              next,
+              now,
+              'PointOrderDemoCourierStarted',
+            );
+          }
+          if (!started)
+            throw invalidState('Bấm Bắt đầu đi giao trên màn mô phỏng trước.');
+          const event: Wire['SimulatedPointDeliveryEvent'] = {
+            eventId: receiptId,
+            orderId: order._id,
+            carrier: 'LatLaiSimulator',
+            trackingCode: order.trackingCode,
+            outcome: 'Delivered',
+            occurredAt: now.toISOString(),
+          };
+          return this.applyDeliveryOutcome(
+            tx,
+            order,
+            event,
+            now,
+            signPointDelivery(this.config, event),
+            receiptId,
+          );
+        },
+      },
+    );
+  }
+
+  private async applyDeliveryOutcome(
+    tx: Tx,
+    o: PointOrderDoc,
+    event: Wire['SimulatedPointDeliveryEvent'],
+    now: Date,
+    signature: string,
+    receiptId: string,
+  ) {
+    if (o.state !== 'InTransit') throw invalidState();
+    if (o.trackingCode !== event.trackingCode) throw notFound();
+    const occurredAt = new Date(event.occurredAt);
+    if (
+      occurredAt < o.dispatchedAt! ||
+      occurredAt > now ||
+      occurredAt >= o.deliveryDeadline!
+    )
+      throw new DomainError(
+        422,
+        'VALIDATION_ERROR',
+        'Thời điểm giao phải từ lúc điểm giao cho hãng đến trước hạn giao.',
+      );
+    await tx.c.point_carrier_events.insertOne({
+      _id: event.eventId,
+      orderId: o._id,
+      trackingCode: event.trackingCode,
+      outcome: event.outcome,
+      occurredAt,
+      receivedAt: now,
+      payloadHash: createHash('sha256')
+        .update(canonicalJson(event))
+        .digest('hex'),
+      signature,
+      receiptId,
+    });
+    if (event.outcome === 'Delivered') {
+      const next = await this.transition(
+        tx,
+        o,
+        {
+          state: 'Inspection',
+          collectedAt: occurredAt,
+          inspectionDeadline: new Date(
+            occurredAt.getTime() + INSPECTION_WINDOW_MS,
+          ),
+        },
+        now,
+      );
+      return PointOrdersService.change(next, now, 'PointOrderDelivered');
+    }
+    const next = await this.transition(
+      tx,
+      o,
+      {
+        state: 'ResolutionPending',
+        resolutionReason: 'DeliveryFailed',
+        resolutionNote: 'Hãng vận chuyển báo giao không thành công.',
+        resolutionOpenedAt: now,
+      },
+      now,
+    );
+    return PointOrdersService.change(next, now, 'PointOrderDeliveryFailed');
+  }
+
+  deliveryTracking(
+    auth: Actor,
+    rawCode: string,
+  ): Promise<Wire['PointOrderDeliveryTracking']> {
+    const trackingCode = rawCode.toUpperCase();
+    if (!/^LL-[A-Z0-9]{8,32}$/.test(trackingCode)) throw notFound();
+    return this.commands.readObligation(auth, async (tx, actor) => {
+      const isMember = actor.roles.some((r) => r.role === 'MEMBER');
+      const isOperator =
+        actor.status === 'ACTIVE' &&
+        actor.roles.some((r) => r.role === 'TEST_OPERATOR');
+      if (!isMember && !isOperator) throw notFound();
+      const matches = await tx.c.point_orders
+        .find({
+          source: 'Auction',
+          fulfillmentMethod: 'CarrierOutbound',
+          trackingCode,
+          ...(isOperator ? {} : { buyerId: actor._id }),
+        })
+        .limit(2)
+        .toArray();
+      const [order] = matches;
+      if (
+        matches.length !== 1 ||
+        !order?.dispatchedAt ||
+        !order.deliveryDeadline
+      )
+        throw notFound();
+      const buyer = isMember && order.buyerId === actor._id;
+      const operator =
+        isOperator && ![order.sellerId, order.buyerId].includes(actor._id);
+      if (!buyer && !operator) throw notFound();
+      const now = await tx.now();
+      const event = order.collectedAt
+        ? null
+        : await tx.c.point_carrier_events.findOne({ orderId: order._id });
+      const status = order.collectedAt
+        ? 'Delivered'
+        : event?.outcome === 'Failed'
+          ? 'Failed'
+          : order.state === 'InTransit' && now < order.deliveryDeadline
+            ? 'InTransit'
+            : 'Overdue';
+      const item = await tx.c.workflow_items.findOne({
+        _id: `${order.contextId}:${order.listingId}`,
+      });
+      const point = await tx.c.handover_points.findOne({ _id: order.pointId });
+      return {
+        orderId: order._id,
+        auctionId: order.auctionId,
+        title: String((item?.snapshot as { title?: string })?.title ?? ''),
+        pointName: point?.name ?? '',
+        trackingCode,
+        dispatchedAt: order.dispatchedAt.toISOString(),
+        deliveryDeadline: order.deliveryDeadline.toISOString(),
+        outcomeAt:
+          (order.collectedAt ?? event?.occurredAt)?.toISOString() ?? null,
+        status,
+        viewer: buyer ? 'Buyer' : 'Operator',
+        canReport: operator && status === 'InTransit',
+        canDemoControl:
+          buyer && actor.status === 'ACTIVE' && this.demo.enabled(),
+        version: order.version,
+        demoOutForDeliveryAt:
+          (await demoOutForDeliveryAt(tx, order))?.toISOString() ?? null,
+        serverTime: now.toISOString(),
+      };
     });
   }
 

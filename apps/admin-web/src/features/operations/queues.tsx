@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, MapPin } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
@@ -32,6 +33,7 @@ import { IntakeReceive, IntakeReclaim } from "./intake-actions";
 import { Forbidden, OperationsQueue } from "./queue-frame";
 import { ResolutionDecision } from "./resolution-actions";
 import { refetchWhileClosed, useQueuePanel, type Row } from "./queue-panel";
+import intakeStyles from "./IntakeQueue.module.css";
 
 // Queues for the point desks and Admin decisions. Each row's command opens
 // under the row (N4-02 to N4-05).
@@ -55,10 +57,81 @@ function intakeMeta(item: Intake) {
         ? "Người bán đã bổ sung bằng chứng"
         : `Hạn bổ sung: ${dateText(item.evidenceDeadline)}`,
     );
-  if (item.shelfCode) meta.push(`Kệ ${item.shelfCode}`);
   if (item.reclaimReason) meta.push(reclaimLabels[item.reclaimReason]);
   return meta;
 }
+const intakeTone = {
+  AwaitingDropoff: "neutral",
+  Received: "ready",
+  Passed: "active",
+  NeedsEvidence: "attention",
+  Auctioning: "active",
+  ReclaimRequired: "attention",
+  Reclaimed: "neutral",
+  Cancelled: "neutral",
+  Sold: "completed",
+} as const satisfies Record<Intake["state"], string>;
+
+function IntakeRowSummary({
+  item,
+  meta,
+  userId,
+}: {
+  item: Intake;
+  meta: string[];
+  userId: string;
+}) {
+  const title = item.title || "Chưa có tên sách";
+  const disclosureLabel = item.reports.length ? "Giá và biên bản" : "Thông tin giá";
+  const waitingForOtherReviewer =
+    item.state === "NeedsEvidence" && item.evidenceRequestedBy === userId;
+  return (
+    <div className={intakeStyles.rowSummary}>
+      <div className={intakeStyles.summaryGrid}>
+        <div className={intakeStyles.book}>
+          <h2>{title}</h2>
+          <span className={intakeStyles.reference}>#{item.id.slice(0, 8)}</span>
+        </div>
+        <div className={intakeStyles.status}>
+          <span className={intakeStyles.badge} data-tone={intakeTone[item.state]}>
+            {intakeLabels[item.state]}
+          </span>
+          {waitingForOtherReviewer && (
+            <p>Nhân viên hoặc quản trị viên khác sẽ xem bằng chứng bạn đã yêu cầu.</p>
+          )}
+        </div>
+        <div className={intakeStyles.placement}>
+          {item.shelfCode && (
+            <span className={intakeStyles.shelf}>
+              <MapPin size={15} aria-hidden="true" />
+              Kệ {item.shelfCode}
+            </span>
+          )}
+          <ul className={intakeStyles.meta}>
+            {meta.map((value) => <li key={value}>{value}</li>)}
+          </ul>
+        </div>
+      </div>
+      <details className={intakeStyles.disclosure}>
+        <summary aria-label={`${disclosureLabel} của ${title}`}>
+          <ChevronDown size={15} aria-hidden="true" />
+          {disclosureLabel}
+        </summary>
+        <div className={intakeStyles.disclosureBody}>
+          <dl>
+            <div><dt>Giá khởi điểm</dt><dd>{money(item.startPrice)}</dd></div>
+            <div><dt>Bước giá</dt><dd>{money(item.step)}</dd></div>
+            {item.buyNowPrice !== null && (
+              <div><dt>Giá mua ngay</dt><dd>{money(item.buyNowPrice)}</dd></div>
+            )}
+          </dl>
+          <InspectionReports item={item} />
+        </div>
+      </details>
+    </div>
+  );
+}
+
 // N4-02: the next step for the assigned Staff member, if any.
 function intakeAction(item: Intake, userId: string): Row["action"] {
   switch (item.state) {
@@ -102,35 +175,35 @@ function IntakeQueueContent({ userId }: { userId: string }) {
   return (
     <OperationsQueue
       number="01"
-      title="Sách gửi đấu giá."
-      intro="Nhận sách người bán mang tới và kiểm tra tình trạng theo bài đã duyệt. Nếu đạt, người bán tự đăng hoặc hẹn phiên; nếu không đạt, xử lý trả sách."
+      title="Sách gửi đấu giá"
+      intro="Nhận và kiểm tra sách theo bài đã duyệt. Sách đạt do người bán đăng hoặc hẹn phiên. Sách không đạt thì trả tại điểm."
       order="Xếp theo lần gửi, cũ nhất trước."
       result={result}
       panel={panel}
-      rows={(result.data?.items ?? []).map((item) => ({
-        id: item.id,
-        status: intakeLabels[item.state],
-        meta: intakeMeta(item),
-        title: item.title,
-        detail: (
-          <>
-            <p>
-              Giá khởi điểm {money(item.startPrice)} · bước {money(item.step)}
-              {item.buyNowPrice !== null &&
-                ` · mua ngay ${money(item.buyNowPrice)}`}
-            </p>
-            <InspectionReports item={item} />
-            {item.state === "NeedsEvidence" &&
-              item.evidenceRequestedBy === userId && (
-                <p>
-                  Bạn đã yêu cầu bằng chứng; một nhân viên hoặc quản trị viên
-                  khác sẽ quyết định.
-                </p>
-              )}
-          </>
+      presentation={{
+        className: intakeStyles.queue,
+        listHeader: (
+          <div className={intakeStyles.listHeader} aria-hidden="true">
+            <div className={intakeStyles.summaryGrid}>
+              <span>Hồ sơ sách</span>
+              <span>Trạng thái</span>
+              <span>Tiếp nhận tại điểm</span>
+            </div>
+            <span>Thao tác</span>
+          </div>
         ),
-        action: intakeAction(item, userId),
-      }))}
+      }}
+      rows={(result.data?.items ?? []).map((item) => {
+        const meta = intakeMeta(item);
+        return {
+          id: item.id,
+          status: intakeLabels[item.state],
+          meta: [...meta, item.shelfCode ?? ""],
+          title: item.title,
+          summary: <IntakeRowSummary item={item} meta={meta} userId={userId} />,
+          action: intakeAction(item, userId),
+        };
+      })}
       empty={{ title: "Chưa có sách cần xử lý.", body: <AssignmentNote /> }}
     />
   );

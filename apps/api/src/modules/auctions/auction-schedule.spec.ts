@@ -15,6 +15,7 @@ import {
   registrationExpired,
   reschedule,
   staffLifecycleOpen,
+  demoStartNowFields,
 } from './auction-schedule.js';
 
 const HOUR = 3_600_000;
@@ -251,5 +252,35 @@ describe('scheduled open with a 24 h grace', () => {
 
   it('a Staff open waits for registrants from now', () => {
     expect(staffLifecycleOpen(now, 24 * HOUR)).toEqual({ openMode: 'ScheduledGrace', opensAt: now, startAt: at(24 * HOUR), plannedEndAt: at(48 * HOUR) });
+  });
+
+  describe('demoStartNowFields', () => {
+    it('bypasses minBidders when registeredCount is below minimum', () => {
+      const a = published({ minBidders: 4, registeredCount: 1 });
+      const res = demoStartNowFields(a, now);
+      expect(res).toEqual({
+        startAt: now,
+        plannedEndAt: at(3 * HOUR),
+        endAt: at(3 * HOUR),
+        openMode: null,
+        minBidders: null,
+        depositAmount: null,
+        biddingOpenedAt: null,
+        opensAt: null,
+        registeredCount: 0,
+      });
+    });
+
+    it('preserves registration when registeredCount is already reached', () => {
+      const a = published({ minBidders: 4, registeredCount: 4 });
+      const res = demoStartNowFields(a, now);
+      expect(res).toEqual({
+        startAt: now,
+        plannedEndAt: at(3 * HOUR),
+        endAt: at(3 * HOUR),
+        biddingOpenedAt: now,
+        opensAt: now,
+      });
+    });
   });
 });

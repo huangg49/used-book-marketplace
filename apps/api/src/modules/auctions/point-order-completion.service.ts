@@ -287,81 +287,98 @@ export class PointOrderCompletionService {
   // Worker: an Inspection Order whose window has passed without a claim is
   // settled once. The book stays with the buyer, so the listing ends Sold and
   // the slot, commitment and both contexts close in the same commit.
-  /** Demo only: end the inspection window now; settle() then applies the
-   * normal payout, listing and context transitions. */
+  /** Demo only: use the normal settlement without rewriting the inspection deadline. */
   demoAdvance(
     context: CommandContext,
     id: string,
     body: Wire['AuctionVersionCommand'],
   ) {
-    let settling = false;
-    return this.commands
-      .runAuction(context, 'advanceDemoPointOrder', id, body, {
-        authorize: async (tx, actor) => {
-          member(actor);
-          this.demo.assertEnabled();
-          const o = await this.order(tx, id);
-          if (o.buyerId !== actor._id && o.sellerId !== actor._id)
-            throw notFound();
-          return o;
-        },
-        mutate: async (tx) => {
-          await tx.lock('point_orders', [id]);
-          const o = await this.order(tx, id);
-          if (o.version !== body.expectedVersion) throw conflict();
-          const now = await this.clock.decision(tx, context.auth);
-          if (
-            o.state !== 'Inspection' ||
-            !o.inspectionDeadline ||
-            now >= o.inspectionDeadline
-          )
-            throw invalidState('Đơn không còn chờ hết thời hạn kiểm tra.');
-          const next = await this.transition(
-            tx,
-            o,
-            { inspectionDeadline: now },
-            now,
-          );
-          settling = true;
-          return PointOrdersService.change(
-            next,
-            now,
-            'PointOrderInspectionSkipped',
-          );
-        },
-      })
-      .then((receipt) => (settling ? this.settle(id) : receipt));
+    return this.commands.runAuction(context, 'advanceDemoPointOrder', id, body, {
+      discover: (tx) => this.settlementParticipants(tx, id),
+      authorize: async (tx, actor) => {
+        member(actor);
+        this.demo.assertEnabled();
+        const o = await this.order(tx, id);
+        if (o.buyerId !== actor._id && o.sellerId !== actor._id)
+          throw notFound();
+        return o;
+      },
+      mutate: async (tx, _actor, before, receiptId) => {
+        const o = await this.lockSettlementOrder(tx, before);
+        if (o.version !== body.expectedVersion) throw conflict();
+        const now = await this.clock.decision(tx, context.auth);
+        if (
+          o.state !== 'Inspection' ||
+          !o.collectedAt ||
+          !o.inspectionDeadline ||
+          now < o.collectedAt ||
+          now >= o.inspectionDeadline
+        )
+          throw invalidState('Đơn không còn chờ hết thời hạn kiểm tra.');
+        return this.finishSettlement(tx, o, receiptId, now, true);
+      },
+    });
   }
 
   settle(id: string) {
     return this.commands.systemAuction('PointOrderSettlement', id, {
-      discover: async (tx) => {
-        const o = await this.order(tx, id);
-        return [o.buyerId, o.sellerId];
-      },
+      discover: (tx) => this.settlementParticipants(tx, id),
       authorize: (tx) => this.order(tx, id),
       mutate: async (tx, before, receiptId) => {
-        await this.listings.lock(tx, before.listingId);
-        await this.points.lockPoint(tx, before.pointId);
-        await tx.lock('auctions', [before.auctionId]);
-        await tx.lock('point_orders', [id]);
-        const o = await this.order(tx, id);
+        const o = await this.lockSettlementOrder(tx, before);
         const now = await this.clock.now(tx);
-        if (o.state !== 'Inspection' || now < o.inspectionDeadline!)
+        if (
+          o.state !== 'Inspection' ||
+          !o.inspectionDeadline ||
+          now < o.inspectionDeadline
+        )
           throw invalidState();
-        await this.ledger.settlePointOrder(tx, o, receiptId, now);
-        await this.reservations.closeCompleted(tx, o.contextId, now, receiptId);
-        await this.closeOrderContext(tx, o.contextId);
-        await this.intakes.completeSale(tx, o.intakeId, now);
-        const next = await this.transition(
-          tx,
-          o,
-          { state: 'Completed', closedAt: now },
-          now,
-        );
-        tx.check(`auction:${o.auctionId}`, () => checkAuction(tx, o.auctionId));
-        return PointOrdersService.change(next, now, 'PointOrderSettled');
+        return this.finishSettlement(tx, o, receiptId, now);
       },
     });
+  }
+
+  private async settlementParticipants(tx: Tx, id: string) {
+    const order = await this.order(tx, id);
+    return [order.buyerId, order.sellerId];
+  }
+
+  private async lockSettlementOrder(tx: Tx, order: PointOrderDoc) {
+    await this.listings.lock(tx, order.listingId);
+    await this.points.lockPoint(tx, order.pointId);
+    await tx.lock('auctions', [order.auctionId]);
+    await tx.lock('point_orders', [order._id]);
+    return this.order(tx, order._id);
+  }
+
+  private async finishSettlement(
+    tx: Tx,
+    order: PointOrderDoc,
+    receiptId: string,
+    now: Date,
+    demo = false,
+  ) {
+    await this.ledger.settlePointOrder(tx, order, receiptId, now);
+    await this.reservations.closeCompleted(tx, order.contextId, now, receiptId);
+    await this.closeOrderContext(tx, order.contextId);
+    await this.intakes.completeSale(tx, order.intakeId, now);
+    const next = await this.transition(
+      tx,
+      order,
+      {
+        state: 'Completed',
+        closedAt: now,
+        ...(demo && { demoInspectionCompletedAt: now }),
+      },
+      now,
+    );
+    tx.check(`auction:${order.auctionId}`, () =>
+      checkAuction(tx, order.auctionId),
+    );
+    return PointOrdersService.change(
+      next,
+      now,
+      demo ? 'PointOrderInspectionSkipped' : 'PointOrderSettled',
+    );
   }
 }

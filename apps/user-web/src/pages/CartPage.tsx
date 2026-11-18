@@ -23,7 +23,7 @@ import { useSession } from "../hooks/useSession";
 import { publicListingSchema } from "../services/public-listings";
 import { ListingPhoto } from "../components/BookCard";
 import { listingTitle } from "../lib/book-bundle";
-import { formatVnd } from "../lib/routes";
+import { formatVnd, ROUTES } from "../lib/routes";
 import styles from "./CartPage.module.css";
 
 const schema = cartSchema(publicListingSchema);
@@ -262,7 +262,7 @@ function CartContent({ owner }: { owner: string }) {
                         {item.canBuy && !disabled && !result.error ? (
                           <Link
                             className={styles.buyNowButton}
-                            to={`/chat/start/${item.listingId}?intent=Negotiation`}
+                            to={ROUTES.buyNow(item.listingId)}
                           >
                             <span>Mua bài đăng này</span>
                             <ArrowRight size={14} aria-hidden="true" />

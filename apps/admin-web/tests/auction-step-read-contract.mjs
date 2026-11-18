@@ -25,12 +25,27 @@ try{
    return url.origin===origin?route.continue():route.abort();
   });
   await page.goto(origin+'/operations/'+queue);await page.getByLabel(/^Email/).fill(user.email);await page.getByLabel(/^Mật khẩu/).fill('fixture-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
-  await expect(page.getByRole('heading',{name:queue==='intakes'?'Sách gửi đấu giá.':'Phiên đang mở hoặc tạm giữ.',exact:true})).toBeVisible();
+  const title = queue === 'intakes'
+    ? (baseline ? 'Sách gửi đấu giá.' : 'Sách gửi đấu giá')
+    : 'Phiên đang mở hoặc tạm giữ.';
+  await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Cập nhật danh sách',exact:true})).toBeEnabled();
   const rejected=baseline&&group==='custom';await expect(page.locator('article.queue-row')).toHaveCount(rejected?0:steps.length);
   await expect(page.getByRole('alert')).toHaveCount(rejected?1:0);
   if(!rejected){
-   await expect(page.locator('article.queue-row').first()).toContainText(steps[0].toLocaleString('vi-VN'));
+   const firstRow = page.locator('article.queue-row').first();
+   if (queue === 'intakes' && !baseline) {
+    const disclosure = firstRow.locator('summary');
+    await expect(firstRow.getByText('Bước giá', {exact:true})).toBeHidden();
+    await disclosure.focus();
+    await page.keyboard.press('Enter');
+    await expect(firstRow.getByText('Bước giá', {exact:true})).toBeVisible();
+    await expect(firstRow.locator('dd').nth(1)).toContainText(steps[0].toLocaleString('vi-VN'));
+    await page.keyboard.press('Enter');
+    await expect(firstRow.getByText('Bước giá', {exact:true})).toBeHidden();
+   } else {
+    await expect(firstRow).toContainText(steps[0].toLocaleString('vi-VN'));
+   }
    await expect(page.getByRole('button',{name:queue==='intakes'?'Nhận sách':'Hủy phiên',exact:true})).toHaveCount(steps.length);
    await page.getByRole('button',{name:'Cập nhật danh sách',exact:true}).click();await expect.poll(()=>reads).toBe(2);await expect(page.locator('article.queue-row')).toHaveCount(steps.length);
   }

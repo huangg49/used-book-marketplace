@@ -122,9 +122,10 @@ function AuctionRow({
         {editable && (
           <button type="button" className={styles.secondaryAction} onClick={() => setEditing(true)}>Đổi thời gian</button>
         )}
-        <Link className={styles.viewButton} to={ROUTES.auctionDetail(a.id)}>
+        <Link className={styles.viewButton} to={item.won ? `${ROUTES.auctionOrder(a.id)}?from=mine` : ROUTES.auctionDetail(a.id)}>
           {payable
             ? 'Xem và thanh toán'
+            : item.won ? 'Mở đơn đấu giá'
             : open && item.role === 'Bidder' && !item.leading
               ? 'Xem để trả tiếp'
               : waiting && item.role === 'Seller'
@@ -133,11 +134,11 @@ function AuctionRow({
           <ArrowRight size={16} aria-hidden="true" />
         </Link>
         </div>
-        {item.role === 'Seller' && a.version != null && (open || (scheduled && !waiting)) && (
+        {item.role === 'Seller' && a.version != null && (open || scheduled) && (
           <DemoSkipButton
             label={scheduled ? 'Mở phiên ngay · Demo' : 'Kết thúc phiên ngay · Demo'}
             note={scheduled
-              ? 'Bỏ qua giờ hẹn mở khi đã đủ người đăng ký.'
+              ? 'Bỏ qua giờ hẹn mở và điều kiện số người đăng ký để mở phiên đấu giá ngay (chế độ demo).'
               : 'Chốt phiên ngay; hệ thống chọn người thắng và tạo đơn như khi hết giờ.'}
             run={(key) => advanceDemoAuction(a.id, a.version!, key)}
             onDone={onChanged}

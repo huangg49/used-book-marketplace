@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -7,6 +7,7 @@ import { useSession } from '../hooks/useSession'
 import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
+import { editGroupedAmount, formatGroupedAmount } from '../lib/grouped-amount'
 import {
   AUCTION_MAX_PRICE, AUCTION_TYPES, BUY_NOW_MODES, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_MIN_BIDDERS_CAP, auctionDepositError, auctionDepositFor, auctionDepositMaxFor, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
   type AuctionStep, type AuctionType, type BuyNowMode, type CreateIntakeBody, type HandoverPoint, type MyIntake,
@@ -112,7 +113,30 @@ function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digi
     const base = value ?? min - (dir > 0 ? step : 0)
     onChange(Math.min(max, Math.max(min, base + dir * step)))
   }
-  const shown = value === null ? '' : value.toLocaleString('vi-VN')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const selectionCollapsed = useRef(false)
+  const caretRef = useRef<number | null>(null)
+  const isAlreadyFocused = useRef(false)
+
+  const selectAll = (target: HTMLInputElement) => {
+    target.select()
+    setTimeout(() => {
+      if (document.activeElement === target) {
+        target.select()
+      }
+    }, 0)
+  }
+
+  const currentDigits = value === null ? '' : String(value)
+  const shown = formatGroupedAmount(currentDigits)
+
+  useLayoutEffect(() => {
+    if (caretRef.current !== null && inputRef.current && document.activeElement === inputRef.current) {
+      inputRef.current.setSelectionRange(caretRef.current, caretRef.current)
+      caretRef.current = null
+    }
+  }, [shown])
+
   return (
     <div className={styles.field}>
       <label htmlFor={id}>{label}</label>
@@ -120,12 +144,45 @@ function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digi
         {/* The input grows with its digits so "đ" sits right after the amount. */}
         <label htmlFor={id} className={styles.moneyValue}>
           <input
-            id={id} inputMode="numeric" autoComplete="off" disabled={disabled} placeholder="0"
+            ref={inputRef}
+            id={id} type="text" inputMode="numeric" autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} disabled={disabled} placeholder="0"
             // Fallback width: separators are narrower than a digit (1ch).
             style={{ width: `${Math.max(shown.replace(/\D/g, '').length, 1) + (shown.match(/\D/g)?.length ?? 0) * 0.4 + 0.15}ch` }}
             value={shown}
             aria-invalid={!!error} aria-describedby={`${id}-help`}
-            onChange={(e) => { const typed = e.target.value.replace(/\D/g, '').slice(0, digits); onChange(typed ? Number(typed) : null) }}
+            onFocus={(e) => {
+              if (!isAlreadyFocused.current) {
+                isAlreadyFocused.current = true
+                selectAll(e.currentTarget)
+              }
+            }}
+            onBlur={() => {
+              isAlreadyFocused.current = false
+            }}
+            onKeyDown={(e) => {
+              selectionCollapsed.current = e.currentTarget.selectionStart === e.currentTarget.selectionEnd
+            }}
+            onBeforeInput={(e) => {
+              selectionCollapsed.current = e.currentTarget.selectionStart === e.currentTarget.selectionEnd
+            }}
+            onChange={(e) => {
+              const node = e.currentTarget
+              const edit = editGroupedAmount(
+                currentDigits,
+                node.value,
+                node.selectionStart ?? node.value.length,
+                (e.nativeEvent as InputEvent).inputType,
+                selectionCollapsed.current,
+              )
+              selectionCollapsed.current = false
+              const capped = edit.digits.slice(0, digits)
+              const finalFormatted = formatGroupedAmount(capped)
+              node.value = finalFormatted
+              const nextCaret = Math.min(edit.caret, finalFormatted.length)
+              node.setSelectionRange(nextCaret, nextCaret)
+              caretRef.current = nextCaret
+              onChange(capped ? Number(capped) : null)
+            }}
           />
           <span className={styles.unit} aria-hidden="true">đ</span>
         </label>
@@ -503,6 +560,11 @@ export function CreateAuctionPage() {
                       autoFocus inputMode="numeric" autoComplete="off" placeholder="0" disabled={locked}
                       value={customStep === null ? '' : customStep.toLocaleString('vi-VN')}
                       aria-label="Bước giá tự nhập" aria-invalid={!!stepError} aria-describedby="auction-step-help"
+                      onFocus={(e) => {
+                        const target = e.currentTarget
+                        target.select()
+                        setTimeout(() => target.select(), 0)
+                      }}
                       onChange={(e) => { const typed = e.target.value.replace(/\D/g, '').slice(0, String(AUCTION_STEP_MAX).length); setCustomStep(typed ? Number(typed) : null) }}
                     />
                     <span aria-hidden="true">đ</span>

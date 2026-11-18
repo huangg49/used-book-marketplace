@@ -80,6 +80,8 @@ export interface CollectionTypes {
   order_delivery_reviews: D.OrderDeliveryReviewDoc;
   order_non_receipt_reports: D.OrderNonReceiptReportDoc;
   direct_delivery_events: D.DirectDeliveryEventDoc;
+  direct_order_journey_events: D.DirectOrderJourneyEventDoc;
+  direct_order_issue_evidence: D.DirectOrderIssueEvidenceDoc;
   workflow_contexts:
     D.WorkflowContextDoc | D.AuctionIntakeContextDoc | D.PointOrderContextDoc;
   workflow_items: D.WorkflowItemDoc;
@@ -267,6 +269,8 @@ const NAMES: CollectionName[] = [
   'order_delivery_reviews',
   'order_non_receipt_reports',
   'direct_delivery_events',
+  'direct_order_journey_events',
+  'direct_order_issue_evidence',
   'workflow_contexts',
   'workflow_items',
   'agreement_snapshots',

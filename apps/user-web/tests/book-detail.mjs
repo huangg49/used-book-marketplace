@@ -52,7 +52,7 @@ try {
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(detailUrl);
   await expect(add()).toBeEnabled();
-  await expect(page.getByRole("link", { name: "Mua ngay", exact: true })).toHaveAttribute("href", `/chat/start/${id}?intent=Negotiation`);
+  await expect(page.getByRole("link", { name: "Mua ngay", exact: true })).toHaveAttribute("href", `/buy-now/${id}`);
   await expect(page.getByRole("link", { name: "Đề nghị đổi sách", exact: true })).toHaveAttribute("href", `/exchange/new?book=${id}`);
   checks.push("Both listing keeps real buy-now and exchange entry routes, one main purchase action");
 

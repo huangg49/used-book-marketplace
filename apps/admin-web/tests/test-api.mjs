@@ -387,6 +387,10 @@ export async function createTestApi({
         if (typeof enabled !== 'boolean') throw new Error('Expected a boolean demo setting');
         app.get(req('@nestjs/config').ConfigService).set('LOCAL_DEMO_COMPLETION_ENABLED', String(enabled));
       },
+      setDirectOrderJourneyDemo: (enabled) => {
+        if (typeof enabled !== 'boolean') throw new Error('Expected a boolean demo setting');
+        app.get(req('@nestjs/config').ConfigService).set('LOCAL_DIRECT_ORDER_JOURNEY_DEMO_ENABLED', String(enabled));
+      },
       close,
       api,
       db,

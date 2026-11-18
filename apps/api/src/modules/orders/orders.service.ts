@@ -38,6 +38,10 @@ import { LedgerService } from '../wallet/ledger.service.js';
 import { DirectOrderReleasePolicy } from '../wallet/direct-order-release.policy.js';
 import { checkOrder } from './order-invariants.js';
 import { quoteAmounts } from '../quotes/quote-money.js';
+import { CarrierSimulator } from '../shipments/carrier-simulator.js';
+import { journeyEventId, listedBySeller } from './direct-order-journey.js';
+
+type JourneyAction = Wire['AdvanceDirectOrderDeliveryJourney']['action'];
 
 // Order with the parts every command/read needs (the Prisma include).
 export async function loadOrder(c: Collections, id: string) {
@@ -104,6 +108,7 @@ export class OrdersService {
     private readonly ledger: LedgerService,
     private readonly directRelease: DirectOrderReleasePolicy,
     private readonly localDemo: LocalDemoCompletionPolicy,
+    private readonly simulator: CarrierSimulator,
   ) {}
   private async order(tx: Tx, id: string) {
     const o = await loadOrder(tx.c, id);
@@ -253,6 +258,7 @@ export class OrdersService {
           member(buyer);
           requireActive(buyer);
           let conversation = before.conversation;
+          let listedPurchaseBySeller = false;
           let orderBody: Wire['CreateDirectOrder'];
           if (intent.mode === 'Negotiated') {
             await tx.lock('purchase_conversations', [
@@ -270,7 +276,9 @@ export class OrdersService {
               conversation.orderId
             )
               throw conflict();
-            await this.agreements.validateOrder(tx, conversation, intent.body.agreedBookPrice);
+            listedPurchaseBySeller = await this.agreements.validateOrder(
+              tx, conversation, intent.body.agreedBookPrice,
+            );
             const quote = await tx.c.sale_quotes.findOne({
               _id: conversation.quoteId,
               buyerId: before.buyerId,
@@ -285,6 +293,8 @@ export class OrdersService {
           } else orderBody = intent.body;
           const { q, l, book, origin, destination } =
             await this.quotes.prepareOrder(tx, before.buyerId, orderBody);
+          if (listedPurchaseBySeller && intent.mode === 'Negotiated' &&
+            intent.body.agreedBookPrice !== q.bookPrice) throw conflict();
           const continuingLegacyHold =
             intent.mode === 'Negotiated' &&
             l.trade === 'Reserved' &&
@@ -391,7 +401,8 @@ export class OrdersService {
           );
           const agreement: Wire['DirectOrderAgreement'] = {
             schemaVersion: 1,
-            purchaseMode: intent.mode,
+            purchaseMode: listedPurchaseBySeller ? 'BuyNow' : intent.mode,
+            ...(listedPurchaseBySeller ? { listedPurchaseBySeller: true as const } : {}),
             policyVersion: q.policyCode,
             method: 'DirectDelivery',
             demoOnly: true,
@@ -1131,6 +1142,154 @@ export class OrdersService {
       'expireOrderDelivery',
     );
   }
+  private async deliveryJourney(tx: Tx, order: NonNullable<Awaited<ReturnType<typeof loadOrder>>>, now: Date, buyer: boolean): Promise<Wire['DirectOrderDeliveryJourney']> {
+    const shipment = await tx.c.direct_shipments.findOne({ orderId: order._id });
+    const pickup = shipment ? await tx.c.carrier_pickup_events.findOne({ shipmentId: shipment._id, outcome: 'Applied' }) : null;
+    const delivered = await tx.c.direct_delivery_events.findOne({ orderId: order._id });
+    const events = await tx.c.direct_order_journey_events.find({ orderId: order._id }).toArray();
+    const event = (action: JourneyAction) => events.find((entry) => entry.action === action);
+    const going = event('OutForDelivery');
+    const acknowledgement = event('Acknowledge')?.occurredAt ??
+      (delivered?.source === 'BuyerReceived' ? delivered.occurredAt : null);
+    const issue = events.find((entry) => entry.action === 'ReportNonReceipt' || entry.action === 'ReportCondition');
+    const actions: JourneyAction[] = [];
+    const demo = buyer && this.localDemo.deliveryJourneyEnabled() && !order.demoCompletionPolicy;
+    if (demo && shipment && !pickup && order.state === 'Preparing' && order.preparation && now < order.preparation.pickupDeadline) {
+      actions.push('Pickup');
+    }
+    if (demo && pickup?.deliveryDeadline && order.state === 'InTransit' && now < pickup.deliveryDeadline) {
+      actions.push(going ? 'Deliver' : 'OutForDelivery');
+    }
+    if (buyer && !issue && order.state === 'Inspection' && order.inspectionDeadline && now < order.inspectionDeadline) {
+      if (acknowledgement) {
+        actions.push('ReportCondition');
+        if (demo && event('Deliver')) actions.push('SkipInspection');
+      } else {
+        actions.push('Acknowledge', 'ReportNonReceipt');
+      }
+    }
+    return {
+      trackingCode: shipment?.trackingCode ?? null,
+      pickedUpAt: pickup?.occurredAt.toISOString() ?? null,
+      outForDeliveryAt: going?.occurredAt.toISOString() ?? null,
+      acknowledgedAt: acknowledgement?.toISOString() ?? null,
+      issue: issue?.supportCaseId && (issue.action === 'ReportNonReceipt' || issue.action === 'ReportCondition')
+        ? { kind: issue.action, openedAt: issue.occurredAt.toISOString(), supportCaseId: issue.supportCaseId }
+        : null,
+      actions,
+    };
+  }
+
+  advanceDeliveryJourney(context: CommandContext, id: string, body: Wire['AdvanceDirectOrderDeliveryJourney']) {
+    const reporting = body.action === 'ReportNonReceipt' || body.action === 'ReportCondition';
+    const description = body.description?.trim();
+    if (reporting ? !description || description.length < 10 : body.description !== undefined)
+      throw new DomainError(422, 'VALIDATION_ERROR', 'Hãy nhập mô tả từ 10 ký tự khi báo sự cố.');
+
+    return this.commands.runOrder(context, 'advanceDirectOrderDeliveryJourney', id, body, {
+      discover: async (tx) => {
+        const o = await this.own(tx, id, context.auth.user.id, true);
+        return [o.buyerId, o.sellerId];
+      },
+      authorize: async (tx, actor) => {
+        member(actor, true);
+        const o = await this.own(tx, id, actor._id, true);
+        if (!listedBySeller(o.context?.agreement?.snapshot)) throw notFound();
+        if (!reporting && body.action !== 'Acknowledge') this.localDemo.assertDeliveryJourneyEnabled();
+        await this.decision(tx, context.auth);
+      },
+      mutate: async (tx, actor, _before, receiptId) => {
+        const { o, listing, commitment } = await this.locked(tx, id);
+        if (o.version !== body.expectedVersion) throw conflict();
+        if (commitment.status !== 'Active') throw invalidState();
+        await this.ledger.lockOrder(tx, o.buyerId, id, false);
+        if ((await this.ledger.orderFunds(tx, id)).held !== o.quote.buyerTotal) throw invalidState();
+        const now = await this.decision(tx, context.auth);
+        const journey = await this.deliveryJourney(tx, o, now, true);
+        const action = body.action;
+        if (!journey.actions.includes(action)) throw invalidState('Mốc này chưa sẵn sàng. Hãy tải lại tiến độ đơn.');
+        const supportCaseId = reporting ? randomUUID() : null;
+        const shipment = await tx.c.direct_shipments.findOne({ orderId: id, carrier: 'LatLaiSimulator' });
+        if (!shipment) throw invalidState('Cần đăng ký vận đơn trước.');
+        await tx.c.direct_order_journey_events.insertOne({
+          _id: journeyEventId(id, action), orderId: id, actorId: actor._id, action,
+          occurredAt: now, receiptId, supportCaseId,
+        });
+        let next: DirectOrderDoc = o;
+        const affectedListings: OrderChange['affectedListings'] = [];
+        const carrierEvent = {
+          eventId: receiptId, shipmentId: shipment._id, orderId: id,
+          carrier: 'LatLaiSimulator' as const, trackingCode: shipment.trackingCode, occurredAt: now.toISOString(),
+        };
+
+        switch (action) {
+          case 'Pickup': {
+            const pickup = { ...carrierEvent, type: 'PickedUp' as const };
+            await tx.c.carrier_pickup_events.insertOne({
+              _id: receiptId, orderId: id, shipmentId: shipment._id, sequence: 1,
+              occurredAt: now, receivedAt: now, outcome: 'Applied',
+              deliveryDeadline: new Date(now.getTime() + 240 * 3600000), policyCode: 'CARRIER-PICKUP-v1',
+              payloadHash: createHash('sha256').update(canonicalJson(pickup)).digest('hex'),
+              signature: this.simulator.sign(pickup), receiptId,
+            });
+            next = await this.transition(tx, o, { state: 'InTransit' });
+            break;
+          }
+          case 'Deliver':
+            await tx.c.direct_delivery_events.insertOne({
+              _id: receiptId, orderId: id, shipmentId: shipment._id, source: 'CarrierDelivered',
+              occurredAt: now, receivedAt: now,
+              payloadHash: createHash('sha256').update(canonicalJson(carrierEvent)).digest('hex'),
+              signature: this.simulator.signDelivery(carrierEvent), receiptId,
+            });
+            next = await this.transition(tx, o, {
+              state: 'Inspection', deliveredAt: now,
+              inspectionDeadline: new Date(now.getTime() + 72 * 3600000),
+            });
+            break;
+          case 'ReportNonReceipt':
+          case 'ReportCondition':
+            await tx.c.support_cases.insertOne({
+              _id: supportCaseId!, reporterId: actor._id, reporterName: actor.displayName,
+              kind: 'TransactionIssue', title: action === 'ReportNonReceipt' ? 'Chưa nhận được sách' : 'Sách nhận được có vấn đề',
+              target: { type: 'DirectOrder', id }, involvedUserIds: [o.buyerId, o.sellerId],
+              assigneeId: null, state: 'Open', version: 1, messageCount: 1,
+              createdAt: now, updatedAt: now, lockSeq: 0,
+            });
+            await tx.c.support_messages.insertOne({
+              _id: randomUUID(), caseId: supportCaseId!, authorId: actor._id, authorName: actor.displayName,
+              role: 'Member', internal: false, text: description!, createdAt: now,
+            });
+            next = await this.transition(tx, o, { state: 'ResolutionPending' });
+            break;
+          case 'SkipInspection': {
+            await this.ledger.settleDemonstratedDirectOrder(tx, {
+              _id: id, sellerId: o.sellerId, buyerTotal: o.quote.buyerTotal,
+              sellerProceeds: o.quote.sellerProceeds,
+            }, receiptId, now);
+            await this.reservations.closeDemonstratedDirectOrder(tx, o.context!._id, now, receiptId);
+            await this.closeContext(tx, o.context!);
+            const sold = await this.listings.project(tx, listing.id, listing.version, 'Reserved', 'Sold');
+            affectedListings.push({ id: sold.id, version: sold.version });
+            next = await this.transition(tx, o, { state: 'Completed', completedAt: now, closedAt: now });
+            break;
+          }
+          case 'OutForDelivery':
+          case 'Acknowledge':
+            tx.check(`order:${id}`, () => checkOrder(tx, id));
+            break;
+        }
+        return {
+          entityType: 'Order', entityId: id, contextId: o.context!._id,
+          version: next.version, state: next.state as OrderChange['state'],
+          decidedAt: now, paymentDeadline: o.paymentDeadline, affectedListings,
+          event: action === 'SkipInspection' ? 'DirectOrderSettled' : 'DirectOrderDeliveryJourneyAdvanced',
+          reason: action, before: { state: o.state, version: o.version },
+        };
+      },
+    });
+  }
+
   startLocalDemoCompletion(context: CommandContext, id: string, body: Wire['StartDemoOrderCompletion']) {
     return this.commands.runOrder(context, 'startLocalDemoOrderCompletion', id, body, {
       discover: async tx => { const o = await this.own(tx, id, context.auth.user.id); return [o.buyerId, o.sellerId]; },
@@ -1144,7 +1303,8 @@ export class OrdersService {
       mutate: async (tx, actor, _before, receiptId) => {
         const { o, commitment } = await this.locked(tx, id);
         if (o.version !== body.expectedVersion) throw conflict();
-        if (o.state !== 'Preparing' || o.version !== 3 || !o.preparation || commitment.status !== 'Active' ||
+        if (listedBySeller(o.context?.agreement?.snapshot) ||
+          o.state !== 'Preparing' || o.version !== 3 || !o.preparation || commitment.status !== 'Active' ||
           o.preparation.pickupReview || await tx.c.carrier_pickup_reviews.findOne({ orderId: id }) ||
           await tx.c.order_delivery_reviews.findOne({ orderId: id }) || await tx.c.order_non_receipt_reports.findOne({ orderId: id }) ||
           await tx.c.local_demo_order_completions.findOne({ _id: id })) throw invalidState();
@@ -1391,6 +1551,18 @@ export class OrdersService {
       'refundOrder',
     );
   }
+  async readByTracking(auth: Actor, code: string) {
+    if (!/^LL-[A-Z0-9]{8,32}$/.test(code)) throw notFound();
+    const id = await this.commands.readObligation(auth, async (tx, actor) => {
+      member(actor);
+      const shipment = await tx.c.direct_shipments.findOne({ trackingCode: code });
+      if (!shipment) throw notFound();
+      const order = await this.own(tx, shipment.orderId, actor._id);
+      if (!listedBySeller(order.context?.agreement?.snapshot)) throw notFound();
+      return order._id;
+    });
+    return this.read(auth, id);
+  }
   read(auth: Actor, id: string): Promise<Wire['PrivateUnpaidOrder']> {
     return this.commands.readObligation(
       auth,
@@ -1432,6 +1604,9 @@ export class OrdersService {
         });
         return {
           id: o._id,
+          ...(agreement.listedPurchaseBySeller ? {
+            deliveryJourney: await this.deliveryJourney(tx, o, now, role === 'Buyer' && actor.status === 'ACTIVE'),
+          } : {}),
           deliveryReview: delivery
             ? {
                 id: delivery._id,
@@ -1464,7 +1639,7 @@ export class OrdersService {
           inspectionDeadline: o.inspectionDeadline?.toISOString() ?? null,
           completedAt: o.completedAt?.toISOString() ?? null,
           canConfirmReceipt: actor.status === 'ACTIVE' && role === 'Buyer' && o.state === 'InTransit' && !!pickup?.deliveryDeadline && now < pickup.deliveryDeadline && !carrierReview && !delivery && funds.held === o.quote.buyerTotal,
-          demoCompletionEnabled: role === 'Seller' && actor.status === 'ACTIVE' && this.localDemo.allows(id) && o.state === 'Preparing' &&
+          demoCompletionEnabled: !agreement.listedPurchaseBySeller && role === 'Seller' && actor.status === 'ACTIVE' && this.localDemo.allows(id) && o.state === 'Preparing' &&
             !!(await tx.c.direct_shipments.findOne({ orderId: o._id, carrier: 'LatLaiSimulator' })) &&
             !(await tx.c.local_demo_order_completions.findOne({ _id: o._id })),
           demoCompletionAt: (await tx.c.local_demo_order_completions.findOne({ _id: o._id, status: 'Pending' }))?.dueAt.toISOString() ?? null,

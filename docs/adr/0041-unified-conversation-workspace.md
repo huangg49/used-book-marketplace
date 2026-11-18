@@ -8,7 +8,8 @@ Mở rộng [ADR0037](0037-seller-selected-purchase-orders.md); giữ Mua ngay c
 
 - Một cuộc trao đổi riêng cho Buyer + Seller + listing, không phải phòng công khai
   theo sản phẩm. Navbar Chat mở danh sách card có sách, đối tác, vai trò và trạng thái.
-  Detail Chat/Đổi sách đi vào cùng workspace; Mua ngay vẫn độc lập theo giá niêm yết.
+  Detail Chat/Đổi sách đi vào cùng workspace. Luồng Mua ngay trên Member web
+  theo điều chỉnh bên dưới.
 - Workspace có phiếu bên trái và chat bên phải; mobile chuyển giữa hai vùng mà
   không unmount bản nháp. Phiếu ban đầu là thỏa thuận dự kiến, không là Order và
   không có quyền giữ sách/thu tiền.
@@ -38,6 +39,24 @@ Mở rộng [ADR0037](0037-seller-selected-purchase-orders.md); giữ Mua ngay c
 - Chat của participant ACTIVE tiếp tục sau OrderCreated; đây không là cấp quyền
   mới cho tài khoản LOCKED. Các quyền ExistingObligation/giao nhận/settlement giữ
   phạm vi hiện hành. Tin nhắn không chứng minh giao nhận hoặc thanh toán.
+
+## Mua ngay trên Member web — 18/11/2026
+
+- **Mua ngay** mở phiếu mua và hộp địa chỉ. **Chat với người bán** mở khung
+  tin nhắn trong cùng workspace, với giá niêm yết trên phiếu.
+- Khi xác nhận, Buyer gửi giá niêm yết đang thấy qua `acceptedListedPrice`.
+  API so với giá trên quote hợp lệ của revision hiện hành. Chấp nhận giá và
+  đính kèm quote ghi trong cùng giao dịch. Đề nghị đang chờ hoặc mức giá khác
+  đã chốt trên cùng revision vẫn được bảo vệ.
+- Sau khi xác nhận, phiếu ẩn mục đề nghị giá. Seller tạo đơn với giá đã chốt
+  và báo giá còn hiệu lực. Thao tác tạo đơn là cam kết bán. Buyer thanh toán
+  vào hold và đơn chuyển sang Chuẩn bị sách trong cùng transaction.
+- Đơn do Seller tạo từ xác nhận giá niêm yết có `purchaseMode=BuyNow` và
+  dấu nguồn `listedPurchaseBySeller` trong snapshot. Đơn thương lượng,
+  snapshot lịch sử và đường Mua ngay legacy giữ cơ chế hiện có.
+- Mô phỏng giao nhận và tua hạn kiểm tra của gói này theo [ADR 0090](0090-seller-listed-purchase-demo-journey.md).
+- API Mua ngay theo ADR0038 và lệnh đính kèm quote không có
+  `acceptedListedPrice` giữ hợp đồng tương thích với các client hiện có.
 
 ## Dữ liệu và tương thích
 

@@ -56,6 +56,11 @@ export class OrdersController {
   read(@Param('orderId') id: string, @Req() req: AuthenticatedRequest) {
     return this.orders.read(req.auth, this.input.uuid(id));
   }
+  @Get('me/direct-order-tracking/:trackingCode')
+  @ExistingObligation()
+  readTracking(@Param('trackingCode') code: string, @Req() req: AuthenticatedRequest) {
+    return this.orders.readByTracking(req.auth, code);
+  }
   @Post('orders/:orderId/conversation')
   @ExistingObligation()
   @HttpCode(200)
@@ -78,6 +83,21 @@ export class OrdersController {
   async startDemoCompletion(@Param('orderId') id: string, @Body() body: unknown,
     @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     const result = await this.orders.startLocalDemoCompletion(commandContext(this.input, req, res), this.input.uuid(id), this.input.body('StartDemoOrderCompletion', body));
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
+  @Post('orders/:orderId/delivery-journey')
+  @ExistingObligation()
+  @HttpCode(200)
+  async advanceDeliveryJourney(
+    @Param('orderId') id: string, @Body() body: unknown,
+    @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.orders.advanceDeliveryJourney(
+      commandContext(this.input, req, res),
+      this.input.uuid(id),
+      this.input.body('AdvanceDirectOrderDeliveryJourney', body),
+    );
     res.setHeader('Idempotency-Replayed', String(result.replayed));
     return result.receipt;
   }

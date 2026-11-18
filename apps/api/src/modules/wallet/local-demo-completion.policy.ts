@@ -6,13 +6,22 @@ import { DomainError } from '../commands/domain-error.js';
 @Injectable()
 export class LocalDemoCompletionPolicy {
   constructor(private readonly config: ConfigService) {}
-  enabled(): boolean {
+  private localRuntime(): boolean {
     const mode = this.config.get<string>('NODE_ENV') ?? 'development';
-    if (this.config.get<string>('LOCAL_DEMO_COMPLETION_ENABLED') !== 'true' ||
-      !['development', 'test'].includes(mode) || !this.config.get('PAYMENT_SIMULATOR_SECRET')) return false;
+    if (!['development', 'test'].includes(mode) || !this.config.get('PAYMENT_SIMULATOR_SECRET')) return false;
     try {
       return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(this.config.getOrThrow<string>('MONGODB_URL')).hostname);
     } catch { return false; }
+  }
+  enabled(): boolean {
+    return this.config.get<string>('LOCAL_DEMO_COMPLETION_ENABLED') === 'true' && this.localRuntime();
+  }
+  deliveryJourneyEnabled(): boolean {
+    return this.config.get<string>('LOCAL_DIRECT_ORDER_JOURNEY_DEMO_ENABLED') === 'true' && this.localRuntime();
+  }
+  assertDeliveryJourneyEnabled(): void {
+    if (!this.deliveryJourneyEnabled())
+      throw new DomainError(403, 'FORBIDDEN', 'Driver và tua hạn kiểm tra demo local chưa được bật.');
   }
   allows(_id: string): boolean { return this.enabled(); }
   assertAllowed(id: string): void {

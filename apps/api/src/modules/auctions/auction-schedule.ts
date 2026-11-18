@@ -469,3 +469,39 @@ export function startNowFields(
     ...(a.opensAt ? { opensAt: now } : {}),
   };
 }
+
+/**
+ * Demo only: Advance a Scheduled auction to Live immediately.
+ * When below the minimum registered bidders, bypasses the registration gate
+ * so the demo can proceed into live bidding without artificial blockers.
+ */
+export function demoStartNowFields(
+  a: Pick<
+    AuctionDoc,
+    'startAt' | 'plannedEndAt' | 'opensAt' | 'minBidders' | 'registeredCount'
+  >,
+  now: Date,
+): Partial<AuctionDoc> {
+  const duration = a.plannedEndAt.getTime() - a.startAt.getTime();
+  const end = new Date(now.getTime() + duration);
+  if (a.minBidders != null && (a.registeredCount ?? 0) < a.minBidders) {
+    return {
+      startAt: now,
+      plannedEndAt: end,
+      endAt: end,
+      openMode: null,
+      minBidders: null,
+      depositAmount: null,
+      biddingOpenedAt: null,
+      opensAt: null,
+      registeredCount: 0,
+    };
+  }
+  return {
+    startAt: now,
+    plannedEndAt: end,
+    endAt: end,
+    biddingOpenedAt: now,
+    ...(a.opensAt ? { opensAt: now } : {}),
+  };
+}

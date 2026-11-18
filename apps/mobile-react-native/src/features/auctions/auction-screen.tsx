@@ -27,6 +27,7 @@ import {
   stitchTokens,
 } from "../../core/ui";
 import { AuctionCover } from "./components/auction-cover";
+import { AuctionBidHistory } from "./components/auction-bid-history";
 import { DemoSkipButton } from "./components/demo-skip-button";
 import { conditions as conditionLabels } from "../shelf/contracts";
 import {
@@ -101,14 +102,6 @@ const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
   SecondChanceOffered: "Giá thắng (chưa thanh toán)",
   OnHold: "Giá khi tạm dừng",
   Cancelled: "Giá khi hủy",
-};
-const TOP_BADGE: Partial<Record<AuctionState, string>> = {
-  Active: "đang dẫn",
-  AwaitingWinnerPayment: "giá chốt",
-  Sold: "giá chốt",
-  OnHold: "dẫn khi tạm dừng",
-  Cancelled: "dẫn khi hủy",
-  PaymentExpired: "giá thắng",
 };
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const time = (iso: string) =>
@@ -1194,10 +1187,8 @@ function AuctionBody({
           onDone={refresh}
         />
       )}
-      <History
-        auction={auction}
-        open={open}
-        scheduled={scheduled}
+      <AuctionBidHistory
+        sealedLive={isSealedFormat(auction) && (open || scheduled)}
         history={history}
         state={auction.state}
         leaderAlias={leaderAlias}
@@ -2376,144 +2367,6 @@ function SealedBlock({
         disabled={locked || !!error || !amount}
         onPress={() => amount && onSubmit(amount)}
       />
-    </View>
-  );
-}
-
-function History({
-  auction,
-  open,
-  scheduled,
-  history,
-  state,
-  leaderAlias,
-  myAlias,
-  startPrice,
-}: {
-  auction: PublicAuctionSummary;
-  open: boolean;
-  scheduled: boolean;
-  history: PublicAuction["history"];
-  state: AuctionState;
-  leaderAlias: number | null;
-  myAlias: number | null;
-  startPrice: number;
-}) {
-  const sealedLive = isSealedFormat(auction) && (open || scheduled);
-
-  return (
-    <View
-      style={{
-        gap: space.sm,
-        padding: space.lg,
-        borderRadius: radius.card * 2,
-        backgroundColor: stitchTokens.whiteSurface,
-        borderWidth: 1,
-        borderColor: stitchTokens.cardBorder,
-      }}
-    >
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Icon name={sealedLive ? "lock" : "clock"} size={16} color={stitchTokens.wineDark} />
-          <AppText kind="bold" accessibilityRole="header" style={{ fontSize: 16, color: stitchTokens.wineDark }}>
-            Diễn biến giá
-          </AppText>
-        </View>
-        {!sealedLive && history.length > 0 && (
-          <View
-            style={{
-              backgroundColor: stitchTokens.parchment,
-              borderRadius: radius.pill,
-              paddingHorizontal: 8,
-              paddingVertical: 2,
-              borderWidth: 1,
-              borderColor: stitchTokens.cardBorder,
-            }}
-          >
-            <AppText kind="small" style={{ fontSize: 11, color: stitchTokens.subtleGray, fontWeight: "700" }}>
-              {history.length} lượt
-            </AppText>
-          </View>
-        )}
-      </View>
-
-      {sealedLive ? (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            backgroundColor: stitchTokens.parchment,
-            padding: 12,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: stitchTokens.cardBorder,
-          }}
-        >
-          <Icon name="eyeOff" size={16} color={stitchTokens.subtleGray} />
-          <AppText kind="small" color={colors.muted} style={{ flex: 1, lineHeight: 17 }}>
-            Phiên đấu giá kín bảo mật toàn bộ lượt trả giá cho tới khi phiên kết thúc. Giá khởi điểm {formatVnd(startPrice)}.
-          </AppText>
-        </View>
-      ) : history.length === 0 ? (
-        <AppText kind="small" color={colors.muted}>
-          Chưa có lượt trả giá. Giá khởi điểm {formatVnd(startPrice)}.
-        </AppText>
-      ) : (
-        history.map((event, index) => {
-          const isMe = event.bidderAlias === myAlias;
-          const who = isMe ? "Bạn" : `Người trả giá #${event.bidderAlias}`;
-          const badge = TOP_BADGE[state];
-          const top = index === 0 && event.bidderAlias === leaderAlias && badge !== undefined;
-          return (
-            <View
-              key={`${event.at}-${index}`}
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: space.md,
-                paddingVertical: 8,
-                paddingHorizontal: top ? 10 : 4,
-                borderRadius: top ? 8 : 0,
-                backgroundColor: top ? stitchTokens.likeNewGreenBg : "transparent",
-                borderBottomWidth: index === history.length - 1 ? 0 : 1,
-                borderColor: colors.rule,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 }}>
-                <AppText
-                  kind={top || isMe ? "bold" : "small"}
-                  color={top ? colors.forest : isMe ? stitchTokens.wineDark : colors.ink}
-                  style={{ flexShrink: 1 }}
-                >
-                  {who}
-                </AppText>
-                {top && (
-                  <View
-                    style={{
-                      backgroundColor: stitchTokens.likeNewGreen,
-                      paddingHorizontal: 6,
-                      paddingVertical: 1.5,
-                      borderRadius: 4,
-                    }}
-                  >
-                    <AppText kind="small" style={{ color: stitchTokens.white, fontSize: 10, fontWeight: "700" }}>
-                      {badge.toUpperCase()}
-                    </AppText>
-                  </View>
-                )}
-                <AppText kind="small" color={colors.muted} style={{ fontSize: 11 }}>
-                  · {time(event.at)}
-                </AppText>
-              </View>
-              <AppText kind="bold" style={{ color: top ? colors.forest : stitchTokens.wineDark }}>
-                {formatVnd(event.price)}
-              </AppText>
-            </View>
-          );
-        })
-      )}
     </View>
   );
 }

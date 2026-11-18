@@ -152,6 +152,7 @@ describe('Unified conversation agreements / isolated Mongo HTTP', () => {
       id: draft.entityId as string,
       version: approved.version as number,
       revisionId: approved.revisionId as string,
+      salePrice: content.salePrice,
     };
   }
   async function saveAddress(who: Reader) {
@@ -211,7 +212,7 @@ describe('Unified conversation agreements / isolated Mongo HTTP', () => {
       f.seller,
     ).expect(200);
   }
-  async function attachQuote(f: Awaited<ReturnType<typeof setup>>) {
+  async function quoteAttachment(f: Awaited<ReturnType<typeof setup>>) {
     const address = await saveAddress(f.buyer);
     const quote = (
       await post(
@@ -227,17 +228,16 @@ describe('Unified conversation agreements / isolated Mongo HTTP', () => {
       ).expect(200)
     ).body;
     const current = await room(f.id, f.buyer);
-    await post(
-      `/me/purchase-conversations/${f.id}/quote`,
-      {
-        expectedVersion: current.version,
-        quoteId: quote.entityId,
-        expectedQuoteVersion: quote.version,
-        expectedListingVersion: f.book.version,
-        expectedListingRevisionId: f.book.revisionId,
-      },
-      f.buyer,
-    ).expect(200);
+    return {
+      expectedVersion: current.version,
+      quoteId: quote.entityId,
+      expectedQuoteVersion: quote.version,
+      expectedListingVersion: f.book.version,
+      expectedListingRevisionId: f.book.revisionId,
+    };
+  }
+  async function attachQuote(f: Awaited<ReturnType<typeof setup>>) {
+    await post(`/me/purchase-conversations/${f.id}/quote`, await quoteAttachment(f), f.buyer).expect(200);
   }
   beforeAll(async () => {
     db = await MongoFixtures.connect();
@@ -404,6 +404,53 @@ describe('Unified conversation agreements / isolated Mongo HTTP', () => {
       await reader(),
     ).expect(409);
   });
+  it('attaches a quote and records explicit acceptance of the listed price once', async () => {
+    const f = await setup();
+    const listedPrice = f.book.salePrice!;
+    const path = `/me/purchase-conversations/${f.id}/quote`;
+    const body = { ...(await quoteAttachment(f)), acceptedListedPrice: listedPrice };
+    const key = randomUUID();
+    await post(path, body, f.seller, key).expect(404);
+    await post(path, { ...body, acceptedListedPrice: listedPrice + 1 }, f.buyer).expect(409);
+    const before = await room(f.id, f.seller);
+    expect(before.hasQuote).toBe(false);
+    expect(before.terms.agreedPrice).toBeNull();
+
+    const [first, second] = await Promise.all([
+      post(path, body, f.buyer, key).expect(200),
+      post(path, body, f.buyer, key).expect(200),
+    ]);
+    expect(first.body).toEqual(second.body);
+    expect([first, second].filter((r) => r.headers['idempotency-replayed'] === 'true')).toHaveLength(1);
+    expect(await db.c.conversation_events.countDocuments({ conversationId: f.id, kind: 'PriceAccepted' })).toBe(1);
+
+    const sellerView = await room(f.id, f.seller);
+    expect(sellerView).toMatchObject({
+      hasQuote: true,
+      orderId: null,
+      terms: { agreedPrice: listedPrice, agreedListingRevisionId: f.book.revisionId, pendingProposal: null },
+    });
+    const orderBody = { conversationId: f.id, expectedVersion: sellerView.version, agreedBookPrice: listedPrice };
+    await post('/orders', { ...orderBody, agreedBookPrice: listedPrice + 1 }, f.seller).expect(409);
+    await post('/orders', orderBody, f.seller).expect(200);
+  });
+
+  it('keeps a pending price proposal intact when the buyer tries to accept the listed price', async () => {
+    const f = await setup();
+    const current = await room(f.id, f.buyer);
+    await post(
+      `/me/purchase-conversations/${f.id}/terms`,
+      { expectedVersion: current.version, kind: 'Price', amount: 75000 },
+      f.seller,
+    ).expect(200);
+    const body = { ...(await quoteAttachment(f)), acceptedListedPrice: f.book.salePrice };
+    await post(`/me/purchase-conversations/${f.id}/quote`, body, f.buyer).expect(409);
+    expect(await room(f.id, f.buyer)).toMatchObject({
+      hasQuote: false,
+      terms: { agreedPrice: null, pendingProposal: { amount: 75000 } },
+    });
+  });
+
   it('freezes the accepted price into the order and keeps participant chat available afterwards', async () => {
     const f = await setup();
     await attachQuote(f);

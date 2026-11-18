@@ -12,6 +12,7 @@ export interface Row {
   status: string;
   meta: string[];
   title: string;
+  summary?: ReactNode;
   detail?: ReactNode;
   action?: {
     label: string;

@@ -4475,16 +4475,16 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         key,
       );
     // A won auction paid with delivery on a pinned timeline (clock restored).
-    async function deliveryOrder() {
+    async function deliveryOrder(fee = FEE) {
       const winner = await actor();
       const won = await wonAuction(winner, 300_000);
-      await fund(winner, 300_000 + FEE);
+      await fund(winner, 300_000 + fee);
       const a = await address(winner);
       pinClock(won.payAt);
       await cmd(
         'post',
         `/point-orders/${won.orderId}/pay`,
-        { expectedVersion: 1, ...delivery(a) },
+        { expectedVersion: 1, ...delivery(a, fee) },
         winner,
       ).expect(200);
       vi.restoreAllMocks();
@@ -4493,8 +4493,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       return { ...won, winner, address: a };
     }
     // Accepted report and Staff hand-off to the carrier (InTransit).
-    async function inTransit() {
-      const o = await deliveryOrder();
+    async function inTransit(fee = FEE) {
+      const o = await deliveryOrder(fee);
       const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
       const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
       await accepted(o, acceptAt);
@@ -4509,6 +4509,171 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         doc: (await db.c.point_orders.findOne({ _id: o.orderId }))!,
       };
     }
+
+    it.each([0, 30_000])('completes a delivered demo order with %i VND shipping once', async (fee) => {
+      const config = app.get(ConfigService);
+      const original = config.get<string>('DEMO_SKIP_ENABLED');
+      const originalEnv = process.env.DEMO_SKIP_ENABLED;
+      const selection = await db.c.sale_quote_policy_selection.findOne({ _id: 'DirectSale' });
+      try {
+        if (fee > 0) {
+          await db.c.sale_quote_policy_selection.updateOne(
+            { _id: 'DirectSale' },
+            { $set: { policyCode: 'HCM-DIRECT-v1' } },
+          );
+        }
+        const o = await inTransit(fee);
+        const deliveredAt = new Date(o.doc.dispatchedAt!.getTime() + 60_000);
+        const completedAt = new Date(deliveredAt.getTime() + 60_000);
+        pinClock(completedAt);
+        const delivered = await carrierEvent(
+          o.orderId, o.doc.trackingCode!, 'Delivered', deliveredAt,
+        ).expect(200);
+        const version: number = delivered.body.version;
+        const path = `/point-orders/${o.orderId}/demo-advance`;
+        const complete = (by: Actor, expectedVersion: number, key?: string) =>
+          cmd('post', path, { expectedVersion }, by, key);
+        const key = randomUUID();
+
+        config.set('DEMO_SKIP_ENABLED', 'false');
+        await complete(o.winner, version, key).expect(403);
+        config.set('DEMO_SKIP_ENABLED', 'true');
+        await complete(staff, version, key).expect(403);
+        await complete(o.winner, version - 1).expect(409);
+        const [finished, replay] = await Promise.all([
+          complete(o.winner, version, key).expect(200),
+          complete(o.winner, version, key).expect(200),
+        ]);
+        validates('AuctionCommandReceipt', finished.body);
+        expect(finished.body).toMatchObject({ state: 'Completed', version: version + 1 });
+        expect(replay.body).toEqual(finished.body);
+        expect([finished, replay].filter((r) => r.headers['idempotency-replayed'] === 'true')).toHaveLength(1);
+        await complete(o.winner, version + 1, key).expect(409);
+        await complete(o.winner, version + 1).expect(409);
+        config.set('DEMO_SKIP_ENABLED', 'false');
+        await complete(o.winner, version, key).expect(403);
+
+        expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
+          state: 'Completed',
+          collectedAt: deliveredAt,
+          inspectionDeadline: new Date(deliveredAt.getTime() + 72 * HOUR),
+          closedAt: completedAt,
+          demoInspectionCompletedAt: completedAt,
+        });
+        const journals = await db.c.ledger_journals.find({
+          orderId: o.orderId,
+          type: 'OrderSettlement',
+        }).toArray();
+        expect(journals).toHaveLength(1);
+        expect(await db.c.ledger_entries.findOne({
+          journalId: journals[0]._id,
+          accountId: PLATFORM_COMMISSION_ACCOUNT_ID,
+        })).toMatchObject({ debit: 15_000 + fee, credit: 0 });
+      } finally {
+        if (selection) {
+          await db.c.sale_quote_policy_selection.updateOne(
+            { _id: 'DirectSale' },
+            { $set: { policyCode: selection.policyCode } },
+          );
+        }
+        config.set('DEMO_SKIP_ENABLED', original);
+        if (originalEnv === undefined) delete process.env.DEMO_SKIP_ENABLED;
+        else process.env.DEMO_SKIP_ENABLED = originalEnv;
+        vi.restoreAllMocks();
+      }
+    }, 60000);
+
+    it('lets only the local demo buyer record a dispatched delivery and replays once', async () => {
+      const config = app.get(ConfigService);
+      const original = config.get<string>('DEMO_SKIP_ENABLED');
+      const originalEnv = process.env.DEMO_SKIP_ENABLED;
+      try {
+        const o = await deliveryOrder();
+        const path = `/point-orders/${o.orderId}/demo-deliver`;
+        const startPath = `/point-orders/${o.orderId}/demo-start-delivery`;
+        const demo = (by: Actor, version: number, key?: string) =>
+          cmd('post', path, { expectedVersion: version }, by, key);
+        config.set('DEMO_SKIP_ENABLED', 'true');
+        await demo(o.winner, 2).expect(409);
+        const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+        const acceptedAt = new Date(paid.paidAt!.getTime() + 60_000);
+        await accepted(o, acceptedAt);
+        const dispatchedAt = openAt(acceptedAt);
+        pinClock(dispatchedAt);
+        await dispatch(o.orderId, staff).expect(200);
+        vi.restoreAllMocks();
+        const at = new Date(dispatchedAt.getTime() + 60_000);
+        pinClock(at);
+        config.set('DEMO_SKIP_ENABLED', 'false');
+        await demo(o.winner, 4).expect(403);
+        config.set('DEMO_SKIP_ENABLED', 'true');
+        await demo(o.seller, 4).expect(404);
+        await demo(o.winner, 3).expect(409);
+        await demo(o.winner, 4).expect(409);
+        await cmd('post', startPath, { expectedVersion: 4 }, o.seller).expect(404);
+        const startKey = randomUUID();
+        const started = await cmd('post', startPath, { expectedVersion: 4 }, o.winner, startKey).expect(200);
+        expect(started.body).toMatchObject({ state: 'InTransit', version: 5 });
+        const startReplay = await cmd('post', startPath, { expectedVersion: 4 }, o.winner, startKey).expect(200);
+        expect(startReplay.headers['idempotency-replayed']).toBe('true');
+        await cmd('post', startPath, { expectedVersion: 5 }, o.winner).expect(409);
+        const order = await call('get', `/me/point-orders/${o.orderId}`, o.winner).expect(200);
+        validates('PointOrder', order.body);
+        expect(order.body).toMatchObject({ state: 'InTransit', inspectionDeadline: null });
+        expect(order.body.delivery.demoOutForDeliveryAt).toEqual(expect.any(String));
+        const tracking = await call('get',
+          `/point-orders/delivery-tracking/${order.body.delivery.trackingCode}`, o.winner).expect(200);
+        expect(tracking.body).toMatchObject({ canDemoControl: true, version: 5,
+          demoOutForDeliveryAt: order.body.delivery.demoOutForDeliveryAt });
+        const key = randomUUID();
+        const result = await demo(o.winner, 5, key).expect(200);
+        validates('AuctionCommandReceipt', result.body);
+        expect(result.body).toMatchObject({ state: 'Inspection', version: 6 });
+        const replay = await demo(o.winner, 5, key).expect(200);
+        expect(replay.headers['idempotency-replayed']).toBe('true');
+        expect(replay.body.id).toBe(result.body.id);
+        await demo(o.winner, 6, key).expect(409);
+        config.set('DEMO_SKIP_ENABLED', 'false');
+        await demo(o.winner, 5, key).expect(403);
+        expect(await db.c.point_carrier_events.countDocuments({ orderId: o.orderId })).toBe(1);
+        expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
+          state: 'Inspection',
+          collectedAt: at,
+          inspectionDeadline: new Date(at.getTime() + 72 * HOUR),
+          closedAt: null,
+        });
+      } finally {
+        config.set('DEMO_SKIP_ENABLED', original);
+        if (originalEnv === undefined) delete process.env.DEMO_SKIP_ENABLED;
+        else process.env.DEMO_SKIP_ENABLED = originalEnv;
+        vi.restoreAllMocks();
+      }
+    });
+
+    it('commits only one delivery outcome across the demo buyer and Test Operator', async () => {
+      const config = app.get(ConfigService);
+      const original = config.get<string>('DEMO_SKIP_ENABLED');
+      const originalEnv = process.env.DEMO_SKIP_ENABLED;
+      try {
+        const o = await inTransit();
+        config.set('DEMO_SKIP_ENABLED', 'true');
+        const at = new Date(o.doc.dispatchedAt!.getTime() + 60_000);
+        pinClock(at);
+        await cmd('post', `/point-orders/${o.orderId}/demo-start-delivery`,
+          { expectedVersion: o.doc.version }, o.winner).expect(200);
+        const results = await Promise.all([
+          cmd('post', `/point-orders/${o.orderId}/demo-deliver`, { expectedVersion: o.doc.version + 1 }, o.winner),
+          carrierEvent(o.orderId, o.doc.trackingCode!, 'Delivered', at),
+        ]);
+        expect(results.map((result) => result.status).sort()).toEqual([200, 409]);
+        expect(await db.c.point_carrier_events.countDocuments({ orderId: o.orderId })).toBe(1);
+      } finally {
+        config.set('DEMO_SKIP_ENABLED', original);
+        if (originalEnv === undefined) delete process.env.DEMO_SKIP_ENABLED;
+        else process.env.DEMO_SKIP_ENABLED = originalEnv;
+        vi.restoreAllMocks();
+      }
+    });
 
     it('quotes the fee and pays book price + fee once; bad choices are refused', async () => {
       const winner = await actor();
@@ -4661,6 +4826,43 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const code = moving.trackingCode!;
       const deliveredAt = new Date(at.getTime() + 20 * HOUR);
       pinClock(new Date(deliveredAt.getTime() + 60_000));
+      const trackingPath = '/point-orders/delivery-tracking/';
+      await call('get', trackingPath + code).expect(401);
+      await call('get', trackingPath + code, o.seller).expect(404);
+      await call('get', trackingPath + code, staff).expect(403);
+      await call('get', trackingPath + 'LL-UNKNOWN12345', o.winner).expect(404);
+      const buyerTracking = await call(
+        'get',
+        trackingPath + code.toLowerCase(),
+        o.winner,
+      )
+        .expect('Cache-Control', 'no-store')
+        .expect(200);
+      validates('PointOrderDeliveryTracking', buyerTracking.body);
+      expect(buyerTracking.body).toMatchObject({
+        orderId: o.orderId,
+        trackingCode: code,
+        status: 'InTransit',
+        viewer: 'Buyer',
+        canReport: false,
+      });
+      const operatorTracking = await call(
+        'get',
+        trackingPath + code,
+        operator,
+      ).expect(200);
+      validates('PointOrderDeliveryTracking', operatorTracking.body);
+      expect(operatorTracking.body).toMatchObject({
+        viewer: 'Operator',
+        canReport: true,
+      });
+      await carrierEvent(
+        o.orderId,
+        code,
+        'Delivered',
+        deliveredAt,
+        o.winner,
+      ).expect(403);
       // Only an independent TEST_OPERATOR, with the key equal to the event id.
       await carrierEvent(
         o.orderId,
@@ -4700,6 +4902,14 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         eventId,
       ).expect(200);
       expect(done.body).toMatchObject({ state: 'Inspection' });
+      const arrived = await call('get', trackingPath + code, operator).expect(
+        200,
+      );
+      expect(arrived.body).toMatchObject({
+        status: 'Delivered',
+        canReport: false,
+        outcomeAt: deliveredAt.toISOString(),
+      });
       const replay = await carrierEvent(
         o.orderId,
         code,
@@ -4775,6 +4985,16 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         'Failed',
         failedAt,
       ).expect(200);
+      const tracking = await call(
+        'get',
+        '/point-orders/delivery-tracking/' + o.doc.trackingCode,
+        o.winner,
+      ).expect(200);
+      expect(tracking.body).toMatchObject({
+        status: 'Failed',
+        canReport: false,
+        outcomeAt: failedAt.toISOString(),
+      });
       vi.restoreAllMocks();
       expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject(
         {
