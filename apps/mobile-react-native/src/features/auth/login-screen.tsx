@@ -342,7 +342,7 @@ export function LoginScreen({
             >
               <Pressable
                 onPress={() => {
-                  setEmail("nguyendai@latlai.local");
+                  setEmail("reader1@latlai.local");
                   setPassword("LatLai-Local-2026!");
                 }}
                 style={{
@@ -362,12 +362,12 @@ export function LoginScreen({
                     color: stitchTokens.wine,
                   }}
                 >
-                  Nguyễn Đại
+                  Reader 1 (Nam)
                 </AppText>
               </Pressable>
               <Pressable
                 onPress={() => {
-                  setEmail("nguyentu@latlai.local");
+                  setEmail("reader2@latlai.local");
                   setPassword("LatLai-Local-2026!");
                 }}
                 style={{
@@ -387,7 +387,7 @@ export function LoginScreen({
                     color: stitchTokens.wine,
                   }}
                 >
-                  Nguyễn Tú
+                  Reader 2 (Thư)
                 </AppText>
               </Pressable>
               <Pressable
