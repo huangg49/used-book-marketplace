@@ -64,7 +64,7 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
         gap: space.xs,
         padding: space.md,
         borderRadius: radius.card,
-        backgroundColor: "#FFF8F9",
+        backgroundColor: stitchTokens.roseWarmSurface,
         borderWidth: 1.5,
         borderStyle: "dashed",
         borderColor: stitchTokens.wine,
