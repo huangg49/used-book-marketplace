@@ -1087,18 +1087,19 @@ function ExchangeActionsContent({
                     color={stitchTokens.likeNewGreen}
                   />
                   <AppText style={styles.successNoteText}>
-                    Bạn đã xác nhận kiểm tra sách. Cọc vẫn được giữ đến khi cả
-                    hai hạn kiểm tra kết thúc và không có tranh chấp.
+                    Bạn đã xác nhận nghiệm thu sách. Đang chờ đối tác kiểm tra và
+                    xác nhận để tiền cọc tự động hoàn về ví của cả hai bên.
                   </AppText>
                 </View>
               ) : (
                 <View style={styles.buttonGroup}>
                   <AppText style={styles.hintText}>
-                    Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận sách. Xác nhận
-                    đã kiểm tra không tất toán hoặc hoàn cọc sớm.
+                    Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận sách. Khi cả hai
+                    bên cùng xác nhận nghiệm thu, toàn bộ tiền cọc và tiền bù sẽ
+                    được hoàn tất về ví ngay lập tức.
                   </AppText>
                   <Button
-                    title="Xác nhận đã kiểm tra"
+                    title="Xác nhận nghiệm thu sách"
                     wine
                     busy={isBusy}
                     onPress={() => setConfirmCompleteOpen(true)}
@@ -1114,18 +1115,6 @@ function ExchangeActionsContent({
                     }}
                   />
                 </View>
-              )}
-              {isCompletedByMe && (
-                <Button
-                  title="Báo cáo khiếu nại sách"
-                  secondary
-                  wine
-                  busy={isBusy}
-                  onPress={() => {
-                    setDisputeError(null);
-                    setDisputeModalOpen(true);
-                  }}
-                />
               )}
             </View>
           )}
@@ -1435,9 +1424,9 @@ function ExchangeActionsContent({
 
       <ConfirmDialog
         visible={confirmCompleteOpen}
-        title="Xác nhận đã kiểm tra sách?"
-        message="Xác nhận bạn đã kiểm tra sách. Cọc vẫn được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
-        confirmLabel="Xác nhận đã kiểm tra"
+        title="Xác nhận nghiệm thu & Tất toán?"
+        message="Bạn có chắc chắn đã kiểm tra sách kỹ lưỡng và hài lòng? Sau khi xác nhận, bạn sẽ từ bỏ quyền khiếu nại hay báo sự cố. Khi đối tác cũng xác nhận nghiệm thu, toàn bộ tiền cọc và tiền bù sẽ được hoàn tất và chuyển về ví của cả hai bên ngay lập tức."
+        confirmLabel="Xác nhận nghiệm thu"
         onCancel={() => setConfirmCompleteOpen(false)}
         onConfirm={() => {
           setConfirmCompleteOpen(false);

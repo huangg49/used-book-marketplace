@@ -35,6 +35,7 @@
     "mongo:seed": "tsx src/mongo-seed.ts",
     "mongo:seed-auctions": "nest build && node dist/seed-auction-demo.js",
     "mongo:seed-exchange": "tsx src/seed-exchange-data.ts",
+    "mongo:seed-exchange-pair": "nest build && node dist/seed-exchange-pair.js",
     "mongo:seed-preferences": "tsx src/seed-exchange-preferences.ts",
     "price-refs:import": "tsx src/price-refs-import.ts",
     "eval:price": "tsx eval/price-assist/run.ts",
