@@ -89,9 +89,11 @@ export function StartConversationPage() {
     }
     started.current = true;
     let disposed = false;
+    const openChatParam = params.get("openChat") === "1" ? "?openChat=1" : "";
     run()
       .then((id) => {
-        if (!disposed && id) navigate(`/chat/${id}`, { replace: true });
+        if (!disposed && id)
+          navigate(`/chat/${id}${openChatParam}`, { replace: true });
       })
       .catch((e) => {
         if (disposed) return;

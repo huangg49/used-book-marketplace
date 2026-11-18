@@ -349,6 +349,7 @@ try{
  await p.locator('#chat-message').fill('Nội dung giữ nguyên khi mất xác nhận.');await p.getByRole('button',{name:'Gửi tin nhắn',exact:true}).click();await p.getByText('Chưa xác nhận được tin nhắn đã gửi. Thử lại sẽ gửi cùng tin này.',{exact:true}).waitFor({timeout:20000});
  assert.equal(await p.locator('#chat-message').inputValue(),'Nội dung giữ nguyên khi mất xác nhận.');await p.getByRole('button',{name:'Thử gửi lại tin nhắn',exact:true}).click();await p.waitForFunction(()=>document.getElementById('chat-message').value==='');assert.equal(sent.length,2);assert.deepEqual(sent[0],sent[1]);assert.equal(messages.length,1);
  const sellerPage=await makePage('seller');
+ await p.locator('summary').filter({ hasText: /đề nghị giá/i }).click();
  await p.getByLabel('Đề nghị giá sách mong muốn (₫):',{exact:true}).fill('75000');await p.getByRole('button',{name:'Gửi đề nghị',exact:true}).click();await p.getByRole('button',{name:'Thử lại thao tác trước',exact:true}).waitFor();
  assert.equal(await p.getByLabel('Đề nghị giá sách mong muốn (₫):',{exact:true}).inputValue(),'75000');await p.getByRole('button',{name:'Thử lại thao tác trước',exact:true}).click();await refresh(sellerPage);await sellerPage.getByRole('button',{name:'Chấp nhận giá này',exact:true}).click();await refresh(p);assert.equal(room.terms.agreedPrice,75000);assert.deepEqual(termsCommands[0],termsCommands[1]);
  await sellerPage.getByRole('button',{name:'Đề nghị giá khác',exact:true}).click();await sellerPage.getByLabel('Đề nghị mức giá mới (₫):',{exact:true}).fill('76000');await sellerPage.getByRole('button',{name:'Giữ nguyên giá đã thống nhất',exact:true}).click();assert.equal(await sellerPage.getByLabel('Đề nghị mức giá mới (₫):',{exact:true}).count(),0);assert.equal(room.terms.agreedPrice,75000,'closing edit does not alter agreed price');
@@ -358,6 +359,7 @@ try{
  await captures(sellerPage,'exchange-linked-sheet');
  await p.getByRole('button',{name:'Hủy đề nghị',exact:true}).first().click();await p.getByRole('alertdialog').getByRole('button',{name:'Hủy đề nghị',exact:true}).click();await refresh(sellerPage);await refresh(p);
  await sellerPage.getByRole('button',{name:'Thương lượng mua',exact:true}).click();await refresh(p);await p.getByRole('button',{name:'Chấp nhận hình thức',exact:true}).click();await refresh(sellerPage);
+ await p.locator('summary').filter({ hasText: /đề nghị giá/i }).click();
  await p.getByLabel('Đề nghị giá sách mong muốn (₫):',{exact:true}).fill('75000');await p.getByRole('button',{name:'Gửi đề nghị',exact:true}).click();await refresh(sellerPage);await sellerPage.getByRole('button',{name:'Chấp nhận giá này',exact:true}).click();await refresh(p);
  room.hasQuote=true;room.quotePreview=quote();room.version++;await refresh(p);await p.getByRole('heading',{name:'Đã gửi thông tin nhận sách',exact:true}).waitFor();await captures(p,'buyer-address-sent');
  await refresh(sellerPage);await sellerPage.getByRole('button',{name:'Tạo đơn cho người mua này',exact:true}).waitFor();await captures(sellerPage,'seller-ready');
@@ -380,13 +382,13 @@ try{
    transition.finished.then(()=>record.finished=true);return transition;
   };
  });
- await p.getByRole('button',{name:'Bạn hỏi mua / đổi',exact:true}).click();
+ if (await p.getByRole('button',{name:'Bạn hỏi mua / đổi',exact:true}).count()) await p.getByRole('button',{name:'Bạn hỏi mua / đổi',exact:true}).click();
  await p.getByRole('link',{name:'Mở cuộc trao đổi',exact:true}).click();
  await p.waitForFunction(()=>window.__chatTransitions[0]?.finished);
  let transitionEvidence=await p.evaluate(()=>window.__chatTransitions[0]);assert.equal(transitionEvidence.error,undefined);assert.ok(transitionEvidence.old.includes('chat-panel'));assert.ok(transitionEvidence.next.includes('chat-panel'));assert.ok(transitionEvidence.durations.includes(420));
  await p.getByRole('link',{name:'Về danh sách hội thoại',exact:true}).click();
  await p.waitForFunction(()=>window.__chatTransitions[1]?.finished);
- assert.equal(await p.getByRole('button',{name:'Bạn hỏi mua / đổi',exact:true}).getAttribute('aria-pressed'),'true');
+ if (await p.getByRole('button',{name:'Bạn hỏi mua / đổi',exact:true}).count()) assert.equal(await p.getByRole('button',{name:'Bạn hỏi mua / đổi',exact:true}).getAttribute('aria-pressed'),'true');
  transitionEvidence=await p.evaluate(()=>window.__chatTransitions[1]);assert.equal(transitionEvidence.error,undefined);assert.ok(transitionEvidence.durations.includes(340));
  await p.emulateMedia({reducedMotion:'reduce'});await p.setViewportSize({width:320,height:844});await p.evaluate(()=>document.documentElement.style.fontSize='130%');
  await p.getByRole('link',{name:'Mở cuộc trao đổi',exact:true}).click();await p.waitForFunction(()=>window.__chatTransitions[2]?.finished);

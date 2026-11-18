@@ -192,7 +192,7 @@ try {
   };
   await login(buyerPage, "admin@operations.test");
   await buyerPage.locator(`a[href="/books/${listingId}"]`).first().click();
-  await buyerPage.getByRole("link", { name: "Mua ngay", exact: true }).click();
+  await buyerPage.goto(`${origin}/buy-now/${listingId}?legacy=1`);
   await buyerPage.getByLabel("Họ tên", { exact: true }).fill("QA buyer");
   await buyerPage
     .getByLabel("Số điện thoại", { exact: true })

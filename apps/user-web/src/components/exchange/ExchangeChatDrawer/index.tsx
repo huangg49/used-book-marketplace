@@ -23,12 +23,21 @@ function readMarker(key: string): Marker | null {
   return null;
 }
 
-export function ExchangeChatDrawer({ viewerId, exchangeId, transactionCode, partnerName, latest, children }: {
+export function ExchangeChatDrawer({
+  viewerId,
+  exchangeId,
+  transactionCode,
+  partnerName,
+  latest,
+  defaultOpen = false,
+  children,
+}: {
   viewerId: string;
   exchangeId: string;
   transactionCode: string;
   partnerName: string;
   latest: ChatMessage[];
+  defaultOpen?: boolean;
   children: (open: boolean) => ReactNode;
 }) {
   const titleId = useId();
@@ -38,9 +47,16 @@ export function ExchangeChatDrawer({ viewerId, exchangeId, transactionCode, part
   const trigger = useRef<HTMLButtonElement>(null);
   const storageKey = `latlai:exchange-chat-seen:${viewerId}:${exchangeId}`;
   const [seen, setSeen] = useState(() => readMarker(storageKey));
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [closing, setClosing] = useState(false);
   const last = latest.at(-1);
+
+  useEffect(() => {
+    if (defaultOpen && dialogRef.current && !dialogRef.current.open) {
+      dialogRef.current.showModal();
+      setOpen(true);
+    }
+  }, [defaultOpen]);
 
   useEffect(() => {
     if (!open || !last || !isNewer(last, seen)) return;

@@ -1,11 +1,10 @@
 import { BundleManifest } from "../components/BookBundle";
-import {AddToCart} from '../components/AddToCart';
 import {SupportLink} from '../features/support/SupportLink';
 import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ArrowLeftRight, ShoppingBag, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
@@ -132,7 +131,9 @@ export function BookDetailPage() {
   );
   const conversationToOpen =
     buyerOrderConversation ?? sellerOrderConversation ?? activeConversation;
-  function requestPurchase() { navigate(`/chat/start/${book.id}?intent=Negotiation`); }
+  function requestPurchase() {
+    navigate(`/chat/start/${book.id}?intent=Negotiation&openChat=1`);
+  }
   return (
     <div className={styles.page} data-book-detail="true">
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -154,193 +155,209 @@ export function BookDetailPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         >
-          <h1>{listingTitle(book)}</h1>
-          <BundleManifest bundle={book.bundle} />
-          <p className={styles.author}>
-            Tác giả: {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-          </p>
+          <div className={styles.bookCard}>
+            <h1>{listingTitle(book)}</h1>
+            <BundleManifest bundle={book.bundle} />
+            <p className={styles.author}>
+              Tác giả: {book.book.authors.join(", ") || "Chưa rõ tác giả"}
+            </p>
 
-          <div className={styles.labels}>
-            <span className={styles.conditionLabel}>Người bán mô tả: {conditions[book.condition]}</span>
-            <span>
-              {book.mode === "Sale"
-                ? "Đăng bán"
-                : book.mode === "Exchange"
-                  ? "Trao đổi"
-                  : "Bán hoặc đổi"}
-            </span>
-            {held && (
+            <div className={styles.labels}>
+              <span className={styles.conditionLabel}>Người bán mô tả: {conditions[book.condition]}</span>
               <span>
-                {buyerOrderConversation && book.purchaseAvailability.status === "InTransaction"
-                  ? "Đang giao dịch với bạn"
-                  : heldLabel}
+                {book.mode === "Sale"
+                  ? "Đăng bán"
+                  : book.mode === "Exchange"
+                    ? "Trao đổi"
+                    : "Bán hoặc đổi"}
               </span>
-            )}
-          </div>
-          <p className={styles.conditionSummary}>
-            <BookOpen size={18} aria-hidden="true" />
-            {book.hasMissingPages
-              ? "Có trang thiếu — xem mô tả và ảnh trước khi mua."
-              : "Người bán khai báo sách không thiếu trang."}
-            <a href="#book-condition">Xem tình trạng</a>
-          </p>
-          <div className={styles.prices}>
-            {book.salePrice !== null && (
-              <div className={styles.priceCard}>
-                <span className={styles.priceLabel}>{book.bundle ? "GIÁ CẢ BỘ" : "GIÁ BÁN"}</span>
-                <strong>{formatVnd(book.salePrice)}</strong>
-              </div>
-            )}
-            {book.exchangeValue !== null && (
-              <div className={styles.exchangePriceCard}>
-                <span className={styles.priceLabel}>GIÁ TRỊ ĐỔI</span>
-                <strong>{formatVnd(book.exchangeValue)}</strong>
-                <span className={styles.priceHint}>Dùng để tính tiền bù</span>
-              </div>
-            )}
-          </div>
-          <section className={styles.sellerCard} aria-label="Thông tin người đăng">
-            <div className={styles.sellerAvatar} aria-hidden="true">
-              {book.seller.displayName.trim().slice(0, 1).toLocaleUpperCase("vi-VN") || "?"}
-            </div>
-            <div className={styles.sellerCardInfo}>
-              <span className={styles.sellerCardMeta}>Người đăng sách</span>
-              <strong>{book.seller.displayName}</strong>
-            </div>
-            {isOwner ? <span className={styles.ownerLabel}>Bài của bạn</span> : (
-              <Link className={styles.sellerProfile} to={`/members/${book.seller.id}`}>
-                Xem hồ sơ <ArrowUpRight size={16} aria-hidden="true" />
-              </Link>
-            )}
-          </section>
-          {book.salePrice !== null && (
-            <section className={styles.purchase}>
-              <h2>
-                {buyerOrderConversation
-                  ? "Người bán đã tạo đơn cho bạn"
-                  : sellerOrderConversation
-                    ? "Bạn đã tạo đơn cho người mua"
-                    : isOwner
-                  ? "Đây là bài đăng của bạn"
-                  : held
-                    ? heldLabel
-                    : "Chọn cách mua"}
-              </h2>
-              <p>
-                {buyerOrderConversation
-                  ? "Đơn hàng này dành cho bạn. Mở đơn để xem giá đã thỏa thuận và xác nhận thanh toán."
-                  : sellerOrderConversation
-                    ? "Bạn đã tạo đơn cho người mua này. Mở hội thoại để xem thông tin đơn hàng."
-                    : isOwner
-                  ? "Người mua có thể mua ngay theo giá niêm yết hoặc nhắn bạn để thương lượng. Đơn Mua ngay đã thanh toán sẽ chuyển thẳng sang chuẩn bị gửi."
-                  : held
-                    ? "Bản sách này đã có đơn giữ chỗ. Bạn vẫn có thể xem bài đăng nhưng chưa thể đặt mua."
-                    : "Mua theo giá niêm yết hoặc nhắn người bán để trao đổi thêm."}
-              </p>
-              <div className={styles.actionRow}>
-                {!isOwner && !held && (
-                  <Link className={styles.primary} to={`/buy-now/${book.id}`}>{book.bundle ? "Mua cả bộ" : "Mua ngay"} <ArrowUpRight size={18} aria-hidden="true" /></Link>
-                )}
-              </div>
-              {held && !orderConversation && state.status === 'authenticated' && (
-                <Link className={styles.secondary} to="/orders">Xem đơn hàng của tôi</Link>
+              {held && (
+                <span>
+                  {buyerOrderConversation && book.purchaseAvailability.status === "InTransaction"
+                    ? "Đang giao dịch với bạn"
+                    : heldLabel}
+                </span>
               )}
-              <div className={styles.secondaryActions}>
-              {!isOwner && !held && (
-                <AddToCart
-                  key={state.status === "authenticated" ? state.user.id : "anonymous"}
-                  listingId={book.id}
-                  listingVersion={book.version}
-                  disabled={detail.isFetching || detail.isError}
-                />
+            </div>
+            <p className={styles.conditionSummary}>
+              <BookOpen size={18} aria-hidden="true" />
+              {book.hasMissingPages
+                ? "Có trang thiếu — xem mô tả và ảnh trước khi mua."
+                : "Người bán khai báo sách không thiếu trang."}
+              <a href="#book-condition">Xem tình trạng</a>
+            </p>
+            <div className={styles.prices}>
+              {book.salePrice !== null && (
+                <div className={styles.priceCard}>
+                  <span className={styles.priceLabel}>{book.bundle ? "GIÁ CẢ BỘ" : "GIÁ BÁN"}</span>
+                  <strong>{formatVnd(book.salePrice)}</strong>
+                </div>
               )}
-              {conversationToOpen ? (
-                <Link
-                  className={styles.secondary}
-                  to={ROUTES.chat(conversationToOpen.id)}
-                >
-                  <MessageCircle size={18} aria-hidden="true" />
+              {book.exchangeValue !== null && (
+                <div className={styles.exchangePriceCard}>
+                  <span className={styles.priceLabel}>GIÁ TRỊ ĐỔI</span>
+                  <strong>{formatVnd(book.exchangeValue)}</strong>
+                  <span className={styles.priceHint}>Dùng để tính tiền bù</span>
+                </div>
+              )}
+            </div>
+            <section className={styles.sellerCard} aria-label="Thông tin người đăng">
+              <div className={styles.sellerAvatar} aria-hidden="true">
+                {book.seller.displayName.trim().slice(0, 1).toLocaleUpperCase("vi-VN") || "?"}
+              </div>
+              <div className={styles.sellerCardInfo}>
+                <span className={styles.sellerCardMeta}>Người đăng sách</span>
+                <strong>{book.seller.displayName}</strong>
+              </div>
+              {isOwner ? <span className={styles.ownerLabel}>Bài của bạn</span> : (
+                <Link className={styles.sellerProfile} to={`/members/${book.seller.id}`}>
+                  Xem hồ sơ <ArrowUpRight size={16} aria-hidden="true" />
+                </Link>
+              )}
+            </section>
+            {(book.salePrice !== null || ["Exchange", "Both"].includes(book.mode)) && (
+              <section className={styles.purchaseSection} aria-labelledby="purchase-heading">
+                <h2 id="purchase-heading" className={styles.purchaseSectionTitle}>
                   {buyerOrderConversation
-                    ? "Xem đơn hàng của bạn"
+                    ? "Người bán đã tạo đơn cho bạn"
                     : sellerOrderConversation
-                      ? "Mở hội thoại giao dịch"
+                      ? "Bạn đã tạo đơn cho người mua"
                       : isOwner
-                        ? "Mở chat với người mua"
-                        : "Mở chat với người bán"}
-                </Link>
-              ) : (
-                !isOwner && (
-                  <button
-                    type="button"
-                    className={styles.secondary}
-                    disabled={
-                      held ||
-                      detail.isFetching ||
-                      detail.isError ||
-                      state.status === "loading"
-                    }
-                    onClick={requestPurchase}
-                  >
-                    {held ? heldLabel : "Chat với người bán"}
-                    <ArrowUpRight size={18} aria-hidden="true" />
-                  </button>
-                )
+                    ? "Đây là bài đăng của bạn"
+                    : held
+                      ? heldLabel
+                      : "Chọn cách mua"}
+                </h2>
+                <p className={styles.purchaseSectionSubtitle}>
+                  {buyerOrderConversation
+                    ? "Đơn hàng này dành cho bạn. Mở đơn để xem giá đã thỏa thuận và xác nhận thanh toán."
+                    : sellerOrderConversation
+                      ? "Bạn đã tạo đơn cho người mua này. Mở hội thoại để xem thông tin đơn hàng."
+                      : isOwner
+                    ? "Người mua có thể mua ngay theo giá niêm yết hoặc nhắn bạn để thương lượng. Đơn Mua ngay đã thanh toán sẽ chuyển thẳng sang chuẩn bị gửi."
+                    : held
+                      ? "Bản sách này đã có đơn giữ chỗ. Bạn vẫn có thể xem bài đăng nhưng chưa thể đặt mua."
+                      : "Mua theo giá niêm yết hoặc nhắn người bán để trao đổi thêm."}
+                </p>
+              {book.salePrice !== null && (
+                <div className={styles.actionRow}>
+                  {!isOwner && !held && (
+                    <Link
+                      className={styles.primary}
+                      to={
+                        conversationToOpen
+                          ? ROUTES.chat(conversationToOpen.id)
+                          : `/chat/start/${book.id}?intent=Negotiation`
+                      }
+                    >
+                      <ShoppingBag size={18} aria-hidden="true" />
+                      {book.bundle ? "Mua cả bộ" : "Mua ngay"}
+                      <ArrowUpRight size={18} aria-hidden="true" />
+                    </Link>
+                  )}
+                  {conversationToOpen ? (
+                    <Link
+                      className={styles.secondary}
+                      to={`${ROUTES.chat(conversationToOpen.id)}?openChat=1`}
+                    >
+                      <MessageCircle size={18} aria-hidden="true" />
+                      {buyerOrderConversation
+                        ? "Xem đơn hàng của bạn"
+                        : sellerOrderConversation
+                          ? "Mở hội thoại giao dịch"
+                          : isOwner
+                            ? "Mở chat với người mua"
+                            : "Mở chat với người bán"}
+                      <ArrowUpRight size={18} aria-hidden="true" />
+                    </Link>
+                  ) : (
+                    !isOwner && (
+                      <button
+                        type="button"
+                        className={styles.secondary}
+                        disabled={
+                          held ||
+                          detail.isFetching ||
+                          detail.isError ||
+                          state.status === "loading"
+                        }
+                        onClick={requestPurchase}
+                      >
+                        <MessageCircle size={18} aria-hidden="true" />
+                        {held ? heldLabel : "Chat với người bán"}
+                        <ArrowUpRight size={18} aria-hidden="true" />
+                      </button>
+                    )
+                  )}
+                </div>
               )}
-              </div>
-              {!isOwner && !held && (
-                <p className={styles.purchaseHint}>Thêm giỏ hoặc nhắn tin chưa giữ chỗ cho bản sách.</p>
+              {held && !orderConversation && state.status === 'authenticated' && (
+                <Link className={styles.secondary} to="/orders">
+                  <ShoppingBag size={18} aria-hidden="true" />
+                  Xem đơn hàng của tôi
+                  <ArrowUpRight size={18} aria-hidden="true" />
+                </Link>
+              )}
+              {book.salePrice !== null && ["Exchange", "Both"].includes(book.mode) && (
+                <div className={styles.actionDivider} aria-hidden="true">
+                  <span className={styles.dividerDot} />
+                </div>
+              )}
+              {["Exchange", "Both"].includes(book.mode) && (
+                <>
+                  {!isOwner && !book.bundle && (!held || (book.purchaseAvailability.status === "InNegotiation" && activeConversation)) && (
+                    <Link className={book.salePrice === null ? styles.primary : styles.secondary} to={ROUTES.exchangeCompose(book.id)}>
+                      <ArrowLeftRight size={18} aria-hidden="true" />
+                      Đề nghị đổi sách
+                      <ArrowUpRight size={18} aria-hidden="true" />
+                    </Link>
+                  )}
+                  {book.exchangePreferences &&
+                    (book.exchangePreferences.targetCategory ||
+                      book.exchangePreferences.targetAuthor ||
+                      book.exchangePreferences.targetDescription) && (
+                      <div className={styles.exchangePreferences}>
+                        <h3><BookOpen size={18} aria-hidden="true" />Tiêu chí đổi sách của người đăng</h3>
+                        {book.exchangePreferences.targetCategory && (
+                          <p><strong>Thể loại:</strong>{" "}
+                            <Link to={searchUrl({ data: "live", q: book.exchangePreferences.targetCategory })}>
+                              {book.exchangePreferences.targetCategory}
+                            </Link>
+                          </p>
+                        )}
+                        {book.exchangePreferences.targetAuthor && (
+                          <p><strong>Tác giả:</strong>{" "}
+                            <Link to={searchUrl({ data: "live", q: book.exchangePreferences.targetAuthor })}>
+                              {book.exchangePreferences.targetAuthor}
+                            </Link>
+                          </p>
+                        )}
+                        {book.exchangePreferences.targetDescription && (
+                          <p><strong>Ghi chú:</strong> {book.exchangePreferences.targetDescription}</p>
+                        )}
+                        {isOwner && (
+                          <Link className={styles.exchangeSearch} to={searchUrl({
+                            data: "live",
+                            q: book.exchangePreferences.targetAuthor || book.exchangePreferences.targetCategory || "",
+                          })}>
+                            Tìm sách theo mong muốn <ArrowUpRight size={16} aria-hidden="true" />
+                          </Link>
+                        )}
+                      </div>
+                    )}
+                  {held && !isOwner && !activeConversation && <p className={styles.exchangeNote}>Bản sách đang được giữ cho giao dịch hiện tại.</p>}
+                  {isOwner ? (
+                    <Link className={styles.primary} to={ROUTES.exchangeMine}>
+                      <ArrowLeftRight size={18} aria-hidden="true" />
+                      Trao đổi của tôi
+                      <ArrowUpRight size={18} aria-hidden="true" />
+                    </Link>
+                  ) : null}
+                </>
               )}
             </section>
           )}
-          {["Exchange", "Both"].includes(book.mode) && (
-            <section className={styles.purchase}>
-              <h2>Đổi sách</h2>
-              {!isOwner && !book.bundle && (!held || (book.purchaseAvailability.status === "InNegotiation" && activeConversation)) && (
-                <Link className={book.salePrice === null ? styles.primary : styles.secondary} to={ROUTES.exchangeCompose(book.id)}>
-                  Đề nghị đổi sách <ArrowUpRight size={18} aria-hidden="true" />
-                </Link>
-              )}
-              {book.exchangePreferences &&
-                (book.exchangePreferences.targetCategory ||
-                  book.exchangePreferences.targetAuthor ||
-                  book.exchangePreferences.targetDescription) && (
-                  <div className={styles.exchangePreferences}>
-                    <h3><BookOpen size={18} aria-hidden="true" />Tiêu chí đổi sách của người đăng</h3>
-                    {book.exchangePreferences.targetCategory && (
-                      <p><strong>Thể loại:</strong>{" "}
-                        <Link to={searchUrl({ data: "live", q: book.exchangePreferences.targetCategory })}>
-                          {book.exchangePreferences.targetCategory}
-                        </Link>
-                      </p>
-                    )}
-                    {book.exchangePreferences.targetAuthor && (
-                      <p><strong>Tác giả:</strong>{" "}
-                        <Link to={searchUrl({ data: "live", q: book.exchangePreferences.targetAuthor })}>
-                          {book.exchangePreferences.targetAuthor}
-                        </Link>
-                      </p>
-                    )}
-                    {book.exchangePreferences.targetDescription && (
-                      <p><strong>Ghi chú:</strong> {book.exchangePreferences.targetDescription}</p>
-                    )}
-                    {isOwner && (
-                      <Link className={styles.exchangeSearch} to={searchUrl({
-                        data: "live",
-                        q: book.exchangePreferences.targetAuthor || book.exchangePreferences.targetCategory || "",
-                      })}>
-                        Tìm sách theo mong muốn <ArrowUpRight size={16} aria-hidden="true" />
-                      </Link>
-                    )}
-                  </div>
-                )}
-              {held && !isOwner && !activeConversation && <p className={styles.exchangeNote}>Bản sách đang được giữ cho giao dịch hiện tại.</p>}
-              {isOwner ? (
-                <Link className={styles.primary} to={ROUTES.exchangeMine}>
-                  Trao đổi của tôi
-                </Link>
-              ) : null}
-            </section>
-          )}
+          </div>
           <div className={styles.report}><SupportLink type="Listing" id={book.id} report /></div>
         </motion.article>
       </div>

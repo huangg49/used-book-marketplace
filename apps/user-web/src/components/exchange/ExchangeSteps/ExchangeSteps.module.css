@@ -66,9 +66,9 @@ button.step:hover {
 }
 
 .steps [data-completed] .marker {
-    border-color: transparent;
-    background-color: color-mix(in srgb, var(--step-complete) 9%, var(--shop-paper));
-    color: var(--step-complete);
+    border: 1.5px solid #27a844;
+    background-color: #eaf8ed;
+    color: #156633;
 }
 
 .steps [data-current] .step {

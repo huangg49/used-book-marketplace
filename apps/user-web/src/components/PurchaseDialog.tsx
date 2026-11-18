@@ -44,6 +44,7 @@ export function PurchaseDialog({
       ref.current?.scrollTo({ top: 0 });
     }
   }, [open, title]);
+  if (typeof document === "undefined") return null;
   return createPortal(
     <dialog
       ref={ref}

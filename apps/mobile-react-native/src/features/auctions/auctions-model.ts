@@ -4,6 +4,7 @@ import { formatVnd } from "../../core/ui/format";
 import {
   auctionReceipt,
   codeIssued,
+  demoSkipStatus,
   myAuctionPage,
   participation,
   pointOrder,
@@ -767,4 +768,34 @@ export function createScheduleCommand(
     body: JSON.stringify(body),
     key,
   };
+}
+
+export function getDemoSkipStatus(client: Pick<SessionClient, "request">) {
+  return client.request("/demo/skip", demoSkipStatus);
+}
+
+export function advanceDemoAuction(
+  client: Pick<SessionClient, "request">,
+  id: string,
+  expectedVersion: number,
+  key: string,
+) {
+  return client.request(`/auctions/${id}/demo-advance`, auctionReceipt, {
+    method: "POST",
+    body: JSON.stringify({ expectedVersion }),
+    headers: { "Idempotency-Key": key },
+  });
+}
+
+export function advanceDemoPointOrder(
+  client: Pick<SessionClient, "request">,
+  orderId: string,
+  expectedVersion: number,
+  key: string,
+) {
+  return client.request(`/point-orders/${orderId}/demo-advance`, auctionReceipt, {
+    method: "POST",
+    body: JSON.stringify({ expectedVersion }),
+    headers: { "Idempotency-Key": key },
+  });
 }

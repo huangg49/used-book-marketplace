@@ -262,7 +262,7 @@ function CartContent({ owner }: { owner: string }) {
                         {item.canBuy && !disabled && !result.error ? (
                           <Link
                             className={styles.buyNowButton}
-                            to={`/buy-now/${item.listingId}`}
+                            to={`/chat/start/${item.listingId}?intent=Negotiation`}
                           >
                             <span>Mua bài đăng này</span>
                             <ArrowRight size={14} aria-hidden="true" />

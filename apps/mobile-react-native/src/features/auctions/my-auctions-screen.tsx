@@ -22,9 +22,11 @@ import {
 import { MemberNavigation } from "../navigation/member-navigation";
 import {
   AUCTION_MIN_BIDDERS_FLOOR,
+  advanceDemoAuction,
   canReschedule,
   closeReasonText,
   formatRemaining,
+  isOpen,
   isSealedFormat,
   isScheduled,
   myAuctionsOptions,
@@ -39,6 +41,7 @@ import {
   ScheduleAuctionSheet,
 } from "./components";
 import { AuctionCover } from "./components/auction-cover";
+import { DemoSkipButton } from "./components/demo-skip-button";
 import { MyAuctionsBackground } from "./components/my-auctions-background";
 import type { MyAuctionItem } from "./contracts";
 
@@ -448,8 +451,11 @@ function Row({
   now: number;
   onEdit: () => void;
 }) {
+  const { client } = useSession();
+  const queryClient = useQueryClient();
   const { auction } = item;
   const scheduled = isScheduled(auction, now);
+  const open = isOpen(auction, now);
   const waiting = waitingTime(auction, now);
   const formatType = auction.auctionType ?? "English";
   const isDutch = formatType === "Dutch";
@@ -719,6 +725,18 @@ function Row({
           onPress={() =>
             router.push({ pathname: "/auction", params: { id: auction.id } })
           }
+        />
+      )}
+      {auction.version != null && (scheduled || open) && (
+        <DemoSkipButton
+          label={scheduled ? "Mở phiên ngay · Demo" : "Kết thúc phiên ngay · Demo"}
+          note={
+            scheduled
+              ? "Bỏ qua giờ hẹn mở. Phiên chỉ mở khi đã đủ người đăng ký tối thiểu."
+              : "Chốt phiên ngay; hệ thống chọn người thắng và tạo đơn như khi hết giờ."
+          }
+          run={(key) => advanceDemoAuction(client, auction.id, auction.version!, key)}
+          onDone={() => queryClient.invalidateQueries({ queryKey: ["my-auctions"] })}
         />
       )}
     </Pressable>

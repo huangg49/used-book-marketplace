@@ -972,6 +972,24 @@ export function AccountScreen() {
                     <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
                   </Pressable>
 
+                  {/* Trung tâm hỗ trợ */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Trung tâm hỗ trợ"
+                    onPress={() => router.push("./support")}
+                    style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="shield" size={17} color={stitchTokens.wine} />
+                      </View>
+                      <AppText kind="bold" style={styles.menuTitleText}>
+                        Trung tâm hỗ trợ
+                      </AppText>
+                    </View>
+                    <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                  </Pressable>
+
                   {/* Hồ sơ cá nhân & Bảo mật */}
                   <Pressable
                     accessibilityRole="button"

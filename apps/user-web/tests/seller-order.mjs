@@ -202,6 +202,7 @@ try {
     (await fixture.db.collection("listings").findOne({ _id: listingId })).trade,
     "Available",
   );
+  await buyerPage.locator("summary").filter({ hasText: /đề nghị giá/i }).click();
   await buyerPage.getByLabel("Đề nghị giá sách mong muốn (₫):", { exact: true }).fill("90000");
   await buyerPage.getByRole("button", { name: "Gửi đề nghị", exact: true }).click();
   await buyerPage.getByRole("button", { name: "Rút đề nghị", exact: true }).waitFor();

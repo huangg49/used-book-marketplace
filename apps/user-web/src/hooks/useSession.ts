@@ -3,7 +3,11 @@ import { session } from '../lib/session';
 
 /** Trả về SessionState hiện tại, reactive với mọi thay đổi phiên. */
 export function useSession() {
-  return useSyncExternalStore(session.subscribe, session.getSnapshot);
+  return useSyncExternalStore(
+    session.subscribe,
+    session.getSnapshot,
+    session.getSnapshot,
+  );
 }
 
 /** Trả về true nếu user đã đăng nhập thành công. */

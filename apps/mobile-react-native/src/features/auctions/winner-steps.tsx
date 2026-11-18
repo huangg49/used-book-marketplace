@@ -26,6 +26,7 @@ import {
   POINT_HOURS,
   POINT_HOURS_LABEL,
   pointReopensAt,
+  advanceDemoPointOrder,
   auctionErrorText,
   createOrderCommand,
   formatRemaining,
@@ -37,6 +38,7 @@ import {
   type OrderCommand,
   type OrderStep,
 } from "./auctions-model";
+import { DemoSkipButton } from "./components/demo-skip-button";
 import { addressBook } from "../addresses/contracts";
 import { deliveryQuote, type CodeIssued, type PointOrder } from "./contracts";
 
@@ -174,6 +176,14 @@ export function WinnerSteps({ orderId, boughtNow, paused = false }: { orderId: s
           )}
           {["Inspection","Completed"].includes(o.state) && <ReviewEntry type="PointOrder" id={o.id} version={o.version} />}
           {o.state === "Inspection" && <Claim order={o} locked={locked} ask={ask} />}
+          {o.state === "Inspection" && (
+            <DemoSkipButton
+              label="Hoàn tất kiểm tra ngay · Demo"
+              note="Kết thúc thời hạn kiểm tra và giải ngân theo biên bản, như khi hết 72 giờ."
+              run={(key) => advanceDemoPointOrder(client, o.id, o.version, key)}
+              onDone={() => queryClient.invalidateQueries({ queryKey: pointOrderKey(orderId) })}
+            />
+          )}
         </>
       )}
       <ConfirmDialog

@@ -1,25 +1,22 @@
 import { NegotiationWorkspace } from "./NegotiationWorkspace";
 import { ConversationInbox } from "../components/conversation/ConversationInbox";
-import { ConversationBookIdentity } from "../components/conversation/ConversationBookIdentity";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
 import {
   useConversationTransition,
   useInboxPosition,
 } from "../components/conversation/conversation-navigation";
-import { OrderDetails } from "./OrderDetails";
-import { SupportLink } from "../features/support/SupportLink";
 import sheet from "../components/conversation/Conversation.module.css";
 import {
   getPurchaseConversation,
   getConversationEvents,
   type ConversationEvent,
 } from "../services/purchase-conversations";
-import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, chatSendWasRateLimited, clipChatMessage } from "@used-books/session-client";
 import { z } from "zod";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeftRight, ArrowUp, ArrowUpRight, Clock3, Gavel, RefreshCw, Send } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
@@ -36,8 +33,10 @@ import { createSellerOrder } from "../services/purchase-conversations";
 import { purchaseChatGuidance } from "../lib/purchase-chat-guidance";
 import { ROUTES, formatVnd } from "../lib/routes";
 import { PurchaseDialog } from "../components/PurchaseDialog";
+import { ExchangeChatDrawer } from "../components/exchange/ExchangeChatDrawer";
 import flow from "./PurchaseFlow.module.css";
 import styles from "./ChatPage.module.css";
+import exchangeStyles from "./ExchangeDetailPage.module.css";
 import { getExchanges, type Exchange } from "../services/exchange";
 import { auctionPhase, listMyAuctions, type MyAuctionItem } from "../services/auctions";
 import { AuctionPhoto } from "../components/AuctionGallery";
@@ -76,20 +75,6 @@ const ChatMessage = memo(function ChatMessage({ message, sender, own }: {
   );
 });
 
-const compactHeaderQuery = "(max-width: 960px)";
-function subscribeHeaderLayout(notify: () => void) {
-  const media = window.matchMedia(compactHeaderQuery);
-  media.addEventListener("change", notify);
-  return () => media.removeEventListener("change", notify);
-}
-function useCompactHeader() {
-  return useSyncExternalStore(
-    subscribeHeaderLayout,
-    () => window.matchMedia(compactHeaderQuery).matches,
-    () => false,
-  );
-}
-
 function ChatRoom({
   room,
   userId,
@@ -100,6 +85,10 @@ function ChatRoom({
   refreshRooms: () => void;
 }) {
   const other = room.buyer.id === userId ? room.seller : room.buyer;
+  const [searchParams] = useSearchParams();
+  const shouldOpenChat =
+    searchParams.get("openChat") === "1" ||
+    searchParams.get("openChat") === "true";
   const [panel, setPanel] = useState<"sheet" | "chat">("sheet");
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const [historyExchange, setHistoryExchange] = useState<string | null>(null);
@@ -124,6 +113,7 @@ function ChatRoom({
   const [error, setError] = useState<string>();
   const [sending, setSending] = useState(false);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [customOrderPrice, setCustomOrderPrice] = useState<string>("");
   const areas = useQuery({
     queryKey: ["service-areas"],
     queryFn: () => session.request("/service-areas", serviceAreasSchema),
@@ -154,10 +144,11 @@ function ChatRoom({
   const expired = !active && room.status !== "OrderCreated";
   const isExchange = room.terms?.mode === "Exchange";
   const canCreate =
-    room.terms?.agreedPrice != null &&
-    room.terms.agreedListingRevisionId === book.data?.revisionId &&
-    !room.terms.pendingProposal &&
-    !room.terms.locked;
+    (room.terms?.agreedPrice != null || book.data?.salePrice != null) &&
+    (room.terms?.agreedListingRevisionId == null ||
+      room.terms.agreedListingRevisionId === book.data?.revisionId) &&
+    !room.terms?.pendingProposal &&
+    !room.terms?.locked;
   const events = useQuery({
     queryKey: ["conversation-events", room.id],
     queryFn: () => getConversationEvents(room.id),
@@ -347,47 +338,329 @@ function ChatRoom({
         setError(undefined);
       });
   }
+  const headerTitle = room.orderId
+    ? "Đơn mua sách"
+    : room.terms?.pendingProposal
+      ? room.terms.pendingProposal.proposedById === userId
+        ? "Đã gửi đề nghị"
+        : "Đề nghị giá mua"
+      : room.terms?.agreedPrice != null
+        ? "Đã thống nhất giá"
+        : isExchange
+          ? "Đề nghị đổi sách"
+          : "Thương lượng mua sách";
+
+  const chatPanelContent = (
+    <section
+      className={`${sheet.chat} ${styles.dossierChat}`}
+      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+      aria-label="Hội thoại"
+    >
+      {!expired && connection !== "online" && (
+        <div className={styles.connection} role="status">
+          <span>
+            {connection === "connecting"
+              ? "Đang kết nối…"
+              : "Kết nối đang gián đoạn. Lịch sử đã tải vẫn ở đây."}
+          </span>
+          {connection === "offline" && (
+            <button
+              type="button"
+              onClick={() => {
+                setConnection("connecting");
+                socketRef.current?.disconnect().connect();
+              }}
+            >
+              Kết nối lại
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        ref={messageList}
+        className={styles.messages}
+        aria-label="Tin nhắn trong hội thoại"
+        tabIndex={0}
+        aria-live="polite"
+        data-lenis-prevent="true"
+        onScroll={(event) => {
+          const list = event.currentTarget;
+          followLatest.current =
+            list.scrollHeight - list.scrollTop - list.clientHeight < 64;
+          const anchor = olderAnchor.current;
+          if (anchor && list.contains(anchor.node))
+            anchor.top = anchor.node.getBoundingClientRect().top;
+        }}
+      >
+        {history.isLoading && (
+          <p className={styles.state}>Đang tải tin nhắn…</p>
+        )}
+        {history.isError &&
+          (!history.isFetchNextPageError || historyDenied) && (
+            <div className={styles.state} role="alert">
+              <p>Chưa tải được lịch sử tin nhắn.</p>
+              <button
+                type="button"
+                disabled={history.isFetching}
+                onClick={() => void history.refetch({ cancelRefetch: false })}
+              >
+                Tải lại tin nhắn
+              </button>
+            </div>
+          )}
+        {!historyDenied && history.hasNextPage && (
+          <div className={styles.olderMessages}>
+            {history.isFetchNextPageError && (
+              <p role="alert">
+                Chưa tải được tin cũ. Tin nhắn đang xem vẫn được giữ.
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={history.isFetching}
+              aria-busy={history.isFetchingNextPage}
+              onClick={loadOlder}
+            >
+              <ArrowUp size={15} aria-hidden="true" />
+              {history.isFetchingNextPage
+                ? "Đang tải tin cũ…"
+                : history.isFetchNextPageError
+                  ? "Thử tải lại tin cũ"
+                  : "Tải tin nhắn cũ hơn"}
+            </button>
+          </div>
+        )}
+        {!history.isError && history.data && messages.length === 0 && (
+          <div className={styles.emptyRoom}>
+            {!expired && (
+              <img
+                className={styles.emptyMascot}
+                src="/illustrations/penguins/exchange.png"
+                alt=""
+                aria-hidden="true"
+                width={64}
+                height={64}
+                draggable={false}
+              />
+            )}
+            <h3>
+              {expired
+                ? "Chưa có tin nhắn trong cuộc trao đổi này"
+                : "Bắt đầu cuộc trò chuyện"}
+            </h3>
+            <p>
+              {expired
+                ? "Lịch sử hội thoại được giữ lại tại đây."
+                : room.orderId
+                  ? "Trao đổi với đối tác về việc chuẩn bị và giao nhận cuốn sách trong đơn này."
+                  : room.terms?.exchangeIds.length
+                    ? "Trao đổi về việc giao nhận và kiểm tra sách của hai bên."
+                    : "Bạn có thể hỏi về tình trạng sách hoặc giá trước khi gửi thông tin nhận sách."}
+            </p>
+            {!expired && !body && (
+              <button
+                className={styles.suggestion}
+                type="button"
+                disabled={!!attempt}
+                onClick={() => {
+                  setBody(
+                    room.orderId
+                      ? "Chào bạn, mình trao đổi thêm về việc giao nhận đơn sách này nhé."
+                      : isBuyer
+                        ? "Chào bạn, sách còn không và tình trạng hiện tại thế nào?"
+                        : "Chào bạn, bạn muốn hỏi thêm điều gì về cuốn sách này?",
+                  );
+                  document.getElementById("chat-message")?.focus();
+                }}
+              >
+                Soạn lời chào
+              </button>
+            )}
+          </div>
+        )}
+        {events.isError && (
+          <p role="alert">
+            Chưa tải được lịch sử thỏa thuận.{" "}
+            <button type="button" onClick={() => void events.refetch()}>
+              Thử lại
+            </button>
+          </p>
+        )}
+        {events.data?.length ? (
+          <section
+            className={sheet.eventHistory}
+            aria-label="Lịch sử thỏa thuận"
+          >
+            <div className={sheet.historyHeading}>
+              <h3>Lịch sử thỏa thuận</h3>
+              {events.data.length > 1 && (
+                <button
+                  type="button"
+                  aria-expanded={expandedEvents}
+                  aria-controls={`agreement-events-${room.id}`}
+                  onClick={() => setExpandedEvents((value) => !value)}
+                >
+                  {expandedEvents
+                    ? "Thu gọn lịch sử"
+                    : "Xem tất cả thay đổi"}
+                </button>
+              )}
+            </div>
+            <div
+              id={`agreement-events-${room.id}`}
+              className={sheet.eventEntries}
+            >
+              {(expandedEvents ? events.data : events.data.slice(-1)).map(
+                (event) => (
+                  <p key={event.id}>
+                    <strong>
+                      {event.actorId === userId ? "Bạn" : other.displayName}
+                    </strong>{" "}
+                    {eventText(event)}
+                    <time dateTime={event.createdAt}>
+                      {dateTime(event.createdAt)}
+                    </time>
+                  </p>
+                ),
+              )}
+            </div>
+          </section>
+        ) : null}
+        {messages.map((message) => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            own={message.senderId === userId}
+            sender={message.senderId === userId ? "Bạn" : other.displayName}
+          />
+        ))}
+      </div>
+      <form
+        className={styles.composer}
+        onSubmit={(event) => {
+          event.preventDefault();
+          send();
+        }}
+      >
+        {!expired && (
+          <label className={styles.composerLabel} htmlFor="chat-message">
+            Nhắn cho {other.displayName}
+          </label>
+        )}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+        {expired ? (
+          <p className={styles.closed}>
+            {room.orderId
+              ? "Đơn hàng đã được tạo. Theo dõi tình trạng ở phiếu thỏa thuận."
+              : "Cuộc trò chuyện đã đóng. Bạn vẫn có thể đọc tin nhắn cũ."}
+          </p>
+        ) : (
+          <div className={styles.composerBar}>
+            <textarea
+              ref={textareaRef}
+              id="chat-message"
+              rows={1}
+              value={body}
+              disabled={!!attempt}
+              onChange={(event) =>
+                setBody(clipChatMessage(event.target.value))
+              }
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  send();
+                }
+              }}
+              placeholder="Nhắn tin…"
+              aria-describedby="chat-compose-help"
+            />
+            <button
+              type="submit"
+              className={styles.sendButton}
+              title={
+                sending
+                  ? "Đang gửi…"
+                  : attempt
+                    ? "Thử gửi lại tin nhắn"
+                    : "Gửi tin nhắn (Enter)"
+              }
+              aria-label={
+                sending
+                  ? "Đang gửi…"
+                  : attempt
+                    ? "Thử gửi lại tin nhắn"
+                    : "Gửi tin nhắn"
+              }
+              disabled={sending || !body.trim() || connection !== "online"}
+            >
+              <Send size={16} aria-hidden="true" />
+            </button>
+            {body.length > 800 && (
+              <span className={styles.charCount}>{body.length}/1.000</span>
+            )}
+          </div>
+        )}
+        {!expired && (
+          <p id="chat-compose-help" className={styles.composeHelp}>
+            Enter để gửi · Shift+Enter xuống dòng
+          </p>
+        )}
+      </form>
+    </section>
+  );
+
   return (
     <section
-      className={styles.room}
+      className={exchangeStyles.exchangeSheet}
       aria-label={`Cuộc trò chuyện với ${other.displayName}`}
     >
-      <header className={styles.roomHeader}>
-        <ConversationBackLink className={styles.back} />
-        {room.orderId ? (
-          <span className={styles.roomHeaderBadge}>
-            Đơn hàng #{room.orderId.slice(0, 8)}
-          </span>
-        ) : (
-          <span className={styles.roomHeaderBadge}>
-            {other.displayName}
-          </span>
-        )}
-        {Boolean(
-          room.orderId ||
-            (isExchange &&
-              (historyExchange ||
-                room.terms?.activeExchangeId ||
-                room.terms?.exchangeIds?.length)),
-        ) ? (
-          <span className={styles.roomSupport}>
-            <SupportLink
-              type={room.orderId ? "DirectOrder" : "Exchange"}
-              id={
-                room.orderId ||
-                (historyExchange && historyExchange !== "new"
-                  ? historyExchange
-                  : room.terms?.activeExchangeId ??
-                    room.terms?.exchangeIds?.[room.terms.exchangeIds.length - 1] ??
-                    "")
-              }
-            />
-          </span>
-        ) : null}
+      <nav
+        className={exchangeStyles.handoverNav}
+        aria-label="Điều hướng phiếu giao dịch"
+      >
+        <ConversationBackLink className={exchangeStyles.proposalBack} />
+        <span className={exchangeStyles.proposalCode}>
+          {room.orderId
+            ? `Đơn #${room.orderId.slice(0, 8).toUpperCase()}`
+            : `Phiếu #${room.id.slice(0, 8).toUpperCase()}`}
+        </span>
+      </nav>
+
+      <header className={exchangeStyles.handoverHeader}>
+        <div>
+          <h1>{headerTitle}</h1>
+          <p>
+            {isBuyer ? "Mua sách từ" : "Giao dịch với"}{" "}
+            <strong dir="auto" title={other.displayName}>
+              {other.displayName}
+            </strong>
+          </p>
+        </div>
+        <ExchangeChatDrawer
+          viewerId={userId}
+          exchangeId={room.id}
+          transactionCode={(room.orderId ?? room.id).slice(0, 8).toUpperCase()}
+          partnerName={other.displayName}
+          defaultOpen={shouldOpenChat}
+          latest={messages.map((m) => ({
+            id: m.id,
+            senderRole: m.senderId === userId ? "viewer" : "partner",
+            text: m.body,
+            sentAt: m.sentAt,
+          }))}
+        >
+          {() => chatPanelContent}
+        </ExchangeChatDrawer>
       </header>
+
       <nav
         className={`${sheet.mobileTabs} ${sheet.bookTabs}`}
         aria-label="Nội dung cuộc trao đổi"
+        hidden
       >
         <button
           type="button"
@@ -404,466 +677,217 @@ function ChatRoom({
           Hội thoại
         </button>
       </nav>
+
       <div
-        className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread} ${room.orderId ? styles.orderSpread : ""}`}
-        data-panel={panel}
-        data-order-mode={Boolean(room.orderId)}
-        data-lenis-prevent="true"
+        ref={sheetBodyRef}
+        role="region"
+        aria-label={
+          room.orderId ? "Nội dung đơn hàng" : "Nội dung phiếu thỏa thuận"
+        }
+        tabIndex={0}
       >
-        <aside className={`${sheet.sheet} ${styles.dossierSheet}`} aria-label={room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}>
-          <h2 className={styles.srOnly}>{room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}</h2>
-          <div
-            className={`${sheet.sheetBody} ${styles.dossierBody}`}
-            ref={sheetBodyRef}
-            role="region"
-            aria-label={room.orderId ? "Nội dung đơn hàng" : "Nội dung phiếu thỏa thuận"}
-            tabIndex={0}
-            data-lenis-prevent="true"
-          >
-            {room.orderId ? (
-              <OrderDetails key={room.orderId} orderId={room.orderId} embedded />
-            ) : (
-              <NegotiationWorkspace
-                room={room}
-                userId={userId}
-                book={book.data}
-                refresh={refreshRooms}
-                frozen={!!orderAttempt.current}
-                guidance={guidance}
-                onOpenOrderDialog={() => setOrderDialogOpen(true)}
-                historyExchange={historyExchange}
-                setHistoryExchange={setHistoryExchange}
-                now={now}
-                expired={expired}
-              />
-            )}
-          </div>
-          {active &&
-            room.seller.id === userId &&
-            (room.hasQuote || orderAttempt.current) && (
-              <>
-                <PurchaseDialog
-                      open={orderDialogOpen}
-                      onClose={() => setOrderDialogOpen(false)}
-                      busy={orderBusy}
-                      title="Tạo đơn cho người mua"
-                      description="Giá đã được hai bên thống nhất. Kiểm tra thông tin nhận và tổng trước khi tạo đơn."
-                      className={flow.flow}
-                    >
-                      <form
-                        onSubmit={async (event) => {
-                          event.preventDefault();
-                          if (orderBusy) return;
-                          const submittedPrice = new FormData(
-                            event.currentTarget,
-                          ).get("agreedBookPrice");
-                          const price =
-                            orderAttempt.current?.price ??
-                            (typeof submittedPrice === "string"
-                              ? Number(submittedPrice)
-                              : Number.NaN);
-                          if (
-                            !Number.isInteger(price) ||
-                            price < 10000 ||
-                            price > 1000000
-                          ) {
-                            setOrderError(
-                              "Giá sách phải từ 10.000 ₫ đến 1.000.000 ₫.",
-                            );
-                            return;
-                          }
-                          const intent = orderAttempt.current ?? {
-                            key: crypto.randomUUID(),
-                            version: room.version,
-                            price,
-                          };
-                          orderAttempt.current = intent;
-                          setOrderBusy(true);
-                          setOrderError(undefined);
-                          try {
-                            await createSellerOrder(
-                              {
-                                conversationId: room.id,
-                                expectedVersion: intent.version,
-                                agreedBookPrice: intent.price,
-                              },
-                              intent.key,
-                            );
-                            orderAttempt.current = undefined;
-                            setOrderDialogOpen(false);
-                            refreshRooms();
-                          } catch (cause) {
-                            let message =
-                              "Chưa xác nhận được đơn đã tạo. Thử lại để gửi cùng yêu cầu.";
-                            if (
-                              cause instanceof ApiError &&
-                              [400, 403, 404, 409, 422].includes(cause.status)
-                            ) {
-                              orderAttempt.current = undefined;
-                              refreshRooms();
-                              message =
-                                "Hội thoại hoặc báo giá vừa thay đổi. Hãy tải lại trước khi tạo đơn.";
-                            }
-                            setOrderError(message);
-                          } finally {
-                            setOrderBusy(false);
-                          }
-                        }}
-                      >
-                        <div className={flow.form}>
-                          <label>
-                            Giá sách đã thỏa thuận (₫)
-                            <input
-                              name="agreedBookPrice"
-                              type="number"
-                              min={10000}
-                              max={1000000}
-                              step={1000}
-                              required
-                              disabled={orderBusy || !!orderAttempt.current}
-                              value={
-                                orderAttempt.current?.price ??
-                                room.terms?.agreedPrice ??
-                                ""
-                              }
-                              readOnly
-                            />
-                          </label>
-                        </div>
-                        {room.quotePreview ? (
-                          <div className={flow.delivery}>
-                            <p>
-                              Địa chỉ nhận:{" "}
-                              {room.quotePreview.destination.recipientName} ·{" "}
-                              {room.quotePreview.destination.phone}
-                            </p>
-                            <p>
-                              {room.quotePreview.destination.detail},{" "}
-                              {areas.data?.localities.find(
-                                (area) =>
-                                  area.code ===
-                                  room.quotePreview?.destination.localityCode,
-                              )?.label ??
-                                (areas.isPending
-                                  ? "Đang tải khu vực…"
-                                  : "Chưa xác định khu vực")}
-                            </p>
-                            {areas.isError && (
-                              <p role="alert">
-                                Chưa tải được tên khu vực.{" "}
-                                <button
-                                  type="button"
-                                  className={flow.textButton}
-                                  disabled={areas.isFetching}
-                                  onClick={() => void areas.refetch()}
-                                >
-                                  Thử lại
-                                </button>
-                              </p>
-                            )}
-                            <p>
-                              {room.quotePreview.shippingFee > 0 && `Phí giao nhận: ${formatVnd(room.quotePreview.shippingFee)} · `}Báo
-                              giá đến {dateTime(room.quotePreview.expiresAt)}
-                            </p>
-                          </div>
-                        ) : (
-                          <p>
-                            Địa chỉ/báo giá không còn khả dụng. Người mua cần
-                            gửi lại thông tin.
-                          </p>
-                        )}
-                        <p>
-                          Người mua đã gửi địa chỉ và báo giá giao nhận. Tạo đơn
-                          sẽ giữ sách 15 phút ở trạng thái chờ thanh toán. Sau
-                          khi người mua thanh toán thành công, sách mới đang
-                          giao dịch.
-                        </p>
-                        {orderError && (
-                          <p className={flow.error} role="alert">
-                            {orderError}
-                          </p>
-                        )}
-                        <button
-                          className={flow.primary}
-                          type="submit"
-                          disabled={
-                            orderBusy ||
-                            (!orderAttempt.current &&
-                              (!canCreate ||
-                                !room.hasQuote ||
-                                !room.quotePreview ||
-                                Date.parse(room.quotePreview.expiresAt) <= now))
-                          }
-                        >
-                          {orderBusy
-                            ? "Đang tạo đơn…"
-                            : "Tạo đơn cho người mua này"}
-                        </button>
-                      </form>
-                    </PurchaseDialog>
-                  </>
-                )}
-        </aside>
-        <section
-          className={`${sheet.chat} ${styles.dossierChat}`}
-          aria-label="Hội thoại"
-        >
-          <div className={`${sheet.chatHeading} ${styles.dossierChatHeading}`}>
-            <span className={styles.avatar} aria-hidden="true">
-              {other.displayName.slice(0, 1).toUpperCase()}
-            </span>
-            <div>
-              <h2>{other.displayName}</h2>
-              <p>
-                {isExchange
-                  ? "Đối tác trao đổi sách"
-                  : room.orderId
-                    ? isBuyer
-                      ? "Người bán · Đơn bạn mua"
-                      : "Người mua · Đơn bạn bán"
-                  : isBuyer
-                    ? "Người bán · Bạn đang hỏi mua"
-                    : "Người mua · Bạn đang bán sách"}
-              </p>
-            </div>
-          </div>
-          {!expired && connection !== "online" && (
-            <div className={styles.connection} role="status">
-              <span>
-                {connection === "connecting"
-                  ? "Đang kết nối…"
-                  : "Kết nối đang gián đoạn. Lịch sử đã tải vẫn ở đây."}
-              </span>
-              {connection === "offline" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConnection("connecting");
-                    socketRef.current?.disconnect().connect();
-                  }}
-                >
-                  Kết nối lại
-                </button>
-              )}
-            </div>
-          )}
-          <div
-            ref={messageList}
-            className={styles.messages}
-            aria-label="Tin nhắn trong hội thoại"
-            tabIndex={0}
-            aria-live="polite"
-            data-lenis-prevent="true"
-            onScroll={event => {
-              const list = event.currentTarget;
-              followLatest.current = list.scrollHeight - list.scrollTop - list.clientHeight < 64;
-              const anchor = olderAnchor.current;
-              if (anchor && list.contains(anchor.node)) anchor.top = anchor.node.getBoundingClientRect().top;
+        <NegotiationWorkspace
+          room={room}
+          userId={userId}
+          book={book.data}
+          refresh={refreshRooms}
+          frozen={!!orderAttempt.current}
+          guidance={guidance}
+          onOpenOrderDialog={() => setOrderDialogOpen(true)}
+          historyExchange={historyExchange}
+          setHistoryExchange={setHistoryExchange}
+          now={now}
+          expired={expired}
+        />
+      </div>
+
+      {active &&
+        room.seller.id === userId &&
+        (room.hasQuote || orderAttempt.current) && (
+          <PurchaseDialog
+            open={orderDialogOpen}
+            onClose={() => {
+              setOrderDialogOpen(false);
+              setCustomOrderPrice("");
             }}
+            busy={orderBusy}
+            title="Tạo đơn cho người mua"
+            description="Kiểm tra thông tin nhận và giá sách trước khi tạo đơn."
+            className={flow.flow}
           >
-            {history.isLoading && (
-              <p className={styles.state}>Đang tải tin nhắn…</p>
-            )}
-            {history.isError && (!history.isFetchNextPageError || historyDenied) && (
-              <div className={styles.state} role="alert">
-                <p>Chưa tải được lịch sử tin nhắn.</p>
-                <button
-                  type="button"
-                  disabled={history.isFetching}
-                  onClick={() => void history.refetch({ cancelRefetch: false })}
-                >
-                  Tải lại tin nhắn
-                </button>
-              </div>
-            )}
-            {!historyDenied && history.hasNextPage && (
-              <div className={styles.olderMessages}>
-                {history.isFetchNextPageError && <p role="alert">Chưa tải được tin cũ. Tin nhắn đang xem vẫn được giữ.</p>}
-                <button type="button" disabled={history.isFetching} aria-busy={history.isFetchingNextPage}
-                  onClick={loadOlder}>
-                  <ArrowUp size={15} aria-hidden="true" />
-                  {history.isFetchingNextPage ? "Đang tải tin cũ…" : history.isFetchNextPageError ? "Thử tải lại tin cũ" : "Tải tin nhắn cũ hơn"}
-                </button>
-              </div>
-            )}
-            {!history.isError && history.data && messages.length === 0 && (
-              <div className={styles.emptyRoom}>
-                {!expired && (
-                  <img
-                    className={styles.emptyMascot}
-                    src="/illustrations/penguins/exchange.png"
-                    alt=""
-                    aria-hidden="true"
-                    width={64}
-                    height={64}
-                    draggable={false}
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (orderBusy) return;
+                const submittedPrice = new FormData(event.currentTarget).get(
+                  "agreedBookPrice",
+                );
+                const defaultBookPrice =
+                  room.terms?.agreedPrice ?? book.data?.salePrice ?? 0;
+                const price =
+                  orderAttempt.current?.price ??
+                  (typeof submittedPrice === "string" && submittedPrice.trim() !== ""
+                    ? Number(submittedPrice)
+                    : defaultBookPrice);
+                if (
+                  !Number.isInteger(price) ||
+                  price < 10000 ||
+                  price > 1000000
+                ) {
+                  setOrderError("Giá sách phải từ 10.000 ₫ đến 1.000.000 ₫.");
+                  return;
+                }
+                const intent = orderAttempt.current ?? {
+                  key: crypto.randomUUID(),
+                  version: room.version,
+                  price,
+                };
+                orderAttempt.current = intent;
+                setOrderBusy(true);
+                setOrderError(undefined);
+                try {
+                  await createSellerOrder(
+                    {
+                      conversationId: room.id,
+                      expectedVersion: intent.version,
+                      agreedBookPrice: intent.price,
+                    },
+                    intent.key,
+                  );
+                  orderAttempt.current = undefined;
+                  setOrderDialogOpen(false);
+                  setCustomOrderPrice("");
+                  refreshRooms();
+                } catch (cause) {
+                  let message =
+                    "Chưa xác nhận được đơn đã tạo. Thử lại để gửi cùng yêu cầu.";
+                  if (
+                    cause instanceof ApiError &&
+                    [400, 403, 404, 409, 422].includes(cause.status)
+                  ) {
+                    orderAttempt.current = undefined;
+                    refreshRooms();
+                    message =
+                      "Hội thoại hoặc báo giá vừa thay đổi. Hãy tải lại trước khi tạo đơn.";
+                  }
+                  setOrderError(message);
+                } finally {
+                  setOrderBusy(false);
+                }
+              }}
+            >
+              <div className={flow.form}>
+                <label>
+                  Giá sách đã thỏa thuận (₫)
+                  <input
+                    name="agreedBookPrice"
+                    type="number"
+                    min={10000}
+                    max={1000000}
+                    step={1000}
+                    disabled={orderBusy || !!orderAttempt.current}
+                    value={
+                      customOrderPrice !== ""
+                        ? customOrderPrice
+                        : (orderAttempt.current?.price ??
+                          room.terms?.agreedPrice ??
+                          book.data?.salePrice ??
+                          "")
+                    }
+                    onChange={(e) => setCustomOrderPrice(e.target.value)}
+                    placeholder={
+                      (room.terms?.agreedPrice ?? book.data?.salePrice)
+                        ? String(room.terms?.agreedPrice ?? book.data?.salePrice)
+                        : "Giá sách"
+                    }
                   />
-                )}
-                <h3>
-                  {expired
-                    ? "Chưa có tin nhắn trong cuộc trao đổi này"
-                    : "Bắt đầu cuộc trò chuyện"}
-                </h3>
-                <p>
-                  {expired
-                    ? "Lịch sử hội thoại được giữ lại tại đây."
-                    : room.orderId
-                      ? "Trao đổi với đối tác về việc chuẩn bị và giao nhận cuốn sách trong đơn này."
-                      : room.terms?.exchangeIds.length
-                        ? "Trao đổi về việc giao nhận và kiểm tra sách của hai bên."
-                        : "Bạn có thể hỏi về tình trạng sách hoặc giá trước khi gửi thông tin nhận sách."}
-                </p>
-                {!expired && !body && (
-                  <button
-                    className={styles.suggestion}
-                    type="button"
-                    disabled={!!attempt}
-                    onClick={() => {
-                      setBody(
-                        room.orderId
-                          ? "Chào bạn, mình trao đổi thêm về việc giao nhận đơn sách này nhé."
-                          : isBuyer
-                          ? "Chào bạn, sách còn không và tình trạng hiện tại thế nào?"
-                          : "Chào bạn, bạn muốn hỏi thêm điều gì về cuốn sách này?",
-                      );
-                      document.getElementById("chat-message")?.focus();
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--shop-muted, #716157)",
+                      marginTop: 4,
+                      display: "block",
+                      fontWeight: 500,
                     }}
                   >
-                    Soạn lời chào
-                  </button>
-                )}
-              </div>
-            )}
-            {events.isError && (
-              <p role="alert">
-                Chưa tải được lịch sử thỏa thuận.{" "}
-                <button type="button" onClick={() => void events.refetch()}>
-                  Thử lại
-                </button>
-              </p>
-            )}
-            {events.data?.length ? (
-              <section
-                className={sheet.eventHistory}
-                aria-label="Lịch sử thỏa thuận"
-              >
-                <div className={sheet.historyHeading}>
-                  <h3>Lịch sử thỏa thuận</h3>
-                  {events.data.length > 1 && (
-                    <button
-                      type="button"
-                      aria-expanded={expandedEvents}
-                      aria-controls={`agreement-events-${room.id}`}
-                      onClick={() => setExpandedEvents((value) => !value)}
-                    >
-                      {expandedEvents
-                        ? "Thu gọn lịch sử"
-                        : "Xem tất cả thay đổi"}
-                    </button>
-                  )}
-                </div>
-                <div
-                  id={`agreement-events-${room.id}`}
-                  className={sheet.eventEntries}
-                >
-                  {(expandedEvents ? events.data : events.data.slice(-1)).map(
-                    (event) => (
-                      <p key={event.id}>
-                        <strong>
-                          {event.actorId === userId ? "Bạn" : other.displayName}
-                        </strong>{" "}
-                        {eventText(event)}
-                        <time dateTime={event.createdAt}>
-                          {dateTime(event.createdAt)}
-                        </time>
-                      </p>
-                    ),
-                  )}
-                </div>
-              </section>
-            ) : null}
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                own={message.senderId === userId}
-                sender={message.senderId === userId ? "Bạn" : other.displayName}
-              />
-            ))}
-          </div>
-          <form
-            className={styles.composer}
-            onSubmit={(event) => {
-              event.preventDefault();
-              send();
-            }}
-          >
-            {!expired && (
-              <label className={styles.composerLabel} htmlFor="chat-message">
-                Nhắn cho {other.displayName}
-              </label>
-            )}
-            {error && (
-              <p className={styles.error} role="alert">
-                {error}
-              </p>
-            )}
-            {expired ? (
-              <p className={styles.closed}>
-                {room.orderId
-                  ? "Đơn hàng đã được tạo. Theo dõi tình trạng ở phiếu thỏa thuận."
-                  : "Cuộc trò chuyện đã đóng. Bạn vẫn có thể đọc tin nhắn cũ."}
-              </p>
-            ) : (
-              <div className={styles.composerBar}>
-                <textarea
-                  ref={textareaRef}
-                  id="chat-message"
-                  rows={1}
-                  value={body}
-                  disabled={!!attempt}
-                  onChange={(event) => setBody(clipChatMessage(event.target.value))}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      send();
-                    }
-                  }}
-                  placeholder="Nhắn tin…"
-                  aria-describedby="chat-compose-help"
-                />
-                <button
-                  type="submit"
-                  className={styles.sendButton}
-                  title={
-                    sending
-                      ? "Đang gửi…"
-                      : attempt
-                        ? "Thử gửi lại tin nhắn"
-                        : "Gửi tin nhắn (Enter)"
-                  }
-                  aria-label={
-                    sending
-                      ? "Đang gửi…"
-                      : attempt
-                        ? "Thử gửi lại tin nhắn"
-                        : "Gửi tin nhắn"
-                  }
-                  disabled={sending || !body.trim() || connection !== "online"}
-                >
-                  <Send size={16} aria-hidden="true" />
-                </button>
-                {body.length > 800 && (
-                  <span className={styles.charCount}>
-                    {body.length}/1.000
+                    {room.terms?.agreedPrice != null
+                      ? `Giá đã thống nhất: ${formatVnd(room.terms.agreedPrice)}`
+                      : `Giá bài đăng: ${formatVnd(book.data?.salePrice ?? 0)}. Tùy chọn đổi giá nếu có thỏa thuận riêng.`}
                   </span>
-                )}
+                </label>
               </div>
-            )}
-            {!expired && <p id="chat-compose-help" className={styles.composeHelp}>Enter để gửi · Shift+Enter xuống dòng</p>}
-          </form>
-        </section>
-      </div>
+              {room.quotePreview ? (
+                <div className={flow.delivery}>
+                  <p>
+                    Địa chỉ nhận:{" "}
+                    {room.quotePreview.destination.recipientName} ·{" "}
+                    {room.quotePreview.destination.phone}
+                  </p>
+                  <p>
+                    {room.quotePreview.destination.detail},{" "}
+                    {areas.data?.localities.find(
+                      (area) =>
+                        area.code ===
+                        room.quotePreview?.destination.localityCode,
+                    )?.label ??
+                      (areas.isPending
+                        ? "Đang tải khu vực…"
+                        : "Chưa xác định khu vực")}
+                  </p>
+                  {areas.isError && (
+                    <p role="alert">
+                      Chưa tải được tên khu vực.{" "}
+                      <button
+                        type="button"
+                        className={flow.textButton}
+                        disabled={areas.isFetching}
+                        onClick={() => void areas.refetch()}
+                      >
+                        Thử lại
+                      </button>
+                    </p>
+                  )}
+                  <p>
+                    {room.quotePreview.shippingFee > 0 &&
+                      `Phí giao nhận: ${formatVnd(room.quotePreview.shippingFee)} · `}
+                    Báo giá đến {dateTime(room.quotePreview.expiresAt)}
+                  </p>
+                </div>
+              ) : (
+                <p>
+                  Địa chỉ/báo giá không còn khả dụng. Người mua cần gửi lại
+                  thông tin.
+                </p>
+              )}
+              <p>
+                Người mua đã gửi địa chỉ và báo giá giao nhận. Tạo đơn sẽ giữ
+                sách 15 phút ở trạng thái chờ thanh toán. Sau khi người mua
+                thanh toán thành công, sách mới đang giao dịch.
+              </p>
+              {orderError && (
+                <p className={flow.error} role="alert">
+                  {orderError}
+                </p>
+              )}
+              <button
+                className={flow.primary}
+                type="submit"
+                disabled={
+                  orderBusy ||
+                  (!orderAttempt.current &&
+                    (!canCreate ||
+                      !room.hasQuote ||
+                      !room.quotePreview ||
+                      Date.parse(room.quotePreview.expiresAt) <= now))
+                }
+              >
+                {orderBusy
+                  ? "Đang tạo đơn…"
+                  : "Tạo đơn cho người mua này"}
+              </button>
+            </form>
+          </PurchaseDialog>
+        )}
     </section>
   );
 }
@@ -1452,12 +1476,6 @@ function TransactionHub({
                 className={styles.panelSection}
                 aria-label="Hội thoại mua ngay và đổi sách"
               >
-                <div className={styles.sectionHead}>
-                  <h2>Hội thoại mua ngay &amp; đổi sách</h2>
-                  <span>
-                    {rooms.length + exchangeItems.length} cuộc trao đổi
-                  </span>
-                </div>
                 <ConversationInbox
                   rooms={rooms}
                   loading={roomsLoading}
@@ -1596,17 +1614,6 @@ export function ChatPage() {
     });
   }, [roomId, rooms.isPending, location.key, position, auth.status]);
   useEffect(() => {
-    if (!roomId) return;
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-    const prevBodyOverflow = document.body.style.overflow;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.documentElement.style.overflow = prevHtmlOverflow;
-      document.body.style.overflow = prevBodyOverflow;
-    };
-  }, [roomId]);
-  useEffect(() => {
     if (transitioning || auth.status !== "authenticated") return;
     if (roomId && location.state?.chatFromInbox) {
       frameRef.current?.focus({ preventScroll: true });
@@ -1661,7 +1668,6 @@ export function ChatPage() {
     <div
       className={styles.root}
       data-room-selected={!!roomId}
-      data-lenis-prevent={!!roomId || undefined}
       data-chat-morph-inbox={(!roomId && transitioning) || undefined}
     >
       {!roomId ? (
@@ -1717,46 +1723,47 @@ function PendingChatRoom({
   pending: boolean;
   retry: () => void;
 }) {
-  const compactHeader = useCompactHeader();
-  const identity = (
-    <ConversationBookIdentity
-      listingId={preview?.listingId}
-      status={pending ? "Đang mở hội thoại…" : "Chưa mở được hội thoại"}
-    />
-  );
   return (
-    <section className={styles.room} aria-label="Đang mở phiếu và hội thoại">
-      <header className={styles.roomHeader}>
-        <ConversationBackLink className={styles.back} />
+    <section
+      className={exchangeStyles.exchangeSheet}
+      aria-label="Đang mở phiếu và hội thoại"
+    >
+      <div className={exchangeStyles.handoverNav}>
+        <ConversationBackLink className={exchangeStyles.backLink} />
+        {preview?.id && (
+          <span className={exchangeStyles.code}>
+            Phiếu #{preview.id.slice(0, 8).toUpperCase()}
+          </span>
+        )}
+      </div>
+      <header className={exchangeStyles.handoverHeader}>
+        <div>
+          <h1>{pending ? "Đang mở hội thoại…" : "Chưa mở được hội thoại"}</h1>
+          <p>
+            {pending
+              ? "Đang tải phiếu thỏa thuận và tin nhắn…"
+              : "Hội thoại không tồn tại hoặc bạn không có quyền truy cập."}
+          </p>
+        </div>
       </header>
-      {compactHeader && <div className={styles.mobileBookHeader}>{identity}</div>}
       <div
-        className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread}`}
+        className={styles.pendingRoom}
+        role={pending ? "status" : "alert"}
       >
-        <aside className={sheet.sheet} aria-label="Phiếu thỏa thuận đang tải">
-          {!compactHeader && <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
-            {identity}
-          </header>}
-          <div
-            className={styles.pendingRoom}
-            role={pending ? "status" : "alert"}
+        <p>
+          {pending
+            ? "Đang tải phiếu thỏa thuận và tin nhắn…"
+            : "Hội thoại không tồn tại hoặc bạn không có quyền truy cập."}
+        </p>
+        {!pending && (
+          <button
+            type="button"
+            className={exchangeStyles.secondaryButton}
+            onClick={retry}
           >
-            <p>
-              {pending
-                ? "Đang tải phiếu thỏa thuận và tin nhắn…"
-                : "Hội thoại không tồn tại hoặc bạn không có quyền truy cập."}
-            </p>
-            {!pending && (
-              <button type="button" onClick={retry}>
-                Thử lại
-              </button>
-            )}
-          </div>
-        </aside>
-        <div
-          className={`${sheet.chat} ${styles.dossierChat}`}
-          aria-hidden="true"
-        />
+            Thử lại
+          </button>
+        )}
       </div>
     </section>
   );

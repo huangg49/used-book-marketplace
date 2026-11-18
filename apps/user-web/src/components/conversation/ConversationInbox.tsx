@@ -227,7 +227,7 @@ export function ConversationInbox({
     refetchInterval: 5000,
     enabled: showExchanges,
   });
-  const [filter, setFilter] = useState<InboxFilter>(position.read().filter),
+  const [filter] = useState<InboxFilter>(position.read().filter),
     [visible, setVisible] = useState(position.read().visible);
   useLayoutEffect(() => {
     const rememberScroll = () => {
@@ -255,28 +255,6 @@ export function ConversationInbox({
   );
   return (
     <section className={styles.inboxContent} aria-label="Danh sách hội thoại">
-      <nav className={styles.filters} aria-label="Lọc hội thoại">
-        {(
-          [
-            ["all", "Tất cả"],
-            ["buyer", "Bạn hỏi mua / đổi"],
-            ["seller", "Sách của bạn"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            aria-pressed={filter === key}
-            onClick={() => {
-              setFilter(key);
-              setVisible(12);
-              position.save({ filter: key, visible: 12 });
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
       {loading && <p role="status">Đang tải hội thoại…</p>}
       {error && (
         <p role="alert">
