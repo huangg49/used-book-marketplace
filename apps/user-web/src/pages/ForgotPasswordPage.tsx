@@ -63,11 +63,11 @@ export function ForgotPasswordPage() {
           {challenge && <EmailOtpField id="recovery-otp" code={code} onChange={setCode} error={otpError} />}
           <div className={styles.formGrid}>
           <div className={styles.field}><label htmlFor="reset-password">Mật khẩu mới</label>
-            <div className={styles.password}><AuthInput id="reset-password" name="password" type={visible ? 'text' : 'password'} autoComplete="new-password" minLength={10} maxLength={128} required />
+            <div className={styles.password}><AuthInput id="reset-password" name="password" type={visible ? 'text' : 'password'} autoComplete="new-password" minLength={10} maxLength={128} required placeholder="Mật khẩu mới, 10 đến 128 ký tự" />
               <button type="button" aria-label={visible ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'} aria-pressed={visible} onClick={() => setVisible(!visible)}>
                 {visible ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></div></div>
           <div className={styles.field}><label htmlFor="reset-confirmation">Nhập lại mật khẩu</label>
-            <AuthInput id="reset-confirmation" name="passwordConfirmation" type={visible ? 'text' : 'password'} autoComplete="new-password" minLength={10} maxLength={128} required /></div>
+            <AuthInput id="reset-confirmation" name="passwordConfirmation" type={visible ? 'text' : 'password'} autoComplete="new-password" minLength={10} maxLength={128} required placeholder="Nhập lại mật khẩu mới" /></div>
           </div>
           <p className={styles.otpHint}>Mật khẩu từ 10 đến 128 ký tự.</p>
           <button className={styles.submit} type="submit">{state.busy ? 'Đang đổi mật khẩu…' : 'Lưu mật khẩu mới'} <ArrowRight size={18} aria-hidden="true" /></button>

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { money } from "../../core/format";
 import { ActionPanel } from "./action-panel";
 import {
@@ -52,18 +52,55 @@ export function ResolutionDecision({ item, ...context }: Props) {
   const firstDecision = useRef<HTMLInputElement>(null);
   const firstFault = useRef<HTMLInputElement>(null);
   const reasonInput = useRef<HTMLTextAreaElement>(null);
+  const modal = useRef<HTMLDialogElement>(null);
   const faults = decision
     ? (allowed[decision] ?? []).filter((f): f is NonNullable<Fault> => !!f)
     : [];
   const trimmed = reason.trim();
+  const dirty = decision !== null || reason !== "";
+
+  useEffect(() => {
+    const element = modal.current;
+    if (!element) return;
+    element.showModal();
+    firstDecision.current?.focus();
+    return () => element.close();
+  }, []);
+
+  const requestClose = () => {
+    if (dirty && !window.confirm("Thông tin đang nhập sẽ bị bỏ. Đóng phiếu quyết định?")) {
+      return;
+    }
+    modal.current?.close();
+    context.onClose?.();
+  };
+
   return (
-    <ActionPanel
-      {...context}
-      label="Quyết định cho đơn tại điểm"
-      title="Một quyết định, có lý do."
-      intro={`Người mua đã trả ${money(item.buyerTotal)}. Quyết định được lưu lại cùng lý do và không sửa được; người mua và người bán đọc được lý do.`}
-      dirty={decision !== null || reason !== ""}
-      fields={(locked) => (
+    <dialog
+      ref={modal}
+      className="resolution-dialog"
+      aria-labelledby={`resolution-title-${item.id}`}
+      onCancel={(event) => {
+        event.preventDefault();
+        requestClose();
+      }}
+    >
+      <div className="resolution-dialog-heading">
+        <div>
+          <p className="resolution-dialog-kicker">Đơn tại điểm · / {item.id.slice(0, 8)}</p>
+          <h2 id={`resolution-title-${item.id}`}>Quyết định cho “{item.title}”</h2>
+        </div>
+        <button className="resolution-dialog-close" type="button" onClick={requestClose}>
+          Đóng
+        </button>
+      </div>
+      <ActionPanel
+        {...context}
+        label="Quyết định cho đơn tại điểm"
+        title="Một quyết định, có lý do."
+        intro={`Người mua đã trả ${money(item.buyerTotal)}. Quyết định được lưu lại cùng lý do và không sửa được; người mua và người bán đọc được lý do.`}
+        dirty={dirty}
+        fields={(locked) => (
         <>
           <fieldset disabled={locked}>
             <legend>Quyết định</legend>
@@ -139,8 +176,8 @@ export function ResolutionDecision({ item, ...context }: Props) {
               : "Bắt buộc, 10–1.000 ký tự. Ghi căn cứ đã đối chiếu."}
           </p>
         </>
-      )}
-      validate={() => {
+        )}
+        validate={() => {
         if (!decision) {
           setProblem("decision");
           firstDecision.current?.focus();
@@ -158,17 +195,17 @@ export function ResolutionDecision({ item, ...context }: Props) {
           return false;
         }
         return true;
-      }}
-      submitLabel="Ghi quyết định"
-      confirmTitle={decision ? `${decisionText[decision].label}?` : "Ghi quyết định?"}
-      confirmBody={
+        }}
+        submitLabel="Ghi quyết định"
+        confirmTitle={decision ? `${decisionText[decision].label}?` : "Ghi quyết định?"}
+        confirmBody={
         <>
           <p>{decision && decisionText[decision].effect}</p>
           {fault && <p>Lỗi: {faultText[fault]}.</p>}
           <blockquote className="prose">{trimmed}</blockquote>
         </>
-      }
-      build={() => ({
+        }
+        build={() => ({
         path: `/operations/point-orders/${item.id}/resolve`,
         body: {
           expectedVersion: item.version,
@@ -176,12 +213,13 @@ export function ResolutionDecision({ item, ...context }: Props) {
           fault: faults.length > 0 ? fault : null,
           reason: trimmed,
         },
-      })}
-      interpret={() => ({
+        })}
+        interpret={() => ({
         tone: "success",
         text: `Đã ghi quyết định cho “${item.title}”: ${decision ? decisionText[decision].label.toLowerCase() : ""}.`,
         close: true,
-      })}
-    />
+        })}
+      />
+    </dialog>
   );
 }

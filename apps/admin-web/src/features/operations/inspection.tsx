@@ -1,8 +1,9 @@
-import { useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Link } from "react-router-dom";
 import { dateText } from "../../core/format";
 import { Notice } from "../../core/ui";
 import { ActionPanel } from "./action-panel";
+import styles from "./IntakeQueue.module.css";
 import {
   checklistLabels,
   outcomeLabels,
@@ -115,6 +116,7 @@ export function IntakeInspect({ item, ...context }: Props) {
   const [problem, setProblem] = useState<"outcome" | "note" | null>(null);
   const noteInput = useRef<HTMLTextAreaElement>(null);
   const firstChoice = useRef<HTMLInputElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
   const trimmed = note.trim();
   const suspected = checklist.suspectedCopy;
   const passable = allMatch(checklist);
@@ -125,7 +127,49 @@ export function IntakeInspect({ item, ...context }: Props) {
       : suspected && outcome !== "NeedsEvidence"
         ? null
         : outcome;
+  const dirty = outcome !== null || note !== "" || checklist !== blank;
+  // Owner request 18/11: inspection opens as a modal, not a row drop-down.
+  const requestClose = () => {
+    if (
+      dirty &&
+      !window.confirm("Bảng kiểm đang nhập sẽ bị bỏ. Đóng phiếu kiểm tra?")
+    ) {
+      return;
+    }
+    dialog.current?.close();
+    context.onClose?.();
+  };
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    element.showModal();
+    return () => element.close();
+  }, []);
   return (
+    <dialog
+      ref={dialog}
+      className={`${styles.receiveDialog} ${styles.inspectionDialog}`}
+      aria-labelledby={`intake-inspect-title-${item.id}`}
+      onCancel={(event) => {
+        event.preventDefault();
+        requestClose();
+      }}
+    >
+      <header className={styles.receiveDialogHeader}>
+        <div>
+          <p>Kiểm tra sách đấu giá · #{item.id.slice(0, 8)}</p>
+          <h2 id={`intake-inspect-title-${item.id}`}>
+            Kiểm tra “{item.title}”
+          </h2>
+        </div>
+        <button
+          className={styles.receiveDialogClose}
+          type="button"
+          onClick={requestClose}
+        >
+          Đóng
+        </button>
+      </header>
     <ActionPanel
       {...context}
       label="Kiểm tra tình trạng sách"
@@ -140,7 +184,7 @@ export function IntakeInspect({ item, ...context }: Props) {
           hãng và không khẳng định đã kiểm mọi trang.
         </>
       }
-      dirty={outcome !== null || note !== "" || checklist !== blank}
+      dirty={dirty}
       shortcut={{
         label: "Đạt: mọi mục khớp",
         apply: () => {
@@ -268,6 +312,7 @@ export function IntakeInspect({ item, ...context }: Props) {
         close: true,
       })}
     />
+    </dialog>
   );
 }
 

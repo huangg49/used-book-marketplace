@@ -56,6 +56,7 @@ const workspaceGroups: RouteGroup[] = [
     icon: "support",
     items: [
       { label: "Khiếu nại trao đổi", to: "/operations/exchange-disputes", icon: "resolution", visibleTo: canReview },
+      { label: "Khiếu nại đấu giá", to: "/operations/auction-disputes", icon: "auction", visibleTo: canResolve },
       { label: "Yêu cầu hỗ trợ", to: "/support", icon: "support", visibleTo: canResolve },
     ],
   },

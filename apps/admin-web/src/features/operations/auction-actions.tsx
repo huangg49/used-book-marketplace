@@ -216,13 +216,14 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
 type ScheduledChoice = "Start" | "Cancel";
 
 // An independent Admin opens a scheduled auction now or cancels it, with a
-// reason. A registration auction opens only once it has its minimum
-// registrants; the server re-checks this and the seller's eligibility.
+// reason. ADR 0091 (owner request 18/11): the Admin may open below the
+// registration minimum; the server then drops the registration gate and
+// returns the registrants' deposits in the same transaction.
 export function AuctionScheduledDecision({ item, ...context }: Props) {
   const need = item.minBidders ?? null;
   const registered = item.registeredCount ?? 0;
-  const canStart = need === null || registered >= need;
-  const [choice, setChoice] = useState<ScheduledChoice | null>(canStart ? null : "Cancel");
+  const belowMinimum = need !== null && registered < need;
+  const [choice, setChoice] = useState<ScheduledChoice | null>(null);
   const [reason, setReason] = useState("");
   const [problem, setProblem] = useState<"choice" | "reason" | null>(null);
   const first = useRef<HTMLInputElement>(null);
@@ -239,11 +240,11 @@ export function AuctionScheduledDecision({ item, ...context }: Props) {
       label="Mở hoặc hủy phiên"
       title="Mở ngay hoặc hủy phiên đang chờ mở."
       intro={
-        canStart
-          ? `Mở ngay: người đăng ký trả giá được từ bây giờ, phiên chạy đủ ${length} như đã hẹn. Người bán và người đăng ký được báo kèm lý do.`
-          : `Phiên mới có ${registered}/${need} người đăng ký nên chưa mở được; chỉ hủy được khi có sự cố hoặc gian lận.`
+        belowMinimum
+          ? `Phiên mới có ${registered}/${need} người đăng ký. Mở ngay bỏ yêu cầu đủ ${need} người: hoàn tiền cọc đăng ký và mọi người trả giá được ngay; phiên chạy đủ ${length} như đã hẹn.`
+          : `Mở ngay: người đăng ký trả giá được từ bây giờ, phiên chạy đủ ${length} như đã hẹn. Người bán và người đăng ký được báo kèm lý do.`
       }
-      dirty={reason !== "" || (canStart && choice !== null)}
+      dirty={reason !== "" || choice !== null}
       fields={(locked) => (
         <>
           <fieldset disabled={locked}>
@@ -254,18 +255,20 @@ export function AuctionScheduledDecision({ item, ...context }: Props) {
                 type="radio"
                 name={`scheduled-${item.id}`}
                 checked={start}
-                disabled={!canStart}
-                aria-describedby={canStart ? undefined : `scheduled-start-hint-${item.id}`}
+                aria-describedby={
+                  belowMinimum ? `scheduled-start-hint-${item.id}` : undefined
+                }
                 onChange={() => {
                   setChoice("Start");
                   setProblem(null);
                 }}
               />
-              Mở phiên ngay: giữ nguyên người đăng ký và tiền cọc, thời lượng {length}
+              Mở phiên ngay: thời lượng {length} tính từ bây giờ
             </label>
-            {!canStart && (
+            {belowMinimum && (
               <p id={`scheduled-start-hint-${item.id}`} className="muted">
-                Cần đủ {need} người đăng ký mới mở được.
+                Bỏ yêu cầu đủ {need} người đăng ký: người đã đăng ký được hoàn
+                tiền cọc, phiên mở cho mọi người trả giá ngay.
               </p>
             )}
             <label className="check">
@@ -320,7 +323,7 @@ export function AuctionScheduledDecision({ item, ...context }: Props) {
         input.current?.focus();
         return false;
       }}
-      submitLabel={start ? "Mở phiên ngay" : "Hủy phiên"}
+      submitLabel={choice ? (start ? "Mở phiên ngay" : "Hủy phiên") : "Kiểm tra và gửi"}
       confirmTitle={start ? "Mở phiên đấu giá ngay?" : "Hủy phiên đấu giá?"}
       confirmBody={
         <>
@@ -328,6 +331,9 @@ export function AuctionScheduledDecision({ item, ...context }: Props) {
             {start
               ? `Phiên “${item.title}” mở ngay bây giờ và kết thúc sau ${length}. Không đổi lại giờ mở được.`
               : `Phiên “${item.title}” sẽ kết thúc ngay, không có người thắng. Không hoàn tác được.`}
+            {start && belowMinimum
+              ? ` Phiên chưa đủ ${need} người đăng ký: yêu cầu tối thiểu bị bỏ, ${registered} người đã đăng ký được hoàn tiền cọc và mọi người trả giá được ngay.`
+              : ""}
           </p>
           <blockquote className="prose">{trimmed}</blockquote>
         </>

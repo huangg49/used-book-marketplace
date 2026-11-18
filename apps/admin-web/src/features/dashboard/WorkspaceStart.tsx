@@ -11,6 +11,8 @@ const hints: Record<string, string> = {
     "Đối chiếu các bài tự duyệt bằng AI và xem hồ sơ cần kiểm tra lại.",
   "/operations/exchange-disputes":
     "Xem khiếu nại Đổi sách, tình trạng giao nhận và bằng chứng trong hồ sơ.",
+  "/operations/auction-disputes":
+    "Xem báo cáo về phiên đấu giá; mở hồ sơ để tạm dừng hoặc đóng phiên.",
   "/support":
     "Tiếp nhận phản ánh, phân công xử lý và trả lời trong từng yêu cầu.",
   "/withdrawals":

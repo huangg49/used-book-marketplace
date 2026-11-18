@@ -56,6 +56,7 @@ import {
   notifyAuctionFunds,
   notifyDepositShare,
   notifyBelowMinimum,
+  notifyOpenedBelowMinimum,
   type FundsReason,
 } from './auction-notifications.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
@@ -947,15 +948,16 @@ export class AuctionBiddingService {
 
   /**
    * An independent Admin opens an Active auction that has not opened yet,
-   * now. A registration auction must already have its minimum registrants
-   * (it never opens below it). The planned length is kept; the seller and
-   * registrants are told, with the reason.
+   * now. ADR 0091 (owner request 18/11): the Admin may also open below the
+   * registration minimum; that override drops the registration gate and sends
+   * every registrant's deposit back in the same transaction. The planned length
+   * is kept; the seller and registrants are told, with the reason.
    */
   start(context: CommandContext, id: string, body: Wire['StartAuction']) {
     return this.commands.runAuction(context, 'startAuction', id, body, {
       discover: async (tx) => [(await this.auction(tx, id)).sellerId],
       authorize: (tx, actor) => this.independentAdmin(tx, actor, id, 'mở'),
-      mutate: async (tx, actor) => {
+      mutate: async (tx, actor, _before, receiptId) => {
         await tx.lock('auctions', [id]);
         const a = await this.auction(tx, id);
         if (a.version !== body.expectedVersion) throw conflict();
@@ -965,22 +967,62 @@ export class AuctionBiddingService {
         const reason = body.reason.trim();
         if (reason.length < 10)
           invalidField('reason', 'Hãy ghi lý do mở phiên ít nhất 10 ký tự.');
+        const need = a.minBidders;
+        const belowMinimum = need != null && (a.registeredCount ?? 0) < need;
+        // Read before the override removes the registration rows.
+        const registrants = await this.registrantIds(tx, a);
         const fields = startNowFields(a, now);
-        if (!fields)
-          throw invalidState(
-            `Phiên mới có ${a.registeredCount ?? 0}/${a.minBidders} người đăng ký nên chưa mở được.`,
-          );
         if (!(await this.partiesEligible(tx, { ...a, leaderId: null })))
           throw invalidState('Người bán chưa đủ điều kiện nên chưa mở được phiên.');
+        if (belowMinimum) {
+          const regs = await tx.c.auction_registrations
+            .find({ auctionId: a._id, state: 'Registered' })
+            .toArray();
+          for (const r of regs)
+            await this.ledger.setAuctionHold(
+              tx,
+              a._id,
+              r.userId,
+              0,
+              `${receiptId}:${r.userId}`,
+              now,
+            );
+          // The app role may not remove documents (ADR 0027 least privilege:
+          // auction_registrations is mutable, not deletable), and the auction
+          // invariant counts every registration except Withdrawn. The returned
+          // deposit ends the registration, so it becomes Withdrawn.
+          await tx.c.auction_registrations.updateMany(
+            { auctionId: a._id, state: 'Registered' },
+            [
+              {
+                $set: {
+                  state: 'Withdrawn',
+                  updatedAt: now,
+                  version: { $add: ['$version', 1] },
+                },
+              },
+            ],
+          );
+        }
         const next = await this.update(tx, a, fields, now);
-        await notifyAuction(
-          tx,
-          next,
-          'AuctionBiddingStarted',
-          [a.sellerId, ...(await this.registrantIds(tx, a))],
-          now,
-          reason,
-        );
+        if (belowMinimum)
+          await notifyOpenedBelowMinimum(
+            tx,
+            next,
+            [a.sellerId, ...registrants],
+            now,
+            need!,
+            reason,
+          );
+        else
+          await notifyAuction(
+            tx,
+            next,
+            'AuctionBiddingStarted',
+            [a.sellerId, ...registrants],
+            now,
+            reason,
+          );
         return this.change(next, now, 'AuctionOpened', actor._id, reason);
       },
     });
@@ -1040,9 +1082,20 @@ export class AuctionBiddingService {
                   now,
                 );
               }
-              await tx.c.auction_registrations.deleteMany({
-                auctionId: a._id,
-              });
+              // No delete: the app role cannot remove documents, and the
+              // invariant counts every registration except Withdrawn.
+              await tx.c.auction_registrations.updateMany(
+                { auctionId: a._id, state: 'Registered' },
+                [
+                  {
+                    $set: {
+                      state: 'Withdrawn',
+                      updatedAt: now,
+                      version: { $add: ['$version', 1] },
+                    },
+                  },
+                ],
+              );
             }
             const fields = demoStartNowFields(a, now);
             const opened = await this.update(tx, a, fields, now);

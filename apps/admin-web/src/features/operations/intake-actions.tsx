@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActionPanel } from "./action-panel";
 import { reclaimLabels, type Intake } from "./contracts";
 import type { ActionContext } from "./queue-panel";
+import styles from "./IntakeQueue.module.css";
 
 // N4-02: the assigned Staff member receives, inspects, opens or hands back one
 // intake. Every rule is checked again by the API (assignment, deadline, state).
@@ -33,10 +34,45 @@ export function IntakeReceive({ item, ...context }: Props) {
   const [invalid, setInvalid] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const submit = useRef<(() => void) | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
   const [recent] = useState(recentShelves);
   const code = shelf.trim();
+  const requestClose = () => {
+    if (shelf && !window.confirm("Mã kệ đang nhập sẽ bị bỏ. Đóng phiếu nhận sách?")) {
+      return;
+    }
+    dialog.current?.close();
+    context.onClose?.();
+  };
+
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    element.showModal();
+    input.current?.focus();
+    return () => element.close();
+  }, []);
+
   return (
-    <ActionPanel
+    <dialog
+      ref={dialog}
+      className={styles.receiveDialog}
+      aria-labelledby={`intake-receive-title-${item.id}`}
+      onCancel={(event) => {
+        event.preventDefault();
+        requestClose();
+      }}
+    >
+      <header className={styles.receiveDialogHeader}>
+        <div>
+          <p>Tiếp nhận sách đấu giá · #{item.id.slice(0, 8)}</p>
+          <h2 id={`intake-receive-title-${item.id}`}>Nhận “{item.title}”</h2>
+        </div>
+        <button className={styles.receiveDialogClose} type="button" onClick={requestClose}>
+          Đóng
+        </button>
+      </header>
+      <ActionPanel
       {...context}
       label="Nhận sách đấu giá"
       title="Nhận sách tại quầy."
@@ -123,12 +159,13 @@ export function IntakeReceive({ item, ...context }: Props) {
         rememberShelf(code);
         return {
           tone: "success",
-          text: `Đã nhận “${item.title}” vào kệ ${code}. Kiểm tra tình trạng ngay bên dưới.`,
+          text: `Đã nhận “${item.title}” vào kệ ${code}. Bước tiếp theo là kiểm tra tình trạng.`,
           close: true,
           next: true,
         };
       }}
-    />
+      />
+    </dialog>
   );
 }
 

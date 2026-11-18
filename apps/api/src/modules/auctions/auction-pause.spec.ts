@@ -143,8 +143,20 @@ describe('startNowFields (Admin opens a scheduled auction now)', () => {
     });
   });
 
-  it('never opens below the registration minimum', () => {
-    expect(startNowFields(scheduled({ registeredCount: 3 }), t0)).toBeNull();
+  // ADR 0091: the Admin may open below the minimum; the override drops the
+  // registration gate so the registrants' holds can be released.
+  it('opens below the registration minimum by dropping the gate', () => {
+    expect(startNowFields(scheduled({ registeredCount: 3 }), t0)).toEqual({
+      startAt: t0,
+      plannedEndAt: at(24 * H),
+      endAt: at(24 * H),
+      openMode: null,
+      minBidders: null,
+      depositAmount: null,
+      biddingOpenedAt: null,
+      opensAt: null,
+      registeredCount: 0,
+    });
   });
 
   it('opens an auction without registration and no open time', () => {

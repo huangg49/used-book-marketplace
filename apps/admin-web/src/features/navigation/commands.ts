@@ -34,6 +34,10 @@ const details: Record<string, [string, string]> = {
     "Đối chiếu bằng chứng và xử lý khiếu nại Đổi sách",
     "tranh chap doi sach phan xu boi thuong exchange dispute",
   ],
+  "/operations/auction-disputes": [
+    "Đối chiếu khiếu nại về phiên đấu giá và mở hồ sơ xử lý",
+    "tranh chap dau gia phien auction dispute khieu nai",
+  ],
   "/support": [
     "Tiếp nhận yêu cầu hỗ trợ và phản ánh",
     "trung tam xu ly phan anh ticket support",

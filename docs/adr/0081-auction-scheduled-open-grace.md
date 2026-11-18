@@ -1,5 +1,9 @@
 # ADR0081: Phiên có đăng ký luôn hẹn giờ mở; thiếu người thì chờ thêm 24 giờ rồi hủy
 
+> Cập nhật 18/11/2026: [ADR0091](0091-admin-open-scheduled-auction-now.md) cho Admin mở
+> phiên ngay cả khi chưa đủ người đăng ký (override bỏ cổng đăng ký, hoàn cọc). Luật tự động
+> và đường của người bán trong ADR này giữ nguyên.
+
 09/11/2026. Accepted theo yêu cầu của chủ dự án trong phiên làm việc ("Remove the option to
 open the auction now from the user they can only schedule their auction to open if they have
 enough people registered in and if not after 24 hours of that scheduled time the auction will

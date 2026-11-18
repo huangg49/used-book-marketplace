@@ -80,6 +80,7 @@ export function LoginPage() {
               <label htmlFor="admin-password">Mật khẩu <span aria-hidden="true">— mã số thẻ</span></label>
               <div className={styles.password}>
                 <input id="admin-password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password"
+                  placeholder="Nhập mật khẩu của bạn"
                   required disabled={busy} value={password}
                   onChange={(event) => { setPassword(event.target.value); setError(undefined); }} />
                 <button className={styles.reveal} type="button" disabled={busy} onClick={() => setShowPassword(!showPassword)}

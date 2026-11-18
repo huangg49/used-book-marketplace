@@ -62,7 +62,7 @@ export function LoginPage() {
           <AuthPageLink to={"/forgot-password" + returnQuery} className={styles.textAction}>Quên mật khẩu?</AuthPageLink>
         </div>
         <div className={styles.password}>
-          <AuthInput id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
+          <AuthInput id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required placeholder="Nhập mật khẩu của bạn"
             defaultValue={draft.current.password} onChange={(event) => updateDraft("password", event.target.value)} />
           <button type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>
             {showPassword ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}

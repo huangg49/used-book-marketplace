@@ -527,9 +527,11 @@ try {
     await navigate(p, "/operations/collections");
     await navigate(p, route);
   };
+  // The inspection sheet is a modal dialog and its confirmation stacks on top.
   const confirmDialog = (p) =>
     p
       .locator("dialog[open]")
+      .last()
       .getByRole("button", { name: /Xác nhận/ })
       .click();
 
