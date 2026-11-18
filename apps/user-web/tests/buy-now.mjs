@@ -781,9 +781,10 @@ try {
         response.url().endsWith(`/me/orders/${orderId}/shipment`) &&
         response.status() === status,
     );
-  const pickerOpened = sellerPage.waitForEvent("filechooser");
-  await shipmentDialog.getByText("Bấm để chọn ảnh từ thiết bị", { exact: true }).click();
-  const picker = await pickerOpened;
+  const [picker] = await Promise.all([
+    sellerPage.waitForEvent("filechooser"),
+    shipmentDialog.getByText("Đổi ảnh khác…", { exact: true }).click(),
+  ]);
   await nextShipmentRead(404);
   assert(
     await originalInput.evaluate((input) => input.isConnected),
