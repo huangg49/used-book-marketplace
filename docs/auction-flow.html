@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luồng đấu giá</title>
+<style>
+  :root { --bg:#faf7f2; --fg:#2a1f1f; --muted:#6b5e5e; --line:#e4dccf; --wine:#7a1f2b; --card:#fff; --soft:#f3ece3; --ok:#2e6b3f; --bad:#a1342b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1b1616; --fg:#f1e9e4; --muted:#b5a8a2; --line:#3a3030; --wine:#e08a95; --card:#241e1e; --soft:#2c2424; --ok:#7fc58f; --bad:#ef8a80; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:32px 16px 56px; }
+  h1 { font-size:1.75rem; margin:0 0 4px; color:var(--wine); }
+  .lead { color:var(--muted); margin:0 0 20px; }
+  nav { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:28px; }
+  nav a { text-decoration:none; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:.9rem; }
+  nav a:hover { border-color:var(--wine); }
+  .step { display:grid; grid-template-columns:44px 1fr; gap:14px; margin-bottom:8px; }
+  .num { width:44px; height:44px; border-radius:50%; background:var(--wine); color:#fff; display:grid; place-items:center; font-weight:700; font-size:1.1rem; }
+  .rail { display:flex; flex-direction:column; align-items:center; }
+  .rail::after { content:""; flex:1; width:2px; background:var(--line); margin-top:6px; }
+  .step:last-of-type .rail::after { display:none; }
+  .body { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 18px 10px; margin-bottom:18px; }
+  h2 { font-size:1.15rem; margin:0 0 6px; }
+  .who { display:inline-block; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:6px; }
+  ul { padding-left:20px; margin:6px 0 8px; }
+  li { margin:3px 0; }
+  .time { display:inline-block; background:var(--soft); border-radius:6px; padding:0 6px; font-weight:600; white-space:nowrap; }
+  .branch { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin:10px 0 6px; }
+  .opt { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--bg); }
+  .opt b { display:block; margin-bottom:4px; }
+  .good b { color:var(--ok); }
+  .bad b { color:var(--bad); }
+  table { width:100%; border-collapse:collapse; margin:8px 0; font-size:.95rem; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-size:.82rem; text-transform:uppercase; }
+  .note { color:var(--muted); font-size:.9rem; margin-top:28px; border-top:1px solid var(--line); padding-top:14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Luồng đấu giá Lật lại</h1>
+  <p class="lead">Từ lúc người bán tạo phiên tới khi sách được bán hoặc trả lại · 09/11/2026</p>
+
+  <nav aria-label="Các bước">
+    <a href="#s1">1. Tạo phiên</a><a href="#s2">2. Gửi sách</a><a href="#s3">3. Đăng ký</a>
+    <a href="#s4">4. Trả giá</a><a href="#s5">5. Kết thúc</a><a href="#s6">6. Thanh toán</a>
+    <a href="#s7">7. Không thanh toán</a>
+  </nav>
+
+  <section class="step" id="s1">
+    <div class="rail"><div class="num">1</div></div>
+    <div class="body">
+      <span class="who">Người bán</span>
+      <h2>Tạo phiên đấu giá</h2>
+      <ul>
+        <li>Chọn sách đã được duyệt trên kệ và điểm giao nhận tại TP.HCM.</li>
+        <li>Chọn kiểu: <b>Anh</b> (giá tăng), <b>Hà Lan</b> (giá giảm), <b>Kín giá cao nhất</b>.</li>
+        <li>Đặt giá khởi điểm (≥ 10.000đ), bước giá. Kiểu Anh có thể thêm giá mua ngay.</li>
+        <li>Số người đăng ký tối thiểu: <b>ít nhất 4</b>.</li>
+        <li>Tiền cọc: mặc định <b>10%</b> giá khởi điểm, người bán tăng được tới <b>50%</b>.</li>
+        <li>Mỗi người bán tối đa 2 phiên chưa kết thúc.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="step" id="s2">
+    <div class="rail"><div class="num">2</div></div>
+    <div class="body">
+      <span class="who">Người bán · Staff</span>
+      <h2>Gửi sách tới điểm và đăng phiên</h2>
+      <ul>
+        <li>Mang sách tới điểm trong <span class="time">72 giờ</span>.</li>
+        <li>Staff nhận và kiểm định sách. Không đạt thì sách được trả lại.</li>
+        <li>Đạt thì người bán đăng phiên, hẹn giờ mở: <span class="time">5 phút – 30 ngày</span>.</li>
+        <li>Đổi giờ mở tối đa <b>2 lần</b>, không đổi trong <span class="time">30 phút</span> trước giờ mở.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="step" id="s3">
+    <div class="rail"><div class="num">3</div></div>
+    <div class="body">
+      <span class="who">Người mua</span>
+      <h2>Đăng ký và đặt cọc</h2>
+      <ul>
+        <li>Đăng ký bằng tiền cọc; tiền được giữ trong ví.</li>
+        <li><b>Rút đăng ký</b> (hoàn cọc ngay): lúc nào cũng được khi chưa đủ người; đã đủ người thì chỉ tới <span class="time">72 giờ</span> trước giờ mở.</li>
+        <li>Đăng ký lại sau khi rút phải chờ <span class="time">1 phút</span>.</li>
+        <li>Đủ người sau giờ mở thì mở sau <span class="time">10 phút</span> (đêm 23:00–07:00 thì mở lúc 07:00).</li>
+      </ul>
+      <div class="branch">
+        <div class="opt good"><b>Đủ người</b>Phiên mở trả giá đúng giờ.</div>
+        <div class="opt bad"><b>Không đủ người</b>Chờ thêm 24 giờ; vẫn không đủ thì hủy, hoàn cọc.</div>
+      </div>
+      <p class="note" style="margin-top:6px;border:0;padding:0">Người bán chỉ đóng phiên được trước giờ mở; tăng số người tối thiểu chỉ khi chưa ai đăng ký.</p>
+    </div>
+  </section>
+
+  <section class="step" id="s4">
+    <div class="rail"><div class="num">4</div></div>
+    <div class="body">
+      <span class="who">Người mua</span>
+      <h2>Trả giá</h2>
+      <table>
+        <thead><tr><th>Kiểu</th><th>Cách thắng</th></tr></thead>
+        <tbody>
+          <tr><td>Anh</td><td>Trả tay hoặc trả tự động; giá cao nhất khi hết giờ thắng.</td></tr>
+          <tr><td>Mua ngay · kết thúc ngay</td><td>Người bấm mua ngay thắng luôn.</td></tr>
+          <tr><td>Mua ngay · chờ thách đấu</td><td>Người khác có <span class="time">60 giây / 5 phút</span> để trả cao hơn.</td></tr>
+          <tr><td>Hà Lan</td><td>Giá giảm dần; người chấp nhận đầu tiên thắng.</td></tr>
+          <tr><td>Kín</td><td>Mỗi người gửi một giá kín; giá cao nhất thắng.</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>Người dẫn giá bị giữ tiền trong ví; ai bị vượt được trả lại ngay.</li>
+        <li>Admin có thể tạm dừng phiên (tối đa <span class="time">48 giờ</span>/lần, tổng <span class="time">72 giờ</span>) và trả lại thời gian khi tiếp tục.</li>
+        <li>Thành viên báo cáo được phiên; Admin có thể đóng phiên kèm lời nhắn.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="step" id="s5">
+    <div class="rail"><div class="num">5</div></div>
+    <div class="body">
+      <span class="who">Hệ thống</span>
+      <h2>Phiên kết thúc</h2>
+      <div class="branch">
+        <div class="opt bad"><b>Không bán</b>Dưới hai người trả giá (trừ Mua ngay, Hà Lan). Hoàn cọc, trả sách.</div>
+        <div class="opt good"><b>Có người thắng</b>Tạo đơn hàng. Người thua được hoàn cọc.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="s6">
+    <div class="rail"><div class="num">6</div></div>
+    <div class="body">
+      <span class="who">Người thắng</span>
+      <h2>Thanh toán trong 24 giờ</h2>
+      <ul>
+        <li>Lúc thắng, tiền trong ví chỉ <b>bị giữ</b>, chưa trả cho ai.</li>
+        <li>Bấm thanh toán trong <span class="time">24 giờ</span>: khoản giữ thành tiền trả cho đơn (tiền cọc nằm trong đó, không bị trừ hai lần).</li>
+        <li>Nhận sách tại điểm. Người bán nhận tiền (trừ phí) khi đơn hoàn tất.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="step" id="s7">
+    <div class="rail"><div class="num">7</div></div>
+    <div class="body">
+      <span class="who">Hệ thống</span>
+      <h2>Người thắng không thanh toán</h2>
+      <ul>
+        <li>Người thắng bị ghi vi phạm và <b>mất tiền cọc</b>; phần giữ còn lại về ví.</li>
+        <li>Người trả giá cao thứ hai được mời mua một lần, ở giá của họ, trong <span class="time">24 giờ</span>.</li>
+      </ul>
+      <table>
+        <thead><tr><th>Kết quả</th><th>Tiền cọc bị mất</th></tr></thead>
+        <tbody>
+          <tr><td>Người thứ hai mua và thanh toán</td><td>Nền tảng giữ 100%</td></tr>
+          <tr><td>Không có người thứ hai</td><td>Người bán 50% · nền tảng 50%</td></tr>
+          <tr><td>Người thứ hai từ chối hoặc hết hạn</td><td>Người bán 50% · nền tảng 50%</td></tr>
+          <tr><td>Người thứ hai nhận nhưng không thanh toán</td><td>Người bán 50% · nền tảng 50%</td></tr>
+          <tr><td>Admin đóng phiên do báo cáo</td><td>Người bán không nhận</td></tr>
+        </tbody>
+      </table>
+      <p>Sách không bán được thì được trả lại người bán tại điểm.</p>
+    </div>
+  </section>
+
+  <p class="note">Giờ tính theo giờ Việt Nam (UTC+7) và đồng hồ máy chủ. Thay đổi tiền cọc (ADR 0087) và Phase E (ADR 0088) chưa commit.</p>
+</main>
+</body>
+</html>

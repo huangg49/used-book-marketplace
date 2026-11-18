@@ -19,14 +19,18 @@ import { getWalletSummary } from '../services/wallet'
 import { invalidateMemberWalletViews } from '../lib/wallet-cache'
 import {
   AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, canWithdrawRegistration, waitingForRegistrants, waitingTime, openRuleText, closeReasonText,
-  getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
+  getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, saveMyAddress, setAutoBid, withdrawIntake, advanceDemoAuction,
+  type DeliveryChoice, type MyIntake, type NewAddressBody,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
 import { AuctionGallery } from '../components/AuctionGallery'
 import { conditions } from '../lib/listing-labels'
 import { AuctionPrice } from '../components/AuctionPrice'
+import { PurchaseAddressFields, type PurchaseAddressForm } from '../components/PurchaseAddressFields'
+import { serviceAreasQuery } from '../services/service-areas'
 import { AuctionReceipt } from '../components/AuctionReceipt'
+import { DemoSkipButton } from '../components/DemoSkipButton'
 import { useAuctionChangeMotion } from '../hooks/useAuctionMotion'
 import { rowFrames, standingFrames } from '../lib/auction-motion'
 import { commandError } from '../lib/auction-errors'
@@ -35,6 +39,8 @@ import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { DutchPanel, RegistrationPanel, SealedPanel, SecondChancePanel, WaitingSellerControls } from './AuctionFormatPanels'
 
 const HOUR = 3_600_000
+// ADR 0044: point delivery uses the same demo area as the exchange flow.
+const DELIVERY_SERVICE_AREA = 'HCM-DEMO-v1'
 // ADR 0077/0079: headline for an auction that ended for a stated reason.
 const CLOSE_TITLE: Record<NonNullable<AuctionSummary['closeReason']>, string> = {
   NotEnoughBidders: 'Phiên không đủ người tham gia',
@@ -116,7 +122,13 @@ export function AuctionDetailPage() {
       }
     },
     enabled: valid && authed, retry: false, staleTime: 0,
-    refetchInterval: (query) => live(query.state.data ?? undefined),
+    refetchInterval: (query) => {
+      const p = query.state.data
+      // Keep polling every 3 s until orderId appears after winning (the backend
+      // worker creates the order asynchronously; without this the user must F5).
+      if (p?.won && !p.orderId) return 3_000
+      return live(p ?? undefined)
+    },
   })
   // Public reads never name the seller; the caller's own intakes do.
   const intakes = useQuery({
@@ -317,6 +329,16 @@ export function AuctionDetailPage() {
             {/* Preserve an unresolved command's key/body while role recovery
                 hides its controls. Recovery must not remount the command. */}
             <div hidden={authed && intakes.isError}>{action}</div>
+            {authed && !intakes.isError && (sellerIntake || me) && auction.version != null && (scheduled || open) && (
+              <DemoSkipButton
+                label={scheduled ? 'Mở phiên ngay · Demo' : 'Kết thúc phiên ngay · Demo'}
+                note={scheduled
+                  ? 'Bỏ qua giờ hẹn mở. Phiên chỉ mở khi đã đủ người đăng ký tối thiểu.'
+                  : 'Chốt phiên ngay; hệ thống chọn người thắng và tạo đơn như khi hết giờ.'}
+                run={(key) => advanceDemoAuction(auction.id, auction.version!, key)}
+                onDone={refresh}
+              />
+            )}
           </section>
         </aside>
 
@@ -940,9 +962,21 @@ function WinnerPanel({ me, auction, ownerId, onChanged, paused }: { me: AuctionP
   // ADR 0044: pickup at the point, or delivery priced by the server.
   const [deliver, setDeliver] = useState(false)
   const [addressId, setAddressId] = useState<string | null>(null)
+  // ADR 0044: a saved address, or a new one saved with the same form the
+  // exchange and direct-delivery flows use.
+  const [newAddress, setNewAddress] = useState(false)
+  const [addressForm, setAddressForm] = useState<PurchaseAddressForm>({ recipientName: '', phone: '', localityCode: '', detail: '' })
+  const [addressBusy, setAddressBusy] = useState(false)
+  const [addressError, setAddressError] = useState<string | null>(null)
+  const addressAttempt = useRef<{ key: string; body: NewAddressBody } | null>(null)
   const addresses = useQuery({ queryKey: ['addresses'], queryFn: getMyAddresses, enabled: deliver, retry: false })
-  const usable = (addresses.data?.items ?? []).filter((a) => a.serviceAreaCode === 'HCM-DEMO-v1')
+  const areas = useQuery({ ...serviceAreasQuery, enabled: deliver })
+  const usable = (addresses.data?.items ?? []).filter((a) => a.serviceAreaCode === DELIVERY_SERVICE_AREA)
   const chosen = addressId ?? usable.find((a) => a.isDefault)?.id ?? usable[0]?.id ?? null
+  const selectedAddress = usable.find((a) => a.id === chosen)
+  const localityLabel = selectedAddress?.localityCode
+    ? areas.data?.localities.find((item) => item.code === selectedAddress.localityCode)?.label
+    : undefined
   const quote = useQuery({
     queryKey: ['point-order-delivery-quote', me.orderId, chosen],
     queryFn: () => getPointOrderDeliveryQuote(me.orderId!, chosen!),
@@ -951,6 +985,56 @@ function WinnerPanel({ me, auction, ownerId, onChanged, paused }: { me: AuctionP
   const delivery: DeliveryChoice | undefined = deliver && quote.data
     ? { addressId: quote.data.addressId, addressVersion: quote.data.addressVersion, fee: quote.data.outboundFee }
     : undefined
+
+  // Prefill only name and phone from the saved address the buyer already has;
+  // the area and street are still written for this delivery.
+  function openNewAddress() {
+    const fallback = selectedAddress ?? usable.find((a) => a.isDefault) ?? usable[0]
+    setAddressForm({
+      recipientName: fallback?.recipientName ?? '',
+      phone: fallback?.phone ?? '',
+      localityCode: fallback?.localityCode ?? '',
+      detail: '',
+    })
+    setNewAddress(true)
+    setAddressError(null)
+  }
+
+  // One Idempotency-Key per address intent: a retry after a lost response
+  // replays the same address instead of adding a second one.
+  async function saveAddress() {
+    if (addressBusy) return
+    if (!addresses.data?.version) {
+      setAddressError('Chưa tải được sổ địa chỉ. Tải lại địa chỉ rồi thử lại.')
+      return
+    }
+    if (!addressForm.localityCode) {
+      setAddressError('Chọn khu vực nhận sách trong TP.HCM, Bình Dương hoặc Vũng Tàu.')
+      return
+    }
+    const attempt = addressAttempt.current ?? {
+      key: crypto.randomUUID(),
+      body: {
+        expectedBookVersion: addresses.data.version,
+        address: { ...addressForm, serviceAreaCode: DELIVERY_SERVICE_AREA },
+        makeDefault: usable.length === 0,
+      },
+    }
+    addressAttempt.current = attempt
+    setAddressBusy(true); setAddressError(null)
+    try {
+      const saved = await saveMyAddress(attempt.body, attempt.key)
+      addressAttempt.current = null
+      await addresses.refetch()
+      setAddressId(saved.addressId)
+      setNewAddress(false)
+    } catch (caught) {
+      if (!commandOutcomeUnknown(caught)) addressAttempt.current = null
+      setAddressError(commandError(caught))
+    } finally {
+      setAddressBusy(false)
+    }
+  }
 
   const pay = async () => {
     if (!order.data) return
@@ -1022,15 +1106,60 @@ function WinnerPanel({ me, auction, ownerId, onChanged, paused }: { me: AuctionP
       </div>
       <p className={styles.quickLabel}>Nhận sách bằng cách nào?</p>
       <div className={styles.quick} role="group" aria-label="Cách nhận sách">
-        <button type="button" aria-pressed={!deliver} disabled={choiceLocked} onClick={() => setDeliver(false)}>Tự nhận tại điểm</button>
+        <button type="button" aria-pressed={!deliver} disabled={choiceLocked} onClick={() => { setDeliver(false); setNewAddress(false); setAddressError(null) }}>Tự nhận tại điểm</button>
         <button type="button" aria-pressed={deliver} disabled={choiceLocked} onClick={() => setDeliver(true)}>Giao tận nơi</button>
       </div>
       {deliver && (addresses.isPending ? (
         <p className={styles.fieldHint} role="status">Đang tải địa chỉ…</p>
       ) : addresses.isError ? (
-        <p role="alert" className={styles.fieldError}>{commandError(addresses.error)}</p>
+        <div role="alert">
+          <p className={styles.fieldError}>{commandError(addresses.error)}</p>
+          <button type="button" className={styles.secondaryBlock} disabled={addresses.isFetching} onClick={() => void addresses.refetch()}>
+            Tải lại địa chỉ
+          </button>
+        </div>
+      ) : newAddress ? (
+        <form className={styles.addressForm} onSubmit={(event) => { event.preventDefault(); void saveAddress() }}>
+          <PurchaseAddressFields
+            addresses={[]}
+            selected="new"
+            onSelect={() => undefined}
+            form={addressForm}
+            onChange={setAddressForm}
+            localities={areas.data?.localities ?? []}
+            note={`Điểm ${o.pointName} giao sách cho hãng vận chuyển mô phỏng tới địa chỉ này.`}
+          />
+          {areas.isError && (
+            <p className={styles.fieldHint} role="status">
+              Chưa tải được khu vực giao sách.{' '}
+              <button type="button" className={styles.secondaryBlock} disabled={areas.isFetching} onClick={() => void areas.refetch()}>
+                Tải lại khu vực
+              </button>
+            </p>
+          )}
+          {addressError && <p role="alert" className={styles.fieldError}>{addressError}</p>}
+          <button type="submit" className={styles.secondaryBlock} disabled={addressBusy || choiceLocked}>
+            {addressBusy ? 'Đang lưu địa chỉ…' : 'Lưu địa chỉ và xem phí giao'}
+          </button>
+          {usable.length > 0 && (
+            <button
+              type="button" className={styles.secondaryBlock} disabled={addressBusy || choiceLocked}
+              onClick={() => { setNewAddress(false); setAddressError(null) }}
+            >
+              Dùng địa chỉ đã lưu
+            </button>
+          )}
+        </form>
       ) : usable.length === 0 ? (
-        <p className={styles.fieldHint}>Bạn chưa có địa chỉ nhận trong khu vực được hỗ trợ. Thêm địa chỉ trong Tài khoản rồi quay lại.</p>
+        <div className={styles.field}>
+          <p className={styles.fieldHint}>
+            Bạn chưa có địa chỉ nhận trong khu vực hỗ trợ (TP.HCM, Bình Dương, Vũng Tàu).
+            Thêm địa chỉ ngay tại đây để nhận sách tận nơi.
+          </p>
+          <button type="button" className={styles.secondaryBlock} disabled={choiceLocked} onClick={openNewAddress}>
+            Thêm địa chỉ nhận sách
+          </button>
+        </div>
       ) : (
         <div className={styles.field}>
           <label htmlFor={`${o.id}-address`}>Giao tới</label>
@@ -1040,13 +1169,33 @@ function WinnerPanel({ me, auction, ownerId, onChanged, paused }: { me: AuctionP
           >
             {usable.map((a) => <option key={a.id} value={a.id}>{a.recipientName} · {a.detail}</option>)}
           </select>
-          <p className={quote.isError ? styles.fieldError : styles.fieldHint} role="status">
-            {quote.isError
-              ? commandError(quote.error)
-              : quote.data
-                ? `Giao hàng miễn phí (hãng vận chuyển mô phỏng). Sau khi bạn đồng ý biên bản, điểm giao sách cho hãng.`
-                : 'Đang kiểm tra địa chỉ…'}
-          </p>
+          {selectedAddress && (
+            <p className={styles.fieldHint}>
+              {selectedAddress.recipientName}
+              {selectedAddress.phone ? ` · ${selectedAddress.phone}` : ''} · {selectedAddress.detail}
+              {localityLabel ? ` · ${localityLabel}` : ''}
+            </p>
+          )}
+          <button type="button" className={styles.secondaryBlock} disabled={choiceLocked} onClick={openNewAddress}>
+            Thêm địa chỉ mới
+          </button>
+          {quote.isError ? (
+            <p role="alert" className={styles.fieldError}>{commandError(quote.error)}</p>
+          ) : quote.data ? (
+            <>
+              <dl className={styles.deliveryTotals}>
+                <div><dt>Tiền sách</dt><dd>{formatVnd(o.amounts.bookPrice)}</dd></div>
+                <div><dt>Phí giao tận nơi</dt><dd>{quote.data.outboundFee > 0 ? formatVnd(quote.data.outboundFee) : 'Miễn phí'}</dd></div>
+                <div><dt>Tổng thanh toán</dt><dd>{formatVnd(quote.data.buyerTotal)}</dd></div>
+              </dl>
+              <p className={styles.fieldHint}>
+                {quote.data.outboundFee > 0 ? `Phí giao ${formatVnd(quote.data.outboundFee)} do điểm giao nhận thu. ` : 'Giao hàng miễn phí. '}
+                Sau khi bạn đồng ý biên bản, {o.pointName} giao sách cho hãng vận chuyển mô phỏng.
+              </p>
+            </>
+          ) : (
+            <p className={styles.fieldHint} role="status">Đang tính phí giao tới địa chỉ này…</p>
+          )}
         </div>
       ))}
       {error && <p role="alert" className={styles.fieldError}>{error}</p>}
@@ -1063,7 +1212,7 @@ function WinnerPanel({ me, auction, ownerId, onChanged, paused }: { me: AuctionP
         onClose={() => !busy && setConfirming(false)}
         title={`Thanh toán ${formatVnd(total ?? o.amounts.bookPrice)} từ ví?`}
         description={delivery
-          ? `Tiền sách ${formatVnd(o.amounts.bookPrice)}. Giao hàng miễn phí. Số tiền được giữ cho đơn này đến khi bạn nhận sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`
+          ? `Giao tới ${selectedAddress?.recipientName ?? 'địa chỉ của bạn'}${selectedAddress?.phone ? ` · ${selectedAddress.phone}` : ''}: tiền sách ${formatVnd(o.amounts.bookPrice)}, phí giao ${delivery.fee > 0 ? formatVnd(delivery.fee) : 'miễn phí'}, tổng ${formatVnd(quote.data?.buyerTotal ?? o.amounts.bookPrice + delivery.fee)}. Số tiền được giữ cho đơn này đến khi bạn nhận sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`
           : `Số tiền được giữ cho đơn này đến khi bạn nhận sách tại ${o.pointName}. Ví cần đủ số dư khả dụng; không nhận thanh toán một phần.`}
         confirmText="Thanh toán"
         onConfirm={() => void pay()}

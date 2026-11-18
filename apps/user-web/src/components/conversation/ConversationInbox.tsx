@@ -209,12 +209,15 @@ export function ConversationInbox({
   error,
   retry,
   userId,
+  showExchanges = true,
 }: {
   rooms: PurchaseConversation[];
   loading: boolean;
   error: boolean;
   retry: () => void;
   userId: string;
+  /** False when the exchange transactions are listed in their own category. */
+  showExchanges?: boolean;
 }) {
   const position = useInboxPosition();
   const exchanges = useQuery({
@@ -222,6 +225,7 @@ export function ConversationInbox({
     queryFn: getExchanges,
     retry: false,
     refetchInterval: 5000,
+    enabled: showExchanges,
   });
   const [filter, setFilter] = useState<InboxFilter>(position.read().filter),
     [visible, setVisible] = useState(position.read().visible);
@@ -234,15 +238,16 @@ export function ConversationInbox({
     return () => window.removeEventListener("scroll", rememberScroll);
   }, [position]);
   const linked = new Set(rooms.flatMap((r) => r.terms?.exchangeIds ?? []));
-  const legacy =
-    exchanges.data?.items.filter(
+  const legacy = !showExchanges
+    ? []
+    : (exchanges.data?.items.filter(
       (x) =>
         !linked.has(x.id) &&
         (filter === "all" ||
           (filter === "buyer"
             ? x.initiatorId === userId
             : x.recipientId === userId)),
-    ) ?? [];
+    ) ?? []);
   const filtered = rooms.filter(
     (r) =>
       filter === "all" ||
@@ -281,7 +286,7 @@ export function ConversationInbox({
           </button>
         </p>
       )}
-      {exchanges.isError && (
+      {showExchanges && exchanges.isError && (
         <p role="alert">
           Chưa tải được danh sách đổi sách.{" "}
           <button type="button" onClick={() => void exchanges.refetch()}>
@@ -293,8 +298,7 @@ export function ConversationInbox({
         !error &&
         !filtered.length &&
         !legacy.length &&
-        !exchanges.isPending &&
-        !exchanges.isError && (
+        (!showExchanges || (!exchanges.isPending && !exchanges.isError)) && (
           <div className={styles.empty}>
             <MessageCircle size={34} aria-hidden="true" />
             <h2>Chưa có cuộc trao đổi ở đây</h2>

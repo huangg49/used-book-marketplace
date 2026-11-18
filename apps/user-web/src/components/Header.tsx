@@ -163,10 +163,10 @@ export function Header({
                 className={styles.iconAction}
                 aria-label={
                   activeRoomsCount > 0
-                    ? `Chat, ${activeRoomsCount} cuộc trò chuyện đang hoạt động`
-                    : "Chat, hội thoại của bạn"
+                    ? `Giao dịch, ${activeRoomsCount} cuộc trò chuyện đang hoạt động`
+                    : "Giao dịch của bạn"
                 }
-                title="Chat"
+                title="Giao dịch"
               >
                 <MessageCircle size={20} aria-hidden="true" />
                 {activeRoomsCount > 0 && (
@@ -237,7 +237,7 @@ export function Header({
                   <NavLink
                     to={ROUTES.chat()}
                     className={styles.mobileQuickItem}
-                    aria-label="Hội thoại Chat"
+                    aria-label="Giao dịch của bạn"
                   >
                     <div className={styles.mobileQuickIcon}>
                       <MessageCircle size={18} aria-hidden="true" />
@@ -246,7 +246,9 @@ export function Header({
                       )}
                     </div>
                     <div className={styles.mobileQuickInfo}>
-                      <span className={styles.mobileQuickTitle}>Hội thoại Chat</span>
+                      <span className={styles.mobileQuickTitle}>
+                        Giao dịch của bạn
+                      </span>
                       <span className={styles.mobileQuickDesc}>
                         {activeRoomsCount > 0
                           ? `${activeRoomsCount} cuộc trò chuyện`

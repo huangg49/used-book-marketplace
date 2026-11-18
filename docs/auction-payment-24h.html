@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thanh toán sau khi thắng</title>
+<style>
+  :root { --bg:#faf7f2; --fg:#2a1f1f; --muted:#6b5e5e; --line:#e4dccf; --wine:#7a1f2b; --card:#fff; --soft:#f3ece3; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1b1616; --fg:#f1e9e4; --muted:#b5a8a2; --line:#3a3030; --wine:#e08a95; --card:#241e1e; --soft:#2c2424; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:820px; margin:0 auto; padding:32px 16px 48px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; color:var(--wine); }
+  .lead { color:var(--muted); margin:0 0 24px; }
+  h2 { font-size:1.15rem; margin:28px 0 10px; }
+  .key { background:var(--soft); border-left:4px solid var(--wine); padding:12px 16px; border-radius:6px; font-weight:600; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin:10px 0; }
+  .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
+  .step { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px 14px; }
+  .arrow { color:var(--wine); font-weight:700; }
+  ul { padding-left:20px; margin:6px 0; }
+  .note { color:var(--muted); font-size:.92rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Thắng đấu giá rồi, sao còn 24 giờ thanh toán?</h1>
+  <p class="lead">Lật lại · giải thích luồng tiền của người thắng</p>
+
+  <p class="key">Tiền giảm trong ví lúc bạn thắng chưa phải là thanh toán, mà chỉ là tiền bị giữ.</p>
+
+  <h2>Ví có hai phần</h2>
+  <div class="card">
+    <ul>
+      <li><b>Số dư khả dụng:</b> tiền bạn tiêu được.</li>
+      <li><b>Tiền đang giữ cho đấu giá:</b> tiền vẫn là của bạn, nhưng tạm khóa và không tiêu được.</li>
+    </ul>
+    <p>Khi bạn dẫn giá hoặc thắng phiên, hệ thống chuyển tiền từ khả dụng sang phần giữ. Vì vậy bạn thấy số dư khả dụng giảm, nhưng người bán chưa nhận đồng nào.</p>
+  </div>
+
+  <h2>24 giờ để làm gì</h2>
+  <p>Sau khi thắng, hệ thống tạo một đơn hàng. Bạn có 24 giờ để bấm thanh toán, tức là xác nhận "tôi mua".</p>
+  <div class="card">
+    <b>Bấm thanh toán</b>
+    <ul>
+      <li>Khoản đang giữ được dùng để trả cho đơn. Bạn không bị trừ thêm lần nữa, và tiền cọc đã nằm trong khoản giữ này.</li>
+      <li>Bạn nhận sách tại điểm. Người bán chỉ nhận tiền (trừ phí) khi đơn hoàn tất.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <b>Không bấm trong 24 giờ</b>
+    <ul>
+      <li>Bạn mất tiền cọc, phần giữ còn lại được trả về ví, và bị ghi một lượt không thanh toán.</li>
+      <li>Sách được mời người trả giá cao thứ hai mua.</li>
+    </ul>
+  </div>
+
+  <h2>Sao không tự trừ tiền luôn</h2>
+  <p>Quy định FR-AU08 trong phụ lục TP.HCM yêu cầu không tự động trừ tiền người thắng, nên người thắng phải tự xác nhận thanh toán. Việc giữ tiền trước chỉ để chắc chắn ví đủ tiền khi bạn bấm.</p>
+
+  <h2>Tóm lại</h2>
+  <div class="flow">
+    <span class="step">Thắng: tiền bị giữ</span><span class="arrow">→</span>
+    <span class="step">Bấm thanh toán trong 24 giờ: khoản giữ thành tiền trả cho đơn</span><span class="arrow">→</span>
+    <span class="step">Nhận sách xong: người bán được trả tiền</span>
+  </div>
+
+  <p class="note">Nếu chủ dự án thấy bước bấm này thừa, có thể đổi sang tự thanh toán ngay khi phiên kết thúc. Nhưng như vậy là đổi FR-AU08, nên cần chủ dự án quyết.</p>
+</main>
+</body>
+</html>

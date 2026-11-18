@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mốc thời gian đấu giá</title>
+<style>
+  :root { --bg:#faf7f2; --fg:#2a1f1f; --muted:#6b5e5e; --line:#e4dccf; --wine:#7a1f2b; --card:#fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1b1616; --fg:#f1e9e4; --muted:#b5a8a2; --line:#3a3030; --wine:#e08a95; --card:#241e1e; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 system-ui,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:32px 16px 48px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; color:var(--wine); }
+  p.lead { color:var(--muted); margin:0 0 24px; }
+  h2 { font-size:1.1rem; margin:28px 0 8px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:.85rem; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); }
+  tr:last-child td { border-bottom:0; }
+  td:first-child { width:42%; font-weight:600; }
+  .note { color:var(--muted); font-size:.9rem; margin-top:24px; }
+  @media (max-width:600px) {
+    table, tbody, tr, td { display:block; width:100%; }
+    thead { display:none; }
+    tr { border-bottom:1px solid var(--line); }
+    td { border:0; padding:6px 12px; }
+    td:first-child { width:100%; padding-top:12px; }
+    td:last-child { padding-bottom:12px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Mốc thời gian khi sửa phiên đấu giá</h1>
+  <p class="lead">Lật lại · nhánh fix/auction-phase-a · ADR 0077–0088 · 09/11/2026</p>
+
+  <h2>Người bán</h2>
+  <table>
+    <thead><tr><th>Việc</th><th>Thời gian / giới hạn</th></tr></thead>
+    <tbody>
+      <tr><td>Gửi sách tới điểm</td><td>Trong 72 giờ sau khi tạo hồ sơ</td></tr>
+      <tr><td>Hẹn giờ mở khi đăng phiên</td><td>Ít nhất 5 phút sau lúc đăng, tối đa 30 ngày</td></tr>
+      <tr><td>Đổi giờ mở</td><td>Tối đa 2 lần; không đổi trong 30 phút trước giờ mở</td></tr>
+      <tr><td>Đổi giờ mở khi phiên đã đủ người</td><td>Chỉ được dời sớm hơn</td></tr>
+      <tr><td>Tăng số người tối thiểu</td><td>Chỉ khi chưa có ai đăng ký</td></tr>
+      <tr><td>Giảm số người tối thiểu (không dưới 4)</td><td>Trong lúc chờ đăng ký, trước khi phiên mở</td></tr>
+      <tr><td>Tiền cọc</td><td>Chọn khi tạo hồ sơ (10%–50% giá khởi điểm), sau đó không đổi</td></tr>
+      <tr><td>Người bán đóng phiên</td><td>Chỉ trước giờ mở; phiên đã mở thì không đóng được</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Người mua và đăng ký</h2>
+  <table>
+    <thead><tr><th>Việc</th><th>Thời gian / giới hạn</th></tr></thead>
+    <tbody>
+      <tr><td>Rút đăng ký</td><td>Lúc nào cũng được khi phiên chưa đủ người; đã đủ thì chỉ tới 72 giờ trước giờ mở; không rút được sau khi đã trả giá</td></tr>
+      <tr><td>Đăng ký lại sau khi rút</td><td>Phải chờ 1 phút</td></tr>
+      <tr><td>Không đủ người tới giờ mở</td><td>Chờ thêm 24 giờ, vẫn không đủ thì hủy và hoàn cọc</td></tr>
+      <tr><td>Đủ người sau giờ mở</td><td>Mở sau 10 phút; nếu rơi vào 23:00–07:00 thì mở lúc 07:00</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Trong và sau phiên</h2>
+  <table>
+    <thead><tr><th>Việc</th><th>Thời gian / giới hạn</th></tr></thead>
+    <tbody>
+      <tr><td>Admin tạm dừng phiên</td><td>Tối đa 48 giờ mỗi lần, tổng 72 giờ; khi tiếp tục được trả lại thời gian, ít nhất 10 phút</td></tr>
+      <tr><td>Mua ngay "chờ thách đấu"</td><td>60 giây hoặc 5 phút để người khác trả cao hơn</td></tr>
+      <tr><td>Người thắng thanh toán</td><td>24 giờ sau khi phiên kết thúc</td></tr>
+      <tr><td>Người trả giá cao thứ hai nhận lời mời</td><td>24 giờ để nhận; nhận rồi thì có 24 giờ để thanh toán</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note">Giờ tính theo giờ Việt Nam (UTC+7) và đồng hồ máy chủ. Thay đổi tiền cọc (ADR 0087) và Phase E (ADR 0088) chưa commit.</p>
+</main>
+</body>
+</html>

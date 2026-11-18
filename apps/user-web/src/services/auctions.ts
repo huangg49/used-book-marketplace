@@ -118,11 +118,21 @@ const deliveryQuoteSchema = z.object({
   addressId: z.string().uuid(), addressVersion: z.number().int(), outboundFee: z.number().int(), buyerTotal: money,
 })
 const addressListSchema = z.object({
+  // Book version guards a concurrent address edit when saving a new address.
+  version: z.number().int().optional(),
   items: z.array(z.object({
-    id: z.string().uuid(), version: z.number().int(), recipientName: z.string(), detail: z.string(),
+    id: z.string().uuid(), version: z.number().int().optional(), recipientName: z.string(), detail: z.string(),
     serviceAreaCode: z.string(), isDefault: z.boolean(),
+    // ADR 0044: the carrier needs the phone and locality of the recipient.
+    phone: z.string().optional(), localityCode: z.string().optional(),
   }).passthrough()),
 }).passthrough()
+export type MyAddress = z.infer<typeof addressListSchema>['items'][number]
+export type NewAddressBody = {
+  expectedBookVersion: number
+  address: { recipientName: string; phone: string; localityCode: string; detail: string; serviceAreaCode: string }
+  makeDefault: boolean
+}
 const pointOrderSchema = z.object({
   id: z.string().uuid(), auctionId: z.string().uuid().nullable(), title: z.string(), pointName: z.string(),
   role: z.enum(['Buyer', 'Seller']),
@@ -298,6 +308,12 @@ export function getPointOrderDeliveryQuote(orderId: string, addressId: string) {
   return session.request(`/me/point-orders/${orderId}/delivery-quote?addressId=${addressId}`, deliveryQuoteSchema)
 }
 export function getMyAddresses() { return session.request('/me/addresses', addressListSchema) }
+/** Same address book as the exchange/direct-delivery flow; one intent per key. */
+export function saveMyAddress(body: NewAddressBody, key: string) {
+  return session.request('/me/addresses', z.object({ addressId: z.string().uuid() }), {
+    method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(body),
+  })
+}
 // Buyer steps after payment (FR-H09/H11, FR-T03). The server checks every deadline.
 export function acceptPointOrderReport(orderId: string, expectedVersion: number, key: string) {
   return command(`/point-orders/${orderId}/accept-report`, key, { expectedVersion })
@@ -319,6 +335,17 @@ export function requestCollectionCode(orderId: string, expectedVersion: number, 
     method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion }),
   })
 }
+// Local demo skip. The server advertises the gate; each command rechecks the
+// actor and moves the real deadline so the normal close/settle decides.
+export const demoSkipStatusSchema = z.object({ enabled: z.boolean() })
+export function getDemoSkipStatus() { return session.request('/demo/skip', demoSkipStatusSchema) }
+export function advanceDemoAuction(id: string, expectedVersion: number, key: string) {
+  return command(`/auctions/${id}/demo-advance`, key, { expectedVersion })
+}
+export function advanceDemoPointOrder(orderId: string, expectedVersion: number, key: string) {
+  return command(`/point-orders/${orderId}/demo-advance`, key, { expectedVersion })
+}
+
 export const CLAIM_MIN_LENGTH = 30
 
 /** Amounts a bidder may enter: start + n·step, from the minimum bid up to the cap. */

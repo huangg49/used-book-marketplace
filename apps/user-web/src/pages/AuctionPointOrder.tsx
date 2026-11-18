@@ -1,11 +1,12 @@
 import { useId, useRef, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DemoSkipButton } from '../components/DemoSkipButton'
 import { formatRemaining, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
 import { formatVnd } from '../lib/routes'
 import { pointReopensAt } from '../lib/point-hours'
 import {
-  acceptPointOrderReport, claimPointOrder, CLAIM_MIN_LENGTH, rejectPointOrderReport, requestCollectionCode,
+  acceptPointOrderReport, advanceDemoPointOrder, claimPointOrder, CLAIM_MIN_LENGTH, rejectPointOrderReport, requestCollectionCode,
   type CodeIssued, type PointOrder,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
@@ -82,13 +83,22 @@ export function PointOrderSteps({ order, onChanged }: { order: PointOrder; onCha
     <div className={styles.bidPanel}>
       {header}
       {order.state === 'Fulfilling' && <ReportDecision order={order} step={step} locked={locked} />}
-      {(order.state === 'InTransit' || (order.state === 'ReadyForCollection' && order.fulfillmentMethod === 'CarrierOutbound')) && (
+      {/* ADR 0044: the chosen address and fee stay visible from payment on. */}
+      {(order.fulfillmentMethod === 'CarrierOutbound' || order.state === 'InTransit') && (
         <DeliveryNote order={order} />
       )}
       {order.state === 'ReadyForCollection' && order.fulfillmentMethod === 'SelfCollect' && (
         <CollectionCode order={order} step={step} locked={locked} />
       )}
       {order.state === 'Inspection' && <InspectionClaim order={order} step={step} locked={locked} />}
+      {order.state === 'Inspection' && (
+        <DemoSkipButton
+          label="Hoàn tất kiểm tra ngay · Demo"
+          note="Kết thúc thời hạn kiểm tra và giải ngân theo biên bản, như khi hết 72 giờ."
+          run={(key) => advanceDemoPointOrder(order.id, order.version, key)}
+          onDone={onChanged}
+        />
+      )}
       {recovery}
     </div>
   )
@@ -205,7 +215,10 @@ function DeliveryNote({ order }: { order: PointOrder }) {
   return (
     <section className={styles.notice} aria-labelledby={`${ids}-delivery`}>
       <strong id={`${ids}-delivery`}>Giao tận nơi</strong>
-      {d && <p>{d.recipientName} · {d.phone} · {d.detail}</p>}
+      {d && <p>{d.recipientName} · {d.phone} · {d.detail}{d.localityCode ? ` · ${d.localityCode}` : ''}</p>}
+      <p>
+        Phí giao tận nơi: {order.amounts.outboundFee > 0 ? formatVnd(order.amounts.outboundFee) : 'Miễn phí'}.
+      </p>
       <p>
         {d?.trackingCode
           ? `Mã vận đơn ${d.trackingCode} · đã giao cho hãng lúc ${when(d.dispatchedAt)}.`

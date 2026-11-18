@@ -9,12 +9,13 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Info, MapPin, Plus, RefreshCw } from 'lucide-react'
 import { AuctionPhoto } from '../components/AuctionGallery'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DemoSkipButton } from '../components/DemoSkipButton'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { useSession } from '../hooks/useSession'
 import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
   AUCTION_MAX_SCHEDULE_EDITS, AUCTION_MIN_BIDDERS_FLOOR, EVIDENCE_MIN_LENGTH, auctionPhase, getMyAuctionIntakes, listHandoverPoints, listMyAuctions,
-  submitIntakeEvidence, waitingForRegistrants, waitingTime, withdrawIntake, getMyAuctionIntake, type MyAuctionItem, type MyIntake,
+  submitIntakeEvidence, waitingForRegistrants, waitingTime, withdrawIntake, getMyAuctionIntake, advanceDemoAuction, type MyAuctionItem, type MyIntake,
 } from '../services/auctions'
 import { ROUTES, formatVnd } from '../lib/routes'
 import styles from './MyAuctionsPage.module.css'
@@ -132,6 +133,16 @@ function AuctionRow({
           <ArrowRight size={16} aria-hidden="true" />
         </Link>
         </div>
+        {item.role === 'Seller' && a.version != null && (open || (scheduled && !waiting)) && (
+          <DemoSkipButton
+            label={scheduled ? 'Mở phiên ngay · Demo' : 'Kết thúc phiên ngay · Demo'}
+            note={scheduled
+              ? 'Bỏ qua giờ hẹn mở khi đã đủ người đăng ký.'
+              : 'Chốt phiên ngay; hệ thống chọn người thắng và tạo đơn như khi hết giờ.'}
+            run={(key) => advanceDemoAuction(a.id, a.version!, key)}
+            onDone={onChanged}
+          />
+        )}
       </div>
       {editable && (
         <ScheduleAuctionDialog
