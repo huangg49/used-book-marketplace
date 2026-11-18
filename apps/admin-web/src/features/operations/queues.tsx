@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { ChevronDown, MapPin } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
@@ -148,11 +149,13 @@ function intakeAction(item: Intake, userId: string): Row["action"] {
     case "AwaitingDropoff":
       return {
         label: "Nhận sách",
+        modal: true,
         render: (context) => <IntakeReceive item={item} {...context} />,
       };
     case "Received":
       return {
         label: "Kiểm tra",
+        modal: true,
         render: (context) => <IntakeInspect item={item} {...context} />,
       };
     // ADR 0047: the seller publishes a Passed book; Staff no longer open it.
@@ -167,11 +170,31 @@ function intakeAction(item: Intake, userId: string): Row["action"] {
 }
 function IntakeQueueContent({ userId }: { userId: string }) {
   const panel = useQueuePanel();
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const result = useQuery({
     queryKey: ["operations", "auction-intakes"],
     queryFn: () => session.request("/operations/auction-intakes", intakeList),
     refetchInterval: refetchWhileClosed(panel),
   });
+  const items = result.data?.items ?? [];
+  const searchTerm = search.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("vi-VN");
+  const filteredItems = !searchTerm
+    ? items
+    : items.filter((item) =>
+      [item.id, item.title, item.pointId, item.shelfCode, intakeLabels[item.state]]
+        .filter((value): value is string => Boolean(value))
+        .join(" ")
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLocaleLowerCase("vi-VN")
+        .includes(searchTerm),
+    );
+  const pageSize = 10;
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const shownFrom = (currentPage - 1) * pageSize;
+  const visibleItems = filteredItems.slice(shownFrom, shownFrom + pageSize);
   return (
     <OperationsQueue
       number="01"
@@ -180,6 +203,44 @@ function IntakeQueueContent({ userId }: { userId: string }) {
       order="Xếp theo lần gửi, cũ nhất trước."
       result={result}
       panel={panel}
+      extra={() => (
+        <form className={intakeStyles.search} role="search" onSubmit={(event) => event.preventDefault()}>
+          <label htmlFor="intake-search">Tìm sách gửi đấu giá</label>
+          <div>
+            <input
+              id="intake-search"
+              type="search"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Tên sách, mã hồ sơ, trạng thái hoặc mã kệ"
+            />
+            {search && (
+              <button type="button" onClick={() => { setSearch(""); setPage(1); }}>
+                Xóa
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+      footer={() => filteredItems.length > 0 && (
+        <nav className={intakeStyles.pagination} aria-label="Phân trang sách gửi đấu giá">
+          <p aria-live="polite">
+            Hiển thị {shownFrom + 1}–{Math.min(shownFrom + pageSize, filteredItems.length)} trong {filteredItems.length} hồ sơ đã tải.
+          </p>
+          <div>
+            <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
+              Trước
+            </button>
+            <span>Trang {currentPage} / {pageCount}</span>
+            <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>
+              Sau
+            </button>
+          </div>
+        </nav>
+      )}
       presentation={{
         className: intakeStyles.queue,
         listHeader: (
@@ -193,7 +254,7 @@ function IntakeQueueContent({ userId }: { userId: string }) {
           </div>
         ),
       }}
-      rows={(result.data?.items ?? []).map((item) => {
+      rows={visibleItems.map((item) => {
         const meta = intakeMeta(item);
         return {
           id: item.id,
@@ -204,7 +265,12 @@ function IntakeQueueContent({ userId }: { userId: string }) {
           action: intakeAction(item, userId),
         };
       })}
-      empty={{ title: "Chưa có sách cần xử lý.", body: <AssignmentNote /> }}
+      empty={{
+        title: search ? "Không tìm thấy sách phù hợp." : "Chưa có sách cần xử lý.",
+        body: search
+          ? "Thử tìm theo tên sách, mã hồ sơ, trạng thái, mã kệ hoặc mã điểm."
+          : <AssignmentNote />,
+      }}
     />
   );
 }
@@ -284,12 +350,26 @@ export function ResolutionQueue() {
 }
 function ResolutionQueueContent() {
   const panel = useQueuePanel();
+  const [search, setSearch] = useState("");
   const result = useQuery({
     queryKey: ["operations", "point-order-resolutions"],
     queryFn: () =>
       session.request("/operations/point-order-resolutions", resolutionQueue),
     refetchInterval: refetchWhileClosed(panel),
   });
+  const items = result.data?.items ?? [];
+  const normalizedSearch = search.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("vi-VN");
+  const filteredItems = !normalizedSearch
+    ? items
+    : items.filter((item) =>
+      [item.id, item.title, item.pointName, item.note, resolutionLabels[item.openReason]]
+        .filter((value): value is string => Boolean(value))
+        .join(" ")
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLocaleLowerCase("vi-VN")
+        .includes(normalizedSearch),
+      );
   return (
     <OperationsQueue
       number="03"
@@ -299,7 +379,7 @@ function ResolutionQueueContent() {
       result={result}
       panel={panel}
       serverTime={result.data?.serverTime}
-      rows={(result.data?.items ?? []).map((item) => ({
+      rows={filteredItems.map((item) => ({
         id: item.id,
         status: resolutionLabels[item.openReason],
         meta: [`Mở lúc ${dateText(item.openedAt)}`, item.pointName],
@@ -309,12 +389,34 @@ function ResolutionQueueContent() {
           .join(" · "),
         action: {
           label: "Quyết định",
+          modal: true,
           render: (context) => <ResolutionDecision item={item} {...context} />,
         },
       }))}
+      extra={() => (
+        <form className="inline-search resolution-search" role="search" onSubmit={(event) => event.preventDefault()}>
+          <div className="field">
+            <label htmlFor="resolution-search">Tìm đơn cần quyết định</label>
+            <input
+              id="resolution-search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Tên sách, mã đơn, điểm hoặc lý do"
+            />
+          </div>
+          {search && (
+            <button type="button" className="button" onClick={() => setSearch("")}>
+              Xóa tìm kiếm
+            </button>
+          )}
+        </form>
+      )}
       empty={{
-        title: "Chưa có đơn cần quyết định.",
-        body: "Đơn tại điểm bạn được phân công hoặc đơn bạn có liên quan không hiện ở đây, để quyết định luôn độc lập.",
+        title: search ? "Không tìm thấy đơn phù hợp." : "Chưa có đơn cần quyết định.",
+        body: search
+          ? "Thử tìm theo tên sách, mã đơn, điểm nhận hoặc lý do mở hồ sơ."
+          : "Đơn tại điểm bạn được phân công hoặc đơn bạn có liên quan không hiện ở đây, để quyết định luôn độc lập.",
       }}
     />
   );
@@ -336,9 +438,10 @@ function scheduledStatus(item: OperationsAuction, serverTime?: string) {
   if ((item.registeredCount ?? 0) >= need)
     return `Đủ người, mở ${dateText(item.startAt)} · kết thúc ${dateText(item.endAt)}`;
   const now = serverTime ? Date.parse(serverTime) : Date.now();
+  // ADR 0091: Admin may open it now even below the minimum.
   return Date.parse(item.opensAt) > now
-    ? `Chờ đủ người, mở ${dateText(item.opensAt)} · chưa đủ thì hủy ${dateText(item.startAt)}`
-    : `Đã qua giờ mở, chờ đủ người tới ${dateText(item.startAt)}`;
+    ? `Chờ đủ người, mở ${dateText(item.opensAt)} · chưa đủ thì hủy ${dateText(item.startAt)} · Admin mở ngay được`
+    : `Đã qua giờ mở, chờ đủ người tới ${dateText(item.startAt)} · Admin mở ngay được`;
 }
 
 export function AuctionQueue() {
@@ -358,7 +461,7 @@ function AuctionQueueContent() {
     <OperationsQueue
       number="04"
       title="Phiên đang mở hoặc tạm giữ."
-      intro="Theo dõi các phiên còn có thể hủy. Phiên chờ mở đã đủ người đăng ký có thể mở ngay, kèm lý do. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục (cộng lại thời gian tạm dừng) hoặc hủy; mỗi phiên tạm dừng tối đa 72 giờ."
+      intro="Theo dõi các phiên còn có thể hủy. Phiên chờ mở đã đủ người đăng ký có thể mở ngay, kèm lý do. Chưa đủ người vẫn mở ngay được; khi đó yêu cầu tối thiểu bị bỏ, người đã đăng ký được hoàn tiền cọc. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục (cộng lại thời gian tạm dừng) hoặc hủy; mỗi phiên tạm dừng tối đa 72 giờ."
       order="Xếp theo giờ kết thúc, gần nhất trước."
       unit="phiên"
       result={result}

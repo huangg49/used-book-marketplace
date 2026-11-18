@@ -447,7 +447,12 @@ export function resumeFields(a: Movable, now: Date): Partial<AuctionDoc> {
 /**
  * An independent Admin opens a Scheduled auction now: the planned length
  * (startAt..plannedEndAt before it opens) is kept from now; a registration
- * auction's open time moves to now too. Null below the registration minimum.
+ * auction's open time moves to now too.
+ *
+ * ADR 0091 (owner request 18/11): the Admin may open below the registration
+ * minimum. The override drops the registration gate - open time, minimum,
+ * deposit and the registration count are cleared so the auction bids like an
+ * auction without registration; the caller releases the registrants' holds.
  */
 export function startNowFields(
   a: Pick<
@@ -455,35 +460,10 @@ export function startNowFields(
     'startAt' | 'plannedEndAt' | 'opensAt' | 'minBidders' | 'registeredCount'
   >,
   now: Date,
-): Partial<AuctionDoc> | null {
-  if (a.minBidders != null && (a.registeredCount ?? 0) < a.minBidders)
-    return null;
+): Partial<AuctionDoc> {
   const end = new Date(
     now.getTime() + (a.plannedEndAt.getTime() - a.startAt.getTime()),
   );
-  return {
-    startAt: now,
-    plannedEndAt: end,
-    endAt: end,
-    biddingOpenedAt: now,
-    ...(a.opensAt ? { opensAt: now } : {}),
-  };
-}
-
-/**
- * Demo only: Advance a Scheduled auction to Live immediately.
- * When below the minimum registered bidders, bypasses the registration gate
- * so the demo can proceed into live bidding without artificial blockers.
- */
-export function demoStartNowFields(
-  a: Pick<
-    AuctionDoc,
-    'startAt' | 'plannedEndAt' | 'opensAt' | 'minBidders' | 'registeredCount'
-  >,
-  now: Date,
-): Partial<AuctionDoc> {
-  const duration = a.plannedEndAt.getTime() - a.startAt.getTime();
-  const end = new Date(now.getTime() + duration);
   if (a.minBidders != null && (a.registeredCount ?? 0) < a.minBidders) {
     return {
       startAt: now,
@@ -504,4 +484,18 @@ export function demoStartNowFields(
     biddingOpenedAt: now,
     ...(a.opensAt ? { opensAt: now } : {}),
   };
+}
+
+/**
+ * Demo only: Advance a Scheduled auction to Live immediately. Same override as
+ * the Admin open, so the demo proceeds into live bidding without blockers.
+ */
+export function demoStartNowFields(
+  a: Pick<
+    AuctionDoc,
+    'startAt' | 'plannedEndAt' | 'opensAt' | 'minBidders' | 'registeredCount'
+  >,
+  now: Date,
+): Partial<AuctionDoc> {
+  return startNowFields(a, now);
 }

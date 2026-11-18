@@ -1,3 +1,47 @@
+# Admin mở phiên chờ ngay dù chưa đủ người đăng ký — 18/11/2026
+
+- Nhánh local `fix-auction`. Lệnh `POST /operations/auctions/{id}/start` bỏ điều kiện
+  `registeredCount >= minBidders` theo [ADR0091](../adr/0091-admin-open-scheduled-auction-now.md).
+  Mở dưới mức tối thiểu là override bỏ cổng đăng ký: hoàn cọc đăng ký và đánh dấu
+  `auction_registrations` sang `Withdrawn` trong cùng transaction (không xóa — role
+  `latlai_app` không có `remove`, và invariant phiên chỉ bỏ qua `Withdrawn`),
+  `openMode/minBidders/depositAmount/biddingOpenedAt/opensAt` về null, `registeredCount` 0,
+  giữ thời lượng đã hẹn tính từ lúc mở. Thông báo `AuctionBiddingStarted` có lời riêng.
+- Admin web (`/operations/auctions`) luôn bật “Mở phiên ngay”, nêu rõ việc bỏ yêu cầu tối
+  thiểu và hoàn cọc; dòng hàng ghi “Admin mở ngay được”. Luật tự động/người bán của
+  ADR0081 giữ nguyên; không cần migration mới. Nhánh demo dùng chung `startNowFields`.
+- Đã chạy thật 18/11 trên DB local: phiên `[DEMO] Nhà giả kim` (1/4, v2) mở qua API → receipt
+  `Active` v3, chi tiết `phase Live`, `minBidders` null, `registeredCount` 0, `endAt` +24 giờ.
+  Lưu ý vận hành: API ở cổng 3000 do `pnpm dev:api` (`nest --watch`) quản lý; một bản
+  `node dist/main.js` cũ từng chiếm cổng nên lệnh vẫn trả lỗi cũ cho tới khi dừng tiến trình
+  đó.
+- Qua: typecheck API, 32 ca unit `auction-pause`/`auction-schedule`, `contract:generate` +
+  `contract:check`, typecheck/lint/build Admin web, `docs:check`. Chưa chạy E2E tự động
+  (cần replica set `_test`); chưa đối chiếu số dư ví người đăng ký bằng script riêng.
+
+# Kiểm tra sách đấu giá mở dạng hộp thoại — 18/11/2026
+
+- Nhánh local `fix-auction`. Nút **Kiểm tra** ở `/operations/intakes` mở bảng
+  kiểm + kết luận + ghi chú trong `<dialog>` thay vì bung dưới dòng, theo cùng
+  mẫu với **Nhận sách**. Đóng hộp thoại khi đã nhập sẽ hỏi trước; hồ sơ vẫn
+  tải lại/không tự đổi trạng thái.
+- Typecheck, oxlint và `vite build` Admin web qua. Hai kịch bản QA auction
+  dùng `dialog[open]` được sửa sang `.last()` cho hộp xác nhận xếp lớp;
+  chưa chạy lại harness Mongo/Chromium của các kịch bản này.
+
+# Khiếu nại đấu giá trên Admin web — 18/11/2026
+
+- Nhánh local `fix-auction` (working tree còn thay đổi của gói trước). Nhóm
+  **Hỗ trợ & khiếu nại** có thêm **Khiếu nại đấu giá** (`/operations/auction-disputes`,
+  Admin) dùng cùng bố cục hàng đợi với Khiếu nại trao đổi.
+- Nguồn dữ liệu là hồ sơ hỗ trợ có target `Auction` qua
+  `GET /operations/support-cases?targetType=Auction`; trang chỉ đọc, không tự
+  tạm dừng/đóng phiên hay hoàn tiền. Mở hồ sơ để dùng thao tác đã có (ADR
+  0079/0084) và quay lại đúng hàng đợi qua `?from=auction-disputes`.
+- `pnpm typecheck`, `oxlint` tệp đã sửa, 41 ca vitest navigation/commands và
+  `vite build` Admin web đều qua. Chưa mở trang bằng Chromium với tài khoản
+  Admin thật trong gói này.
+
 # Trình diễn Mua ngay và Driver trên Member web — 18/11/2026
 
 - Nhánh local `codex/auction-winner-order-web`, base `54bca5a1`. Phiếu mua

@@ -2798,7 +2798,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE ADMIN independent of the seller, bidders and registrants opens an Active auction that has not opened yet (phase Scheduled) right now, with a reason. A registration auction must already have its minimum registrants. startAt, the open time and the start of bidding become server time; the planned length is kept (end = now + length). The seller and registrants receive an AuctionBiddingStarted notification quoting the reason. Holds and deposits are kept. */
+        /** @description ACTIVE ADMIN independent of the seller, bidders and registrants opens an Active auction that has not opened yet (phase Scheduled) right now, with a reason. ADR 0091 - the Admin may also open below the registration minimum; that override drops the registration gate (openMode, minBidders and depositAmount cleared, registeredCount 0) and returns every registrant's deposit in the same transaction. Otherwise holds and deposits are kept. startAt, the open time and the start of bidding become server time; the planned length is kept (end = now + length). The seller and registrants receive an AuctionBiddingStarted notification quoting the reason. */
         post: operations["startAuction"];
         delete?: never;
         options?: never;

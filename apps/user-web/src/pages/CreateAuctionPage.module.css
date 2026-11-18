@@ -131,6 +131,7 @@
 .confirmBook svg { flex: none; color: var(--shop-wine); }
 .confirmPrices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0; border: 1px solid var(--shop-line); border-radius: 10px; overflow: hidden; background: var(--shop-line); }
 .confirmPrices div { display: grid; gap: 2px; padding: 10px 14px; background: var(--shop-paper); }
+.confirmPrices div:last-child { grid-column: 1 / -1; }
 .confirmPrices dt { font-size: .75rem; font-weight: 700; color: var(--shop-wine); }
 .confirmPrices dd { margin: 0; font-weight: 700; font-size: .9375rem; color: var(--shop-ink); font-variant-numeric: tabular-nums; }
 .confirmLabel { margin: 4px 0 0; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-wine); }

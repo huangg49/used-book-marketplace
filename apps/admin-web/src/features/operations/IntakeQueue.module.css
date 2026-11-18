@@ -57,6 +57,98 @@
   display: none;
 }
 
+.search {
+  display: grid;
+  gap: 0.4rem;
+  margin: 1rem 0;
+}
+
+.search label {
+  color: var(--shop-ink);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.search > div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.search input {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font: inherit;
+}
+
+.search input:focus-visible,
+.search button:focus-visible,
+.pagination button:focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 2px;
+}
+
+.search button,
+.pagination button {
+  min-height: 44px;
+  border: 1px solid var(--shop-control);
+  border-radius: 6px;
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.search button {
+  padding-inline: 1rem;
+}
+
+.search button:hover,
+.pagination button:hover:not(:disabled) {
+  border-color: var(--shop-wine);
+  background: var(--shop-shelf);
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--shop-line);
+}
+
+.pagination p,
+.pagination span {
+  margin: 0;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+
+.pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination button {
+  padding-inline: 0.875rem;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .queue :global(.queue-row),
 .listHeader {
   display: grid;
@@ -108,6 +200,83 @@
   min-width: 0;
   margin: 0.15rem 0 0.45rem;
   padding: clamp(0.9rem, 3cqw, 1.5rem);
+}
+
+.receiveDialog {
+  width: min(42rem, calc(100% - 2rem));
+  max-width: 42rem;
+  max-height: min(42rem, calc(100dvh - 2rem));
+  margin: auto;
+  padding: 0;
+  overflow: hidden auto;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+}
+
+/* Inspection is wider and taller than the receive sheet: checklist, conclusion,
+   note and the command buttons share one dialog. */
+.inspectionDialog {
+  width: min(48rem, calc(100% - 2rem));
+  max-width: 48rem;
+  max-height: min(48rem, calc(100dvh - 2rem));
+}
+
+.receiveDialog::backdrop {
+  background: rgb(40 25 20 / 48%);
+}
+
+.receiveDialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--shop-line);
+  background: var(--shop-cream);
+}
+
+.receiveDialogHeader p {
+  margin: 0 0 0.25rem;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.receiveDialogHeader h2 {
+  margin: 0;
+  color: var(--shop-ink);
+  font-size: 1.2rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.receiveDialogClose {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--shop-line);
+  border-radius: 4px;
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.receiveDialogClose:hover:not(:disabled) {
+  border-color: var(--shop-wine);
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+
+.receiveDialog :global(.operation-panel) {
+  position: static;
+  margin: 0;
+  padding: 1.25rem 1.5rem 1.5rem;
+  border: 0;
+  border-radius: 0;
 }
 
 .rowSummary,
@@ -336,5 +505,29 @@
 
   .queue :global(.queue-row > span:empty) {
     display: none;
+  }
+}
+
+@container auction-intake (max-width: 25rem) {
+  .search > div,
+  .pagination,
+  .pagination > div {
+    align-items: stretch;
+  }
+
+  .pagination,
+  .pagination > div {
+    flex-direction: column;
+  }
+
+  .pagination button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 35rem) {
+  .receiveDialogHeader,
+  .receiveDialog :global(.operation-panel) {
+    padding: 1rem;
   }
 }

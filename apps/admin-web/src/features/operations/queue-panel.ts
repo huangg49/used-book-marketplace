@@ -4,6 +4,8 @@ import type { Finish, Outcome } from "./action-panel";
 export interface ActionContext {
   onFinish: Finish;
   onPending: (pending: boolean) => void;
+  // Closes a modal action without treating it as a completed command.
+  onClose?: () => void;
   // Rejects when the reload fails, so an acknowledged command can be re-read.
   reconcile: () => Promise<unknown>;
 }
@@ -17,6 +19,8 @@ export interface Row {
   action?: {
     label: string;
     to?: string;
+    // A modal action keeps the queue readable while its form owns focus.
+    modal?: boolean;
     render?: (context: ActionContext) => ReactNode;
   };
 }

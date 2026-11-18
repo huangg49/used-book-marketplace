@@ -556,8 +556,10 @@ try {
   await row
     .getByRole("button", { name: "Ghi kết luận kiểm tra", exact: true })
     .click();
+  // The confirmation stacks on top of the inspection dialog.
   await desk
     .locator("dialog[open]")
+    .last()
     .getByRole("button", { name: /Xác nhận/ })
     .click();
   await expect(

@@ -1303,8 +1303,11 @@
   font-weight: 650;
   box-shadow: none;
 }
-.reviewToolbar .openDecision:hover {
+.reviewToolbar .openDecision:hover:not([aria-expanded="true"]) {
   background: var(--shop-wine-hover);
+  border-color: var(--shop-wine-hover);
+  color: var(--desk-paper);
+  transform: translateY(-1px);
 }
 .reviewToolbar .openDecision[aria-expanded="true"] {
   border-color: var(--shop-line);

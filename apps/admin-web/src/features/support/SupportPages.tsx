@@ -238,12 +238,21 @@ export function SupportDetailPage() {
     { caseId = "" } = useParams(),
     [params] = useSearchParams();
   if (!canResolve(user)) return supportAccessDenied;
+  // Owner request 18/11: auction complaints are opened from their own queue.
+  const fromAuctionDisputes = params.get("from") === "auction-disputes";
   return (
     <SupportRecord
       key={`${user.id}:${caseId}`}
       owner={user.id}
       id={caseId}
-      back={params.size ? `/support?${params}` : "/support"}
+      back={
+        fromAuctionDisputes
+          ? "/operations/auction-disputes"
+          : params.size
+            ? `/support?${params}`
+            : "/support"
+      }
+      backLabel={fromAuctionDisputes ? "Khiếu nại đấu giá" : undefined}
     />
   );
 }
@@ -251,10 +260,12 @@ function SupportRecord({
   owner,
   id,
   back,
+  backLabel,
 }: {
   owner: string;
   id: string;
   back: string;
+  backLabel?: string;
 }) {
   const cache = useQueryClient(),
     query = useQuery({
@@ -324,7 +335,7 @@ function SupportRecord({
   }
   return (
     <div className={styles.page}>
-      <Link to={back}>← Trung tâm xử lý</Link>
+      <Link to={back}>← {backLabel ?? "Trung tâm xử lý"}</Link>
       {query.isPending ? <p role="status">Đang mở hồ sơ…</p> : null}
       {query.isError ? (
         <Notice tone="error">

@@ -289,6 +289,38 @@ export const notifyBelowMinimum = (
   now: Date,
 ) => write(tx, a, 'AuctionRescheduled', BELOW_MINIMUM, recipients, now);
 
+// ADR 0091: an Admin opened the auction below the registration minimum. The
+// standard "đã đủ người đăng ký" text would be false, so this event says the
+// minimum no longer applies and the registration deposits went back.
+const OPENED_BELOW_MINIMUM =
+  (need: number): Record<'default' | 'seller', Message> => ({
+    default: (c, a) => ({
+      title: 'Phiên đấu giá đã mở',
+      body: `${c.title} đã mở ngay theo quyết định của Admin dù chưa đủ ${need} người đăng ký. Yêu cầu đủ người không còn áp dụng; tiền cọc đăng ký đã về số dư khả dụng và bạn trả giá được từ ${when(a.startAt)} đến ${when(a.endAt)}.`,
+    }),
+    seller: (c, a) => ({
+      title: 'Phiên của bạn đã mở',
+      body: `${c.title} đã mở ngay theo quyết định của Admin dù chưa đủ ${need} người đăng ký. Yêu cầu đủ người không còn áp dụng; người mua trả giá được từ ${when(a.startAt)} đến ${when(a.endAt)}.`,
+    }),
+  });
+export const notifyOpenedBelowMinimum = (
+  tx: Tx,
+  a: AuctionDoc,
+  recipients: (string | null | undefined)[],
+  now: Date,
+  need: number,
+  note?: string,
+) =>
+  write(
+    tx,
+    a,
+    'AuctionBiddingStarted',
+    OPENED_BELOW_MINIMUM(need),
+    recipients,
+    now,
+    note,
+  );
+
 async function write(
   tx: Tx,
   a: AuctionDoc,

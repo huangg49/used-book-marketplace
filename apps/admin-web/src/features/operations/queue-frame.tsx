@@ -29,6 +29,7 @@ export function OperationsQueue({
   empty,
   panel,
   extra,
+  footer,
   presentation,
 }: {
   number: string;
@@ -44,6 +45,7 @@ export function OperationsQueue({
   panel: QueuePanel;
   // A page-level command (e.g. adding a point) shares the notice and refresh.
   extra?: (context: ActionContext) => ReactNode;
+  footer?: () => ReactNode;
   presentation?: { className: string; listHeader: ReactNode };
 }) {
   const { open, setOpen, pending, setPending, notice, setNotice } = panel;
@@ -159,38 +161,53 @@ export function OperationsQueue({
                     <Button
                       className="row-action"
                       variant={presentation && !expanded ? "primary" : "default"}
-                      aria-expanded={expanded}
-                      aria-controls={expanded ? panelId : undefined}
+                      aria-expanded={row.action.modal ? undefined : expanded}
+                      aria-controls={row.action.modal ? undefined : expanded ? panelId : undefined}
+                      aria-haspopup={row.action.modal ? "dialog" : undefined}
                       disabled={pending}
                       onClick={() => {
                         setNotice(undefined);
                         setOpen(expanded ? undefined : row.id);
                       }}
                     >
-                      {expanded ? "Đóng" : row.action.label}
+                      {row.action.modal ? row.action.label : expanded ? "Đóng" : row.action.label}
                     </Button>
                   )
                 ) : (
                   <span />
                 )}
-                {row.action?.render && (
-                  <MotionPanel
-                    open={expanded}
-                    id={panelId}
-                    className="row-panel"
-                  >
-                    {expanded &&
-                      row.action.render({
+                {row.action?.render &&
+                  (row.action.modal ? (
+                    expanded &&
+                    row.action.render({
+                      onFinish: (outcome) => {
+                        setReceiptIndex(index);
+                        setOpen(outcome.next ? row.id : undefined);
+                        setNotice(outcome);
+                      },
+                      onPending: setPending,
+                      onClose: () => setOpen(undefined),
+                      reconcile,
+                    })
+                  ) : (
+                    <MotionPanel
+                      open={expanded}
+                      id={panelId}
+                      className="row-panel"
+                    >
+                      {expanded &&
+                        row.action.render({
                         onFinish: (outcome) => {
                           setReceiptIndex(index);
                           setOpen(outcome.next ? row.id : undefined);
                           setNotice(outcome);
                         },
                         onPending: setPending,
+                        onClose: () => setOpen(undefined),
                         reconcile,
                       })}
-                  </MotionPanel>
-                )}
+                    </MotionPanel>
+                  ))}
               </article>
             </Fragment>
           );
@@ -201,6 +218,7 @@ export function OperationsQueue({
             <OperationReceipt value={notice} present={presentNotice} />
           )}
       </div>
+      {footer?.()}
     </>
   );
   return presentation ? <div className={presentation.className}>{queue}</div> : queue;
