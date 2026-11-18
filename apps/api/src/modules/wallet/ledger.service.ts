@@ -2,6 +2,7 @@ import { LocalDemoCompletionPolicy } from './local-demo-completion.policy.js';
 import { LOCAL_DEMO_COMPLETION_POLICY } from '../../database/mongo/demo-completion-policy.js';
 import { Injectable } from '@nestjs/common';
 import { orderAmounts } from '../orders/order-amounts.js';
+import { assertInspectionWasSkipped } from '../orders/direct-order-journey.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type {
   ExchangeDoc,
@@ -1037,6 +1038,19 @@ export class LedgerService {
   ) {
     this.directRelease.assertReleased();
     return this.settlePointOrder(tx, order, receiptId, now);
+  }
+  async settleDemonstratedDirectOrder(
+    tx: Tx,
+    order: { _id: string; sellerId: string; buyerTotal: number; sellerProceeds: number },
+    receiptId: string,
+    now: Date,
+  ) {
+    if (!this.localDemo) throw invalidState();
+    this.localDemo.assertDeliveryJourneyEnabled();
+    const source = await tx.c.direct_orders.findOne({ _id: order._id });
+    if (!source) throw invalidState();
+    await assertInspectionWasSkipped(tx, source, receiptId, now);
+    return this.postOrderSettlement(tx, order, receiptId, now);
   }
   // Caller owns participant and intent locks; this never opens a nested transaction.
   async withdrawalHeld(tx: Tx, ownerId?: string) {

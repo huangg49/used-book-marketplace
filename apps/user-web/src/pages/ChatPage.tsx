@@ -113,7 +113,6 @@ function ChatRoom({
   const [error, setError] = useState<string>();
   const [sending, setSending] = useState(false);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
-  const [customOrderPrice, setCustomOrderPrice] = useState<string>("");
   const areas = useQuery({
     queryKey: ["service-areas"],
     queryFn: () => session.request("/service-areas", serviceAreasSchema),
@@ -143,10 +142,10 @@ function ChatRoom({
     (!room.expiresAt || now < Date.parse(room.expiresAt));
   const expired = !active && room.status !== "OrderCreated";
   const isExchange = room.terms?.mode === "Exchange";
+  const agreedBookPrice = room.terms?.agreedPrice;
   const canCreate =
-    (room.terms?.agreedPrice != null || book.data?.salePrice != null) &&
-    (room.terms?.agreedListingRevisionId == null ||
-      room.terms.agreedListingRevisionId === book.data?.revisionId) &&
+    agreedBookPrice != null &&
+    room.terms?.agreedListingRevisionId === book.data?.revisionId &&
     !room.terms?.pendingProposal &&
     !room.terms?.locked;
   const events = useQuery({
@@ -689,10 +688,12 @@ function ChatRoom({
         <NegotiationWorkspace
           room={room}
           userId={userId}
+          buyNowEntry={searchParams.get("buyNow") === "1"}
           book={book.data}
           refresh={refreshRooms}
           frozen={!!orderAttempt.current}
           guidance={guidance}
+          canCreateOrder={canCreate}
           onOpenOrderDialog={() => setOrderDialogOpen(true)}
           historyExchange={historyExchange}
           setHistoryExchange={setHistoryExchange}
@@ -703,12 +704,11 @@ function ChatRoom({
 
       {active &&
         room.seller.id === userId &&
-        (room.hasQuote || orderAttempt.current) && (
+        ((canCreate && room.hasQuote) || orderAttempt.current) && (
           <PurchaseDialog
             open={orderDialogOpen}
             onClose={() => {
               setOrderDialogOpen(false);
-              setCustomOrderPrice("");
             }}
             busy={orderBusy}
             title="Tạo đơn cho người mua"
@@ -719,17 +719,10 @@ function ChatRoom({
               onSubmit={async (event) => {
                 event.preventDefault();
                 if (orderBusy) return;
-                const submittedPrice = new FormData(event.currentTarget).get(
-                  "agreedBookPrice",
-                );
-                const defaultBookPrice =
-                  room.terms?.agreedPrice ?? book.data?.salePrice ?? 0;
-                const price =
-                  orderAttempt.current?.price ??
-                  (typeof submittedPrice === "string" && submittedPrice.trim() !== ""
-                    ? Number(submittedPrice)
-                    : defaultBookPrice);
+                if (!orderAttempt.current && !canCreate) return;
+                const price = orderAttempt.current?.price ?? agreedBookPrice;
                 if (
+                  price == null ||
                   !Number.isInteger(price) ||
                   price < 10000 ||
                   price > 1000000
@@ -756,7 +749,6 @@ function ChatRoom({
                   );
                   orderAttempt.current = undefined;
                   setOrderDialogOpen(false);
-                  setCustomOrderPrice("");
                   refreshRooms();
                 } catch (cause) {
                   let message =
@@ -786,20 +778,8 @@ function ChatRoom({
                     max={1000000}
                     step={1000}
                     disabled={orderBusy || !!orderAttempt.current}
-                    value={
-                      customOrderPrice !== ""
-                        ? customOrderPrice
-                        : (orderAttempt.current?.price ??
-                          room.terms?.agreedPrice ??
-                          book.data?.salePrice ??
-                          "")
-                    }
-                    onChange={(e) => setCustomOrderPrice(e.target.value)}
-                    placeholder={
-                      (room.terms?.agreedPrice ?? book.data?.salePrice)
-                        ? String(room.terms?.agreedPrice ?? book.data?.salePrice)
-                        : "Giá sách"
-                    }
+                    value={orderAttempt.current?.price ?? agreedBookPrice ?? ""}
+                    readOnly
                   />
                   <span
                     style={{
@@ -810,9 +790,7 @@ function ChatRoom({
                       fontWeight: 500,
                     }}
                   >
-                    {room.terms?.agreedPrice != null
-                      ? `Giá đã thống nhất: ${formatVnd(room.terms.agreedPrice)}`
-                      : `Giá bài đăng: ${formatVnd(book.data?.salePrice ?? 0)}. Tùy chọn đổi giá nếu có thỏa thuận riêng.`}
+                    Giá được chốt từ đề nghị đã được đối tác chấp nhận.
                   </span>
                 </label>
               </div>
@@ -1192,6 +1170,8 @@ function AuctionCard({
   serverTime: string;
 }) {
   const auction = item.auction;
+  const winnerOrder = item.role === "Bidder" && item.won;
+  const destination = winnerOrder ? `${ROUTES.auctionOrder(auction.id)}?from=chat` : ROUTES.auctionDetail(auction.id);
   const status = auctionStatus(item, serverTime);
   const priceLabel =
     auction.currentPrice === null
@@ -1215,7 +1195,7 @@ function AuctionCard({
         </span>
         <div>
           <h3 className={styles.txnCardTitle}>
-            <Link to={ROUTES.auctionDetail(auction.id)}>{auction.title}</Link>
+            <Link to={destination}>{auction.title}</Link>
           </h3>
           <p className={styles.txnCardMeta}>{auction.pointName}</p>
           <p className={styles.txnCardMeta}>
@@ -1233,8 +1213,8 @@ function AuctionCard({
         <span className={styles.txnCardFootNote}>
           {auction.bidderCount} người trả giá
         </span>
-        <Link className={styles.txnLink} to={ROUTES.auctionDetail(auction.id)}>
-          Xem phiên <ArrowUpRight size={14} aria-hidden="true" />
+        <Link className={styles.txnLink} to={destination}>
+          {winnerOrder ? "Mở đơn đấu giá" : "Xem phiên"} <ArrowUpRight size={14} aria-hidden="true" />
         </Link>
       </div>
     </article>
@@ -1333,7 +1313,17 @@ function TransactionHub({
   roomsError: boolean;
   refetchRooms: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<TransactionTab>("all");
+  const [tabParams, setTabParams] = useSearchParams();
+  const requestedTab = tabParams.get("tab");
+  const activeTab = TRANSACTION_TABS.find((tab) => tab === requestedTab) ?? "all";
+  function setActiveTab(tab: TransactionTab) {
+    setTabParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (tab === "all") next.delete("tab");
+      else next.set("tab", tab);
+      return next;
+    }, { replace: true, preventScrollReset: true });
+  }
   const exchanges = useQuery({
     queryKey: ["conversation-exchanges", userId],
     queryFn: getExchanges,

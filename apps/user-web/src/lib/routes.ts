@@ -6,6 +6,7 @@ export const ROUTES = {
   home: '/',
   search: '/books',
   bookDetail: (id: string): string => `/books/${id}`,
+  buyNow: (listingId: string): string => `/buy-now/${listingId}`,
   sell: '/sell',
   login: '/login',
   register: '/register',
@@ -24,6 +25,9 @@ export const ROUTES = {
   auctionCreate: (listingId?: string): string => listingId ? `/auctions/new?listing=${listingId}` : '/auctions/new',
   myAuctions: '/my-auctions',
   auctionDetail: (id: string): string => `/auctions/${id}`,
+  auctionOrder: (id: string): string => `/auctions/${id}/order`,
+  driver: (trackingCode?: string, demo = false): string => trackingCode
+    ? `/driver?${new URLSearchParams({ trackingCode, ...(demo ? { demo: '1' } : {}) })}` : '/driver',
   notifications: '/notifications',
 } as const
 

@@ -19,6 +19,21 @@ import {
 // area, fixed fee, the same as ordinary deliveries).
 export const DELIVERY_SERVICE_AREA = 'HCM-DEMO-v1';
 
+// The committed demo command stores its milestone in the order-scoped receipt.
+// Real carrier state is independent of the last-mile demo.
+export async function demoOutForDeliveryAt(tx: Tx, order: PointOrderDoc) {
+  if (!order.dispatchedAt) return null;
+  const receipt = await tx.c.mutation_receipts.findOne(
+    {
+      principal: `user:${order.buyerId}`,
+      operation: 'demoStartPointDelivery',
+      'result.orderId': order._id,
+    },
+    { projection: { committedAt: 1 } },
+  );
+  return receipt?.committedAt ?? null;
+}
+
 export async function deliveryPrice(
   tx: Tx,
   o: PointOrderDoc,
@@ -113,6 +128,7 @@ export async function deliverySnapshot(
 export function deliveryView(
   o: PointOrderDoc,
   d: PointOrderDeliveryDoc,
+  demoStartedAt?: Date | null,
 ): Wire['PointOrderDelivery'] {
   return {
     recipientName: d.recipientName,
@@ -126,6 +142,7 @@ export function deliveryView(
     dispatchedAt: o.dispatchedAt?.toISOString() ?? null,
     deliveryDeadline: o.deliveryDeadline?.toISOString() ?? null,
     deliveredAt: o.collectedAt?.toISOString() ?? null,
+    demoOutForDeliveryAt: demoStartedAt?.toISOString() ?? null,
   };
 }
 

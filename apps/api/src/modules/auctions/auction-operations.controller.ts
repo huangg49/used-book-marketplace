@@ -123,9 +123,11 @@ export class AuctionOperationsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return commandResponse(
-      this.collection.recordDelivery(
-        commandContext(this.input, req, res),
-        this.input.body('SimulatedPointDeliveryEvent', body),
+      this.notify(
+        this.collection.recordDelivery(
+          commandContext(this.input, req, res),
+          this.input.body('SimulatedPointDeliveryEvent', body),
+        ),
       ),
       res,
     );

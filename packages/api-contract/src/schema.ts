@@ -2160,6 +2160,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orders/{orderId}/delivery-journey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Buyer of a seller-created listed-price order. Records receipt or an inspection issue. Driver actions and early inspection completion require the local demo policy. Commands are versioned and replayable. */
+        post: operations["advanceDirectOrderDeliveryJourney"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/direct-order-tracking/{trackingCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["readDirectOrderByTrackingCode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support-cases/{caseId}/order-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDirectOrderIssueEvidence"];
+        put?: never;
+        post: operations["reserveDirectOrderIssueEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support-cases/{caseId}/order-evidence/{evidenceId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["uploadDirectOrderIssueEvidence"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support-cases/{caseId}/order-evidence/{evidenceId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Issues a fresh short-lived URL and audits each authorized read. Does not change the order or attachment. */
+        post: operations["readDirectOrderIssueEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders/{orderId}/pay": {
         parameters: {
             query?: never;
@@ -2956,8 +3038,42 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Local demo only. The buyer or seller ends an inspection window now; the normal settle command then applies payout, listing completion and context closure. Delivery, collection and Admin decisions keep their own staff flows. */
+        /** @description Local demo only. The buyer or seller completes an unclaimed order during inspection. Payout, listing completion, context closure and the idempotent receipt commit together. The original inspection deadline is preserved. */
         post: operations["advanceDemoPointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/{orderId}/demo-start-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Local demo only. The active buyer starts the last-mile simulation after Staff handover. Records a demo progress milestone while the auction Order stays InTransit. */
+        post: operations["demoStartPointDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/{orderId}/demo-deliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Local demo only. The active buyer records simulated delivery after Staff handover and the last-mile demo milestone. A committed carrier event starts the regular 72-hour inspection window. */
+        post: operations["demoDeliverPointOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3230,6 +3346,23 @@ export interface paths {
         put?: never;
         /** @description ADR 0044: assigned STAFF independent of buyer and seller, during point hours, before the window deadline of a CarrierOutbound Order in ReadyForCollection. Records the single custody handover to the simulated carrier and a tracking code; the Order becomes InTransit with a 240-hour delivery deadline. */
         post: operations["dispatchPointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/delivery-tracking/{trackingCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read one auction shipment after point handover. Available to the buyer and an independent active TEST_OPERATOR. Other orders return 404. The response excludes names, contact details and addresses. Recording an outcome still requires the existing authenticated simulator command. */
+        get: operations["getPointOrderDeliveryTracking"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5554,6 +5687,8 @@ export interface components {
             expectedListingVersion: number;
             /** Format: uuid */
             expectedListingRevisionId: string;
+            /** @description Optional explicit buyer acceptance of the exact listed book price in this quote. Attaches the quote and records the agreement for the quoted listing revision in one operation. Omit for an address-only attachment. */
+            acceptedListedPrice?: number;
         };
         CreateOrderFromPurchaseConversation: {
             /** Format: uuid */
@@ -6315,6 +6450,11 @@ export interface components {
              * @enum {string}
              */
             purchaseMode?: "Negotiated" | "BuyNow";
+            /**
+             * @description The seller created the order after the buyer expressly accepted the listed price.
+             * @constant
+             */
+            listedPurchaseBySeller?: true;
             /** @constant */
             schemaVersion: 1;
             policyVersion: string;
@@ -6367,6 +6507,7 @@ export interface components {
         };
         /** @description Private DirectDelivery Order including funding, pre-confirmation refund, seller acceptance and overdue pickup review. Historical schema name retained. shippingAddress is the frozen buyer destination, disclosed only to the accepted Seller. Review is an unresolved task, never proof of custody, strike or refund. Shipment registration is available through its separate endpoint; independent pickup simulation can advance InTransit or open carrierReview/ResolutionPending. Review resolution handlers remain planned. */
         PrivateUnpaidOrder: {
+            deliveryJourney?: components["schemas"]["DirectOrderDeliveryJourney"];
             /** @description Local-demo seller command; enabled only when the server demo switch is on and the current seller/order is eligible. */
             demoCompletionEnabled?: boolean;
             /**
@@ -6766,7 +6907,53 @@ export interface components {
             /** Format: date-time */
             serverTime: string;
         };
+        AdvanceDirectOrderDeliveryJourney: {
+            expectedVersion: number;
+            /** @enum {string} */
+            action: "Pickup" | "OutForDelivery" | "Deliver" | "Acknowledge" | "ReportNonReceipt" | "ReportCondition" | "SkipInspection";
+            /** @description Required for either report action and omitted for other actions. */
+            description?: string;
+        };
+        DirectOrderDeliveryJourney: {
+            trackingCode: string | null;
+            /** Format: date-time */
+            pickedUpAt: string | null;
+            /** Format: date-time */
+            outForDeliveryAt: string | null;
+            /** Format: date-time */
+            acknowledgedAt: string | null;
+            issue: null | {
+                /** @enum {string} */
+                kind: "ReportNonReceipt" | "ReportCondition";
+                /** Format: date-time */
+                openedAt: string;
+                /** Format: uuid */
+                supportCaseId: string;
+            };
+            actions: ("Pickup" | "OutForDelivery" | "Deliver" | "Acknowledge" | "ReportNonReceipt" | "ReportCondition" | "SkipInspection")[];
+        };
         StartDemoOrderCompletion: components["schemas"]["PayOrder"];
+        ReserveDirectOrderIssueEvidence: {
+            /** Format: uuid */
+            evidenceId: string;
+            /** @enum {string} */
+            mimeType: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
+            byteSize: number;
+            sha256: string;
+        };
+        DirectOrderIssueEvidence: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            mimeType: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
+            byteSize: number;
+            sha256: string;
+            /** @enum {string} */
+            status: "Pending" | "Ready";
+        };
+        ReadDirectOrderIssueEvidence: {
+            reason?: string;
+        };
         PayOrder: {
             expectedVersion: number;
         };
@@ -7072,6 +7259,11 @@ export interface components {
             deliveryDeadline: string | null;
             /** Format: date-time */
             deliveredAt: string | null;
+            /**
+             * Format: date-time
+             * @description Optional local demo milestone recorded from the shipper simulator.
+             */
+            demoOutForDeliveryAt?: string | null;
         };
         PointOrderDeliveryQuote: {
             /** Format: uuid */
@@ -7109,6 +7301,32 @@ export interface components {
             dispatchedAt: string;
             /** Format: date-time */
             deliveryDeadline: string;
+        };
+        PointOrderDeliveryTracking: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            auctionId: string;
+            title: string;
+            pointName: string;
+            trackingCode: string;
+            /** Format: date-time */
+            dispatchedAt: string;
+            /** Format: date-time */
+            deliveryDeadline: string;
+            /** Format: date-time */
+            outcomeAt: string | null;
+            /** @enum {string} */
+            status: "InTransit" | "Delivered" | "Failed" | "Overdue";
+            /** @enum {string} */
+            viewer: "Buyer" | "Operator";
+            canReport: boolean;
+            canDemoControl: boolean;
+            version: number;
+            /** Format: date-time */
+            demoOutForDeliveryAt: string | null;
+            /** Format: date-time */
+            serverTime: string;
         };
         SimulatedPointDeliveryEvent: {
             /** Format: uuid */
@@ -12900,6 +13118,172 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    advanceDirectOrderDeliveryJourney: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvanceDirectOrderDeliveryJourney"];
+            };
+        };
+        responses: {
+            /** @description Canonical Order receipt */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionCommandReceipt"];
+                };
+            };
+            default: components["responses"]["ListingError"];
+        };
+    };
+    readDirectOrderByTrackingCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trackingCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Participant's direct order */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateUnpaidOrder"];
+                };
+            };
+        };
+    };
+    listDirectOrderIssueEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private case attachments */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["DirectOrderIssueEvidence"][];
+                        packagingEvidenceIds: string[];
+                    };
+                };
+            };
+        };
+    };
+    reserveDirectOrderIssueEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReserveDirectOrderIssueEvidence"];
+            };
+        };
+        responses: {
+            /** @description Attachment reservation */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionCommandReceipt"];
+                };
+            };
+        };
+    };
+    uploadDirectOrderIssueEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Attachment committed */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionCommandReceipt"];
+                };
+            };
+        };
+    };
+    readDirectOrderIssueEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadDirectOrderIssueEvidence"];
+            };
+        };
+        responses: {
+            /** @description Audited, expiring private download URL */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceRead"];
+                };
+            };
+        };
+    };
     payOrder: {
         parameters: {
             query?: never;
@@ -14666,6 +15050,82 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    demoStartPointDelivery: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    demoDeliverPointOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     getAuctionPhoto: {
         parameters: {
             query?: never;
@@ -15250,6 +15710,34 @@ export interface operations {
             422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getPointOrderDeliveryTracking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trackingCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current delivery milestones and action availability. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointOrderDeliveryTracking"];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
         };
     };

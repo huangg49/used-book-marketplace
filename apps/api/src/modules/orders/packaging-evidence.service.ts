@@ -31,6 +31,7 @@ import { checkPackaging } from './order-invariants.js';
 
 const originalKey = (id: string) => `order-evidence/${id}/original`;
 const previewKey = (id: string) => `order-evidence/${id}/preview-v1.webp`;
+export { previewKey as packagingPreviewKey };
 const quota = () =>
   new DomainError(
     429,

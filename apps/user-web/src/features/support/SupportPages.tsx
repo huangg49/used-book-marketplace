@@ -11,6 +11,7 @@ import {
   Send,
 } from "lucide-react";
 import { usePagedCollection } from "../../components/Pagination/usePagedCollection";
+import { DirectOrderEvidence } from "./DirectOrderEvidence";
 import { FilterSelect } from "../../components/FilterSelect";
 import { CollectionPager } from "../../components/Pagination/CollectionPager";
 import {
@@ -825,6 +826,9 @@ function SupportDetail({
             ) : null}
           </section>
 
+          {data.case.target?.type === "DirectOrder" && data.relatedState === "ResolutionPending" && (
+            <DirectOrderEvidence owner={owner} caseId={id} />
+          )}
           <section className={styles.timeline} aria-label="Lịch sử xử lý">
             {data.messages.map((m) => (
               <article

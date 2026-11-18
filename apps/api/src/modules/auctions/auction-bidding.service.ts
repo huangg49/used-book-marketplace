@@ -87,6 +87,7 @@ import {
   pauseBudgetLeft,
   resumeFields,
   startNowFields,
+  demoStartNowFields,
 } from './auction-schedule.js';
 import { stepKey } from './system-key.js';
 
@@ -1013,7 +1014,7 @@ export class AuctionBiddingService {
           if (!reg && !bid) throw notFound();
           return a;
         },
-        mutate: async (tx, actor) => {
+        mutate: async (tx, actor, _before, receiptId) => {
           await tx.lock('auctions', [id]);
           const a = await this.auction(tx, id);
           if (a.version !== body.expectedVersion) throw conflict();
@@ -1021,11 +1022,29 @@ export class AuctionBiddingService {
           if (a.state !== 'Active')
             throw invalidState('Phiên không còn chờ để bỏ qua.');
           if (phaseOf(a, now) === 'Scheduled') {
-            const fields = startNowFields(a, now);
-            if (!fields)
-              throw invalidState(
-                'Phiên chưa đủ người đăng ký tối thiểu nên chưa mở được.',
-              );
+            if (
+              a.minBidders != null &&
+              (a.registeredCount ?? 0) < a.minBidders &&
+              (a.registeredCount ?? 0) > 0
+            ) {
+              const regs = await tx.c.auction_registrations
+                .find({ auctionId: a._id, state: 'Registered' })
+                .toArray();
+              for (const r of regs) {
+                await this.ledger.setAuctionHold(
+                  tx,
+                  a._id,
+                  r.userId,
+                  0,
+                  `${receiptId}:${r.userId}`,
+                  now,
+                );
+              }
+              await tx.c.auction_registrations.deleteMany({
+                auctionId: a._id,
+              });
+            }
+            const fields = demoStartNowFields(a, now);
             const opened = await this.update(tx, a, fields, now);
             return this.change(
               opened,
@@ -1037,7 +1056,21 @@ export class AuctionBiddingService {
           }
           if (phaseOf(a, now) !== 'Live')
             throw invalidState('Phiên không còn chờ để bỏ qua.');
-          const ended = await this.update(tx, a, { endAt: now }, now);
+          const end = now;
+          const start = new Date(now.getTime() - 3_600_000);
+          const published = new Date(start.getTime() - 1000);
+          const ended = await this.update(
+            tx,
+            a,
+            {
+              endAt: end,
+              plannedEndAt: end,
+              startAt: a.startAt < start ? a.startAt : start,
+              publishedAt:
+                a.publishedAt < published ? a.publishedAt : published,
+            },
+            now,
+          );
           closing = { version: ended.version };
           return this.change(
             ended,

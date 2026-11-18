@@ -1,10 +1,160 @@
+# Trình diễn Mua ngay và Driver trên Member web — 18/11/2026
+
+- Nhánh local `codex/auction-winner-order-web`, base `54bca5a1`. Phiếu mua
+  theo giá niêm yết do người bán tạo là cam kết bán. Thanh toán giữ tiền
+  và mở Chuẩn bị sách ngay. Đơn thương lượng tiếp tục có lượt xác nhận riêng.
+- Driver mở đúng vận đơn Mua ngay và ghi lấy kiện, bắt đầu đi giao, giao
+  thành công. Người mua xác nhận đã nhận rồi có thể tua hạn 72 giờ. Đơn
+  đã báo sự cố giữ toàn bộ tiền và mở hồ sơ. Admin phụ trách có thể xem ảnh
+  đóng gói và tệp bằng chứng riêng có audit.
+- Demo API local đã bật `LOCAL_DIRECT_ORDER_JOURNEY_DEMO_ENABLED`. Mongo local
+  đã áp 0083–0084. API 3000, Member web 5174 và Admin web 5173 phản hồi.
+  Thao tác của từng vai ghi ở [ADR 0090](../adr/0090-seller-listed-purchase-demo-journey.md).
+- 21:49 ICT: sửa lỗi tạo đơn trên DB local đã tồn tại. Migration đã tạo
+  collection mới nhưng role runtime chưa được cập nhật. Đã cấp bổ sung
+  hai bộ quyền tối thiểu và xác minh bằng kết nối `latlai_app`. Request
+  lỗi bị rollback, không tạo đơn hoặc ghi sổ ví.
+- PASS 74 ca HTTP Mongo QA về Order và thỏa thuận. Hai phiên Chromium kiểm
+  từng mốc Driver, nhận sách, gửi lặp chỉ giải ngân một lần, báo chưa nhận
+  giữ tiền và Admin được phân công đọc tệp. Khiếu nại chất lượng cạnh tranh
+  với tua hạn chỉ cho một kết quả. Storage fake ghi/đọc ảnh QA.
+  Metadata xác nhận hai bucket local trỏ tới đều private và có giới hạn.
+  Chưa chạy upload Supabase thật hoặc video MP4 trong gói này.
+- Luồng giao/giải ngân thường vẫn theo ADR 0064. Hồ sơ hỗ trợ cho phép
+  tiếp nhận và xem bằng chứng, chưa quyết định hoàn tiền hoặc hoàn hàng.
+
+# Diễn biến giá trên React Native — 18/11/2026
+
+- Nhánh local `codex/auction-winner-order-web`, base `54bca5a1`. Danh sách
+  lịch sử đấu giá trên RN theo bố cục Member web. Hiện số người trả giá
+  ẩn danh, giờ đến giây, mức giá và trạng thái của dòng đầu. Danh sách
+  cuộn trong khung, có chú thích dưới và xếp giá xuống dòng khi chỗ hẹp.
+- Typecheck, Expo lint và 34 ca model đấu giá qua. Android emulator x86_64
+  kiểm cùng phiên local lúc đang mở và đã bán, cuộn đến lượt cũ nhất và
+  mở màn với chữ hệ thống 150%. Chưa kiểm trên iOS hay thiết bị thật.
+
+# Mua ngay theo giá niêm yết trên Member web — 18/11/2026
+
+- Nhánh local `codex/auction-winner-order-web`, base `54bca5a1`. Từ chi tiết
+  sách hoặc giỏ, **Mua ngay** mở hộp địa chỉ. **Chat với người bán** mở khung
+  nhắn tin và phiếu hiện giá niêm yết. Khi Buyer xác nhận giá cùng địa chỉ,
+  phiếu ẩn mục thương lượng và Seller thấy nút tạo đơn với đúng giá đã chốt.
+  Buyer vẫn thanh toán sau khi Seller tạo đơn.
+- API đính kèm quote nhận `acceptedListedPrice` tùy chọn và chốt giá cùng
+  quote trong một giao dịch. Xem ADR0041. Tương thích với client cũ.
+- PASS 12 ca Mongo QA về thỏa thuận. Hai phiên Chromium trên cùng API QA
+  kiểm hai điểm vào, gửi lại sau mất phản hồi và Seller tạo đúng một đơn
+  chờ thanh toán theo giá niêm yết. Storage giả trong fixture. Build Member
+  web, typecheck API, kiểm contract qua.
+- Suite chi tiết sách dừng ở selector **Thêm vào giỏ sách**, thao tác đã vắng
+  trên màn chi tiết từ base `54bca5a1`. Hai điểm vào mới đã qua ca Chromium ở trên.
+
+# Đồng bộ PR #116 vào checkout demo — 18/11/2026
+
+- `main` local và HEAD `codex/auction-winner-order-web` cùng ở `54bca5a1`.
+  Giữ thay đổi tracked/untracked; ghép `ChatPage` và `CreateAuctionPage`
+  với phần mới từ main. Bản sao tệp trước đồng bộ nằm dưới `.tmp/main-sync-54bca5a1`.
+- PR #116 đưa màn thương lượng năm bước và hộp thoại giao hàng lên web,
+  bổ sung hỗ trợ, xử lý trả sách trao đổi và một số thao tác demo đấu giá trên RN.
+- Bản local giữ thứ tự React Hook đúng ở BuyNow/Checkout và áp ADR 0041
+  khi tạo đơn thương lượng. API yêu cầu giá đã được đối tác chấp nhận.
+  Web chỉ mở tạo đơn khi đủ điều kiện, với giá đã chốt ở chế độ chỉ đọc.
+- Worktree thử qua 10 ca Mongo QA về thỏa thuận, build/lint Member web,
+  typecheck API/RN, kiểm OpenAPI, Chromium về điều kiện tạo đơn và Driver.
+  Suite chat tổng hợp dừng ở selector tiêu đề cũ; chưa xác nhận toàn bộ suite
+  hoặc chạy trên thiết bị native.
+
+# Tân trang màn Nhận sách đấu giá — 18/11/2026
+
+- Nhánh `codex/auction-winner-order-web`, base `735ff25f`. Admin/Staff web
+  trình bày tên sách, trạng thái, vị trí kệ và hạn theo cột. Giá và biên bản
+  mở dưới hồ sơ bằng chuột hoặc bàn phím. Nút nghiệp vụ dùng điều kiện hiện có.
+- Build, lint và 8 ca Chromium đọc hàng chờ qua. Fixture hỗn hợp ở 390, 1024
+  và 1536 px kiểm phần mở giá, bảng nhận sách, tải lại lỗi/giữ danh sách cũ,
+  trạng thái trống và tràn ngang. Các lượt này chỉ dùng dữ liệu thử trên web.
+
+# Trình diễn giao sách từ màn Simulator — 18/11/2026
+
+- Nhánh `codex/auction-winner-order-web`, base `735ff25f`. Sau khi Staff
+  bàn giao kiện, nút **Mở Simulator giao hàng · Demo** ở bước Nhận sách mở
+  Driver trong cùng phiên đăng nhập. Mở màn chỉ tra cứu vận đơn đã cấp.
+- Với cổng demo local, người thắng thao tác **Bắt đầu đi giao**, rồi
+  **Giao thành công → Ghi nhận kết quả**. Lệnh đầu ghi mốc đi giao trong
+  receipt, đơn vẫn InTransit. Lệnh thứ hai dùng sự kiện carrier chuẩn để
+  mở Kiểm tra & kết quả và hạn 72 giờ. Trở về đơn để xem kết quả mới.
+- OpenAPI 0.84.0. API kiểm quyền người mua, trạng thái sau bàn giao,
+  phiên bản, hạn và cổng demo. Driver Test Operator dùng quyền hiện có.
+- PASS 8 ca giao sách trên Mongo QA, gồm hai mốc demo, replay và cạnh
+  tranh báo giao với Test Operator. Chromium fixture kiểm mở Driver,
+  quay lại đơn thấy mốc đang giao và chỉ sang Kiểm tra sau kết quả giao.
+  Build, typecheck API, lint và contract qua.
+- Sửa nút **Hoàn tất kiểm tra ngay · Demo** trên cùng nhánh. API cũ đổi
+  hạn 72 giờ nên validator từ chối. Migration 0081 giữ hạn và cho phép ghi
+  dấu hoàn tất sớm ở riêng đơn demo. Giải ngân và receipt cùng commit.
+  PASS 10 ca Mongo QA về giao sách hoặc giải ngân, gồm hai yêu cầu đồng
+  thời cùng key, cổng demo tắt, sai quyền và sai phiên bản. Mongo local
+  đã áp 0081. Đơn **Mắt Biếc** vẫn ở bước kiểm tra để chủ dự án thử nút.
+- Lỗi 500 của đơn **Số Đỏ** sau 0081 do Mongo local thiếu tài khoản
+  `PlatformCommission` và bản ghi khóa. Migration 0082 đã bổ sung hai
+  bản ghi tham chiếu, giữ nguyên sổ cái và tiền đang giữ. Chromium với bản
+  sao đơn trên Mongo QA tái hiện 500 khi thiếu tài khoản, gửi lại cùng key
+  sau khi sửa nhận 200 và chỉ tạo một bút toán. F5 kết thúc phiên
+  memory-only. Đăng nhập lại điều hướng về đúng đơn.
+
+# Đồng bộ giao diện điều phối Driver — 18/11/2026
+
+- Trên nhánh `codex/auction-winner-order-web`, Driver của Trao đổi và
+  Driver đấu giá dành cho Test Operator dùng chung khung, thẻ kiện, lộ trình
+  và nút báo giao. Đấu giá hiển thị một kiện với mốc nhận từ điểm, vận
+  chuyển và giao. Người mua xem tiến trình gọn theo quyền của đơn.
+- Chỉ đổi Member web. Lệnh báo kết quả, điều kiện mở nút, quyền đọc,
+  idempotency và lịch sử hai chiều của Trao đổi dùng đường xử lý hiện có.
+- Member web build, lint và browser fixture qua. Chromium kiểm thẻ Trao
+  đổi và nút POD cũ, ba mốc của Operator, màn Buyer, viewport 320 px và
+  gửi lại kết quả sau mất phản hồi. Đơn demo local để chủ dự án thao tác.
+
+# Theo dõi giao sách đấu giá trên Driver — 18/11/2026
+
+- Nhánh `codex/auction-winner-order-web`, base `735ff25f`. Chặng Nhận sách
+  có tiến trình bàn giao, vận chuyển và kết quả. Nút Theo dõi vận đơn mở
+  `/driver?trackingCode=…`. Driver nhận mã đấu giá đã cấp và giữ luồng
+  điều phối hai kiện của Trao đổi.
+- OpenAPI 0.82.0 bổ sung đọc vận đơn của người mua và Test Operator độc lập,
+  giới hạn trường theo dõi. Driver báo giao thành công/thất bại bằng lệnh
+  mô phỏng hiện có. Mất phản hồi giữ nguyên mã sự kiện và nội dung gửi lại.
+  Giao thành công mở 72 giờ kiểm tra, thất bại chuyển xử lý sự cố.
+- Kiểm 6 ca API giao sách đấu giá trên Mongo QA, gồm quyền, dữ liệu tra cứu,
+  giao thành công/thất bại và replay. Driver Chromium kiểm nhập mã, đường
+  dẫn điền sẵn, giao diện Buyer/Operator và gửi lại sau mất phản hồi bằng
+  dữ liệu thử. Web/API local đã phục vụ route. Đơn demo để chủ dự án thử.
+
+# Đơn của người thắng đấu giá trên Member web — 18/11/2026
+
+- Nhánh `codex/auction-winner-order-web`, base `735ff25f`. Từ Giao dịch,
+  Đấu giá của tôi, thông báo thắng và trang phiên, người thắng mở
+  `/auctions/:id/order`. Trang đọc order riêng theo tài khoản và trình bày
+  Thanh toán, Nhận sách, Kiểm tra & kết quả. Hai cách nhận, biên bản, mã vận
+  đơn/mã nhận, thời hạn, khiếu nại và hoàn tiền dùng trạng thái API hiện có.
+- Nghiệp vụ ở điểm tiếp tục dùng thao tác Staff và công cụ Hãng vận chuyển
+  dành cho Test Operator. Luồng RN và readiness gate tiếp tục theo chủ gói.
+- Mongo local có phiên demo **Số Đỏ** chốt với User3 là người thắng, đơn chờ
+  thanh toán 30.000 ₫. Dùng bản sách mẫu của User1 đã duyệt. API xác nhận vai
+  trò Buyer và từ chối đọc đơn với tài khoản ngoài giao dịch.
+- Unit Member web 490 ca, build, lint và browser 12 ca thanh toán qua. Browser
+  390/1440 px dùng dữ liệu thử, có kiểm nhận tại điểm, vận đơn, sự cố giao,
+  trả sách và kết quả. Hồi quy danh sách đấu giá và thẻ giao dịch qua.
+  Suite notification-preview dừng ở selector cũ “Xem thông báo” trên Tổng
+  quan. Unit xác nhận đích thông báo thắng. Xuyên vai trò với Mongo QA,
+  provider thật và native chưa chạy lại.
+
 # Bỏ qua chờ cho demo — 17/11/2026
 
 - Nhánh `test/auction-journey-registration`. Member web có nút “Bỏ qua chờ”
   chỉ hiện khi API bật `DEMO_SKIP_ENABLED=true` (development/test, Mongo local
   và `PAYMENT_SIMULATOR_SECRET`): mở hoặc chốt phiên đấu giá ngay, và kết thúc
-  hạn kiểm tra của đơn ViaPoint. Lệnh chỉ dời hạn thật; `close`/`settle` chuẩn
-  vẫn chọn người thắng, giải ngân và ghi sổ. Exchange, đơn trực tiếp và đánh
+  hạn kiểm tra của đơn ViaPoint. Nút phiên đấu giá vẫn dùng `close` chuẩn
+  để chọn người thắng. Bản sửa ngày 18/11 giữ nguyên hạn kiểm tra của đơn
+  ViaPoint và dùng chung quy trình giải ngân. Exchange, đơn trực tiếp và đánh
   giá giữ các nút demo sẵn có.
 - Bước chờ Staff/hãng vận chuyển và quyết định Admin vẫn dùng bàn vận hành;
   nút phía Member không cấp quyền Admin. Cần đặt `DEMO_SKIP_ENABLED=true`

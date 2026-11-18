@@ -29,6 +29,7 @@ try {
     const page = await context.newPage();
     await page.clock.setFixedTime(new Date(now));
     let paid = false, walletReads = 0, release;
+    let fulfillment = {};
     const commands = [], errors = [], external = [];
     page.on('pageerror', error => errors.push(error.message));
     const auction = () => ({ id: id(2), listingId: id(4), title: 'Phiên đấu giá QA', state: paid ? 'Sold' : 'AwaitingWinnerPayment',
@@ -43,7 +44,8 @@ try {
       delivery: null, paymentDeadline: paid ? null : deadline, paidAt: paid ? now : null, serverTime: now,
       report: { outcome: 'Pass', inspectedAt: now, note: null, scope: 'Kiểm tra tình trạng QA' },
       acceptanceDeadline: paid ? '2026-11-07T03:00:00.000Z' : null, acceptedAt: null,
-      collectionDeadline: null, collectedAt: null, inspectionDeadline: null, returnDeadline: null, refunded: false, resolution: null });
+      collectionDeadline: null, collectedAt: null, inspectionDeadline: null, returnDeadline: null, refunded: false, resolution: null,
+      ...fulfillment });
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url()), p = url.pathname;
       if (p === '/socket.io/') return route.abort();
@@ -51,6 +53,7 @@ try {
         if (p === '/api/v1/auth/login') return route.fulfill({ json: {
           accessToken: 'fixture-access', refreshToken: 'f'.repeat(43), expiresIn: 900, user: actor,
         } });
+        if (p === '/api/v1/demo/skip') return route.fulfill({ json: { enabled: true } });
         if (p === `/api/v1/point-orders/${id(3)}/pay` && request.method() === 'POST') {
           const body = JSON.parse(request.postData());
           assert.deepEqual(body, method === 'SelfCollect' ? { expectedVersion: 1 } : {
@@ -107,7 +110,16 @@ try {
       history.pushState({ key: 'qa-point-order', idx: (history.state?.idx ?? 0) + 1 }, '', path);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }, '/auctions/' + id(2));
-    await expect(page.getByText('Bạn đã thắng phiên đấu giá', { exact: true })).toBeVisible();
+    if (baseline) {
+      await expect(page.getByText('Bạn đã thắng phiên đấu giá', { exact: true })).toBeVisible();
+    } else {
+      await page.getByRole('link', { name: 'Mở đơn đấu giá', exact: true }).click();
+      await expect(page).toHaveURL(`${origin}/auctions/${id(2)}/order`);
+      await expect(page.getByRole('heading', { name: 'Chọn cách nhận và thanh toán' })).toBeVisible();
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+      if (mode === 'success' && method === 'SelfCollect')
+        await page.screenshot({ path: path.join(out, `winner-order-${width}.png`) });
+    }
     if (method === 'CarrierOutbound') {
       await page.getByRole('button', { name: 'Giao tận nơi', exact: true }).click();
       await expect(page.getByLabel('Giao tới', { exact: true })).toHaveValue(id(5));
@@ -135,12 +147,56 @@ try {
     }
     await expect(action).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Thử lại thanh toán', exact: true })).toHaveCount(0);
+    if (!baseline) {
+      await expect(page.getByRole('heading', { name: 'Xem biên bản kiểm tra tại điểm' })).toBeVisible();
+      await expect(page.getByRole('listitem').filter({ has: page.getByText('Đang diễn ra', { exact: true }) })).toContainText('Nhận sách');
+    }
+    if (!baseline && width === 390 && mode === 'success') {
+      const transfer = method === 'CarrierOutbound' ? [
+        [{ state: 'ReadyForCollection', collectionDeadline: deadline }, 'Chờ bàn giao cho hãng'],
+        [{
+          state: 'InTransit', version: 4,
+          delivery: {
+            recipientName: 'Người nhận QA', phone: '0900000000', localityCode: 'DEMO-A', detail: 'Địa chỉ QA',
+            outboundFee: 0, trackingCode: 'LL-ABCDEF123456', dispatchedAt: now, deliveryDeadline: deadline, deliveredAt: null,
+          },
+        }, 'Sách đang trên đường đến bạn'],
+        [{ state: 'ResolutionPending', resolution: { reason: 'DeliveryFailed', openedAt: now } }, 'Đơn đang được xem xét'],
+        [{ state: 'ReturnPending', returnDeadline: deadline }, 'Chờ hãng trả sách về điểm'],
+        [{ state: 'Cancelled', refunded: true, closedAt: now }, 'Đơn đã đóng và tiền đã về ví'],
+      ] : [
+        [{ state: 'ReadyForCollection', collectionDeadline: deadline }, 'Đến điểm nhận sách'],
+        [{ state: 'Inspection', collectedAt: now, inspectionDeadline: deadline }, 'Kiểm tra sách bạn đã nhận'],
+        [{ state: 'Completed', collectedAt: now, closedAt: now }, 'Đơn đã hoàn tất'],
+      ];
+      for (const [state, label] of transfer) {
+        fulfillment = state;
+        await page.goBack();
+        await expect(page.getByRole('link', { name: 'Mở đơn đấu giá', exact: true })).toBeVisible();
+        await page.goForward();
+        await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
+        if (state.delivery) {
+          await expect(page.getByText(state.delivery.trackingCode, { exact: true })).toBeVisible();
+          await expect(page.getByRole('list', { name: 'Tiến trình vận chuyển' })).toBeVisible();
+          await expect(page.getByRole('link', { name: 'Theo dõi vận đơn' }))
+            .toHaveAttribute('href', '/driver?trackingCode=' + state.delivery.trackingCode);
+          const simulator = page.getByRole('link', { name: 'Mở Simulator giao hàng · Demo', exact: true });
+          await expect(simulator).toHaveAttribute('href', '/driver?trackingCode=' + state.delivery.trackingCode + '&demo=1');
+          await page.screenshot({ path: path.join(out, 'demo-delivery-390.png'), fullPage: true });
+          await simulator.click();
+          await expect(page).toHaveURL(origin + '/driver?trackingCode=' + state.delivery.trackingCode + '&demo=1');
+          await page.goBack();
+          await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
+        }
+      }
+    }
     if (width === 1440) {
       await page.getByRole('button', { name: /^Tài khoản của/ }).click();
       await expect(menu.locator('[class*="hubBalance"]')).toContainText(baseline ? '100.000' : '50.000');
       await page.keyboard.press('Escape'); await expect(menu).toHaveCount(0);
     }
     await page.goBack();
+    if (!baseline) await page.goBack();
     await expect(balance).toContainText(baseline ? '100.000' : '50.000');
     await expect(page.locator('[class*="cardHeldValue"]')).toHaveText(baseline ? /^0\s*₫$/ : /^50\.000\s*₫$/);
     if (mode === 'success' && method === 'SelfCollect') await page.screenshot({ path: path.join(out, `wallet-${width}${baseline ? '-before' : ''}.png`) });

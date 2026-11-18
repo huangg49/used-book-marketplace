@@ -19,6 +19,16 @@
   background: #fde9ee;
 }
 
+.link {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  text-align: center;
+  text-decoration: none;
+}
+
 .skip:disabled {
   cursor: progress;
   opacity: 0.65;

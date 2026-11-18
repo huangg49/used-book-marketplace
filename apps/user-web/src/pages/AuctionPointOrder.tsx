@@ -1,15 +1,22 @@
 import { useId, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowUpRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DemoSkipButton } from '../components/DemoSkipButton'
+import { AuctionShipmentTimeline } from '../components/AuctionShipmentTimeline'
 import { formatRemaining, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
-import { formatVnd } from '../lib/routes'
+import { ROUTES } from '../lib/routes'
 import { pointReopensAt } from '../lib/point-hours'
 import {
-  acceptPointOrderReport, advanceDemoPointOrder, claimPointOrder, CLAIM_MIN_LENGTH, rejectPointOrderReport, requestCollectionCode,
+  acceptPointOrderReport, advanceDemoPointOrder, claimPointOrder, CLAIM_MIN_LENGTH, getDemoSkipStatus,
+  rejectPointOrderReport, requestCollectionCode,
   type CodeIssued, type PointOrder,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
+import orderStyles from './AuctionWinnerOrderPage.module.css'
+import demoStyles from '../components/DemoSkipButton.module.css'
 
 // The buyer's steps after paying for an auction book at a point (FR-H09/H11,
 // FR-T03): answer the inspection report, request the collection code at the
@@ -60,14 +67,10 @@ function useOrderStep(onSettled: () => Promise<unknown>) {
   return { run, retry: () => pending.current && run(pending.current), busy, error, unknown }
 }
 
-export function PointOrderSteps({ order, onChanged }: { order: PointOrder; onChanged: () => Promise<unknown> }) {
+export function PointOrderSteps({
+  order, onChanged, paused,
+}: { order: PointOrder; onChanged: () => Promise<unknown>; paused: boolean }) {
   const step = useOrderStep(onChanged)
-  const header = (
-    <div className={`${styles.standing} ${styles.standingLead}`}>
-      <strong>{order.state === 'Completed' ? 'Đơn nhận sách đã hoàn tất' : `Đã thanh toán ${formatVnd(order.amounts.buyerTotal)}`}</strong>
-      <span>{summary(order)}</span>
-    </div>
-  )
   const recovery = (step.error || step.unknown) && (
     <div className={styles.notice} role="alert">
       {step.error && <p className={styles.fieldError}>{step.error}</p>}
@@ -78,20 +81,21 @@ export function PointOrderSteps({ order, onChanged }: { order: PointOrder; onCha
       )}
     </div>
   )
-  const locked = step.busy || !!step.unknown
+  const locked = paused || step.busy || !!step.unknown
   return (
     <div className={styles.bidPanel}>
-      {header}
       {order.state === 'Fulfilling' && <ReportDecision order={order} step={step} locked={locked} />}
-      {/* ADR 0044: the chosen address and fee stay visible from payment on. */}
-      {(order.fulfillmentMethod === 'CarrierOutbound' || order.state === 'InTransit') && (
+      {order.fulfillmentMethod === 'CarrierOutbound' && (
         <DeliveryNote order={order} />
+      )}
+      {order.state === 'InTransit' && order.delivery?.trackingCode && !locked && (
+        <DemoDeliveryLink trackingCode={order.delivery.trackingCode} />
       )}
       {order.state === 'ReadyForCollection' && order.fulfillmentMethod === 'SelfCollect' && (
         <CollectionCode order={order} step={step} locked={locked} />
       )}
       {order.state === 'Inspection' && <InspectionClaim order={order} step={step} locked={locked} />}
-      {order.state === 'Inspection' && (
+      {order.state === 'Inspection' && !locked && (
         <DemoSkipButton
           label="Hoàn tất kiểm tra ngay · Demo"
           note="Kết thúc thời hạn kiểm tra và giải ngân theo biên bản, như khi hết 72 giờ."
@@ -104,35 +108,22 @@ export function PointOrderSteps({ order, onChanged }: { order: PointOrder; onCha
   )
 }
 
-function summary(o: PointOrder) {
-  const delivered = o.fulfillmentMethod === 'CarrierOutbound'
-  switch (o.state) {
-    case 'Fulfilling':
-      return `Sách đã đạt kiểm tra tại ${o.pointName}. Hãy xem biên bản và trả lời trước ${when(o.acceptanceDeadline)}.`
-    case 'ReadyForCollection':
-      return delivered
-        ? `${o.pointName} sẽ giao sách cho hãng vận chuyển trước ${when(o.collectionDeadline)}.`
-        : `Sách chờ bạn tại ${o.pointName} đến ${when(o.collectionDeadline)}, trong giờ ${POINT_HOURS}.`
-    case 'InTransit':
-      return `Sách đang được giao tới địa chỉ của bạn, chậm nhất ${when(o.delivery?.deliveryDeadline ?? null)}.`
-    case 'Inspection':
-      return delivered
-        ? `Sách đã giao tới bạn lúc ${when(o.delivery?.deliveredAt ?? null)}. Nếu sách khác biên bản, hãy báo trước ${when(o.inspectionDeadline)}.`
-        : `Bạn đã nhận sách. Nếu sách khác biên bản, hãy báo trước ${when(o.inspectionDeadline)}.`
-    case 'ResolutionPending':
-      return 'Quản trị viên đang xem xét đơn này. Tiền vẫn được giữ cho đơn cho tới khi có quyết định; theo dõi thông báo.'
-    case 'ReturnPending':
-      return delivered && !o.delivery?.deliveredAt
-        ? `Giao hàng không thành công. Hãng đang trả sách về ${o.pointName}; tiền đã thanh toán được hoàn sau khi nhân viên đối chiếu sách.`
-        : `Hãy mang sách trả về ${o.pointName} trước ${when(o.returnDeadline)}, trong giờ ${POINT_HOURS}. Tiền được hoàn sau khi nhân viên đối chiếu sách.`
-    case 'Completed':
-      return 'Quy trình nhận sách đã hoàn tất. Cảm ơn bạn đã cho cuốn sách một chương mới.'
-    default:
-      return 'Theo dõi thông báo để biết bước tiếp theo.'
-  }
-}
-
 type StepProps = { order: PointOrder; step: ReturnType<typeof useOrderStep>; locked: boolean }
+
+function DemoDeliveryLink({ trackingCode }: { trackingCode: string }) {
+  const demo = useQuery({
+    queryKey: ['demo-skip'], queryFn: getDemoSkipStatus, staleTime: Infinity, retry: false,
+  })
+  if (!demo.data?.enabled) return null
+  return (
+    <div className={demoStyles.wrap}>
+      <Link to={ROUTES.driver(trackingCode, true)} className={`${demoStyles.skip} ${demoStyles.link}`}>
+        Mở Simulator giao hàng · Demo <ArrowUpRight size={17} aria-hidden="true" />
+      </Link>
+      <p className={demoStyles.note}>Trình diễn quá trình bưu tá đi giao và ghi nhận giao thành công.</p>
+    </div>
+  )
+}
 
 function ReportDecision({ order, step, locked }: StepProps) {
   const ids = useId()
@@ -212,18 +203,23 @@ function ReportDecision({ order, step, locked }: StepProps) {
 function DeliveryNote({ order }: { order: PointOrder }) {
   const ids = useId()
   const d = order.delivery
+  const deliveryStatus = d?.deliveredAt ? 'Delivered'
+    : d?.dispatchedAt && order.state !== 'InTransit' ? 'Failed'
+    : d?.dispatchedAt ? 'InTransit' : 'Waiting'
   return (
-    <section className={styles.notice} aria-labelledby={`${ids}-delivery`}>
-      <strong id={`${ids}-delivery`}>Giao tận nơi</strong>
+    <section className={orderStyles.shipment} aria-labelledby={`${ids}-delivery`}>
+      <h3 id={`${ids}-delivery`}>Vận chuyển tận nơi</h3>
+      {(order.state === 'ReadyForCollection' || d?.dispatchedAt) && (
+        <AuctionShipmentTimeline status={deliveryStatus} dispatchedAt={d?.dispatchedAt}
+          outForDeliveryAt={d?.demoOutForDeliveryAt} outcomeAt={d?.deliveredAt} />
+      )}
+      {d?.trackingCode && (
+        <div className={orderStyles.shipmentCode}>
+          <span>Mã vận đơn <strong>{d.trackingCode}</strong></span>
+          <Link to={ROUTES.driver(d.trackingCode)}>Theo dõi vận đơn <ArrowUpRight size={16} aria-hidden="true" /></Link>
+        </div>
+      )}
       {d && <p>{d.recipientName} · {d.phone} · {d.detail}{d.localityCode ? ` · ${d.localityCode}` : ''}</p>}
-      <p>
-        Phí giao tận nơi: {order.amounts.outboundFee > 0 ? formatVnd(order.amounts.outboundFee) : 'Miễn phí'}.
-      </p>
-      <p>
-        {d?.trackingCode
-          ? `Mã vận đơn ${d.trackingCode} · đã giao cho hãng lúc ${when(d.dispatchedAt)}.`
-          : `Nhân viên ${order.pointName} sẽ đóng gói và giao sách cho hãng vận chuyển.`}
-      </p>
     </section>
   )
 }

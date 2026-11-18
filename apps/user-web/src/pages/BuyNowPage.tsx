@@ -94,15 +94,15 @@ const BUY_NOW_STEPS = [
 export function BuyNowPage() {
   const { listingId = "" } = useParams<{ listingId: string }>();
   const [params] = useSearchParams();
+  const auth = useSession();
   if (params.get("legacy") !== "1") {
     return (
       <Navigate
-        to={`/chat/start/${listingId}?intent=Negotiation`}
+        to={`/chat/start/${listingId}?intent=Negotiation&buyNow=1`}
         replace
       />
     );
   }
-  const auth = useSession();
   return (
     <BuyNowListing
       key={`${auth.status === "authenticated" ? auth.user.id : "guest"}:${listingId}`}

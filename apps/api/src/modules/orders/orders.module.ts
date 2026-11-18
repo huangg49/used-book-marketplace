@@ -14,6 +14,10 @@ import { OrderExpiryWorker } from './order-expiry.service.js';
 import { WalletModule } from '../wallet/wallet.module.js';
 import { PackagingEvidenceService } from './packaging-evidence.service.js';
 import { PackagingEvidenceController } from './packaging-evidence.controller.js';
+import { CarrierSimulator } from '../shipments/carrier-simulator.js';
+import { EvidenceStorage } from '../media/media-storage.js';
+import { DirectOrderIssueEvidenceController } from './direct-order-issue-evidence.controller.js';
+import { DirectOrderIssueEvidenceService } from './direct-order-issue-evidence.service.js';
 @Module({
   imports: [PurchasesModule,
     DatabaseModule,
@@ -30,8 +34,11 @@ import { PackagingEvidenceController } from './packaging-evidence.controller.js'
     OrderExpiryWorker,
     LocalDemoCompletionWorker,
     PackagingEvidenceService,
+    CarrierSimulator,
+    EvidenceStorage,
+    DirectOrderIssueEvidenceService,
   ],
-  controllers: [OrdersController, PackagingEvidenceController],
+  controllers: [OrdersController, PackagingEvidenceController, DirectOrderIssueEvidenceController],
   exports: [OrderExpiryWorker, OrdersService, OrderClock],
 })
 export class OrdersModule {}

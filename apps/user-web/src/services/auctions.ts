@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { components } from '@used-books/api-contract'
 import { session } from '../lib/session'
 
 // Auction reads and commands (OpenAPI 0.27.0, tag Auctions). Ceilings are never
@@ -113,6 +114,7 @@ const deliverySchema = z.object({
   recipientName: z.string(), phone: z.string(), localityCode: z.string(), detail: z.string(),
   outboundFee: z.number().int(), trackingCode: z.string().nullable(), dispatchedAt: z.string().nullable(),
   deliveryDeadline: z.string().nullable(), deliveredAt: z.string().nullable(),
+  demoOutForDeliveryAt: z.string().nullish(),
 })
 const deliveryQuoteSchema = z.object({
   addressId: z.string().uuid(), addressVersion: z.number().int(), outboundFee: z.number().int(), buyerTotal: money,
@@ -141,7 +143,7 @@ const pointOrderSchema = z.object({
   // ADR 0044: older servers had pickup only; only the buyer receives the address.
   fulfillmentMethod: z.enum(['SelfCollect', 'CarrierOutbound']).default('SelfCollect'),
   delivery: deliverySchema.nullable().default(null),
-  paymentDeadline: z.string().nullable(), paidAt: z.string().nullable(), serverTime: z.string(),
+  paymentDeadline: z.string().nullable(), paidAt: z.string().nullable(), closedAt: z.string().nullish(), serverTime: z.string(),
   // Condition check at the point (FR-T02): never an authenticity claim.
   report: z.object({ outcome: z.literal('Pass'), inspectedAt: z.string(), note: z.string().nullable(), scope: z.string() }),
   acceptanceDeadline: z.string().nullable(), acceptedAt: z.string().nullable(),
@@ -207,8 +209,27 @@ export function getAuctionPhoto(id: string, mediaId: string) {
 export function getMyParticipation(id: string) { return session.request(`/me/auctions/${id}/participation`, participationSchema) }
 export function getMyPointOrder(id: string) { return session.request(`/me/point-orders/${id}`, pointOrderSchema) }
 
+const pointDeliveryTrackingSchema = z.object({
+  orderId: z.string().uuid(), auctionId: z.string().uuid(), title: z.string(), pointName: z.string(),
+  trackingCode: z.string(), dispatchedAt: z.string(), deliveryDeadline: z.string(), outcomeAt: z.string().nullable(),
+  status: z.enum(['InTransit', 'Delivered', 'Failed', 'Overdue']),
+  viewer: z.enum(['Buyer', 'Operator']), canReport: z.boolean(), serverTime: z.string(),
+  canDemoControl: z.boolean().default(false), version: z.number().int().optional(),
+  demoOutForDeliveryAt: z.string().nullish(),
+})
+export type PointDeliveryTracking = z.infer<typeof pointDeliveryTrackingSchema>
+
+export function getPointDeliveryTracking(trackingCode: string) {
+  return session.request(`/point-orders/delivery-tracking/${encodeURIComponent(trackingCode)}`, pointDeliveryTrackingSchema)
+}
+
 function command(path: string, key: string, body: object, method = 'POST') {
   return session.request(path, receiptSchema, { method, headers: { 'Idempotency-Key': key }, body: JSON.stringify(body) })
+}
+
+export type PointDeliveryEvent = components['schemas']['SimulatedPointDeliveryEvent']
+export function reportPointDelivery(event: PointDeliveryEvent) {
+  return command('/operations/simulator/point-delivery-events', event.eventId, event)
 }
 // ADR 0076: Dutch acceptance at the price the member saw, and sealed bids.
 export function acceptDutch(id: string, price: number, key: string) { return command(`/auctions/${id}/dutch-accept`, key, { price, fulfillmentMethod: 'SelfCollect' }) }
@@ -344,6 +365,12 @@ export function advanceDemoAuction(id: string, expectedVersion: number, key: str
 }
 export function advanceDemoPointOrder(orderId: string, expectedVersion: number, key: string) {
   return command(`/point-orders/${orderId}/demo-advance`, key, { expectedVersion })
+}
+export function demoDeliverPointOrder(orderId: string, expectedVersion: number, key: string) {
+  return command(`/point-orders/${orderId}/demo-deliver`, key, { expectedVersion })
+}
+export function demoStartPointDelivery(orderId: string, expectedVersion: number, key: string) {
+  return command(`/point-orders/${orderId}/demo-start-delivery`, key, { expectedVersion })
 }
 
 export const CLAIM_MIN_LENGTH = 30

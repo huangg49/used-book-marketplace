@@ -234,7 +234,7 @@ export function BookDetailPage() {
                     : sellerOrderConversation
                       ? "Bạn đã tạo đơn cho người mua này. Mở hội thoại để xem thông tin đơn hàng."
                       : isOwner
-                    ? "Người mua có thể mua ngay theo giá niêm yết hoặc nhắn bạn để thương lượng. Đơn Mua ngay đã thanh toán sẽ chuyển thẳng sang chuẩn bị gửi."
+                    ? "Khi người mua xác nhận giá và địa chỉ nhận sách, bạn có thể tạo đơn trong hội thoại."
                     : held
                       ? "Bản sách này đã có đơn giữ chỗ. Bạn vẫn có thể xem bài đăng nhưng chưa thể đặt mua."
                       : "Mua theo giá niêm yết hoặc nhắn người bán để trao đổi thêm."}
@@ -244,11 +244,7 @@ export function BookDetailPage() {
                   {!isOwner && !held && (
                     <Link
                       className={styles.primary}
-                      to={
-                        conversationToOpen
-                          ? ROUTES.chat(conversationToOpen.id)
-                          : `/chat/start/${book.id}?intent=Negotiation`
-                      }
+                      to={ROUTES.buyNow(book.id)}
                     >
                       <ShoppingBag size={18} aria-hidden="true" />
                       {book.bundle ? "Mua cả bộ" : "Mua ngay"}

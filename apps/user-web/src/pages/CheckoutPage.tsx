@@ -86,11 +86,11 @@ function errorText(error: unknown, phase: "address" | "quote" | "attach") {
 export function CheckoutPage() {
   const { listingId = "" } = useParams<{ listingId: string }>();
   const [params] = useSearchParams();
+  const auth = useSession();
   const conversationId = params.get("conversationId");
   if (conversationId) {
     return <Navigate to={`/chat/${conversationId}`} replace />;
   }
-  const auth = useSession();
   return <CheckoutListing key={`${auth.status === 'authenticated' ? auth.user.id : 'guest'}:${listingId}:${params.get('conversationId') ?? ''}`} />;
 }
 
@@ -121,7 +121,7 @@ function CheckoutListing() {
     listing: PublicListing;
     body: {
       quoteId: string;
-      expectedQuoteVersion: number;
+      expectedQuoteVersion: 1;
       expectedListingVersion: number;
       expectedListingRevisionId: string;
     };

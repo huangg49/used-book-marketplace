@@ -1,8 +1,10 @@
 import { TransactionDisclosure } from "../components/conversation/TransactionFrame";
+import { DirectDeliveryJourney } from "../components/DirectDeliveryJourney";
 import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinanceSummary";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
+import { commandOutcomeUnknown } from "../hooks/useAuctionClock";
 import { createdExchange, pendingProposal } from "../services/exchange";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "@used-books/session-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -109,6 +111,22 @@ const quoteDetailSchema = z.object({
   }),
 });
 
+type AddressQuoteAttempt = {
+  listing: PublicListing;
+  roomVersion: number;
+  acceptedListedPrice?: number;
+  address?: { id: string; version: number };
+  saveAddress?: {
+    key: string;
+    body: { expectedBookVersion: number; address: PurchaseAddressForm & { serviceAreaCode: string }; makeDefault: true };
+    savedId?: string;
+  };
+  quoteKey: string;
+  quoteId?: string;
+  attachKey: string;
+  attachment?: Parameters<typeof attachPurchaseQuote>[1];
+};
+
 function quoteErrorText(error: unknown, phase: "address" | "quote" | "attach") {
   if (!(error instanceof ApiError))
     return error instanceof Error ? error.message : "Chưa kết nối được máy chủ. Kiểm tra mạng rồi thử lại.";
@@ -139,10 +157,12 @@ const NEGOTIATION_STEPS = [
 export function NegotiationWorkspace({
   room,
   userId,
+  buyNowEntry = false,
   book,
   refresh,
   frozen = false,
   guidance,
+  canCreateOrder = false,
   onOpenOrderDialog,
   historyExchange,
   setHistoryExchange,
@@ -150,10 +170,12 @@ export function NegotiationWorkspace({
 }: {
   room: PurchaseConversation;
   userId: string;
+  buyNowEntry?: boolean;
   book?: PublicListing;
   refresh: () => void;
   frozen?: boolean;
   guidance: ReturnType<typeof purchaseChatGuidance>;
+  canCreateOrder?: boolean;
   onOpenOrderDialog: () => void;
   historyExchange: string | null;
   setHistoryExchange: (id: string | null) => void;
@@ -175,7 +197,11 @@ export function NegotiationWorkspace({
   const [uncertain, setUncertain] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
 
-  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+  const [addressDialogOpen, setAddressDialogOpen] = useState(() =>
+    buyNowEntry && room.buyer.id === userId && room.status === "Active" &&
+    !room.orderId && room.terms?.mode !== "Exchange" && !room.terms?.pendingProposal,
+  );
+  const [confirmListedPrice, setConfirmListedPrice] = useState(buyNowEntry);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [addressForm, setAddressForm] = useState<PurchaseAddressForm>({
     recipientName: "",
@@ -186,12 +212,19 @@ export function NegotiationWorkspace({
   const [acknowledgedRevision, setAcknowledgedRevision] = useState<string>();
   const [addressBusy, setAddressBusy] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
+  const [recoveringAddress, setRecoveringAddress] = useState(false);
+  const addressAttempt = useRef<AddressQuoteAttempt | undefined>(undefined);
 
   const seller = room.seller.id === userId;
   const isBuyer = room.buyer.id === userId;
   const terms = room.terms;
   const proposal = terms?.pendingProposal;
   const isExchange = terms?.mode === "Exchange";
+  const offerListedPurchase = isBuyer && terms?.agreedPrice == null && book?.salePrice != null;
+  const listedPrice = confirmListedPrice && isBuyer ? book?.salePrice ?? null : null;
+  const hasDifferentAgreedPrice = listedPrice !== null &&
+    terms?.agreedListingRevisionId === book?.revisionId &&
+    terms?.agreedPrice != null && terms.agreedPrice !== listedPrice;
 
   const bundleAcknowledged =
     !!book && acknowledgedRevision === purchaseListingKey(book);
@@ -217,12 +250,18 @@ export function NegotiationWorkspace({
       const state = query.state.data?.state;
       return state === "AwaitingPayment" ||
         state === "Preparing" ||
-        state === "InTransit"
+        state === "InTransit" ||
+        (state === "Inspection" && !!query.state.data?.deliveryJourney)
         ? 5000
         : false;
     },
   });
   const orderData = order.data;
+  useEffect(() => {
+    if (orderData?.state === "Completed" && orderData.deliveryJourney) {
+      invalidateMemberWalletViews(queryClient, userId);
+    }
+  }, [orderData?.state, orderData?.deliveryJourney, queryClient, userId]);
   const shipment = useOrderShipment(room.orderId ?? "", !!room.orderId);
   const [shipmentDialogOpen, setShipmentDialogOpen] = useState(false);
 
@@ -338,31 +377,38 @@ export function NegotiationWorkspace({
 
   async function submitAddressAndQuote(event: React.FormEvent) {
     event.preventDefault();
-    if (!book || !addresses.data || !areas.data || addressBusy) return;
-    if (!book.fulfillment) {
+    if (addressBusy || !isBuyer) return;
+    let attempt = addressAttempt.current;
+    if (!attempt && (!book || !addresses.data || !areas.data)) return;
+    if (!attempt && !book?.fulfillment) {
       setAddressError(
         "Người bán chưa hoàn thiện nơi gửi cho bài đăng này nên chưa thể báo giá. Hãy trao đổi để người bán cập nhật trước.",
       );
       return;
     }
-    if (book.bundle && !bundleAcknowledged) {
+    if (!attempt && book?.bundle && !bundleAcknowledged) {
       setAddressError("Xem danh sách và xác nhận mua toàn bộ các cuốn trong bộ.");
       return;
     }
-    setAddressBusy(true);
-    setAddressError(null);
-    let phase: "address" | "quote" | "attach" = "address";
-    try {
+    if (!attempt && book && addresses.data && areas.data) {
+      if (listedPrice !== null && (proposal || isExchange || hasDifferentAgreedPrice)) {
+        setAddressError("Hãy xử lý thỏa thuận hiện tại trước khi xác nhận mua theo giá niêm yết.");
+        return;
+      }
       const activeAddressId =
         selectedAddressId ||
         (addresses.data.items.find((item) => item.isDefault)?.id ??
           addresses.data.items[0]?.id ??
           "new");
-      let address =
+      const address =
         activeAddressId === "new"
           ? undefined
           : addresses.data.items.find((item) => item.id === activeAddressId);
 
+      if (!address && activeAddressId !== "new") {
+        setAddressError("Địa chỉ đã thay đổi. Vui lòng chọn lại nơi nhận sách.");
+        return;
+      }
       if (!address) {
         if (
           !areas.data.localities.some(
@@ -370,73 +416,113 @@ export function NegotiationWorkspace({
           )
         ) {
           setAddressError("Hãy chọn một khu vực phục vụ trong danh sách.");
-          setAddressBusy(false);
           return;
         }
-        const saved = await session.request(
-          "/me/addresses",
-          z.object({
-            addressId: z.string().uuid(),
-            version: z.number().int(),
-          }),
-          {
-            method: "POST",
-            headers: { "Idempotency-Key": crypto.randomUUID() },
-            body: JSON.stringify({
-              expectedBookVersion: addresses.data.version,
-              address: { ...addressForm, serviceAreaCode: "HCM-DEMO-v1" },
-              makeDefault: true,
-            }),
+      }
+      attempt = {
+        listing: book,
+        roomVersion: room.version,
+        ...(listedPrice !== null ? { acceptedListedPrice: listedPrice } : {}),
+        address: address && { id: address.id, version: address.version },
+        saveAddress: address ? undefined : {
+          key: crypto.randomUUID(),
+          body: {
+            expectedBookVersion: addresses.data.version,
+            address: { ...addressForm, serviceAreaCode: "HCM-DEMO-v1" },
+            makeDefault: true,
           },
-        );
+        },
+        quoteKey: crypto.randomUUID(),
+        attachKey: crypto.randomUUID(),
+      };
+      addressAttempt.current = attempt;
+    }
+    if (!attempt) return;
+    setAddressBusy(true);
+    setAddressError(null);
+    let phase: "address" | "quote" | "attach" = "address";
+    try {
+      const saving = attempt.saveAddress;
+      if (!attempt.address && saving) {
+        if (!saving.savedId) {
+          const saved = await session.request(
+            "/me/addresses",
+            z.object({
+              addressId: z.string().uuid(),
+              version: z.number().int(),
+            }),
+            {
+              method: "POST",
+              headers: { "Idempotency-Key": saving.key },
+              body: JSON.stringify(saving.body),
+            },
+          );
+          saving.savedId = saved.addressId;
+        }
         const refreshed = await addresses.refetch();
-        address = refreshed.data?.items.find((item) => item.id === saved.addressId);
+        const address = refreshed.data?.items.find((item) => item.id === saving.savedId);
         if (!address) {
           throw new Error("Địa chỉ vừa lưu chưa thể xác nhận. Hãy thử lại.");
         }
+        attempt.address = { id: address.id, version: address.version };
         setSelectedAddressId(address.id);
       }
 
       phase = "quote";
-      const quoteBody = {
-        expectedListingVersion: book.version,
-        expectedListingRevisionId: book.revisionId,
-        ...(book.bundle ? { acknowledgeWholeBundle: true } : {}),
-        destinationAddressId: address.id,
-        expectedDestinationAddressVersion: address.version,
-        method: "DirectDelivery",
-      };
-      const quoted = await session.request(
-        `/listings/${room.listingId}/quotes`,
-        quoteReceiptSchema,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": crypto.randomUUID() },
-          body: JSON.stringify(quoteBody),
-        },
-      );
-      const currentQuote = await session.request(
-        `/me/quotes/${quoted.entityId}`,
-        quoteDetailSchema,
-      );
-
-      phase = "attach";
-      await attachPurchaseQuote(
-        room.id,
-        {
+      if (!attempt.attachment) {
+        if (!attempt.address) throw new Error("Chưa xác nhận được địa chỉ nhận sách.");
+        const listing = attempt.listing;
+        if (!attempt.quoteId) {
+          const quoted = await session.request(
+            `/listings/${room.listingId}/quotes`,
+            quoteReceiptSchema,
+            {
+              method: "POST",
+              headers: { "Idempotency-Key": attempt.quoteKey },
+              body: JSON.stringify({
+                expectedListingVersion: listing.version,
+                expectedListingRevisionId: listing.revisionId,
+                ...(listing.bundle ? { acknowledgeWholeBundle: true } : {}),
+                destinationAddressId: attempt.address.id,
+                expectedDestinationAddressVersion: attempt.address.version,
+                method: "DirectDelivery",
+              }),
+            },
+          );
+          attempt.quoteId = quoted.entityId;
+        }
+        const currentQuote = await session.request(
+          `/me/quotes/${attempt.quoteId}`,
+          quoteDetailSchema,
+        );
+        attempt.attachment = {
           quoteId: currentQuote.id,
           expectedQuoteVersion: currentQuote.version,
           expectedListingVersion: currentQuote.listingVersion,
           expectedListingRevisionId: currentQuote.listingRevisionId,
-          expectedVersion: room.version,
-        },
-        crypto.randomUUID(),
-      );
+          expectedVersion: attempt.roomVersion,
+          acceptedListedPrice: attempt.acceptedListedPrice,
+        };
+      }
 
+      phase = "attach";
+      await attachPurchaseQuote(room.id, attempt.attachment, attempt.attachKey);
+
+      addressAttempt.current = undefined;
+      setRecoveringAddress(false);
       setAddressDialogOpen(false);
       refresh();
     } catch (cause) {
-      setAddressError(quoteErrorText(cause, phase));
+      const uncertain = commandOutcomeUnknown(cause);
+      setRecoveringAddress(uncertain);
+      if (!uncertain) {
+        addressAttempt.current = undefined;
+        refresh();
+        void queryClient.invalidateQueries({ queryKey: ["public-listing", room.listingId] });
+      }
+      setAddressError(uncertain
+        ? "Chưa xác nhận được kết quả. Bấm thử lại để gửi đúng yêu cầu trước."
+        : quoteErrorText(cause, phase));
     } finally {
       setAddressBusy(false);
     }
@@ -497,6 +583,12 @@ export function NegotiationWorkspace({
       room.quotePreview &&
       Date.parse(room.quotePreview.expiresAt) > now,
   );
+  function openAddress() {
+    setAddressError(null);
+    if (!addressAttempt.current)
+      setConfirmListedPrice(!proposal && offerListedPurchase);
+    setAddressDialogOpen(true);
+  }
 
   const latestExchangeId =
     room.terms?.activeExchangeId ??
@@ -843,7 +935,11 @@ export function NegotiationWorkspace({
                 )}
 
                 {/* BƯỚC 3: CHUẨN BỊ SÁCH (Preparing) */}
-                {orderData.state === "Preparing" && (
+                {orderData.deliveryJourney &&
+                  (["Preparing", "InTransit", "Inspection"].includes(orderData.state) || !!orderData.deliveryJourney.issue) && (
+                    <DirectDeliveryJourney key={orderData.id} order={orderData} onChanged={() => order.refetch()} />
+                  )}
+                {orderData.state === "Preparing" && (!orderData.deliveryJourney || (seller && !orderData.deliveryJourney.trackingCode)) && (
                   <div style={{ display: "grid", gap: 10 }}>
                     {orderData.preparation && (
                       <div className={styles.deadlineBadge} style={{ marginBottom: 4 }}>
@@ -915,7 +1011,7 @@ export function NegotiationWorkspace({
                 )}
 
                 {/* BƯỚC 3: VẬN CHUYỂN (InTransit) */}
-                {orderData.state === "InTransit" && (
+                {orderData.state === "InTransit" && !orderData.deliveryJourney && (
                   <div style={{ display: "grid", gap: 10 }}>
                     <div className={styles.procedureNoticeInfo}>
                       <Truck size={22} aria-hidden="true" />
@@ -943,9 +1039,14 @@ export function NegotiationWorkspace({
                   </div>
                 )}
 
+                {orderData.state === "InTransit" && orderData.deliveryJourney && orderData.canConfirmReceipt &&
+                  !orderData.deliveryJourney.actions.some((action) => action === "OutForDelivery" || action === "Deliver") && (
+                    <ReceiptConfirmation order={orderData} onChanged={() => order.refetch()} />
+                  )}
+
                 {/* BƯỚC 4: KIỂM TRA SÁCH 72H (Inspection) */}
-                {(orderData.state === "Inspection" ||
-                  orderData.state === "ResolutionPending") && (
+                {(!orderData.deliveryJourney || (orderData.state === "ResolutionPending" && !orderData.deliveryJourney.issue)) &&
+                  (orderData.state === "Inspection" || orderData.state === "ResolutionPending") && (
                   <div style={{ display: "grid", gap: 10 }}>
                     <div className={styles.procedureNoticeInfo}>
                       <ShieldCheck size={22} aria-hidden="true" />
@@ -976,6 +1077,9 @@ export function NegotiationWorkspace({
                         </p>
                       </div>
                     </div>
+                    {seller && orderData.deliveryJourney && <Link to="/wallet" className={styles.secondaryActionBtn}>
+                      Đối chiếu tiền bán trong ví
+                    </Link>}
 
                     <ReviewEntry type="DirectOrder" id={orderData.id} version={orderData.version} />
                   </div>
@@ -1019,8 +1123,18 @@ export function NegotiationWorkspace({
                   </div>
                 )}
 
+                {isBuyer && pendingAction && orderData.state !== "AwaitingPayment" && (
+                  <button
+                    type="button"
+                    className={styles.secondaryActionBtn}
+                    disabled={orderBusy}
+                    onClick={() => void handleOrderAct(pendingAction)}
+                  >
+                    {pendingAction === "pay" ? "Thử lại thanh toán" : "Thử lại hủy đơn"}
+                  </button>
+                )}
                 {orderActionError && (
-                  <div className={styles.procedureNoticeWarning} style={{ marginTop: 8 }}>
+                  <div role="alert" className={styles.procedureNoticeWarning} style={{ marginTop: 8 }}>
                     <AlertCircle size={16} />
                     <p style={{ margin: 0 }}>{orderActionError}</p>
                   </div>
@@ -1281,10 +1395,7 @@ export function NegotiationWorkspace({
                 {proposal && guidance.action === "address" && !room.terms?.locked && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setAddressError(null);
-                      setAddressDialogOpen(true);
-                    }}
+                    onClick={openAddress}
                     className={styles.primaryActionBtn}
                     style={{
                       justifyContent: "center",
@@ -1312,12 +1423,14 @@ export function NegotiationWorkspace({
                           >
                             {terms?.agreedPrice != null
                               ? "Giá đã thống nhất"
-                              : "Giá mua bài đăng"}
+                              : "Giá mua ngay"}
                           </span>
                           <div className={styles.purchaseMainCardTitle}>
                             {terms?.agreedPrice != null
-                              ? "Thương lượng hoàn tất"
-                              : "Mua theo giá niêm yết"}
+                              ? "Đã chốt giá mua"
+                              : offerListedPurchase
+                                ? "Mua theo giá niêm yết"
+                                : "Chờ người mua xác nhận giá"}
                           </div>
                         </div>
                         <div style={{ textAlign: "right" }}>
@@ -1334,21 +1447,18 @@ export function NegotiationWorkspace({
                             : isBuyer
                               ? "Giá đã được hai bên đồng ý. Vui lòng gửi thông tin nhận sách để người bán tạo đơn."
                               : "Giá đã được hai bên đồng ý. Chờ người mua gửi thông tin nhận sách để tạo đơn."
-                          : quoteCurrent
-                            ? "Đã gửi thông tin nhận sách. Người bán có thể tạo đơn giao dịch theo giá này."
-                            : isBuyer
-                              ? "Không cần trả giá nếu bạn đồng ý mức giá này. Gửi thông tin nhận sách để người bán tạo đơn ngay."
-                              : "Chờ người mua gửi thông tin nhận sách hoặc đề nghị mức giá mong muốn."}
+                          : isBuyer
+                            ? "Xác nhận giá niêm yết và địa chỉ để người bán tạo đơn. Bạn cũng có thể gửi đề nghị giá khác."
+                            : quoteCurrent
+                              ? "Đã có thông tin nhận sách. Chờ người mua xác nhận giá niêm yết hoặc hai bên chốt một đề nghị giá."
+                              : "Chờ người mua xác nhận giá và gửi thông tin nhận sách."}
                       </p>
 
                       {/* Nút hành động giao nhận chính */}
                       {guidance.action === "address" && !room.terms?.locked && (
                         <button
                           type="button"
-                          onClick={() => {
-                            setAddressError(null);
-                            setAddressDialogOpen(true);
-                          }}
+                          onClick={openAddress}
                           className={styles.primaryActionBtn}
                           style={{
                             justifyContent: "center",
@@ -1356,11 +1466,11 @@ export function NegotiationWorkspace({
                           }}
                         >
                           <MapPin size={16} />
-                          <span>{guidance.actionLabel || "Gửi thông tin nhận sách"}</span>
+                          <span>{offerListedPurchase ? "Mua theo giá niêm yết" : guidance.actionLabel || "Gửi thông tin nhận sách"}</span>
                         </button>
                       )}
 
-                      {guidance.action === "create-order" && !frozen && (
+                      {guidance.action === "create-order" && canCreateOrder && !frozen && (
                         <button
                           className={styles.primaryActionBtn}
                           type="button"
@@ -1392,7 +1502,7 @@ export function NegotiationWorkspace({
                     </div>
 
                     {/* 2. Dropdown Đề nghị giá (mặc định đóng, mở khi cần) */}
-                    {!locked && (
+                    {!locked && !(room.hasQuote && canCreateOrder) && (
                       <details
                         className={styles.priceOfferDropdown}
                         open={editingPrice}
@@ -1749,10 +1859,7 @@ export function NegotiationWorkspace({
                       {isBuyer && !room.terms?.locked && !frozen && (
                         <button
                           type="button"
-                          onClick={() => {
-                            setAddressError(null);
-                            setAddressDialogOpen(true);
-                          }}
+                          onClick={openAddress}
                           style={{
                             background: "none",
                             border: "none",
@@ -1775,16 +1882,13 @@ export function NegotiationWorkspace({
                       <strong>Chưa đính kèm địa chỉ nhận sách</strong>
                       <span>
                         {isBuyer
-                          ? "Sau khi thống nhất giá, bạn chọn địa chỉ nhận sách để người bán tạo đơn."
+                          ? "Xác nhận giá và chọn địa chỉ nhận sách để người bán tạo đơn."
                           : "Người mua sẽ gửi địa chỉ nhận sách để bạn xác nhận tạo đơn."}
                       </span>
                       {isBuyer && !room.terms?.locked && !frozen && (
                         <button
                           type="button"
-                          onClick={() => {
-                            setAddressError(null);
-                            setAddressDialogOpen(true);
-                          }}
+                          onClick={openAddress}
                           style={{
                             background: "none",
                             border: "none",
@@ -1906,50 +2010,71 @@ export function NegotiationWorkspace({
         title="Địa chỉ nhận sách"
         description="Chọn nơi người bán giao sách cho bạn và lấy báo giá giao hàng"
         busy={addressBusy}
+        className={flow.flow}
       >
-        <form onSubmit={submitAddressAndQuote} className={flow.formSection}>
-          {book?.bundle && (
-            <BundleAcknowledgment
-              bundle={book.bundle}
-              checked={bundleAcknowledged}
-              onChange={(checked) =>
-                setAcknowledgedRevision(
-                  checked ? purchaseListingKey(book) : undefined,
-                )
-              }
-            />
-          )}
-
-          {addresses.isLoading || areas.isLoading ? (
-            <p
-              style={{
-                padding: 16,
-                textAlign: "center",
-                color: "var(--shop-muted)",
-              }}
-            >
-              Đang tải danh sách địa chỉ…
+        <form onSubmit={submitAddressAndQuote}>
+          {listedPrice !== null && (
+            <p className={flow.note}>
+              Giá sách niêm yết <strong>{formatVnd(listedPrice)}</strong>.
+              Sau khi bạn xác nhận, người bán có thể tạo đơn ở mức giá này.
             </p>
-          ) : (
-            <PurchaseAddressFields
-              addresses={addresses.data?.items ?? []}
-              selected={
-                selectedAddressId ||
-                (addresses.data?.items.find((item) => item.isDefault)?.id ??
-                  addresses.data?.items[0]?.id ??
-                  "new")
-              }
-              onSelect={setSelectedAddressId}
-              form={addressForm}
-              onChange={setAddressForm}
-              localities={areas.data?.localities ?? []}
-            />
           )}
+          <fieldset disabled={addressBusy || recoveringAddress}>
+            {book?.bundle && (
+              <BundleAcknowledgment
+                bundle={book.bundle}
+                checked={bundleAcknowledged}
+                onChange={(checked) =>
+                  setAcknowledgedRevision(
+                    checked ? purchaseListingKey(book) : undefined,
+                  )
+                }
+              />
+            )}
+
+            {addresses.isLoading || areas.isLoading ? (
+              <p
+                style={{
+                  padding: 16,
+                  textAlign: "center",
+                  color: "var(--shop-muted)",
+                }}
+              >
+                Đang tải danh sách địa chỉ…
+              </p>
+            ) : (
+              <PurchaseAddressFields
+                addresses={addresses.data?.items ?? []}
+                selected={
+                  selectedAddressId ||
+                  (addresses.data?.items.find((item) => item.isDefault)?.id ??
+                    addresses.data?.items[0]?.id ??
+                    "new")
+                }
+                onSelect={setSelectedAddressId}
+                form={addressForm}
+                onChange={setAddressForm}
+                localities={areas.data?.localities ?? []}
+              />
+            )}
+          </fieldset>
 
           {addressError && (
             <p role="alert" className={flow.error} style={{ marginTop: 12 }}>
               {addressError}
             </p>
+          )}
+          {!recoveringAddress && (addresses.isError || areas.isError) && (
+            <button
+              type="button"
+              className={styles.secondaryActionBtn}
+              onClick={() => {
+                void addresses.refetch();
+                void areas.refetch();
+              }}
+            >
+              Tải lại thông tin giao nhận
+            </button>
           )}
 
           <div
@@ -1971,9 +2096,12 @@ export function NegotiationWorkspace({
             <button
               type="submit"
               className={styles.primaryActionBtn}
-              disabled={addressBusy || addresses.isLoading || areas.isLoading}
+              disabled={addressBusy || (!recoveringAddress && (!book || !addresses.data || !areas.data))}
             >
-              {addressBusy ? "Đang xử lý…" : "Xác nhận & đính kèm báo giá"}
+              {addressBusy ? "Đang xử lý…"
+                : recoveringAddress ? "Thử lại gửi báo giá"
+                : listedPrice !== null ? "Xác nhận giá & đính kèm báo giá"
+                : "Xác nhận & đính kèm báo giá"}
             </button>
           </div>
         </form>

@@ -178,6 +178,8 @@ export class PurchasesService {
           quote.listingRevisionId !== body.expectedListingRevisionId ||
           quote.expiresAt <= now
         ) throw conflict();
+        if (body.acceptedListedPrice !== undefined)
+          await this.agreements.acceptListedPrice(tx, row, quote, body.acceptedListedPrice);
         const updated = await tx.c.purchase_conversations.findOneAndUpdate(
           { _id: row._id, version: row.version, status: 'Active' },
           { $set: { quoteId: quote._id, updatedAt: now }, $inc: { version: 1 } },

@@ -3,9 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { DomainError } from '../commands/domain-error.js';
 
 /**
- * Explicitly enabled local demo only. It never changes a business rule: the
- * skip endpoints move a real deadline to now and the normal close/settle
- * command performs the transition, so ledger and state checks still decide.
+ * Explicitly enabled local demo only. Timing shortcuts and the demo delivery
+ * command use the standard transitions, so ledger and state checks still apply.
  */
 @Injectable()
 export class DemoSkipPolicy {

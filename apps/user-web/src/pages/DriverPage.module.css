@@ -64,6 +64,8 @@
   background-color: rgba(252, 248, 219, 0.3);
 }
 
+.refreshControl { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; white-space: nowrap; }
+
 /* Search bar */
 .searchContainer {
   display: flex;
@@ -73,6 +75,8 @@
 
 .searchInput {
   flex: 1;
+  min-width: 0;
+  min-height: 44px;
   background-color: #ffffff;
   border: 1.5px solid var(--shop-line, #d9cbbd);
   border-radius: 10px;
@@ -90,6 +94,7 @@
 }
 
 .searchBtn {
+  min-height: 44px;
   background-color: var(--shop-wine, #5c0202);
   color: #ffffff;
   border: none;
@@ -105,6 +110,23 @@
 .searchBtn:hover {
   background-color: #7c2320;
 }
+
+.auctionShipment { display: grid; gap: 14px; padding: 18px; border: 1px solid var(--shop-line); border-radius: 12px; }
+.auctionShipment h2, .auctionShipment p { margin: 0; overflow-wrap: anywhere; }
+.auctionShipment h2 { font-size: 1.25rem; line-height: 1.25; letter-spacing: -.02em; }
+.auctionShipment p, .auctionFeedback { font-size: .875rem; line-height: 1.6; color: var(--shop-muted); }
+.auctionShipment .auctionTrackingMeta { display: flex; flex-wrap: wrap; column-gap: 8px; color: var(--shop-wine); }
+.auctionTrackingMeta strong { font-variant-numeric: tabular-nums; }
+.auctionAction, .auctionBack {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 44px; padding: 8px 12px; border-radius: 8px; font-size: .875rem; font-weight: 700; cursor: pointer;
+}
+.auctionAction { border: 1px solid var(--shop-wine); background: var(--shop-wine); color: var(--shop-cream); }
+.auctionAction:hover:not(:disabled) { background: color-mix(in srgb, var(--shop-wine) 85%, var(--shop-ink)); }
+.auctionAction:disabled { cursor: not-allowed; opacity: .65; }
+.auctionBack { justify-content: flex-start; padding-inline: 0; color: var(--shop-wine); }
+.auctionFeedback { margin: 0; padding: 12px 4px; }
+.auctionFeedback[role='alert'] { color: var(--shop-wine); }
 
 /* Quick chips */
 .chipsSection {
@@ -266,6 +288,8 @@
 
 .orderHeaderRow {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   justify-content: space-between;
   align-items: center;
 }
@@ -285,6 +309,7 @@
   color: var(--shop-wine, #5c0202);
   margin: 2px 0 0;
   font-family: monospace;
+  overflow-wrap: anywhere;
 }
 
 .feeBadge {
@@ -294,6 +319,8 @@
   text-align: right;
   border: 1px solid #ebdcb2;
 }
+
+.parcelStatus { margin: 0; color: var(--shop-wine); font-size: .75rem; font-weight: 700; }
 
 .feeText {
   color: var(--shop-wine, #5c0202);
@@ -416,6 +443,18 @@
   margin-bottom: 20px;
 }
 
+.parcelSteps { list-style: none; padding: 0; margin-top: 0; }
+.parcelSteps > li > button { width: 100%; }
+.actionBtn.parcelStep { cursor: default; }
+.parcelStep > svg, .actionBtn > svg { flex-shrink: 0; }
+
+@media (max-width: 360px) {
+  .searchBtn { padding-inline: 10px; }
+  .searchInput { padding-inline: 9px; }
+  .parcelSteps .actionBtn { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 5px 10px; }
+  .parcelSteps .actionBtn > :last-child:not(.actionBtnContent) { grid-column: 2; justify-self: start; }
+}
+
 .actionBtn {
   display: flex;
   align-items: center;
@@ -430,7 +469,7 @@
   color: var(--shop-ink, #281914);
 }
 
-.actionBtn:hover:not(:disabled) {
+.actionBtn:hover:not(:disabled):where(:not(.parcelStep)) {
   border-color: var(--shop-wine, #5c0202);
   background-color: #fdfaf6;
   transform: translateY(-1px);
@@ -482,6 +521,7 @@
 }
 
 .actionBtnTitleWhite {
+  display: block;
   font-size: 14px;
   font-weight: 800;
   color: #ffffff;
@@ -489,6 +529,7 @@
 }
 
 .actionBtnDescWhite {
+  display: block;
   font-size: 11px;
   color: var(--shop-cream, #fcf8db);
   margin: 2px 0 0;

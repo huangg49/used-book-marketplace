@@ -13,6 +13,7 @@ export { exchangeAgreementSchema, exchangeBookSnapshotSchema, type ExchangeBookS
 export * from './exchange-commands';
 export * from './support';
 export * from "./exchange-evidence";
+export * from "./direct-order-evidence";
 
 export * from './withdrawals';
 export * from "./wallet-history-filters";

@@ -25,6 +25,12 @@ export function StartConversationPage() {
     navigate = useNavigate();
   const intent =
     params.get("intent") === "Exchange" ? "Exchange" : "Negotiation";
+  // Carry the presentation intent through login, an existing room and a retry.
+  const entry = new URLSearchParams();
+  if (intent === "Negotiation" && params.get("buyNow") === "1") entry.set("buyNow", "1");
+  else if (params.get("openChat") === "1") entry.set("openChat", "1");
+  const roomSuffix = entry.size ? `?${entry}` : "";
+  const returnUrl = `/chat/start/${listingId}?intent=${intent}${entry.size ? `&${entry}` : ""}`;
   const book = useQuery({
     queryKey: ["public-listing", listingId],
     queryFn: () => getPublicListing(listingId),
@@ -89,11 +95,10 @@ export function StartConversationPage() {
     }
     started.current = true;
     let disposed = false;
-    const openChatParam = params.get("openChat") === "1" ? "?openChat=1" : "";
     run()
       .then((id) => {
         if (!disposed && id)
-          navigate(`/chat/${id}${openChatParam}`, { replace: true });
+          navigate(`/chat/${id}${roomSuffix}`, { replace: true });
       })
       .catch((e) => {
         if (disposed) return;
@@ -117,11 +122,11 @@ export function StartConversationPage() {
     };
     // One entry intent, including StrictMode effect replay. Manual retry resumes it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book.data, auth.status, navigate]);
+  }, [book.data, auth.status, navigate, roomSuffix]);
   async function retry() {
     try {
       const id = await run();
-      if (id) navigate(`/chat/${id}`, { replace: true });
+      if (id) navigate(`/chat/${id}${roomSuffix}`, { replace: true });
     } catch {
       request.current = null;
       setBusy(false);
@@ -132,7 +137,7 @@ export function StartConversationPage() {
     return (
       <Navigate
         replace
-        to={`/login?returnUrl=${encodeURIComponent(`/chat/start/${listingId}?intent=${intent}`)}`}
+        to={`/login?returnUrl=${encodeURIComponent(returnUrl)}`}
       />
     );
   return (

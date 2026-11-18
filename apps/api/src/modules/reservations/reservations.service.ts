@@ -8,6 +8,7 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { conflict, invalidState } from '../commands/domain-error.js';
+import { assertInspectionWasSkipped } from '../orders/direct-order-journey.js';
 import { balanceOf } from '../wallet/ledger.service.js';
 
 // The only writer of exclusive commitments. The partial unique index
@@ -357,7 +358,7 @@ export class ReservationsService {
     now: Date,
     receiptId: string,
   ) {
-    return this.closeDirectCompletion(tx, contextId, now, receiptId, false);
+    return this.closeDirectCompletion(tx, contextId, now, receiptId, 'normal');
   }
   async closeLocalDemoCompleted(tx: Tx, contextId: string, now: Date, receiptId: string) {
     const context = orderContext(await tx.c.workflow_contexts.findOne({ _id: contextId }));
@@ -366,9 +367,12 @@ export class ReservationsService {
     if (!job || job.policy !== LOCAL_DEMO_COMPLETION_POLICY || job.status !== 'Pending' || now < job.dueAt ||
       started?.operation !== 'startLocalDemoOrderCompletion' || started.actorId !== job.sellerId || started.resultVersion !== 4)
       throw invalidState();
-    return this.closeDirectCompletion(tx, contextId, now, receiptId, true);
+    return this.closeDirectCompletion(tx, contextId, now, receiptId, 'legacy-demo');
   }
-  private async closeDirectCompletion(tx: Tx, contextId: string, now: Date, receiptId: string, demo: boolean) {
+  async closeDemonstratedDirectOrder(tx: Tx, contextId: string, now: Date, receiptId: string) {
+    return this.closeDirectCompletion(tx, contextId, now, receiptId, 'inspection-demo');
+  }
+  private async closeDirectCompletion(tx: Tx, contextId: string, now: Date, receiptId: string, mode: 'normal' | 'legacy-demo' | 'inspection-demo') {
     const context = orderContext(
       await tx.c.workflow_contexts.findOne({ _id: contextId }),
     );
@@ -388,12 +392,15 @@ export class ReservationsService {
       !context ||
       !order ||
       context.ownershipPhase !== 'Holding' ||
-      (demo ? order.state !== 'InTransit' || order.version !== 4 || order.demoCompletionPolicy !== LOCAL_DEMO_COMPLETION_POLICY
-        : order.state !== 'Inspection' || !order.inspectionDeadline || now < order.inspectionDeadline) ||
       !settled || settled.receiptId !== receiptId ||
       !hold ||
       (await balanceOf(tx, hold._id)) !== 0
     )
+      throw invalidState();
+    if (mode === 'inspection-demo') await assertInspectionWasSkipped(tx, order, receiptId, now);
+    else if (mode === 'legacy-demo'
+      ? order.state !== 'InTransit' || order.version !== 4 || order.demoCompletionPolicy !== LOCAL_DEMO_COMPLETION_POLICY
+      : order.state !== 'Inspection' || !order.inspectionDeadline || now < order.inspectionDeadline)
       throw invalidState();
     const commitment = await tx.c.exclusive_commitments.findOne({
       currentContextId: contextId,

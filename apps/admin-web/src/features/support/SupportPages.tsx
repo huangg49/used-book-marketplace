@@ -35,6 +35,7 @@ import { Button, CursorPagination, Notice } from "../../core/ui";
 import { dateText } from "../../core/format";
 import styles from "./support.module.css";
 import { EmptyArt } from "../../core/EmptyArt";
+import { DirectOrderEvidence } from "./DirectOrderEvidence";
 import { WorkspaceRecovery } from "../navigation/WorkspaceRecovery";
 
 const supportAccessDenied = (
@@ -369,6 +370,9 @@ function SupportRecord({
                 : ""}
             </Notice>
           ) : null}
+          {data.canManage && owner && data.case.target?.type === "DirectOrder" && data.relatedState === "ResolutionPending" && (
+            <DirectOrderEvidence key={data.case.id} owner={owner} caseId={data.case.id} />
+          )}
           {notice ? <Notice tone="success">{notice}</Notice> : null}
           {error ? <Notice tone="error">{error}</Notice> : null}
           {pending ? (

@@ -3,6 +3,7 @@ import { orderContext } from '../reservations/workflow-context.js';
 import { canonicalJson } from '../../common/canonical-json.js';
 import type {
   DirectOrderDoc,
+  DirectOrderJourneyEventDoc,
   Json,
   MutationReceiptDoc,
   WorkflowContextDoc,
@@ -10,6 +11,7 @@ import type {
 import type { Tx } from '../../database/mongo/transaction.js';
 import { checkListing } from '../listings/listing-projection.js';
 import { quoteAmounts } from '../quotes/quote-money.js';
+import { journeyEventId } from './direct-order-journey.js';
 
 // Commit-time replacements for the PostgreSQL deferred constraint triggers of
 // the Order aggregate (MIG02_MODEL_MAP, section C): latlai_check_order and its
@@ -105,7 +107,11 @@ export async function checkOrder(tx: Tx, orderId: string) {
   const initial = events.find((event) => event.sequence === 1);
   const initialChain = initial ? await chain(tx, initial.receiptId) : null;
   const buyNow = get(snapshot, 'purchaseMode') === 'BuyNow';
-  if (buyNow !== (initialChain?.r.operation === 'createBuyNowOrder'))
+  const listedBySeller = get(snapshot, 'listedPurchaseBySeller') === true;
+  if (listedBySeller && (!buyNow || initialChain?.r.operation !== 'createDirectOrderFromConversation' ||
+    initialChain.r.actorId !== o.sellerId || bookPrice !== q!.bookPrice))
+    fail('Listed purchase seller commitment mismatch');
+  if (buyNow !== (listedBySeller || initialChain?.r.operation === 'createBuyNowOrder'))
     fail('Order purchase mode/creation receipt mismatch');
   if (
     bookPrice !== q!.bookPrice &&
@@ -151,8 +157,12 @@ export async function checkOrder(tx: Tx, orderId: string) {
     )
       fail('Missing commitment receipt/audit/outbox');
   }
-  await checkOrderFunding(tx, o, c!, calculated!.buyerTotal, buyNow);
-  await checkOrderPreparation(tx, o, c!, buyNow);
+  const journey = listedBySeller
+    ? await tx.c.direct_order_journey_events.find({ orderId: o._id }).toArray()
+    : [];
+  await checkOrderJourney(tx, o, c!, journey);
+  await checkOrderFunding(tx, o, c!, calculated!.buyerTotal, buyNow, journey);
+  await checkOrderPreparation(tx, o, c!, buyNow, journey);
   tx.check(`listing:${i.listingId}`, () => checkListing(tx, i.listingId));
 }
 
@@ -162,6 +172,7 @@ async function checkOrderFunding(
   c: WorkflowContextDoc,
   buyerTotal: number,
   buyNow: boolean,
+  journey: DirectOrderJourneyEventDoc[],
 ) {
   const p = await tx.c.ledger_journals.findOne({
     orderId: o._id,
@@ -225,6 +236,8 @@ async function checkOrderFunding(
       (j.type === 'OrderSettlement' &&
         (o.demoCompletionPolicy === LOCAL_DEMO_COMPLETION_POLICY
           ? x.r.operation !== 'completeLocalDemoOrder' || x.r.systemActor !== 'OrderDemoCompletion' || x.r.resultVersion !== 5
+          : journey.some((e) => e.action === 'SkipInspection')
+            ? x.r._id !== journey.find((e) => e.action === 'SkipInspection')?.receiptId || x.r.resultVersion !== 6
           : x.r.operation !== 'settleDirectOrder' || x.r.systemActor !== 'OrderInspectionExpiry' || x.r.resultVersion !== 6))
     )
       fail('Order journal receipt mismatch');
@@ -269,6 +282,7 @@ async function checkOrderPreparation(
   o: DirectOrderDoc,
   c: WorkflowContextDoc,
   buyNow: boolean,
+  journey: DirectOrderJourneyEventDoc[],
 ) {
   const p = await tx.c.order_preparations.findOne({ _id: o._id });
   const review = await tx.c.pickup_reviews.findOne({ orderId: o._id });
@@ -310,9 +324,10 @@ async function checkOrderPreparation(
   const deliveryReview = await tx.c.order_delivery_reviews.findOne({
     orderId: o._id,
   });
+  const issue = journey.find((e) => e.supportCaseId);
   if (
     (o.state === 'ResolutionPending') !==
-    !!(review || carrierReview || deliveryReview)
+    !!(review || carrierReview || deliveryReview || issue)
   )
     fail('Pickup verification task mismatch');
   if (review) {
@@ -335,7 +350,7 @@ async function checkOrderPreparation(
       fail('Pickup verification task mismatch');
   }
   if (await checkLocalDemoCompletion(tx, o, c)) return;
-  await checkOrderPickup(tx, o, c);
+  await checkOrderPickup(tx, o, c, journey);
   if (['Inspection', 'Completed'].includes(o.state)) return;
   await checkDeliveryReview(tx, o, c);
 }
@@ -380,6 +395,7 @@ async function checkOrderPickup(
   tx: Tx,
   o: DirectOrderDoc,
   c: WorkflowContextDoc,
+  journey: DirectOrderJourneyEventDoc[],
 ) {
   const p = await tx.c.order_preparations.findOne({ _id: o._id });
   const s = await tx.c.direct_shipments.findOne({ orderId: o._id });
@@ -426,6 +442,13 @@ async function checkOrderPickup(
     )
       fail('Invalid pickup chronology/outcome');
     const x = await chain(tx, e.receiptId);
+    if (n === 1 && journey.some((step) => step.action === 'Pickup' && step.receiptId === e.receiptId)) {
+      if (!hasApplied || !x || get(x.r.result, 'entityId') !== o._id ||
+        e.receiptId !== e._id || e.receivedAt.getTime() !== x.r.committedAt.getTime())
+        fail('Invalid demo pickup chronology or receipt');
+      prior = e.receivedAt;
+      continue;
+    }
     const result = x?.r.result;
     const after = x?.a.after ?? null;
     const payload = x?.o.payload ?? null;
@@ -484,7 +507,10 @@ async function checkOrderPickup(
     expectedVersion = 5;
   }
   const pickupReview = await tx.c.pickup_reviews.findOne({ orderId: o._id });
-  if (['Inspection', 'Completed'].includes(o.state)) {
+  const issue = journey.find((e) => e.supportCaseId);
+  const demoDelivered = journey.find((e) => e.action === 'Deliver');
+  const skip = journey.find((e) => e.action === 'SkipInspection');
+  if (['Inspection', 'Completed'].includes(o.state) || issue) {
     const deliveryEvent = await tx.c.direct_delivery_events.findOne({
       orderId: o._id,
     });
@@ -505,9 +531,9 @@ async function checkOrderPickup(
         o.deliveredAt.getTime() + 72 * 3600000 ||
       (completed
         ? !o.completedAt ||
-          o.completedAt < o.inspectionDeadline ||
+          (skip ? o.completedAt >= o.inspectionDeadline : o.completedAt < o.inspectionDeadline) ||
           o.version !== 6
-        : !!o.completedAt || o.version !== 5) ||
+        : !!o.completedAt || o.version !== (issue ? 6 : 5)) ||
       pickupReview ||
       cr ||
       delivery ||
@@ -524,7 +550,9 @@ async function checkOrderPickup(
         ? deliveryChain.r.operation !== 'confirmOrderReceipt' ||
           deliveryChain.r.actorId !== o.buyerId ||
           deliveryChain.r.systemActor !== null
-        : deliveryChain.r.operation !== 'emitSimulatedDeliveryEvent' ||
+        : demoDelivered
+          ? deliveryChain.r._id !== demoDelivered.receiptId
+          : deliveryChain.r.operation !== 'emitSimulatedDeliveryEvent' ||
           !deliveryChain.r.actorId ||
           [o.buyerId, o.sellerId].includes(deliveryChain.r.actorId) ||
           deliveryChain.r.systemActor !== null)
@@ -542,8 +570,8 @@ async function checkOrderPickup(
         !settlement ||
         !settled ||
         settlement.postedAt.getTime() !== o.completedAt!.getTime() ||
-        settled.r.operation !== 'settleDirectOrder' ||
-        settled.r.systemActor !== 'OrderInspectionExpiry' ||
+        (skip ? settled.r._id !== skip.receiptId :
+          settled.r.operation !== 'settleDirectOrder' || settled.r.systemActor !== 'OrderInspectionExpiry') ||
         settled.r.resultVersion !== 6 ||
         get(settled.r.result, 'state') !== 'Completed' ||
         get(settled.r.result, 'version') !== 6 ||
@@ -565,6 +593,59 @@ async function checkOrderPickup(
     (o.state === 'ResolutionPending' && o.version !== (hasApplied ? 5 : 4))
   )
     fail('Pickup state/review mismatch');
+}
+
+async function checkOrderJourney(
+  tx: Tx,
+  o: DirectOrderDoc,
+  c: WorkflowContextDoc,
+  events: DirectOrderJourneyEventDoc[],
+) {
+  if (!events.length) return;
+  const getEvent = (action: DirectOrderJourneyEventDoc['action']) => events.find((event) => event.action === action);
+  const pickup = await tx.c.carrier_pickup_events.findOne({ orderId: o._id, outcome: 'Applied' });
+  const delivery = await tx.c.direct_delivery_events.findOne({ orderId: o._id });
+  const start = getEvent('OutForDelivery');
+  const arrive = getEvent('Deliver');
+  const acknowledge = getEvent('Acknowledge');
+  const skip = getEvent('SkipInspection');
+  const missing = getEvent('ReportNonReceipt');
+  const condition = getEvent('ReportCondition');
+  const issue = missing ?? condition;
+  if (
+    !pickup ||
+    (start && start.occurredAt < pickup.occurredAt) ||
+    (arrive && (!start || arrive.occurredAt < start.occurredAt || delivery?.receiptId !== arrive.receiptId)) ||
+    (acknowledge && (!delivery || acknowledge.occurredAt < delivery.occurredAt)) ||
+    (missing && (acknowledge || delivery?.source !== 'CarrierDelivered')) ||
+    (condition && !acknowledge && delivery?.source !== 'BuyerReceived') ||
+    (missing && condition) ||
+    (issue && (o.state !== 'ResolutionPending' || skip || !!o.closedAt)) ||
+    (skip && (!arrive || !acknowledge || o.state !== 'Completed' || skip.occurredAt.getTime() !== o.completedAt?.getTime())) ||
+    events.some(step => !['Pickup', 'OutForDelivery', 'Deliver'].includes(step.action) &&
+      (!o.deliveredAt || !o.inspectionDeadline || step.occurredAt < o.deliveredAt || step.occurredAt >= o.inspectionDeadline))
+  ) fail('Invalid listed order journey sequence');
+
+  for (const step of events) {
+    const x = await chain(tx, step.receiptId);
+    const phase = {
+      Pickup: ['InTransit', 4], OutForDelivery: ['InTransit', 4], Deliver: ['Inspection', 5],
+      Acknowledge: ['Inspection', 5], ReportNonReceipt: ['ResolutionPending', 6],
+      ReportCondition: ['ResolutionPending', 6], SkipInspection: ['Completed', 6],
+    }[step.action];
+    if (step._id !== journeyEventId(o._id, step.action) || step.actorId !== o.buyerId ||
+      !x || x.r.operation !== 'advanceDirectOrderDeliveryJourney' || x.r.actorId !== o.buyerId ||
+      x.r.systemActor !== null || x.r.contextId !== c._id || x.a.reason !== step.action ||
+      x.r.resultVersion !== phase[1] || get(x.r.result, 'state') !== phase[0] ||
+      x.r.committedAt.getTime() !== step.occurredAt.getTime() ||
+      x.o.type !== (step.action === 'SkipInspection' ? 'DirectOrderSettled' : 'DirectOrderDeliveryJourneyAdvanced'))
+      fail('Listed order journey receipt mismatch');
+  }
+  if (issue) {
+    const support = await tx.c.support_cases.findOne({ _id: issue.supportCaseId! });
+    if (support?.reporterId !== o.buyerId || support.target?.type !== 'DirectOrder' || support.target.id !== o._id)
+      fail('Order claim support case mismatch');
+  }
 }
 
 async function checkDeliveryReview(

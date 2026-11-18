@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.81.0
+  version: 0.84.0
 
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
@@ -6074,6 +6074,192 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /orders/{orderId}/delivery-journey:
+    post:
+      operationId: advanceDirectOrderDeliveryJourney
+      tags: [Orders]
+      x-implementation-status: implemented
+      x-locked-access: existing-obligations
+      description: Buyer of a seller-created listed-price order. Records receipt or an inspection issue. Driver actions and early inspection completion require the local demo policy. Commands are versioned and replayable.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvanceDirectOrderDeliveryJourney"
+      responses:
+        "200":
+          description: Canonical Order receipt
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionCommandReceipt"
+        default:
+          $ref: "#/components/responses/ListingError"
+  /me/direct-order-tracking/{trackingCode}:
+    get:
+      operationId: readDirectOrderByTrackingCode
+      tags: [Orders]
+      x-implementation-status: implemented
+      x-locked-access: existing-obligations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: trackingCode
+          in: path
+          required: true
+          schema: { type: string, pattern: "^LL-[A-Z0-9]{8,32}$" }
+      responses:
+        "200":
+          description: Participant's direct order
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrivateUnpaidOrder" }
+  /support-cases/{caseId}/order-evidence:
+    get:
+      operationId: listDirectOrderIssueEvidence
+      tags: [Orders]
+      x-implementation-status: implemented
+      x-locked-access: existing-obligations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Private case attachments
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, packagingEvidenceIds]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/DirectOrderIssueEvidence" }
+                  packagingEvidenceIds:
+                    type: array
+                    items: { type: string, format: uuid }
+    post:
+      operationId: reserveDirectOrderIssueEvidence
+      tags: [Orders]
+      x-implementation-status: implemented
+      x-locked-access: existing-obligations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReserveDirectOrderIssueEvidence" }
+      responses:
+        "200":
+          description: Attachment reservation
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransactionCommandReceipt" }
+  /support-cases/{caseId}/order-evidence/{evidenceId}/content:
+    put:
+      operationId: uploadDirectOrderIssueEvidence
+      tags: [Orders]
+      x-implementation-status: implemented
+      x-locked-access: existing-obligations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: evidenceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          description: Attachment committed
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransactionCommandReceipt" }
+  /support-cases/{caseId}/order-evidence/{evidenceId}/read:
+    post:
+      operationId: readDirectOrderIssueEvidence
+      tags: [Orders]
+      description: Issues a fresh short-lived URL and audits each authorized read. Does not change the order or attachment.
+      x-implementation-status: implemented
+      x-locked-access: existing-obligations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: evidenceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReadDirectOrderIssueEvidence" }
+      responses:
+        "200":
+          description: Audited, expiring private download URL
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExchangeEvidenceRead" }
   /orders/{orderId}/pay:
     post:
       operationId: payOrder
@@ -8854,9 +9040,128 @@ paths:
       operationId: advanceDemoPointOrder
       tags:
         - Auctions
-      description: Local demo only. The buyer or seller ends an inspection window now; the normal
-        settle command then applies payout, listing completion and context closure. Delivery, collection
-        and Admin decisions keep their own staff flows.
+      description: Local demo only. The buyer or seller completes an unclaimed order during
+        inspection. Payout, listing completion, context closure and the idempotent receipt commit
+        together. The original inspection deadline is preserved.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/demo-start-delivery:
+    post:
+      operationId: demoStartPointDelivery
+      tags:
+        - Auctions
+      description: Local demo only. The active buyer starts the last-mile simulation after
+        Staff handover. Records a demo progress milestone while the auction Order stays InTransit.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/demo-deliver:
+    post:
+      operationId: demoDeliverPointOrder
+      tags:
+        - Auctions
+      description: Local demo only. The active buyer records simulated delivery after Staff
+        handover and the last-mile demo milestone. A committed carrier event starts the regular
+        72-hour inspection window.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -9863,6 +10168,42 @@ paths:
         "429":
           $ref: "#/components/responses/ListingError"
         "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/delivery-tracking/{trackingCode}:
+    get:
+      operationId: getPointOrderDeliveryTracking
+      tags: [Auctions]
+      x-implementation-status: implemented
+      description: Read one auction shipment after point handover. Available to the buyer
+        and an independent active TEST_OPERATOR. Other orders return 404. The response
+        excludes names, contact details and addresses. Recording an outcome still requires
+        the existing authenticated simulator command.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: trackingCode
+          required: true
+          schema: { type: string, pattern: '^[Ll]{2}-[A-Za-z0-9]{8,32}$' }
+      responses:
+        "200":
+          description: Current delivery milestones and action availability.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointOrderDeliveryTracking"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "429":
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
@@ -16736,6 +17077,11 @@ components:
         expectedQuoteVersion: { type: integer, const: 1 }
         expectedListingVersion: { type: integer, minimum: 1, maximum: 2147483647 }
         expectedListingRevisionId: { type: string, format: uuid }
+        acceptedListedPrice:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+          description: Optional explicit buyer acceptance of the exact listed book price in this quote. Attaches the quote and records the agreement for the quoted listing revision in one operation. Omit for an address-only attachment.
     CreateOrderFromPurchaseConversation:
       type: object
       additionalProperties: false
@@ -18769,6 +19115,10 @@ components:
           type: string
           enum: [Negotiated, BuyNow]
           description: Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
+        listedPurchaseBySeller:
+          type: boolean
+          const: true
+          description: The seller created the order after the buyer expressly accepted the listed price.
         schemaVersion:
           type: integer
           const: 1
@@ -18946,6 +19296,8 @@ components:
         - completedAt
         - canConfirmReceipt
       properties:
+        deliveryJourney:
+          $ref: "#/components/schemas/DirectOrderDeliveryJourney"
         demoCompletionEnabled:
           type: boolean
           description: Local-demo seller command; enabled only when the server demo switch is on and the current seller/order is eligible.
@@ -19922,8 +20274,70 @@ components:
         serverTime:
           type: string
           format: date-time
+    AdvanceDirectOrderDeliveryJourney:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, action]
+      properties:
+        expectedVersion: { type: integer, minimum: 1, maximum: 2147483647 }
+        action:
+          type: string
+          enum: [Pickup, OutForDelivery, Deliver, Acknowledge, ReportNonReceipt, ReportCondition, SkipInspection]
+        description:
+          type: string
+          minLength: 10
+          maxLength: 1000
+          description: Required for either report action and omitted for other actions.
+    DirectOrderDeliveryJourney:
+      type: object
+      additionalProperties: false
+      required: [trackingCode, pickedUpAt, outForDeliveryAt, acknowledgedAt, issue, actions]
+      properties:
+        trackingCode: { type: [string, "null"] }
+        pickedUpAt: { type: [string, "null"], format: date-time }
+        outForDeliveryAt: { type: [string, "null"], format: date-time }
+        acknowledgedAt: { type: [string, "null"], format: date-time }
+        issue:
+          oneOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              required: [kind, openedAt, supportCaseId]
+              properties:
+                kind: { type: string, enum: [ReportNonReceipt, ReportCondition] }
+                openedAt: { type: string, format: date-time }
+                supportCaseId: { type: string, format: uuid }
+        actions:
+          type: array
+          items:
+            type: string
+            enum: [Pickup, OutForDelivery, Deliver, Acknowledge, ReportNonReceipt, ReportCondition, SkipInspection]
     StartDemoOrderCompletion:
       $ref: '#/components/schemas/PayOrder'
+    ReserveDirectOrderIssueEvidence:
+      type: object
+      additionalProperties: false
+      required: [evidenceId, mimeType, byteSize, sha256]
+      properties:
+        evidenceId: { type: string, format: uuid }
+        mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, video/mp4] }
+        byteSize: { type: integer, minimum: 1, maximum: 8000000 }
+        sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+    DirectOrderIssueEvidence:
+      type: object
+      additionalProperties: false
+      required: [id, mimeType, byteSize, sha256, status]
+      properties:
+        id: { type: string, format: uuid }
+        mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, video/mp4] }
+        byteSize: { type: integer, minimum: 1, maximum: 8000000 }
+        sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+        status: { type: string, enum: [Pending, Ready] }
+    ReadDirectOrderIssueEvidence:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: { type: string, minLength: 5, maxLength: 250 }
     PayOrder:
       type: object
       additionalProperties: false
@@ -20709,6 +21123,10 @@ components:
             - string
             - "null"
           format: date-time
+        demoOutForDeliveryAt:
+          type: [string, "null"]
+          format: date-time
+          description: Optional local demo milestone recorded from the shipper simulator.
     PointOrderDeliveryQuote:
       type: object
       additionalProperties: false
@@ -20812,6 +21230,26 @@ components:
         deliveryDeadline:
           type: string
           format: date-time
+    PointOrderDeliveryTracking:
+      type: object
+      additionalProperties: false
+      required: [orderId, auctionId, title, pointName, trackingCode, dispatchedAt, deliveryDeadline, outcomeAt, status, viewer, canReport, canDemoControl, version, demoOutForDeliveryAt, serverTime]
+      properties:
+        orderId: { type: string, format: uuid }
+        auctionId: { type: string, format: uuid }
+        title: { type: string }
+        pointName: { type: string }
+        trackingCode: { type: string, pattern: '^LL-[A-Z0-9]{8,32}$' }
+        dispatchedAt: { type: string, format: date-time }
+        deliveryDeadline: { type: string, format: date-time }
+        outcomeAt: { type: [string, "null"], format: date-time }
+        status: { type: string, enum: [InTransit, Delivered, Failed, Overdue] }
+        viewer: { type: string, enum: [Buyer, Operator] }
+        canReport: { type: boolean }
+        canDemoControl: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        demoOutForDeliveryAt: { type: [string, "null"], format: date-time }
+        serverTime: { type: string, format: date-time }
     SimulatedPointDeliveryEvent:
       type: object
       additionalProperties: false

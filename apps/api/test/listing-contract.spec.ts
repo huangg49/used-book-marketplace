@@ -86,7 +86,8 @@ describe('listing design contract (not HTTP implementation tests)', () => {
         expect(operation.security, operation.operationId).toEqual(
           publicIds.has(operation.operationId) ? [] : [{ bearerAuth: [] }],
         );
-        if (method !== 'get')
+        const signingRead = operation.operationId === 'readDirectOrderIssueEvidence';
+        if (method !== 'get' && !signingRead)
           expect(operation.parameters).toContainEqual(
             expect.objectContaining({
               name: 'Idempotency-Key',
@@ -94,8 +95,13 @@ describe('listing design contract (not HTTP implementation tests)', () => {
               required: true,
             }),
           );
+        if (signingRead) {
+          expect(method).toBe('post');
+          expect(operation.description).toContain('audits each authorized read');
+        }
         expect(
-          operation.responses['200'].headers['Cache-Control'].schema.const,
+          operation.responses['200']?.headers?.['Cache-Control']?.schema?.const,
+          operation.operationId,
         ).toBe('no-store');
         for (const match of path.matchAll(/\{([^}]+)\}/g))
           expect(operation.parameters).toContainEqual(

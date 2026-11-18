@@ -70,6 +70,8 @@ describe("durable inbox cache and targets", () => {
     for (const [kind, targetType, path] of [
       ["SupportUpdated", "SupportCase", `/support/${id}`],
       ["ReviewModerated", "TransactionReview", `/reviews?reviewId=${id}`],
+      ["AuctionWon", "Auction", `/auctions/${id}/order`],
+      ["AuctionSecondChanceOffered", "Auction", `/auctions/${id}`],
       ["ExchangeDisputed", "Exchange", `/exchange/${id}`],
       ["ExchangeShipped", "Exchange", `/exchange/${id}#nhan-sach`],
       ["ExchangeReceived", "Exchange", `/exchange/${id}#giao-nhan`],

@@ -295,7 +295,9 @@ export class ShipmentsService {
           event.orderId,
         );
         const { s } = await locate(tx);
-        if (o.demoCompletionPolicy) throw invalidState('Đơn đang chạy luồng hoàn tất demo riêng.');
+        if (o.demoCompletionPolicy || await tx.c.direct_order_journey_events.findOne({
+          orderId: o._id, action: 'Pickup',
+        })) throw invalidState('Đơn đang chạy luồng giao nhận demo riêng.');
         if (
           !o.preparation ||
           !['Preparing', 'InTransit', 'ResolutionPending'].includes(o.state) ||

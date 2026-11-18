@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { components } from '@used-books/api-contract'
 import { session } from '../lib/session'
 import { exchangeHandoverAnchor } from '../lib/exchange-handover'
+import { ROUTES } from '../lib/routes'
 
 // Durable inbox (FR-N03/N04, OpenAPI 0.30.0). The server writes rows in the same
 // transaction as the event; pages only read and mark them read.
@@ -84,7 +85,7 @@ export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetI
       if (n.kind === 'ExchangeReceived') return `${path}#${exchangeHandoverAnchor.overview}`;
       return path;
     }
-    case 'Auction':return `/auctions/${n.targetId}`;
+    case 'Auction':return n.kind === 'AuctionWon' ? ROUTES.auctionOrder(n.targetId) : ROUTES.auctionDetail(n.targetId);
     default:return '/notifications';
   }
 }

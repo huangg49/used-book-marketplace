@@ -1129,7 +1129,7 @@ try {
   await navigate(competing, "/my-auctions?view=payment");
   await competing.getByRole("link", { name: /Xem và thanh toán/ }).click();
   await expect(
-    competing.getByText("Bạn đã mua ngay cuốn sách này", { exact: true }),
+    competing.getByRole("heading", { name: "Chọn cách nhận và thanh toán" }),
   ).toBeVisible();
   await capture(competing, "buyer-payment-due");
   passed(

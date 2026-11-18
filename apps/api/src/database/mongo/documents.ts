@@ -179,6 +179,7 @@ export interface ConversationProposalDoc {
 export interface ConversationTermsDoc extends Lockable {
   _id: string; mode: ConversationMode; pendingProposal: ConversationProposalDoc | null;
   agreedPrice: number | null; agreedListingRevisionId: string | null; activeExchangeId: string | null;
+  listedPriceAccepted?: boolean;
 }
 export interface ConversationEventDoc {
   _id: string; conversationId: string; actorId: string;
@@ -588,6 +589,29 @@ export interface OrderNonReceiptReportDoc {
   submittedAt: Date;
   description: string;
   receiptId: string;
+}
+export interface DirectOrderJourneyEventDoc {
+  _id: string;
+  orderId: string;
+  actorId: string;
+  action: 'Pickup' | 'OutForDelivery' | 'Deliver' | 'Acknowledge' | 'ReportNonReceipt' | 'ReportCondition' | 'SkipInspection';
+  occurredAt: Date;
+  receiptId: string;
+  supportCaseId: string | null;
+}
+export interface DirectOrderIssueEvidenceDoc extends Lockable {
+  _id: string;
+  caseId: string;
+  orderId: string;
+  uploaderId: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'video/mp4';
+  byteSize: number;
+  sha256: string;
+  status: 'Pending' | 'Ready';
+  createdAt: Date;
+  createdReceiptId: string;
+  uploadedAt: Date | null;
+  uploadReceiptId: string | null;
 }
 
 export interface WorkflowContextDoc extends Lockable {
@@ -1275,6 +1299,7 @@ export interface PointOrderDoc extends Lockable {
   collectionDeadline: Date | null;
   collectedAt: Date | null;
   inspectionDeadline: Date | null;
+  demoInspectionCompletedAt?: Date;
   resolutionReason:
     | 'ReportRejected'
     | 'RecipientDecisionOverdue'

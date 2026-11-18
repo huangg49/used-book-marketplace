@@ -1,7 +1,17 @@
 // Real HTTP/Mongo and two browser sessions; QA-only accounts/storage/funding.
 import assert from "node:assert/strict";
 import { parseArgs } from "node:util";
-const { values: { "checkout-only": checkoutOnly, "demo-completion": demoCompletion, "receipt-review": receiptReview } } = parseArgs({ options: { "checkout-only": { type: "boolean", default: false }, "demo-completion": { type: "boolean", default: false }, "receipt-review": { type: "boolean", default: false } } });
+const { values: { "checkout-only": checkoutOnly, "demo-completion": demoCompletion, "receipt-review": receiptReview, "listed-confirm": listedConfirm, "direct-journey": directJourney, "direct-journey-issue": directJourneyIssue, "direct-journey-race": directJourneyRace } } = parseArgs({
+  options: {
+    "checkout-only": { type: "boolean", default: false },
+    "demo-completion": { type: "boolean", default: false },
+    "receipt-review": { type: "boolean", default: false },
+    "listed-confirm": { type: "boolean", default: false },
+    "direct-journey": { type: "boolean", default: false },
+    "direct-journey-issue": { type: "boolean", default: false },
+    "direct-journey-race": { type: "boolean", default: false },
+  },
+});
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -30,12 +40,6 @@ Object.assign(process.env, {
 });
 const artifacts = path.join(root, "apps/user-web/test-results/buy-now");
 await mkdir(artifacts, { recursive: true });
-const openOrderContext = async (region) => {
-  await region.getByRole("complementary", { name: "Sách và thỏa thuận", exact: true }).waitFor();
-  const toggle = region.getByRole("button", { name: "Sách và thỏa thuận", exact: true });
-  if (await toggle.isVisible() && await toggle.getAttribute("aria-expanded") !== "true")
-    await toggle.click();
-};
 const captureDialog = async (page, filename) => {
   const dialog = page.locator("dialog[open]");
   await dialog.waitFor();
@@ -60,8 +64,18 @@ const captureDialog = async (page, filename) => {
 };
 let fixture, server, browser;
 const errors = [];
+const evidenceObjects = new Map();
 try {
-  fixture = await createTestApi({ corsOrigin: origin, listingCount: 1 });
+  fixture = await createTestApi({ corsOrigin: origin, listingCount: 1, ...(directJourneyIssue ? {
+    evidenceStorageAdapter: {
+      async check() {},
+      async put(key, bytes) { evidenceObjects.set(key, bytes); },
+      async attachment(key) {
+        assert(evidenceObjects.has(key), "A private attachment must be pinned before reading");
+        return { url: "https://storage.qa.invalid/attachment", expiresAt: new Date(Date.now() + 120000).toISOString() };
+      },
+    },
+  } : {}) });
   const seller = fixture.member;
   const buyer = await fixture.api("/auth/login", null, {
     email: "admin@operations.test",
@@ -166,7 +180,7 @@ try {
       },
     );
   };
-  await fundBuyer(50000);
+  if (!listedConfirm) await fundBuyer(50000);
   process.chdir(path.join(root, "apps/user-web"));
   server = await createServer({
     root: path.join(root, "apps/user-web"),
@@ -190,9 +204,207 @@ try {
     await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
     await page.waitForURL(origin + "/");
   };
+  const go = (page, url) => page.evaluate(async (target) => {
+    const { router } = await import("/src/app/router.tsx");
+    await router.navigate(target);
+  }, url);
   await login(buyerPage, "admin@operations.test");
   await buyerPage.locator(`a[href="/books/${listingId}"]`).first().click();
-  await buyerPage.goto(`${origin}/buy-now/${listingId}?legacy=1`);
+  if (listedConfirm || directJourney || directJourneyIssue || directJourneyRace) {
+    const listedBook = await fixture.api(`/listings/${listingId}`, buyer.accessToken);
+    await buyerPage.getByRole("button", { name: "Chat với người bán", exact: true }).click();
+    await buyerPage.waitForURL(/\/chat\/[a-f0-9-]{36}\?openChat=1$/);
+    const roomPath = new URL(buyerPage.url()).pathname;
+    await buyerPage.locator("dialog[open] #chat-message").waitFor();
+    await buyerPage.keyboard.press("Escape");
+    await buyerPage.getByText("Giá mua ngay", { exact: true }).waitFor();
+
+    await login(sellerPage, seller.user.email);
+    await go(sellerPage, roomPath);
+    await sellerPage.getByText("Chờ người mua xác nhận giá", { exact: true }).waitFor();
+    const createOrder = sellerPage.getByRole("button", { name: "Tạo đơn cho người mua này", exact: true });
+    assert.equal(await createOrder.count(), 0);
+
+    await go(buyerPage, `/books/${listingId}`);
+    await buyerPage.getByRole("link", { name: "Mua ngay", exact: true }).click();
+    await buyerPage.waitForURL(`${origin}${roomPath}?buyNow=1`);
+    const delivery = buyerPage.getByRole("dialog", { name: "Địa chỉ nhận sách" });
+    await delivery.getByLabel("Họ tên", { exact: true }).fill("QA buyer");
+    await delivery.getByLabel("Số điện thoại", { exact: true }).fill("0900654321");
+    await delivery.getByLabel(/Khu vực luân chuyển sách/).selectOption("DEMO-C");
+    await delivery.getByLabel("Địa chỉ chi tiết", { exact: true }).fill("QA destination, simulated only");
+    const quoteWrites = [];
+    await buyerPage.route("**/api/v1/me/purchase-conversations/*/quote", async (route) => {
+      const request = route.request();
+      const response = await route.fetch();
+      quoteWrites.push({ key: request.headers()["idempotency-key"], body: request.postDataJSON() });
+      if (quoteWrites.length === 1) return route.fulfill({ status: 503, json: {} });
+      await route.fulfill({ response });
+    });
+    await delivery.getByRole("button", { name: "Xác nhận giá & đính kèm báo giá", exact: true }).click();
+    await delivery.getByRole("button", { name: "Thử lại gửi báo giá", exact: true }).click();
+    await delivery.waitFor({ state: "hidden" });
+    assert.equal(quoteWrites.length, 2);
+    assert.deepEqual(quoteWrites[0], quoteWrites[1]);
+    assert.equal(quoteWrites[0].body.acceptedListedPrice, listedBook.salePrice);
+    await createOrder.waitFor();
+    assert.equal(await buyerPage.locator("summary").filter({ hasText: /đề nghị giá|đề nghị mức giá/i }).count(), 0);
+    assert.equal(await sellerPage.locator("summary").filter({ hasText: /đề nghị giá|đề nghị mức giá/i }).count(), 0);
+    await createOrder.click();
+    const orderDialog = sellerPage.getByRole("dialog", { name: "Tạo đơn cho người mua" });
+    const price = orderDialog.getByLabel("Giá sách đã thỏa thuận (₫)");
+    assert.equal(await price.inputValue(), String(listedBook.salePrice));
+    assert.equal(await price.getAttribute("readonly") !== null, true);
+    await orderDialog.getByRole("button", { name: "Tạo đơn cho người mua này", exact: true }).click();
+    await orderDialog.waitFor({ state: "hidden" });
+    const savedRoom = await fixture.api(`/me/purchase-conversations/${roomPath.split("/").at(-1)}`, seller.accessToken);
+    const order = await fixture.api(`/me/orders/${savedRoom.orderId}`, buyer.accessToken);
+    assert.equal(order.state, "AwaitingPayment");
+    assert.equal(order.amounts.bookPrice, listedBook.salePrice);
+    assert.equal(order.purchaseMode, "BuyNow");
+    if (directJourney || directJourneyIssue || directJourneyRace) {
+      await fundBuyer(order.amounts.buyerTotal);
+      const orderUrl = `/me/orders/${order.id}`;
+      const currentOrder = (token = buyer.accessToken) => fixture.api(orderUrl, token);
+      const walletAtStart = await fixture.api("/me/wallet", seller.accessToken);
+      const advance = (token, action, expectedVersion, key = randomUUID(), description) =>
+        fetch(`${base}/orders/${order.id}/delivery-journey`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "Idempotency-Key": key },
+          body: JSON.stringify({ action, expectedVersion, ...(description ? { description } : {}) }),
+        });
+      await buyerPage.getByRole("button", { name: /^Thanh toán ngay/ }).click();
+      await sellerPage.getByText("Chờ người mua thanh toán", { exact: true }).waitFor({ state: "hidden" });
+      assert.equal((await currentOrder()).state, "Preparing");
+      assert.equal((await currentOrder(seller.accessToken)).sellerAcceptanceEnabled, false);
+      await sellerPage.getByRole("button", { name: "Xác nhận gửi sách", exact: true }).click();
+      const shipmentDialog = sellerPage.getByRole("dialog", { name: "Xác nhận gửi sách" });
+      await shipmentDialog.getByRole("button", { name: "Xác nhận gửi sách", exact: true }).click();
+      await shipmentDialog.waitFor({ state: "hidden" });
+      assert.equal((await advance(buyer.accessToken, "Pickup", 3)).status, 403);
+      fixture.setDirectOrderJourneyDemo(true);
+      assert.equal((await advance(seller.accessToken, "Pickup", 3)).status, 404);
+      assert.equal((await advance(buyer.accessToken, "Deliver", 3)).status, 409);
+      await buyerPage.getByRole("link", { name: "Mở Driver Simulator · Demo" }).click();
+      for (const action of ["Xác nhận lấy kiện", "Bắt đầu đi giao", "Giao thành công"]) {
+        await buyerPage.getByRole("button", { name: action, exact: true }).click();
+        await buyerPage.getByRole("button", { name: "Ghi nhận mốc giao hàng", exact: true }).click();
+        await buyerPage.getByRole("dialog").waitFor({ state: "hidden" });
+        if (action === "Bắt đầu đi giao") {
+          await buyerPage.getByRole("button", { name: "Giao thành công", exact: true }).waitFor();
+          assert(await buyerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          await buyerPage.screenshot({ path: path.join(artifacts, "direct-order-driver-mobile.png"), fullPage: true });
+        }
+      }
+      await buyerPage.getByRole("link", { name: "Quay lại đơn mua" }).click();
+      const inspection = await currentOrder();
+      assert.equal(inspection.state, "Inspection");
+      assert.equal(inspection.moneyHeld, order.amounts.buyerTotal);
+      assert.equal(new Date(inspection.inspectionDeadline) - new Date(inspection.deliveredAt), 72 * 3600000);
+      if (directJourneyRace) {
+        await buyerPage.getByRole("button", { name: "Tôi đã nhận được sách", exact: true }).click();
+        await buyerPage.getByRole("button", { name: "Sách có vấn đề", exact: true }).waitFor();
+        const [report, release] = await Promise.all([
+          advance(buyer.accessToken, "ReportCondition", inspection.version, randomUUID(), "QA nhận được sách bị thiếu trang."),
+          advance(buyer.accessToken, "SkipInspection", inspection.version),
+        ]);
+        assert.deepEqual([report.status, release.status].sort(), [200, 409]);
+        const outcome = await currentOrder();
+        const settlements = await fixture.db.collection("ledger_journals").countDocuments({ orderId: order.id, type: "OrderSettlement" });
+        const sellerWallet = await fixture.api("/me/wallet", seller.accessToken);
+        if (report.ok) {
+          assert.equal(outcome.state, "ResolutionPending");
+          assert.equal(outcome.deliveryJourney.issue.kind, "ReportCondition");
+          assert.equal(outcome.moneyHeld, order.amounts.buyerTotal);
+          assert.equal(settlements, 0);
+          assert.equal(sellerWallet.available, walletAtStart.available);
+        } else {
+          assert.equal(outcome.state, "Completed");
+          assert.equal(outcome.deliveryJourney.issue, null);
+          assert.equal(settlements, 1);
+          assert.equal(sellerWallet.available - walletAtStart.available, order.amounts.sellerProceedsOnCompletion);
+        }
+        console.log("PASS: A quality claim racing inspection skip produces exactly one permitted outcome.");
+      } else if (directJourneyIssue) {
+        await buyerPage.getByRole("button", { name: "Chưa nhận được sách", exact: true }).click();
+        const complaint = buyerPage.getByRole("dialog", { name: "Chưa nhận được sách" });
+        await complaint.getByLabel("Mô tả sự cố").fill("QA chưa nhận được kiện dù trạng thái đã giao.");
+        await complaint.getByRole("button", { name: "Gửi báo cáo", exact: true }).click();
+        await buyerPage.getByRole("heading", { name: "Đang xử lý sự cố" }).waitFor();
+        const reported = await currentOrder();
+        assert.equal(reported.state, "ResolutionPending");
+        assert.equal(reported.deliveryJourney.issue.kind, "ReportNonReceipt");
+        assert.equal(reported.moneyHeld, order.amounts.buyerTotal);
+        assert.equal((await advance(buyer.accessToken, "SkipInspection", reported.version)).status, 409);
+        assert.equal((await fixture.api("/me/wallet", seller.accessToken)).available, walletAtStart.available);
+        await buyerPage.getByRole("link", { name: "Mở hồ sơ hỗ trợ" }).click();
+        await buyerPage.waitForURL(`**/support/${reported.deliveryJourney.issue.supportCaseId}`);
+        const sourceImage = createRequire(new URL("../../api/package.json", import.meta.url))("sharp");
+        const proof = await sourceImage({ create: { width: 40, height: 40, channels: 3, background: "#d4bc9e" } }).png().toBuffer();
+        await buyerPage.getByLabel("Chọn ảnh hoặc video").setInputFiles({ name: "qa-mo-kien.png", mimeType: "image/png", buffer: proof });
+        await buyerPage.getByRole("button", { name: "Gửi bằng chứng", exact: true }).click();
+        await buyerPage.getByText("Đã lưu bằng chứng vào hồ sơ.", { exact: true }).waitFor();
+        const caseId = reported.deliveryJourney.issue.supportCaseId;
+        const proofPath = `/support-cases/${caseId}/order-evidence`;
+        const stored = await fixture.api(proofPath, buyer.accessToken);
+        assert.equal(stored.items[0].status, "Ready");
+        assert.equal(stored.packagingEvidenceIds.length, 1);
+        assert(evidenceObjects.values().next().value.equals(proof));
+        assert.equal((await fetch(base + proofPath, { headers: { Authorization: `Bearer ${seller.accessToken}` } })).status, 404);
+
+        const reviewerId = randomUUID();
+        await fixture.db.collection("users").insertOne({
+          ...sellerDoc, _id: reviewerId, emailNormalized: "independent-order-reviewer@operations.test",
+          roles: [{ role: "ADMIN", grantedAt: new Date() }],
+        });
+        const reviewer = await fixture.api("/auth/login", null, { email: "independent-order-reviewer@operations.test", password });
+        assert.equal((await fetch(base + proofPath, { headers: { Authorization: `Bearer ${reviewer.accessToken}` } })).status, 404);
+        const adminCase = await fixture.api(`/operations/support-cases/${caseId}`, reviewer.accessToken);
+        await fixture.api(`/operations/support-cases/${caseId}/actions`, reviewer.accessToken,
+          { action: "Assign", expectedVersion: adminCase.case.version, text: "Nhận phụ trách hồ sơ QA." });
+        const adminEvidence = await fixture.api(proofPath, reviewer.accessToken);
+        for (const id of [adminEvidence.items[0].id, adminEvidence.packagingEvidenceIds[0]]) {
+          await fixture.api(`${proofPath}/${id}/read`, reviewer.accessToken, { reason: "Đối soát hồ sơ QA" });
+        }
+        assert.equal(await fixture.db.collection("audit_events").countDocuments({
+          actorId: reviewerId, action: "readDirectOrderIssueEvidence", "after.caseId": caseId,
+        }), 2);
+        console.log("PASS: Delivered claim retains the full hold, blocks payout, uploads a private photo, and restricts evidence to the reporter and assigned admin.");
+      } else {
+        assert.equal((await advance(buyer.accessToken, "SkipInspection", inspection.version)).status, 409);
+        await buyerPage.getByRole("button", { name: "Tôi đã nhận được sách", exact: true }).click();
+        await buyerPage.getByRole("button", { name: "Tua hạn kiểm tra và giải ngân · Demo" }).click();
+        let settledReplies = [];
+        await buyerPage.route(`**/api/v1/orders/${order.id}/delivery-journey`, async route => {
+          if (route.request().postDataJSON().action !== "SkipInspection") return route.continue();
+          const responses = await Promise.all([route.fetch(), route.fetch()]);
+          settledReplies = responses.map(response => [response.status(), response.headers()["idempotency-replayed"]]);
+          await route.fulfill({ response: responses[0] });
+        });
+        await buyerPage.getByRole("button", { name: "Hoàn tất đơn demo", exact: true }).click();
+        await buyerPage.getByRole("heading", { name: "Đơn hàng đã hoàn tất thành công" }).waitFor();
+        assert.deepEqual(settledReplies.sort(), [[200, "false"], [200, "true"]]);
+        await sellerPage.getByRole("link", { name: "Đối chiếu tiền bán trong ví" }).waitFor();
+        assert(await sellerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await sellerPage.screenshot({ path: path.join(artifacts, "direct-order-completed-desktop.png"), fullPage: true });
+        const completed = await currentOrder();
+        assert.equal(completed.state, "Completed");
+        assert.equal(completed.inspectionDeadline, inspection.inspectionDeadline);
+        assert.equal(completed.moneyHeld, 0);
+        assert.equal((await advance(buyer.accessToken, "SkipInspection", completed.version)).status, 409);
+        assert.equal((await fixture.api("/me/wallet", seller.accessToken)).available - walletAtStart.available,
+          order.amounts.sellerProceedsOnCompletion);
+        assert.equal(await fixture.db.collection("ledger_journals").countDocuments({ orderId: order.id, type: "OrderSettlement" }), 1);
+        console.log("PASS: Direct Driver records all three steps, acknowledgement gates inspection skip, and seller is credited once.");
+      }
+    }
+    assert.deepEqual(errors, []);
+    console.log("PASS: Chat opens the drawer, Mua ngay opens address, listed-price confirmation replays, seller creates one order at the confirmed price.");
+  } else {
+  await go(buyerPage, `/buy-now/${listingId}?legacy=1`);
+  await buyerPage
+    .getByRole("button", { name: "Chọn địa chỉ nhận sách", exact: true })
+    .click();
   await buyerPage.getByLabel("Họ tên", { exact: true }).fill("QA buyer");
   await buyerPage
     .getByLabel("Số điện thoại", { exact: true })
@@ -305,6 +517,7 @@ try {
   await buyerPage
     .getByRole("button", { name: "Đặt mua và đến thanh toán", exact: true })
     .waitFor();
+  assert.equal(await buyerPage.locator("dialog[open]").count(), 0);
   assert.equal(
     await fixture.db
       .collection("purchase_conversations")
@@ -323,12 +536,7 @@ try {
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   );
-  await captureDialog(buyerPage, "checkout-mobile.png");
   await buyerPage.setViewportSize({ width: 1440, height: 900 });
-  await captureDialog(buyerPage, "checkout-desktop.png");
-  await buyerPage
-    .getByRole("button", { name: "Đóng popup", exact: true })
-    .click();
   await buyerPage.screenshot({
     path: path.join(artifacts, "summary-desktop.png"),
     fullPage: true,
@@ -338,9 +546,6 @@ try {
     path: path.join(artifacts, "summary-mobile.png"),
     fullPage: true,
   });
-  await buyerPage
-    .getByRole("button", { name: "Tiếp tục đặt mua", exact: true })
-    .click();
   const createAttempts = [];
   let lostCreate = false;
   await buyerPage.route("**/api/v1/orders/buy-now", async (route) => {
@@ -383,14 +588,11 @@ try {
   const conversationId = order.conversationId;
   assert.equal(new URL(buyerPage.url()).pathname, `/chat/${conversationId}`);
   const buyerOrderDetails = buyerPage.getByRole("region", {
-    name: "Chi tiết đơn hàng",
+    name: "Nội dung đơn hàng",
     exact: true,
   });
-  await openOrderContext(buyerOrderDetails);
-  await buyerOrderDetails.getByText("Mua ngay", { exact: true }).waitFor();
-  await buyerOrderDetails.getByRole("heading", {
-    name: order.item.metadata.title, exact: true,
-  }).waitFor();
+  await buyerOrderDetails.getByRole("heading", { name: "Phiếu đặt mua sách", exact: true }).waitFor();
+  await buyerOrderDetails.getByText(order.item.metadata.title, { exact: true }).waitFor();
   await buyerOrderDetails.getByText("Chờ thanh toán", { exact: true }).waitFor();
   await buyerOrderDetails.locator('[aria-current="step"]')
     .filter({ hasText: "Thanh toán" }).waitFor();
@@ -398,7 +600,7 @@ try {
     const viewport = buyerPage.viewportSize();
     for (const width of [1440, 390]) {
       await buyerPage.setViewportSize({ width, height: 900 });
-      await buyerOrderDetails.locator('[aria-label="Tiến trình thủ tục đơn hàng"]')
+      await buyerOrderDetails.getByRole("navigation", { name: "Các bước mua sách" })
         .screenshot({ path: path.join(artifacts, `progress-${state}-${width}.png`) });
     }
     await buyerPage.setViewportSize(viewport);
@@ -416,7 +618,7 @@ try {
   assert.equal(order.purchaseMode, "BuyNow");
   assert.equal(order.amounts.bookPrice, 125000);
   assert.equal(order.amounts.shippingFee, 0);
-  assert.equal(await buyerOrderDetails.getByText("Phí giao hàng", { exact: true }).count(), 0);
+  await buyerOrderDetails.getByText("Miễn phí", { exact: true }).waitFor();
   assert.equal(order.amounts.buyerTotal, 125000);
   assert.equal(order.state, "AwaitingPayment");
   const observer = await browser.newPage({
@@ -487,9 +689,9 @@ try {
     .getByRole("button", { name: "Thử lại thanh toán", exact: true })
     .click();
   await buyerOrderDetails
-    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
+    .getByRole("heading", { name: "Người bán đang chuẩn bị sách", exact: true })
     .waitFor();
-  assert.equal(await buyerOrderDetails.locator('[aria-current="step"]').innerText(), "3\nChuẩn bị");
+  assert.equal(await buyerOrderDetails.locator('[aria-current="step"]').innerText(), "3\nGiao nhận");
   await captureProgress("preparing");
   assert.equal(paymentAttempts.length, 2);
   assert.deepEqual(paymentAttempts[0], paymentAttempts[1]);
@@ -508,7 +710,7 @@ try {
   await buyerPage.goBack();
   await buyerPage.waitForURL(`**/chat/${conversationId}`);
   await buyerOrderDetails
-    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
+    .getByRole("heading", { name: "Người bán đang chuẩn bị sách", exact: true })
     .waitFor();
   assert.equal(
     (await fixture.api("/me/wallet", buyer.accessToken)).transactionHeld,
@@ -556,26 +758,22 @@ try {
   await sellerPage.locator(`a[href="/chat/orders/${orderId}"]`).click();
   await sellerPage.waitForURL(`**/chat/${conversationId}`);
   const sellerOrderDetails = sellerPage.getByRole("region", {
-    name: "Chi tiết đơn hàng",
+    name: "Nội dung đơn hàng",
     exact: true,
   });
-  await openOrderContext(sellerOrderDetails);
-  await sellerOrderDetails.getByText("Mua ngay", { exact: true }).waitFor();
-  await sellerOrderDetails
-    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
-    .waitFor();
-  assert.equal(await sellerOrderDetails.locator('[aria-current="step"]').innerText(), "3\nChuẩn bị");
+  await sellerOrderDetails.getByText("Chuẩn bị và bàn giao sách", { exact: true }).waitFor();
+  assert.equal(await sellerOrderDetails.locator('[aria-current="step"]').innerText(), "3\nGiao nhận");
   const apiRequire = createRequire(path.join(root, "apps/api/package.json"));
   const bytes = await apiRequire("sharp")({
     create: { width: 300, height: 300, channels: 3, background: "#58685E" },
   })
     .png()
     .toBuffer();
-  const photo = sellerPage.getByLabel("Ảnh đóng gói", { exact: true });
-  const tracking = sellerPage.getByLabel("Mã vận đơn mô phỏng", {
-    exact: true,
-  });
-  await photo.waitFor();
+  await sellerOrderDetails.getByRole("button", { name: "Xác nhận gửi sách", exact: true }).click();
+  const shipmentDialog = sellerPage.getByRole("dialog");
+  const photo = shipmentDialog.locator('input[type="file"]');
+  const tracking = shipmentDialog.getByLabel("Mã vận đơn mô phỏng");
+  await photo.waitFor({ state: "attached" });
   const originalInput = await photo.elementHandle();
   const nextShipmentRead = (status) =>
     sellerPage.waitForResponse(
@@ -583,9 +781,10 @@ try {
         response.url().endsWith(`/me/orders/${orderId}/shipment`) &&
         response.status() === status,
     );
-  const pickerOpened = sellerPage.waitForEvent("filechooser");
-  await photo.click();
-  const picker = await pickerOpened;
+  const [picker] = await Promise.all([
+    sellerPage.waitForEvent("filechooser"),
+    shipmentDialog.getByText("Đổi ảnh khác…", { exact: true }).click(),
+  ]);
   await nextShipmentRead(404);
   assert(
     await originalInput.evaluate((input) => input.isConnected),
@@ -599,10 +798,6 @@ try {
   await tracking.fill("LL-BUYNOWQA123");
   shipmentUnavailable = true;
   await nextShipmentRead(503);
-  await sellerPage
-    .getByRole("alert")
-    .filter({ hasText: "Chưa tải được vận đơn" })
-    .waitFor();
   assert(
     await originalInput.evaluate((input) => input.isConnected),
     "A background read failure must preserve the form",
@@ -622,27 +817,11 @@ try {
     await photo.evaluate((input) => input.files[0]?.name),
     "qa-packaging.png",
   );
-  await sellerPage
-    .getByRole("button", { name: "Lưu ảnh đóng gói", exact: true })
-    .click();
-  await sellerPage
-    .getByText("Ảnh đóng gói đã lưu: 1", { exact: true })
-    .waitFor();
-  await sellerPage
-    .getByLabel("Mã vận đơn mô phỏng", { exact: true })
-    .fill("LL-BUYNOWQA123");
-  await sellerPage
-    .getByRole("button", { name: "Đăng ký vận đơn", exact: true })
-    .click();
-  await sellerPage
-    .getByText("Đã đăng ký vận đơn, đang chờ xác nhận bàn giao.")
-    .waitFor();
-  await sellerOrderDetails.locator('[aria-current="step"]').filter({ hasText: "Vận chuyển" }).waitFor();
-  await buyerOrderDetails.locator('[aria-current="step"]').filter({ hasText: "Vận chuyển" }).waitFor();
-  await buyerOrderDetails.getByText("Người bán đã đăng ký vận đơn", { exact: true }).waitFor();
+  await shipmentDialog.getByRole("button", { name: "Xác nhận gửi sách", exact: true }).click();
+  await sellerOrderDetails.getByRole("heading", { name: "Đã đăng ký vận đơn giao sách" }).waitFor();
+  await buyerOrderDetails.getByText(/Người bán đã đăng ký vận đơn/).waitFor();
   for (const details of [sellerOrderDetails, buyerOrderDetails]) {
-    assert.equal(await details.locator('[aria-current="step"]').innerText(), "4\nVận chuyển");
-    await details.getByRole("heading", { name: "Chờ bàn giao vận chuyển", exact: true }).waitFor();
+    assert.equal(await details.locator('[aria-current="step"]').innerText(), "3\nGiao nhận");
   }
   await captureProgress("registered");
   assert.equal(
@@ -767,7 +946,7 @@ try {
     "POST",
     { "Idempotency-Key": pickupEventId },
   );
-  await buyerOrderDetails.getByText("Đang giao", { exact: true }).waitFor();
+  await buyerOrderDetails.getByRole("heading", { name: "Kiện hàng đang được giao", exact: true }).waitFor();
   await buyerPage.evaluate(() =>
     window.scrollTo({ top: 0, behavior: "instant" }),
   );
@@ -832,6 +1011,7 @@ try {
   else if (!demoCompletion) console.log(
     "PASS buy-now browser: listed price, quote does not reserve or open chat, create/pay lost ACK same-key/body replay, one OrderCreated room shared by buyer/seller with no negotiation/quote, underfunded no hold, paid Preparing without seller approval, durable notifications, file chooser/input/focus/draft retained across shipment polling and transient 503, real image upload/registration, independent simulated pickup InTransit; 390/1440. API/Mongo real, QA storage/payment/carrier only.",
   );
+  }
 } catch (error) {
   for (const [index, context] of (browser?.contexts() ?? []).entries())
     for (const page of context.pages())

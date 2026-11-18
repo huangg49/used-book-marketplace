@@ -245,6 +245,8 @@ export type AuctionOperation =
   | 'receivePointOrderReturn'
   | 'dispatchPointOrder'
   | 'recordPointDelivery'
+  | 'demoStartPointDelivery'
+  | 'demoDeliverPointOrder'
   | 'advanceDemoPointOrder';
 type EvidenceChange = {
   entityType: 'ExchangeEvidence';
@@ -597,6 +599,9 @@ export class MongoCommandService {
       | 'confirmOrderReceipt'
       | 'emitSimulatedDeliveryEvent'
       | 'reportOrderNonReceipt'
+      | 'advanceDirectOrderDeliveryJourney'
+      | 'reserveDirectOrderIssueEvidence'
+      | 'uploadDirectOrderIssueEvidence'
       | 'cancelPaidOrder'
       | 'rejectPaidOrder',
     target: string | null,

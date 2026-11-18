@@ -32,6 +32,7 @@ import { checkAuction } from './auction-invariants.js';
 import { notifyAuction } from './auction-notifications.js';
 import {
   deliveryChoice,
+  demoOutForDeliveryAt,
   deliveryPrice,
   deliverySnapshot,
   deliveryView,
@@ -412,6 +413,7 @@ export class PointOrdersService {
             ? deliveryView(
                 o,
                 (await tx.c.point_order_deliveries.findOne({ _id: o._id }))!,
+                await demoOutForDeliveryAt(tx, o),
               )
             : null,
         serverTime: (await tx.now()).toISOString(),
