@@ -191,6 +191,7 @@ export const pointOrderDelivery = z.object({
   outboundFee: z.number().int(),
   trackingCode: z.string().nullable(),
   dispatchedAt: z.string().nullable(),
+  demoOutForDeliveryAt: z.string().nullish(),
   deliveryDeadline: z.string().nullable(),
   deliveredAt: z.string().nullable(),
 });

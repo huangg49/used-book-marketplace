@@ -799,3 +799,29 @@ export function advanceDemoPointOrder(
     headers: { "Idempotency-Key": key },
   });
 }
+
+export function demoStartPointDelivery(
+  client: Pick<SessionClient, "request">,
+  orderId: string,
+  expectedVersion: number,
+  key: string,
+) {
+  return client.request(`/point-orders/${orderId}/demo-start-delivery`, auctionReceipt, {
+    method: "POST",
+    body: JSON.stringify({ expectedVersion }),
+    headers: { "Idempotency-Key": key },
+  });
+}
+
+export function demoDeliverPointOrder(
+  client: Pick<SessionClient, "request">,
+  orderId: string,
+  expectedVersion: number,
+  key: string,
+) {
+  return client.request(`/point-orders/${orderId}/demo-deliver`, auctionReceipt, {
+    method: "POST",
+    body: JSON.stringify({ expectedVersion }),
+    headers: { "Idempotency-Key": key },
+  });
+}

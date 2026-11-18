@@ -31,7 +31,11 @@ import { MemberProfileModule } from './modules/profile/member-profile.module.js'
   imports: [
     CartModule,
     SupportModule,
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', 'apps/api/.env', '../apps/api/.env'],
+      validate: validateEnvironment,
+    }),
     DatabaseModule,
     AuthModule,
     CatalogModule,

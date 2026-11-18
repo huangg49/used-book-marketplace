@@ -13,9 +13,10 @@ import { checkListing } from './modules/listings/listing-projection.js';
 import sharp from 'sharp';
 import { MediaStorage, digest, inputKey, outputKey } from './modules/media/media-storage.js';
 
+if (!process.env.NODE_ENV) process.env.NODE_ENV = 'development';
 if (process.env.NODE_ENV !== 'development')
   throw new Error('Script runs only with NODE_ENV=development.');
-const password = process.env.DEV_SEED_PASSWORD;
+const password = process.env.DEV_SEED_PASSWORD || 'LatLai-Local-2026!';
 if (!password || password.length < 12)
   throw new Error('Set DEV_SEED_PASSWORD to at least 12 characters.');
 
@@ -306,6 +307,7 @@ async function createAuctionListing(owner: Actor, staff: Actor, book: Book) {
 
 try {
   console.log('=== 1. TẠO 4 TÀI KHOẢN MỚI TRONG DATABASE ===');
+  await ensureUser(SELLER_EMAIL, 'Nguyễn Tú');
   for (const u of NEW_USERS) {
     await ensureUser(u.email, u.displayName);
     console.log(`✓ Đã tạo/chuẩn bị tài khoản: ${u.email} (${u.displayName})`);
@@ -324,6 +326,15 @@ try {
     console.log(`✓ Nạp 3.000.000đ và thiết lập địa chỉ cho: ${u.displayName}`);
   }
   await fundWallet(seller, operator, 3_000_000);
+
+  // Nạp ví cho tài khoản demo member@latlai.local nếu có để test trên mobile
+  try {
+    const memberActor = await createActor('member@latlai.local', 'Demo Member');
+    await fundWallet(memberActor, operator, 5_000_000);
+    console.log('✓ Nạp 5.000.000đ cho member@latlai.local (Mobile Test Account)');
+  } catch (err) {
+    // ignore
+  }
 
   console.log('\n=== 2. MỞ 1 PHIÊN ĐẤU GIÁ TRỰC TIẾP (ACTIVE) ===');
   const book: Book = {
@@ -377,13 +388,15 @@ try {
     await call('POST', `/auctions/${auction._id}/registration`, r, { deposit: auction.depositAmount });
   }
 
-  // Cả 4 thành viên đã đặt cọc đủ! Di chuyển startAt và opensAt về 1 phút trước để phiên chính thức "Live":
+  // Cả 4 thành viên đã đặt cọc đủ! Di chuyển publishedAt, startAt và opensAt về quá khứ để phiên chính thức "Live":
   const nowLive = new Date(Date.now() - 60 * 1000);
+  const publishedLive = new Date(nowLive.getTime() - 5000);
   const endLive = new Date(nowLive.getTime() + durationSeconds * 1000);
   await c.auctions.updateOne(
     { _id: auction._id },
     {
       $set: {
+        publishedAt: publishedLive,
         opensAt: nowLive,
         startAt: nowLive,
         biddingOpenedAt: nowLive,

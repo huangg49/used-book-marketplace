@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
-import { View } from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../../core/session/session-provider";
-import { AppText, Button, Notice, colors, radius, space, stitchTokens } from "../../../core/ui";
+import { AppText, Notice, colors, radius, space, stitchTokens } from "../../../core/ui";
 import { auctionErrorText, getDemoSkipStatus } from "../auctions-model";
 
 type Props = {
@@ -63,24 +63,89 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
       style={{
         gap: space.xs,
         padding: space.md,
-        borderRadius: radius.control,
-        backgroundColor: stitchTokens.warmIvory,
-        borderWidth: 1,
+        borderRadius: radius.card,
+        backgroundColor: "#FFF8F9",
+        borderWidth: 1.5,
         borderStyle: "dashed",
-        borderColor: stitchTokens.goldDark,
+        borderColor: stitchTokens.wine,
       }}
     >
-      <Button
-        secondary
-        title={busy ? "Đang bỏ qua chờ…" : label}
-        busy={busy}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 2,
+        }}
+      >
+        <AppText
+          kind="bold"
+          color={stitchTokens.wineDark}
+          style={{ fontSize: 13 }}
+        >
+          Công cụ hỗ trợ trình diễn
+        </AppText>
+        <View
+          style={{
+            backgroundColor: stitchTokens.wine,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: radius.small,
+          }}
+        >
+          <AppText
+            kind="small"
+            color={colors.surface}
+            style={{ fontSize: 9, fontWeight: "700", letterSpacing: 0.5 }}
+          >
+            DEMO SKIP
+          </AppText>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        activeOpacity={0.8}
+        disabled={busy}
         onPress={() => void skip()}
-      />
+        style={{
+          minHeight: 44,
+          paddingHorizontal: space.md,
+          paddingVertical: space.sm,
+          borderRadius: radius.control,
+          backgroundColor: stitchTokens.wine,
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "row",
+          gap: 8,
+          shadowColor: stitchTokens.wine,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 3,
+          elevation: 2,
+        }}
+      >
+        {busy ? (
+          <ActivityIndicator size="small" color={colors.surface} />
+        ) : null}
+        <AppText
+          kind="bold"
+          color={colors.surface}
+          style={{ fontSize: 14 }}
+        >
+          {busy ? "Đang bỏ qua chờ…" : label}
+        </AppText>
+      </TouchableOpacity>
+
       {note && !error ? (
-        <AppText kind="small" color={colors.muted}>
+        <AppText
+          kind="small"
+          color={stitchTokens.wineDark}
+          style={{ fontSize: 11, lineHeight: 15, opacity: 0.85 }}
+        >
           {note}
         </AppText>
       ) : null}
+
       {error ? <Notice tone="error">{error}</Notice> : null}
     </View>
   );
