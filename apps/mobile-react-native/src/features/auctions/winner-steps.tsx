@@ -1,9 +1,8 @@
 import { ReviewEntry } from "../reviews/review-entry";
 import { useEffect, useState } from "react";
-import { View, TouchableOpacity, ScrollView } from "react-native";
+import { View, TouchableOpacity } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
@@ -630,7 +629,6 @@ function Payment({
   onPay: (delivery?: DeliveryChoice) => void;
 }) {
   const { client } = useSession();
-  const queryClient = useQueryClient();
   const remaining = useRemaining(order.paymentDeadline, order.serverTime);
   const [deliver, setDeliver] = useState(false);
   const [addressId, setAddressId] = useState<string | null>(null);
@@ -770,7 +768,7 @@ function Payment({
               borderWidth: 1,
               borderBottomWidth: !deliver ? 3.5 : 1,
               borderColor: !deliver ? stitchTokens.wineDark : colors.rule,
-              borderBottomColor: !deliver ? "#3F0000" : colors.rule,
+              borderBottomColor: !deliver ? stitchTokens.wineDark : colors.rule,
               backgroundColor: !deliver ? stitchTokens.wine : colors.surface,
               alignItems: "center",
               justifyContent: "center",
@@ -796,7 +794,7 @@ function Payment({
                   backgroundColor: colors.surface,
                   alignItems: "center",
                   justifyContent: "center",
-                  shadowColor: "#000",
+                  shadowColor: stitchTokens.black,
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.2,
                   shadowRadius: 1,
@@ -823,7 +821,7 @@ function Payment({
                 paddingHorizontal: 8,
                 paddingVertical: 2,
                 borderRadius: 4,
-                backgroundColor: !deliver ? "rgba(255, 255, 255, 0.2)" : colors.paper,
+                backgroundColor: !deliver ? stitchTokens.whiteAlpha20 : colors.paper,
               }}
             >
               <AppText
@@ -848,7 +846,7 @@ function Payment({
               borderWidth: 1,
               borderBottomWidth: deliver ? 3.5 : 1,
               borderColor: deliver ? stitchTokens.wineDark : colors.rule,
-              borderBottomColor: deliver ? "#3F0000" : colors.rule,
+              borderBottomColor: deliver ? stitchTokens.wineDark : colors.rule,
               backgroundColor: deliver ? stitchTokens.wine : colors.surface,
               alignItems: "center",
               justifyContent: "center",
@@ -874,7 +872,7 @@ function Payment({
                   backgroundColor: colors.surface,
                   alignItems: "center",
                   justifyContent: "center",
-                  shadowColor: "#000",
+                  shadowColor: stitchTokens.black,
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.2,
                   shadowRadius: 1,
@@ -901,7 +899,7 @@ function Payment({
                 paddingHorizontal: 8,
                 paddingVertical: 2,
                 borderRadius: 4,
-                backgroundColor: deliver ? "rgba(255, 255, 255, 0.2)" : colors.paper,
+                backgroundColor: deliver ? stitchTokens.whiteAlpha20 : colors.paper,
               }}
             >
               <AppText
@@ -935,7 +933,7 @@ function Payment({
                 width: 26,
                 height: 26,
                 borderRadius: 13,
-                backgroundColor: "rgba(139, 44, 39, 0.08)",
+                backgroundColor: stitchTokens.wineAlpha08,
                 alignItems: "center",
                 justifyContent: "center",
                 marginTop: 2,
@@ -988,7 +986,7 @@ function Payment({
                         borderRadius: radius.card,
                         borderWidth: isSelected ? 1.5 : 1,
                         borderColor: isSelected ? stitchTokens.wine : colors.rule,
-                        backgroundColor: isSelected ? "rgba(139, 44, 39, 0.03)" : colors.paper,
+                        backgroundColor: isSelected ? stitchTokens.wineAlpha05 : colors.paper,
                         gap: space.sm,
                       }}
                     >
@@ -1078,7 +1076,7 @@ function Payment({
                   borderWidth: 1,
                   borderStyle: "dashed",
                   borderColor: stitchTokens.wine,
-                  backgroundColor: "rgba(139, 44, 39, 0.02)",
+                  backgroundColor: stitchTokens.wineAlpha05,
                   gap: 6,
                   marginTop: 2,
                 }}
@@ -1562,13 +1560,6 @@ function DeliveryPanel({
   const d = order.delivery;
   const [simBusy, setSimBusy] = useState(false);
   const [simError, setSimError] = useState<string | null>(null);
-
-  const demoStatus = useQuery({
-    queryKey: ["demo-skip"],
-    queryFn: () => getDemoSkipStatus(client),
-    staleTime: Infinity,
-    retry: false,
-  });
 
   const step1Done = Boolean(d?.dispatchedAt);
   const step2Done = Boolean(d?.demoOutForDeliveryAt);

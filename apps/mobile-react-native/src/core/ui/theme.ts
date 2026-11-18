@@ -116,6 +116,7 @@ export const stitchTokens = {
   black: "#000000",
   blackAlpha45: "rgba(0, 0, 0, 0.45)",
   whiteAlpha14: "rgba(255, 255, 255, 0.14)",
+  whiteAlpha20: "rgba(255, 255, 255, 0.2)",
   whiteAlpha40: "rgba(255, 255, 255, 0.4)",
   modalScrim: "rgba(30, 20, 18, 0.55)",
   scrimDark: "rgba(43, 20, 16, 0.82)",

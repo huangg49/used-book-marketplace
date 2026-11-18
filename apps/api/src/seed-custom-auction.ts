@@ -332,7 +332,7 @@ try {
     const memberActor = await createActor('member@latlai.local', 'Demo Member');
     await fundWallet(memberActor, operator, 5_000_000);
     console.log('✓ Nạp 5.000.000đ cho member@latlai.local (Mobile Test Account)');
-  } catch (err) {
+  } catch {
     // ignore
   }
 
