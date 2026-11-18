@@ -1180,7 +1180,7 @@ function AuctionBody({
           label={scheduled ? "Mở phiên ngay · Demo" : "Kết thúc phiên ngay · Demo"}
           note={
             scheduled
-              ? "Bỏ qua giờ hẹn mở. Phiên chỉ mở khi đã đủ người đăng ký tối thiểu."
+              ? "Bỏ qua giờ hẹn mở và điều kiện số người đăng ký để mở phiên đấu giá ngay (chế độ demo)."
               : "Chốt phiên ngay; hệ thống chọn người thắng và tạo đơn như khi hết giờ."
           }
           run={(key) => advanceDemoAuction(client, auction.id, auction.version!, key)}
