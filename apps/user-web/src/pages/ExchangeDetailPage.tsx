@@ -406,14 +406,23 @@ function ExchangeDetailContent({
           onComplete={handleComplete}
           onDispute={handleDispute}
           onAdvanceDemoDeadline={async () => {
+            const deadline = detail.demoDeadline;
             const latest = await getExchangeDetail(detail.id);
-            if (latest.demoDeadline !== detail.demoDeadline || latest.revision !== detail.revision) {
+            if (latest.demoDeadline !== deadline || latest.revision !== detail.revision) {
               invalidate();
-              throw new Error("Phiếu vừa thay đổi. Xem lại trạng thái trước khi tua hạn.");
+              if (deadline === "Inspection" && latest.status === "COMPLETED") return;
+              throw new ApiError(409, "VersionConflict", "Phiếu vừa thay đổi. Xem lại trạng thái trước khi tua hạn.");
             }
-            await exchangeCommand(`/exchanges/${detail.id}/demo-advance`, {
-              expectedVersion: detail.revision!, deadline: detail.demoDeadline,
-            });
+            try {
+              await exchangeCommand(`/exchanges/${detail.id}/demo-advance`, {
+                expectedVersion: detail.revision!, deadline,
+              });
+            } catch (error) {
+              // The other participant may finish inspection after our preflight read.
+              if (deadline !== "Inspection" || !(error instanceof ApiError) || error.status !== 409) throw error;
+              const current = await getExchangeDetail(detail.id).catch(() => undefined);
+              if (current?.status !== "COMPLETED") throw error;
+            }
             invalidate();
           }}
           onAdvanceDemoShipping={async () => {

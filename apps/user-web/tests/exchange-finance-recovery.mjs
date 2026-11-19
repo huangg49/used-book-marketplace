@@ -42,6 +42,12 @@ try {
     let failure = 0, standalone = false, messagesFailure = 0, exchangeResult = exchange;
     const returnCommands = [];
     const inspectionCommands = [];
+    let partnerCompletesOn;
+    const partnerCompletes = () => {
+      exchangeResult = { ...exchangeResult, revision: exchangeResult.revision + 1,
+        status: 'Completed', completedAt: now, demoDeadline: undefined };
+      partnerCompletesOn = undefined;
+    };
     const messageCursors = [];
     await context.route('**/api/v1/**', route => {
       const request = route.request(), p = new URL(request.url()).pathname.slice('/api/v1'.length);
@@ -71,6 +77,10 @@ try {
         assert.equal(request.method(), 'POST');
         const command = p.split('/').at(-1);
         inspectionCommands.push({ command, body: request.postDataJSON() });
+        if (command === 'demo-advance' && partnerCompletesOn === 'post') {
+          partnerCompletes();
+          return route.fulfill({ status: 409, json: { code: 'VersionConflict', message: 'Version changed' } });
+        }
         const revision = exchangeResult.revision + 1;
         exchangeResult = command === 'complete'
           ? { ...exchangeResult, revision, initiatorCompletedAt: now }
@@ -96,9 +106,12 @@ try {
       if (p.endsWith('/evidence')) return route.fulfill({ json: { items: [], nextCursor: null } });
       if (p.endsWith('/messages/history')) return route.fulfill({ json: { items: [], olderCursor: null } });
       if (p.endsWith('/events')) return route.fulfill({ json: [] });
-      if (p === `/exchanges/${exchange.id}`) return failure
-        ? route.fulfill({ status: failure, json: { code: failure === 403 ? 'Forbidden' : 'Unavailable' } })
-        : route.fulfill({ json: exchangeResult });
+      if (p === `/exchanges/${exchange.id}`) {
+        if (partnerCompletesOn === 'read') partnerCompletes();
+        return failure
+          ? route.fulfill({ status: failure, json: { code: failure === 403 ? 'Forbidden' : 'Unavailable' } })
+          : route.fulfill({ json: exchangeResult });
+      }
       if (p === '/listings/' + id(4)) return route.fulfill({ json: listing(4) });
       if (p === '/listings/' + id(5)) return route.fulfill({ json: listing(5) });
       if (p === '/me/notifications') return route.fulfill({ json: { items: [], nextCursor: null, unreadCount: 0 } });
@@ -279,8 +292,24 @@ try {
       { command: 'complete', body: { expectedVersion: 20 } },
       { command: 'demo-advance', body: { expectedVersion: 22, deadline: 'Inspection' } },
     ]);
+    for (const race of ['read', 'post']) {
+      exchangeResult = { ...exchangeResult, status: 'Delivered', completedAt: null, demoDeadline: 'Inspection' };
+      await page.goto(origin + '/login?returnUrl=' + encodeURIComponent('/exchange/' + exchange.id));
+      await page.getByLabel(/^Email/).fill(user.email);
+      await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
+      await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+      await expect(fastForward).toBeEnabled();
+      await fastForward.click();
+      const commandCount = inspectionCommands.length;
+      partnerCompletesOn = race;
+      await demoDialog.getByRole('button', { name: 'Xác nhận tua hạn', exact: true }).click();
+      await expect(demoDialog).toBeHidden();
+      await expect(page.getByText(/Trao đổi đã hoàn tất thành công/)).toBeVisible();
+      await expect(page.locator('#exchange-actions').getByRole('alert')).toHaveCount(0);
+      assert.equal(inspectionCommands.length, commandCount + (race === 'post' ? 1 : 0));
+    }
     assert.deepEqual(errors, []);
-    console.log(`PASS exchange finance recovery ${width}: stale read, denied access, exact appeal replay, distinct inspection commands`);
+    console.log(`PASS exchange finance recovery ${width}: stale read, denied access, exact appeal replay, distinct inspection commands, partner settlement races`);
     await context.close();
   }
 } finally {

@@ -706,6 +706,11 @@ function Payment({
   });
 
   const total = deliver ? quote.data?.buyerTotal : order.amounts.bookPrice;
+  const missingQuoteLabel = !chosen
+    ? "Chọn địa chỉ"
+    : quote.isFetching
+      ? "Đang tính phí…"
+      : "Chưa có báo giá";
 
   const handleSaveNewAddress = async () => {
     if (addressBusy) return;
@@ -940,7 +945,11 @@ function Payment({
                 color={deliver ? colors.surface : colors.muted}
                 style={{ fontSize: 10, fontWeight: "700" }}
               >
-                Miễn phí · Lật Lại Express
+                {quote.data && quote.data.outboundFee > 0
+                  ? `${formatVnd(quote.data.outboundFee)} · Lật Lại Express`
+                  : quote.data
+                    ? "Miễn phí · Lật Lại Express"
+                    : "Lật Lại Express"}
               </AppText>
             </View>
           </TouchableOpacity>
@@ -1213,16 +1222,18 @@ function Payment({
                     width: 22,
                     height: 22,
                     borderRadius: 11,
-                    backgroundColor: colors.success,
+                    backgroundColor: quote.data.outboundFee > 0 ? stitchTokens.wineAlpha08 : colors.success,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Icon name="check" size={12} color={colors.surface} />
+                  <Icon name={quote.data.outboundFee > 0 ? "truck" : "check"} size={12} color={quote.data.outboundFee > 0 ? stitchTokens.wine : colors.surface} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText kind="bold" color={colors.success} style={{ fontSize: 12 }}>
-                    Miễn phí giao hàng (Hỗ trợ bạn đọc)
+                  <AppText kind="bold" color={quote.data.outboundFee > 0 ? colors.ink : colors.success} style={{ fontSize: 12 }}>
+                    {quote.data.outboundFee > 0
+                      ? `Phí giao tận nơi: ${formatVnd(quote.data.outboundFee)}`
+                      : "Miễn phí giao hàng (Hỗ trợ bạn đọc)"}
                   </AppText>
                   <AppText kind="small" color={colors.ink} style={{ fontSize: 11 }}>
                     Giao bởi Lật Lại Express tới địa chỉ đã chọn
@@ -1279,18 +1290,43 @@ function Payment({
           <AppText kind="small" color={colors.muted}>
             Phí giao nhận
           </AppText>
-          <View
-            style={{
-              paddingHorizontal: 8,
-              paddingVertical: 2,
-              borderRadius: 4,
-              backgroundColor: colors.successSurface,
-            }}
-          >
-            <AppText kind="bold" color={colors.success} style={{ fontSize: 12 }}>
-              {deliver ? "Miễn phí" : "0 đ (Tại quầy)"}
-            </AppText>
-          </View>
+          {deliver ? (
+            quote.data && quote.data.outboundFee > 0 ? (
+              <AppText kind="bold" color={colors.ink} style={{ fontSize: 14 }}>
+                {formatVnd(quote.data.outboundFee)}
+              </AppText>
+            ) : quote.data ? (
+              <View
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: 4,
+                  backgroundColor: colors.successSurface,
+                }}
+              >
+                <AppText kind="bold" color={colors.success} style={{ fontSize: 12 }}>
+                  Miễn phí
+                </AppText>
+              </View>
+            ) : (
+              <AppText kind="small" color={colors.muted} style={{ fontSize: 12 }}>
+                {missingQuoteLabel}
+              </AppText>
+            )
+          ) : (
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 4,
+                backgroundColor: colors.successSurface,
+              }}
+            >
+              <AppText kind="bold" color={colors.success} style={{ fontSize: 12 }}>
+                0 đ (Tại quầy)
+              </AppText>
+            </View>
+          )}
         </View>
 
         <View style={{ height: 1, backgroundColor: colors.rule, marginVertical: 6 }} />
@@ -1300,7 +1336,7 @@ function Payment({
             Tổng cần thanh toán
           </AppText>
           <AppText kind="bold" color={stitchTokens.wine} style={{ fontSize: 20 }}>
-            {formatVnd(total ?? order.amounts.bookPrice)}
+            {total === undefined ? "—" : formatVnd(total)}
           </AppText>
         </View>
 

@@ -1,3 +1,19 @@
+# Rà soát gói demo đăng sách, giao nhận và trao đổi — 19/11/2026
+
+- Làm rõ trạng thái và bộ lọc của hai hàng đợi tại điểm theo dữ liệu API đã tải.
+  Giữ phiên hiện tại khi mở Driver Simulator. Mobile dùng phí từ báo giá máy chủ
+  và để trống tổng thanh toán khi chưa có báo giá.
+- Member web đọc lại trạng thái khi hai bên tua hạn kiểm tra gần đồng thời.
+  Bước 5 đăng sách có bố cục kiểm tra, sửa từng phần và xác nhận quyền sở hữu.
+
+# Bước kiểm tra khi đăng sách trên web demo — 19/11/2026
+
+- Checkout demo, nhánh `codex/auction-demo-receipt` từ `1b03c74a`. Bước 5
+  gom thông tin đầu sách, ảnh, tình trạng, giá và xác nhận quyền sở hữu. Nút
+  chỉnh sửa quay về đúng bước. Lệnh gửi duyệt dùng quy trình hiện có.
+- Kiểm qua web demo với HTTP fixture ở 320/390/1440 px và 8 ca Chromium về
+  gửi duyệt sau khi xử lý ảnh.
+
 # Tách xác nhận giao và nhận sách khi demo đấu giá — 19/11/2026
 
 - Nhánh `codex/auction-demo-receipt` từ `92a01c8c`. Driver ghi giao thành công

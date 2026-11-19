@@ -1,0 +1,866 @@
+.queue {
+  container: point-collection / inline-size;
+  --collection-gutter: clamp(1rem, 2.8cqw, 2rem);
+  --collection-action: 9.5rem;
+}
+
+.queue :global(.page-heading) {
+  margin: 0;
+  padding: clamp(1.25rem, 3.2cqw, 2rem) var(--collection-gutter);
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-line);
+  border-top: 3px solid var(--shop-wine);
+  border-radius: 14px 14px 0 0;
+}
+
+.queue :global(.page-heading h1) {
+  color: var(--shop-wine);
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.75rem, 3.8cqw, 2.35rem);
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin: 0 0 0.5rem;
+}
+
+.queue :global(.page-heading .intro) {
+  margin: 0;
+  max-width: 72ch;
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.queue :global(.queue-toolbar) {
+  padding: 0.65rem var(--collection-gutter);
+  background: var(--shop-shelf);
+  border: 1px solid var(--shop-line);
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.queue :global(.queue-toolbar > .button) {
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-line);
+  color: var(--shop-wine);
+  padding: 0.45rem 0.95rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.queue :global(.queue-toolbar > .button:hover:not(:disabled)) {
+  background: var(--shop-cream);
+  border-color: var(--shop-wine);
+}
+
+/* --------------------------------------------------------------------------
+   KPI SUMMARY CARDS RIBBON
+   -------------------------------------------------------------------------- */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 1rem 0 0.85rem;
+}
+
+.kpiCard {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.5rem;
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-line);
+  border-radius: 9px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+  color: var(--shop-ink);
+  position: relative;
+  overflow: hidden;
+  min-height: 48px;
+  min-width: 0;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--shop-wine) 40%, var(--shop-line));
+  box-shadow: 0 4px 12px rgba(40, 25, 20, 0.06);
+  background: color-mix(in srgb, var(--shop-cream) 25%, var(--shop-paper));
+}
+
+.kpiCard[data-active="true"] {
+  border-color: var(--shop-wine);
+  background: color-mix(in srgb, var(--shop-cream) 45%, var(--shop-paper));
+  box-shadow: 0 2px 8px rgba(92, 2, 2, 0.12);
+}
+
+.kpiCard[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3.5px;
+  background: var(--shop-wine);
+}
+
+.kpiIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+  flex-shrink: 0;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.kpiCard[data-active="true"] .kpiIcon {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+
+.kpiData {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kpiNumber {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--shop-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiTitle {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--shop-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   COMMAND BAR: FILTER TABS + SEARCH
+   -------------------------------------------------------------------------- */
+.controlBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.filterTabs {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+}
+
+.tabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.6rem;
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.tabBtn:hover {
+  background: var(--shop-shelf);
+  border-color: color-mix(in srgb, var(--shop-wine) 30%, var(--shop-line));
+}
+
+.tabBtn[data-active="true"] {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  border-color: var(--shop-wine);
+}
+
+.tabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.06rem 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--shop-ink) 8%, transparent);
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.tabBtn[data-active="true"] .tabCount {
+  background: rgba(255, 255, 255, 0.24);
+  color: var(--shop-cream);
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  padding: 0 0.65rem;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  width: 220px;
+  flex: 0 1 220px;
+  margin-left: auto;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.searchBox:focus-within {
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--shop-wine) 20%, transparent);
+}
+
+.searchIcon {
+  color: var(--shop-muted);
+  flex-shrink: 0;
+}
+
+.searchBox input:not([type="checkbox"]):not([type="radio"]),
+.searchBox input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  min-height: 36px !important;
+  padding: 0.45rem 0 !important;
+  color: var(--shop-ink) !important;
+  font: inherit !important;
+  font-size: 0.8125rem !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  outline: none !important;
+}
+
+.searchBox input:not([type="checkbox"]):not([type="radio"]):focus,
+.searchBox input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+.searchBox input:focus,
+.searchBox input:focus-visible {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+.searchBox input::-webkit-search-cancel-button,
+.searchBox input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.searchBox input::placeholder {
+  color: color-mix(in srgb, var(--shop-muted) 80%, transparent);
+}
+
+.clearSearchBtn {
+  border: 0;
+  background: transparent;
+  color: var(--shop-muted);
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.clearSearchBtn:hover {
+  color: var(--shop-wine);
+  background: var(--shop-shelf);
+}
+
+/* --------------------------------------------------------------------------
+   LIST HEADER & QUEUE CONTAINER
+   -------------------------------------------------------------------------- */
+.queue :global(.queue-list) {
+  margin: 0.5rem 0 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.queue :global(.queue-list:empty) {
+  display: none;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: color-mix(in srgb, var(--shop-shelf) 70%, var(--shop-paper));
+  border: 1px solid var(--shop-line);
+  border-radius: 10px;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.listHeaderTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--shop-ink);
+}
+
+.listHeaderAction {
+  color: var(--shop-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   QUEUE ROW CARD
+   -------------------------------------------------------------------------- */
+.queue :global(.queue-row) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--collection-action);
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.4rem;
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(40, 25, 20, 0.04);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  position: relative;
+}
+
+.queue :global(.queue-row:hover) {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--shop-wine) 35%, var(--shop-line));
+  box-shadow: 0 6px 18px rgba(40, 25, 20, 0.08);
+  background: #fffdf9;
+}
+
+.queue :global(.queue-row:has(> span:empty)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.queue :global(.queue-row > span:empty) {
+  display: none;
+}
+
+.queue :global(.queue-row > .row-action) {
+  justify-self: end;
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.15rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-decoration: none;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  border: 1px solid var(--shop-wine);
+  box-shadow: 0 2px 4px rgba(92, 2, 2, 0.15);
+  cursor: pointer;
+  transition: background 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.queue :global(.queue-row > .row-action:hover:not(:disabled)) {
+  background: var(--shop-wine-hover);
+  border-color: var(--shop-wine-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(92, 2, 2, 0.25);
+}
+
+.queue :global(.row-panel) {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0.4rem 0 0.2rem;
+  padding: clamp(0.9rem, 3cqw, 1.5rem);
+  background: var(--shop-cream);
+  border-radius: 10px;
+  border: 1px solid var(--shop-line);
+}
+
+/* --------------------------------------------------------------------------
+   FULFILLMENT DOSSIER CARD PRESENTATION
+   -------------------------------------------------------------------------- */
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* Tactile Book Cover */
+.bookCover {
+  width: 62px;
+  min-width: 62px;
+  height: 86px;
+  position: relative;
+  border-radius: 4px 7px 7px 4px;
+  box-shadow: 2px 3px 8px rgba(40, 25, 20, 0.12), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  background: linear-gradient(135deg, #f7efe1 0%, #ece0ce 100%);
+  border: 1px solid #dcd1c2;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.bookSpine {
+  width: 10px;
+  height: 100%;
+  background: linear-gradient(180deg, #164b56 0%, #0d2e35 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 1px 0 2px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.bookCoverBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0.25rem 0.2rem;
+}
+
+.bookRibbon {
+  width: 7px;
+  height: 15px;
+  background: var(--shop-wine);
+  position: absolute;
+  top: 0;
+  right: 8px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.bookCoverIcon {
+  color: var(--shop-wine);
+  opacity: 0.35;
+  margin-bottom: 2px;
+}
+
+.bookCoverInitial {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--shop-ink);
+  line-height: 1;
+}
+
+.bookCoverIndex {
+  font-size: 0.65rem;
+  font-weight: 750;
+  color: var(--shop-muted);
+  position: absolute;
+  bottom: 4px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+/* Dossier Content */
+.dossier {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.headerLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.bookTitle {
+  margin: 0;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: var(--shop-ink);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.refCode {
+  font-family: monospace;
+  font-size: 0.8125rem;
+  color: var(--shop-muted);
+  font-weight: 600;
+  background: var(--shop-shelf);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--shop-line) 60%, transparent);
+}
+
+.badgesGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Warehouse Shelf Tag */
+.shelfTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  background: linear-gradient(180deg, #fdfbf7 0%, #f4eddf 100%);
+  border: 1.5px solid #c9b7a4;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: var(--shop-ink);
+  letter-spacing: 0.03em;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.06);
+}
+
+.shelfTag svg {
+  color: var(--shop-wine);
+  flex-shrink: 0;
+}
+
+.shelfTagEmpty {
+  padding: 0.25rem 0.55rem;
+  background: var(--shop-shelf);
+  border: 1px dashed var(--shop-line);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+}
+
+/* Fulfillment Method Badges */
+.methodBadgeCarrier {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, #0284c7 12%, var(--shop-paper));
+  border: 1px solid color-mix(in srgb, #0284c7 30%, transparent);
+  color: #0369a1;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.methodBadgeSelf {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--shop-orange) 14%, var(--shop-paper));
+  border: 1px solid color-mix(in srgb, var(--shop-orange) 35%, transparent);
+  color: #9a3412;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+/* Status Badge */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.statusBadge[data-tone="ready"] {
+  background: color-mix(in srgb, var(--shop-wine) 10%, var(--shop-paper));
+  color: var(--shop-wine);
+  border: 1px solid color-mix(in srgb, var(--shop-wine) 25%, transparent);
+}
+
+.statusBadge[data-tone="attention"] {
+  background: color-mix(in srgb, #e65100 12%, var(--shop-paper));
+  color: #bf360c;
+  border: 1px solid color-mix(in srgb, #e65100 30%, transparent);
+}
+
+.statusBadge[data-tone="in-transit"] {
+  background: color-mix(in srgb, #0284c7 12%, var(--shop-paper));
+  color: #0369a1;
+  border: 1px solid color-mix(in srgb, #0284c7 30%, transparent);
+}
+
+.statusBadge[data-tone="completed"] {
+  background: color-mix(in srgb, #2e7d32 12%, var(--shop-paper));
+  color: #1b5e20;
+  border: 1px solid color-mix(in srgb, #2e7d32 30%, transparent);
+}
+
+.statusBadge[data-tone="neutral"] {
+  background: var(--shop-shelf);
+  color: var(--shop-muted);
+  border: 1px solid var(--shop-line);
+}
+
+/* --------------------------------------------------------------------------
+   RECIPIENT & SHIPPING DOSSIER
+   -------------------------------------------------------------------------- */
+.recipientCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--shop-shelf) 45%, var(--shop-paper));
+  border: 1px solid var(--shop-line);
+  border-radius: 9px;
+  border-left: 3px solid var(--shop-wine);
+}
+
+.recipientRow {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.recipientField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 750;
+  color: var(--shop-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fieldLabel svg {
+  color: var(--shop-wine);
+}
+
+.fieldValBold {
+  font-size: 0.9375rem;
+  font-weight: 750;
+  color: var(--shop-ink);
+}
+
+.fieldValPhone {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.fieldValMono {
+  font-family: monospace;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--shop-wine);
+  background: var(--shop-paper);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid var(--shop-line);
+}
+
+.fieldVal {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+}
+
+.recipientDivider {
+  width: 1px;
+  height: 24px;
+  background: var(--shop-line);
+}
+
+.addressRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed color-mix(in srgb, var(--shop-line) 80%, transparent);
+}
+
+.addressIcon {
+  color: var(--shop-control);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.addressText {
+  font-size: 0.84rem;
+  color: var(--shop-ink);
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+/* Meta List (Timestamps) */
+.metaList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.metaItem svg {
+  color: var(--shop-control);
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE & CONTAINER QUERIES
+   -------------------------------------------------------------------------- */
+@container point-collection (max-width: 36rem) {
+  .kpiGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .controlBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchBox {
+    max-width: 100%;
+    min-width: 100%;
+    margin-left: 0;
+  }
+}
+
+@container point-collection (max-width: 26rem) {
+  .listHeader {
+    display: none;
+  }
+
+  .queue :global(.queue-row) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .queue :global(.queue-row > .row-action) {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .recipientRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .recipientDivider {
+    display: none;
+  }
+}
+
+@container point-collection (max-width: 30rem) {
+  .card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bookCover {
+    width: 100%;
+    height: 52px;
+    flex-direction: row;
+  }
+
+  .bookSpine {
+    width: 12px;
+  }
+
+  .bookCoverBody {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding-left: 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .bookCoverInitial {
+    font-size: 1rem;
+  }
+
+  .bookCoverIndex {
+    position: static;
+    margin-left: auto;
+    padding-right: 0.5rem;
+  }
+
+  .bookRibbon {
+    right: 2.5rem;
+  }
+
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+}

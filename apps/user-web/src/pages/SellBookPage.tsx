@@ -2936,208 +2936,221 @@ export function SellBookPage() {
                         </div>
                       )}
                       {step === 5 && (
-                        <>
+                        <div className={styles.reviewSheet}>
                           <BundleManifest bundle={bundle} />
-                          <div className={styles.reviewHeading}>
-                            <h3>Thông tin đầu sách</h3>
-                            {reviewEdit(1)}
-                          </div>
-                          <dl className={styles.reviewFacts}>
-                            {[
-                              ["Tên sách", formData.title],
-                              ["Tác giả", formData.author],
-                              [
-                                "Danh mục",
-                                categoryFor(classification.categoryId)?.label ||
-                                  selectedBook?.category,
-                              ],
-                              [
-                                "Ngôn ngữ",
-                                languageOptions.find(
-                                  (option) => option.id === language,
-                                )?.label || language,
-                              ],
-                              ...(classification.series
-                                ? [["Bộ truyện", classification.series]]
-                                : []),
-                              ...(selectedBook ? [] : autofillFactRows(autofillFacts)),
-                              ...facetsFor(
-                                classification.categoryId,
-                                classification.attributes,
-                              ).flatMap((facet) => {
-                                const selected =
-                                  classification.attributes[facet.id] || [];
-                                return selected.length
-                                  ? [
-                                      [
-                                        facet.label,
-                                        selected
-                                          .map(
-                                            (id) =>
-                                              facet.options.find(
-                                                (option) => option.id === id,
-                                              )?.label || id,
-                                          )
-                                          .join(", "),
-                                      ],
-                                    ]
-                                  : [];
-                              }),
-                            ].map(([label, value]) => (
-                              <div key={label}>
-                                <dt>{label}</dt>
-                                <dd>{value || "Chưa nhập"}</dd>
-                              </div>
-                            ))}
-                          </dl>
-                          <div className={styles.reviewHeading}>
-                            <h3>Ảnh bản sách · {imageFiles.length}/8</h3>
-                            {reviewEdit(2)}
-                          </div>
-                          {formData.images.length > 0 ? (
-                            <div className={styles.reviewPhotos}>
-                              {formData.images.map((url, index) => (
-                                <img
-                                  key={url}
-                                  src={url}
-                                  alt={`Ảnh bản sách ${index + 1}${index === 0 && hasCoverPhoto ? ", ảnh bìa" : ""}`}
-                                />
+                          <section className={styles.reviewSection} aria-labelledby="sell-review-book">
+                            <div className={styles.reviewHeading}>
+                              <h3 id="sell-review-book">Thông tin đầu sách</h3>
+                              {reviewEdit(1)}
+                            </div>
+                            <dl className={styles.reviewFacts}>
+                              {[
+                                ["Tên sách", formData.title],
+                                ["Tác giả", formData.author],
+                                [
+                                  "Danh mục",
+                                  categoryFor(classification.categoryId)?.label ||
+                                    selectedBook?.category,
+                                ],
+                                [
+                                  "Ngôn ngữ",
+                                  languageOptions.find(
+                                    (option) => option.id === language,
+                                  )?.label || language,
+                                ],
+                                ...(classification.series
+                                  ? [["Bộ truyện", classification.series]]
+                                  : []),
+                                ...(selectedBook ? [] : autofillFactRows(autofillFacts)),
+                                ...facetsFor(
+                                  classification.categoryId,
+                                  classification.attributes,
+                                ).flatMap((facet) => {
+                                  const selected =
+                                    classification.attributes[facet.id] || [];
+                                  return selected.length
+                                    ? [
+                                        [
+                                          facet.label,
+                                          selected
+                                            .map(
+                                              (id) =>
+                                                facet.options.find(
+                                                  (option) => option.id === id,
+                                                )?.label || id,
+                                            )
+                                            .join(", "),
+                                        ],
+                                      ]
+                                    : [];
+                                }),
+                              ].map(([label, value]) => (
+                                <div key={label} className={label === "Tên sách" ? styles.reviewBookTitle : undefined}>
+                                  <dt>{label}</dt>
+                                  <dd>{value || "Chưa nhập"}</dd>
+                                </div>
                               ))}
+                            </dl>
+                          </section>
+                          <section className={styles.reviewSection} aria-labelledby="sell-review-photos">
+                            <div className={styles.reviewHeading}>
+                              <h3 id="sell-review-photos">Ảnh bản sách <span className={styles.reviewCount}>{imageFiles.length}/8</span></h3>
+                              {reviewEdit(2)}
                             </div>
-                          ) : (
-                            <p className={styles.help}>Chưa có ảnh bản sách.</p>
-                          )}
-                          <div className={styles.reviewHeading}>
-                            <h3>Tình trạng bản sách</h3>
-                            {reviewEdit(3)}
-                          </div>
-                          <dl className={styles.reviewFacts}>
-                            <div>
-                              <dt>Mức độ đã qua sử dụng</dt>
-                              <dd>
-                                {
-                                  conditions[
-                                    formData.condition as keyof typeof conditions
-                                  ]
-                                }
-                              </dd>
+                            {formData.images.length > 0 ? (
+                              <div className={styles.reviewPhotos}>
+                                {formData.images.map((url, index) => (
+                                  <figure key={url} className={styles.reviewPhotoItem}>
+                                    <img
+                                      src={url}
+                                      alt={`Ảnh bản sách ${index + 1}${index === 0 && hasCoverPhoto ? ", ảnh bìa" : ""}`}
+                                    />
+                                    {index === 0 && hasCoverPhoto && (
+                                      <figcaption className={styles.reviewCoverBadge}>Ảnh bìa</figcaption>
+                                    )}
+                                  </figure>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className={styles.help}>Chưa có ảnh bản sách.</p>
+                            )}
+                          </section>
+                          <section className={styles.reviewSection} aria-labelledby="sell-review-condition">
+                            <div className={styles.reviewHeading}>
+                              <h3 id="sell-review-condition">Tình trạng bản sách</h3>
+                              {reviewEdit(3)}
                             </div>
-                            {textFields.map(([key, label]) => (
-                              <div key={key}>
-                                <dt>{label}</dt>
-                                <dd>{formData[key] || "Chưa nhập"}</dd>
-                              </div>
-                            ))}
-                            {questions.map(([key, label]) => (
-                              <div key={key}>
-                                <dt>{label}</dt>
+                            <dl className={styles.reviewFacts}>
+                              <div>
+                                <dt>Mức độ đã qua sử dụng</dt>
                                 <dd>
-                                  {formData[key] === null
-                                    ? "Chưa trả lời"
-                                    : formData[key]
-                                      ? "Có"
-                                      : "Không"}
+                                  {
+                                    conditions[
+                                      formData.condition as keyof typeof conditions
+                                    ]
+                                  }
                                 </dd>
                               </div>
-                            ))}
-                          </dl>
-                          <div className={styles.reviewHeading}>
-                            <h3>{auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Bán hoặc đổi"}</h3>
-                            {reviewEdit(4)}
-                          </div>
-                          <dl className={styles.reviewFacts}>
-                            <div>
-                              <dt>Hình thức</dt>
-                              <dd>
-                                {auction
-                                  ? "Đấu giá qua điểm giao nhận"
-                                  : formData.mode === "Sale"
-                                  ? "Bán sách"
-                                  : formData.mode === "Exchange"
-                                    ? "Đổi sách"
-                                    : "Bán hoặc đổi"}
-                              </dd>
+                              {textFields.map(([key, label]) => (
+                                <div key={key} className={key === "description" ? styles.reviewFullWidth : undefined}>
+                                  <dt>{label}</dt>
+                                  <dd>{formData[key] || "Chưa nhập"}</dd>
+                                </div>
+                              ))}
+                              {questions.map(([key, label]) => (
+                                <div key={key}>
+                                  <dt>{label}</dt>
+                                  <dd>
+                                    {formData[key] === null
+                                      ? "Chưa trả lời"
+                                      : formData[key]
+                                        ? "Có"
+                                        : "Không"}
+                                  </dd>
+                                </div>
+                              ))}
+                            </dl>
+                          </section>
+                          <section className={styles.reviewSection} aria-labelledby="sell-review-trade">
+                            <div className={styles.reviewHeading}>
+                              <h3 id="sell-review-trade">{auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Bán hoặc đổi"}</h3>
+                              {reviewEdit(4)}
                             </div>
-                            {formData.mode !== "Exchange" && (
+                            <dl className={styles.reviewFacts}>
                               <div>
-                                <dt>{auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Giá bán"}</dt>
+                                <dt>Hình thức</dt>
                                 <dd>
-                                  {validPrice(formData.salePrice)
-                                    ? formatVnd(Number(formData.salePrice))
-                                    : "Chưa nhập giá hợp lệ"}
+                                  {auction
+                                    ? "Đấu giá qua điểm giao nhận"
+                                    : formData.mode === "Sale"
+                                    ? "Bán sách"
+                                    : formData.mode === "Exchange"
+                                      ? "Đổi sách"
+                                      : "Bán hoặc đổi"}
                                 </dd>
                               </div>
-                            )}
-                            {formData.mode !== "Sale" && (
-                              <div>
-                                <dt>Giá trị đổi</dt>
-                                <dd>
-                                  {validPrice(formData.exchangeValue)
-                                    ? formatVnd(Number(formData.exchangeValue))
-                                    : "Chưa nhập giá hợp lệ"}
-                                </dd>
-                              </div>
-                            )}
-                            {!auction && formData.mode !== "Sale" && (formData.targetCategory.trim() || formData.targetAuthor.trim() || formData.targetDescription.trim()) && (
-                              <div>
-                                <dt>Mong muốn đổi</dt>
-                                <dd>
-                                  {[
-                                    formData.targetCategory.trim() ? `Thể loại: ${formData.targetCategory.trim()}` : null,
-                                    formData.targetAuthor.trim() ? `Tác giả: ${formData.targetAuthor.trim()}` : null,
-                                    formData.targetDescription.trim() ? `Ghi chú: ${formData.targetDescription.trim()}` : null,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" · ")}
-                                </dd>
-                              </div>
-                            )}
+                              {formData.mode !== "Exchange" && (
+                                <div>
+                                  <dt>{auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Giá bán"}</dt>
+                                  <dd className={styles.reviewPrice}>
+                                    {validPrice(formData.salePrice)
+                                      ? formatVnd(Number(formData.salePrice))
+                                      : "Chưa nhập giá hợp lệ"}
+                                  </dd>
+                                </div>
+                              )}
+                              {formData.mode !== "Sale" && (
+                                <div>
+                                  <dt>Giá trị đổi</dt>
+                                  <dd className={styles.reviewPrice}>
+                                    {validPrice(formData.exchangeValue)
+                                      ? formatVnd(Number(formData.exchangeValue))
+                                      : "Chưa nhập giá hợp lệ"}
+                                  </dd>
+                                </div>
+                              )}
+                              {!auction && formData.mode !== "Sale" && (formData.targetCategory.trim() || formData.targetAuthor.trim() || formData.targetDescription.trim()) && (
+                                <div>
+                                  <dt>Mong muốn đổi</dt>
+                                  <dd>
+                                    {[
+                                      formData.targetCategory.trim() ? `Thể loại: ${formData.targetCategory.trim()}` : null,
+                                      formData.targetAuthor.trim() ? `Tác giả: ${formData.targetAuthor.trim()}` : null,
+                                      formData.targetDescription.trim() ? `Ghi chú: ${formData.targetDescription.trim()}` : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </dd>
+                                </div>
+                              )}
+                              {needsOrigin && (
+                                <div>
+                                  <dt>Nơi gửi sách</dt>
+                                  <dd>
+                                    {originAddressId
+                                      ? "Đã chọn một địa chỉ đã lưu"
+                                      : hasValidOriginAddress()
+                                        ? "Địa chỉ mới sẽ được lưu riêng tư"
+                                        : "Chưa chọn nơi gửi"}
+                                  </dd>
+                                </div>
+                              )}
+                            </dl>
                             {needsOrigin && (
-                              <div>
-                                <dt>Nơi gửi sách</dt>
-                                <dd>
-                                  {originAddressId
-                                    ? "Đã chọn một địa chỉ đã lưu"
-                                    : hasValidOriginAddress()
-                                      ? "Địa chỉ mới sẽ được lưu riêng tư"
-                                      : "Chưa chọn nơi gửi"}
-                                </dd>
-                              </div>
+                              <p className={styles.help}>
+                                Địa chỉ chi tiết và số điện thoại chỉ dùng cho
+                                giao nhận; người mua chỉ thấy khu vực luân chuyển.
+                              </p>
                             )}
-                          </dl>
-                          {needsOrigin && (
-                            <p className={styles.help}>
-                              Địa chỉ chi tiết và số điện thoại chỉ dùng cho
-                              giao nhận; người mua chỉ thấy khu vực luân chuyển.
+                          </section>
+                          <section className={styles.reviewConfirmation} aria-labelledby="sell-review-confirm">
+                            <h3 id="sell-review-confirm">Trước khi gửi duyệt</h3>
+                            <p>
+                              {auction
+                                ? "Bài đấu giá sẽ được kiểm duyệt. Khi bài được duyệt, bạn mang sách đến điểm giao nhận."
+                                : "Bài đăng sẽ xuất hiện trên kệ sau khi được duyệt."}
                             </p>
-                          )}
-                          <p className={styles.help}>
-                            {auction
-                              ? `${imageFiles.length} ảnh bản sách. Sách đấu giá được gửi kiểm duyệt; sau khi duyệt sách không lên kệ mua/đổi mà chờ bạn gửi tới điểm.`
-                              : `${imageFiles.length} ảnh bản sách. Bài đăng và thông tin sách được gửi kiểm duyệt trước khi xuất hiện trên kệ.`}
-                          </p>
-                          {!auction && formData.mode !== "Exchange" && (
-                            <p className={styles.help}>
-                              Người mua có thể Mua ngay theo giá bạn niêm yết.
-                              Khi thanh toán thành công, đơn được chốt và bạn
-                              cam kết bàn giao sách trong 48 giờ, không có bước
-                              duyệt lại. Chat thương lượng vẫn là luồng riêng.
-                            </p>
-                          )}
-                          <label className={styles.ownership}>
-                            <input
-                              id="ownership"
-                              type="checkbox"
-                              {...feedbackProps("ownership")}
-                              checked={ownershipDeclared}
-                              onChange={(event) =>
-                                setOwnershipDeclared(event.target.checked)
-                              }
-                            />
-                            {bundle ? 'Tôi sở hữu toàn bộ các cuốn trong bộ và không đăng bán chúng đồng thời ở tin khác.' : 'Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.'}
-                          </label>
-                          {fieldFeedback("ownership")}
-                        </>
+                            {!auction && formData.mode !== "Exchange" && (
+                              <p>
+                                Đơn Mua ngay được chốt theo giá niêm yết khi người mua thanh toán. Bạn có 48 giờ để bàn giao sách.
+                                Hai bên vẫn có thể thương lượng riêng qua chat.
+                              </p>
+                            )}
+                            <label className={styles.ownership}>
+                              <input
+                                id="ownership"
+                                type="checkbox"
+                                {...feedbackProps("ownership")}
+                                checked={ownershipDeclared}
+                                onChange={(event) =>
+                                  setOwnershipDeclared(event.target.checked)
+                                }
+                              />
+                              {bundle ? 'Tôi sở hữu toàn bộ các cuốn trong bộ và không đăng bán chúng đồng thời ở tin khác.' : 'Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.'}
+                            </label>
+                            {fieldFeedback("ownership")}
+                          </section>
+                        </div>
                       )}
                     </fieldset>
                     {coverCropBusy && (
@@ -3209,7 +3222,7 @@ export function SellBookPage() {
                         )}
                       </div>
                     )}
-                    {step === 1 || step === 4 ? (
+                    {step === 1 || step === 4 || step === 5 ? (
                       <details className={styles.postingLimit}>
                         <summary>
                           <span>Giới hạn đăng bài</span>
