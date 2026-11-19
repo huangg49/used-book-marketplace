@@ -56,7 +56,7 @@ export async function frontendUxJourney(page, evidence, chatPath) {
   // This is journey navigation, not resource cleanup. The caller closes the
   // browser on failure; retain the original failed UX assertion and screen.
   await page.setViewportSize({ width: 1366, height: 900 });
-  await page.getByRole("link", { name: /^Chat, / }).click();
+  await page.getByRole("link", { name: /^Giao dịch(?: của bạn|, \d+ cuộc trò chuyện đang hoạt động)$/ }).click();
   await page.locator(`a[href="${chatPath}"]`).first().click();
   await page.getByRole("button", { name: "Hủy đề nghị", exact: true }).waitFor();
   console.log("PASS frontend UX: exchange data/empty/error/retry; tabs Arrow/Home/End; 1440/768/390/320 and large text; mobile menu Escape/focus dismissal.");

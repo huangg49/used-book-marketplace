@@ -5,6 +5,11 @@
   và để trống tổng thanh toán khi chưa có báo giá.
 - Member web đọc lại trạng thái khi hai bên tua hạn kiểm tra gần đồng thời.
   Bước 5 đăng sách có bố cục kiểm tra, sửa từng phần và xác nhận quyền sở hữu.
+- PR #122 phục hồi nút thêm vào giỏ, tải giá mới trước khi mở Mua ngay và hiển thị
+  đúng trạng thái xác minh giao nhận. Migration `0085` đồng bộ validator đơn trực
+  tiếp cho DB đã chạy `0083`, giữ nguyên lịch sử migration. Đã kiểm nâng cấp trên
+  Mongo QA riêng và thử giỏ hàng trên Member Web/Expo Web. Chưa xác minh thiết bị
+  native hoặc áp dụng migration vào DB demo trong lượt rà soát này.
 
 # Bước kiểm tra khi đăng sách trên web demo — 19/11/2026
 

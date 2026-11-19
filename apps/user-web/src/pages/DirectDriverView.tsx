@@ -34,16 +34,16 @@ export function DirectDriverView({ code, onSearch }: { code: string; onSearch: (
       refresh={{ loading: order.isFetching, disabled: !ownerId || !validCode, run: () => void order.refetch() }}>
       {state.status === "loading" || (ownerId && validCode && order.isPending) ? <p role="status">Đang tải vận đơn…</p>
         : !ownerId ? <p>Đăng nhập tài khoản trong giao dịch để xem vận đơn.</p>
-          : parcel ? <DirectDriverParcel key={parcel.id} order={parcel} reload={() => order.refetch()} />
+          : parcel ? <DirectDriverParcel key={parcel.id} order={parcel} ownerId={ownerId} reload={() => order.refetch()} />
             : <p role="alert">Chưa tìm được mã này trong đơn mua. Hãy mở lại từ bước Giao nhận của đơn.</p>}
     </DriverWorkspace>
   );
 }
 
-function DirectDriverParcel({ order, reload }: { order: DirectOrder; reload: () => Promise<unknown> }) {
+function DirectDriverParcel({ order, ownerId, reload }: { order: DirectOrder; ownerId: string; reload: () => Promise<unknown> }) {
   const queryClient = useQueryClient();
   const command = useDirectDeliveryAction(order, async () => {
-    await Promise.all([reload(), queryClient.invalidateQueries({ queryKey: ["direct-order", order.id] })]);
+    await Promise.all([reload(), queryClient.invalidateQueries({ queryKey: ["direct-order", ownerId, order.id] })]);
   });
   const [confirm, setConfirm] = useState<DirectDeliveryAction>();
   const journey = order.deliveryJourney!;

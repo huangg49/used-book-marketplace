@@ -312,6 +312,7 @@ try {
         ...pickup,
         state: "Inspection",
         carrierReview: null,
+        deliveryJourney: undefined,
         deliveredAt: pickup.serverTime,
         inspectionDeadline: pickup.serverTime,
       },

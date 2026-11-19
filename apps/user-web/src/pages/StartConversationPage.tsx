@@ -35,6 +35,7 @@ export function StartConversationPage() {
     queryKey: ["public-listing", listingId],
     queryFn: () => getPublicListing(listingId),
     enabled: auth.status === "authenticated",
+    refetchOnMount: "always",
     retry: false,
   });
   const createIntent = useRef<{ key: string; version: number } | null>(null),
@@ -82,10 +83,27 @@ export function StartConversationPage() {
     request.current ??= open();
     return request.current;
   }
+  function showFailure(cause: unknown) {
+    request.current = null;
+    setBusy(false);
+    const terminal =
+      cause instanceof ApiError && [400, 403, 404, 409, 422].includes(cause.status);
+    if (terminal) {
+      createIntent.current = null;
+      modeIntent.current = null;
+      void book.refetch();
+    }
+    setError(
+      terminal
+        ? "Chưa mở được cuộc trao đổi. Sách hoặc quyền truy cập vừa thay đổi; kiểm tra lại rồi thử tiếp."
+        : "Chưa xác nhận được kết quả. Thử lại sẽ tiếp tục đúng yêu cầu vừa gửi.",
+    );
+  }
   useEffect(() => {
     if (
       !book.data ||
       auth.status !== "authenticated" ||
+      (!request.current && (book.isFetching || book.isError)) ||
       (started.current && !request.current)
     )
       return;
@@ -100,37 +118,21 @@ export function StartConversationPage() {
         if (!disposed && id)
           navigate(`/chat/${id}${roomSuffix}`, { replace: true });
       })
-      .catch((e) => {
-        if (disposed) return;
-        request.current = null;
-        setBusy(false);
-        const terminal =
-          e instanceof ApiError && [400, 403, 404, 409, 422].includes(e.status);
-        if (terminal) {
-          createIntent.current = null;
-          modeIntent.current = null;
-          void book.refetch();
-        }
-        setError(
-          terminal
-            ? "Chưa mở được cuộc trao đổi. Sách hoặc quyền truy cập vừa thay đổi; kiểm tra lại rồi thử tiếp."
-            : "Chưa xác nhận được kết quả. Thử lại sẽ tiếp tục đúng yêu cầu vừa gửi.",
-        );
+      .catch((cause: unknown) => {
+        if (!disposed) showFailure(cause);
       });
     return () => {
       disposed = true;
     };
     // One entry intent, including StrictMode effect replay. Manual retry resumes it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book.data, auth.status, navigate, roomSuffix]);
+  }, [book.data, book.isFetching, book.isError, auth.status, navigate, roomSuffix]);
   async function retry() {
     try {
       const id = await run();
       if (id) navigate(`/chat/${id}${roomSuffix}`, { replace: true });
-    } catch {
-      request.current = null;
-      setBusy(false);
-      setError("Chưa xác nhận được kết quả. Thử lại để tiếp tục cùng yêu cầu.");
+    } catch (cause) {
+      showFailure(cause);
     }
   }
   if (auth.status === "anonymous")
@@ -156,8 +158,11 @@ export function StartConversationPage() {
       {(error || book.isError) && (
         <button
           type="button"
-          disabled={busy}
-          onClick={() => (book.isError ? void book.refetch() : void retry())}
+          disabled={busy || (!createIntent.current && book.isFetching)}
+          onClick={() => {
+            if (book.isError && !createIntent.current) void book.refetch();
+            else void retry();
+          }}
         >
           Thử lại
         </button>

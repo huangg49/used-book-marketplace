@@ -255,7 +255,7 @@ export function BookDetailPage() {
                   {conversationToOpen ? (
                     <Link
                       className={styles.secondary}
-                      to={`${ROUTES.chat(conversationToOpen.id)}?openChat=1`}
+                      to={`${ROUTES.chat(conversationToOpen.id)}${buyerOrderConversation ? "" : "?openChat=1"}`}
                     >
                       <MessageCircle size={18} aria-hidden="true" />
                       {buyerOrderConversation

@@ -1,3 +1,4 @@
+import { directDeliveryGuidance } from "../lib/direct-delivery-guidance";
 import { TransactionDisclosure } from "../components/conversation/TransactionFrame";
 import { DirectDeliveryJourney } from "../components/DirectDeliveryJourney";
 import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinanceSummary";
@@ -243,9 +244,10 @@ export function NegotiationWorkspace({
 
   const queryClient = useQueryClient();
   const order = useQuery({
-    queryKey: ["direct-order", room.orderId],
+    queryKey: ["direct-order", userId, room.orderId],
     queryFn: () => getOrder(room.orderId!),
     enabled: !!room.orderId,
+    refetchOnMount: "always",
     refetchInterval: (query) => {
       const state = query.state.data?.state;
       return state === "AwaitingPayment" ||
@@ -708,6 +710,10 @@ export function NegotiationWorkspace({
     ? orderData.amounts.buyerTotal
     : effectiveBookPrice + shippingFee;
   const shippingAddress = orderData?.shippingAddress ?? orderData?.ownAddress;
+  const legacyDeliveryReview = orderData &&
+    (!orderData.deliveryJourney || (orderData.state === "ResolutionPending" && !orderData.deliveryJourney.issue))
+    ? directDeliveryGuidance(orderData)
+    : null;
 
   return (
     <div id={exchangeSheetId} tabIndex={-1} data-transaction-page
@@ -803,12 +809,13 @@ export function NegotiationWorkspace({
                             : "Người bán đang chuẩn bị sách"
                           : orderData.state === "InTransit"
                             ? "Đang vận chuyển sách"
-                            : orderData.state === "Inspection" ||
-                                orderData.state === "ResolutionPending"
-                              ? "Kiểm tra sách (72 giờ)"
-                              : orderData.state === "Completed"
-                                ? "Giao dịch hoàn tất"
-                                : "Đơn hàng đã kết thúc"}
+                            : orderData.state === "ResolutionPending"
+                              ? "Đang xử lý sự cố giao nhận"
+                              : orderData.state === "Inspection"
+                                ? "Kiểm tra sách (72 giờ)"
+                                : orderData.state === "Completed"
+                                  ? "Giao dịch hoàn tất"
+                                  : "Đơn hàng đã kết thúc"}
                   </strong>
                   <span
                     style={{
@@ -1073,24 +1080,17 @@ export function NegotiationWorkspace({
                     <ReceiptConfirmation order={orderData} onChanged={() => order.refetch()} />
                   )}
 
-                {/* BƯỚC 4: KIỂM TRA SÁCH 72H (Inspection) */}
-                {(!orderData.deliveryJourney || (orderData.state === "ResolutionPending" && !orderData.deliveryJourney.issue)) &&
-                  (orderData.state === "Inspection" || orderData.state === "ResolutionPending") && (
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <div className={styles.procedureNoticeInfo}>
-                      <ShieldCheck size={22} aria-hidden="true" />
-                      <div>
-                        <h4>Kiểm tra sách 72 giờ</h4>
-                        <p>
-                          Sách đã được giao tới bạn. Vui lòng kiểm tra sách trong vòng 72h. Nếu hài lòng, hãy bấm Xác nhận đã nhận để giải ngân tiền cho người bán.
-                        </p>
-                      </div>
+                {legacyDeliveryReview && (
+                  <div className={styles.procedureNoticeInfo}>
+                    <ShieldCheck size={22} aria-hidden="true" />
+                    <div>
+                      <h4>{legacyDeliveryReview.title}</h4>
+                      <p>{legacyDeliveryReview.message}</p>
+                      {legacyDeliveryReview.date && (
+                        <p>{legacyDeliveryReview.dateLabel}: {orderTime(legacyDeliveryReview.date)}</p>
+                      )}
+                      {legacyDeliveryReview.report && <p>{legacyDeliveryReview.report}</p>}
                     </div>
-
-                    <ReceiptConfirmation
-                      order={orderData}
-                      onChanged={() => order.refetch()}
-                    />
                   </div>
                 )}
 

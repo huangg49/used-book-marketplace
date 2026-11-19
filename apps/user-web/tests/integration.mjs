@@ -257,7 +257,7 @@ try {
   await button("Chat với người bán").click();
   await p.waitForURL("**/login?returnUrl=*");
   const returnPath = new URL(p.url()).searchParams.get("returnUrl");
-  assert.equal(returnPath, `/chat/start/${fixture.listings[0]}?intent=Negotiation`);
+  assert.equal(returnPath, `/chat/start/${fixture.listings[0]}?intent=Negotiation&openChat=1`);
   await p.getByLabel(/^Email/).fill("member@operations.test");
   await p.getByLabel(/^Mật khẩu/).fill(password);
   await button("Đăng nhập").click();
@@ -287,6 +287,7 @@ try {
     .click();
   await p.waitForURL(origin + "/sell");
   await step(/Kiểm tra/).click();
+  await p.getByText("Giới hạn đăng bài", { exact: true }).click();
   await p.getByText(/Đăng bài miễn phí/).waitFor();
   assert.equal(await p.getByText(/Phí gửi duyệt:/).count(), 0);
   assert.equal(
