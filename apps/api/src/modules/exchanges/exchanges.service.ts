@@ -1704,8 +1704,8 @@ export class ExchangesService {
           (isInitiator
             ? exchange.recipientCompletedAt
             : exchange.initiatorCompletedAt) != null;
-        // When both participants confirm inspection without dispute, mutual early settlement is authorized.
-        const willBeBothCompleted = bothAcknowledged && !hasExchangeDispute(exchange);
+        // Acknowledgement never waives either participant's inspection window.
+        const willBeBothCompleted = bothAcknowledged && inspectionMaySettle(exchange, now);
 
         if (willBeBothCompleted) {
           setFields.status = 'Completed';
@@ -1946,14 +1946,10 @@ export class ExchangesService {
             throw conflict();
           }
 
-          const isInitiator = actor._id === exchange.initiatorId;
-          const deadline = isInitiator
+          const deadline = actor._id === exchange.initiatorId
             ? inspectionDeadlines(exchange).initiator
             : inspectionDeadlines(exchange).recipient;
           if (deadline && now >= deadline) throw invalidState();
-          if (isInitiator ? exchange.initiatorCompletedAt : exchange.recipientCompletedAt) {
-            throw invalidState();
-          }
           const next = await tx.c.exchanges.findOneAndUpdate(
             { _id: exchange._id, revision: exchange.revision },
             {

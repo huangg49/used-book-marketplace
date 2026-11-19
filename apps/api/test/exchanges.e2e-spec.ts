@@ -908,7 +908,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect((await reconcile()).balanced).toBe(true);
   });
 
-  it('keeps the later receiver claim window open after the earlier receiver window ends', async () => {
+  it('keeps the later receiver claim window open after acknowledgement and the earlier deadline', async () => {
     const ex = await inTransitExchange();
     const first = (await post(`/exchanges/${ex.id}/receive`, { expectedVersion: ex.revision }, user1).expect(200)).body;
     const second = (await post(`/exchanges/${ex.id}/receive`, { expectedVersion: first.revision }, user2).expect(200)).body;
@@ -917,7 +917,9 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       initiatorReceivedAt: earlierReceipt,
       initiatorInspectionDeadline: new Date(earlierReceipt.getTime() + 72 * 3600000),
     } });
-    const body = { expectedVersion: second.revision, reason: 'QA: tình trạng cần đối chiếu trong hạn cá nhân.' };
+    const acknowledged = (await post(`/exchanges/${ex.id}/complete`, { expectedVersion: second.revision }, user2).expect(200)).body;
+    expect(acknowledged.status).toBe('Delivered');
+    const body = { expectedVersion: acknowledged.revision, reason: 'QA: tình trạng cần đối chiếu trong hạn cá nhân.' };
     await post(`/exchanges/${ex.id}/dispute`, body, user1).expect(409);
     await post(`/exchanges/${ex.id}/dispute`, body, user2).expect(200);
     await worker.tick(new Date(Date.parse(second.inspectionDeadline) + 1));

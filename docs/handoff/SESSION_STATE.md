@@ -1,3 +1,21 @@
+# Đồng bộ checkout demo và sửa luồng kiểm tra trao đổi — 19/11/2026
+
+- `main` local đã fast-forward tới `808db32b`, khớp `origin/main` với PR #118–#121.
+  Checkout demo dùng nhánh local `codex/main-sync-regressions` từ mốc đó. Hai tệp
+  untracked giữ nguyên. Bản router Expo local trước đồng bộ nằm ở stash `3badca2f`.
+- Bản `808db32b` giải ngân ngay sau xác nhận thứ hai và chặn báo sự cố sau xác
+  nhận. Ca Mongo QA tái hiện `Completed` trước hạn trong khi contract yêu cầu
+  `Delivered`. API, Member web và React Native đã khôi phục [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md).
+  Cả hai vẫn có đủ hạn cá nhân. Nút tua kiểm tra chỉ hiện trong demo local sau
+  hai xác nhận và với cặp tài khoản được cấu hình.
+- Ba script chẩn đoán Mongo báo số đếm tổng hợp, gồm phân nhóm đấu giá theo
+  `state`. Đã thử bằng DB QA.
+- PASS 65 ca E2E trao đổi, gồm báo sự cố sau xác nhận, tranh chấp cạnh tranh
+  worker và tua hạn demo. PASS 5 ca HTTP đấu giá chọn lọc. Chromium kiểm Member
+  web ở 390/1440 px, Driver và 8 ca đọc Staff/Admin bằng fixture. Unit, lint,
+  typecheck của API, Member web, Admin web và RN qua. Build API và hai web qua.
+  Contract khớp 292 operations/41 controllers. Chưa kiểm trên thiết bị native.
+
 # Admin mở phiên chờ ngay dù chưa đủ người đăng ký — 18/11/2026
 
 - Nhánh local `fix-auction`. Lệnh `POST /operations/auctions/{id}/start` bỏ điều kiện
