@@ -98,7 +98,7 @@ function useDeadlineExpired(deadline: string | undefined) {
   const at = deadline ? Date.parse(deadline) : NaN;
   const expired = useCallback(() => at <= Date.now(), [at]);
   const subscribe = useCallback((notify: () => void) => {
-    if (!Number.isFinite(at)) return () => {};
+    if (!Number.isFinite(at)) return () => { };
     let timer: number | undefined;
     const schedule = () => {
       window.clearTimeout(timer);
@@ -142,10 +142,10 @@ export function ActionCard(props: Props) {
   const inspecting = detail.status === "INSPECTING";
   const deadline =
     detail.status === "PENDING" ? detail.proposalExpiresAt :
-    detail.status === "FUNDING" ? detail.fundingDeadline :
-    detail.status === "WAITING_YOU_SEND" ? detail.shippingDeadline :
-    inspecting ? detail.inspectionDeadline :
-    undefined;
+      detail.status === "FUNDING" ? detail.fundingDeadline :
+        detail.status === "WAITING_YOU_SEND" ? detail.shippingDeadline :
+          inspecting ? detail.inspectionDeadline :
+            undefined;
   const expired = useDeadlineExpired(deadline);
   const inspectionExpired = useDeadlineExpired(
     inspecting || detail.status === "DELIVERING" || detail.status === "WAITING_YOU_CONFIRM"
@@ -277,7 +277,7 @@ export function ActionCard(props: Props) {
   } else if (detail.status === "COMPLETED") {
     instructions =
       detail.resolutionDecision === "CompleteExchange" &&
-      detail.resolutionReason
+        detail.resolutionReason
         ? `Trao đổi đã hoàn tất theo phán quyết của người phụ trách: "${detail.resolutionReason}". Khoản cọc bảo chứng và tiền bù đã được tất toán.`
         : "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
   } else if (detail.status === "RESOLUTION_PENDING") {
@@ -291,18 +291,18 @@ export function ActionCard(props: Props) {
       detail.returnResolution?.outcome
         ? "Hồ sơ trả sách đã xử lý xong. Xem từng khoản đã ghi vào ví bên dưới."
         : detail.cancelReason === "DisputeResolvedRefund" && detail.resolutionReason
-        ? `Giao dịch đã hủy theo phán quyết của người phụ trách: "${detail.resolutionReason}". Toàn bộ tiền cọc và tiền bù đã được hoàn lại 100% về ví của bạn.`
-        : detail.cancelReason === "MutualAgreement"
-          ? "Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ 100% tiền cọc và tiền bù đã được hoàn lại về ví của hai bên và sách đã được mở lại trên kệ."
-          : detail.cancelReason === "ShippingExpired"
-            ? "Phiếu đã hủy do hết hạn và chưa có kiện nào được bàn giao. Tiền đã về ví và sách được mở lại."
-          : detail.status === "REJECTED"
-            ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
-            : detail.status === "EXPIRED"
-              ? "Đề nghị hoặc thời hạn đặt cọc đã hết."
-              : detail.cancelReason === "ListingUnavailable"
-                ? "Thỏa thuận không còn hợp lệ hoặc thiếu bản chụp sách gốc. Chưa giữ sách hay thu tiền từ đề xuất này. Hãy tạo đề xuất mới từ sách đủ điều kiện."
-                : "Đề nghị đã bị hủy.";
+          ? `Giao dịch đã hủy theo phán quyết của người phụ trách: "${detail.resolutionReason}". Toàn bộ tiền cọc và tiền bù đã được hoàn lại 100% về ví của bạn.`
+          : detail.cancelReason === "MutualAgreement"
+            ? "Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ 100% tiền cọc và tiền bù đã được hoàn lại về ví của hai bên và sách đã được mở lại trên kệ."
+            : detail.cancelReason === "ShippingExpired"
+              ? "Phiếu đã hủy do hết hạn và chưa có kiện nào được bàn giao. Tiền đã về ví và sách được mở lại."
+              : detail.status === "REJECTED"
+                ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
+                : detail.status === "EXPIRED"
+                  ? "Đề nghị hoặc thời hạn đặt cọc đã hết."
+                  : detail.cancelReason === "ListingUnavailable"
+                    ? "Thỏa thuận không còn hợp lệ hoặc thiếu bản chụp sách gốc. Chưa giữ sách hay thu tiền từ đề xuất này. Hãy tạo đề xuất mới từ sách đủ điều kiện."
+                    : "Đề nghị đã bị hủy.";
   }
 
   const open = async (next: Action) => {
@@ -337,9 +337,9 @@ export function ActionCard(props: Props) {
   const pickupCount = Number(Boolean(detail.viewerShipping.sentAt)) + Number(Boolean(detail.partnerShipping.sentAt));
   const demoEffect = detail.demoDeadline === "Proposal" ? "Phiếu sẽ hết hạn phản hồi."
     : detail.demoDeadline === "Funding" ? "Phiếu sẽ hủy và hoàn khoản đã nộp."
-    : detail.demoDeadline === "Shipping" && pickupCount === 0 ? "Phiếu sẽ hủy và hoàn các khoản đã nộp."
-    : detail.demoDeadline === "Inspection" ? "Demo sẽ tua qua hạn kiểm tra của cả hai bên, hoàn tất phiếu, hoàn cọc và chuyển tiền bù theo thỏa thuận."
-    : "Phiếu sẽ chuyển sang xử lý sự cố. Tiền và sách tiếp tục được giữ.";
+      : detail.demoDeadline === "Shipping" && pickupCount === 0 ? "Phiếu sẽ hủy và hoàn các khoản đã nộp."
+        : detail.demoDeadline === "Inspection" ? "Demo sẽ tua qua hạn kiểm tra của cả hai bên, hoàn tất phiếu, hoàn cọc và chuyển tiền bù theo thỏa thuận."
+          : "Phiếu sẽ chuyển sang xử lý sự cố. Tiền và sách tiếp tục được giữ.";
 
   async function handleCounterSubmit(data: CounterOfferData, revision = detail.revision!) {
     if (!props.onCounter) return;
@@ -539,8 +539,8 @@ export function ActionCard(props: Props) {
           <p className={styles.fundingStatus} role="status">
             {expired ? "Hệ thống đang cập nhật phiếu."
               : detail.viewerFundedAt ? "Chờ đối tác đặt cọc."
-              : detail.partnerFundedAt ? "Đối tác đã đặt cọc."
-              : "Cả hai cần đặt cọc trước khi gửi sách."}
+                : detail.partnerFundedAt ? "Đối tác đã đặt cọc."
+                  : "Cả hai cần đặt cọc trước khi gửi sách."}
           </p>
         </>
       )}
@@ -603,22 +603,22 @@ export function ActionCard(props: Props) {
       )}
       {(!inspecting && !props.handover && (detail.viewerInspectionDeadline || detail.partnerInspectionDeadline)) && <details className={styles.inspectionDetails}>
         <summary>Hạn kiểm tra của từng bên</summary>
-      {detail.viewerInspectionDeadline && (
-        <p className={styles.deadlineRow}>
-          Hạn kiểm tra sách của bạn:{" "}
-          <time dateTime={detail.viewerInspectionDeadline}>
-            {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
-          </time>
-        </p>
-      )}
-      {detail.partnerInspectionDeadline && (
-        <p className={styles.deadlineRow}>
-          Hạn kiểm tra của đối tác:{" "}
-          <time dateTime={detail.partnerInspectionDeadline}>
-            {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
-          </time>
-        </p>
-      )}
+        {detail.viewerInspectionDeadline && (
+          <p className={styles.deadlineRow}>
+            Hạn kiểm tra sách của bạn:{" "}
+            <time dateTime={detail.viewerInspectionDeadline}>
+              {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
+            </time>
+          </p>
+        )}
+        {detail.partnerInspectionDeadline && (
+          <p className={styles.deadlineRow}>
+            Hạn kiểm tra của đối tác:{" "}
+            <time dateTime={detail.partnerInspectionDeadline}>
+              {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
+            </time>
+          </p>
+        )}
       </details>}
       {inspecting && (
         <ExchangeInspection detail={detail} expired={inspectionExpired} awaitingResult={expired}>
@@ -676,7 +676,7 @@ export function ActionCard(props: Props) {
               detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
             let label = next === "fund" && props.standaloneSheet ? fundLabel
               : next === "cancel" && detail.status === "FUNDING" ? "Hủy trao đổi"
-              : next === "dispute" && props.handover ? "Báo sự cố" : labels[next];
+                : next === "dispute" && props.handover ? "Báo sự cố" : labels[next];
             if (detail.status === "WAITING_YOU_SEND") {
               if (next === "cancel") {
                 label =
@@ -769,31 +769,31 @@ export function ActionCard(props: Props) {
           action === "cancel" && detail.status === "FUNDING"
             ? "Hủy trao đổi"
             : action === "cancel" && detail.status === "WAITING_YOU_SEND"
-            ? detail.cancellationRequestedBy
-              ? "Xác nhận đồng ý hủy"
-              : "Đề nghị hủy giao dịch"
-            : action === "reject" && detail.status === "WAITING_YOU_SEND"
-              ? "Từ chối yêu cầu hủy"
-              : action === "advanceDemoShipping" ? demoLabel : action
-                ? labels[action]
-                : ""
+              ? detail.cancellationRequestedBy
+                ? "Xác nhận đồng ý hủy"
+                : "Đề nghị hủy giao dịch"
+              : action === "reject" && detail.status === "WAITING_YOU_SEND"
+                ? "Từ chối yêu cầu hủy"
+                : action === "advanceDemoShipping" ? demoLabel : action
+                  ? labels[action]
+                  : ""
         }
         confirmText={
           action === "dispute"
             ? "Gửi biên bản khiếu nại"
             : action === "complete"
-              ? "Xác nhận nghiệm thu & Tất toán"
+              ? "Xác nhận nghiệm thu"
               : action === "cancel" &&
-                  detail.status === "WAITING_YOU_SEND" &&
-                  detail.cancellationRequestedBy
+                detail.status === "WAITING_YOU_SEND" &&
+                detail.cancellationRequestedBy
                 ? "Đồng ý hủy"
                 : action === "cancel" && detail.status === "FUNDING"
                   ? "Hủy trao đổi"
-                : action === "reject" && detail.status === "WAITING_YOU_SEND"
-                  ? "Từ chối hủy"
-                  : action === "advanceDemoShipping" ? "Xác nhận tua hạn" : action
-                    ? labels[action]
-                    : "Xác nhận"
+                  : action === "reject" && detail.status === "WAITING_YOU_SEND"
+                    ? "Từ chối hủy"
+                    : action === "advanceDemoShipping" ? "Xác nhận tua hạn" : action
+                      ? labels[action]
+                      : "Xác nhận"
         }
         isBusy={busy}
         isDanger={
@@ -828,16 +828,16 @@ export function ActionCard(props: Props) {
                 : action === "retry"
                   ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
                   : action === "complete"
-                    ? "Bạn có chắc chắn đã kiểm tra sách kỹ lưỡng và hài lòng? Sau khi xác nhận nghiệm thu, bạn sẽ từ bỏ quyền khiếu nại hay báo sự cố. Khi đối tác cũng xác nhận nghiệm thu, toàn bộ tiền cọc và tiền bù sẽ được hoàn tất và chuyển về ví của cả hai bên ngay lập tức."
+                    ? "Bạn vẫn có thể báo sự cố đến hết hạn của mình. Tiền cọc tiếp tục được giữ đến khi cả hai hết hạn kiểm tra và giao dịch không có khiếu nại."
                     : action === "cancel" && detail.status === "FUNDING"
                       ? "Sách sẽ được mở lại. Khoản đã nộp sẽ được hoàn về ví của người đã nộp."
                     : action === "cancel" &&
-                        detail.status === "WAITING_YOU_SEND"
+                      detail.status === "WAITING_YOU_SEND"
                       ? detail.cancellationRequestedBy
                         ? "Đối tác đã đề nghị hủy giao dịch này trước khi gửi sách. Bằng việc đồng ý, giao dịch sẽ hủy an toàn và toàn bộ 100% tiền cọc cùng tiền bù của cả hai bên sẽ được hoàn trả về ví mô phỏng. Sách sẽ được mở lại trên kệ."
                         : "Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Hệ thống sẽ gửi thông báo đến đối tác. Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% tiền cọc cho cả hai bên."
                       : action === "reject" &&
-                          detail.status === "WAITING_YOU_SEND"
+                        detail.status === "WAITING_YOU_SEND"
                         ? "Bạn có chắc muốn từ chối yêu cầu hủy của đối tác để tiếp tục giao dịch? Hãy nhập lý do để đối tác yên tâm chuẩn bị và gửi sách đúng hạn."
                         : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
           </p>

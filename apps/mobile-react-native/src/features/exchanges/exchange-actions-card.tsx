@@ -439,7 +439,7 @@ function ExchangeActionsContent({
     exchange.diffAmount === 0 || !exchange.diffPayerId
       ? "Đổi ngang giá (không bù tiền)"
       : (isInitiator && exchange.diffPayerId === exchange.initiatorId) ||
-          (!isInitiator && exchange.diffPayerId === exchange.recipientId)
+        (!isInitiator && exchange.diffPayerId === exchange.recipientId)
         ? `Bạn bù thêm ${exchange.diffAmount.toLocaleString("vi-VN")} ₫`
         : `Đối tác bù thêm ${exchange.diffAmount.toLocaleString("vi-VN")} ₫`;
 
@@ -926,7 +926,7 @@ function ExchangeActionsContent({
                   <Icon
                     name={
                       exchange.cancellationRequestedBy ===
-                      (isInitiator ? "Initiator" : "Recipient")
+                        (isInitiator ? "Initiator" : "Recipient")
                         ? "clock"
                         : "info"
                     }
@@ -935,7 +935,7 @@ function ExchangeActionsContent({
                   />
                   <AppText style={styles.proposalNoticeText}>
                     {exchange.cancellationRequestedBy ===
-                    (isInitiator ? "Initiator" : "Recipient")
+                      (isInitiator ? "Initiator" : "Recipient")
                       ? "Bạn đã gửi yêu cầu hủy giao dịch trước khi gửi sách. Đang chờ đối tác xác nhận. Nếu đối tác đồng thuận, 100% tiền cọc và tiền bù sẽ được hoàn lại về ví của cả hai bên."
                       : "Đối tác đã đề nghị hủy giao dịch trao đổi này trước khi gửi sách. Nếu bạn đồng ý hủy, 100% tiền cọc bảo chứng và tiền bù sẽ được hoàn trả về ví. Nếu muốn tiếp tục, bạn có thể bấm Từ chối yêu cầu hủy hoặc tiếp tục gửi sách."}
                   </AppText>
@@ -982,7 +982,7 @@ function ExchangeActionsContent({
                   )}
                   {!isPartnerShipped &&
                     exchange.cancellationRequestedBy ===
-                      (isInitiator ? "Recipient" : "Initiator") && (
+                    (isInitiator ? "Recipient" : "Initiator") && (
                       <>
                         <Button
                           title="🤝 Đồng ý hủy (Hoàn cọc 100%)"
@@ -1087,19 +1087,18 @@ function ExchangeActionsContent({
                     color={stitchTokens.likeNewGreen}
                   />
                   <AppText style={styles.successNoteText}>
-                    Bạn đã xác nhận nghiệm thu sách. Đang chờ đối tác kiểm tra và
-                    xác nhận để tiền cọc tự động hoàn về ví của cả hai bên.
+                    Bạn đã xác nhận kiểm tra sách. Cọc vẫn được giữ đến khi cả
+                    hai hạn kiểm tra kết thúc và không có tranh chấp.
                   </AppText>
                 </View>
               ) : (
                 <View style={styles.buttonGroup}>
                   <AppText style={styles.hintText}>
-                    Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận sách. Khi cả hai
-                    bên cùng xác nhận nghiệm thu, toàn bộ tiền cọc và tiền bù sẽ
-                    được hoàn tất về ví ngay lập tức.
+                    Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận sách. Xác nhận
+                    đã kiểm tra không tất toán hoặc hoàn cọc sớm.
                   </AppText>
                   <Button
-                    title="Xác nhận nghiệm thu sách"
+                    title="Xác nhận đã kiểm tra"
                     wine
                     busy={isBusy}
                     onPress={() => setConfirmCompleteOpen(true)}
@@ -1115,6 +1114,18 @@ function ExchangeActionsContent({
                     }}
                   />
                 </View>
+              )}
+              {isCompletedByMe && (
+                <Button
+                  title="Báo cáo khiếu nại sách"
+                  secondary
+                  wine
+                  busy={isBusy}
+                  onPress={() => {
+                    setDisputeError(null);
+                    setDisputeModalOpen(true);
+                  }}
+                />
               )}
             </View>
           )}
@@ -1253,11 +1264,11 @@ function ExchangeActionsContent({
                     );
                   const cleanReason = exchange.resolutionReason
                     ? exchange.resolutionReason
-                        .replace(
-                          /^\[(CompensateInitiator|CompensateRecipient)\]\s*/,
-                          "",
-                        )
-                        .trim()
+                      .replace(
+                        /^\[(CompensateInitiator|CompensateRecipient)\]\s*/,
+                        "",
+                      )
+                      .trim()
                     : null;
 
                   const decisionTitle = isCompInit
@@ -1383,7 +1394,7 @@ function ExchangeActionsContent({
         }
         confirmLabel={
           exchange.status === "Preparing" &&
-          exchange.cancellationRequestedBy ===
+            exchange.cancellationRequestedBy ===
             (isInitiator ? "Recipient" : "Initiator")
             ? "Đồng ý hủy"
             : "Xác nhận hủy"
@@ -1424,9 +1435,9 @@ function ExchangeActionsContent({
 
       <ConfirmDialog
         visible={confirmCompleteOpen}
-        title="Xác nhận nghiệm thu & Tất toán?"
-        message="Bạn có chắc chắn đã kiểm tra sách kỹ lưỡng và hài lòng? Sau khi xác nhận, bạn sẽ từ bỏ quyền khiếu nại hay báo sự cố. Khi đối tác cũng xác nhận nghiệm thu, toàn bộ tiền cọc và tiền bù sẽ được hoàn tất và chuyển về ví của cả hai bên ngay lập tức."
-        confirmLabel="Xác nhận nghiệm thu"
+        title="Xác nhận đã kiểm tra sách?"
+        message="Xác nhận bạn đã kiểm tra sách. Cọc vẫn được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
+        confirmLabel="Xác nhận đã kiểm tra"
         onCancel={() => setConfirmCompleteOpen(false)}
         onConfirm={() => {
           setConfirmCompleteOpen(false);
@@ -1799,9 +1810,9 @@ function ExchangeActionsContent({
                       {(areasQuery.data?.localities?.length
                         ? areasQuery.data.localities
                         : [
-                            { code: "DEMO-A", label: "Quận 1, 3, 5, 10" },
-                            { code: "DEMO-B", label: "Bình Thạnh, Phú Nhuận" },
-                          ]
+                          { code: "DEMO-A", label: "Quận 1, 3, 5, 10" },
+                          { code: "DEMO-B", label: "Bình Thạnh, Phú Nhuận" },
+                        ]
                       ).map((loc) => {
                         const isLocSelected =
                           (newLocalityCode ||
@@ -1907,8 +1918,8 @@ function ExchangeActionsContent({
                 currentIds={
                   isInitiator
                     ? (exchange.initiatorListingIds ?? [
-                        exchange.initiatorListingId!,
-                      ])
+                      exchange.initiatorListingId!,
+                    ])
                     : [exchange.recipientListingId]
                 }
                 partnerValue={
@@ -2037,7 +2048,7 @@ function ExchangeActionsContent({
                           style={[
                             styles.presetChip,
                             shipCarrierCode === c.code &&
-                              styles.presetChipActive,
+                            styles.presetChipActive,
                           ]}
                           onPress={() => {
                             setShipCarrierCode(c.code);
@@ -2048,7 +2059,7 @@ function ExchangeActionsContent({
                             style={[
                               styles.presetChipText,
                               shipCarrierCode === c.code &&
-                                styles.presetChipTextActive,
+                              styles.presetChipTextActive,
                             ]}
                           >
                             {c.name}
@@ -2310,8 +2321,8 @@ function ExchangeActionsContent({
                   {packagingPhoto ? (
                     <View style={{ gap: 6 }}>
                       {packagingPhoto.startsWith("http") ||
-                      packagingPhoto.startsWith("file:") ||
-                      packagingPhoto.startsWith("data:") ? (
+                        packagingPhoto.startsWith("file:") ||
+                        packagingPhoto.startsWith("data:") ? (
                         <Image
                           source={{ uri: packagingPhoto }}
                           style={{

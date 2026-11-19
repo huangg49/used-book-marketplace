@@ -194,7 +194,43 @@ const USERS = [
   },
 ];
 
-async function generateCover(title: string, author: string, color: string): Promise<Buffer> {
+export const BOOK_COVERS: Record<string, string> = {
+  'Hoàng Tử Bé': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/57/58/f7/1256dcaf0f6cfe797ea923f21896305b.jpg',
+  'Cây Cam Ngọt Của Tôi': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/5e/18/24/2a6154ba08df6ce6161c13f4303fa19e.jpg',
+  'Mắt Biếc': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/10/d1/35/b2098bf8884bb8a5fbcd42a978a6b601.jpg',
+  'Nhà Giả Kim': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
+  'Số Đỏ': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/6a/14/f8/efe8171950a0fbe2c5a1b5f4d6ff8744.jpg',
+  'Tôi Thấy Hoa Vàng Trên Cỏ Xanh': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/d5/56/6b/506b4f5baeed19a459dce7cea095787e.jpg',
+  'Chiến Binh Cầu Vồng': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/70/63/3d/c57040b46e074d49d9e2af573ecefd4e.jpg',
+  'Đắc Nhân Tâm': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/db/09/a5/4892e37b77ddf3b9883e489a2151e7bf.jpg',
+  'Không Gia Đình': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/18/0f/10/d88b72c75541b04821713543e340d055.jpg',
+  'Gia Đình Trộm Cắp': 'https://salt.tikicdn.com/cache/750x750/ts/product/18/f8/9a/9d6ea11214401bc136b684ce8e12cfa4.jpg',
+  'Dế Mèn Phiêu Lưu Ký': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/47/54/8e/30bac752bcca2beb34a3522990805aa1.jpg',
+  'Tuổi Trẻ Đáng Giá Bao Nhiêu': 'https://salt.tikicdn.com/cache/750x750/ts/product/56/ce/23/64b2eaa5b859d8ba1412f1b350c3e128.jpg',
+  'Hành Trình Về Phương Đông': 'https://salt.tikicdn.com/cache/750x750/media/catalog/product/product/da/23/c2/ed5eff6b06b244b942184c88d6d65b20.jpg',
+  'Tư Duy Nhanh Và Chậm': 'https://salt.tikicdn.com/cache/750x750/ts/product/d2/5a/00/479b787ba33d3933c0619ea2441e2a7d.png',
+  'Biên Niên Ký Chim Vặn Dây Cót': 'https://salt.tikicdn.com/cache/750x750/ts/product/70/d5/57/86a39f54565770a8a98fba90769633fc.jpg'
+};
+
+async function generateCover(title: string, author: string, color: string, coverUrl?: string): Promise<Buffer> {
+  const targetUrl = coverUrl || BOOK_COVERS[title];
+  if (targetUrl) {
+    try {
+      const res = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer());
+        return await sharp(buf).resize(600, 800, { fit: 'cover' }).webp({ quality: 85 }).toBuffer();
+      }
+    } catch (e) {
+      console.warn(`! Không tải được ảnh online cho "${title}", fallback SVG:`, (e as Error).message);
+    }
+  }
+
   const svg = `<svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
     <rect width="100%" height="100%" fill="${color}"/>
     <rect x="25" y="25" width="550" height="750" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-opacity="0.4"/>
@@ -281,7 +317,18 @@ async function run() {
           trade: 'Available',
         });
         if (existingListing) {
-          console.log(`  * Đã có sách: "${bookDef.title}"`);
+          console.log(`  * Đã có sách: "${bookDef.title}" - Đang cập nhật ảnh bìa thực tế...`);
+          const media = await c.listing_media.findOne({ listingId: existingListing._id });
+          if (media && media.derivativeKey) {
+            const coverBytes = await generateCover(bookDef.title, bookDef.authors[0], bookDef.color);
+            await storage.remove([media.derivativeKey]).catch(() => null);
+            await storage.put(media.derivativeKey, coverBytes, 'image/webp');
+            await c.listing_media.updateOne(
+              { _id: media._id },
+              { $set: { byteSize: coverBytes.length, sha256: digest(coverBytes), mimeType: 'image/webp' } }
+            );
+            console.log(`    -> Đã cập nhật ảnh bìa thực tế cho "${bookDef.title}"`);
+          }
           continue;
         }
       }

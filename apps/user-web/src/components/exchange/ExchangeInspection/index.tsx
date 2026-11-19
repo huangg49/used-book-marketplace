@@ -56,7 +56,7 @@ export function ExchangeInspection({ detail, expired, awaitingResult, children }
           <p className={styles.note}>
             {checked && !detail.partnerCompletedAt
               ? "Đang chờ đối tác kiểm tra và xác nhận. Khi cả hai cùng xác nhận nghiệm thu, cọc và tiền bù sẽ được hoàn tất về ví ngay."
-              : "Mỗi bên có 72 giờ từ lúc nhận sách. Khi cả hai cùng xác nhận nghiệm thu, cọc và tiền bù sẽ được hoàn tất về ví ngay lập tức."}
+              : "Mỗi bên có 72 giờ từ lúc nhận sách. Cọc được giữ đến khi cả hai hết hạn và giao dịch không có khiếu nại."}
           </p>
           {(receivedAt || detail.partnerInspectionDeadline) && (
             <details className={styles.times}>
