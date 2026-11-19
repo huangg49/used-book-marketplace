@@ -1,3 +1,4 @@
+import { createDirectOrderValidatorReconciliationMigration } from './0085-direct-order-validator-reconciliation.js';
 import { createMessageSendLimitsMigration, withMessageSendLimits } from './0062-message-send-limits.js';
 import { createBuyNowModeMigration, withBuyNowMode } from './0063-auction-buy-now-mode.js';
 import { createAuctionTypesMigration, withAuctionTypes } from './0065-auction-types.js';
@@ -688,9 +689,12 @@ const demoPointOrderSettlementMigration = createDemoPointOrderSettlementMigratio
 );
 migrations.push(demoPointOrderSettlementMigration);
 migrations.push(restorePlatformCommissionMigration);
-migrations.push(createDirectOrderDeliveryJourneyMigration([
+const directOrderDeliveryJourneyMigration = createDirectOrderDeliveryJourneyMigration([
   ...baselineCollections.filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape).map(withLocalDemoCompletion),
   ...conversationAgreementSpecs.filter((spec) => spec.name === 'conversation_terms'),
-]));
-migrations.push(directOrderIssueEvidenceMigration);
+]);
+migrations.push(directOrderDeliveryJourneyMigration, directOrderIssueEvidenceMigration);
+migrations.push(createDirectOrderValidatorReconciliationMigration(
+  directOrderDeliveryJourneyMigration.definition.collections.find(spec => spec.name === 'direct_orders')!,
+));

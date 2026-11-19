@@ -14,6 +14,7 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     '0078-exchange-outbound-delivery-verification',
     '0079-exchange-demo-archive',
     '0080-exchange-inspection-verdict',
+    '0085-direct-order-validator-reconciliation',
   );
   const client = await new MongoClient(testUrl(`local_demo_upgrade_${randomUUID().replaceAll('-', '')}_test`)).connect();
   const db = client.db();
