@@ -1,3 +1,4 @@
+import { directDeliveryGuidance } from "../lib/direct-delivery-guidance";
 import { TransactionDisclosure } from "../components/conversation/TransactionFrame";
 import { DirectDeliveryJourney } from "../components/DirectDeliveryJourney";
 import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinanceSummary";
@@ -243,9 +244,10 @@ export function NegotiationWorkspace({
 
   const queryClient = useQueryClient();
   const order = useQuery({
-    queryKey: ["direct-order", room.orderId],
+    queryKey: ["direct-order", userId, room.orderId],
     queryFn: () => getOrder(room.orderId!),
     enabled: !!room.orderId,
+    refetchOnMount: "always",
     refetchInterval: (query) => {
       const state = query.state.data?.state;
       return state === "AwaitingPayment" ||
@@ -256,7 +258,9 @@ export function NegotiationWorkspace({
         : false;
     },
   });
-  const orderData = order.data;
+  const orderReadDenied = order.error instanceof ApiError &&
+    [401, 403, 404].includes(order.error.status);
+  const orderData = orderReadDenied ? undefined : order.data;
   useEffect(() => {
     if (orderData?.state === "Completed" && orderData.deliveryJourney) {
       invalidateMemberWalletViews(queryClient, userId);
@@ -577,7 +581,8 @@ export function NegotiationWorkspace({
     terms?.activeExchangeId ??
     createdExchange(room.listingId);
   const exchangeSheetId = "exchange-sheet-" + room.id;
-  const conditionLabel = book ? conditions[book.condition] : undefined;
+  const itemCondition = orderData ? orderData.item.condition : book?.condition;
+  const conditionLabel = itemCondition && (conditions[itemCondition as keyof typeof conditions] || itemCondition);
   const quoteCurrent = Boolean(
     room.hasQuote &&
       room.quotePreview &&
@@ -655,6 +660,21 @@ export function NegotiationWorkspace({
     );
   }
 
+  if (room.orderId && !orderData) {
+    return (
+      <section aria-label="Chi tiết đơn hàng">
+        {order.isPending ? <p role="status">Đang tải đơn hàng…</p> : (
+          <div role="alert" className={styles.errorAlert}>
+            <p>Chưa tải được đơn.</p>
+            <button type="button" onClick={() => void order.refetch()} disabled={order.isFetching}>
+              Thử lại
+            </button>
+          </div>
+        )}
+      </section>
+    );
+  }
+
   const activeStepIndex = (() => {
     if (!room.orderId || !orderData) return 0;
     switch (orderData.state) {
@@ -690,9 +710,24 @@ export function NegotiationWorkspace({
     ? orderData.amounts.buyerTotal
     : effectiveBookPrice + shippingFee;
   const shippingAddress = orderData?.shippingAddress ?? orderData?.ownAddress;
+  const legacyDeliveryReview = orderData &&
+    (!orderData.deliveryJourney || (orderData.state === "ResolutionPending" && !orderData.deliveryJourney.issue))
+    ? directDeliveryGuidance(orderData)
+    : null;
 
   return (
-    <div id={exchangeSheetId} tabIndex={-1} data-transaction-page>
+    <div id={exchangeSheetId} tabIndex={-1} data-transaction-page
+      role={orderData ? "region" : undefined}
+      aria-label={orderData ? "Chi tiết đơn hàng" : undefined}
+    >
+      {orderData && order.isError && (
+        <div role="alert" className={styles.errorAlert}>
+          <span>Chưa cập nhật được trạng thái mới nhất.</span>
+          <button type="button" onClick={() => void order.refetch()} disabled={order.isFetching}>
+            Thử lại
+          </button>
+        </div>
+      )}
       {historyExchange === "new" && (
         <div
           className={styles.procedureNoticeInfo}
@@ -774,12 +809,13 @@ export function NegotiationWorkspace({
                             : "Người bán đang chuẩn bị sách"
                           : orderData.state === "InTransit"
                             ? "Đang vận chuyển sách"
-                            : orderData.state === "Inspection" ||
-                                orderData.state === "ResolutionPending"
-                              ? "Kiểm tra sách (72 giờ)"
-                              : orderData.state === "Completed"
-                                ? "Giao dịch hoàn tất"
-                                : "Đơn hàng đã kết thúc"}
+                            : orderData.state === "ResolutionPending"
+                              ? "Đang xử lý sự cố giao nhận"
+                              : orderData.state === "Inspection"
+                                ? "Kiểm tra sách (72 giờ)"
+                                : orderData.state === "Completed"
+                                  ? "Giao dịch hoàn tất"
+                                  : "Đơn hàng đã kết thúc"}
                   </strong>
                   <span
                     style={{
@@ -1044,24 +1080,17 @@ export function NegotiationWorkspace({
                     <ReceiptConfirmation order={orderData} onChanged={() => order.refetch()} />
                   )}
 
-                {/* BƯỚC 4: KIỂM TRA SÁCH 72H (Inspection) */}
-                {(!orderData.deliveryJourney || (orderData.state === "ResolutionPending" && !orderData.deliveryJourney.issue)) &&
-                  (orderData.state === "Inspection" || orderData.state === "ResolutionPending") && (
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <div className={styles.procedureNoticeInfo}>
-                      <ShieldCheck size={22} aria-hidden="true" />
-                      <div>
-                        <h4>Kiểm tra sách 72 giờ</h4>
-                        <p>
-                          Sách đã được giao tới bạn. Vui lòng kiểm tra sách trong vòng 72h. Nếu hài lòng, hãy bấm Xác nhận đã nhận để giải ngân tiền cho người bán.
-                        </p>
-                      </div>
+                {legacyDeliveryReview && (
+                  <div className={styles.procedureNoticeInfo}>
+                    <ShieldCheck size={22} aria-hidden="true" />
+                    <div>
+                      <h4>{legacyDeliveryReview.title}</h4>
+                      <p>{legacyDeliveryReview.message}</p>
+                      {legacyDeliveryReview.date && (
+                        <p>{legacyDeliveryReview.dateLabel}: {orderTime(legacyDeliveryReview.date)}</p>
+                      )}
+                      {legacyDeliveryReview.report && <p>{legacyDeliveryReview.report}</p>}
                     </div>
-
-                    <ReceiptConfirmation
-                      order={orderData}
-                      onChanged={() => order.refetch()}
-                    />
                   </div>
                 )}
 
@@ -1753,18 +1782,15 @@ export function NegotiationWorkspace({
                   </div>
                 </div>
                 <div>
-                  <strong className={exchangeStyles.proposalBookTitle}>
-                    {book?.bundle?.title ||
-                      book?.book.title ||
-                      orderData?.item.bundle?.title ||
-                      orderData?.item.metadata.title ||
-                      "Đang tải thông tin sách…"}
-                  </strong>
+                  <h4 className={exchangeStyles.proposalBookTitle}>
+                    {orderData
+                      ? orderData.item.bundle?.title || orderData.item.metadata.title
+                      : book?.bundle?.title || book?.book.title || "Đang tải thông tin sách…"}
+                  </h4>
                   <span className={exchangeStyles.proposalBookAuthor}>
-                    {book?.book.authors?.join(", ") ||
-                      (orderData
-                        ? `Người bán: ${seller ? "Bạn" : room.seller.displayName}`
-                        : "Tác giả")}
+                    {orderData
+                      ? `Người bán: ${seller ? "Bạn" : room.seller.displayName}`
+                      : book?.book.authors?.join(", ") || "Tác giả"}
                   </span>
                   {(isExchange
                     ? book?.exchangeValue ?? book?.salePrice
@@ -1784,31 +1810,18 @@ export function NegotiationWorkspace({
                   <details>
                     <summary>Tình trạng sách</summary>
                     <p>
-                      {conditionLabel || orderData?.item.condition
-                        ? `Tình trạng: ${conditionLabel || orderData?.item.condition}. `
-                        : ""}
-                      {book?.description ||
-                        orderData?.item.description ||
-                        "Chưa có mô tả chi tiết."}
+                      {conditionLabel ? `Tình trạng: ${conditionLabel}. ` : ""}
+                      {(orderData ? orderData.item.description : book?.description) || "Chưa có mô tả chi tiết."}
                     </p>
                     <p>
-                      Bìa & gáy:{" "}
-                      {book?.coverNote ||
-                        orderData?.item.coverNote ||
-                        "Chưa có dữ liệu"}{" "}
-                      · Số trang:{" "}
-                      {book?.pages ||
-                        orderData?.item.pages ||
-                        "Chưa có dữ liệu"}
+                      Bìa &amp; gáy: {(orderData ? orderData.item.coverNote : book?.coverNote) || "Chưa có dữ liệu"}
+                      {" · Số trang: "}
+                      {(orderData ? orderData.item.pages : book?.pages) || "Chưa có dữ liệu"}
                     </p>
                   </details>
                 </div>
               </div>
-              {book?.bundle && (
-                <div style={{ marginTop: 8 }}>
-                  <BundleManifest bundle={book.bundle} />
-                </div>
-              )}
+              <BundleManifest bundle={orderData ? orderData.item.bundle : book?.bundle} />
             </div>
 
             {/* Card 2: Delivery & Listing Info Card */}
@@ -1840,6 +1853,12 @@ export function NegotiationWorkspace({
                       <span>
                         {addressDetailLabel(shippingAddress?.detail || "")}
                       </span>
+                      {seller && orderData.shippingAddress && (
+                        <TransactionDisclosure title="Nơi gửi sách">
+                          <p>{orderData.ownAddress.recipientName} · {orderData.ownAddress.phone}</p>
+                          <p>{addressDetailLabel(orderData.ownAddress.detail)}</p>
+                        </TransactionDisclosure>
+                      )}
                       <span style={{ color: "#156633", fontWeight: 600 }}>
                         {orderData.state === "AwaitingPayment"
                           ? "Đơn hàng đã được tạo. Chờ thanh toán."

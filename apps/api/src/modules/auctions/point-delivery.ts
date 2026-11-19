@@ -129,6 +129,7 @@ export function deliveryView(
   o: PointOrderDoc,
   d: PointOrderDeliveryDoc,
   demoStartedAt?: Date | null,
+  carrierDeliveredAt?: Date | null,
 ): Wire['PointOrderDelivery'] {
   return {
     recipientName: d.recipientName,
@@ -141,7 +142,7 @@ export function deliveryView(
     trackingCode: o.trackingCode,
     dispatchedAt: o.dispatchedAt?.toISOString() ?? null,
     deliveryDeadline: o.deliveryDeadline?.toISOString() ?? null,
-    deliveredAt: o.collectedAt?.toISOString() ?? null,
+    deliveredAt: (carrierDeliveredAt ?? o.collectedAt)?.toISOString() ?? null,
     demoOutForDeliveryAt: demoStartedAt?.toISOString() ?? null,
   };
 }

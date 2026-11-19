@@ -56,19 +56,14 @@ describe("merged Exchange inspection semantics", () => {
     { partnerCompletedAt: "2026-11-02T00:00:00Z" },
     { viewerCompletedAt: "2026-11-02T00:00:00Z" },
   ])(
-    "shows the inspection and mutual settlement state (%j)",
+    "preserves both 72-hour windows without promising early release (%j)",
     (changes) => {
       const html = render(changes);
+      expect(html).toContain("72 giờ");
       expect(html).toContain("Hạn kiểm tra sách của bạn");
       expect(html).toContain("Hạn kiểm tra của đối tác");
-      if (changes.viewerCompletedAt) {
-        expect(html).toContain("Đang chờ đối tác kiểm tra và xác nhận");
-        expect(html).toContain("cả hai cùng xác nhận nghiệm thu");
-        expect(html).not.toContain("Báo sự cố");
-      } else {
-        expect(html).toContain("72 giờ");
-        expect(html).not.toContain("giải phóng cọc ngay");
-      }
+      expect(html).not.toContain("tất toán sớm");
+      expect(html).not.toContain("giải phóng cọc ngay");
       expect(html).not.toContain("48h");
     },
   );
@@ -81,11 +76,12 @@ describe("merged Exchange inspection semantics", () => {
     expect(html).toContain("200.000");
     expect(html).toContain("Đặt cọc mô phỏng");
   });
-  it("closes the viewer's dispute action after their deadline or confirmation", () => {
+  it("closes only the viewer's claim when their deadline passes", () => {
     const html = render({ viewerInspectionDeadline: "2020-01-01T00:00:00Z" });
     expect(html).toContain("Đã hết hạn kiểm tra của bạn.");
+    expect(html).toContain("Xác nhận đã kiểm tra");
     expect(html).not.toContain(">Báo sự cố</button>");
-    expect(render({ viewerCompletedAt: base.createdAt })).not.toContain(">Báo sự cố</button>");
+    expect(render({ viewerCompletedAt: base.createdAt })).toContain(">Báo sự cố</button>");
   });
 });
 

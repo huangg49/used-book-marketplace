@@ -247,6 +247,7 @@ export type AuctionOperation =
   | 'recordPointDelivery'
   | 'demoStartPointDelivery'
   | 'demoDeliverPointOrder'
+  | 'decidePointOrderReceipt'
   | 'advanceDemoPointOrder';
 type EvidenceChange = {
   entityType: 'ExchangeEvidence';

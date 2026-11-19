@@ -471,8 +471,7 @@ export class PointCollectionService {
   }
 
   // An independent TEST_OPERATOR reports the simulated carrier outcome once.
-  // Delivered starts the inspection window from the delivery time (FR-T03)
-  // and never settles; Failed opens DeliveryFailed for an independent Admin.
+  // Delivered waits for the buyer's receipt decision. Failed opens a review.
   recordDelivery(
     context: CommandContext,
     event: Wire['SimulatedPointDeliveryEvent'],
@@ -555,6 +554,9 @@ export class PointCollectionService {
             );
           const started = await demoOutForDeliveryAt(tx, order);
           if (step === 'Start') {
+            if (await tx.c.point_carrier_events.findOne({ orderId: id })) {
+              throw invalidState('Vận đơn đã có kết quả giao từ hãng.');
+            }
             if (started)
               throw invalidState('Bưu tá đã bắt đầu đi giao kiện này.');
             const next = await this.transition(tx, order, {}, now);
@@ -587,6 +589,35 @@ export class PointCollectionService {
     );
   }
 
+  decideReceipt(context: CommandContext, id: string, body: Wire['PointOrderReceiptDecision']) {
+    return this.commands.runAuction(context, 'decidePointOrderReceipt', id, body, {
+      discover: async (tx) => [(await this.order(tx, id)).sellerId],
+      authorize: (tx, actor) => this.buyerOrder(tx, id, actor),
+      mutate: async (tx) => {
+        const order = await this.locked(tx, id, body.expectedVersion);
+        if (order.state !== 'InTransit' || order.fulfillmentMethod !== 'CarrierOutbound' ||
+          !await tx.c.point_carrier_events.findOne({ orderId: id, outcome: 'Delivered' })) {
+          throw invalidState('Chỉ phản hồi sau khi hãng báo đã giao sách.');
+        }
+        const now = await this.clock.decision(tx, context.auth);
+        if (order.deliveryDeadline && now >= order.deliveryDeadline) {
+          throw invalidState('Đã hết hạn phản hồi. Điểm giao nhận sẽ chuyển đơn cho quản trị viên.');
+        }
+        const next = await this.transition(tx, order, body.received ? {
+          state: 'Inspection',
+          collectedAt: now,
+          inspectionDeadline: new Date(now.getTime() + INSPECTION_WINDOW_MS),
+        } : {
+          state: 'ResolutionPending',
+          resolutionReason: 'DeliveryFailed',
+          resolutionNote: 'Hãng báo đã giao nhưng người mua báo chưa nhận sách.',
+          resolutionOpenedAt: now,
+        }, now);
+        return PointOrdersService.change(next, now, body.received ? 'PointOrderDelivered' : 'PointOrderDeliveryFailed');
+      },
+    });
+  }
+
   private async applyDeliveryOutcome(
     tx: Tx,
     o: PointOrderDoc,
@@ -597,6 +628,9 @@ export class PointCollectionService {
   ) {
     if (o.state !== 'InTransit') throw invalidState();
     if (o.trackingCode !== event.trackingCode) throw notFound();
+    if (await tx.c.point_carrier_events.findOne({ orderId: o._id })) {
+      throw invalidState('Vận đơn đã có kết quả giao từ hãng.');
+    }
     const occurredAt = new Date(event.occurredAt);
     if (
       occurredAt < o.dispatchedAt! ||
@@ -622,19 +656,8 @@ export class PointCollectionService {
       receiptId,
     });
     if (event.outcome === 'Delivered') {
-      const next = await this.transition(
-        tx,
-        o,
-        {
-          state: 'Inspection',
-          collectedAt: occurredAt,
-          inspectionDeadline: new Date(
-            occurredAt.getTime() + INSPECTION_WINDOW_MS,
-          ),
-        },
-        now,
-      );
-      return PointOrdersService.change(next, now, 'PointOrderDelivered');
+      const next = await this.transition(tx, o, {}, now);
+      return PointOrdersService.change(next, now, 'PointOrderCarrierDelivered');
     }
     const next = await this.transition(
       tx,
@@ -683,10 +706,8 @@ export class PointCollectionService {
         isOperator && ![order.sellerId, order.buyerId].includes(actor._id);
       if (!buyer && !operator) throw notFound();
       const now = await tx.now();
-      const event = order.collectedAt
-        ? null
-        : await tx.c.point_carrier_events.findOne({ orderId: order._id });
-      const status = order.collectedAt
+      const event = await tx.c.point_carrier_events.findOne({ orderId: order._id });
+      const status = order.collectedAt || event?.outcome === 'Delivered'
         ? 'Delivered'
         : event?.outcome === 'Failed'
           ? 'Failed'
@@ -706,7 +727,7 @@ export class PointCollectionService {
         dispatchedAt: order.dispatchedAt.toISOString(),
         deliveryDeadline: order.deliveryDeadline.toISOString(),
         outcomeAt:
-          (order.collectedAt ?? event?.occurredAt)?.toISOString() ?? null,
+          (event?.occurredAt ?? order.collectedAt)?.toISOString() ?? null,
         status,
         viewer: buyer ? 'Buyer' : 'Operator',
         canReport: operator && status === 'InTransit',
@@ -732,14 +753,19 @@ export class PointCollectionService {
         throw new DomainError(403, 'FORBIDDEN', 'Cần quyền vận hành mô phỏng.');
       const now = await tx.now();
       const orders = await tx.c.point_orders
-        .find(
-          {
+        .aggregate<PointOrderDoc>([
+          { $match: {
             state: 'InTransit',
             buyerId: { $ne: actor._id },
             sellerId: { $ne: actor._id },
-          },
-          { sort: { deliveryDeadline: 1, _id: 1 }, limit: 50 },
-        )
+          } },
+          { $sort: { deliveryDeadline: 1, _id: 1 } },
+          { $lookup: {
+            from: 'point_carrier_events', localField: '_id', foreignField: 'orderId', as: 'carrierEvents',
+          } },
+          { $match: { 'carrierEvents.0': { $exists: false } } },
+          { $limit: 50 },
+        ])
         .toArray();
       const items: Wire['SimulatedPointDeliveryItem'][] = [];
       for (const o of orders) {
@@ -873,13 +899,16 @@ export class PointCollectionService {
           }
           // ADR 0044: no carrier outcome by the delivery deadline.
           if (o.state === 'InTransit' && now >= o.deliveryDeadline!) {
+            const carrierReportedDelivery = await tx.c.point_carrier_events.findOne({ orderId: id, outcome: 'Delivered' });
             const next = await this.transition(
               tx,
               o,
               {
                 state: 'ResolutionPending',
                 resolutionReason: 'DeliveryFailed',
-                resolutionNote: 'Quá hạn giao hàng mà hãng chưa báo kết quả.',
+                resolutionNote: carrierReportedDelivery
+                  ? 'Hãng báo đã giao, quá hạn chờ người mua phản hồi.'
+                  : 'Quá hạn giao hàng mà hãng chưa báo kết quả.',
                 resolutionOpenedAt: now,
               },
               now,

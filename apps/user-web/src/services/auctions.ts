@@ -372,6 +372,9 @@ export function demoDeliverPointOrder(orderId: string, expectedVersion: number, 
 export function demoStartPointDelivery(orderId: string, expectedVersion: number, key: string) {
   return command(`/point-orders/${orderId}/demo-start-delivery`, key, { expectedVersion })
 }
+export function decidePointOrderReceipt(orderId: string, expectedVersion: number, received: boolean, key: string) {
+  return command(`/point-orders/${orderId}/receipt-decision`, key, { expectedVersion, received })
+}
 
 export const CLAIM_MIN_LENGTH = 30
 

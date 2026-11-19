@@ -35,7 +35,8 @@ trong một giao dịch. Thỏa thuận giá thương lượng vẫn cần xác 
   vẫn theo gate [ADR 0064](0064-direct-delivery-completion-release-gate.md).
   Hành vi demo không mở gate đó và không chạy trên các đơn lịch sử.
 - Migration 0083 thêm dấu xác nhận giá, nhật ký mốc và shape của đơn sau
-  báo sự cố/tua kiểm tra. Migration 0084 thêm bằng chứng riêng.
+  báo sự cố/tua kiểm tra. Migration 0084 thêm bằng chứng riêng. Migration 0085
+  khôi phục validator đơn mua theo 0083 khi một nâng cấp từ nhánh cũ đã ghi đè.
 - Với DB đã có, sau `pnpm db:migrate` chạy `pnpm db:bootstrap` để đồng bộ
   quyền role theo [hướng dẫn setup](../handoff/START_HERE.md). API dùng
   `find/insert` cho `direct_order_journey_events` và

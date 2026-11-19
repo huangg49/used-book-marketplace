@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PurchaseDialog } from "./PurchaseDialog";
 import { type DirectOrder } from "../services/orders";
 import { session } from "../lib/session";
@@ -15,6 +15,18 @@ import styles from "../pages/DirectOrders.module.css";
 import { addressDetailLabel } from "../lib/address-detail-label";
 
 const receiptSchema = z.object({ entityId: z.string().uuid() });
+
+type ShipmentAttempt = {
+  version: number;
+  trackingCode: string;
+  file: File;
+  sha256: string;
+  createKey: string;
+  uploadKey: string;
+  registerKey: string;
+  evidenceId?: string;
+  uploaded?: boolean;
+};
 
 function createDemoPhotoFile(): File {
   const canvas = document.createElement("canvas");
@@ -65,6 +77,8 @@ export function DirectShipmentDialog({
   const [tracking, setTracking] = useState<string>(() => generateDemoTrackingCode());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const attempt = useRef<ShipmentAttempt | undefined>(undefined);
+  const [retryPending, setRetryPending] = useState(false);
 
   const address = order.shippingAddress ?? order.ownAddress;
 
@@ -85,70 +99,68 @@ export function DirectShipmentDialog({
     setError(null);
 
     try {
-      // 1. Tạo packaging evidence
-      const hash = await crypto.subtle.digest(
-        "SHA-256",
-        await file.arrayBuffer(),
-      );
-      const sha256 = Array.from(new Uint8Array(hash), (b) =>
-        b.toString(16).padStart(2, "0"),
-      ).join("");
-
-      const created = await session.request(
-        `/orders/${order.id}/packaging-evidence`,
-        receiptSchema,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": crypto.randomUUID() },
-          body: JSON.stringify({
-            expectedVersion: order.version,
-            mimeType: file.type || "image/jpeg",
-            byteSize: file.size,
-            sha256,
-          }),
-        },
-      );
-      const evidenceId = created.entityId;
-
-      // 2. Upload file content
-      await session.request(
-        `/orders/${order.id}/packaging-evidence/${evidenceId}/content`,
-        receiptSchema,
-        {
-          method: "PUT",
-          headers: {
-            "Idempotency-Key": crypto.randomUUID(),
-            "Content-Type": file.type || "image/jpeg",
-          },
-          body: file,
-        },
-      );
-
-      // 3. Đăng ký shipment
-      await session.request(`/orders/${order.id}/shipment`, receiptSchema, {
-        method: "POST",
-        headers: { "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({
-          expectedOrderVersion: order.version,
-          carrier: "LatLaiSimulator",
+      if (!attempt.current) {
+        const hash = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+        attempt.current = {
+          version: order.version,
           trackingCode: cleanTracking,
-          packagingEvidenceIds: [evidenceId],
+          file,
+          sha256: Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join(""),
+          createKey: crypto.randomUUID(),
+          uploadKey: crypto.randomUUID(),
+          registerKey: crypto.randomUUID(),
+        };
+      }
+      const intent = attempt.current;
+      const base = "/orders/" + order.id;
+      if (!intent.evidenceId) {
+        const created = await session.request(base + "/packaging-evidence", receiptSchema, {
+          method: "POST",
+          headers: { "Idempotency-Key": intent.createKey },
+          body: JSON.stringify({
+            expectedVersion: intent.version,
+            mimeType: intent.file.type,
+            byteSize: intent.file.size,
+            sha256: intent.sha256,
+          }),
+        });
+        intent.evidenceId = created.entityId;
+      }
+      if (!intent.uploaded) {
+        await session.request(base + "/packaging-evidence/" + intent.evidenceId + "/content", receiptSchema, {
+          method: "PUT",
+          headers: { "Idempotency-Key": intent.uploadKey, "Content-Type": intent.file.type },
+          body: intent.file,
+        });
+        intent.uploaded = true;
+      }
+      await session.request(base + "/shipment", receiptSchema, {
+        method: "POST",
+        headers: { "Idempotency-Key": intent.registerKey },
+        body: JSON.stringify({
+          expectedOrderVersion: intent.version,
+          carrier: "LatLaiSimulator",
+          trackingCode: intent.trackingCode,
+          packagingEvidenceIds: [intent.evidenceId],
         }),
       });
 
+      attempt.current = undefined;
+      setRetryPending(false);
       onSuccess();
       onClose();
     } catch (cause) {
-      if (cause instanceof ApiError) {
-        if (cause.status === 409) {
-          setError("Trạng thái đơn hàng vừa thay đổi hoặc đã đăng ký vận đơn trước đó.");
-        } else if (cause.status === 422) {
-          setError("Mã vận đơn hoặc thông tin đóng gói chưa hợp lệ.");
-        } else {
-          setError(cause.message || "Chưa thể đăng ký gửi sách. Vui lòng thử lại.");
-        }
+      const known = cause instanceof ApiError &&
+        [400, 401, 403, 404, 409, 413, 415, 422].includes(cause.status);
+      if (known) {
+        attempt.current = undefined;
+        setRetryPending(false);
+        setError(cause.message || "Chưa thể đăng ký gửi sách. Vui lòng thử lại.");
+      } else if (attempt.current) {
+        setRetryPending(true);
+        setError("Chưa xác nhận vận đơn đã lưu. Thử lại cùng mã và thông tin ban đầu.");
       } else {
-        setError(cause instanceof Error ? cause.message : "Đã có lỗi xảy ra khi lưu vận đơn.");
+        setError("Chưa đọc được ảnh đóng gói. Vui lòng chọn lại ảnh.");
       }
     } finally {
       setBusy(false);
@@ -215,6 +227,7 @@ export function DirectShipmentDialog({
             </label>
             <button
               type="button"
+              disabled={busy || retryPending}
               onClick={() => {
                 setFile(createDemoPhotoFile());
                 setError(null);
@@ -253,6 +266,7 @@ export function DirectShipmentDialog({
               <input
                 type="file"
                 id="packaging-photo"
+                disabled={busy || retryPending}
                 accept="image/jpeg,image/png,image/webp"
                 style={{ display: "none" }}
                 onChange={(e) => {
@@ -311,6 +325,7 @@ export function DirectShipmentDialog({
             </label>
             <button
               type="button"
+              disabled={busy || retryPending}
               onClick={() => {
                 setTracking(generateDemoTrackingCode());
                 setError(null);
@@ -340,7 +355,7 @@ export function DirectShipmentDialog({
             pattern="LL-[A-Z0-9]{8,32}"
             maxLength={35}
             value={tracking}
-            disabled={busy}
+            disabled={busy || retryPending}
             onChange={(e) => setTracking(e.target.value.toUpperCase())}
             placeholder="Ví dụ: LL-12345678"
             style={{
@@ -392,7 +407,7 @@ export function DirectShipmentDialog({
             disabled={busy || !file || !tracking.trim()}
           >
             <Truck size={16} />
-            <span>{busy ? "Đang xử lý…" : "Xác nhận gửi sách"}</span>
+            <span>{busy ? "Đang xử lý…" : retryPending ? "Thử lại đăng ký vận đơn" : "Xác nhận gửi sách"}</span>
           </button>
         </div>
       </form>

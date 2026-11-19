@@ -10,19 +10,18 @@ async function main() {
   console.log('--- Collections with documents ---');
   for (const [name, col] of Object.entries(c)) {
     try {
-      const count = await (col as any).countDocuments();
+      const count = await col.countDocuments();
       if (count > 0) {
         console.log(name.padEnd(35), count);
       }
-    } catch (e: any) {
-      console.log(name.padEnd(35), 'Error:', e.message);
+    } catch {
+      console.error(name.padEnd(35), 'Could not read count.');
+      process.exitCode = 1;
     }
-  }
-  console.log('\n--- Users ---');
-  const users = await c.users.find({}, { projection: { emailNormalized: 1, displayName: 1, roles: 1, status: 1 } }).toArray();
-  for (const u of users) {
-    console.log(u.emailNormalized, '|', u.displayName, '|', JSON.stringify(u.roles), '|', u.status);
   }
 }
 
-main().catch(console.error).finally(() => client.close());
+main().catch(() => {
+  console.error('Could not read collection counts. Check the MongoDB connection and read permissions.');
+  process.exitCode = 1;
+}).finally(() => client.close());

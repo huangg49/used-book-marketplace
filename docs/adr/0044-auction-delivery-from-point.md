@@ -36,10 +36,11 @@ of [LOCAL-AUCTION-01](../features/LOCAL_HANDOVER_AUCTION.md) for auction Orders.
   follow.
 - **Carrier events.** An independent TEST_OPERATOR posts the signed simulated
   delivery event (`Delivered` or `Failed`; Idempotency-Key = eventId).
-  `Delivered` starts the 72-hour inspection window from the delivery time
-  (FR-T03); claims, settlement and returns then follow the existing ViaPoint
-  rules. `Failed`, or no event by the delivery deadline, opens
-  `ResolutionPending` with reason `DeliveryFailed`.
+  Khi hãng báo `Delivered`, đơn chờ người mua ở bước **Nhận sách**. Người
+  mua xác nhận đã nhận thì 72 giờ kiểm tra bắt đầu từ lúc xác nhận. Người
+  mua báo chưa nhận, hãng báo `Failed`, hoặc hết hạn giao mà đơn chưa có xác
+  nhận của người mua thì mở `ResolutionPending` theo quy trình `DeliveryFailed`.
+  Tiền tiếp tục được giữ cho tới khi xử lý theo quy trình hiện có.
 - **Failures.**
   - The book not handed to the carrier in time opens the existing
     `CollectionOverdue`. For delivery the buyer is never at fault: a refund

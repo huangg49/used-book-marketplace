@@ -41,6 +41,7 @@ try {
     const commands = []
     let read = false
     let delivered = false
+    let received = false
     let started = false
     let version = 4
     const demoCommands = []
@@ -65,12 +66,12 @@ try {
       } })
       if (endpoint === `/api/v1/me/point-orders/${orderId}`) return route.fulfill({ json: {
         id: orderId, auctionId, title: 'Sách QA', pointName: 'Điểm demo', role: 'Buyer',
-        state: delivered ? 'Inspection' : 'InTransit', version,
+        state: received ? 'Inspection' : 'InTransit', version,
         amounts: { bookPrice: 30000, outboundFee: 0, buyerTotal: 30000 },
         fulfillmentMethod: 'CarrierOutbound', paymentDeadline: null, paidAt: now, serverTime: now,
         report: { outcome: 'Pass', inspectedAt: now, note: null, scope: 'Kiểm tra tình trạng QA' },
         acceptanceDeadline: null, acceptedAt: now, collectionDeadline: null,
-        collectedAt: delivered ? now : null, inspectionDeadline: delivered ? '2026-11-21T06:30:00.000Z' : null,
+        collectedAt: received ? now : null, inspectionDeadline: received ? '2026-11-21T06:30:00.000Z' : null,
         returnDeadline: null, refunded: false, resolution: null,
         delivery: {
           recipientName: 'Người nhận QA', phone: '0900000000', localityCode: 'DEMO-A', detail: 'Địa chỉ QA',
@@ -110,8 +111,19 @@ try {
         version++
         return route.fulfill({ json: {
           id: orderId, entityType: 'PointOrder', entityId: orderId, auctionId, orderId,
-          version, state: delivered ? 'Inspection' : 'InTransit',
+          version, state: 'InTransit',
           currentPrice: null, minimumBid: null, leading: false, serverTime: now,
+        } })
+      }
+      if (endpoint === `/api/v1/point-orders/${orderId}/receipt-decision`) {
+        assert.equal(demo && delivered, true)
+        assert.ok(req.headers()['idempotency-key'])
+        assert.deepEqual(req.postDataJSON(), { expectedVersion: version, received: true })
+        received = true
+        version++
+        return route.fulfill({ json: {
+          id: orderId, entityType: 'PointOrder', entityId: orderId, auctionId, orderId,
+          version, state: 'Inspection', currentPrice: null, minimumBid: null, leading: false, serverTime: now,
         } })
       }
       if (endpoint === '/api/v1/operations/simulator/point-delivery-events') {
@@ -125,7 +137,7 @@ try {
         if (commands.length === 1) return route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } })
         return route.fulfill({ json: {
           id: body.eventId, entityType: 'PointOrder', entityId: orderId, auctionId, orderId,
-          version: 5, state: 'Inspection', currentPrice: null, minimumBid: null, leading: false, serverTime: now,
+          version: 5, state: 'InTransit', currentPrice: null, minimumBid: null, leading: false, serverTime: now,
         } })
       }
       if (endpoint === '/api/v1/me/notifications') return route.fulfill({ json: { items: [], nextCursor: null, unreadCount: 0 } })
@@ -173,6 +185,10 @@ try {
       await page.getByRole('dialog').getByRole('button', { name: 'Ghi nhận kết quả' }).click()
       await expect(page.getByRole('heading', { name: 'Sách đã giao thành công' })).toBeVisible()
       await page.getByRole('link', { name: 'Về đơn đấu giá' }).click()
+      await expect(page.getByRole('heading', { name: 'Hãng báo đã giao sách' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Tôi chưa nhận được sách' })).toBeVisible()
+      await page.getByRole('button', { name: 'Tôi đã nhận được sách' }).click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận đã nhận sách' }).click()
       await expect(page.getByRole('heading', { name: 'Kiểm tra sách bạn đã nhận' })).toBeVisible()
       assert.deepEqual(demoCommands, ['Start', 'Deliver'])
     } else {
@@ -193,7 +209,7 @@ try {
     assert.deepEqual(errors, [])
     await context.close()
   }
-  console.log('PASS: Driver lookup, buyer view, operator exact replay and two separate demo stages.')
+  console.log('PASS: Driver lookup, exact replay, separate carrier delivery and buyer confirmation.')
 } finally {
   await browser?.close()
   await new Promise((resolve) => server.httpServer.close(resolve))

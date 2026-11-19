@@ -4529,15 +4529,19 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         const delivered = await carrierEvent(
           o.orderId, o.doc.trackingCode!, 'Delivered', deliveredAt,
         ).expect(200);
-        const version: number = delivered.body.version;
         const path = `/point-orders/${o.orderId}/demo-advance`;
         const complete = (by: Actor, expectedVersion: number, key?: string) =>
           cmd('post', path, { expectedVersion }, by, key);
         const key = randomUUID();
 
         config.set('DEMO_SKIP_ENABLED', 'false');
-        await complete(o.winner, version, key).expect(403);
+        await complete(o.winner, delivered.body.version, key).expect(403);
         config.set('DEMO_SKIP_ENABLED', 'true');
+        await complete(o.winner, delivered.body.version).expect(409);
+        const receipt = await orderPost(o.orderId, 'receipt-decision', {
+          expectedVersion: delivered.body.version, received: true,
+        }, o.winner).expect(200);
+        const version: number = receipt.body.version;
         await complete(staff, version, key).expect(403);
         await complete(o.winner, version - 1).expect(409);
         const [finished, replay] = await Promise.all([
@@ -4555,8 +4559,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
 
         expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
           state: 'Completed',
-          collectedAt: deliveredAt,
-          inspectionDeadline: new Date(deliveredAt.getTime() + 72 * HOUR),
+          collectedAt: completedAt,
+          inspectionDeadline: new Date(completedAt.getTime() + 72 * HOUR),
           closedAt: completedAt,
           demoInspectionCompletedAt: completedAt,
         });
@@ -4628,7 +4632,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         const key = randomUUID();
         const result = await demo(o.winner, 5, key).expect(200);
         validates('AuctionCommandReceipt', result.body);
-        expect(result.body).toMatchObject({ state: 'Inspection', version: 6 });
+        expect(result.body).toMatchObject({ state: 'InTransit', version: 6 });
         const replay = await demo(o.winner, 5, key).expect(200);
         expect(replay.headers['idempotency-replayed']).toBe('true');
         expect(replay.body.id).toBe(result.body.id);
@@ -4637,9 +4641,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         await demo(o.winner, 5, key).expect(403);
         expect(await db.c.point_carrier_events.countDocuments({ orderId: o.orderId })).toBe(1);
         expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
-          state: 'Inspection',
-          collectedAt: at,
-          inspectionDeadline: new Date(at.getTime() + 72 * HOUR),
+          state: 'InTransit',
+          collectedAt: null,
+          inspectionDeadline: null,
           closedAt: null,
         });
       } finally {
@@ -4667,6 +4671,13 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         ]);
         expect(results.map((result) => result.status).sort()).toEqual([200, 409]);
         expect(await db.c.point_carrier_events.countDocuments({ orderId: o.orderId })).toBe(1);
+        const pending = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+        await orderPost(o.orderId, 'receipt-decision', { expectedVersion: pending.version, received: false }, o.winner)
+          .expect(200).expect(({ body }) => expect(body.state).toBe('ResolutionPending'));
+        expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
+          collectedAt: null, inspectionDeadline: null, resolutionReason: 'DeliveryFailed',
+        });
+        expect(await db.c.ledger_journals.countDocuments({ orderId: o.orderId, type: 'OrderSettlement' })).toBe(0);
       } finally {
         config.set('DEMO_SKIP_ENABLED', original);
         if (originalEnv === undefined) delete process.env.DEMO_SKIP_ENABLED;
@@ -4775,7 +4786,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(await reconciled()).toBe(true);
     });
 
-    it('Staff hand the book to the carrier; Delivered starts inspection and the Order settles', async () => {
+    it('requires buyer confirmation after carrier delivery before inspection and settlement', async () => {
       const o = await deliveryOrder();
       const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
       const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
@@ -4831,6 +4842,13 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await call('get', trackingPath + code, o.seller).expect(404);
       await call('get', trackingPath + code, staff).expect(403);
       await call('get', trackingPath + 'LL-UNKNOWN12345', o.winner).expect(404);
+      await db.setStatus(o.winner.id, 'LOCKED');
+      const lockedTracking = await call('get', trackingPath + code, o.winner).expect(200);
+      expect(lockedTracking.body).toMatchObject({ viewer: 'Buyer', canReport: false, canDemoControl: false });
+      await db.setStatus(o.seller.id, 'LOCKED');
+      await call('get', trackingPath + code, o.seller).expect(404);
+      await db.setStatus(o.winner.id, 'ACTIVE');
+      await db.setStatus(o.seller.id, 'ACTIVE');
       const buyerTracking = await call(
         'get',
         trackingPath + code.toLowerCase(),
@@ -4893,6 +4911,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         new Date(at.getTime() - 1),
       ).expect(422);
       const eventId = randomUUID();
+      await orderPost(o.orderId, 'receipt-decision', { expectedVersion: moving.version, received: true }, o.winner).expect(409);
       const done = await carrierEvent(
         o.orderId,
         code,
@@ -4901,7 +4920,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         operator,
         eventId,
       ).expect(200);
-      expect(done.body).toMatchObject({ state: 'Inspection' });
+      expect(done.body).toMatchObject({ state: 'InTransit' });
       const arrived = await call('get', trackingPath + code, operator).expect(
         200,
       );
@@ -4920,16 +4939,24 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       ).expect(200);
       expect(replay.headers['idempotency-replayed']).toBe('true');
       await carrierEvent(o.orderId, code, 'Failed', deliveredAt).expect(409);
+      const decision = { expectedVersion: done.body.version, received: true };
+      await orderPost(o.orderId, 'receipt-decision', decision, o.seller).expect(404);
+      const pending = await call('get', `/me/point-orders/${o.orderId}`, o.winner).expect(200);
+      expect(pending.body).toMatchObject({ state: 'InTransit', collectedAt: null, inspectionDeadline: null });
+      const confirmKey = randomUUID();
+      const confirmation = await orderPost(o.orderId, 'receipt-decision', decision, o.winner, confirmKey).expect(200);
+      expect(confirmation.body).toMatchObject({ state: 'Inspection' });
+      await orderPost(o.orderId, 'receipt-decision', decision, o.winner, confirmKey).expect('Idempotency-Replayed', 'true').expect(200);
       vi.restoreAllMocks();
       const inspecting = (await db.c.point_orders.findOne({
         _id: o.orderId,
       }))!;
       expect(inspecting).toMatchObject({
         state: 'Inspection',
-        collectedAt: deliveredAt,
+        collectedAt: new Date(deliveredAt.getTime() + 60_000),
       });
       expect(inspecting.inspectionDeadline!.getTime()).toBe(
-        deliveredAt.getTime() + 72 * HOUR,
+        deliveredAt.getTime() + 60_000 + 72 * HOUR,
       );
       const view = await call(
         'get',
@@ -5115,7 +5142,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       vi.restoreAllMocks();
       expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
       const won = results.find((r) => r.status === 200)!.body.state;
-      expect(['Inspection', 'ResolutionPending']).toContain(won);
+      expect(['InTransit', 'ResolutionPending']).toContain(won);
       expect(
         await db.c.point_carrier_events.countDocuments({ orderId: o.orderId }),
       ).toBe(1);

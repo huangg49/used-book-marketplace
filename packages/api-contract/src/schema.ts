@@ -3072,8 +3072,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Local demo only. The active buyer records simulated delivery after Staff handover and the last-mile demo milestone. A committed carrier event starts the regular 72-hour inspection window. */
+        /** @description Local demo only. The active buyer records simulated delivery after Staff handover and the last-mile demo milestone. Carrier delivery alone does not start the buyer inspection window. */
         post: operations["demoDeliverPointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/{orderId}/receipt-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The buyer confirms receipt after the carrier reports delivery, starting the 72-hour inspection window from buyer confirmation. If the buyer reports non-receipt, keep the funds held and send the order for independent operations review. */
+        post: operations["decidePointOrderReceipt"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3359,7 +3376,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Read one auction shipment after point handover. Available to the buyer and an independent active TEST_OPERATOR. Other orders return 404. The response excludes names, contact details and addresses. Recording an outcome still requires the existing authenticated simulator command. */
+        /** @description Read one auction shipment after point handover. Available to the buyer (including a locked buyer with an existing obligation) and an independent active TEST_OPERATOR. Other orders return 404. The response excludes names, contact details and addresses. Recording an outcome still requires the existing authenticated simulator command. */
         get: operations["getPointOrderDeliveryTracking"];
         put?: never;
         post?: never;
@@ -3395,7 +3412,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0044: independent TEST_OPERATOR (not buyer or seller) records one signed simulated carrier outcome for an InTransit auction Order; Idempotency-Key must equal eventId. Delivered starts the 72-hour inspection window from occurredAt (FR-T03) and never settles; Failed opens DeliveryFailed for an independent Admin. */
+        /** @description ADR 0044: independent TEST_OPERATOR (not buyer or seller) records one signed simulated carrier outcome for an InTransit auction Order; Idempotency-Key must equal eventId. Delivered waits for the buyer's receipt decision before inspection and never settles; Failed opens DeliveryFailed for an independent Admin. */
         post: operations["emitSimulatedPointDeliveryEvent"];
         delete?: never;
         options?: never;
@@ -7257,13 +7274,20 @@ export interface components {
             dispatchedAt: string | null;
             /** Format: date-time */
             deliveryDeadline: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Carrier-reported delivery time. Buyer confirmation is recorded separately as collectedAt on the order.
+             */
             deliveredAt: string | null;
             /**
              * Format: date-time
              * @description Optional local demo milestone recorded from the shipper simulator.
              */
             demoOutForDeliveryAt?: string | null;
+        };
+        PointOrderReceiptDecision: {
+            expectedVersion: number;
+            received: boolean;
         };
         PointOrderDeliveryQuote: {
             /** Format: uuid */
@@ -15102,6 +15126,44 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    decidePointOrderReceipt: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PointOrderReceiptDecision"];
             };
         };
         responses: {

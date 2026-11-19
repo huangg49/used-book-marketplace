@@ -182,7 +182,7 @@ function AuctionDriverSession({
       setPending(null)
       setMessage({
         error: false,
-        text: outcome === 'Delivered' ? 'Đã ghi nhận giao thành công. Người nhận bắt đầu có 72 giờ kiểm tra sách.'
+        text: outcome === 'Delivered' ? 'Đã ghi nhận hãng giao thành công. Đơn đang chờ người mua xác nhận đã nhận.'
           : 'Đã ghi nhận giao không thành công. Đơn chuyển quản trị viên xử lý.',
       })
       void queryClient.invalidateQueries({ queryKey: ['point-order', event.orderId] })
@@ -260,7 +260,7 @@ function AuctionDriverSession({
           onClose={() => { if (!busy) setChosen(null) }}
           title={chosen === 'Failed' ? 'Ghi nhận giao không thành công?' : 'Ghi nhận giao thành công?'}
           description={chosen === 'Failed' ? 'Đơn đấu giá sẽ được chuyển cho quản trị viên xử lý.'
-            : 'Thời hạn kiểm tra sách của người nhận bắt đầu sau khi giao thành công.'}
+            : 'Thời hạn kiểm tra bắt đầu khi người mua xác nhận đã nhận sách.'}
           confirmText="Ghi nhận kết quả"
           isBusy={busy}
           onConfirm={() => {

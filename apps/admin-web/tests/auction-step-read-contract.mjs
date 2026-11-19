@@ -14,7 +14,10 @@ try{
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));let reads=0;
   const user={id:id(1),displayName:'Vận hành QA',email:'operator@example.test',roles:[queue==='intakes'?'STAFF':'ADMIN'],status:'ACTIVE'};
   const now=new Date().toISOString(),steps=group==='legacy'?[10000,50000]:[1000,20000,37000,100000,10000000,10000,50000];
-  const items=steps.map((step,i)=>queue==='auctions'?{id:id(100+i),version:1,title:'Phiên QA bước '+step,state:'Active',startPrice:100000,step,currentPrice:null,bidderCount:0,startAt:now,endAt:new Date(Date.now()+86400000).toISOString(),pointName:'Điểm QA'}:{id:id(200+i),contextId:id(300+i),listingId:id(400+i),listingRevisionId:id(500+i),title:'Lần gửi QA bước '+step,pointId:id(20),startPrice:100000,step,buyNowPrice:null,protectiveValue:100000,state:'AwaitingDropoff',version:1,createdAt:now,dropoffDeadline:now,receivedAt:null,shelfCode:null,inspectedAt:null,inspectionOutcome:null,inspectionNote:null,auctionId:null,reclaimReason:null,closedAt:null,evidenceRequestedBy:null,evidenceDeadline:null,evidenceNote:null,evidenceSubmittedAt:null,reclaimRequiredAt:null,inspectionDueAt:null,reclaimDueAt:null,reports:[]});
+  const items=steps.map((step,i)=>queue==='auctions'?{id:id(100+i),version:1,title:'Phiên QA bước '+step,state:'Active',startPrice:100000,step,currentPrice:null,bidderCount:0,startAt:now,endAt:new Date(Date.now()+86400000).toISOString(),pointName:'Điểm QA'}:{id:id(200+i),contextId:id(300+i),listingId:id(400+i),listingRevisionId:id(500+i),title:'Lần gửi QA bước '+step,pointId:id(20),startPrice:100000,step,buyNowPrice:null,protectiveValue:100000,state:'AwaitingDropoff',version:1,createdAt:now,dropoffDeadline:now,receivedAt:null,shelfCode:null,inspectedAt:null,inspectionOutcome:null,inspectionNote:null,auctionId:null,reclaimReason:null,closedAt:null,evidenceRequestedBy:null,evidenceDeadline:null,evidenceNote:null,evidenceSubmittedAt:null,reclaimRequiredAt:null,inspectionDueAt:null,reclaimDueAt:null,reports:i===0?[
+   {revision:1,outcome:'Fail',checklist:null,note:'Biên bản cũ QA',createdAt:now},
+   {revision:2,outcome:'Pass',checklist:null,note:'Biên bản mới QA',createdAt:now},
+  ]:[]});
   await context.route('**/*',route=>{
    const request=route.request(),url=new URL(request.url()),p=url.pathname;
    if(p==='/api/v1/auth/login')return route.fulfill({json:{accessToken:'fixture-access',refreshToken:'f'.repeat(43),expiresIn:900,user}});
@@ -36,6 +39,10 @@ try{
    const firstRow = page.locator('article.queue-row').first();
    if (queue === 'intakes' && !baseline) {
     const disclosure = firstRow.locator('summary');
+    await expect(firstRow.getByText('Biên bản mới QA', {exact:false})).toBeVisible();
+    await expect(firstRow.getByText('Biên bản cũ QA', {exact:false})).toHaveCount(0);
+    await firstRow.getByRole('button',{name:/biên bản cũ/}).click();
+    await expect(firstRow.getByText(/Biên bản cũ QA/)).toBeVisible();
     await expect(firstRow.getByText('Bước giá', {exact:true})).toBeHidden();
     await disclosure.focus();
     await page.keyboard.press('Enter');

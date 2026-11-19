@@ -1,3 +1,56 @@
+# Rà soát gói demo đăng sách, giao nhận và trao đổi — 19/11/2026
+
+- Làm rõ trạng thái và bộ lọc của hai hàng đợi tại điểm theo dữ liệu API đã tải.
+  Giữ phiên hiện tại khi mở Driver Simulator. Mobile dùng phí từ báo giá máy chủ
+  và để trống tổng thanh toán khi chưa có báo giá.
+- Member web đọc lại trạng thái khi hai bên tua hạn kiểm tra gần đồng thời.
+  Bước 5 đăng sách có bố cục kiểm tra, sửa từng phần và xác nhận quyền sở hữu.
+- PR #122 phục hồi nút thêm vào giỏ, tải giá mới trước khi mở Mua ngay và hiển thị
+  đúng trạng thái xác minh giao nhận. Migration `0085` đồng bộ validator đơn trực
+  tiếp cho DB đã chạy `0083`, giữ nguyên lịch sử migration. Đã kiểm nâng cấp trên
+  Mongo QA riêng và thử giỏ hàng trên Member Web/Expo Web. Chưa xác minh thiết bị
+  native hoặc áp dụng migration vào DB demo trong lượt rà soát này.
+
+# Bước kiểm tra khi đăng sách trên web demo — 19/11/2026
+
+- Checkout demo, nhánh `codex/auction-demo-receipt` từ `1b03c74a`. Bước 5
+  gom thông tin đầu sách, ảnh, tình trạng, giá và xác nhận quyền sở hữu. Nút
+  chỉnh sửa quay về đúng bước. Lệnh gửi duyệt dùng quy trình hiện có.
+- Kiểm qua web demo với HTTP fixture ở 320/390/1440 px và 8 ca Chromium về
+  gửi duyệt sau khi xử lý ảnh.
+
+# Tách xác nhận giao và nhận sách khi demo đấu giá — 19/11/2026
+
+- Nhánh `codex/auction-demo-receipt` từ `92a01c8c`. Driver ghi giao thành công
+  theo mã vận đơn, đơn vẫn ở **Nhận sách**. Người mua bấm **Tôi đã nhận được
+  sách** trên web/RN để mở 72 giờ kiểm tra. **Tôi chưa nhận được sách** đưa
+  đơn tới **Xử lý đơn tại điểm** của Admin, giữ tiền để đối chiếu giao nhận.
+- Admin có thể yêu cầu hãng trả sách. Staff đối chiếu sách trả trước hoàn
+  tiền. Các đơn đã ghi nhận nhận sách vẫn đọc theo dữ liệu hiện có. Tái sử
+  dụng sự kiện hãng và receipt lệnh, gói này không cần migration.
+- PASS 10 ca E2E giao tận nơi trên Mongo QA và Chromium với API fixture từ
+  Driver qua xác nhận người mua. Typecheck API, Member web, Admin và RN qua.
+  Chưa xác minh chạy trên thiết bị native. Form khiếu nại tình trạng sách vẫn
+  nhận mô tả, phần bằng chứng media và nút mẫu demo chưa triển khai.
+
+# Đồng bộ checkout demo và sửa luồng kiểm tra trao đổi — 19/11/2026
+
+- `main` local đã fast-forward tới `808db32b`, khớp `origin/main` với PR #118–#121.
+  Checkout demo dùng nhánh local `codex/main-sync-regressions` từ mốc đó. Hai tệp
+  untracked giữ nguyên. Bản router Expo local trước đồng bộ nằm ở stash `3badca2f`.
+- Bản `808db32b` giải ngân ngay sau xác nhận thứ hai và chặn báo sự cố sau xác
+  nhận. Ca Mongo QA tái hiện `Completed` trước hạn trong khi contract yêu cầu
+  `Delivered`. API, Member web và React Native đã khôi phục [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md).
+  Cả hai vẫn có đủ hạn cá nhân. Nút tua kiểm tra chỉ hiện trong demo local sau
+  hai xác nhận và với cặp tài khoản được cấu hình.
+- Ba script chẩn đoán Mongo báo số đếm tổng hợp, gồm phân nhóm đấu giá theo
+  `state`. Đã thử bằng DB QA.
+- PASS 65 ca E2E trao đổi, gồm báo sự cố sau xác nhận, tranh chấp cạnh tranh
+  worker và tua hạn demo. PASS 5 ca HTTP đấu giá chọn lọc. Chromium kiểm Member
+  web ở 390/1440 px, Driver và 8 ca đọc Staff/Admin bằng fixture. Unit, lint,
+  typecheck của API, Member web, Admin web và RN qua. Build API và hai web qua.
+  Contract khớp 292 operations/41 controllers. Chưa kiểm trên thiết bị native.
+
 # Admin mở phiên chờ ngay dù chưa đủ người đăng ký — 18/11/2026
 
 - Nhánh local `fix-auction`. Lệnh `POST /operations/auctions/{id}/start` bỏ điều kiện

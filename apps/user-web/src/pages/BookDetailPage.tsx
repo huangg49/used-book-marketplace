@@ -1,3 +1,4 @@
+import { AddToCart } from "../components/AddToCart";
 import { BundleManifest } from "../components/BookBundle";
 import {SupportLink} from '../features/support/SupportLink';
 import { listingTitle } from "../lib/book-bundle";
@@ -254,7 +255,7 @@ export function BookDetailPage() {
                   {conversationToOpen ? (
                     <Link
                       className={styles.secondary}
-                      to={`${ROUTES.chat(conversationToOpen.id)}?openChat=1`}
+                      to={`${ROUTES.chat(conversationToOpen.id)}${buyerOrderConversation ? "" : "?openChat=1"}`}
                     >
                       <MessageCircle size={18} aria-hidden="true" />
                       {buyerOrderConversation
@@ -286,6 +287,14 @@ export function BookDetailPage() {
                     )
                   )}
                 </div>
+              )}
+              {!isOwner && !held && book.salePrice !== null && (
+                <AddToCart
+                  key={state.status === "authenticated" ? state.user.id : "anonymous"}
+                  listingId={book.id}
+                  listingVersion={book.version}
+                  disabled={detail.isFetching || detail.isError}
+                />
               )}
               {held && !orderConversation && state.status === 'authenticated' && (
                 <Link className={styles.secondary} to="/orders">

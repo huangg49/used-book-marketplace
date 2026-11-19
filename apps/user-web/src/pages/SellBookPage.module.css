@@ -1443,38 +1443,143 @@
   scrollbar-width: thin;
   border-radius: 12px;
 }
-.reviewFacts {
-  margin: 0;
+.reviewSheet {
   display: grid;
-  gap: 20px;
+  gap: 16px;
+}
+.reviewSection {
+  min-width: 0;
+  padding: clamp(14px, 3vw, 22px);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-paper);
+}
+.reviewFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+  margin: 14px 0 0;
 }
 .reviewFacts > div {
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--shop-line);
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
 }
 .reviewFacts dt {
-  font-size: 0.8125rem;
   color: var(--shop-muted);
-  margin-bottom: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
 }
 .reviewFacts dd {
-  font-size: 0.875rem;
   margin: 0;
-  line-height: 1.9;
-  white-space: pre-wrap;
+  color: var(--shop-ink);
+  font-size: 0.9375rem;
+  line-height: 1.55;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.reviewBookTitle,
+.reviewFullWidth {
+  grid-column: 1 / -1;
+}
+.reviewFacts .reviewBookTitle dd {
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.reviewFacts .reviewPrice {
+  color: var(--shop-wine);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.reviewCount {
+  margin-left: 0.4em;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.reviewPhotos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 96px), 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.reviewPhotoItem {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  max-width: 160px;
+  margin: 0;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-shelf);
+}
+.reviewPhotoItem img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+.reviewCoverBadge {
+  position: absolute;
+  inset: auto auto 6px 6px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.reviewConfirmation {
+  padding: clamp(14px, 3vw, 22px);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-shelf);
+}
+.reviewConfirmation h3 {
+  margin: 0 0 6px;
+  color: var(--shop-wine);
+  font-size: 1.05rem;
+}
+.reviewConfirmation > p {
+  margin: 8px 0;
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 .ownership {
   display: flex;
-  gap: 12px;
   align-items: flex-start;
+  gap: 12px;
   min-height: 44px;
-  font-size: 0.875rem;
-  line-height: 1.8;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
   cursor: pointer;
 }
+.ownership:hover,
+.ownership:has(input:checked) {
+  border-color: var(--shop-wine);
+}
 .ownership input {
-  margin-top: 4px;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--shop-wine);
 }
 .error {
   margin-top: 24px;
@@ -1939,31 +2044,15 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  padding-top: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--shop-line);
 }
 .reviewHeading h3 {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.7;
-}
-.reviewFacts {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 24px;
-}
-.reviewFacts > div {
-  min-width: 0;
-}
-.reviewPhotos {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-.reviewPhotos img {
-  width: 100%;
-  height: 140px;
-  object-fit: contain;
-  background: #efe3cf;
-  border-radius: 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--shop-ink);
 }
 .sessionNote {
   align-self: center;
@@ -1990,9 +2079,6 @@
   }
   .stepHelp {
     margin-bottom: 24px;
-  }
-  .reviewPhotos {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .sessionNote {
     max-width: 12ch;

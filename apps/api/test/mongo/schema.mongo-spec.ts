@@ -1,3 +1,5 @@
+import { directDeliveryJourneySpec } from '../../src/database/mongo/migrations/0083-direct-order-delivery-journey.js';
+import { directOrderIssueEvidenceSpec } from '../../src/database/mongo/migrations/0084-direct-order-issue-evidence.js';
 import { withdrawalSpecs } from '../../src/database/mongo/migrations/0060-wallet-withdrawals.js';
 import { withdrawalProofSpecs } from '../../src/database/mongo/migrations/0063-withdrawal-proofs.js';
 import { exchangeEvidenceSpecs } from '../../src/database/mongo/migrations/0054-exchange-evidence.js';
@@ -94,8 +96,12 @@ describe('migrations', () => {
       expect(info, name).toBeDefined();
       expect(info.options?.validator, name).toBeDefined();
     }
+    const specs = currentCollections();
+    expect(specs.map(spec => spec.name)).toEqual(expect.arrayContaining([
+      directDeliveryJourneySpec.name, directOrderIssueEvidenceSpec.name,
+    ]));
     expect(
-      currentCollections().length -
+      specs.filter(spec => spec.name !== directDeliveryJourneySpec.name && spec.name !== directOrderIssueEvidenceSpec.name).length -
         INFRASTRUCTURE_COLLECTIONS.length -
         // New Mongo-native evidence/assignment collections do not change the PG baseline.
         withdrawalSpecs.length -

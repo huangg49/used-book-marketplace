@@ -196,7 +196,8 @@ try {
   await buyerPage
     .getByRole("button", { name: "Chat với người bán", exact: true })
     .click();
-  await buyerPage.waitForURL(/\/chat\/[0-9a-f-]{36}$/);
+  await buyerPage.waitForURL(/\/chat\/[0-9a-f-]{36}\?openChat=1$/);
+  await buyerPage.getByRole("button", { name: "Đóng tin nhắn", exact: true }).click();
   const conversationId = new URL(buyerPage.url()).pathname.split("/").at(-1);
   assert.equal(
     (await fixture.db.collection("listings").findOne({ _id: listingId })).trade,
@@ -205,10 +206,10 @@ try {
   await buyerPage.locator("summary").filter({ hasText: /đề nghị giá/i }).click();
   await buyerPage.getByLabel("Đề nghị giá sách mong muốn (₫):", { exact: true }).fill("90000");
   await buyerPage.getByRole("button", { name: "Gửi đề nghị", exact: true }).click();
-  await buyerPage.getByRole("button", { name: "Rút đề nghị", exact: true }).waitFor();
-  await buyerPage
-    .getByRole("link", { name: "Gửi thông tin nhận sách", exact: true })
-    .click();
+  await buyerPage.getByRole("button", { name: "Hủy đề nghị", exact: true }).waitFor();
+  const openAddress = buyerPage.getByRole("button", { name: "Gửi thông tin nhận sách", exact: true });
+  const addressDialog = buyerPage.getByRole("dialog", { name: "Địa chỉ nhận sách", exact: true });
+  await openAddress.click();
   await buyerPage
     .getByRole("radio", { name: "Dùng địa chỉ mới", exact: true })
     .check();
@@ -221,9 +222,7 @@ try {
     .getByLabel("Địa chỉ chi tiết", { exact: true })
     .fill("QA destination, simulated only");
   await buyerPage.keyboard.press("Escape");
-  await buyerPage
-    .getByRole("button", { name: "Gửi địa chỉ và báo giá", exact: true })
-    .click();
+  await openAddress.click();
   assert.equal(
     await buyerPage.getByLabel("Họ tên", { exact: true }).inputValue(),
     "QA buyer",
@@ -259,10 +258,10 @@ try {
     },
   );
   await buyerPage
-    .getByRole("button", { name: "Xác nhận nơi nhận", exact: true })
+    .getByRole("button", { name: "Xác nhận & đính kèm báo giá", exact: true })
     .click();
   await buyerPage
-    .getByRole("button", { name: "Thử lại bước xác nhận địa chỉ", exact: true })
+    .getByRole("button", { name: "Thử lại gửi báo giá", exact: true })
     .waitFor();
   assert.equal(
     await buyerPage.getByLabel("Họ tên", { exact: true }).isDisabled(),
@@ -271,11 +270,9 @@ try {
   await buyerPage
     .getByRole("button", { name: "Đóng popup", exact: true })
     .click();
+  await openAddress.click();
   await buyerPage
-    .getByRole("button", { name: "Gửi địa chỉ và báo giá", exact: true })
-    .click();
-  await buyerPage
-    .getByRole("button", { name: "Thử lại bước xác nhận địa chỉ", exact: true })
+    .getByRole("button", { name: "Thử lại gửi báo giá", exact: true })
     .click();
   assert.equal(addressAttempts.length, 2);
   assert.deepEqual(addressAttempts[0], addressAttempts[1]);
@@ -291,30 +288,13 @@ try {
     await buyerPage.getByLabel("Họ tên", { exact: true }).count(),
     0,
   );
-  await buyerPage
-    .getByRole("button", { name: "Xác nhận nơi nhận", exact: true })
-    .click();
-  await buyerPage
-    .getByRole("button", { name: "Gửi báo giá cho người bán", exact: true })
-    .waitFor();
-  assert.equal(
-    addressAttempts.length,
-    2,
-    "Retry quotes the confirmed address without another save",
-  );
-  assert.equal(
-    (await fixture.api("/me/addresses", buyer.accessToken)).items.length,
-    2,
-  );
-
-  await buyerPage
-    .getByRole("button", { name: "Gửi báo giá cho người bán", exact: true })
-    .waitFor();
+  assert.equal(addressAttempts.length, 2, "Retry quotes the confirmed address without another save");
+  assert.equal((await fixture.api("/me/addresses", buyer.accessToken)).items.length, 2);
   await captureDialog(buyerPage, "quote-mobile.png");
-  await buyerPage
-    .getByRole("button", { name: "Gửi báo giá cho người bán", exact: true })
-    .click();
-  await buyerPage.waitForURL(`**/chat/${conversationId}`);
+  await addressDialog.getByRole("button", { name: "Xác nhận & đính kèm báo giá", exact: true }).click();
+  await addressDialog.waitFor({ state: "hidden" });
+  assert.equal(addressAttempts.length, 2);
+  assert.equal((await fixture.api("/me/purchase-conversations/" + conversationId, buyer.accessToken)).hasQuote, true);
   await login(sellerPage, "member@operations.test");
   await sellerPage.locator('a[href="/chat"]').first().click();
   await sellerPage.locator(`a[href="/chat/${conversationId}"]`).first().click();
@@ -333,9 +313,7 @@ try {
   await sellerPage
     .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
     .click();
-  const price = sellerPage.getByLabel("Giá sách đã thỏa thuận (₫)", {
-    exact: true,
-  });
+  const price = sellerPage.getByRole("spinbutton", { name: /^Giá sách đã thỏa thuận/ });
   await sellerPage.locator('dialog[open] input[name="agreedBookPrice"][value="90000"]').waitFor();
   assert.equal(await price.inputValue(), "90000");
   assert.equal(await price.getAttribute("readonly") !== null, true);
@@ -415,8 +393,8 @@ try {
     name: "Chi tiết đơn hàng",
     exact: true,
   });
-  await buyerPage.waitForURL(`**/chat/${conversationId}`);
-  await buyerOrderDetails.getByRole("heading", { name: "Thanh toán đơn sách", exact: true }).waitFor();
+  await buyerPage.waitForURL((url) => url.pathname === `/chat/${conversationId}`);
+  await buyerOrderDetails.getByRole("heading", { name: "Chờ thanh toán đơn hàng", exact: true }).waitFor();
   await buyerOrderDetails.getByText("Chờ thanh toán", {exact: true}).waitFor();
   const order = await fixture.db
     .collection("direct_orders")
@@ -485,7 +463,7 @@ try {
     .getByRole("button", { name: /^Thanh toán ngay 90\.000\s*₫$/ })
     .click();
   await buyerOrderDetails
-    .getByRole("heading", { name: "Chờ người bán xác nhận", exact: true })
+    .getByRole("heading", { name: "Đã thanh toán · Chờ người bán xác nhận", exact: true })
     .waitFor();
   const wallet = await fixture.api("/me/wallet", buyer.accessToken);
   assert.equal(wallet.transactionHeld, 90000);
@@ -500,24 +478,25 @@ try {
       .countDocuments({ orderId: order._id, type: "OrderPayment" }),
     1,
   );
-  const listingTabReady = buyerPage.waitForEvent("popup");
-  await buyerPage.locator(`a[href="/books/${listingId}"]`).first().click();
-  const listingTab = await listingTabReady;
-  await listingTab.getByRole("heading", { name: "Đang giao dịch", exact: true }).waitFor();
-  await listingTab.close();
-  // A new browser tab has no memory-only access token. Verify the authenticated
-  // participant view in the existing session as well as the public popup above.
-  await buyerPage.evaluate(async (id) => {
-    const { router } = await import("/src/app/router.tsx");
-    await router.navigate(`/books/${id}`);
-  }, listingId);
-  await buyerPage
-    .getByText("Đang giao dịch với bạn", { exact: true })
-    .waitFor();
+  await buyerOrderDetails.getByRole("link", { name: "Xem bài đăng gốc", exact: true }).click();
+  await buyerPage.waitForURL(origin + `/books/${listingId}`);
+  const viewOrder = buyerPage.getByRole("link", { name: "Xem đơn hàng của bạn", exact: true });
+  await viewOrder.waitFor();
+  await buyerPage.getByText("Đang giao dịch với bạn", { exact: true }).waitFor();
+  const publicListing = await browser.newPage();
+  await publicListing.goto(origin + `/books/${listingId}`);
+  await publicListing.getByRole("heading", { name: "Đang giao dịch", exact: true }).waitFor();
+  assert.equal(await publicListing.getByRole("link", { name: "Xem đơn hàng của bạn", exact: true }).count(), 0);
+  await publicListing.close();
   await buyerPage.screenshot({
     path: path.join(artifacts, "buyer-listing-mobile.png"),
     fullPage: true,
   });
+  await viewOrder.click();
+  await buyerPage.waitForURL(origin + `/chat/${conversationId}`);
+  await buyerOrderDetails
+    .getByRole("heading", { name: "Đã thanh toán · Chờ người bán xác nhận", exact: true })
+    .waitFor();
   assert.deepEqual(errors, []);
   console.log(
     "PASS seller-order browser: two sessions, non-exclusive chat, quote/address, negotiated 90000 with zero shipping, committed lost create response, one unpaid Order, underfunded Buyer payment rejected, explicit Buyer payment/one hold, public transaction state; mobile 390 and desktop 1440. QA funding/storage only.",

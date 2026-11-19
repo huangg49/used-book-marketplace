@@ -70,7 +70,7 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
       (!carrier ||
         events[0].trackingCode !== o.trackingCode ||
         (events[0].outcome === 'Delivered'
-          ? o.collectedAt?.getTime() !== events[0].occurredAt.getTime()
+          ? !!o.collectedAt && o.collectedAt < events[0].occurredAt
           : !!o.collectedAt))) ||
     (carrier && !!o.collectedAt && events.length !== 1)
   )

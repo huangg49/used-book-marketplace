@@ -1,6 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronDown, MapPin } from "lucide-react";
+import {
+  AlertCircle,
+  Archive,
+  BookOpen,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  Gavel,
+  Layers,
+  MapPin,
+  Phone,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  Truck,
+  User,
+  X,
+} from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
@@ -13,6 +31,7 @@ import {
   intakeLabels,
   intakeList,
   operationsAuctionList,
+  outcomeLabels,
   reclaimLabels,
   resolutionLabels,
   resolutionQueue,
@@ -28,13 +47,13 @@ import {
 import {
   IntakeEvidenceDecision,
   IntakeInspect,
-  InspectionReports,
 } from "./inspection";
 import { IntakeReceive, IntakeReclaim } from "./intake-actions";
 import { Forbidden, OperationsQueue } from "./queue-frame";
 import { ResolutionDecision } from "./resolution-actions";
 import { refetchWhileClosed, useQueuePanel, type Row } from "./queue-panel";
 import intakeStyles from "./IntakeQueue.module.css";
+import collectionStyles from "./CollectionQueue.module.css";
 
 // Queues for the point desks and Admin decisions. Each row's command opens
 // under the row (N4-02 to N4-05).
@@ -77,58 +96,160 @@ function IntakeRowSummary({
   item,
   meta,
   userId,
+  index,
 }: {
   item: Intake;
   meta: string[];
   userId: string;
+  index: number;
 }) {
   const title = item.title || "Chưa có tên sách";
-  const disclosureLabel = item.reports.length ? "Giá và biên bản" : "Thông tin giá";
+  const initial = title.trim().charAt(0).toUpperCase() || "S";
   const waitingForOtherReviewer =
     item.state === "NeedsEvidence" && item.evidenceRequestedBy === userId;
+  const [showAllReports, setShowAllReports] = useState(false);
+  const latestReport = item.reports.at(-1);
+  const previousReports = item.reports.slice(0, -1).reverse();
+
   return (
-    <div className={intakeStyles.rowSummary}>
-      <div className={intakeStyles.summaryGrid}>
-        <div className={intakeStyles.book}>
-          <h2>{title}</h2>
-          <span className={intakeStyles.reference}>#{item.id.slice(0, 8)}</span>
-        </div>
-        <div className={intakeStyles.status}>
-          <span className={intakeStyles.badge} data-tone={intakeTone[item.state]}>
-            {intakeLabels[item.state]}
-          </span>
-          {waitingForOtherReviewer && (
-            <p>Nhân viên hoặc quản trị viên khác sẽ xem bằng chứng bạn đã yêu cầu.</p>
-          )}
-        </div>
-        <div className={intakeStyles.placement}>
-          {item.shelfCode && (
-            <span className={intakeStyles.shelf}>
-              <MapPin size={15} aria-hidden="true" />
-              Kệ {item.shelfCode}
-            </span>
-          )}
-          <ul className={intakeStyles.meta}>
-            {meta.map((value) => <li key={value}>{value}</li>)}
-          </ul>
+    <div className={intakeStyles.card}>
+      {/* Archival Book Jacket / Thumbnail */}
+      <div className={intakeStyles.bookCover} aria-hidden="true">
+        <div className={intakeStyles.bookSpine} />
+        <div className={intakeStyles.bookCoverBody}>
+          <div className={intakeStyles.bookRibbon} />
+          <BookOpen className={intakeStyles.bookCoverIcon} size={20} />
+          <span className={intakeStyles.bookCoverInitial}>{initial}</span>
+          <span className={intakeStyles.bookCoverIndex}>{String(index + 1).padStart(2, "0")}</span>
         </div>
       </div>
-      <details className={intakeStyles.disclosure}>
-        <summary aria-label={`${disclosureLabel} của ${title}`}>
-          <ChevronDown size={15} aria-hidden="true" />
-          {disclosureLabel}
-        </summary>
-        <div className={intakeStyles.disclosureBody}>
-          <dl>
-            <div><dt>Giá khởi điểm</dt><dd>{money(item.startPrice)}</dd></div>
-            <div><dt>Bước giá</dt><dd>{money(item.step)}</dd></div>
+
+      {/* Main Dossier Content */}
+      <div className={intakeStyles.dossier}>
+        {/* Header Line: Title, ID, Shelf Tag, Status Badge */}
+        <div className={intakeStyles.headerLine}>
+          <div className={intakeStyles.titleGroup}>
+            <h2 className={intakeStyles.bookTitle}>{title}</h2>
+            <span className={intakeStyles.refCode}>#{item.id.slice(0, 8)}</span>
+          </div>
+
+          <div className={intakeStyles.badgesGroup}>
+            {item.shelfCode ? (
+              <span className={intakeStyles.shelfTag}>
+                <MapPin size={13} aria-hidden="true" />
+                <span>KỆ {item.shelfCode}</span>
+              </span>
+            ) : (
+              <span className={intakeStyles.shelfTagEmpty}>
+                <span>Chưa xếp kệ</span>
+              </span>
+            )}
+
+            <span className={intakeStyles.statusBadge} data-tone={intakeTone[item.state]}>
+              {item.state === "Auctioning" && <span className={intakeStyles.pulseDot} aria-hidden="true" />}
+              {item.state === "Sold" && <Check size={12} aria-hidden="true" />}
+              {intakeLabels[item.state]}
+            </span>
+          </div>
+        </div>
+
+        {waitingForOtherReviewer && (
+          <div className={intakeStyles.noticeBanner}>
+            <AlertCircle size={14} aria-hidden="true" />
+            <span>Nhân viên hoặc quản trị viên khác sẽ xem bằng chứng bạn đã yêu cầu.</span>
+          </div>
+        )}
+
+        <details className={intakeStyles.priceDisclosure}>
+          <summary aria-label={`Thông tin giá của ${title}`}>
+            <ChevronDown size={15} aria-hidden="true" /> Thông tin giá
+          </summary>
+          <dl className={intakeStyles.priceMatrix}>
+            <div className={intakeStyles.priceCell}>
+              <dt className={intakeStyles.priceLabel}>Giá khởi điểm</dt>
+              <dd className={intakeStyles.priceValue}>{money(item.startPrice)}</dd>
+            </div>
+            <div className={intakeStyles.priceCell}>
+              <dt className={intakeStyles.priceLabel}>Bước giá</dt>
+              <dd className={intakeStyles.priceValue}>+{money(item.step)}</dd>
+            </div>
             {item.buyNowPrice !== null && (
-              <div><dt>Giá mua ngay</dt><dd>{money(item.buyNowPrice)}</dd></div>
+              <div className={intakeStyles.priceCell}>
+                <dt className={intakeStyles.priceLabel}>Giá mua ngay</dt>
+                <dd className={intakeStyles.priceValueBuyNow}>{money(item.buyNowPrice)}</dd>
+              </div>
             )}
           </dl>
-          <InspectionReports item={item} />
+        </details>
+
+        {/* Inspection Certificate Seal (Biên bản kiểm định tại điểm) */}
+        {latestReport ? (
+          <div className={intakeStyles.inspectionCert}>
+            <div className={intakeStyles.certHeader}>
+              <span className={intakeStyles.certStamp} data-outcome={latestReport.outcome}>
+                {latestReport.outcome === "Pass" ? (
+                  <CheckCircle2 size={13} aria-hidden="true" />
+                ) : latestReport.outcome === "Fail" ? (
+                  <AlertCircle size={13} aria-hidden="true" />
+                ) : (
+                  <Clock size={13} aria-hidden="true" />
+                )}
+                <span>{outcomeLabels[latestReport.outcome]} kiểm định</span>
+              </span>
+              <span className={intakeStyles.certMeta}>
+                Biên bản #{latestReport.revision} · {dateText(latestReport.createdAt)}
+              </span>
+              {previousReports.length > 0 && (
+                <button
+                  type="button"
+                  className={intakeStyles.historyToggle}
+                  aria-expanded={showAllReports}
+                  onClick={() => setShowAllReports(!showAllReports)}
+                >
+                  <ChevronDown
+                    size={13}
+                    aria-hidden="true"
+                    style={{ transform: showAllReports ? "rotate(180deg)" : undefined }}
+                  />
+                  {showAllReports ? "Ẩn lịch sử" : `+${previousReports.length} biên bản cũ`}
+                </button>
+              )}
+            </div>
+            {latestReport.note && (
+              <blockquote className={intakeStyles.certNote}>
+                “{latestReport.note}”
+              </blockquote>
+            )}
+            {showAllReports && previousReports.length > 0 && (
+              <div className={intakeStyles.historyList}>
+                {previousReports.map((r) => (
+                  <div key={r.revision} className={intakeStyles.historyItem}>
+                    <span className={intakeStyles.historyOutcome} data-outcome={r.outcome}>
+                      #{r.revision} {outcomeLabels[r.outcome]}
+                    </span>
+                    <span className={intakeStyles.historyTime}>{dateText(r.createdAt)}</span>
+                    {r.note && <span>— {r.note}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className={intakeStyles.noCert}>
+            <span className={intakeStyles.noCertText}>Chưa có biên bản kiểm tra tại điểm</span>
+          </div>
+        )}
+
+        {/* Footer Meta: Logistics & Timestamps */}
+        <div className={intakeStyles.metaList}>
+          {meta.map((text) => (
+            <span key={text} className={intakeStyles.metaItem}>
+              <Clock size={12} aria-hidden="true" />
+              {text}
+            </span>
+          ))}
         </div>
-      </details>
+      </div>
     </div>
   );
 }
@@ -164,13 +285,29 @@ function intakeAction(item: Intake, userId: string): Row["action"] {
         label: "Trả sách",
         render: (context) => <IntakeReclaim item={item} {...context} />,
       };
+    case "Auctioning":
+    case "Sold":
+      if (item.auctionId) {
+        return {
+          label: "Xem phiên ↗",
+          to: "/operations/auctions",
+        };
+      }
+      return undefined;
     default:
       return undefined;
   }
 }
+
+const queueSearch = (input: string) =>
+  input.trim().toLocaleLowerCase("vi-VN").normalize("NFD").replace(/\p{Diacritic}/gu, "").replaceAll("đ", "d");
+
+type FilterTab = "all" | "awaiting" | "inspecting" | "auction" | "reclaim" | "resolved";
+
 function IntakeQueueContent({ userId }: { userId: string }) {
   const panel = useQueuePanel();
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [page, setPage] = useState(1);
   const result = useQuery({
     queryKey: ["operations", "auction-intakes"],
@@ -178,23 +315,54 @@ function IntakeQueueContent({ userId }: { userId: string }) {
     refetchInterval: refetchWhileClosed(panel),
   });
   const items = result.data?.items ?? [];
-  const searchTerm = search.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("vi-VN");
-  const filteredItems = !searchTerm
-    ? items
-    : items.filter((item) =>
-      [item.id, item.title, item.pointId, item.shelfCode, intakeLabels[item.state]]
+
+  const stats = {
+    total: items.length,
+    awaiting: items.filter((i) => i.state === "AwaitingDropoff").length,
+    inspecting: items.filter((i) => i.state === "Received" || i.state === "NeedsEvidence").length,
+    auction: items.filter((i) => i.state === "Passed" || i.state === "Auctioning").length,
+    reclaim: items.filter((i) => i.state === "ReclaimRequired").length,
+    resolved: items.filter((i) => i.state === "Sold").length,
+  };
+
+  const tabFilter = (item: Intake): boolean => {
+    switch (activeTab) {
+      case "awaiting":
+        return item.state === "AwaitingDropoff";
+      case "inspecting":
+        return item.state === "Received" || item.state === "NeedsEvidence";
+      case "auction":
+        return item.state === "Passed" || item.state === "Auctioning";
+      case "reclaim":
+        return item.state === "ReclaimRequired";
+      case "resolved":
+        return item.state === "Sold";
+      default:
+        return true;
+    }
+  };
+
+  const searchTerm = queueSearch(search);
+  const filteredItems = items
+    .filter(tabFilter)
+    .filter((item) => {
+      if (!searchTerm) return true;
+      return queueSearch([item.id, item.title, item.pointId, item.shelfCode, intakeLabels[item.state]]
         .filter((value): value is string => Boolean(value))
-        .join(" ")
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .toLocaleLowerCase("vi-VN")
-        .includes(searchTerm),
-    );
+        .join(" "))
+        .includes(searchTerm);
+    });
+
   const pageSize = 10;
   const pageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const shownFrom = (currentPage - 1) * pageSize;
-  const visibleItems = filteredItems.slice(shownFrom, shownFrom + pageSize);
+  const pageItems = filteredItems.slice(shownFrom, shownFrom + pageSize);
+  const openItem = panel.open ? items.find((i) => i.id === panel.open) : undefined;
+  const visibleItems = openItem && !pageItems.some((i) => i.id === panel.open)
+    ? [openItem, ...pageItems]
+    : pageItems;
+
   return (
     <OperationsQueue
       number="01"
@@ -204,31 +372,170 @@ function IntakeQueueContent({ userId }: { userId: string }) {
       result={result}
       panel={panel}
       extra={() => (
-        <form className={intakeStyles.search} role="search" onSubmit={(event) => event.preventDefault()}>
-          <label htmlFor="intake-search">Tìm sách gửi đấu giá</label>
-          <div>
-            <input
-              id="intake-search"
-              type="search"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Tên sách, mã hồ sơ, trạng thái hoặc mã kệ"
-            />
-            {search && (
-              <button type="button" onClick={() => { setSearch(""); setPage(1); }}>
-                Xóa
-              </button>
-            )}
+        <>
+          {/* Quick KPI Stats Ribbon */}
+          <div className={intakeStyles.kpiGrid}>
+            <button
+              type="button"
+              className={intakeStyles.kpiCard}
+              aria-pressed={activeTab === "all"}
+              data-active={activeTab === "all"}
+              onClick={() => { setActiveTab("all"); setPage(1); }}
+            >
+              <div className={intakeStyles.kpiIcon}><BookOpen size={18} aria-hidden="true" /></div>
+              <div className={intakeStyles.kpiData}>
+                <span className={intakeStyles.kpiNumber}>{stats.total}</span>
+                <span className={intakeStyles.kpiTitle}>Hồ sơ đã tải</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={intakeStyles.kpiCard}
+              aria-pressed={activeTab === "awaiting"}
+              data-active={activeTab === "awaiting"}
+              onClick={() => { setActiveTab("awaiting"); setPage(1); }}
+            >
+              <div className={intakeStyles.kpiIcon}><Clock size={18} aria-hidden="true" /></div>
+              <div className={intakeStyles.kpiData}>
+                <span className={intakeStyles.kpiNumber}>{stats.awaiting}</span>
+                <span className={intakeStyles.kpiTitle}>Chờ tiếp nhận</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={intakeStyles.kpiCard}
+              aria-pressed={activeTab === "inspecting"}
+              data-active={activeTab === "inspecting"}
+              onClick={() => { setActiveTab("inspecting"); setPage(1); }}
+            >
+              <div className={intakeStyles.kpiIcon}><CheckCircle2 size={18} aria-hidden="true" /></div>
+              <div className={intakeStyles.kpiData}>
+                <span className={intakeStyles.kpiNumber}>{stats.inspecting}</span>
+                <span className={intakeStyles.kpiTitle}>Cần kiểm định</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={intakeStyles.kpiCard}
+              aria-pressed={activeTab === "auction"}
+              data-active={activeTab === "auction"}
+              onClick={() => { setActiveTab("auction"); setPage(1); }}
+            >
+              <div className={intakeStyles.kpiIcon}><Gavel size={18} aria-hidden="true" /></div>
+              <div className={intakeStyles.kpiData}>
+                <span className={intakeStyles.kpiNumber}>{stats.auction}</span>
+                <span className={intakeStyles.kpiTitle}>Trên kệ / Đấu giá</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={intakeStyles.kpiCard}
+              aria-pressed={activeTab === "resolved"}
+              data-active={activeTab === "resolved"}
+              onClick={() => { setActiveTab("resolved"); setPage(1); }}
+            >
+              <div className={intakeStyles.kpiIcon}><Archive size={18} aria-hidden="true" /></div>
+              <div className={intakeStyles.kpiData}>
+                <span className={intakeStyles.kpiNumber}>{stats.resolved}</span>
+                <span className={intakeStyles.kpiTitle}>Đã bán</span>
+              </div>
+            </button>
           </div>
-        </form>
+
+          {/* Filter Tabs & Search Bar */}
+          <div className={intakeStyles.controlBar}>
+            <div className={intakeStyles.filterTabs} role="group" aria-label="Lọc hồ sơ theo trạng thái">
+              <button
+                type="button"
+                aria-pressed={activeTab === "all"}
+                className={intakeStyles.tabBtn}
+                data-active={activeTab === "all"}
+                onClick={() => { setActiveTab("all"); setPage(1); }}
+              >
+                Tất cả <span className={intakeStyles.tabCount}>{stats.total}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "awaiting"}
+                className={intakeStyles.tabBtn}
+                data-active={activeTab === "awaiting"}
+                onClick={() => { setActiveTab("awaiting"); setPage(1); }}
+              >
+                Chờ nhận <span className={intakeStyles.tabCount}>{stats.awaiting}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "inspecting"}
+                className={intakeStyles.tabBtn}
+                data-active={activeTab === "inspecting"}
+                onClick={() => { setActiveTab("inspecting"); setPage(1); }}
+              >
+                Cần kiểm định <span className={intakeStyles.tabCount}>{stats.inspecting}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "auction"}
+                className={intakeStyles.tabBtn}
+                data-active={activeTab === "auction"}
+                onClick={() => { setActiveTab("auction"); setPage(1); }}
+              >
+                Đang đấu giá <span className={intakeStyles.tabCount}>{stats.auction}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "reclaim"}
+                className={intakeStyles.tabBtn}
+                data-active={activeTab === "reclaim"}
+                onClick={() => { setActiveTab("reclaim"); setPage(1); }}
+              >
+                Chờ trả sách <span className={intakeStyles.tabCount}>{stats.reclaim}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "resolved"}
+                className={intakeStyles.tabBtn}
+                data-active={activeTab === "resolved"}
+                onClick={() => { setActiveTab("resolved"); setPage(1); }}
+              >
+                Đã bán <span className={intakeStyles.tabCount}>{stats.resolved}</span>
+              </button>
+            </div>
+
+            <div className={intakeStyles.searchBox} data-focus-surface>
+              <Search size={16} className={intakeStyles.searchIcon} aria-hidden="true" />
+              <input
+                id="intake-search"
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Tìm theo tên sách, mã hồ sơ, mã kệ..."
+                aria-label="Tìm kiếm sách gửi đấu giá"
+              />
+              {search && (
+                <button
+                  type="button"
+                  className={intakeStyles.clearSearchBtn}
+                  onClick={() => { setSearch(""); setPage(1); }}
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          </div>
+        </>
       )}
       footer={() => filteredItems.length > 0 && (
         <nav className={intakeStyles.pagination} aria-label="Phân trang sách gửi đấu giá">
           <p aria-live="polite">
-            Hiển thị {shownFrom + 1}–{Math.min(shownFrom + pageSize, filteredItems.length)} trong {filteredItems.length} hồ sơ đã tải.
+            Hiển thị {shownFrom + 1}–{Math.min(shownFrom + pageSize, filteredItems.length)} trong {filteredItems.length} hồ sơ đã lọc ({items.length} đã tải).
           </p>
           <div>
             <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
@@ -245,33 +552,179 @@ function IntakeQueueContent({ userId }: { userId: string }) {
         className: intakeStyles.queue,
         listHeader: (
           <div className={intakeStyles.listHeader} aria-hidden="true">
-            <div className={intakeStyles.summaryGrid}>
-              <span>Hồ sơ sách</span>
-              <span>Trạng thái</span>
-              <span>Tiếp nhận tại điểm</span>
+            <div className={intakeStyles.listHeaderTitle}>
+              <Layers size={14} />
+              <span>Hồ sơ sách lưu kho & đấu giá</span>
             </div>
-            <span>Thao tác</span>
+            <span className={intakeStyles.listHeaderAction}>Thao tác tại điểm</span>
           </div>
         ),
       }}
-      rows={visibleItems.map((item) => {
+      rows={visibleItems.map((item, index) => {
         const meta = intakeMeta(item);
         return {
           id: item.id,
           status: intakeLabels[item.state],
           meta: [...meta, item.shelfCode ?? ""],
           title: item.title,
-          summary: <IntakeRowSummary item={item} meta={meta} userId={userId} />,
+          summary: <IntakeRowSummary item={item} meta={meta} userId={userId} index={shownFrom + index} />,
           action: intakeAction(item, userId),
         };
       })}
       empty={{
-        title: search ? "Không tìm thấy sách phù hợp." : "Chưa có sách cần xử lý.",
-        body: search
-          ? "Thử tìm theo tên sách, mã hồ sơ, trạng thái, mã kệ hoặc mã điểm."
+        title: search || activeTab !== "all" ? "Không tìm thấy sách phù hợp." : "Chưa có sách cần xử lý.",
+        body: search || activeTab !== "all"
+          ? "Thử đổi bộ lọc trạng thái hoặc từ khóa tìm kiếm (tên sách, mã hồ sơ, mã kệ)."
           : <AssignmentNote />,
       }}
     />
+  );
+}
+
+const collectionTone: Record<CollectionItem["state"], string> = {
+  ReadyForCollection: "ready",
+  InTransit: "in-transit",
+  Inspection: "ready",
+  ReturnPending: "attention",
+  Completed: "completed",
+  AwaitingPayment: "neutral",
+  Fulfilling: "neutral",
+  ResolutionPending: "attention",
+  Cancelled: "neutral",
+  PaymentExpired: "neutral",
+};
+
+function CollectionRowSummary({
+  item,
+  index,
+}: {
+  item: CollectionItem;
+  index: number;
+}) {
+  const title = item.title || "Chưa có tên sách";
+  const initial = title.trim().charAt(0).toUpperCase() || "S";
+  const deadlineText =
+    item.state === "ReturnPending"
+      ? `Hạn mang trả: ${dateText(item.returnDeadline)}`
+      : item.fulfillmentMethod === "CarrierOutbound"
+        ? `Hạn giao cho hãng: ${dateText(item.collectionDeadline)}`
+        : `Hạn đến lấy: ${dateText(item.collectionDeadline)}`;
+
+  return (
+    <div className={collectionStyles.card}>
+      {/* Tactile Archival Book Thumbnail */}
+      <div className={collectionStyles.bookCover} aria-hidden="true">
+        <div className={collectionStyles.bookSpine} />
+        <div className={collectionStyles.bookCoverBody}>
+          <div className={collectionStyles.bookRibbon} />
+          <BookOpen className={collectionStyles.bookCoverIcon} size={20} />
+          <span className={collectionStyles.bookCoverInitial}>{initial}</span>
+          <span className={collectionStyles.bookCoverIndex}>{String(index + 1).padStart(2, "0")}</span>
+        </div>
+      </div>
+
+      {/* Main Dossier Content */}
+      <div className={collectionStyles.dossier}>
+        {/* Header Line: Title, ID, Shelf Tag, Fulfillment Method Badge, Status Badge */}
+        <div className={collectionStyles.headerLine}>
+          <div className={collectionStyles.titleGroup}>
+            <h2 className={collectionStyles.bookTitle}>{title}</h2>
+            <span className={collectionStyles.refCode}>#{item.id.slice(0, 8)}</span>
+          </div>
+
+          <div className={collectionStyles.badgesGroup}>
+            {item.shelfCode ? (
+              <span className={collectionStyles.shelfTag}>
+                <MapPin size={13} aria-hidden="true" />
+                <span>KỆ {item.shelfCode}</span>
+              </span>
+            ) : (
+              <span className={collectionStyles.shelfTagEmpty}>
+                <span>Chưa xếp kệ</span>
+              </span>
+            )}
+
+            {item.fulfillmentMethod === "CarrierOutbound" ? (
+              <span className={collectionStyles.methodBadgeCarrier}>
+                <Truck size={13} aria-hidden="true" />
+                <span>GIAO TẬN NƠI (SHIPPER)</span>
+              </span>
+            ) : (
+              <span className={collectionStyles.methodBadgeSelf}>
+                <User size={13} aria-hidden="true" />
+                <span>NHẬN TẠI ĐIỂM</span>
+              </span>
+            )}
+
+            <span className={collectionStyles.statusBadge} data-tone={collectionTone[item.state] ?? "neutral"}>
+              {collectionStatus(item)}
+            </span>
+          </div>
+        </div>
+
+        {/* Recipient & Shipping Dossier */}
+        {item.delivery ? (
+          <div className={collectionStyles.recipientCard}>
+            <div className={collectionStyles.recipientRow}>
+              <div className={collectionStyles.recipientField}>
+                <span className={collectionStyles.fieldLabel}>
+                  <User size={12} aria-hidden="true" /> NGƯỜI NHẬN
+                </span>
+                <span className={collectionStyles.fieldValBold}>{item.delivery.recipientName}</span>
+              </div>
+              <div className={collectionStyles.recipientDivider} />
+              <div className={collectionStyles.recipientField}>
+                <span className={collectionStyles.fieldLabel}>
+                  <Phone size={12} aria-hidden="true" /> ĐIỆN THOẠI
+                </span>
+                <span className={collectionStyles.fieldValPhone}>{item.delivery.phone}</span>
+              </div>
+              {item.delivery.trackingCode && (
+                <>
+                  <div className={collectionStyles.recipientDivider} />
+                  <div className={collectionStyles.recipientField}>
+                    <span className={collectionStyles.fieldLabel}>
+                      <Truck size={12} aria-hidden="true" /> MÃ VẬN ĐƠN
+                    </span>
+                    <span className={collectionStyles.fieldValMono}>{item.delivery.trackingCode}</span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className={collectionStyles.addressRow}>
+              <MapPin size={13} className={collectionStyles.addressIcon} aria-hidden="true" />
+              <span className={collectionStyles.addressText}>{item.delivery.detail}</span>
+            </div>
+          </div>
+        ) : (
+          <div className={collectionStyles.recipientCard}>
+            <div className={collectionStyles.recipientRow}>
+              <div className={collectionStyles.recipientField}>
+                <span className={collectionStyles.fieldLabel}>
+                  <User size={12} aria-hidden="true" /> NGƯỜI ĐẾN NHẬN
+                </span>
+                <span className={collectionStyles.fieldValBold}>{item.recipientName}</span>
+              </div>
+              <div className={collectionStyles.recipientDivider} />
+              <div className={collectionStyles.recipientField}>
+                <span className={collectionStyles.fieldLabel}>
+                  <ShieldCheck size={12} aria-hidden="true" /> XÁC THỰC
+                </span>
+                <span className={collectionStyles.fieldVal}>Yêu cầu mã 6 số trên ứng dụng khi giao sách</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer Meta: Logistics & Timestamps */}
+        <div className={collectionStyles.metaList}>
+          <span className={collectionStyles.metaItem}>
+            <Clock size={12} aria-hidden="true" />
+            {deadlineText}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -297,30 +750,272 @@ function collectionAction(item: CollectionItem): Row["action"] {
     };
   return undefined;
 }
+
 export function CollectionQueue() {
   const user = useOutletContext<CurrentUser>();
   if (!canOperatePoint(user)) return <Forbidden />;
   return <CollectionQueueContent />;
 }
+
+type CollectionFilterTab = "all" | "carrier" | "self" | "return" | "report";
+
+function collectionStatus(item: CollectionItem) {
+  return item.state === "ReadyForCollection" && item.fulfillmentMethod === "CarrierOutbound"
+    ? "Chờ bàn giao cho hãng"
+    : collectionLabels[item.state];
+}
+
 function CollectionQueueContent() {
   const panel = useQueuePanel();
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<CollectionFilterTab>("all");
+  const [page, setPage] = useState(1);
   const result = useQuery({
     queryKey: ["operations", "point-orders"],
     queryFn: () => session.request("/operations/point-orders", collectionQueue),
     refetchInterval: refetchWhileClosed(panel),
   });
+  const items = result.data?.items ?? [];
+
+  const stats = {
+    total: items.length,
+    carrier: items.filter((i) => i.fulfillmentMethod === "CarrierOutbound" && i.state === "ReadyForCollection").length,
+    self: items.filter((i) => i.fulfillmentMethod === "SelfCollect" && i.state === "ReadyForCollection").length,
+    returnPending: items.filter((i) => i.state === "ReturnPending").length,
+    report: items.filter((i) => i.state === "Fulfilling").length,
+  };
+
+  const tabFilter = (item: CollectionItem): boolean => {
+    switch (activeTab) {
+      case "carrier":
+        return item.fulfillmentMethod === "CarrierOutbound" && item.state === "ReadyForCollection";
+      case "self":
+        return item.fulfillmentMethod === "SelfCollect" && item.state === "ReadyForCollection";
+      case "return":
+        return item.state === "ReturnPending";
+      case "report":
+        return item.state === "Fulfilling";
+      default:
+        return true;
+    }
+  };
+
+  const searchTerm = queueSearch(search);
+  const filteredItems = items
+    .filter(tabFilter)
+    .filter((item) => {
+      if (!searchTerm) return true;
+      const deliveryText = item.delivery
+        ? `${item.delivery.recipientName} ${item.delivery.phone} ${item.delivery.detail} ${item.delivery.trackingCode ?? ""}`
+        : "";
+      return queueSearch([item.id, item.title, item.recipientName, item.shelfCode, collectionStatus(item), deliveryText]
+        .filter((value): value is string => Boolean(value))
+        .join(" "))
+        .includes(searchTerm);
+    });
+
+  const pageSize = 10;
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const shownFrom = (currentPage - 1) * pageSize;
+  const pageItems = filteredItems.slice(shownFrom, shownFrom + pageSize);
+  const openItem = panel.open ? items.find((i) => i.id === panel.open) : undefined;
+  const visibleItems = openItem && !pageItems.some((i) => i.id === panel.open)
+    ? [openItem, ...pageItems]
+    : pageItems;
+
   return (
     <OperationsQueue
       number="02"
-      title="Giao sách tại điểm."
+      title="Giao sách tại điểm"
       intro="Giao sách cho người nhận bằng mã họ tự yêu cầu trên ứng dụng, và nhận lại sách khi đơn cần trả."
       order="Xếp theo hạn đến lấy, gần nhất trước."
       result={result}
       panel={panel}
       serverTime={result.data?.serverTime}
-      rows={(result.data?.items ?? []).map((item) => ({
+      extra={() => (
+        <>
+          {/* Quick KPI Stats Ribbon */}
+          <div className={collectionStyles.kpiGrid}>
+            <button
+              type="button"
+              className={collectionStyles.kpiCard}
+              aria-pressed={activeTab === "all"}
+              data-active={activeTab === "all"}
+              onClick={() => { setActiveTab("all"); setPage(1); }}
+            >
+              <div className={collectionStyles.kpiIcon}><BookOpen size={16} aria-hidden="true" /></div>
+              <div className={collectionStyles.kpiData}>
+                <span className={collectionStyles.kpiNumber}>{stats.total}</span>
+                <span className={collectionStyles.kpiTitle}>Đơn đã tải</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={collectionStyles.kpiCard}
+              aria-pressed={activeTab === "carrier"}
+              data-active={activeTab === "carrier"}
+              onClick={() => { setActiveTab("carrier"); setPage(1); }}
+            >
+              <div className={collectionStyles.kpiIcon}><Truck size={16} aria-hidden="true" /></div>
+              <div className={collectionStyles.kpiData}>
+                <span className={collectionStyles.kpiNumber}>{stats.carrier}</span>
+                <span className={collectionStyles.kpiTitle}>Giao hãng</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={collectionStyles.kpiCard}
+              aria-pressed={activeTab === "self"}
+              data-active={activeTab === "self"}
+              onClick={() => { setActiveTab("self"); setPage(1); }}
+            >
+              <div className={collectionStyles.kpiIcon}><User size={16} aria-hidden="true" /></div>
+              <div className={collectionStyles.kpiData}>
+                <span className={collectionStyles.kpiNumber}>{stats.self}</span>
+                <span className={collectionStyles.kpiTitle}>Tự lấy</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={collectionStyles.kpiCard}
+              aria-pressed={activeTab === "return"}
+              data-active={activeTab === "return"}
+              onClick={() => { setActiveTab("return"); setPage(1); }}
+            >
+              <div className={collectionStyles.kpiIcon}><RotateCcw size={16} aria-hidden="true" /></div>
+              <div className={collectionStyles.kpiData}>
+                <span className={collectionStyles.kpiNumber}>{stats.returnPending}</span>
+                <span className={collectionStyles.kpiTitle}>Hoàn trả</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={collectionStyles.kpiCard}
+              aria-pressed={activeTab === "report"}
+              data-active={activeTab === "report"}
+              onClick={() => { setActiveTab("report"); setPage(1); }}
+            >
+              <div className={collectionStyles.kpiIcon}><CheckCircle2 size={16} aria-hidden="true" /></div>
+              <div className={collectionStyles.kpiData}>
+                <span className={collectionStyles.kpiNumber}>{stats.report}</span>
+                <span className={collectionStyles.kpiTitle}>Chờ xem biên bản</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Filter Tabs & Search Bar */}
+          <div className={collectionStyles.controlBar}>
+            <div className={collectionStyles.filterTabs} role="group" aria-label="Lọc đơn giao nhận theo trạng thái">
+              <button
+                type="button"
+                aria-pressed={activeTab === "all"}
+                className={collectionStyles.tabBtn}
+                data-active={activeTab === "all"}
+                onClick={() => { setActiveTab("all"); setPage(1); }}
+              >
+                Tất cả <span className={collectionStyles.tabCount}>{stats.total}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "carrier"}
+                className={collectionStyles.tabBtn}
+                data-active={activeTab === "carrier"}
+                onClick={() => { setActiveTab("carrier"); setPage(1); }}
+              >
+                Giao hãng <span className={collectionStyles.tabCount}>{stats.carrier}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "self"}
+                className={collectionStyles.tabBtn}
+                data-active={activeTab === "self"}
+                onClick={() => { setActiveTab("self"); setPage(1); }}
+              >
+                Tự lấy <span className={collectionStyles.tabCount}>{stats.self}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "return"}
+                className={collectionStyles.tabBtn}
+                data-active={activeTab === "return"}
+                onClick={() => { setActiveTab("return"); setPage(1); }}
+              >
+                Hoàn trả <span className={collectionStyles.tabCount}>{stats.returnPending}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === "report"}
+                className={collectionStyles.tabBtn}
+                data-active={activeTab === "report"}
+                onClick={() => { setActiveTab("report"); setPage(1); }}
+              >
+                Chờ biên bản <span className={collectionStyles.tabCount}>{stats.report}</span>
+              </button>
+            </div>
+
+            <div className={collectionStyles.searchBox} data-focus-surface>
+              <Search size={16} className={collectionStyles.searchIcon} aria-hidden="true" />
+              <input
+                id="collection-search"
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Tìm người nhận, SĐT, tên sách, mã kệ..."
+                aria-label="Tìm kiếm đơn giao nhận"
+              />
+              {search && (
+                <button
+                  type="button"
+                  className={collectionStyles.clearSearchBtn}
+                  onClick={() => { setSearch(""); setPage(1); }}
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+      footer={() => filteredItems.length > 0 && (
+        <nav className={intakeStyles.pagination} aria-label="Phân trang đơn giao nhận">
+          <p aria-live="polite">
+            Hiển thị {shownFrom + 1}–{Math.min(shownFrom + pageSize, filteredItems.length)} trong {filteredItems.length} đơn đã lọc ({items.length} đã tải).
+          </p>
+          <div>
+            <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
+              Trước
+            </button>
+            <span>Trang {currentPage} / {pageCount}</span>
+            <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>
+              Sau
+            </button>
+          </div>
+        </nav>
+      )}
+      presentation={{
+        className: collectionStyles.queue,
+        listHeader: (
+          <div className={collectionStyles.listHeader} aria-hidden="true">
+            <div className={collectionStyles.listHeaderTitle}>
+              <Layers size={14} />
+              <span>Hồ sơ giao nhận sách tại điểm</span>
+            </div>
+            <span className={collectionStyles.listHeaderAction}>Thao tác tại điểm</span>
+          </div>
+        ),
+      }}
+      rows={visibleItems.map((item, index) => ({
         id: item.id,
-        status: collectionLabels[item.state],
+        status: collectionStatus(item),
         meta: [
           item.state === "ReturnPending"
             ? `Hạn trả: ${dateText(item.returnDeadline)}`
@@ -330,14 +1025,14 @@ function CollectionQueueContent() {
           ...(item.shelfCode ? [`Kệ ${item.shelfCode}`] : []),
         ],
         title: item.title,
-        detail: item.delivery
-          ? `Giao tận nơi: ${item.delivery.recipientName} · ${item.delivery.phone} · ${item.delivery.detail}`
-          : `Người nhận: ${item.recipientName}`,
+        summary: <CollectionRowSummary item={item} index={shownFrom + index} />,
         action: collectionAction(item),
       }))}
       empty={{
-        title: "Chưa có đơn cần giao hoặc nhận lại.",
-        body: <AssignmentNote />,
+        title: search || activeTab !== "all" ? "Không tìm thấy đơn phù hợp." : "Chưa có đơn cần giao hoặc nhận lại.",
+        body: search || activeTab !== "all"
+          ? "Thử đổi bộ lọc trạng thái hoặc từ khóa tìm kiếm (tên người nhận, SĐT, mã kệ)."
+          : <AssignmentNote />,
       }}
     />
   );

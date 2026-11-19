@@ -322,7 +322,7 @@ export const resolutionLabels: Record<ResolutionItem["openReason"], string> = {
   CollectionOverdue: "Quá hạn đến lấy sách",
   InspectionClaim: "Khiếu nại sau khi nhận",
   ReturnOverdue: "Quá hạn mang trả sách",
-  DeliveryFailed: "Giao tận nơi không thành công",
+  DeliveryFailed: "Cần đối chiếu giao tận nơi",
 };
 
 // N4-10/N4-11: points, assignments and their receipts (FR-H04).

@@ -198,30 +198,42 @@ try {
   }
   // Select one of two rows. Reuse the actual single-listing quote/create journey.
   await p.setViewportSize({ width: 1440, height: 1000 });
-  const creates = [];
-  p.on("response", async (response) => {
-    if (
-      response.url().endsWith("/orders/buy-now") &&
-      response.request().method() === "POST" &&
-      response.status() === 200
-    )
-      creates.push(await response.json());
-  });
   await p
     .locator("li")
     .filter({ has: p.locator(`a[href="/books/${id}"]`) })
     .getByRole("link", { name: "Mua bài đăng này", exact: true })
     .click();
-  await p.getByRole("dialog").waitFor();
-  await button(p, "Xem tổng thanh toán").click();
-  await button(p, "Đặt mua và đến thanh toán").click();
-  await expect.poll(() => creates.length).toBe(1);
-  const webOrder = await f.api("/me/orders/" + creates[0].entityId, token);
+  await p.waitForURL(/\/chat\/[a-f0-9-]{36}\?buyNow=1$/);
+  const roomId = new URL(p.url()).pathname.split("/").at(-1);
+  const addressDialog = p.getByRole("dialog", { name: "Địa chỉ nhận sách" });
+  await addressDialog.getByRole("button", { name: "Xác nhận giá & đính kèm báo giá" }).click();
+  await addressDialog.waitFor({ state: "hidden" });
+  const buyerRoom = await f.api("/me/purchase-conversations/" + roomId, token);
+  assert.equal(buyerRoom.listingId, id);
+  assert.equal(buyerRoom.hasQuote, true);
+  assert.equal((await f.db.collection("conversation_terms").findOne({ _id: roomId }))?.listedPriceAccepted, true);
+  assert.equal(buyerRoom.orderId, null, "Buyer sends the quote and waits for the seller");
+
+  const sellerPage = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await sellerPage.goto(webOrigin + "/login");
+  await sellerPage.getByLabel(/^Email/).fill(f.member.user.email);
+  await sellerPage.getByLabel(/^Mật khẩu/).fill(password);
+  await button(sellerPage, "Đăng nhập").click();
+  await sellerPage.waitForURL(webOrigin + "/");
+  await nav(sellerPage, "/chat/" + roomId);
+  await button(sellerPage, "Tạo đơn cho người mua này").click();
+  const sellerDialog = sellerPage.getByRole("dialog", { name: "Tạo đơn cho người mua" });
+  await button(sellerDialog, "Tạo đơn cho người mua này").click();
+  await sellerDialog.waitFor({ state: "hidden" });
+  const updatedRoom = await f.api("/me/purchase-conversations/" + roomId, token);
+  assert(updatedRoom.orderId);
+  const webOrder = await f.api("/me/orders/" + updatedRoom.orderId, token);
   assert.equal(webOrder.item.listingId, id);
+  assert.equal(webOrder.state, "AwaitingPayment");
+  assert.equal(webOrder.amounts.bookPrice, 140000);
   assert.equal((await f.api("/me/cart", token)).items.length, 2);
-  await f.api(`/orders/${webOrder.id}/cancel`, token, {
-    expectedVersion: webOrder.version,
-  });
+  await f.api("/orders/" + webOrder.id + "/cancel", token, { expectedVersion: webOrder.version });
+  await sellerPage.close();
   // RN-web uses the same cart persisted by the real API, independently signed in.
   const rn = await browser.newPage({ viewport: { width: 390, height: 1000 } });
   rn.setDefaultTimeout(12000);

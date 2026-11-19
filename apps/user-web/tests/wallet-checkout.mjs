@@ -171,9 +171,10 @@ try {
     .waitFor();
   const header = page.locator("header").first();
   const chatIcon = header.getByRole("link", {
-    name: /^Chat, /,
+    name: /^Giao dịch(?: của bạn|, \d+ cuộc trò chuyện đang hoạt động)$/,
   });
-  assert.equal((await chatIcon.textContent()).trim(), "");
+  assert.equal(await chatIcon.getAttribute("href"), "/chat");
+  assert.match((await chatIcon.textContent()).trim(), /^(?:\d+|9\+)?$/);
   const chatBounds = await chatIcon.boundingBox();
   assert.ok(chatBounds.width >= 44 && chatBounds.height >= 44);
   // Main's account redesign moved the wallet entry into the account/mobile menu.

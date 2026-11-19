@@ -574,6 +574,8 @@ export type OrderStep =
   | "accept-report"
   | "reject-report"
   | "collection-code"
+  | "confirm-receipt"
+  | "report-non-receipt"
   | "claim";
 export type OrderCommand = {
   step: OrderStep;
@@ -595,6 +597,8 @@ export function createOrderCommand(
   const body: Record<string, unknown> = { expectedVersion };
   if (step === "reject-report") body.reason = text;
   if (step === "claim") body.description = text;
+  const isReceiptDecision = step === "confirm-receipt" || step === "report-non-receipt";
+  if (isReceiptDecision) body.received = step === "confirm-receipt";
   if (step === "pay" && delivery) {
     body.fulfillmentMethod = "CarrierOutbound";
     body.destinationAddressId = delivery.addressId;
@@ -603,7 +607,7 @@ export function createOrderCommand(
   }
   return {
     step,
-    path: `/point-orders/${orderId}/${step}`,
+    path: `/point-orders/${orderId}/${isReceiptDecision ? "receipt-decision" : step}`,
     body: JSON.stringify(body),
     key,
   };

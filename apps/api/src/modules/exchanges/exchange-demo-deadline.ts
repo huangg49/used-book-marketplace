@@ -16,7 +16,7 @@ export function demoExchangeDeadlineEnabled(config: ConfigService, row: Exchange
 
   const ids = config.get<string>('DEMO_EXCHANGE_MEMBER_IDS', '').split(',').map(id => id.trim()).filter(Boolean);
   return row.initiatorId !== row.recipientId &&
-    (ids.length === 0 || (ids.includes(row.initiatorId) && ids.includes(row.recipientId)));
+    ids.includes(row.initiatorId) && ids.includes(row.recipientId);
 }
 
 export function currentDemoDeadline(row: ExchangeDoc, now: Date, operations: boolean): Deadline | undefined {
