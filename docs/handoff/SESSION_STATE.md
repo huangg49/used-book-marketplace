@@ -1,3 +1,17 @@
+# Tách xác nhận giao và nhận sách khi demo đấu giá — 19/11/2026
+
+- Nhánh `codex/auction-demo-receipt` từ `92a01c8c`. Driver ghi giao thành công
+  theo mã vận đơn, đơn vẫn ở **Nhận sách**. Người mua bấm **Tôi đã nhận được
+  sách** trên web/RN để mở 72 giờ kiểm tra. **Tôi chưa nhận được sách** đưa
+  đơn tới **Xử lý đơn tại điểm** của Admin, giữ tiền để đối chiếu giao nhận.
+- Admin có thể yêu cầu hãng trả sách. Staff đối chiếu sách trả trước hoàn
+  tiền. Các đơn đã ghi nhận nhận sách vẫn đọc theo dữ liệu hiện có. Tái sử
+  dụng sự kiện hãng và receipt lệnh, gói này không cần migration.
+- PASS 10 ca E2E giao tận nơi trên Mongo QA và Chromium với API fixture từ
+  Driver qua xác nhận người mua. Typecheck API, Member web, Admin và RN qua.
+  Chưa xác minh chạy trên thiết bị native. Form khiếu nại tình trạng sách vẫn
+  nhận mô tả, phần bằng chứng media và nút mẫu demo chưa triển khai.
+
 # Đồng bộ checkout demo và sửa luồng kiểm tra trao đổi — 19/11/2026
 
 - `main` local đã fast-forward tới `808db32b`, khớp `origin/main` với PR #118–#121.

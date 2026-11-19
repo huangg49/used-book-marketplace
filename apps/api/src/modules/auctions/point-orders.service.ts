@@ -414,6 +414,7 @@ export class PointOrdersService {
                 o,
                 (await tx.c.point_order_deliveries.findOne({ _id: o._id }))!,
                 await demoOutForDeliveryAt(tx, o),
+                (await tx.c.point_carrier_events.findOne({ orderId: o._id, outcome: 'Delivered' }))?.occurredAt,
               )
             : null,
         serverTime: (await tx.now()).toISOString(),

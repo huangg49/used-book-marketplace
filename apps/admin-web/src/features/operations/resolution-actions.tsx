@@ -43,6 +43,10 @@ type Props = { item: ResolutionItem } & ActionContext;
 
 export function ResolutionDecision({ item, ...context }: Props) {
   const allowed = decisionsFor(item.openReason);
+  const textFor = (value: Decision) =>
+    item.openReason === "DeliveryFailed" && value === "RequireReturn"
+      ? { label: "Yêu cầu hãng trả sách về điểm", effect: "Tiền tiếp tục được giữ. Staff phải nhận và đối chiếu sách hãng trả trước khi hoàn tiền." }
+      : decisionText[value];
   const [decision, setDecision] = useState<Decision | null>(null);
   const [fault, setFault] = useState<NonNullable<Fault> | null>(null);
   const [reason, setReason] = useState("");
@@ -118,8 +122,8 @@ export function ResolutionDecision({ item, ...context }: Props) {
                   }}
                 />
                 <span>
-                  {decisionText[value].label}
-                  <small className="muted"> — {decisionText[value].effect}</small>
+                  {textFor(value).label}
+                  <small className="muted"> — {textFor(value).effect}</small>
                 </span>
               </label>
             ))}
@@ -197,10 +201,10 @@ export function ResolutionDecision({ item, ...context }: Props) {
         return true;
         }}
         submitLabel="Ghi quyết định"
-        confirmTitle={decision ? `${decisionText[decision].label}?` : "Ghi quyết định?"}
+        confirmTitle={decision ? `${textFor(decision).label}?` : "Ghi quyết định?"}
         confirmBody={
         <>
-          <p>{decision && decisionText[decision].effect}</p>
+          <p>{decision && textFor(decision).effect}</p>
           {fault && <p>Lỗi: {faultText[fault]}.</p>}
           <blockquote className="prose">{trimmed}</blockquote>
         </>
@@ -216,7 +220,7 @@ export function ResolutionDecision({ item, ...context }: Props) {
         })}
         interpret={() => ({
         tone: "success",
-        text: `Đã ghi quyết định cho “${item.title}”: ${decision ? decisionText[decision].label.toLowerCase() : ""}.`,
+        text: `Đã ghi quyết định cho “${item.title}”: ${decision ? textFor(decision).label.toLowerCase() : ""}.`,
         close: true,
         })}
       />

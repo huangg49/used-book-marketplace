@@ -130,6 +130,16 @@ function orderPresentation(order: PointOrder) {
             deadline: order.collectionDeadline,
           };
     case "InTransit":
+      if (order.delivery?.deliveredAt) {
+        return {
+          phase: 1,
+          tone: "action" as const,
+          actor: "Bạn cần thao tác",
+          title: "Hãng báo đã giao sách",
+          note: "Xác nhận đã nhận để bắt đầu 72 giờ kiểm tra. Nếu chưa có sách, hãy báo để quản trị viên đối chiếu.",
+          deadline: order.delivery.deliveryDeadline,
+        };
+      }
       return {
         phase: 1,
         tone: "waiting" as const,
@@ -137,7 +147,7 @@ function orderPresentation(order: PointOrder) {
         title: order.delivery?.demoOutForDeliveryAt
           ? "Bưu tá đang đi giao sách cho bạn"
           : "Sách đang trên đường đến bạn",
-        note: "Thời hạn kiểm tra 72 giờ bắt đầu khi hệ thống ghi nhận sách đã được giao đến bạn.",
+        note: "Bạn sẽ xác nhận sau khi nhận sách để bắt đầu thời hạn kiểm tra.",
         deadline: order.delivery?.deliveryDeadline ?? null,
       };
     case "Inspection":
@@ -159,6 +169,16 @@ function orderPresentation(order: PointOrder) {
         deadline: null,
       };
     case "ReturnPending":
+      if (order.delivery && !order.collectedAt) {
+        return {
+          phase,
+          tone: "issue" as const,
+          actor: "Đang chờ hãng vận chuyển",
+          title: "Chờ hãng trả sách về điểm",
+          note: "Tiền được hoàn sau khi điểm nhận lại và đối chiếu sách.",
+          deadline: order.returnDeadline,
+        };
+      }
       return {
         phase,
         tone: "issue" as const,
@@ -540,6 +560,19 @@ export function WinnerSteps({
               locked={locked}
               onRefresh={() => void order.refetch()}
             />
+          )}
+
+          {o.state === "InTransit" && o.delivery?.deliveredAt && (
+            <View style={{ gap: space.sm }}>
+              <Button title="Tôi đã nhận được sách" wine disabled={locked} onPress={() => ask(
+                "confirm-receipt", "Xác nhận đã nhận sách?",
+                "Thời hạn kiểm tra 72 giờ bắt đầu khi bạn xác nhận.", "Xác nhận đã nhận sách",
+              )} />
+              <Button title="Tôi chưa nhận được sách" secondary wine disabled={locked} onPress={() => ask(
+                "report-non-receipt", "Báo chưa nhận được sách?",
+                "Tiền vẫn được giữ trong đơn. Quản trị viên sẽ đối chiếu với bên vận chuyển.", "Gửi báo cáo",
+              )} />
+            </View>
           )}
 
           {/* BƯỚC 2: TỰ NHẬN TẠI QUẦY (SelfCollect) */}
@@ -1546,7 +1579,7 @@ function Collection({
 }
 
 // ADR 0044: the point hands the book to the simulated carrier, which delivers
-// to the buyer's address; inspection starts at delivery.
+// to the buyer's address. The buyer confirms receipt before inspection.
 function DeliveryPanel({
   order,
   locked,

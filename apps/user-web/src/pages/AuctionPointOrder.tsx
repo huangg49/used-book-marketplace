@@ -10,7 +10,7 @@ import { commandError } from '../lib/auction-errors'
 import { ROUTES } from '../lib/routes'
 import { pointReopensAt } from '../lib/point-hours'
 import {
-  acceptPointOrderReport, advanceDemoPointOrder, claimPointOrder, CLAIM_MIN_LENGTH, getDemoSkipStatus,
+  acceptPointOrderReport, advanceDemoPointOrder, claimPointOrder, CLAIM_MIN_LENGTH, decidePointOrderReceipt, getDemoSkipStatus,
   rejectPointOrderReport, requestCollectionCode,
   type CodeIssued, type PointOrder,
 } from '../services/auctions'
@@ -88,7 +88,10 @@ export function PointOrderSteps({
       {order.fulfillmentMethod === 'CarrierOutbound' && (
         <DeliveryNote order={order} />
       )}
-      {order.state === 'InTransit' && order.delivery?.trackingCode && !locked && (
+      {order.state === 'InTransit' && order.delivery?.deliveredAt && (
+        <ReceiptDecision order={order} step={step} locked={locked} />
+      )}
+      {order.state === 'InTransit' && !order.delivery?.deliveredAt && order.delivery?.trackingCode && !locked && (
         <DemoDeliveryLink trackingCode={order.delivery.trackingCode} />
       )}
       {order.state === 'ReadyForCollection' && order.fulfillmentMethod === 'SelfCollect' && (
@@ -109,6 +112,36 @@ export function PointOrderSteps({
 }
 
 type StepProps = { order: PointOrder; step: ReturnType<typeof useOrderStep>; locked: boolean }
+
+function ReceiptDecision({ order, step, locked }: StepProps) {
+  const [decision, setDecision] = useState<'received' | 'missing' | null>(null)
+  const missing = decision === 'missing'
+  return (
+    <>
+      <button className={styles.primaryBlock} type="button" disabled={locked} onClick={() => setDecision('received')}>
+        Tôi đã nhận được sách
+      </button>
+      <button className={styles.secondaryBlock} type="button" disabled={locked} onClick={() => setDecision('missing')}>
+        Tôi chưa nhận được sách
+      </button>
+      <ConfirmDialog
+        isOpen={decision !== null} isBusy={step.busy} isDanger={missing}
+        title={missing ? 'Báo chưa nhận được sách?' : 'Xác nhận đã nhận sách?'}
+        description={missing ? 'Tiền vẫn được giữ trong đơn. Quản trị viên sẽ đối chiếu với bên vận chuyển.' : 'Thời hạn kiểm tra 72 giờ bắt đầu khi bạn xác nhận. Bạn có thể báo nếu sách khác biên bản.'}
+        confirmText={missing ? 'Gửi báo cáo' : 'Xác nhận đã nhận sách'}
+        onClose={() => !step.busy && setDecision(null)}
+        onConfirm={async () => {
+          await step.run({
+            label: missing ? 'báo chưa nhận sách' : 'xác nhận đã nhận sách',
+            signature: `receipt:${order.id}:${order.version}:${missing}`,
+            send: (key) => decidePointOrderReceipt(order.id, order.version, !missing, key),
+          })
+          setDecision(null)
+        }}
+      />
+    </>
+  )
+}
 
 function DemoDeliveryLink({ trackingCode }: { trackingCode: string }) {
   const demo = useQuery({

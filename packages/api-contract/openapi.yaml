@@ -9162,8 +9162,8 @@ paths:
       tags:
         - Auctions
       description: Local demo only. The active buyer records simulated delivery after Staff
-        handover and the last-mile demo milestone. A committed carrier event starts the regular
-        72-hour inspection window.
+        handover and the last-mile demo milestone. Carrier delivery alone does not start
+        the buyer inspection window.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -9186,6 +9186,65 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/receipt-decision:
+    post:
+      operationId: decidePointOrderReceipt
+      tags:
+        - Auctions
+      description: The buyer confirms receipt after the carrier reports delivery, starting the 72-hour inspection window from buyer confirmation. If the buyer reports non-receipt, keep the funds held and send the order for independent operations review.
+      x-implementation-status: implemented
+      x-locked-access: existing-obligations
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PointOrderReceiptDecision"
       responses:
         "200":
           description: Committed receipt (including replay).
@@ -10258,7 +10317,7 @@ paths:
         - Auctions
       description: "ADR 0044: independent TEST_OPERATOR (not buyer or seller) records one signed simulated
         carrier outcome for an InTransit auction Order; Idempotency-Key must equal eventId. Delivered
-        starts the 72-hour inspection window from occurredAt (FR-T03) and never settles; Failed opens
+        waits for the buyer's receipt decision before inspection and never settles; Failed opens
         DeliveryFailed for an independent Admin."
       x-implementation-status: implemented
       security:
@@ -21121,6 +21180,7 @@ components:
             - "null"
           format: date-time
         deliveredAt:
+          description: Carrier-reported delivery time. Buyer confirmation is recorded separately as collectedAt on the order.
           type:
             - string
             - "null"
@@ -21129,6 +21189,17 @@ components:
           type: [string, "null"]
           format: date-time
           description: Optional local demo milestone recorded from the shipper simulator.
+    PointOrderReceiptDecision:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, received]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        received:
+          type: boolean
     PointOrderDeliveryQuote:
       type: object
       additionalProperties: false

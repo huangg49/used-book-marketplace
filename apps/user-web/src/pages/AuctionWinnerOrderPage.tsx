@@ -39,9 +39,12 @@ function orderPresentation(order: PointOrder) {
         ? { phase: 1, tone: 'waiting', actor: 'Đang chờ điểm giao nhận', title: 'Chờ bàn giao cho hãng', note: 'Nhân viên tại điểm sẽ bàn giao sách cho hãng. Bạn có thể theo dõi mã vận đơn tại đây khi sách bắt đầu được giao.', deadline: order.collectionDeadline }
         : { phase: 1, tone: 'action', actor: 'Bạn cần thao tác', title: 'Đến điểm nhận sách', note: 'Lấy mã khi bạn đã đến quầy. Nhân viên dùng mã để đối chiếu và giao đúng cuốn sách.', deadline: order.collectionDeadline }
     case 'InTransit':
+      if (order.delivery?.deliveredAt) {
+        return { phase: 1, tone: 'action', actor: 'Bạn cần thao tác', title: 'Hãng báo đã giao sách', note: 'Xác nhận đã nhận để bắt đầu 72 giờ kiểm tra. Nếu chưa có sách, hãy báo để quản trị viên đối chiếu.', deadline: order.delivery.deliveryDeadline }
+      }
       return { phase: 1, tone: 'waiting', actor: 'Hãng đang vận chuyển',
         title: order.delivery?.demoOutForDeliveryAt ? 'Bưu tá đang đi giao sách cho bạn' : 'Sách đang trên đường đến bạn',
-        note: 'Thời hạn kiểm tra bắt đầu khi hệ thống ghi nhận sách đã được giao đến bạn.', deadline: order.delivery?.deliveryDeadline }
+        note: 'Bạn sẽ xác nhận sau khi nhận sách để bắt đầu thời hạn kiểm tra.', deadline: order.delivery?.deliveryDeadline }
     case 'Inspection':
       return { phase: 2, tone: 'action', actor: 'Đã nhận sách', title: 'Kiểm tra sách bạn đã nhận', note: 'Nếu sách khác biên bản, hãy báo trong thời gian kiểm tra. Nếu mọi thứ ổn, hệ thống sẽ tự hoàn tất đơn khi hết hạn.', deadline: order.inspectionDeadline }
     case 'ResolutionPending': {
@@ -50,7 +53,7 @@ function orderPresentation(order: PointOrder) {
         RecipientDecisionOverdue: 'Đã hết thời hạn trả lời biên bản.',
         CollectionOverdue: 'Đã hết thời hạn giao hoặc nhận sách tại điểm.',
         InspectionClaim: 'Hệ thống đã nhận báo cáo về tình trạng sách.',
-        DeliveryFailed: 'Hãng chưa giao được sách đến bạn.',
+        DeliveryFailed: order.delivery?.deliveredAt ? 'Quản trị viên đang đối chiếu việc nhận sách.' : 'Hãng chưa giao được sách đến bạn.',
         ReturnOverdue: 'Đã hết thời hạn trả sách về điểm.',
       }
       return { phase, tone: 'issue', actor: 'Đang chờ quản trị viên', title: 'Đơn đang được xem xét', note: `${order.resolution ? reasons[order.resolution.reason] : 'Hệ thống đã chuyển đơn cho quản trị viên.'} Tiền vẫn được giữ trong đơn trong lúc xử lý.` }

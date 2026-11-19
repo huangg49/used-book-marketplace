@@ -347,6 +347,22 @@ export class AuctionsController {
     return this.demoDelivery('Deliver', id, body, req, res);
   }
 
+  @Post('point-orders/:orderId/receipt-decision')
+  @Roles('MEMBER')
+  @ExistingObligation()
+  @HttpCode(200)
+  decidePointOrderReceipt(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(commandResponse(this.collection.decideReceipt(
+      commandContext(this.input, req, res), this.input.uuid(id),
+      this.input.body('PointOrderReceiptDecision', body),
+    ), res));
+  }
+
   private demoDelivery(
     step: 'Start' | 'Deliver',
     id: string,
