@@ -108,8 +108,8 @@ function IntakeRowSummary({
   const waitingForOtherReviewer =
     item.state === "NeedsEvidence" && item.evidenceRequestedBy === userId;
   const [showAllReports, setShowAllReports] = useState(false);
-  const latestReport = item.reports[0];
-  const previousReports = item.reports.slice(1);
+  const latestReport = item.reports.at(-1);
+  const previousReports = item.reports.slice(0, -1).reverse();
 
   return (
     <div className={intakeStyles.card}>
@@ -160,27 +160,27 @@ function IntakeRowSummary({
           </div>
         )}
 
-        {/* Financial Matrix (Bảng định giá 3 cột rõ ràng) */}
-        <div className={intakeStyles.priceMatrix}>
-          <div className={intakeStyles.priceCell}>
-            <span className={intakeStyles.priceLabel}>GIÁ KHỞI ĐIỂM</span>
-            <span className={intakeStyles.priceValue}>{money(item.startPrice)}</span>
-          </div>
-          <div className={intakeStyles.priceDivider} />
-          <div className={intakeStyles.priceCell}>
-            <span className={intakeStyles.priceLabel}>BƯỚC GIÁ</span>
-            <span className={intakeStyles.priceValue}>+{money(item.step)}</span>
-          </div>
-          {item.buyNowPrice !== null && (
-            <>
-              <div className={intakeStyles.priceDivider} />
+        <details className={intakeStyles.priceDisclosure}>
+          <summary aria-label={`Thông tin giá của ${title}`}>
+            <ChevronDown size={15} aria-hidden="true" /> Thông tin giá
+          </summary>
+          <dl className={intakeStyles.priceMatrix}>
+            <div className={intakeStyles.priceCell}>
+              <dt className={intakeStyles.priceLabel}>Giá khởi điểm</dt>
+              <dd className={intakeStyles.priceValue}>{money(item.startPrice)}</dd>
+            </div>
+            <div className={intakeStyles.priceCell}>
+              <dt className={intakeStyles.priceLabel}>Bước giá</dt>
+              <dd className={intakeStyles.priceValue}>+{money(item.step)}</dd>
+            </div>
+            {item.buyNowPrice !== null && (
               <div className={intakeStyles.priceCell}>
-                <span className={intakeStyles.priceLabel}>MUA NGAY</span>
-                <span className={intakeStyles.priceValueBuyNow}>{money(item.buyNowPrice)}</span>
+                <dt className={intakeStyles.priceLabel}>Giá mua ngay</dt>
+                <dd className={intakeStyles.priceValueBuyNow}>{money(item.buyNowPrice)}</dd>
               </div>
-            </>
-          )}
-        </div>
+            )}
+          </dl>
+        </details>
 
         {/* Inspection Certificate Seal (Biên bản kiểm định tại điểm) */}
         {latestReport ? (
@@ -203,6 +203,7 @@ function IntakeRowSummary({
                 <button
                   type="button"
                   className={intakeStyles.historyToggle}
+                  aria-expanded={showAllReports}
                   onClick={() => setShowAllReports(!showAllReports)}
                 >
                   <ChevronDown

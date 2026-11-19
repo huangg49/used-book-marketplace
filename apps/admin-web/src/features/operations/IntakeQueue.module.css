@@ -647,9 +647,28 @@
   color: #bf360c;
 }
 
+.priceDisclosure summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 44px;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.priceDisclosure summary::-webkit-details-marker {
+  display: none;
+}
+.priceDisclosure[open] summary svg {
+  transform: rotate(180deg);
+}
+
 /* Financial Matrix */
 .priceMatrix {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
   align-items: stretch;
   background: color-mix(in srgb, var(--shop-shelf) 45%, var(--shop-paper));
   border: 1px solid var(--shop-line);
@@ -686,9 +705,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-.priceDivider {
-  width: 1px;
-  background: var(--shop-line);
+.priceMatrix dd {
+  margin: 0;
+}
+.priceCell + .priceCell {
+  border-inline-start: 1px solid var(--shop-line);
 }
 
 /* Inspection Certificate Block */
