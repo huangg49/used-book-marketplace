@@ -3376,7 +3376,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Read one auction shipment after point handover. Available to the buyer and an independent active TEST_OPERATOR. Other orders return 404. The response excludes names, contact details and addresses. Recording an outcome still requires the existing authenticated simulator command. */
+        /** @description Read one auction shipment after point handover. Available to the buyer (including a locked buyer with an existing obligation) and an independent active TEST_OPERATOR. Other orders return 404. The response excludes names, contact details and addresses. Recording an outcome still requires the existing authenticated simulator command. */
         get: operations["getPointOrderDeliveryTracking"];
         put?: never;
         post?: never;

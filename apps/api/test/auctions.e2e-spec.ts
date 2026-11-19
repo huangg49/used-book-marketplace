@@ -4842,6 +4842,13 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await call('get', trackingPath + code, o.seller).expect(404);
       await call('get', trackingPath + code, staff).expect(403);
       await call('get', trackingPath + 'LL-UNKNOWN12345', o.winner).expect(404);
+      await db.setStatus(o.winner.id, 'LOCKED');
+      const lockedTracking = await call('get', trackingPath + code, o.winner).expect(200);
+      expect(lockedTracking.body).toMatchObject({ viewer: 'Buyer', canReport: false, canDemoControl: false });
+      await db.setStatus(o.seller.id, 'LOCKED');
+      await call('get', trackingPath + code, o.seller).expect(404);
+      await db.setStatus(o.winner.id, 'ACTIVE');
+      await db.setStatus(o.seller.id, 'ACTIVE');
       const buyerTracking = await call(
         'get',
         trackingPath + code.toLowerCase(),

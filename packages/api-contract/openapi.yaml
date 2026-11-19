@@ -10237,8 +10237,10 @@ paths:
       operationId: getPointOrderDeliveryTracking
       tags: [Auctions]
       x-implementation-status: implemented
+      x-locked-access: existing-obligations
       description: Read one auction shipment after point handover. Available to the buyer
-        and an independent active TEST_OPERATOR. Other orders return 404. The response
+        (including a locked buyer with an existing obligation) and an independent active
+        TEST_OPERATOR. Other orders return 404. The response
         excludes names, contact details and addresses. Recording an outcome still requires
         the existing authenticated simulator command.
       security:
