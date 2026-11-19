@@ -162,6 +162,7 @@
    -------------------------------------------------------------------------- */
 .controlBar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.65rem;
@@ -170,9 +171,10 @@
 
 .filterTabs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.3rem;
-  flex: 0 0 auto;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .tabBtn {
