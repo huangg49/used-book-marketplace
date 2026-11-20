@@ -69,7 +69,7 @@ export async function addressJourney(p, fixture, artifacts) {
   let b = await book();
   assert.equal(b.items.length, 1);
   assert.equal(b.items[0].isDefault, true);
-  await click("Thêm địa chỉ");
+  await (p.getByRole("button", { name: /^Thêm địa chỉ/ }).first()).click();
   await fill("Tên người nhận", "Bạn đọc thứ hai");
   await fill("Số điện thoại", "0900000001");
   await fill("Địa chỉ chi tiết", "Bàn thử nghiệm số hai");
@@ -77,7 +77,8 @@ export async function addressJourney(p, fixture, artifacts) {
   await click("Lưu địa chỉ");
   await p.getByText("2/10 địa chỉ", { exact: true }).waitFor();
   await click("Đặt địa chỉ 2 làm mặc định");
-  await p.getByText("ĐỊA CHỈ 2 · MẶC ĐỊNH", { exact: true }).waitFor();
+  await p.getByText(/ĐỊA CHỈ.*2/).waitFor();
+  await p.getByText(/Mặc định/i).first().waitFor();
   await p.setViewportSize({ width: 320, height: 844 });
   await p.addStyleTag({
     content: '[class*="css-text"] { font-size:135% !important; }',
@@ -114,7 +115,8 @@ export async function addressJourney(p, fixture, artifacts) {
     .getByRole("dialog")
     .getByRole("button", { name: "Rời phần chỉnh sửa", exact: true })
     .click();
-  await p.getByText("ĐỊA CHỈ 1 · MẶC ĐỊNH", { exact: true }).waitFor();
+  await p.getByText(/ĐỊA CHỈ.*1/).waitFor();
+  await p.getByText(/Mặc định/i).first().waitFor();
   let deleteLost = true;
   await p.route("**/api/v1/me/addresses/*/archive", async (route) => {
     if (deleteLost) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Platform, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router, useNavigation } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +19,7 @@ import {
   TextField,
   colors,
   space,
+  stitchTokens,
   presentError,
 } from "../../core/ui";
 import {
@@ -161,17 +162,23 @@ export function AddressesScreen() {
     if (errors[field])
       setErrors((previous) => ({
         ...previous,
-        [field]: undefined,
+        [field]: validateAddress(
+          next,
+          areas.data?.localities.map((x) => x.code) ?? [],
+        )[field],
       }));
+    setError("");
   }
   function discard() {
-    if (busyRef.current) return;
-    setEditor(null);
-    setDeleting(null);
-    setIntent(null);
-    setErrors({});
-    setError("");
-    top();
+    leaveAction.current = () => {
+      setEditor(null);
+      setDeleting(null);
+      setIntent(null);
+      setError("");
+      setErrors({});
+      void book.refetch();
+    };
+    setLeave(true);
   }
   const locked = busy || !!intent,
     readError = book.error || areas.error;
@@ -195,7 +202,7 @@ export function AddressesScreen() {
     </ActionBar>
   ) : undefined;
   return (
-    <Screen scrollRef={scroll} footer={footer}>
+    <Screen scrollRef={scroll} footer={footer} appearance="browse">
       <BackAction
         title="Quay lại"
         disabled={busy}
@@ -204,15 +211,18 @@ export function AddressesScreen() {
           else router.replace("./account");
         }}
       />
-      <View style={{ gap: space.md }}>
-        <AppText kind="label" color={colors.rustText}>
-          NƠI SÁCH ĐƯỢC CHUYỀN TỚI
-        </AppText>
-        <AppText kind="title" color={colors.forest} accessibilityRole="header">
+      <View style={styles.heroHeader}>
+        <View style={styles.heroBadgeRow}>
+          <View style={styles.heroBadge}>
+            <Icon name="pin" size={12} color={stitchTokens.wine} />
+            <AppText style={styles.heroBadgeText}>NƠI SÁCH ĐƯỢC CHUYỂN TỚI</AppText>
+          </View>
+        </View>
+        <AppText style={styles.heroTitle} accessibilityRole="header">
           {editor
             ? editor.id
               ? "Chỉnh sửa địa chỉ"
-              : "Thêm địa chỉ"
+              : "Thêm địa chỉ mới"
             : "Sổ địa chỉ"}
         </AppText>
       </View>
@@ -221,9 +231,11 @@ export function AddressesScreen() {
       {intent && !deleting ? (
         <>
           <Notice tone="warning">
-            {intent.stopped
-              ? "Yêu cầu trước đó đã gửi tới máy chủ nhưng mất kết nối phản hồi. Bấm xem lại để đọc lại sổ địa chỉ."
-              : "Mất phản hồi mạng khi gửi yêu cầu địa chỉ. Bạn có thể gửi lại cùng khóa giao dịch."}
+            {intent.acknowledged
+              ? "Yêu cầu đã được lưu; cần tải lại sổ địa chỉ."
+              : intent.stopped
+                ? "Yêu cầu chưa được chấp nhận. Xem lại dữ liệu đã lưu trước khi sửa tiếp."
+                : "Chưa xác định được kết quả. Thử lại cùng yêu cầu để tránh lưu hai lần."}
           </Notice>
           {!intent.stopped ? (
             <Button
@@ -330,11 +342,23 @@ export function AddressesScreen() {
                 setEditor({ ...editor, makeDefault: !editor.makeDefault })
               }
             />
+            <AppText kind="small">
+              Địa chỉ đầu tiên tự trở thành mặc định. Muốn đổi mặc định, chọn
+              một địa chỉ khác trong sổ.
+            </AppText>
           </Group>
         </>
       ) : book.data ? (
         <>
-          <AppText kind="small">{book.data.items.length}/10 địa chỉ</AppText>
+          <View style={styles.counterRow}>
+            <AppText style={styles.counterTitle}>Danh sách địa chỉ</AppText>
+            <View style={styles.counterBadge}>
+              <AppText style={styles.counterBadgeText}>
+                {book.data.items.length}/10 địa chỉ
+              </AppText>
+            </View>
+          </View>
+
           {!book.data.items.length ? (
             <StatePanel
               icon="pin"
@@ -342,89 +366,122 @@ export function AddressesScreen() {
               message="Lưu nơi gửi hoặc nhận để chuẩn bị cho những lần chuyền sách."
             />
           ) : null}
+
           {book.data.items.map((item, index) => (
             <View
               key={item.id}
-              style={{
-                gap: space.md,
-                borderTopWidth: 1,
-                borderColor: colors.rule,
-                paddingTop: space.xl,
-                // The default address carries a visible rule and text, not colour alone.
-                ...(item.isDefault
-                  ? {
-                      borderLeftWidth: 3,
-                      borderLeftColor: colors.forest,
-                      paddingLeft: space.md,
-                    }
-                  : null),
-              }}
+              style={[
+                styles.addressCard,
+                item.isDefault ? styles.addressCardDefault : null,
+              ]}
             >
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: space.xs,
-                }}
-              >
+              {/* Card Header */}
+              <View style={styles.cardHeader}>
+                <View style={styles.cardHeaderLeft}>
+                  <View
+                    style={[
+                      styles.pinCircle,
+                      item.isDefault ? styles.pinCircleDefault : null,
+                    ]}
+                  >
+                    <Icon
+                      name="pin"
+                      size={13}
+                      color={item.isDefault ? stitchTokens.white : stitchTokens.wine}
+                      filled={item.isDefault}
+                    />
+                  </View>
+                  <AppText style={styles.addressNumber}>
+                    ĐỊA CHỈ {index + 1}
+                  </AppText>
+                </View>
                 {item.isDefault ? (
-                  <Icon name="pin" size={16} filled color={colors.forest} />
+                  <View style={styles.defaultBadge}>
+                    <Icon name="check" size={11} color={stitchTokens.likeNewGreen} />
+                    <AppText style={styles.defaultBadgeText}>Mặc định</AppText>
+                  </View>
                 ) : null}
-                <AppText
-                  kind="label"
-                  color={item.isDefault ? colors.forest : colors.rustText}
-                  style={{ flexShrink: 1 }}
-                >
-                  ĐỊA CHỈ {index + 1}
-                  {item.isDefault ? " · MẶC ĐỊNH" : ""}
-                </AppText>
               </View>
-              <AppText kind="heading">{item.recipientName}</AppText>
-              <AppText>{item.phone}</AppText>
-              <AppText>{item.detail}</AppText>
-              <AppText kind="small">
-                {areas.data?.localities.find(
-                  (l) => l.code === item.localityCode,
-                )?.label ?? item.localityCode}
-              </AppText>
-              <View style={{ flexDirection: "row", gap: space.sm }}>
-                <View style={{ flex: 1 }}>
-                  <Button
-                    title={`Sửa địa chỉ\u00a0${index + 1}`}
-                    secondary
+
+              {/* Card Body */}
+              <View style={styles.cardBody}>
+                <View style={styles.recipientRow}>
+                  <AppText style={styles.recipientName}>{item.recipientName}</AppText>
+                  <View style={styles.phonePill}>
+                    <AppText style={styles.phoneText}>📞 {item.phone}</AppText>
+                  </View>
+                </View>
+
+                <AppText style={styles.addressDetail}>{item.detail}</AppText>
+
+                <View style={styles.localityRow}>
+                  <View style={styles.localityTag}>
+                    <AppText style={styles.localityText}>
+                      📍{" "}
+                      {areas.data?.localities.find(
+                        (l) => l.code === item.localityCode,
+                      )?.label ?? item.localityCode}
+                    </AppText>
+                  </View>
+                </View>
+              </View>
+
+              {/* Card Footer Actions */}
+              <View style={styles.cardFooter}>
+                <View style={styles.actionGroupLeft}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Sửa địa chỉ ${index + 1}`}
+                    style={({ pressed }) => [styles.actionBtn, pressed && styles.btnPressed]}
                     disabled={locked || !!readError}
                     onPress={() => begin(item)}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  {/* Outlined in the list; the confirmation carries the destructive action. */}
-                  <Button
-                    title={`Xóa địa chỉ\u00a0${index + 1}`}
-                    secondary
+                  >
+                    <Icon name="pen" size={13} color={stitchTokens.wineDark} />
+                    <AppText style={styles.actionBtnText}>Sửa</AppText>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Xóa địa chỉ ${index + 1}`}
+                    style={({ pressed }) => [
+                      styles.actionBtn,
+                      styles.deleteBtn,
+                      pressed && styles.btnPressed,
+                    ]}
                     disabled={locked || !!readError}
                     onPress={() => {
                       setError("");
                       setDeleting(item);
                     }}
-                  />
+                  >
+                    <Icon name="trash" size={13} color={stitchTokens.crimson} />
+                    <AppText style={styles.deleteBtnText}>Xóa</AppText>
+                  </Pressable>
                 </View>
+
+                {!item.isDefault ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Đặt địa chỉ ${index + 1} làm mặc định`}
+                    style={({ pressed }) => [styles.setDefaultBtn, pressed && styles.btnPressed]}
+                    disabled={locked || !!readError}
+                    onPress={() =>
+                      start(`/me/addresses/${item.id}/default`, "POST", {
+                        expectedBookVersion: book.data!.version,
+                      })
+                    }
+                  >
+                    <Icon name="check" size={12} color={stitchTokens.wineDark} />
+                    <AppText style={styles.setDefaultText}>Đặt mặc định</AppText>
+                  </Pressable>
+                ) : null}
               </View>
-              {!item.isDefault ? (
-                <Button
-                  title={`Đặt địa chỉ ${index + 1} làm mặc định`}
-                  secondary
-                  disabled={locked || !!readError}
-                  onPress={() =>
-                    start(`/me/addresses/${item.id}/default`, "POST", {
-                      expectedBookVersion: book.data!.version,
-                    })
-                  }
-                />
-              ) : null}
             </View>
           ))}
+
           <Button
-            title="Thêm địa chỉ"
+            title="Thêm địa chỉ mới"
+            wine
             disabled={locked || !!readError || book.data.items.length >= 10}
             onPress={() => begin()}
           />
@@ -484,23 +541,279 @@ export function AddressesScreen() {
     </Screen>
   );
 }
+
 function Group({
   title,
   children,
 }: React.PropsWithChildren<{ title: string }>) {
   return (
-    <View
-      style={{
-        gap: space.md,
-        paddingTop: space.lg,
-        borderTopWidth: 1,
-        borderColor: colors.rule,
-      }}
-    >
-      <AppText kind="label" color={colors.rustText} accessibilityRole="header">
-        {title}
-      </AppText>
-      {children}
+    <View style={styles.formGroupCard}>
+      <View style={styles.formGroupHeader}>
+        <AppText style={styles.formGroupTitle}>{title}</AppText>
+      </View>
+      <View style={styles.formGroupBody}>{children}</View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  heroHeader: {
+    gap: 8,
+    marginBottom: space.xs,
+  },
+  heroBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  heroBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.roseWarmTag,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  heroBadgeText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+
+  counterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
+    marginTop: space.xs,
+  },
+  counterTitle: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  counterBadge: {
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  counterBadgeText: {
+    fontSize: 11,
+    color: stitchTokens.subtleGray,
+    fontWeight: "600",
+  },
+  addressCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderRadius: 16,
+    padding: 14,
+    gap: 10,
+    shadowColor: stitchTokens.wineDark,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  addressCardDefault: {
+    borderWidth: 1.5,
+    borderColor: stitchTokens.wineLight,
+    backgroundColor: stitchTokens.warmIvory,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cardHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  pinCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: stitchTokens.roseWarmTag,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pinCircleDefault: {
+    backgroundColor: stitchTokens.wine,
+    borderColor: stitchTokens.wineDark,
+  },
+  addressNumber: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    letterSpacing: 0.3,
+  },
+  defaultBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    borderColor: stitchTokens.cardBorder,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  defaultBadgeText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: stitchTokens.likeNewGreen,
+  },
+  cardBody: {
+    gap: 5,
+    paddingLeft: 2,
+  },
+  recipientRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  recipientName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  phonePill: {
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  phoneText: {
+    fontSize: 12.5,
+    color: stitchTokens.deepCocoa,
+    fontWeight: "600",
+  },
+  addressDetail: {
+    fontSize: 13.5,
+    color: stitchTokens.deepCocoa,
+    lineHeight: 19,
+    marginTop: 2,
+  },
+  localityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  localityTag: {
+    alignSelf: "flex-start",
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  localityText: {
+    fontSize: 11.5,
+    color: stitchTokens.subtleGray,
+    fontWeight: "500",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 6,
+    borderTopWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    paddingTop: 10,
+    marginTop: 2,
+  },
+  actionGroupLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  deleteBtn: {
+    backgroundColor: stitchTokens.flashRedBg,
+    borderColor: stitchTokens.peachBorder,
+  },
+  deleteBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.crimson,
+  },
+  setDefaultBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  setDefaultText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  btnPressed: {
+    opacity: 0.7,
+  },
+  formGroupCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderRadius: 14,
+    padding: 14,
+    gap: space.md,
+    shadowColor: stitchTokens.wineDark,
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  formGroupHeader: {
+    borderBottomWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    paddingBottom: 6,
+  },
+  formGroupTitle: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+    letterSpacing: 0.5,
+  },
+  formGroupBody: {
+    gap: space.md,
+  },
+});
