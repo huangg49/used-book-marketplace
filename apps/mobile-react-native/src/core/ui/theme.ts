@@ -288,6 +288,14 @@ export const stitchTokens = {
   crimsonBolt: "#8E1E32",
   crimsonDeepText: "#721022",
   scrimDarkCrimson: "rgba(28, 5, 9, 0.55)",
+  greenLightBorder: "#81C784",
+  whiteAlpha16: "rgba(255, 255, 255, 0.16)",
+  whiteAlpha18: "rgba(255, 255, 255, 0.18)",
+  whiteAlpha22: "rgba(255, 255, 255, 0.22)",
+  whiteAlpha32: "rgba(255, 255, 255, 0.32)",
+  whiteAlpha35: "rgba(255, 255, 255, 0.35)",
+  whitePinkMutedAlpha65: "rgba(255, 240, 245, 0.65)",
+  blackAlpha28: "rgba(0, 0, 0, 0.28)",
 
   // Autumn Theme tokens
   autumnSkyPeach: "#FFF2E8",

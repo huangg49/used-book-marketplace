@@ -430,6 +430,7 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
   return (
     <Screen
       appearance="browse"
+      compactFooter={true}
       header={
         <View style={styles.header}>
           <Pressable
@@ -450,54 +451,78 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
           <View style={{ width: 40 }} />
         </View>
       }
-    >
-      <View style={styles.scrollContent}>
-        {errorNotice ? <Notice tone="error">{errorNotice}</Notice> : null}
-
-        {/* 1. Sách bạn muốn nhận (Target Book Banner) */}
-        <View style={styles.targetCard}>
-          <View style={styles.targetCardBadgeRow}>
-            <View style={styles.targetBadge}>
-              <Icon name="bookmark" size={13} color={stitchTokens.wineDark} />
-              <AppText style={styles.targetBadgeText}>
-                SÁCH BẠN MUỐN NHẬN
-              </AppText>
+      footer={
+        <View style={styles.stickyFooterContainer}>
+          {errorNotice ? (
+            <View style={{ marginBottom: space.xs }}>
+              <Notice tone="error">{errorNotice}</Notice>
             </View>
-            <AppText style={styles.targetOwner}>
-              Chủ sách: @{targetBook.seller.displayName}
+          ) : null}
+          <Button
+            title={
+              submitProposalMutation.isPending
+                ? "Đang gửi đề nghị..."
+                : chosenMyListings.length > 0
+                  ? `Gửi đề xuất đổi ${chosenMyListings.length} cuốn (${diff > 0 ? "Bù " + formatVnd(diff) : diff < 0 ? "Nhận bù " + formatVnd(-diff) : "Ngang giá"})`
+                  : "Vui lòng chọn ít nhất 1 cuốn sách để đổi"
+            }
+            wine
+            busy={submitProposalMutation.isPending}
+            disabled={
+              chosenMyListings.length === 0 || submitProposalMutation.isPending
+            }
+            onPress={() => submitProposalMutation.mutate()}
+          />
+        </View>
+      }
+    >
+      {/* 1. Sách bạn muốn nhận (Target Book Banner - Full Width Red) */}
+      <View style={styles.targetCard}>
+        <View style={styles.targetCardBadgeRow}>
+          <View style={styles.targetBadge}>
+            <Icon name="bookmark" size={13} color={stitchTokens.wineDark} />
+            <AppText style={styles.targetBadgeText}>
+              SÁCH BẠN MUỐN NHẬN
             </AppText>
           </View>
+          <AppText style={styles.targetOwner}>
+            Chủ sách: @{targetBook.seller.displayName}
+          </AppText>
+        </View>
 
-          <View style={styles.targetBookRow}>
-            <View style={styles.photoBox}>
-              {targetBook.photos[0] ? (
-                <PublicPhoto
-                  listingId={targetBook.id}
-                  revisionId={targetBook.revisionId}
-                  mediaId={targetBook.photos[0].id}
-                  label="Bìa sách muốn nhận"
-                  active={true}
-                  compact
-                />
-              ) : null}
-            </View>
+        <View style={styles.targetBookRow}>
+          <View style={styles.photoBox}>
+            {targetBook.photos[0] ? (
+              <PublicPhoto
+                listingId={targetBook.id}
+                revisionId={targetBook.revisionId}
+                mediaId={targetBook.photos[0].id}
+                label="Bìa sách muốn nhận"
+                active={true}
+                compact
+              />
+            ) : null}
+          </View>
 
-            <View style={styles.targetDetails}>
-              <AppText style={styles.targetBookTitle} numberOfLines={2}>
-                {targetBook.book.title}
+          <View style={styles.targetDetails}>
+            <AppText style={styles.targetBookTitle} numberOfLines={2}>
+              {targetBook.book.title}
+            </AppText>
+            <AppText style={styles.targetBookAuthors} numberOfLines={1}>
+              {targetBook.book.authors.join(", ")}
+            </AppText>
+            <View style={styles.valueRow}>
+              <AppText style={styles.valueLabel}>Định giá quy đổi:</AppText>
+              <AppText style={styles.targetValueText}>
+                {formatVnd(targetValue)}
               </AppText>
-              <AppText style={styles.targetBookAuthors} numberOfLines={1}>
-                {targetBook.book.authors.join(", ")}
-              </AppText>
-              <View style={styles.valueRow}>
-                <AppText style={styles.valueLabel}>Định giá quy đổi:</AppText>
-                <AppText style={styles.targetValueText}>
-                  {formatVnd(targetValue)}
-                </AppText>
-              </View>
             </View>
           </View>
         </View>
+      </View>
+
+      <View style={styles.scrollContent}>
+        {errorNotice ? <Notice tone="error">{errorNotice}</Notice> : null}
 
         {/* 2. Chọn sách từ kệ của bạn */}
         <View style={styles.sectionCard}>
@@ -524,41 +549,65 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
               targetBook.exchangePreferences.targetDescription) && (
               <View style={styles.prefBanner}>
                 <View style={styles.prefBannerHeader}>
-                  <Icon name="sync" size={14} color={stitchTokens.wineDark} />
-                  <AppText style={styles.prefBannerTitle}>
-                    🎯 Tiêu chí đối tác đang tìm kiếm
+                  <View style={styles.prefHeaderLeft}>
+                    <View style={styles.prefIconCircle}>
+                      <Icon name="bookmark" size={13} color={stitchTokens.wine} />
+                    </View>
+                    <View>
+                      <AppText style={styles.prefBannerTitle}>
+                        Tiêu chí đối tác đang tìm kiếm
+                      </AppText>
+                      <AppText style={styles.prefBannerSubtitle}>
+                        Khớp tiêu chí giúp lời đề nghị dễ được chấp nhận
+                      </AppText>
+                    </View>
+                  </View>
+                </View>
+
+                {(targetBook.exchangePreferences.targetCategory ||
+                  targetBook.exchangePreferences.targetAuthor) && (
+                  <View style={styles.prefTagsRow}>
+                    {targetBook.exchangePreferences.targetCategory ? (
+                      <View style={styles.prefTagItem}>
+                        <Icon name="tag" size={12} color={stitchTokens.wineLight} />
+                        <AppText style={styles.prefTagLabel}>Thể loại:</AppText>
+                        <AppText style={styles.prefTagValue}>
+                          {targetBook.exchangePreferences.targetCategory}
+                        </AppText>
+                      </View>
+                    ) : null}
+
+                    {targetBook.exchangePreferences.targetAuthor ? (
+                      <View style={styles.prefTagItem}>
+                        <Icon name="pen" size={12} color={stitchTokens.wineLight} />
+                        <AppText style={styles.prefTagLabel}>Tác giả:</AppText>
+                        <AppText style={styles.prefTagValue}>
+                          {targetBook.exchangePreferences.targetAuthor}
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
+                )}
+
+                {targetBook.exchangePreferences.targetDescription ? (
+                  <View style={styles.prefNoteBox}>
+                    <View style={styles.prefNoteHeader}>
+                      <Icon name="message" size={12} color={stitchTokens.roseBrown} />
+                      <AppText style={styles.prefNoteLabel}>Ghi chú từ chủ sách:</AppText>
+                    </View>
+                    <AppText style={styles.prefNoteText}>
+                      &ldquo;{targetBook.exchangePreferences.targetDescription}&rdquo;
+                    </AppText>
+                  </View>
+                ) : null}
+
+                <View style={styles.prefHintRow}>
+                  <Icon name="star" size={12} color={stitchTokens.goldBronze} />
+                  <AppText style={styles.prefHint}>
+                    Sách trên kệ của bạn khớp tiêu chí sẽ có huy hiệu{" "}
+                    <AppText style={styles.prefHintHighlight}>✨ Khớp mong muốn</AppText>
                   </AppText>
                 </View>
-                <View style={styles.prefBannerBody}>
-                  {targetBook.exchangePreferences.targetCategory ? (
-                    <AppText style={styles.prefBannerText}>
-                      • Thể loại:{" "}
-                      <AppText style={styles.prefBold}>
-                        {targetBook.exchangePreferences.targetCategory}
-                      </AppText>
-                    </AppText>
-                  ) : null}
-                  {targetBook.exchangePreferences.targetAuthor ? (
-                    <AppText style={styles.prefBannerText}>
-                      • Tác giả:{" "}
-                      <AppText style={styles.prefBold}>
-                        {targetBook.exchangePreferences.targetAuthor}
-                      </AppText>
-                    </AppText>
-                  ) : null}
-                  {targetBook.exchangePreferences.targetDescription ? (
-                    <AppText style={styles.prefBannerText}>
-                      • Ghi chú:{" "}
-                      <AppText style={styles.prefBold}>
-                        {targetBook.exchangePreferences.targetDescription}
-                      </AppText>
-                    </AppText>
-                  ) : null}
-                </View>
-                <AppText style={styles.prefHint}>
-                  Sách trong kệ của bạn khớp tiêu chí sẽ có huy hiệu ✨ Khớp
-                  mong muốn.
-                </AppText>
               </View>
             )}
 
@@ -772,30 +821,6 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
             maxLength={500}
           />
         </View>
-
-        {/* Nút gửi đề nghị */}
-        <View style={styles.submitContainer}>
-          {errorNotice ? (
-            <View style={{ marginBottom: space.sm }}>
-              <Notice tone="error">{errorNotice}</Notice>
-            </View>
-          ) : null}
-          <Button
-            title={
-              submitProposalMutation.isPending
-                ? "Đang gửi đề nghị..."
-                : chosenMyListings.length > 0
-                  ? `Gửi đề xuất đổi ${chosenMyListings.length} cuốn (${diff > 0 ? "Bù " + formatVnd(diff) : diff < 0 ? "Nhận bù " + formatVnd(-diff) : "Ngang giá"})`
-                  : "Vui lòng chọn ít nhất 1 cuốn sách để đổi"
-            }
-            wine
-            busy={submitProposalMutation.isPending}
-            disabled={
-              chosenMyListings.length === 0 || submitProposalMutation.isPending
-            }
-            onPress={() => submitProposalMutation.mutate()}
-          />
-        </View>
       </View>
     </Screen>
   );
@@ -833,8 +858,6 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.creamBg,
   },
   scrollContent: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.sm,
     paddingBottom: space.section,
     gap: space.md,
   },
@@ -843,17 +866,15 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   targetCard: {
-    padding: space.md,
-    borderRadius: 18,
-    backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachMuted,
-    gap: 10,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    marginHorizontal: -space.xl,
+    marginTop: -space.xl,
+    paddingHorizontal: space.lg,
+    paddingTop: space.md,
+    paddingBottom: space.md + 4,
+    backgroundColor: stitchTokens.wine,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.wineDark,
   },
   targetCardBadgeRow: {
     flexDirection: "row",
@@ -864,7 +885,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: stitchTokens.terracottaSoft,
+    backgroundColor: stitchTokens.goldLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -877,7 +898,7 @@ const styles = StyleSheet.create({
   targetOwner: {
     fontSize: 11,
     fontWeight: "600",
-    color: stitchTokens.roseBrown,
+    color: stitchTokens.goldLight,
   },
   targetBookRow: {
     flexDirection: "row",
@@ -888,9 +909,9 @@ const styles = StyleSheet.create({
     height: 85,
     borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: stitchTokens.warmCard,
+    backgroundColor: stitchTokens.wineDark,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderColor: stitchTokens.whiteAlpha20,
   },
   targetDetails: {
     flex: 1,
@@ -900,12 +921,12 @@ const styles = StyleSheet.create({
   targetBookTitle: {
     fontSize: 15,
     fontWeight: "800",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.white,
     lineHeight: 19,
   },
   targetBookAuthors: {
     fontSize: 12,
-    color: stitchTokens.roseBrown,
+    color: stitchTokens.goldLight,
   },
   valueRow: {
     flexDirection: "row",
@@ -915,12 +936,12 @@ const styles = StyleSheet.create({
   },
   valueLabel: {
     fontSize: 11,
-    color: stitchTokens.darkWood,
+    color: stitchTokens.creamBg,
   },
   targetValueText: {
     fontSize: 13,
     fontWeight: "800",
-    color: stitchTokens.likeNewGreen,
+    color: stitchTokens.gold,
   },
   sectionCard: {
     padding: space.md,
@@ -965,40 +986,117 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   prefBanner: {
-    backgroundColor: stitchTokens.creamWarm,
-    borderWidth: 1,
+    backgroundColor: stitchTokens.warmIvory,
+    borderWidth: 1.5,
     borderColor: stitchTokens.peachBorder,
-    borderRadius: 12,
-    padding: space.sm,
-    gap: 6,
+    borderRadius: 14,
+    padding: 12,
+    gap: 9,
+    shadowColor: stitchTokens.wineDark,
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   prefBannerHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "space-between",
+  },
+  prefHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  prefIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseWarmTag,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
   },
   prefBannerTitle: {
     fontSize: 13,
     fontWeight: "700",
     color: stitchTokens.wineDark,
   },
-  prefBannerBody: {
-    gap: 2,
-    paddingLeft: 4,
+  prefBannerSubtitle: {
+    fontSize: 10.5,
+    color: stitchTokens.roseBrown,
+    marginTop: 1,
   },
-  prefBannerText: {
+  prefTagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  prefTagItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  prefTagLabel: {
+    fontSize: 11,
+    color: stitchTokens.subtleGray,
+  },
+  prefTagValue: {
     fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  prefNoteBox: {
+    backgroundColor: stitchTokens.parchment,
+    borderLeftWidth: 3,
+    borderLeftColor: stitchTokens.wineLight,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    gap: 3,
+  },
+  prefNoteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  prefNoteLabel: {
+    fontSize: 10.5,
+    fontWeight: "600",
     color: stitchTokens.roseBrown,
   },
-  prefBold: {
-    fontWeight: "600",
-    color: stitchTokens.wineDark,
+  prefNoteText: {
+    fontSize: 12,
+    fontStyle: "italic",
+    color: stitchTokens.deepCocoa,
+    lineHeight: 17,
+  },
+  prefHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: stitchTokens.goldLight,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAlpha40,
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
   },
   prefHint: {
     fontSize: 11,
-    fontStyle: "italic",
-    color: stitchTokens.wineMid,
-    marginTop: 2,
+    color: stitchTokens.goldBronze,
+    flex: 1,
+  },
+  prefHintHighlight: {
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
   },
   bookOptionCard: {
     flexDirection: "row",
@@ -1238,8 +1336,8 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
     textAlignVertical: "top",
   },
-  submitContainer: {
-    paddingVertical: space.sm,
+  stickyFooterContainer: {
+    paddingVertical: space.xs,
   },
   pressed: {
     opacity: 0.7,

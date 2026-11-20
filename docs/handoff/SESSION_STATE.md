@@ -1,3 +1,18 @@
+# Tối ưu UI hành trình trao đổi, Stepper 3D, Phiếu đề nghị thu gọn và Thẻ Đồng kiểm 72h (RN) — 21/11/2026
+
+- Đã tạo nhánh `feat/mobile-exchange-ui-polish` từ `main` (`c678b413`).
+- Dọn dẹp màn hình Sổ địa chỉ (`addresses-screen.tsx`): loại bỏ subtitle và banner "Khu vực thử nghiệm" thừa.
+- Tối ưu Phiếu đề nghị đổi sách (`exchange-proposal-card.tsx`): bổ sung chế độ Thu gọn / Mở rộng (Collapse / Expand), mặc định mở ở bước đầu (`Proposed`) và tự động thu gọn ở các bước sau (`Preparing`, `InTransit`, `Delivered`,...) giúp tiết kiệm 90% diện tích cuộn màn hình.
+- Nâng cấp Stepper tiến trình (`exchange-progress-stepper.tsx`, `theme.ts`): chuyển sang nền Red Ombre 3D cao cấp, tinh chỉnh thanh nối độc lập giữa các vòng tròn không đè dẫm lên icon.
+- Chuyển vị trí thẻ: đưa "Hành động tiếp theo" (`ExchangeActionsCard`) lên trên "Hành trình giao nhận" (`ExchangeShippingCard`) trong `exchange-detail-screen.tsx`.
+- Đồng bộ hóa trạng thái gửi sách: kiểm tra cả `initiatorShipment` / `recipientShipment` để ngăn ngừa lỗi 409 Conflict khi bưu tá chưa lấy hàng (`exchange-actions-card.tsx`, `chat-inbox-screen.tsx`).
+- Tái cấu trúc giai đoạn Đồng kiểm 72h và Đánh giá:
+  - Loại bỏ Notice xanh trùng lặp mốc giờ trên đỉnh thẻ;
+  - Gom thời hạn kiểm tra vào thẻ Đồng kiểm 72h tinh tế với 3 bullet points lưu ý bảo chứng an toàn, kiểm tra thực tế và quyền lợi;
+  - Phân cấp nút: `✓ Xác nhận đã kiểm tra sách` (Primary Wine) và `⚠️ Báo cáo sự cố / Khiếu nại sách` (Secondary Outlined);
+  - Đóng gói thẻ Đánh giá trải nghiệm (`review-entry.tsx`) với phong cách thẻ phụ nhã nhặn, nút viền nhẹ tránh cạnh tranh thị giác.
+- PASS `typecheck` cho `@used-books/mobile-react-native`. Đã push lên GitHub nhánh `feat/mobile-exchange-ui-polish`.
+
 # Rà soát gói demo đăng sách, giao nhận và trao đổi — 19/11/2026
 
 - Làm rõ trạng thái và bộ lọc của hai hàng đợi tại điểm theo dữ liệu API đã tải.
