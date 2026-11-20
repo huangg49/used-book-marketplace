@@ -59,8 +59,8 @@ try {
     const denied = !baseline && failure === 403;
     await expect(results.locator('article')).toHaveCount(denied ? 0 : 4);
     await expect(pager).toHaveCount(denied ? 0 : 1);
-    const tabs = page.getByRole('tablist', { name: 'Lọc theo vai trò', exact: true });
-    await expect(tabs.locator('span[class*="tabBadge"]')).toHaveCount(denied ? 0 : 3);
+    const tabs = page.getByRole('group', { name: 'Lọc theo vai trò', exact: true });
+    await expect(tabs.locator('span[class*="tabBadge"]')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Bạn chưa có đơn hàng nào', exact: true })).toHaveCount(0);
     if (denied) await expect(page.getByText('Quyền xem đơn hàng đã thay đổi. Kiểm tra phiên đăng nhập và thử lại.', { exact: true })).toBeVisible();
     await page.getByRole('alert').screenshot({ path: path.join(out, `${baseline ? 'before' : 'after'}-${mode}-${failure}-${width}.png`) });
@@ -68,12 +68,13 @@ try {
     if (mode === 'refresh' || denied) await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
     else await pager.getByRole('button', { name: 'Đến trang tiếp theo', exact: true }).click();
     await expect(page.getByRole('alert')).toHaveCount(0);
-    await expect(results.locator('article')).toHaveCount(mode === 'next-page' && !denied ? 5 : 4);
+    const loadedAllPages = mode === 'next-page' && !denied;
+    await expect(results.locator('article')).toHaveCount(loadedAllPages ? 5 : 4);
     if (mode === 'next-page') assert.equal(cursors[readsBefore], denied ? null : id(119), 'Denied reads refetch root; temporary pagination errors retry the cursor');
     await expect(pager).toBeVisible();
-    await expect(tabs.locator('span[class*="tabBadge"]')).toHaveCount(3);
+    await expect(tabs.locator('span[class*="tabBadge"]')).toHaveCount(loadedAllPages ? 3 : 0);
     // Filtering still uses loaded data and offers older pages when needed.
-    await page.getByRole('tab', { name: /^Đơn mua/ }).click();
+    await page.getByRole('button', { name: /^Đơn mua/ }).click();
     await expect(results.locator('article')).toHaveCount(8);
     assert.deepEqual(errors, []); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     checks.push({ width, mode, failure, deniedCacheHidden: denied, recoveryReadOnly: true, reads: cursors.length }); await context.close();

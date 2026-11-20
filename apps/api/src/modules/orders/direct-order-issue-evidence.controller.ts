@@ -9,17 +9,18 @@ import { DirectOrderIssueEvidenceService } from './direct-order-issue-evidence.s
 
 @Controller('support-cases/:caseId/order-evidence')
 @Roles('MEMBER', 'ADMIN')
-@ExistingObligation()
 export class DirectOrderIssueEvidenceController {
   constructor(private readonly evidence: DirectOrderIssueEvidenceService, private readonly input: ContractInput) {}
 
   @Get()
+  @ExistingObligation()
   list(@Param('caseId') caseId: string, @Req() req: AuthenticatedRequest) {
     return this.evidence.list(req.auth, this.input.uuid(caseId));
   }
 
   @Post()
   @Roles('MEMBER')
+  @ExistingObligation()
   @HttpCode(200)
   async reserve(@Param('caseId') caseId: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     const result = await this.evidence.reserve(commandContext(this.input, req, res), this.input.uuid(caseId), this.input.body('ReserveDirectOrderIssueEvidence', body));
@@ -29,6 +30,7 @@ export class DirectOrderIssueEvidenceController {
 
   @Put(':evidenceId/content')
   @Roles('MEMBER')
+  @ExistingObligation()
   @HttpCode(200)
   async upload(@Param('caseId') caseId: string, @Param('evidenceId') id: string, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     const result = await this.evidence.upload(commandContext(this.input, req, res), this.input.uuid(caseId), this.input.uuid(id), req);
@@ -37,6 +39,7 @@ export class DirectOrderIssueEvidenceController {
   }
 
   @Post(':evidenceId/read')
+  @ExistingObligation()
   @HttpCode(200)
   read(@Param('caseId') caseId: string, @Param('evidenceId') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     return this.evidence.read(req.auth, this.input.uuid(caseId), this.input.uuid(id),

@@ -249,11 +249,22 @@ export function NegotiationWorkspace({
     enabled: !!room.orderId,
     refetchOnMount: "always",
     refetchInterval: (query) => {
-      const state = query.state.data?.state;
+      const data = query.state.data;
+      const state = data?.state;
+      if (
+        data?.demoCompletionAt &&
+        state !== "Completed" &&
+        state !== "Cancelled" &&
+        state !== "PaymentExpired"
+      ) {
+        return 1000;
+      }
       return state === "AwaitingPayment" ||
+        state === "PendingSellerConfirmation" ||
         state === "Preparing" ||
         state === "InTransit" ||
-        (state === "Inspection" && !!query.state.data?.deliveryJourney)
+        state === "Inspection" ||
+        state === "SettlementPending"
         ? 5000
         : false;
     },
@@ -262,10 +273,10 @@ export function NegotiationWorkspace({
     [401, 403, 404].includes(order.error.status);
   const orderData = orderReadDenied ? undefined : order.data;
   useEffect(() => {
-    if (orderData?.state === "Completed" && orderData.deliveryJourney) {
-      invalidateMemberWalletViews(queryClient, userId);
-    }
-  }, [orderData?.state, orderData?.deliveryJourney, queryClient, userId]);
+    if (orderData?.state !== "Completed") return;
+    invalidateMemberWalletViews(queryClient, userId);
+    void queryClient.invalidateQueries({ queryKey: ["direct-orders", userId] });
+  }, [orderData?.state, queryClient, userId]);
   const shipment = useOrderShipment(room.orderId ?? "", !!room.orderId);
   const [shipmentDialogOpen, setShipmentDialogOpen] = useState(false);
 

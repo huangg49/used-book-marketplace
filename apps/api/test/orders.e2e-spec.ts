@@ -26,7 +26,12 @@ import {
   onTransactionRetry,
   Tx,
 } from '../src/database/mongo/transaction.js';
-import { MediaStorage } from '../src/modules/media/media-storage.js';
+import {
+  EvidenceStorage,
+  MediaStorage,
+  digest,
+} from '../src/modules/media/media-storage.js';
+import sharp from 'sharp';
 import { validates } from './helpers/contract.js';
 import { Gate } from './helpers/mongo-gate.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
@@ -42,6 +47,20 @@ const storage = {
     await this.beforeSign?.();
     return {
       url: 'https://storage.test/' + key,
+      expiresAt: new Date(Date.now() + 120000).toISOString(),
+    };
+  },
+};
+
+const evidenceStore = new Map<string, Buffer>();
+const evidenceStorage = {
+  async check() {},
+  async put(key: string, bytes: Buffer) {
+    evidenceStore.set(key, bytes);
+  },
+  async attachment(key: string) {
+    return {
+      url: 'https://evidence.test/' + key,
       expiresAt: new Date(Date.now() + 120000).toISOString(),
     };
   },
@@ -163,6 +182,8 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(MediaStorage)
       .useValue(storage)
+      .overrideProvider(EvidenceStorage)
+      .useValue(evidenceStorage)
       .compile();
     const next = module.createNestApplication();
     configureApp(next, { docs: false, logRequests: false });
@@ -1987,6 +2008,149 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       ).expect(401);
     } finally {
       storage.beforeSign = undefined;
+    }
+  });
+  it('allows LOCKED buyer to list, reserve, upload, replay and read direct-order issue evidence while refusing LOCKED seller and LOCKED admin', async () => {
+    const p = await prepared(),
+      r = (await create(p).expect(200)).body;
+    const order = (await findOrder(r.entityId))!;
+    const paidAt = new Date(order.createdAt.getTime() + 60_000);
+    const deliveredAt = new Date(paidAt.getTime() + 60_000);
+    const caseId = randomUUID();
+    await db.c.direct_orders.updateOne(
+      { _id: order._id },
+      {
+        $set: {
+          version: 6,
+          state: 'ResolutionPending',
+          paidAt,
+          sellerConfirmationDeadline: new Date(paidAt.getTime() + 48 * 3_600_000),
+          deliveredAt,
+          inspectionDeadline: new Date(deliveredAt.getTime() + 72 * 3_600_000),
+          completedAt: null,
+          closedAt: null,
+        },
+        $inc: { lockSeq: 1 },
+      },
+    );
+    await db.c.support_cases.insertOne({
+      _id: caseId,
+      reporterId: p.f.buyer.id,
+      reporterName: 'Bạn đọc thử nghiệm',
+      kind: 'TransactionIssue',
+      title: 'Báo cáo tình trạng sách đơn QA',
+      target: { type: 'DirectOrder', id: order._id },
+      involvedUserIds: [p.f.buyer.id, p.f.seller.id],
+      assigneeId: a2.id,
+      state: 'InReview',
+      version: 1,
+      messageCount: 1,
+      createdAt: deliveredAt,
+      updatedAt: deliveredAt,
+      lockSeq: 0,
+    });
+    await db.c.direct_order_journey_events.insertOne({
+      _id: `${order._id}:ReportCondition`,
+      orderId: order._id,
+      actorId: p.f.buyer.id,
+      action: 'ReportCondition',
+      occurredAt: deliveredAt,
+      receiptId: randomUUID(),
+      supportCaseId: caseId,
+    });
+
+    const png = await sharp({
+      create: { width: 12, height: 12, channels: 3, background: 'red' },
+    })
+      .png()
+      .toBuffer();
+    const evidenceId = randomUUID();
+    const reserveKey = randomUUID();
+    const uploadKey = randomUUID();
+    const reserveBody = {
+      evidenceId,
+      mimeType: 'image/png',
+      byteSize: png.length,
+      sha256: digest(png),
+    };
+
+    await db.setStatus(p.f.buyer.id, 'LOCKED');
+    await db.setStatus(p.f.seller.id, 'LOCKED');
+    await db.setStatus(a2.id, 'LOCKED');
+    try {
+      const initialList = await get(
+        `/support-cases/${caseId}/order-evidence`,
+        p.f.buyer,
+      ).expect(200);
+      expect(initialList.body.items).toEqual([]);
+      await get(
+        `/support-cases/${caseId}/order-evidence`,
+        p.f.seller,
+      ).expect(404);
+      await get(`/support-cases/${caseId}/order-evidence`, a2).expect(403);
+
+      const reserved = await post(
+        `/support-cases/${caseId}/order-evidence`,
+        reserveBody,
+        p.f.buyer,
+        reserveKey,
+      ).expect(200);
+      expect(reserved.headers['idempotency-replayed']).toBe('false');
+      await post(
+        `/support-cases/${caseId}/order-evidence`,
+        reserveBody,
+        p.f.buyer,
+        reserveKey,
+      )
+        .expect('Idempotency-Replayed', 'true')
+        .expect(200);
+      await post(
+        `/support-cases/${caseId}/order-evidence`,
+        { ...reserveBody, evidenceId: randomUUID() },
+        p.f.seller,
+      ).expect(404);
+
+      const upload = () =>
+        request(app.getHttpServer())
+          .put(`/api/v1/support-cases/${caseId}/order-evidence/${evidenceId}/content`)
+          .set('Authorization', `Bearer ${p.f.buyer.token}`)
+          .set('Idempotency-Key', uploadKey)
+          .set('Content-Type', 'application/octet-stream')
+          .send(png);
+      await upload().expect(200);
+      await upload().expect('Idempotency-Replayed', 'true').expect(200);
+
+      const buyerRead = await post(
+        `/support-cases/${caseId}/order-evidence/${evidenceId}/read`,
+        {},
+        p.f.buyer,
+      ).expect(200);
+      expect(buyerRead.body.url).toContain(evidenceId);
+      await post(
+        `/support-cases/${caseId}/order-evidence/${evidenceId}/read`,
+        {},
+        p.f.seller,
+      ).expect(404);
+      await post(
+        `/support-cases/${caseId}/order-evidence/${evidenceId}/read`,
+        { reason: 'Kiểm tra bằng chứng QA' },
+        a2,
+      ).expect(403);
+
+      await db.setStatus(a2.id, 'ACTIVE');
+      const adminList = await get(
+        `/support-cases/${caseId}/order-evidence`,
+        a2,
+      ).expect(200);
+      expect(adminList.body.items).toHaveLength(1);
+      const adminRead = await post(
+        `/support-cases/${caseId}/order-evidence/${evidenceId}/read`,
+        { reason: 'Đối chiếu bằng chứng mở kiện QA' },
+        a2,
+      ).expect(200);
+      expect(adminRead.body.url).toContain(evidenceId);
+    } finally {
+      await db.setStatus(a2.id, 'ACTIVE');
     }
   });
 });

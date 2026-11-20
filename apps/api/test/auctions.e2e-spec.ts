@@ -4940,13 +4940,19 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(replay.headers['idempotency-replayed']).toBe('true');
       await carrierEvent(o.orderId, code, 'Failed', deliveredAt).expect(409);
       const decision = { expectedVersion: done.body.version, received: true };
+      await db.setStatus(o.seller.id, 'LOCKED');
       await orderPost(o.orderId, 'receipt-decision', decision, o.seller).expect(404);
+      await db.setStatus(o.seller.id, 'ACTIVE');
+      await db.setStatus(o.winner.id, 'LOCKED');
+      await orderPost(o.orderId, 'demo-start-delivery', { expectedVersion: done.body.version }, o.winner).expect(403);
+      await orderPost(o.orderId, 'demo-deliver', { expectedVersion: done.body.version }, o.winner).expect(403);
       const pending = await call('get', `/me/point-orders/${o.orderId}`, o.winner).expect(200);
       expect(pending.body).toMatchObject({ state: 'InTransit', collectedAt: null, inspectionDeadline: null });
       const confirmKey = randomUUID();
       const confirmation = await orderPost(o.orderId, 'receipt-decision', decision, o.winner, confirmKey).expect(200);
       expect(confirmation.body).toMatchObject({ state: 'Inspection' });
       await orderPost(o.orderId, 'receipt-decision', decision, o.winner, confirmKey).expect('Idempotency-Replayed', 'true').expect(200);
+      await db.setStatus(o.winner.id, 'ACTIVE');
       vi.restoreAllMocks();
       const inspecting = (await db.c.point_orders.findOne({
         _id: o.orderId,

@@ -19,8 +19,9 @@ import {
 // ADR 0044: an independent TEST_OPERATOR reports what the simulated carrier
 // did with an auction book the point handed over. Each confirmation is one
 // event: its id is the Idempotency-Key, frozen for retries after an unknown
-// outcome. Delivered starts the buyer's inspection window; Failed goes to an
-// independent Admin, who can only require the book back.
+// outcome. Delivered keeps the order InTransit until the buyer confirms
+// receipt (starting the 72h inspection window) or reports non-receipt; Failed
+// goes to an independent Admin, who can only require the book back.
 
 export function DeliverySimulator() {
   const user = useOutletContext<CurrentUser>();
@@ -117,7 +118,7 @@ function DeliveryOutcome({
             <legend>Kết quả</legend>
             {choice(
               "Delivered",
-              "Đã giao tới người nhận: bắt đầu 72 giờ kiểm tra sách",
+              "Đã giao tới người nhận: chờ người mua xác nhận đã nhận sách",
               first,
             )}
             {choice(
@@ -145,7 +146,7 @@ function DeliveryOutcome({
           “{item.title}” · vận đơn {item.trackingCode}.{" "}
           {outcome === "Failed"
             ? "Đơn chuyển quản trị viên xử lý; tiền vẫn được giữ."
-            : "Người nhận có 72 giờ để báo nếu sách khác biên bản."}
+            : "Đơn giữ ở trạng thái đang giao cho đến khi người mua xác nhận đã nhận để bắt đầu 72 giờ kiểm tra, hoặc báo chưa nhận."}
         </p>
       }
       build={() => {
@@ -164,23 +165,29 @@ function DeliveryOutcome({
         };
       }}
       interpret={(receipt) =>
-        receipt.state === "Inspection"
+        receipt.state === "InTransit"
           ? {
               tone: "success",
-              text: `Đã ghi nhận giao thành công “${item.title}”. Thời hạn kiểm tra của người nhận bắt đầu.`,
+              text: `Đã ghi nhận hãng giao thành công “${item.title}”. Đơn đang chờ người mua xác nhận đã nhận sách.`,
               close: true,
             }
-          : receipt.state === "ResolutionPending"
+          : receipt.state === "Inspection"
             ? {
-                tone: "warning",
-                text: `Đã ghi nhận giao không thành công “${item.title}”. Đơn chờ quản trị viên xử lý.`,
+                tone: "success",
+                text: `Đã ghi nhận giao thành công “${item.title}”. Thời hạn kiểm tra của người nhận bắt đầu.`,
                 close: true,
               }
-            : {
-                tone: "info",
-                text: "Máy chủ chưa báo trạng thái mới. Danh sách đã tải lại.",
-                close: true,
-              }
+            : receipt.state === "ResolutionPending"
+              ? {
+                  tone: "warning",
+                  text: `Đã ghi nhận giao không thành công “${item.title}”. Đơn chờ quản trị viên xử lý.`,
+                  close: true,
+                }
+              : {
+                  tone: "info",
+                  text: "Máy chủ chưa báo trạng thái mới. Danh sách đã tải lại.",
+                  close: true,
+                }
       }
     />
   );

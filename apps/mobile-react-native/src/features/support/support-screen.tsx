@@ -467,7 +467,6 @@ function SupportCaseDetailView({
   const { client } = useSession();
   const queryClient = useQueryClient();
   const [replyText, setReplyText] = useState("");
-  const [reopenReason, setReopenReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -511,7 +510,6 @@ function SupportCaseDetailView({
 
   const { case: c, messages, canReply, relatedState } = detailQuery.data;
   const replyScope = `support:reply:${caseId}:${c.version}`;
-  const reopenScope = `support:reopen:${caseId}:${c.version}`;
 
   const sendReply = async () => {
     if (!replyText.trim() && !pendingSupportIntent(client, replyScope)) {
@@ -529,31 +527,6 @@ function SupportCaseDetailView({
         () => Crypto.randomUUID(),
       );
       setReplyText("");
-      await detailQuery.refetch();
-      await queryClient.invalidateQueries({ queryKey: ["support"] });
-    } catch (caught) {
-      setError(supportError(caught));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const sendReopen = async () => {
-    if (!reopenReason.trim() && !pendingSupportIntent(client, reopenScope)) {
-      setError("Nhập lý do mở lại phiếu hỗ trợ.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      await sendSupportIntent(
-        client,
-        reopenScope,
-        `/me/support-cases/${caseId}/reopen`,
-        { expectedVersion: c.version, reason: reopenReason.trim() },
-        () => Crypto.randomUUID(),
-      );
-      setReopenReason("");
       await detailQuery.refetch();
       await queryClient.invalidateQueries({ queryKey: ["support"] });
     } catch (caught) {
@@ -681,22 +654,13 @@ function SupportCaseDetailView({
             backgroundColor: stitchTokens.white,
             borderWidth: 1,
             borderColor: stitchTokens.peachBorder,
-            gap: space.sm,
+            gap: space.xs,
           }}
         >
-          <TextField
-            label="Mở lại phiếu hỗ trợ"
-            value={reopenReason}
-            onChangeText={setReopenReason}
-            placeholder="Nhập lý do cần mở lại phiếu hỗ trợ..."
-            multiline
-          />
-          <Button
-            secondary
-            title="Yêu cầu mở lại phiếu"
-            busy={busy}
-            onPress={() => void sendReopen()}
-          />
+          <AppText kind="bold">Hồ sơ hỗ trợ đã đóng</AppText>
+          <AppText kind="small" color={colors.muted}>
+            Lịch sử trao đổi vẫn được lưu bên trên. Hiện chưa thể gửi thêm nội dung trong hồ sơ này.
+          </AppText>
         </View>
       ) : null}
     </Screen>

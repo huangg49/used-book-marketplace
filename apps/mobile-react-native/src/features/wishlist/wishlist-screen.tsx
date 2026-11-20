@@ -303,7 +303,10 @@ function WishlistItemCard({
 
   const handleOpenDetail = () => {
     if (isBook && item.book) {
-      router.push(`/showcase-book?id=${item.book.id}` as any);
+      const q = item.book.title?.trim();
+      router.push(
+        (q ? `/search?q=${encodeURIComponent(q)}` : "/search") as any,
+      );
     } else if (item.listing) {
       router.push(`/book?id=${item.listing.id}` as any);
     }

@@ -1,3 +1,38 @@
+# Sửa lỗi sau PR #122: DB demo, quyền LOCKED, kiểm thử ví/đơn và đồng bộ hiển thị giao nhận — 20/11/2026
+
+- Nhánh `codex/post-pr122-fixes` từ `origin/main` (`c678b413`, PR #122). Giữ nguyên
+  hai file untracked cục bộ (`apps/api/src/seed-user1-user2-books.ts`,
+  `apps/user-web/public/illustrations/reading-pattern.webp`) và các worktree
+  (`price-assist-review` chưa chốt). Chủ dự án xác nhận bỏ phần AI tự duyệt bài;
+  cờ cục bộ `LISTING_AUTO_REVIEW_ENABLED` đã tắt trong `apps/api/.env`.
+- DB demo `latlai` đã áp `0085-direct-order-validator-reconciliation` và chạy
+  `pnpm db:bootstrap`; `pnpm doctor:local` xác nhận 107/107 migration khớp checksum
+  và bucket private hợp lệ.
+- Quyền `ExistingObligation`: bổ sung `decidePointOrderReceipt`,
+  `reserveDirectOrderIssueEvidence`, `uploadDirectOrderIssueEvidence` vào
+  `EXISTING_OBLIGATION_OPERATIONS` và chuyển `@ExistingObligation()` xuống từng
+  method của `DirectOrderIssueEvidenceController` (khớp OpenAPI `0.84.0`, Admin
+  bị khóa vẫn bị chặn bởi `admin(actor)`).
+- Member web: sửa `NegotiationWorkspace.tsx` để poll `Inspection`/`PendingSellerConfirmation`/
+  `SettlementPending` và xóa cache ví khi đơn chuyển `Completed` không phụ thuộc
+  `deliveryJourney`; đồng bộ `order-list-read-access.mjs` theo bố cục nút lọc và
+  `tabBadge` sau thay đổi 16/11 của `DirectOrderPage.tsx`.
+- Đồng bộ hiển thị tách giao/nhận đấu giá trên Admin `simulator.tsx`, Member web
+  `AuctionDriverView.tsx`, [ADR 0044](../adr/0044-auction-delivery-from-point.md),
+  và RN (`winner-steps.tsx` kiểm `GET /demo/skip` + hiển thị đúng phí giao hàng;
+  `support-screen.tsx` bỏ gọi route `/reopen` không tồn tại; `wishlist-screen.tsx`
+  điều hướng đầu sách tới `/search?q=...` thay vì `/showcase-book`).
+- Kiểm chứng (20/11/2026): PASS `contract:check`, `contract:routes` (293 op/41 controller),
+  `docs:check`, `git diff --check`; typecheck/lint/build API, Admin web, Member web;
+  unit API 551/551 (`configure-app.spec.ts` qua khi chạy độc lập), Admin web, Member web
+  và RN 243/243; Mongo QA (`57017`) E2E `obligations.e2e-spec.ts` (21/21), ca
+  `LOCKED` buyer/seller `receipt-decision` trong `auctions.e2e-spec.ts` và ca
+  `LOCKED` buyer/seller/admin `order-evidence` trong `orders.e2e-spec.ts`; Chromium
+  fixture `order-wallet-cache` (12/12), `order-list-read-access` (8/8),
+  `auction-driver`, `order-chat-workspace`, `wallet-status-recovery` và Admin
+  `auction-step-read-contract` (8/8). Chưa chạy thiết bị native thật hay nghiệm thu
+  người thật; các gate trong [READINESS](READINESS.md) giữ nguyên.
+
 # Rà soát gói demo đăng sách, giao nhận và trao đổi — 19/11/2026
 
 - Làm rõ trạng thái và bộ lọc của hai hàng đợi tại điểm theo dữ liệu API đã tải.
