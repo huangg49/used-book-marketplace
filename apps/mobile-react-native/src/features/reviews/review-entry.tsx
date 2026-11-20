@@ -1,4 +1,4 @@
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -7,7 +7,7 @@ import {
   type ReviewType,
 } from "@used-books/session-client";
 import { useSession } from "../../core/session/session-provider";
-import { AppText, Button, Notice, space } from "../../core/ui";
+import { AppText, Button, Icon, Notice, stitchTokens } from "../../core/ui";
 
 export function ReviewEntry({
   type,
@@ -50,17 +50,20 @@ export function ReviewEntry({
   const data = result.data;
   if (!data?.canReview && !data?.myReview && !data?.partnerReview) return null;
   return (
-    <View style={{ gap: space.sm }}>
+    <View style={styles.cardContainer}>
+      <View style={styles.headerRow}>
+        <Icon name="star" size={15} color={stitchTokens.wineDark} />
+        <AppText style={styles.title}>Đánh giá trải nghiệm</AppText>
+      </View>
       {data.awaitingCompletion && (
-        <AppText>
-          Bạn có thể viết ngay trong 72 giờ kiểm tra. Đánh giá vẫn riêng tư đến
-          khi giao dịch hoàn tất và đủ điều kiện công bố; tiền tiếp tục được
-          giữ.
+        <AppText style={styles.hintText}>
+          Bạn có thể viết nhận xét trước trong 72 giờ này. Đánh giá được giữ riêng tư đến khi giao dịch hoàn tất và tiền tiếp tục được bảo vệ.
         </AppText>
       )}
       <Button
         wine
-        title={data.canReview ? "Viết đánh giá" : "Xem đánh giá"}
+        secondary={Boolean(data.awaitingCompletion)}
+        title={data.canReview ? "Viết đánh giá đối tác" : "Xem đánh giá"}
         onPress={() =>
           router.push({ pathname: "/reviews", params: { type, id } })
         }
@@ -68,3 +71,30 @@ export function ReviewEntry({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    backgroundColor: "#FDFBF7",
+    borderColor: "#EADCCB",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    marginTop: 4,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  title: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  hintText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: stitchTokens.darkWood,
+  },
+});
