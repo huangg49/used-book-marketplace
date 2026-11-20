@@ -74,8 +74,8 @@ export function ReviewEntry({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: "#FDFBF7",
-    borderColor: "#EADCCB",
+    backgroundColor: stitchTokens.warmIvory,
+    borderColor: stitchTokens.borderWarm,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,

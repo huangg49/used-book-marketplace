@@ -1088,7 +1088,11 @@ function ExchangeActionsContent({
                     <View style={styles.inspectionHeader}>
                       <View style={styles.inspectionTitleRow}>
                         <View style={styles.inspectionIconBadge}>
-                          <Icon name="clock" size={15} color="#5C0202" />
+                          <Icon
+                            name="clock"
+                            size={15}
+                            color={stitchTokens.wine}
+                          />
                         </View>
                         <View style={{ flex: 1 }}>
                           <AppText style={styles.inspectionTitle}>
@@ -2788,8 +2792,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inspectionCard: {
-    backgroundColor: "#FAF6F0",
-    borderColor: "#E5DAC8",
+    backgroundColor: stitchTokens.parchment,
+    borderColor: stitchTokens.borderWarm,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -2807,7 +2811,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#F0E4D2",
+    backgroundColor: stitchTokens.warmCard,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2823,7 +2827,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   commonDeadlineTag: {
-    backgroundColor: "#EFE8DA",
+    backgroundColor: stitchTokens.canvasMuted,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -2837,7 +2841,7 @@ const styles = StyleSheet.create({
   inspectionGuidelines: {
     gap: 6,
     borderTopWidth: 1,
-    borderTopColor: "#EAE0D2",
+    borderTopColor: stitchTokens.cardBorder,
     paddingTop: 8,
   },
   guidelineItem: {
