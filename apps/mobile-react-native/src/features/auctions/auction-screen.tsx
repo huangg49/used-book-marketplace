@@ -7,6 +7,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../../core/api/session-client";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
+import { readAuctionNewest, useAuctionLive } from "./use-auction-live";
+import {
+  CLOSING_POLL_MS,
+  FALLBACK_POLL_MS,
+  LIVE_BACKSTOP_MS,
+  isClosing,
+} from "./auction-live-model";
 import {
   AppModal,
   AppText,
@@ -138,18 +145,25 @@ export function AuctionScreen({ id }: { id: string }) {
     state.status === "authenticated" && state.user.roles.includes("MEMBER")
       ? state.user.id
       : null;
+  const queryClient = useQueryClient();
+  // ADR 0031: pushes keep the screen live; REST polling is the backstop while
+  // they flow and the fallback (5 s) while the socket is down.
+  const pushing = useAuctionLive(valid ? id : "", valid && foreground);
+  const poll = pushing ? LIVE_BACKSTOP_MS : FALLBACK_POLL_MS;
   const detail = useQuery({
     ...auctionOptions(client, id),
+    // A REST read never steps back behind a newer push.
+    queryFn: () => readAuctionNewest(client, queryClient, id),
     enabled: valid && foreground,
     retry: false,
     refetchInterval: (query) =>
-      foreground && query.state.data?.auction.state === "Active" ? 5_000 : false,
+      foreground && query.state.data?.auction.state === "Active" ? poll : false,
   });
   const me = useQuery({
     ...participationOptions(client, id, member ?? ""),
     enabled: valid && foreground && !!member,
     retry: false,
-    refetchInterval: foreground && detail.data?.auction.state === "Active" ? 5_000 : false,
+    refetchInterval: foreground && detail.data?.auction.state === "Active" ? poll : false,
   });
   const ownIntakes = useQuery({
     queryKey: ["my-auction-intakes", member, "auction", id],
@@ -159,6 +173,19 @@ export function AuctionScreen({ id }: { id: string }) {
     staleTime: 0,
   });
   const now = useServerNow(detail.data?.serverTime, foreground);
+  // Past the end on the server clock, the worker closes the auction within
+  // seconds: read again until the result shows instead of waiting for a poll.
+  const closing = !!detail.data && !!now && isClosing(detail.data.auction, now);
+  const { refetch: refetchDetail } = detail;
+  const { refetch: refetchMe } = me;
+  useEffect(() => {
+    if (!closing || !foreground) return;
+    const timer = setInterval(() => {
+      void refetchDetail();
+      if (member) void refetchMe();
+    }, CLOSING_POLL_MS);
+    return () => clearInterval(timer);
+  }, [closing, foreground, member, refetchDetail, refetchMe]);
   const unavailable =
     !valid || (detail.error instanceof ApiError && detail.error.status === 404);
   return (
@@ -297,7 +324,7 @@ function AuctionTimerCard({
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Icon name="clock" size={15} color={isOnHold ? colors.warning : stitchTokens.subtleGray} />
           <AppText kind="bold" style={{ color: isOnHold ? colors.warning : stitchTokens.wineDark, fontSize: 13 }}>
-            {isOnHold ? "TẠM DỪNG XEM XÉT" : "PHIÊN ĐÃ KẾT THÚC"}
+            {isOnHold ? "TẠM DỪNG XEM XÉT" : isClosing(auction, now) ? "ĐÃ HẾT GIỜ, ĐANG CHỐT KẾT QUẢ" : "PHIÊN ĐÃ KẾT THÚC"}
           </AppText>
         </View>
         <AppText kind="small" color={colors.muted}>

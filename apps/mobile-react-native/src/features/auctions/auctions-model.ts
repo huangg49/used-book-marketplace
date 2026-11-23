@@ -36,12 +36,13 @@ export function auctionStepError(step: number | null): string | undefined {
 export const AUCTION_MAX_PRICE = Number.MAX_SAFE_INTEGER;
 export const EVIDENCE_MIN_LENGTH = 20;
 
-export function usePublicAuctions(client: SessionClient, enabled = true) {
+/** `live`: summaries arrive over the socket (ADR 0031), so polling is only a backstop. */
+export function usePublicAuctions(client: SessionClient, enabled = true, live = false) {
   return useQuery<PublicAuctionList, Error>({
     queryKey: AUCTIONS_QUERY_KEY,
     queryFn: () => client.request("/auctions", publicAuctionList),
     staleTime: 10_000,
-    refetchInterval: 15_000,
+    refetchInterval: live ? 60_000 : 15_000,
     enabled,
   });
 }
