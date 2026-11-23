@@ -81,7 +81,7 @@ export class CarrierService {
     browserSources: Array<string | undefined>,
     forwardedFor?: string,
   ) {
-    const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+    const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1', '10.0.2.2', '::ffff:10.0.2.2'];
     if (!this.config || !['development', 'test'].includes(this.config.get('NODE_ENV', 'development')) ||
       !this.config.get('PAYMENT_SIMULATOR_SECRET') ||
       !loopback.includes(remoteAddress ?? '') ||
@@ -92,7 +92,7 @@ export class CarrierService {
     for (const source of browserSources) {
       if (source === undefined) continue;
       const url = URL.parse(source.includes('://') ? source : `http://${source}`);
-      if (!url || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) throw notFound();
+      if (!url || !['127.0.0.1', 'localhost', '[::1]', '10.0.2.2'].includes(url.hostname)) throw notFound();
     }
   }
 

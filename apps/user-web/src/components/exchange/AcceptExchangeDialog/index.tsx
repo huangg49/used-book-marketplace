@@ -284,14 +284,14 @@ export function AcceptExchangeDialog({
         <div className={styles.header}>
           <div className={styles.headerContent}>
             <div className={styles.headerIcon}>
-              <FileSignature size={18} />
+              <FileSignature size={20} />
             </div>
             <h2 id="accept-contract-title" className={styles.title}>
               Xác nhận hợp đồng trao đổi
             </h2>
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose} disabled={isBusy} aria-label="Đóng">
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
@@ -301,7 +301,7 @@ export function AcceptExchangeDialog({
             {/* Left Column: Sách trao đổi */}
             <div className={styles.colBooks}>
               <h3 className={styles.sectionTitle}>
-                <ArrowLeftRight size={13} /> Sách trao đổi
+                <ArrowLeftRight size={14} /> Sách trao đổi
               </h3>
               <div className={styles.booksContainer}>
                 {/* Sách nhận */}
@@ -362,7 +362,7 @@ export function AcceptExchangeDialog({
               <div className={styles.sectionCompact}>
                 <div className={styles.compHeaderRow}>
                   <h3 className={styles.sectionTitle}>
-                    <Banknote size={13} /> Thỏa thuận tài chính
+                    <Banknote size={14} /> Thỏa thuận tài chính
                   </h3>
                   <div className={styles.compHeaderActions}>
                     <div className={styles.lockedBadge}>
@@ -535,14 +535,14 @@ export function AcceptExchangeDialog({
                     <div className={isBalanceSufficient ? styles.balanceOkBadge : styles.balanceWarningBadge}>
                       {isBalanceSufficient ? (
                         <>
-                          <CheckCircle2 size={12} className={styles.balanceIconOk} />
+                          <CheckCircle2 size={14} className={styles.balanceIconOk} />
                           <span>
                             Ví: <strong>{formatVnd(availableBalance)}</strong> (Đủ số dư đặt cọc)
                           </span>
                         </>
                       ) : (
                         <>
-                          <AlertTriangle size={12} className={styles.balanceIconWarn} />
+                          <AlertTriangle size={14} className={styles.balanceIconWarn} />
                           <span>
                             Ví: <strong>{formatVnd(availableBalance)}</strong> (Cần nạp thêm {formatVnd(missingBalance)} trong 24h)
                           </span>
@@ -556,7 +556,7 @@ export function AcceptExchangeDialog({
               {/* Địa chỉ giao nhận */}
               <div className={styles.sectionCompact}>
                 <h3 className={styles.sectionTitle}>
-                  <MapPin size={13} /> Địa chỉ giao nhận
+                  <MapPin size={14} /> Địa chỉ giao nhận
                 </h3>
                 <div className={styles.addressBox}>
                   <div className={styles.partnerAddressRow}>

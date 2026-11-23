@@ -120,6 +120,10 @@ export function publicEligibleStages(
         as: 'activeOrder',
       },
     },
+    // A listing with an unpaid or otherwise active direct order must leave all
+    // public shelves immediately, even if an older purchase conversation is
+    // still active for another buyer. Cancellation returns trade to Available.
+    { $match: { 'activeOrder.0': { $exists: false } } },
     {
       $lookup: {
         from: 'exchanges',
@@ -173,7 +177,6 @@ export function publicEligibleStages(
                 {
                   $or: [
                     { $gt: [{ $size: '$purchase' }, 0] },
-                    { $gt: [{ $size: '$activeOrder' }, 0] },
                     { $gt: [{ $size: '$activeExchange' }, 0] },
                   ],
                 },
