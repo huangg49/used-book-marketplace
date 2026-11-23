@@ -6,10 +6,10 @@ import { AuctionPhoto } from '../components/AuctionGallery'
 import { ReviewEntry } from '../features/reviews/ReviewEntry'
 import { SupportLink } from '../features/support/SupportLink'
 import { formatRemaining, outcomeUnknown, useCountdown } from '../hooks/useAuctionClock'
-import { useAuctionLive } from '../hooks/useAuctionLive'
+import { readAuctionNewest, useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
-import { getAuction, getMyParticipation, getMyPointOrder, type PointOrder } from '../services/auctions'
+import { getMyParticipation, getMyPointOrder, type PointOrder } from '../services/auctions'
 import { AuctionOrderPayment } from './AuctionOrderPayment'
 import { PointOrderSteps } from './AuctionPointOrder'
 import styles from './AuctionWinnerOrderPage.module.css'
@@ -99,7 +99,7 @@ function WinnerOrder({ id, ownerId }: { id: string; ownerId: string }) {
   const orderId = participation.data?.won ? participation.data.orderId : null
   const auction = useQuery({
     queryKey: ['auction', id],
-    queryFn: () => getAuction(id),
+    queryFn: () => readAuctionNewest(queryClient, id),
     retry: false,
   })
   useAuctionLive(id)

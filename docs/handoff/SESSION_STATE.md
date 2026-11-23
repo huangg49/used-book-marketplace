@@ -1,6 +1,6 @@
 # Trung tâm Thống kê Admin đa trang (Tài chính, Dòng tiền & Giao dịch/Rủi ro) — 23/11/2026
 
-- Nhánh `feat/admin-finance-statistics` từ `main` (`53d1cdcd`).
+- Nhánh `feat/admin-finance-statistics` từ `main` (`53d1cdcd`), đã merge `main` (`ecfe2189` / PR #126).
 - **Contract & API (Read-only trên sổ cái bất biến)**:
   - `GET /operations/finance-overview?from&to` (ADMIN-only): tổng hợp GMV, hoa hồng bán trực tiếp 5%, hoa hồng đấu giá 5% (tách bạch `outboundFee` thu hộ), cọc đấu giá bị tịch thu, chia 50% cọc cho seller (ADR 0087), chi phí bồi thường quỹ sự cố, lợi nhuận (cho phép số âm), take-rate (bps), so sánh kỳ liền trước và khối lượng Trao đổi (phí 0đ).
   - `GET /operations/finance-cashflow?from&to` (ADMIN-only): đối soát bảo toàn vốn sổ cái mô phỏng, dòng tiền nạp/rút theo ngày và sức khỏe hàng chờ rút tiền (`Requested`).
@@ -11,6 +11,36 @@
   - `/statistics/operations` (`OperationsAnalyticsPage.tsx`): Giao dịch & Rủi ro (3 thẻ hiệu suất kênh có progress bar, cảnh báo rủi ro/sự cố, tổng quan thành viên).
   - `/statistics` (`StatisticsPage.tsx`): giữ nguyên luồng cũ, gắn `StatisticsSubNav` và đổi nhãn thẻ sang "Hoa hồng & phí đã ghi sổ".
 - **Kiểm chứng**: PASS `pnpm contract:check`, API `lint`/`typecheck`/`build` + `finance-overview.spec.ts` (10/10), Admin Web `lint`/`typecheck`/`test` (37/37 files, 253/253 tests) + `build` + bundle budget (`455 kB < 500 kB`). Chưa chạy Mongo QA live spec và chưa push lên remote.
+
+# Đồng hồ máy chủ dùng chung cho đếm ngược — 23/11/2026
+
+- Nhánh `feat/auction-server-clock` cắt từ `feat/auction-live-hardening` (`4b58c8e3`),
+  gồm luôn các commit của nhánh đó; PR #126 vào `main`. Bổ sung [ADR0031](../adr/0031-live-auction-updates.md#addendum-2026-11-23-shared-server-clock-for-countdowns);
+  không đổi OpenAPI, migration hay READINESS.
+- `ServerClock`/`createServerNow` trong `packages/session-client`: lấy mẫu `serverTime`
+  từ phản hồi REST có đo round trip, chạy theo `performance.now()`, phát hiện ngủ máy
+  hoặc đổi giờ thiết bị và đồng bộ lại ở phản hồi kế tiếp.
+- Web và RN dùng chung cho các đếm ngược đấu giá/đơn; web hiện "đang chốt kết quả" khi hết giờ.
+- PASS: unit session-client 172, web 504, RN 251; typecheck/lint web, RN.
+- NOT RUN: browser và thiết bị native (API local không chạy). Chưa có human review.
+
+# Kênh đấu giá trực tiếp web và React Native — 23/11/2026
+
+- Nhánh `feat/auction-live-hardening` từ `main` (`2f9af522`). Bổ sung
+  [ADR0031](../adr/0031-live-auction-updates.md#addendum-2026-11-23-client-hardening-and-react-native);
+  không đổi OpenAPI, migration hay READINESS.
+- Web: Socket.IO `tryAllTransports` để rơi về long-polling khi WebSocket bị chặn;
+  snapshot mới hơn theo `serverTime` thắng (push, ack, REST) nên giá không lùi; push
+  chỉ đọc lại phần riêng tư khi người xem có thể bị ảnh hưởng (gộp 400 ms).
+- RN: `use-auction-live.ts` cho chi tiết và danh sách, đóng socket khi nền; poll
+  30 s khi có push, 5 s khi mất; trạng thái "đang chốt kết quả" sau `endAt`.
+- API: lượt theo dõi danh sách đọc theo `endAt` để luôn phủ 50 thẻ REST hiển thị.
+- PASS: unit web 502, RN 251, `auction-live.spec` 8; typecheck/lint web, RN, API;
+  browser `test:auction-live:browser` (server chỉ polling: cấu hình cũ không kết
+  nối, cấu hình mới live; push cũ và REST trễ không lùi giá); `auction-countdown`
+  và `expired-countdown` browser PASS.
+- NOT RUN: thiết bị native, API E2E `auctions.e2e-spec` trên Mongo QA, nhiều instance
+  API/long-polling cần sticky session. Chưa có giới hạn kết nối theo IP. Đi chung PR #126.
 
 # Đồng bộ toàn diện luồng Trao đổi & Khiếu nại (API, Admin, Web, RN) + UI Đăng sách & Duyệt bài — 23/11/2026
 

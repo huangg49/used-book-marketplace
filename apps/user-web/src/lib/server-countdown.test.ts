@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ServerClock } from '@used-books/session-client';
 import { startServerCountdown } from './server-countdown';
 
 const server = Date.parse('2026-11-04T03:00:00.000Z');
@@ -64,5 +65,30 @@ describe('server countdown lifecycle', () => {
     vi.advanceTimersByTime(1000);
     expect(update).toHaveBeenLastCalledWith(11000);
     next();
+  });
+
+  it('follows the synced server clock, not the age of cached data', () => {
+    let mono = 0
+    const clock = new ServerClock(() => mono, () => Date.now())
+    clock.observe(iso(0), 0, 0) // synced: server is at iso(0) now
+    const update = vi.fn()
+    // Cached response stamped 20 s ago; the old offset would add 20 s.
+    const stop = startServerCountdown(iso(30000), iso(-20000), update, clock)
+    expect(update).toHaveBeenLastCalledWith(30000)
+    mono += 1000; vi.advanceTimersByTime(1000)
+    expect(update).toHaveBeenLastCalledWith(29000)
+    stop()
+  });
+
+  it('keeps counting on the monotonic clock when the device date is changed', () => {
+    let mono = 0
+    const clock = new ServerClock(() => mono, () => Date.now())
+    clock.observe(iso(0), 0, 0)
+    const update = vi.fn()
+    const stop = startServerCountdown(iso(10000), iso(0), update, clock)
+    vi.setSystemTime(Date.now() - 3600000) // user sets the date back an hour
+    mono += 1000; vi.advanceTimersByTime(1000)
+    expect(update).toHaveBeenLastCalledWith(9000)
+    stop()
   });
 });

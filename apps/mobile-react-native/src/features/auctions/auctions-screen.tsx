@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
+import { useAuctionListLive } from "./use-auction-live";
 import {
   AppText,
   Button,
@@ -64,7 +65,8 @@ export function AuctionsScreen() {
     isAuthenticated && notifQuery.data ? notifQuery.data.unreadCount : 0;
 
   // Open auctions, soonest end first (server order).
-  const result = usePublicAuctions(client, foreground);
+  const listLive = useAuctionListLive(foreground);
+  const result = usePublicAuctions(client, foreground, listLive);
   const allAuctions = useMemo(() => result.data?.items ?? [], [result.data]);
 
   // ADR 0047: scheduled auctions shown separately

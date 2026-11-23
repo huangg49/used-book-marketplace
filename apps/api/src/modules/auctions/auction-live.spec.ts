@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AuctionLiveService, LIST_ROOM } from './auction-live.service.js';
+import { AuctionLiveService, LIST_ROOM, LIST_TRACKED } from './auction-live.service.js';
 
 type Row = { _id: string; version: number; state: string; buyNowAt?: Date | null; endAt?: Date };
 
@@ -106,6 +106,15 @@ describe('AuctionLiveService', () => {
     t.bump(A); // closed auction is no longer tracked by the list
     await t.live.tick();
     expect(t.emitted).toEqual([]);
+  });
+
+  it('tracks the soonest-ending open auctions for the list, as GET /auctions shows them', async () => {
+    const t = setup([{ _id: A, version: 1, state: 'Active' }]);
+    cleanup = t.stop;
+    await t.live.watchList();
+    const listPass = t.find.mock.calls.find(([q]) => 'state' in q)!;
+    expect(listPass[0]).toEqual({ state: 'Active' });
+    expect(listPass[1]).toMatchObject({ sort: { endAt: 1, _id: 1 }, limit: LIST_TRACKED });
   });
 
   it('stops checking once the last watcher leaves', async () => {

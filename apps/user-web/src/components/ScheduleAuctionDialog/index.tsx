@@ -1,3 +1,4 @@
+import { createServerNow } from '@used-books/session-client'
 import { useEffect, useId, useRef, useState } from 'react'
 import { CalendarClock, Flag, Info, Play, X } from 'lucide-react'
 import { lockPageScroll } from '../../lib/page-scroll'
@@ -70,8 +71,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const [error, setError] = useState<string | null>(null)
   // A lost response keeps the same body and key so the retry replays it.
   const [unknown, setUnknown] = useState<ScheduleBody | null>(null)
-  const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
-  const now = Date.now() + offset
+  const now = createServerNow(serverTime)()
   const horizon = target.kind === 'publish'
     ? now + AUCTION_OPEN_CEILING_MS
     : lifecycle && target.kind === 'reschedule'
