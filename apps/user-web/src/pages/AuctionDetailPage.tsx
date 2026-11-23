@@ -11,12 +11,12 @@ import {
 import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
-import { useAuctionLive } from '../hooks/useAuctionLive'
+import { readAuctionNewest, useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, canWithdrawRegistration, waitingForRegistrants, waitingTime, openRuleText, closeReasonText,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, canWithdrawRegistration, waitingForRegistrants, waitingTime, openRuleText, closeReasonText,
   placeBid, setAutoBid, withdrawIntake, advanceDemoAuction,
   type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
@@ -103,7 +103,7 @@ export function AuctionDetailPage() {
   const live = (data?: { auction?: AuctionSummary; state?: AuctionState }) =>
     (data?.auction?.state ?? data?.state) === 'Active' ? (pushing ? 60_000 : 10_000) : false
   const detail = useQuery({
-    queryKey: ['auction', id], queryFn: () => getAuction(id), enabled: valid, retry: false, staleTime: 0,
+    queryKey: ['auction', id], queryFn: () => readAuctionNewest(queryClient, id), enabled: valid, retry: false, staleTime: 0,
     refetchInterval: (query) => live(query.state.data),
   })
   const participation = useQuery({
