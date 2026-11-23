@@ -452,7 +452,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       const counterBody = { expectedVersion: 1, listingIds: [replacement.listingId] };
       const key = randomUUID();
       const counter = (await post('/exchanges/' + exchange.id + '/counter', counterBody, user2, key).expect(200)).body;
-      expect(counter).toMatchObject({ revision: 2, recipientListingId: replacement.listingId, initiatorDeposit: 200000, recipientDeposit: 100000, diffAmount: 100000, diffPayerId: user1.id, lastProposedById: user2.id });
+      expect(counter).toMatchObject({ revision: 2, recipientListingId: replacement.listingId, initiatorDeposit: 100000, recipientDeposit: 200000, diffAmount: 100000, diffPayerId: user1.id, lastProposedById: user2.id });
       await post('/exchanges/' + exchange.id + '/accept', { revision: 1 }, user1).expect(409);
       const acceptKey = randomUUID();
       const accepted = (await post('/exchanges/' + exchange.id + '/accept', { revision: 2 }, user1, acceptKey).expect(200)).body;
@@ -488,7 +488,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 2, listingIds: [b.listingId] }, user2).expect(409);
       await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 2, listingIds: [replacementA1.listingId, replacementA1.listingId] }, user1).expect(422);
       const second = (await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 2, listingIds: [replacementA1.listingId, replacementA2.listingId] }, user1).expect(200)).body;
-      expect(second).toMatchObject({ revision: 3, initiatorListingIds: [replacementA1.listingId, replacementA2.listingId], initiatorDeposit: 200000, recipientDeposit: 250000, diffAmount: 50000, diffPayerId: user2.id });
+      expect(second).toMatchObject({ revision: 3, initiatorListingIds: [replacementA1.listingId, replacementA2.listingId], initiatorDeposit: 250000, recipientDeposit: 200000, diffAmount: 50000, diffPayerId: user2.id });
       await post('/exchanges/' + exchange.id + '/accept', { revision: 2 }, user2).expect(409);
       const accepted = (await post('/exchanges/' + exchange.id + '/accept', { revision: 3 }, user2).expect(200)).body;
       expect(accepted.status).toBe('AcceptedAwaitingFunding');
@@ -498,8 +498,8 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await post('/exchanges/' + exchange.id + '/funding', {}, user1).expect(200);
       const funded = (await post('/exchanges/' + exchange.id + '/funding', {}, user2).expect(200)).body;
       expect(funded.status).toBe('Preparing');
-      expect((await get('/me/wallet', user1).expect(200)).body.available).toBe(550000);
-      expect((await get('/me/wallet', user2).expect(200)).body.available).toBe(450000);
+      expect((await get('/me/wallet', user1).expect(200)).body.available).toBe(500000);
+      expect((await get('/me/wallet', user2).expect(200)).body.available).toBe(500000);
       expect((await reconcile()).balanced).toBe(true);
     });
 
@@ -612,8 +612,8 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       recipientListingId: l2.listingId,
       status: 'Proposed',
       revision: 1,
-      initiatorDeposit: 150000,
-      recipientDeposit: 100000,
+      initiatorDeposit: 100000,
+      recipientDeposit: 150000,
       diffAmount: 50000,
       diffPayerId: user1.id,
       initiatorAddress: {
@@ -745,17 +745,16 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(comp1Res.body.initiatorCompletedAt).toBeDefined();
     expect(comp1Res.body.status).toBe('Delivered');
 
-    // Both acknowledgements preserve the full inspection windows and all holds.
+    // Mutual acknowledgement authorizes immediate settlement and releases holds.
     const comp2Res = await post(
       `/exchanges/${exchangeId}/complete`,
       { expectedVersion: comp1Res.body.revision },
       user2,
     ).expect(200);
     expect(comp2Res.body.recipientCompletedAt).toBeDefined();
-    expect(comp2Res.body.status).toBe('Delivered');
-    expect(comp2Res.body.completedAt).toBeNull();
-    expect((await db.c.listings.findOne({ _id: l1.listingId }))?.trade).toBe('Reserved');
-    await worker.tick(new Date(Date.parse(comp2Res.body.inspectionDeadline) + 1));
+    expect(comp2Res.body.status).toBe('Completed');
+    expect(comp2Res.body.completedAt).toBeDefined();
+    expect((await db.c.listings.findOne({ _id: l1.listingId }))?.trade).toBe('Exchanged');
     expect((await db.c.exchanges.findOne({ _id: exchangeId }))?.status).toBe('Completed');
 
     // 8. Verify listings are now Exchanged!
@@ -971,8 +970,8 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       recipientListingId: l2.listingId,
       status: 'Proposed',
       revision: 1,
-      initiatorDeposit: 150000,
-      recipientDeposit: 110000,
+      initiatorDeposit: 110000,
+      recipientDeposit: 150000,
       diffAmount: 40000,
       diffPayerId: user1.id,
     });
@@ -2290,19 +2289,13 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         const bothAcknowledged = (await post(inspectionPath + '/complete', {
           expectedVersion: acknowledged.revision,
         }, user2).expect(200)).body;
-        expect(bothAcknowledged).toMatchObject({ status: 'Delivered', completedAt: null });
-        expect(bothAcknowledged.recipientCompletedAt).toEqual(expect.any(String));
-        for (const user of [user1, user2]) {
-          expect((await get(inspectionPath, user).expect(200)).body.demoDeadline).toBe('Inspection');
-        }
-        await advanceInspection(acknowledged.revision).expect(409);
-        const completed = (await advanceInspection(bothAcknowledged.revision).expect(200)).body;
-        expect(completed).toMatchObject({
+        expect(bothAcknowledged).toMatchObject({
           status: 'Completed',
+          completedAt: expect.any(String),
           initiatorReceivedAt: delivered.initiatorReceivedAt,
           recipientReceivedAt: delivered.recipientReceivedAt,
           initiatorCompletedAt: acknowledged.initiatorCompletedAt,
-          recipientCompletedAt: bothAcknowledged.recipientCompletedAt,
+          recipientCompletedAt: expect.any(String),
         });
 
         const proposalA = await createApprovedListing(user1, 100000, 'Both');

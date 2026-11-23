@@ -734,7 +734,7 @@ function OperationsReturnActions({
                   updated.id !== item.id ||
                   (selected === "VerifyOutboundDelivery"
                     ? !updated.outboundDeliveryVerification ||
-                      !updated.canStartReturnResolution
+                    !updated.canStartReturnResolution
                     : !updated.returnResolution)
                 ) {
                   throw new Error("Chưa xác minh được kết quả của đúng hồ sơ.");
@@ -1090,8 +1090,8 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
           <h1>
             {item
               ? disputeParty(item, "initiator").name +
-                " ↔ " +
-                disputeParty(item, "recipient").name
+              " ↔ " +
+              disputeParty(item, "recipient").name
               : "Hồ sơ khiếu nại trao đổi"}
           </h1>
           {item && (

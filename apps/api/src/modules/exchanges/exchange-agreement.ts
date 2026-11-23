@@ -157,8 +157,8 @@ export function exchangeAmounts(
   }
 
   return {
-    initiatorDeposit: recipientValue,
-    recipientDeposit: initiatorValue,
+    initiatorDeposit: initiatorValue,
+    recipientDeposit: recipientValue,
     diffAmount,
     diffPayerId,
     ...(isNegotiated ? { negotiatedDiffAmount: diffAmount } : {}),

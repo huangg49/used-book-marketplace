@@ -148,36 +148,36 @@ export function AcceptExchangeDialog({
     ? (negotiatedPayer === 'none' ? 0 : negotiatedDiff)
     : (detail.moneyAmount ?? defaultDiffAmount);
   let effectiveCompensationNotice = 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
-  let effectiveFundingAmount = totalReceivePrice;
+  let effectiveFundingAmount = totalGivePrice;
 
   if (isNegotiating) {
     if (negotiatedPayer === 'viewer') {
       effectiveCompensationNotice = currentDiff > 0
         ? `Bạn sẽ bù thêm cho đối tác (theo thỏa thuận mới): ${formatVnd(currentDiff)}`
         : 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
-      effectiveFundingAmount = totalReceivePrice + currentDiff;
+      effectiveFundingAmount = totalGivePrice + currentDiff;
     } else if (negotiatedPayer === 'partner') {
       effectiveCompensationNotice = currentDiff > 0
         ? `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn (theo thỏa thuận mới): ${formatVnd(currentDiff)}`
         : 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
-      effectiveFundingAmount = totalReceivePrice;
+      effectiveFundingAmount = totalGivePrice;
     } else {
       effectiveCompensationNotice = 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
-      effectiveFundingAmount = totalReceivePrice;
+      effectiveFundingAmount = totalGivePrice;
     }
   } else {
     if (detail.moneyCompensationType === 'user_pays' && (detail.moneyAmount ?? 0) > 0) {
       effectiveCompensationNotice = isAlreadyNegotiated
         ? `Bạn cần bù thêm (đã chốt theo thương lượng): ${formatVnd(detail.moneyAmount!)}`
         : `Bạn cần bù thêm: ${formatVnd(detail.moneyAmount!)}`;
-      effectiveFundingAmount = totalReceivePrice + detail.moneyAmount!;
+      effectiveFundingAmount = totalGivePrice + detail.moneyAmount!;
     } else if (detail.moneyCompensationType === 'other_pays' && (detail.moneyAmount ?? 0) > 0) {
       effectiveCompensationNotice = isAlreadyNegotiated
         ? `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn (đã chốt theo thương lượng): ${formatVnd(detail.moneyAmount!)}`
         : `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn: ${formatVnd(detail.moneyAmount!)}`;
-      effectiveFundingAmount = totalReceivePrice;
+      effectiveFundingAmount = totalGivePrice;
     } else {
-      effectiveFundingAmount = totalReceivePrice;
+      effectiveFundingAmount = totalGivePrice;
     }
   }
 
@@ -491,9 +491,9 @@ export function AcceptExchangeDialog({
                     <div className={styles.financialValueGroup}>
                       <span className={styles.highlightAmount}>{formatVnd(effectiveFundingAmount)}</span>
                       <span className={styles.financialSubtext}>
-                        {effectiveFundingAmount > totalReceivePrice
-                          ? '(cọc sách + tiền bù)'
-                          : '(cọc sách nhận, hoàn lại khi hoàn tất)'}
+                        {effectiveFundingAmount > totalGivePrice
+                          ? `(cọc sách gửi ${formatVnd(totalGivePrice)} + tiền bù ${formatVnd(effectiveFundingAmount - totalGivePrice)}, cọc hoàn lại khi hoàn tất)`
+                          : `(cọc sách gửi ${formatVnd(totalGivePrice)}, hoàn lại khi hoàn tất)`}
                       </span>
                     </div>
                   </div>
