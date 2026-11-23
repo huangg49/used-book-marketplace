@@ -82,7 +82,6 @@ export class ExchangesController {
   }
 
   @Get(':id/messages')
-  @ExistingObligation()
   @Roles('MEMBER')
   getMessages(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const query = this.input.query('getExchangeMessages', req.query);
@@ -95,7 +94,6 @@ export class ExchangesController {
   }
 
   @Post(':id/messages')
-  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(201)
   sendMessage(

@@ -20,6 +20,7 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     '0086-exchange-proportional-deposits',
     '0087-exchange-legacy-funded-deposit-compat',
     '0088-exchange-dispute-compensation',
+    '0089-restore-funded-exchange-terms',
   );
   const client = await new MongoClient(testUrl(`local_demo_upgrade_${randomUUID().replaceAll('-', '')}_test`)).connect();
   const db = client.db();

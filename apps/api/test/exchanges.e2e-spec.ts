@@ -9,6 +9,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import type { RoleCode, UserStatus, UserDoc } from '../src/database/mongo/documents.js';
+import type { CollectionSpec } from '../src/database/mongo/schema-dsl.js';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
@@ -18,6 +19,7 @@ import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { Gate } from './helpers/mongo-gate.js';
 import { applyCollectionSpecs, currentCollections, migrations } from '../src/database/mongo/migrations/index.js';
 import { exchangeInspectionDeadlinesMigration } from '../src/database/mongo/migrations/0039-exchange-inspection-deadlines.js';
+import { restoreFundedExchangeTermsMigration } from '../src/database/mongo/migrations/0089-restore-funded-exchange-terms.js';
 
 const storage = {
   async check() {},
@@ -787,6 +789,47 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     return (await post(`/exchanges/${ex.id}/ship`, { expectedVersion: first.revision }, user2).expect(200)).body;
   }
 
+  it('restores only funded legacy terms rewritten by 0086 without reposting the ledger', async () => {
+    const current = await preparedExchange(120000, 160000);
+    const legacyBook = await createApprovedListing(user1, 100000, 'Both');
+    const otherBook = await createApprovedListing(user2, 150000, 'Both');
+    const legacy = (await post('/exchanges', {
+      initiatorListingId: legacyBook.listingId, recipientListingId: otherBook.listingId,
+    }, user1).expect(201)).body;
+    const path = `/exchanges/${legacy.id}`;
+    await post(path + '/accept', { revision: 1 }, user2).expect(200);
+    const database = db.client.db();
+    const preProportional = migrations.find(m => m.id === '0080-exchange-inspection-verdict')!
+      .definition as { collections: CollectionSpec[] };
+    const exchangeSpecs = currentCollections().filter(spec => spec.name === 'exchanges');
+    await applyCollectionSpecs(database, preProportional.collections);
+    try {
+      await db.c.exchanges.updateOne({ _id: legacy.id }, {
+        $set: { initiatorDeposit: 150000, recipientDeposit: 100000 },
+      });
+      await post(path + '/funding', {}, user1).expect(200);
+    } finally {
+      await applyCollectionSpecs(database, exchangeSpecs);
+    }
+    const funded = (await db.c.exchanges.findOne({ _id: legacy.id }))!;
+    const currentFunded = await db.c.exchanges.findOne({ _id: current.id });
+    const payment = await db.c.ledger_journals.findOne({ orderId: funded.initiatorOrderId, type: 'OrderPayment' });
+    expect(payment).not.toBeNull();
+    const postings = await db.c.ledger_entries.find({ journalId: payment!._id }).sort({ _id: 1 }).toArray();
+    const proportional = migrations.find(m => m.id === '0086-exchange-proportional-deposits')!;
+    await proportional.up(database, db.client);
+    expect(await db.c.exchanges.findOne({ _id: legacy.id })).toMatchObject({
+      initiatorDeposit: 100000, recipientDeposit: 150000,
+    });
+    await restoreFundedExchangeTermsMigration.up(database);
+    await restoreFundedExchangeTermsMigration.up(database);
+    expect(await db.c.exchanges.findOne({ _id: legacy.id })).toEqual(funded);
+    expect(await db.c.exchanges.findOne({ _id: current.id })).toEqual(currentFunded);
+    expect(await db.c.ledger_entries.find({ journalId: payment!._id }).sort({ _id: 1 }).toArray()).toEqual(postings);
+    await post(path + '/funding', {}, user2).expect(200);
+    expect((await reconcile()).balanced).toBe(true);
+  });
+
   it('accepts the first receiver claim during preparation and delays one-sided return until the shipping deadline', async () => {
     const ex = await preparedExchange();
     const path = `/exchanges/${ex.id}`;
@@ -920,6 +963,8 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
             { initiatorShipment: { $exists: true } },
             { recipientShipment: { $exists: true } },
             { returnResolution: { $exists: true } },
+            { cancellationRequestedBy: { $exists: true } },
+            { cancellationRequestedAt: { $exists: true } },
           ],
         },
         {
@@ -929,6 +974,8 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
             initiatorShipment: 1,
             recipientShipment: 1,
             returnResolution: 1,
+            cancellationRequestedBy: 1,
+            cancellationRequestedAt: 1,
           },
         },
       )
@@ -941,6 +988,8 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
           initiatorShipment: '',
           recipientShipment: '',
           returnResolution: '',
+          cancellationRequestedBy: '',
+          cancellationRequestedAt: '',
         },
       },
     );
@@ -983,6 +1032,8 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         if (row.initiatorShipment !== undefined) restore.initiatorShipment = row.initiatorShipment;
         if (row.recipientShipment !== undefined) restore.recipientShipment = row.recipientShipment;
         if (row.returnResolution !== undefined) restore.returnResolution = row.returnResolution;
+        if (row.cancellationRequestedBy !== undefined) restore.cancellationRequestedBy = row.cancellationRequestedBy;
+        if (row.cancellationRequestedAt !== undefined) restore.cancellationRequestedAt = row.cancellationRequestedAt;
         if (Object.keys(restore).length > 0) {
           await db.c.exchanges.updateOne({ _id: row._id }, { $set: restore });
         }
@@ -2932,6 +2983,9 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       expect(after.exchange.resolutionDecision).toBe(verdict.decision);
       expect(after.journals.filter(j => j.type === 'ExchangeNonReturnCompensation')).toHaveLength(1);
       expect(after.listings.find(l => l._id === ex.initiatorListingId)?.trade).toBe('ClosedUnavailable');
+      expect(after.listings.find(l => l._id === ex.recipientListingId)).toMatchObject({
+        trade: 'Available', moderation: 'Draft',
+      });
       const replay = await post(operations + '/resolve', verdict, staff, key).expect(200);
       expect(replay.headers['idempotency-replayed']).toBe('true');
       expect(replay.body).toEqual(settled);

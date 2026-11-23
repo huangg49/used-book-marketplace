@@ -1645,7 +1645,7 @@ async function checkExchangeReturnBooks(tx: Tx, exchange: ExchangeDoc) {
   }
   if (scope.bothShipped && compensated) {
     if (
-      ownerBooks.some((b) => b.trade !== 'ClosedUnavailable') ||
+      ownerBooks.some((b) => b.trade !== 'Available' || b.moderation !== 'Draft') ||
       holderBooks.some((b) => b.trade !== 'ClosedUnavailable')
     ) {
       throw new Error('Exchange full compensation listing projection mismatch');

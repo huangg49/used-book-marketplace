@@ -23,6 +23,7 @@ import { directOrderIssueEvidenceMigration, directOrderIssueEvidenceSpec } from 
 import { createExchangeProportionalDepositsMigration, withProportionalExchangeDeposits } from './0086-exchange-proportional-deposits.js';
 import { createLegacyFundedExchangeDepositCompatMigration, withLegacyFundedExchangeDepositCompat } from './0087-exchange-legacy-funded-deposit-compat.js';
 import { createExchangeDisputeCompensationMigration, withExchangeDisputeCompensation } from './0088-exchange-dispute-compensation.js';
+import { restoreFundedExchangeTermsMigration } from './0089-restore-funded-exchange-terms.js';
 import { onlinePriceCatalogRevisionMigration, withOnlinePriceCatalogRevision } from './0076-online-price-catalog-revision.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
@@ -707,3 +708,4 @@ migrations.push(exchangeProportionalDepositsMigration);
 const exchangeLegacyDepositCompatMigration = createLegacyFundedExchangeDepositCompatMigration(exchangeProportionalDepositsMigration.definition.collections[0]);
 migrations.push(exchangeLegacyDepositCompatMigration);
 migrations.push(createExchangeDisputeCompensationMigration(exchangeLegacyDepositCompatMigration.definition.collections[0]));
+migrations.push(restoreFundedExchangeTermsMigration);

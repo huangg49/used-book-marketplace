@@ -1,13 +1,14 @@
 # Đồng bộ toàn diện luồng Trao đổi & Khiếu nại (API, Admin, Web, RN) + UI Đăng sách & Duyệt bài — 23/11/2026
 
 - Nhánh `codex/exchange-driver-links` (từ `785106fa` / `main` `2f9af522`).
-- **Contract, API, Ledger & Migrations (`0087`, `0088`)**: bổ sung khấu trừ thiệt hại một phần/toàn phần (`compensationAmount`, `resolutionCompensationAmount`), thẩm quyền Staff `EXCHANGE_STAFF_LIMIT = 300_000`, `RefundBoth` chỉ Admin cho `InTransit`, `heldInExchanges` trên Wallet, `@ExistingObligation` cho chat/reject, `tx.lock` cho `receive`, và mở khóa sách chưa gửi khi bồi thường 1 chiều.
+- **Contract, API, Ledger & Migrations (`0087`–`0089`)**: bổ sung khấu trừ thiệt hại một phần/toàn phần (`compensationAmount`, `resolutionCompensationAmount`), tính khoản giữ trong ví và khóa phiếu khi xác nhận nhận sách. Chat giữ yêu cầu tài khoản hoạt động. API chỉ cho phát lại biên nhận `RefundBoth` lịch sử. Giữ migration `0086` của main. Migration `0089` dùng biên nhận đặt cọc để khôi phục mức cọc cũ nếu `0086` đã ghi đè, giữ nguyên sổ cái và revision.
 - **Admin Web, Member Web & Mobile RN**:
-  - Admin Dispute Desk: bộ chọn mức bồi thường (Toàn phần / Khấu trừ 1 phần), preview chia tiền Ledger thời gian thực, QuickAssign và `RefundBoth` cho `InTransit`.
+  - Admin Dispute Desk: bộ chọn mức bồi thường (Toàn phần / Khấu trừ 1 phần), xem trước cách chia tiền và nhận phụ trách. Nhãn `RefundBoth` trên giao diện vận chuyển hiện còn lệch với API chỉ hỗ trợ replay.
   - Member Web: đồng bộ cọc tỷ lệ theo sách gửi, thỏa thuận tiền bù nhiều vòng kèm cảnh báo trần bảo chứng, thanh 5 bước bấm xem lại lịch sử, form báo sự cố 1 bước chọn từng cuốn sách và mở Driver Simulator theo chiều vận chuyển.
   - Mobile RN: thiết kế lại chuẩn native app với thanh tiến độ 5 vạch gọn + Bottom Sheet Timeline dọc, Sticky Bottom Action Dock vùng ngón cái, 4 modal dạng Bottom Sheet trượt từ đáy, giao diện Chat full-screen kèm chip gợi ý nhanh.
   - Gom cùng gói UI Đăng sách (`SellBookPage`) và Admin Duyệt bài/Catalog (`features/review/*`) theo yêu cầu chủ dự án.
 - **Kiểm chứng**: PASS `pnpm contract:check`, `pnpm contract:routes` (293 op/41 controller), `pnpm docs:check`, `git diff --check`; API unit `57/57` (`566/566`), Member Web unit `61/61` (`491/491`) + build, Mobile RN `tsc --noEmit` + unit `28/28` (`243/243`), Admin Web build + `exchange-resolution-safety.mjs`. Đã kiểm tra trực quan Web (Playwright 390/1440px) và Mobile RN trên Android Emulator.
+- **PR #125**: đã chạy đạt bốn ca HTTP tập trung trên Mongo QA (biên nhận cọc cũ, backfill hạn kiểm tra, quyết định bồi thường và quyền LOCKED) và hai ca nâng cấp Mongo. Bỏ qua kiểm tra riêng job Operations and public shelf CI theo yêu cầu chủ dự án.
 
 # Mở Driver Simulator theo chiều vận chuyển — 23/11/2026
 

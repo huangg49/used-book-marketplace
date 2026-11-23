@@ -160,8 +160,10 @@ export class CarrierService {
       if (pickup) {
         if (initiator) changes.initiatorShippedAt = now;
         else changes.recipientShippedAt = now;
-        changes.cancellationRequestedBy = null;
-        changes.cancellationRequestedAt = null;
+        if (row.cancellationRequestedBy) {
+          changes.cancellationRequestedBy = null;
+          changes.cancellationRequestedAt = null;
+        }
         if (otherSentAt) changes.status = 'InTransit';
       }
       if (status === 'DELIVERED') {
