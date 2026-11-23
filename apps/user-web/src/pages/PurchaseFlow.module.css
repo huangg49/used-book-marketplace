@@ -129,6 +129,75 @@
   padding-block: 24px;
   border-block: 1px solid var(--shop-line);
 }
+.commissionSummary {
+  margin-block: 20px;
+  padding: 16px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-shelf, #f4eddf);
+}
+.commissionSummary h3 {
+  margin: 0 0 10px;
+  color: var(--shop-wine);
+  font: 700 0.9375rem/1.6 var(--shop-body);
+}
+.commissionSummary dl {
+  margin: 0;
+}
+.commissionSummary dl > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding-block: 7px;
+}
+.commissionSummary dt {
+  color: var(--shop-muted);
+}
+.commissionSummary dd {
+  margin: 0;
+  color: var(--shop-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.commissionSummary .commissionNet {
+  margin-top: 5px;
+  padding-top: 12px;
+  border-top: 1px solid var(--shop-line);
+}
+.commissionSummary .commissionNet dt,
+.commissionSummary .commissionNet dd {
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+.commissionSummary p {
+  margin: 9px 0 0 !important;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.commissionConsent {
+  display: flex !important;
+  align-items: start;
+  gap: 12px !important;
+  margin-block: 18px;
+  padding: 14px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  cursor: pointer;
+}
+.commissionConsent input {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--shop-wine);
+}
+.commissionConsent span {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
 .sectionHeading {
   display: flex;
   gap: 10px;
@@ -326,6 +395,26 @@ fieldset:disabled .primary {
 .form {
   display: grid;
   gap: 18px;
+}
+.agreedPrice {
+  display: grid;
+  gap: 5px;
+}
+.agreedPriceLabel {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.agreedPriceValue {
+  margin: 0;
+  color: var(--shop-wine);
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.agreedPriceHelp {
+  color: var(--shop-muted);
+  font-size: 0.75rem;
 }
 .fieldPair {
   display: grid;

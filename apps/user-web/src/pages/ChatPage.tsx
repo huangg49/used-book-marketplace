@@ -59,6 +59,11 @@ function dateTime(value: string) {
   }).format(new Date(value));
 }
 
+function directOrderCommission(bookPrice: number) {
+  // POL-13 / BR-20: 5% of the book price, rounded half up to the nearest VND.
+  return Number((BigInt(bookPrice) * 500n + 5000n) / 10000n);
+}
+
 // Draft changes do not alter existing messages. Keep normal prop comparison so
 // new message content, timestamps, participant names or ownership still render.
 const ChatMessage = memo(function ChatMessage({ message, sender, own }: {
@@ -121,6 +126,7 @@ function ChatRoom({
   });
   const [orderBusy, setOrderBusy] = useState(false);
   const [orderError, setOrderError] = useState<string>();
+  const [commissionAccepted, setCommissionAccepted] = useState(false);
   const orderAttempt = useRef<
     { key: string; version: number; price: number } | undefined
   >(undefined);
@@ -348,6 +354,9 @@ function ChatRoom({
         : isExchange
           ? "Đề nghị đổi sách"
           : "Thương lượng mua sách";
+  const orderBookPrice = orderAttempt.current?.price ?? agreedBookPrice;
+  const orderCommission =
+    orderBookPrice == null ? null : directOrderCommission(orderBookPrice);
 
   const chatPanelContent = (
     <section
@@ -708,6 +717,7 @@ function ChatRoom({
           <PurchaseDialog
             open={orderDialogOpen}
             onClose={() => {
+              setCommissionAccepted(false);
               setOrderDialogOpen(false);
             }}
             busy={orderBusy}
@@ -719,6 +729,7 @@ function ChatRoom({
               onSubmit={async (event) => {
                 event.preventDefault();
                 if (orderBusy) return;
+                if (!commissionAccepted) return;
                 if (!orderAttempt.current && !canCreate) return;
                 const price = orderAttempt.current?.price ?? agreedBookPrice;
                 if (
@@ -748,6 +759,7 @@ function ChatRoom({
                     intent.key,
                   );
                   orderAttempt.current = undefined;
+                  setCommissionAccepted(false);
                   setOrderDialogOpen(false);
                   refreshRooms();
                 } catch (cause) {
@@ -769,31 +781,74 @@ function ChatRoom({
               }}
             >
               <div className={flow.form}>
-                <label>
-                  Giá sách đã thỏa thuận (₫)
-                  <input
-                    name="agreedBookPrice"
-                    type="number"
-                    min={10000}
-                    max={1000000}
-                    step={1000}
-                    disabled={orderBusy || !!orderAttempt.current}
-                    value={orderAttempt.current?.price ?? agreedBookPrice ?? ""}
-                    readOnly
-                  />
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--shop-muted, #716157)",
-                      marginTop: 4,
-                      display: "block",
-                      fontWeight: 500,
-                    }}
-                  >
+                <div className={flow.agreedPrice}>
+                  <span className={flow.agreedPriceLabel}>
+                    Giá sách đã thỏa thuận (₫)
+                  </span>
+                  <p className={flow.agreedPriceValue}>
+                    {orderBookPrice == null
+                      ? "Chưa chốt giá"
+                      : formatVnd(orderBookPrice)}
+                  </p>
+                  <span className={flow.agreedPriceHelp}>
                     Giá được chốt từ đề nghị đã được đối tác chấp nhận.
                   </span>
-                </label>
+                </div>
               </div>
+              {orderBookPrice != null && orderCommission != null && (
+                <section
+                  className={flow.commissionSummary}
+                  aria-label="Giá sách và phí hoa hồng"
+                >
+                  <h3>Giá sách và phí hoa hồng</h3>
+                  <dl>
+                    {book.data?.salePrice != null ? (
+                      <div>
+                        <dt>Giá bài đăng</dt>
+                        <dd>{formatVnd(book.data.salePrice)}</dd>
+                      </div>
+                    ) : (
+                      <div>
+                        <dt>Giá sách áp dụng cho đơn</dt>
+                        <dd>{formatVnd(orderBookPrice)}</dd>
+                      </div>
+                    )}
+                    {book.data?.salePrice != null &&
+                      book.data.salePrice !== orderBookPrice && (
+                        <div>
+                          <dt>Giá sách đã thống nhất cho đơn</dt>
+                          <dd>{formatVnd(orderBookPrice)}</dd>
+                        </div>
+                      )}
+                    <div>
+                      <dt>Phí hoa hồng (5% giá sách)</dt>
+                      <dd>−{formatVnd(orderCommission)}</dd>
+                    </div>
+                    <div className={flow.commissionNet}>
+                      <dt>Dự kiến tiền sách còn lại sau hoa hồng</dt>
+                      <dd>{formatVnd(orderBookPrice - orderCommission)}</dd>
+                    </div>
+                  </dl>
+                  <p>
+                    Ước tính theo giá sách hiện tại. Hoa hồng 5% áp dụng trên
+                    tiền sách thực giữ lại khi giao dịch hoàn tất; không tính
+                    phí giao nhận.
+                  </p>
+                </section>
+              )}
+              <label className={flow.commissionConsent}>
+                <input
+                  type="checkbox"
+                  required
+                  checked={commissionAccepted}
+                  disabled={orderBusy}
+                  onChange={(event) => setCommissionAccepted(event.target.checked)}
+                />
+                <span>
+                  Tôi đã đọc và đồng ý để Lật lại thu phí hoa hồng 5% trên giá
+                  sách khi giao dịch hoàn tất.
+                </span>
+              </label>
               {room.quotePreview ? (
                 <div className={flow.delivery}>
                   <p>
@@ -852,6 +907,7 @@ function ChatRoom({
                 type="submit"
                 disabled={
                   orderBusy ||
+                  !commissionAccepted ||
                   (!orderAttempt.current &&
                     (!canCreate ||
                       !room.hasQuote ||
@@ -1635,6 +1691,13 @@ export function ChatPage() {
       void cache.invalidateQueries({
         queryKey: ["public-listing", room.data.listingId],
       });
+    for (const key of [
+      "home-shelves",
+      "catalog-search",
+      "exchange-public-listings",
+    ]) {
+      void cache.invalidateQueries({ queryKey: [key] });
+    }
   };
   if (auth.status !== "authenticated")
     return (
