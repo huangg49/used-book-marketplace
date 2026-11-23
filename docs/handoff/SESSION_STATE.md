@@ -1,3 +1,21 @@
+# Kênh đấu giá trực tiếp web và React Native — 23/11/2026
+
+- Nhánh `feat/auction-live-hardening` từ `main` (`2f9af522`). Bổ sung
+  [ADR0031](../adr/0031-live-auction-updates.md#addendum-2026-11-23-client-hardening-and-react-native);
+  không đổi OpenAPI, migration hay READINESS.
+- Web: Socket.IO `tryAllTransports` để rơi về long-polling khi WebSocket bị chặn;
+  snapshot mới hơn theo `serverTime` thắng (push, ack, REST) nên giá không lùi; push
+  chỉ đọc lại phần riêng tư khi người xem có thể bị ảnh hưởng (gộp 400 ms).
+- RN: `use-auction-live.ts` cho chi tiết và danh sách, đóng socket khi nền; poll
+  30 s khi có push, 5 s khi mất; trạng thái "đang chốt kết quả" sau `endAt`.
+- API: lượt theo dõi danh sách đọc theo `endAt` để luôn phủ 50 thẻ REST hiển thị.
+- PASS: unit web 502, RN 251, `auction-live.spec` 8; typecheck/lint web, RN, API;
+  browser `test:auction-live:browser` (server chỉ polling: cấu hình cũ không kết
+  nối, cấu hình mới live; push cũ và REST trễ không lùi giá); `auction-countdown`
+  và `expired-countdown` browser PASS.
+- NOT RUN: thiết bị native, API E2E `auctions.e2e-spec` trên Mongo QA, nhiều instance
+  API/long-polling cần sticky session. Chưa có giới hạn kết nối theo IP. Chưa push/PR.
+
 # Tối ưu UI hành trình trao đổi, Stepper 3D, Phiếu đề nghị thu gọn và Thẻ Đồng kiểm 72h (RN) — 21/11/2026
 
 - Đã tạo nhánh `feat/mobile-exchange-ui-polish` từ `main` (`c678b413`).

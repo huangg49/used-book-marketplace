@@ -64,3 +64,35 @@ has `find/insert/update` only, so MongoDB change streams would need a new
 - Not done: no private socket channel (outbid is derived from the REST participation
   read), no durable notification inbox entry for being outbid (FR-N01–N04), and React
   Native/Flutter clients do not subscribe yet.
+
+## Addendum 2026-11-23: client hardening and React Native
+
+Same events, payloads and server protocol; no OpenAPI or migration change.
+
+- **Transport fallback.** Clients connect with `transports: ['websocket', 'polling']`
+  and `tryAllTransports: true`. Socket.IO's default (`false`) gives up when the first
+  transport fails, so a proxy or network that refuses the WebSocket upgrade left the
+  page on REST polling. WebSocket stays first so several API instances need no sticky
+  session in the common case; long-polling across instances does need one.
+- **Ordering.** Pushes, watch acks and REST reads write the same cache entry and can
+  arrive out of order. Each public snapshot carries `serverTime` from the database
+  clock, so clients keep the newer one and the shown price never steps back. Equal
+  stamps take the incoming copy (Dutch drops). A REST read that started earlier but
+  saw a later commit can lose to an older one; the push for that commit repairs it.
+- **Private fan-out.** A push no longer makes every viewer re-read participation,
+  point orders and notifications. Within a 400 ms trailing window: a guest reads
+  nothing private; a member known not to take part reads only on a lifecycle change
+  (state/phase); a participant (or one not yet known) also re-reads participation,
+  wallet (ADR 0075 holds) and notifications when price, leader or end time move. Point
+  orders are re-read only on a lifecycle change. A lifecycle change flushes at once.
+- **React Native** subscribes on the auction detail and open-list screens while the
+  screen is focused and the app active (`useForeground`); the socket closes in the
+  background and resyncs from the ack on return. REST polls every 30 s while pushes
+  flow and every 5 s while they do not; past `endAt` on the server clock it re-reads
+  every 2 s and shows "đang chốt kết quả" until the worker's close arrives. List pushes
+  replace known cards in place and refetch for an unseen one, keeping server order.
+- **List tracking** follows the REST order: the bounded list pass (200) reads open
+  auctions by `endAt` (state+endAt index), so the 50 cards `GET /auctions` shows stay
+  tracked when more than 200 are open.
+- Still not done: a per-IP connection limit on the public namespace, Flutter, and a
+  private socket channel (own standing stays a REST read).
