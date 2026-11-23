@@ -10,8 +10,8 @@ import {
   useExchangeRecovery,
 } from "./exchange-recovery";
 import { ExchangeCounterForm } from "./exchange-counter-form";
-import React, { useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import React, { useCallback, useState, useSyncExternalStore } from "react";
+import { AppState, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
@@ -428,6 +428,38 @@ function ExchangeActionsContent({
   const isReceivedByMe = isInitiator
     ? Boolean(exchange.initiatorReceivedAt)
     : Boolean(exchange.recipientReceivedAt);
+  const partnerPickedUpAt = isInitiator ? exchange.recipientShippedAt : exchange.initiatorShippedAt;
+  const myInspectionDeadline = isInitiator ? exchange.initiatorInspectionDeadline : exchange.recipientInspectionDeadline;
+  const cutoff = myInspectionDeadline ? Date.parse(myInspectionDeadline) : Infinity;
+  const readInspectionOpen = useCallback(() => Date.now() < cutoff, [cutoff]);
+  const subscribeInspectionDeadline = useCallback((notify: () => void) => {
+    if (!Number.isFinite(cutoff)) return () => {};
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      clearTimeout(timer);
+      const remaining = cutoff - Date.now();
+      if (remaining > 0) timer = setTimeout(schedule, Math.min(remaining, 2_147_483_647));
+      notify();
+    };
+    schedule();
+    const listener = AppState.addEventListener("change", (state) => {
+      if (state === "active") schedule();
+    });
+    return () => {
+      listener.remove();
+      clearTimeout(timer);
+    };
+  }, [cutoff]);
+  const inspectionOpen = useSyncExternalStore(subscribeInspectionDeadline, readInspectionOpen, readInspectionOpen);
+  const receiveAction = partnerPickedUpAt && !isReceivedByMe ? (
+    <Button title="Xác nhận đã nhận sách" wine busy={isBusy} onPress={() => receiveMutation.mutate()} />
+  ) : null;
+  const disputeAction = inspectionOpen ? (
+    <Button title="Báo sự cố / Khiếu nại sách" secondary wine busy={isBusy} onPress={() => {
+      setDisputeError(null);
+      setDisputeModalOpen(true);
+    }} />
+  ) : null;
 
   const isCompletedByMe = isInitiator
     ? Boolean(exchange.initiatorCompletedAt)
@@ -1003,6 +1035,8 @@ function ExchangeActionsContent({
                     )}
                 </View>
               )}
+              {receiveAction}
+              {isReceivedByMe && disputeAction}
             </View>
           )}
 
@@ -1045,24 +1079,10 @@ function ExchangeActionsContent({
                     Sách đang trên đường giao đến bạn. Khi nhận sách và kiểm tra
                     đúng mô tả, hãy bấm nút xác nhận dưới đây.
                   </AppText>
-                  <Button
-                    title="Tôi đã nhận được sách an toàn"
-                    wine
-                    busy={isBusy}
-                    onPress={() => receiveMutation.mutate()}
-                  />
-                  <Button
-                    title="Báo cáo khiếu nại sách"
-                    secondary
-                    wine
-                    busy={isBusy}
-                    onPress={() => {
-                      setDisputeError(null);
-                      setDisputeModalOpen(true);
-                    }}
-                  />
+                  {receiveAction}
                 </View>
               )}
+              {disputeAction}
             </View>
           )}
 
@@ -1155,8 +1175,8 @@ function ExchangeActionsContent({
                           color={stitchTokens.wineDark}
                         />
                         <AppText style={styles.guidelineText}>
-                          Xác nhận kiểm tra giúp hoàn tất sớm phần của bạn; cọc chỉ
-                          được hoàn khi cả hai bên cùng hoàn tất và không có khiếu nại.
+                          Cọc được giữ đến khi cả hai hết hạn kiểm tra và
+                          giao dịch không có khiếu nại.
                         </AppText>
                       </View>
                     </View>
@@ -1176,21 +1196,11 @@ function ExchangeActionsContent({
                         </AppText>
                       </View>
                       <AppText style={styles.completedInspectionDesc}>
-                        Hệ thống đang chờ đối tác hoàn tất kiểm tra hoặc đợi đến
-                        hết hạn chung để tự động tất toán cọc về ví của bạn.
+                        {inspectionOpen
+                          ? "Bạn vẫn có thể báo sự cố trong hạn kiểm tra của mình."
+                          : "Đã hết hạn kiểm tra sách của bạn."}
                       </AppText>
-                      <View style={{ marginTop: 4 }}>
-                        <Button
-                          title="⚠️ Báo cáo sự cố / Khiếu nại sách"
-                          secondary
-                          wine
-                          busy={isBusy}
-                          onPress={() => {
-                            setDisputeError(null);
-                            setDisputeModalOpen(true);
-                          }}
-                        />
-                      </View>
+                      {disputeAction}
                     </View>
                   ) : (
                     <View style={styles.buttonGroup}>
@@ -1200,16 +1210,7 @@ function ExchangeActionsContent({
                         busy={isBusy}
                         onPress={() => setConfirmCompleteOpen(true)}
                       />
-                      <Button
-                        title="⚠️ Báo cáo sự cố / Khiếu nại sách"
-                        secondary
-                        wine
-                        busy={isBusy}
-                        onPress={() => {
-                          setDisputeError(null);
-                          setDisputeModalOpen(true);
-                        }}
-                      />
+                      {disputeAction}
                     </View>
                   )}
                 </View>
@@ -1258,6 +1259,7 @@ function ExchangeActionsContent({
                   ) : null}
 
                   <AppText>Tệp đã gửi được kiểm tra riêng ở mục Bằng chứng sự cố. Tên tệp trong mô tả cũ không chứng minh tệp đã được tải lên.</AppText>
+                  {!exchange.returnResolution && !exchange.outboundDeliveryVerification && receiveAction}
 
                   <View style={styles.ledgerNoticeCallout}>
                     <Icon name="info" size={14} color={stitchTokens.wineDark} />

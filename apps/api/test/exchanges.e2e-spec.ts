@@ -787,6 +787,66 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     return (await post(`/exchanges/${ex.id}/ship`, { expectedVersion: first.revision }, user2).expect(200)).body;
   }
 
+  it('accepts the first receiver claim during preparation and delays one-sided return until the shipping deadline', async () => {
+    const ex = await preparedExchange();
+    const path = `/exchanges/${ex.id}`;
+    const outgoingCode = 'QA-EARLY-CLAIM-A';
+    const firstLabel = (await post(`${path}/ship`, {
+      expectedVersion: ex.revision, method: 'carrier', carrierCode: 'SIMULATOR', trackingCode: outgoingCode,
+    }, user1).expect(200)).body;
+    await post(`${path}/ship`, {
+      expectedVersion: firstLabel.revision, method: 'carrier', carrierCode: 'SIMULATOR', trackingCode: 'QA-EARLY-CLAIM-B',
+    }, user2).expect(200);
+    await carrierEvent(outgoingCode).expect(200);
+    const sent = (await get(path, user2).expect(200)).body;
+    const reason = 'QA: sách đã nhận bị rách so với mô tả.';
+    await post(`${path}/dispute`, { expectedVersion: sent.revision, reason }, user2).expect(409);
+    await carrierEvent(outgoingCode, 'DELIVERED').expect(200);
+    const received = (await get(path, user2).expect(200)).body;
+    expect(received).toMatchObject({ status: 'Preparing', recipientInspectionDeadline: expect.any(String) });
+    const body = { expectedVersion: received.revision, reason };
+    await post(`${path}/dispute`, body, user1).expect(409);
+    await post(`${path}/dispute`, body, await reader()).expect(404);
+    await post(`${path}/dispute`, { ...body, expectedVersion: sent.revision }, user2).expect(409);
+    const before = await reconcile();
+    const key = randomUUID();
+    const claim = (await post(`${path}/dispute`, body, user2, key).expect(200)).body;
+    expect(claim).toMatchObject({ status: 'ResolutionPending', recipientInspectionDeadline: received.recipientInspectionDeadline });
+    expect((await post(`${path}/dispute`, body, user2, key).expect(200)).body).toEqual(claim);
+    expect(claim.canStartReturnResolution).toBeUndefined();
+    await post(`/operations${path}/evidence-access`, { expectedVersion: 0, reason: 'Tiếp nhận báo sự cố.' }, admin).expect(200);
+    const requestEvidence = { expectedVersion: claim.revision, action: 'RequestEvidence', note: 'QA: bổ sung tình trạng sách nhận.' };
+    await post(`/operations${path}/return-resolution`, requestEvidence, admin).expect(409);
+    const priorNow = Tx.prototype.now;
+    const clock = vi.spyOn(Tx.prototype, 'now').mockImplementation(async function (this: Tx) {
+      await priorNow.call(this);
+      return new Date(Date.parse(ex.shippingDeadline) + 1);
+    });
+    try {
+      expect((await get(`/operations${path}/dispute`, admin).expect(200)).body.canStartReturnResolution).toBe(true);
+      const response = await post(`/operations${path}/return-resolution`, requestEvidence, admin).expect(200);
+      expect(response.body.returnResolution.phase).toBe('Evidence');
+    } finally {
+      clock.mockRestore();
+    }
+    expect(await reconcile()).toEqual(before);
+  });
+
+  it('retains a dispute and holds when the other already-sent book is confirmed received', async () => {
+    const ex = await inTransitExchange();
+    const path = `/exchanges/${ex.id}`;
+    const first = (await post(`${path}/receive`, { expectedVersion: ex.revision }, user1).expect(200)).body;
+    const claim = (await post(`${path}/dispute`, {
+      expectedVersion: first.revision, reason: 'QA: sai tình trạng sách khi nhận trước.',
+    }, user1).expect(200)).body;
+    const before = await reconcile();
+    const second = (await post(`${path}/receive`, { expectedVersion: claim.revision }, user2).expect(200)).body;
+    expect(second).toMatchObject({ status: 'ResolutionPending', initiatorInspectionDeadline: first.initiatorInspectionDeadline, recipientInspectionDeadline: expect.any(String) });
+    await worker.tick(new Date(Date.parse(second.recipientInspectionDeadline) + 1));
+    expect((await get(path, user1).expect(200)).body.status).toBe('ResolutionPending');
+    expect(await reconcile()).toEqual(before);
+  });
+
   it('pins separate 72h windows, ignores the obsolete 48h setting and never shortens the first receipt', async () => {
     app.get(ConfigService).set('EXCHANGE_INSPECTION_HOURS', 48);
     const ex = await inTransitExchange();

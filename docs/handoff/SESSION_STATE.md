@@ -1,3 +1,16 @@
+# Báo sự cố khi nhận sách trước — 23/11/2026
+
+- Nhánh `codex/exchange-early-inspection-report` từ `b1d6a247` (`main` `be0f3e0b`).
+  Member Web và RN cho người đã nhận sách báo sự cố trong hạn riêng, kể cả khi
+  chiều còn lại chưa được nhận hoặc chưa lấy kiện. Khiếu nại giữ tiền và sách.
+  Xác nhận nhận kiện đã gửi vẫn ghi được trong lúc xử lý và giữ hồ sơ mở.
+- Ca một cuốn đã giao và chiều còn lại chưa gửi vẫn chỉ vào quy trình hoàn theo
+  ADR0089 khi đến hạn gửi gốc. Không cần migration. Xem [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md).
+- PASS 9 ca Exchange HTTP trên Mongo QA, gồm giao một chiều qua simulator, quyền
+  báo sự cố, replay, giữ tiền, hạn riêng và hồi quy quy trình hoàn. Chromium
+  fixture 390/1440 px xác nhận nút hiện rồi ẩn theo hạn riêng. RN lint/typecheck,
+  243 unit và Expo web export qua. Chưa kiểm bằng thiết bị native.
+
 # Tối ưu UI hành trình trao đổi, Stepper 3D, Phiếu đề nghị thu gọn và Thẻ Đồng kiểm 72h (RN) — 21/11/2026
 
 - Đã tạo nhánh `feat/mobile-exchange-ui-polish` từ `main` (`c678b413`).

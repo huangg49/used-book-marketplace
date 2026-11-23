@@ -147,10 +147,7 @@ export function ActionCard(props: Props) {
     inspecting ? detail.inspectionDeadline :
     undefined;
   const expired = useDeadlineExpired(deadline);
-  const inspectionExpired = useDeadlineExpired(
-    inspecting || detail.status === "DELIVERING" || detail.status === "WAITING_YOU_CONFIRM"
-      ? detail.viewerInspectionDeadline : undefined,
-  );
+  const inspectionExpired = useDeadlineExpired(detail.viewerInspectionDeadline);
   const canAccept = detail.canViewerAccept ?? detail.viewerRole === "recipient";
   const canReplace = detail.status === "PENDING" && canAccept && !expired &&
     detail.hasAgreementSnapshot && detail.revision != null && Boolean(props.onCounter);
@@ -230,7 +227,9 @@ export function ActionCard(props: Props) {
     if (!expired && detail.demoShippingAdvanceAvailable && props.onAdvanceDemoShipping) {
       actions.push("advanceDemoShipping");
     }
-    if (expired && props.onDispute && Boolean(detail.viewerShipping.sentAt) !== Boolean(detail.partnerShipping.sentAt)) {
+    const received = Boolean(detail.viewerShipping.receivedAt);
+    const missedPickup = expired && Boolean(detail.viewerShipping.sentAt) !== Boolean(detail.partnerShipping.sentAt);
+    if (!inspectionExpired && props.onDispute && (received || missedPickup)) {
       actions.push("dispute");
     }
     if (detail.viewerShipping.sentAt) {
@@ -284,7 +283,7 @@ export function ActionCard(props: Props) {
     instructions = detail.disputeReason
       ? `Giao dịch đang có tranh chấp / báo sự cố: "${detail.disputeReason}". Toàn bộ tiền cọc bảo chứng và tiền bù đang được tạm khóa an toàn trên Ledger để bảo vệ quyền lợi của hai bên.`
       : "Trao đổi đang chờ giải quyết tranh chấp. Khoản tiền cọc đang được tạm khóa an toàn.";
-    if (!detail.returnResolution && !detail.outboundDeliveryVerification && detail.partnerShipping.sentAt && !detail.viewerShipping.sentAt &&
+    if (!detail.returnResolution && !detail.outboundDeliveryVerification && detail.partnerShipping.sentAt &&
       !detail.viewerShipping.receivedAt) actions.push("received");
   } else {
     instructions =
@@ -323,7 +322,7 @@ export function ActionCard(props: Props) {
       setReceiveOpen(true);
       return;
     }
-    if (next === "dispute" && detail.status === "WAITING_YOU_SEND") {
+    if (next === "dispute" && detail.status === "WAITING_YOU_SEND" && !detail.viewerShipping.receivedAt) {
       setDisputeCategory("Đối tác chưa gửi sách");
     }
     setAction(next);

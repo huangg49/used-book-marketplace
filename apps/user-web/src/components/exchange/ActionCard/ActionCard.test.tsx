@@ -128,4 +128,16 @@ describe("Exchange handover actions", () => {
     expect(after).toContain("Tạo đơn gửi sách");
     expect(after).not.toContain("Xác nhận đã nhận sách");
   });
+
+  it("lets the first receiver report during preparation until their own deadline", () => {
+    const preparing = {
+      status: "WAITING_YOU_SEND",
+      rawStatus: "Preparing",
+      shippingDeadline: "2099-01-01T00:00:00Z",
+      partnerShipping: { sentAt: base.createdAt },
+    } satisfies Partial<ExchangeDetail>;
+    expect(render(preparing, true)).toContain("Báo sự cố");
+    expect(render({ ...preparing, viewerShipping: {} }, true)).not.toContain("Báo sự cố");
+    expect(render({ ...preparing, viewerInspectionDeadline: "2020-01-01T00:00:00Z" }, true)).not.toContain("Báo sự cố");
+  });
 });

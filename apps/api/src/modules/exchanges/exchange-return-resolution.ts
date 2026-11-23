@@ -16,10 +16,11 @@ const HOUR = 3_600_000;
 const STAFF_LIMIT = 300_000;
 type Action = Wire['ExchangeReturnCommand']['action'];
 
-function oneSidedShipment(row: ExchangeDoc) {
+function oneSidedShipment(row: ExchangeDoc, now?: Date) {
   const sent = Boolean(row.initiatorShippedAt);
   const shippedAt = sent ? row.initiatorShippedAt : row.recipientShippedAt;
   const receivedAt = sent ? row.recipientReceivedAt : row.initiatorReceivedAt;
+  const holderId = sent ? row.recipientId : row.initiatorId;
   // This decision covers one physical book per party.
   if (
     sent === Boolean(row.recipientShippedAt) ||
@@ -28,18 +29,24 @@ function oneSidedShipment(row: ExchangeDoc) {
     !row.recipientFundedAt ||
     !row.shippingDeadline ||
     !row.disputedAt ||
-    row.disputedAt < row.shippingDeadline ||
     !shippedAt ||
     shippedAt >= row.shippingDeadline ||
     (sent ? row.recipientDeposit : row.initiatorDeposit) <= 0 ||
     (sent ? row.initiatorReceivedAt : row.recipientReceivedAt)
   )
     return null;
+  // An inspection claim can predate the shipping deadline. The return process
+  // still requires the deadline to pass, and the existing case remains valid
+  // for views and settlement once that process has begun.
+  if (row.disputedAt < row.shippingDeadline && !(
+    receivedAt && receivedAt <= row.disputedAt && row.disputedBy === holderId &&
+    (row.returnResolution || (now && now >= row.shippingDeadline))
+  )) return null;
   return {
     shippedAt,
     receivedAt,
     ownerId: sent ? row.initiatorId : row.recipientId,
-    holderId: sent ? row.recipientId : row.initiatorId,
+    holderId,
     listingId: sent ? row.initiatorListingId : row.recipientListingId,
     otherListingId: sent ? row.recipientListingId : row.initiatorListingId,
     ownerDeposit: sent ? row.initiatorDeposit : row.recipientDeposit,
@@ -51,8 +58,8 @@ function oneSidedShipment(row: ExchangeDoc) {
   };
 }
 
-export function oneSidedReturn(row: ExchangeDoc) {
-  const scope = oneSidedShipment(row);
+export function oneSidedReturn(row: ExchangeDoc, now?: Date) {
+  const scope = oneSidedShipment(row, now);
   return scope && (scope.receivedAt || row.outboundDeliveryVerification) ? scope : null;
 }
 
@@ -230,7 +237,7 @@ export async function exchangeReturnChange(
   now: Date,
 ): Promise<ExchangeReturnDoc> {
   if (body.action === 'VerifyOutboundDelivery') throw invalidState();
-  const scope = oneSidedReturn(row);
+  const scope = oneSidedReturn(row, now);
   requireState(
     Boolean(scope),
     'Luồng này xử lý một cuốn đã được bên nhận xác nhận và một cuốn đã quá hạn gửi.',

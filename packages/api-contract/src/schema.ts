@@ -3821,7 +3821,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Participant opens a dispute during delivery or inspection window, halting auto-settlement. */
+        /** @description Participant opens a dispute during delivery or their own inspection window, even if the other parcel has not been picked up. A dispute holds the funds and halts auto-settlement. */
         post: operations["disputeExchange"];
         delete?: never;
         options?: never;

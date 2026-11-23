@@ -215,11 +215,11 @@ export class ExchangesService {
     }
   }
 
-  private view(row: ExchangeDoc): Wire['Exchange'] {
+  private view(row: ExchangeDoc, now?: Date): Wire['Exchange'] {
     const deadlines = inspectionDeadlines(row);
     return {
       id: row._id,
-      ...(oneSidedReturn(row) && row.status === 'ResolutionPending' ? { canStartReturnResolution: true } : {}),
+      ...(row.status === 'ResolutionPending' && oneSidedReturn(row, now) ? { canStartReturnResolution: true } : {}),
       ...(pendingOutboundDelivery(row) ? { canVerifyOutboundDelivery: true } : {}),
       ...(row.outboundDeliveryVerification ? { outboundDeliveryVerification: {
         verifiedAt: row.outboundDeliveryVerification.verifiedAt.toISOString(),
@@ -594,7 +594,8 @@ export class ExchangesService {
           { sort: { updatedAt: -1, _id: -1 }, limit: 100 },
         )
         .toArray();
-      return { items: rows.map((r) => this.view(r)), nextCursor: null };
+      const now = await tx.now();
+      return { items: rows.map((r) => this.view(r, now)), nextCursor: null };
     });
   }
 
@@ -603,11 +604,11 @@ export class ExchangesService {
       member(actor);
       const row = await this.exchange(tx, id);
       this.participant(row, actor._id);
+      const now = await tx.now();
       const view = {
-        ...this.view(row),
+        ...this.view(row, now),
         ...(row.returnResolution ? { statements: await this.readDisputeStatements(tx, row, actor._id) } : {}),
       };
-      const now = await tx.now();
       const demoDeadline = actor.status === 'ACTIVE' && demoExchangeDeadlineEnabled(this.config, row)
         ? currentDemoDeadline(row, now, false) : undefined;
       if (demoDeadline) return { ...view, demoDeadline };
@@ -1589,10 +1590,9 @@ export class ExchangesService {
         }
 
         const incomingShipment = isInitiator ? exchange.recipientShippedAt : exchange.initiatorShippedAt;
+        const duringDispute = exchange.status === 'ResolutionPending';
         const canRecordReceipt = ['Preparing', 'InTransit', 'Delivered'].includes(exchange.status) ||
-          (exchange.status === 'ResolutionPending' && !exchange.returnResolution && !exchange.outboundDeliveryVerification &&
-            Boolean(exchange.shippingDeadline) &&
-            Boolean(exchange.initiatorShippedAt) !== Boolean(exchange.recipientShippedAt));
+          (duringDispute && !exchange.returnResolution && !exchange.outboundDeliveryVerification);
         if (!incomingShipment || !canRecordReceipt) throw invalidState();
         const minAcceptableVersion = exchange.revision - 1;
         if (
@@ -1617,7 +1617,7 @@ export class ExchangesService {
             : exchange.initiatorReceivedAt) != null;
 
         if (willBeBothReceived) {
-          setFields.status = 'Delivered';
+          if (!duringDispute) setFields.status = 'Delivered';
           setFields.inspectionDeadline = inspectionDeadlines({ ...exchange, ...setFields } as ExchangeDoc).all;
         }
 
@@ -1936,19 +1936,19 @@ export class ExchangesService {
           const exchange = await this.exchange(tx, initialExchange._id);
 
           const now = await tx.now();
+          const deadlines = inspectionDeadlines(exchange);
+          const deadline = actor._id === exchange.initiatorId ? deadlines.initiator : deadlines.recipient;
           const lateOneSided = exchange.status === 'Preparing' && exchange.shippingDeadline &&
             now >= exchange.shippingDeadline &&
             Boolean(exchange.initiatorShippedAt) !== Boolean(exchange.recipientShippedAt);
-          if ((!['InTransit', 'Delivered'].includes(exchange.status) && !lateOneSided) || hasExchangeDispute(exchange)) {
+          const receivedWhilePreparing = exchange.status === 'Preparing' && deadline !== null;
+          if ((!['InTransit', 'Delivered'].includes(exchange.status) && !lateOneSided && !receivedWhilePreparing) || hasExchangeDispute(exchange)) {
             throw invalidState();
           }
           if (exchange.revision !== body.expectedVersion) {
             throw conflict();
           }
 
-          const deadline = actor._id === exchange.initiatorId
-            ? inspectionDeadlines(exchange).initiator
-            : inspectionDeadlines(exchange).recipient;
           if (deadline && now >= deadline) throw invalidState();
           const next = await tx.c.exchanges.findOneAndUpdate(
             { _id: exchange._id, revision: exchange.revision },
@@ -2021,8 +2021,9 @@ export class ExchangesService {
       user._id,
       { displayName: user.displayName, avatarId: user.avatarId ?? null },
     ]));
+    const now = await tx.now();
     return rows.map((row) => ({
-      ...this.view(row),
+      ...this.view(row, now),
       participants: {
         initiator: participants.get(row.initiatorId) ?? null,
         recipient: participants.get(row.recipientId) ?? null,
@@ -2365,7 +2366,7 @@ export class ExchangesService {
             : undefined;
           const resolution = verification ? undefined : await exchangeReturnChange(tx, row, actor, body, operations, now);
           const closing = resolution?.phase === 'Closed';
-          const scope = closing ? oneSidedReturn(row)! : undefined;
+          const scope = closing ? oneSidedReturn(row, now)! : undefined;
           if (scope && resolution) {
             const books = await this.lockAllListingsOrdered(tx, [scope.listingId, scope.otherListingId]);
             for (const listing of books.values()) {
