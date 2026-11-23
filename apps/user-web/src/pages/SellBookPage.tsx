@@ -19,16 +19,21 @@ import {
   Check,
   CircleAlert,
   ChevronDown,
+  ClipboardCheck,
+  Clock,
   BookOpen,
+  FileImage,
   ImagePlus,
+  Images,
+  Info,
   MapPin,
   PencilLine,
-  Sparkles,
+  ShieldCheck,
+  SlidersHorizontal,
   Tag,
   X,
 } from "lucide-react";
 import { Header } from "../layouts/MainLayout";
-import { Logo } from "../components/Header";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
 import { lockPageScroll } from "../lib/page-scroll";
@@ -1129,11 +1134,20 @@ export function SellBookPage() {
     "Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn.";
   const stepHelp = [
     null,
-    "Ảnh thật giúp người đọc nhìn rõ bản sách của bạn.",
-    "Kể rõ những dấu vết đã có trên cuốn sách.",
+    bundle
+      ? "Chọn ảnh thấy rõ toàn bộ các cuốn trong bộ ở bên trái, thêm ảnh gáy, ruột và vết lỗi từng cuốn ở bên phải."
+      : "Ảnh thật giúp người đọc nhìn rõ bản sách — chọn ảnh bìa bên trái và các góc chụp chi tiết bên phải.",
+    "Kể rõ những dấu vết đã có trên cuốn sách để người đọc yên tâm chọn mua.",
     auction || bundle ? null : "Chọn cách giao dịch. Các mục cần điền sẽ hiện bên dưới.",
-    "Xem lại một lượt. Bạn có thể chỉnh sửa từng phần.",
+    "Kiểm tra nhanh một lượt trước khi gửi duyệt. Bạn có thể bấm Chỉnh sửa ở từng mục.",
   ];
+  const conditionHints: Record<keyof typeof conditions, string> = {
+    LikeNew: "Sạch đẹp, rất ít dấu đọc",
+    Good: "Gáy chắc, có dấu vết nhẹ",
+    Fair: "Có nếp gấp hoặc ố nhẹ",
+    Worn: "Rõ dấu thời gian, đủ chữ",
+  };
+  const supportPhotoGuides = ["Bìa sau", "Gáy sách", "Trang ruột", "Vết lỗi nếu có"];
   function reviewEdit(target: number) {
     return (
       <button
@@ -1336,8 +1350,8 @@ export function SellBookPage() {
   const preview = (
     <section className={styles.preview} aria-label="Bản xem trước bài đăng">
       <div className={styles.previewHeading}>
-        <h2>{bundle ? "Bộ sách của bạn" : "Cuốn sách của bạn"}</h2>
-        <span>Bản nháp</span>
+        <h2>{bundle ? "Bộ sách của bạn" : "Xem trước trên kệ"}</h2>
+        <span className={styles.previewCount}>{imageFiles.length}/8 ảnh</span>
       </div>
       <div className={styles.previewMedia}>
         <div
@@ -1358,12 +1372,17 @@ export function SellBookPage() {
             </button>
           ) : (
             <div className={styles.emptyPhoto}>
-              <BookOpen size={32} aria-hidden="true" />
-              <span>Thêm ảnh ở bước tiếp theo</span>
+              <BookOpen size={28} aria-hidden="true" />
+              <span>Thêm ảnh bìa ở bước 2</span>
             </div>
           )}
+          {hasCoverPhoto && (checkedSteps.includes(3) || formData.pages || formData.description) && (
+            <span className={styles.previewCoverChip}>
+              {conditions[formData.condition as keyof typeof conditions]}
+            </span>
+          )}
         </div>
-        {formData.images.length > 0 && (
+        {formData.images.length > 1 && (
           <div
             className={styles.previewThumbnails}
             role="group"
@@ -1383,23 +1402,25 @@ export function SellBookPage() {
           </div>
         )}
       </div>
-      <h3>{bundle?.title || formData.title || "Cuốn nào sẽ đi tiếp?"}</h3>
-      {bundle && <p>Bộ {bundle.items.length} cuốn · Bán nguyên bộ</p>}
-      <p>
-        {formData.author || "Tên sách và tác giả sẽ hiện ở đây khi bạn điền."}
-      </p>
-      {(checkedSteps.includes(3) || formData.pages || formData.description) && (
-        <span>
-          {conditions[formData.condition as keyof typeof conditions]} ·{" "}
-          {auction
-            ? "Đấu giá"
-            : formData.mode === "Sale"
-              ? "Bán"
-              : formData.mode === "Exchange"
-                ? "Đổi"
-                : "Bán hoặc đổi"}
-        </span>
-      )}
+      <div className={styles.previewMeta}>
+        <h3>{bundle?.title || formData.title || "Cuốn nào sẽ đi tiếp?"}</h3>
+        {bundle && <p className={styles.previewBundleMeta}>Bộ {bundle.items.length} cuốn · Bán nguyên bộ</p>}
+        <p className={styles.previewAuthor}>
+          {formData.author || "Tên sách và tác giả sẽ hiện ở đây khi bạn điền."}
+        </p>
+        {(checkedSteps.includes(3) || formData.pages || formData.description) && (
+          <span className={styles.previewTag}>
+            {conditions[formData.condition as keyof typeof conditions]} ·{" "}
+            {auction
+              ? "Đấu giá"
+              : formData.mode === "Sale"
+                ? "Bán"
+                : formData.mode === "Exchange"
+                  ? "Đổi"
+                  : "Bán hoặc đổi"}
+          </span>
+        )}
+      </div>
       {step >= 4 || formData.salePrice || formData.exchangeValue ? (
         <dl>
           {formData.mode !== "Exchange" && (
@@ -1439,11 +1460,11 @@ export function SellBookPage() {
         </dl>
       ) : (
         <p className={styles.previewProgress}>
-          Ảnh, tình trạng và giá sẽ được bổ sung qua từng bước.
+          Ảnh, tình trạng và giá sẽ được cập nhật qua từng bước.
         </p>
       )}
       <p className={styles.note}>
-        Đây là bản xem trước, chưa hiển thị công khai.
+        Bản xem trước riêng tư, chưa hiển thị công khai.
       </p>
     </section>
   );
@@ -1521,33 +1542,20 @@ export function SellBookPage() {
           )}
         </div>
       </dialog>
-      <svg
-        width="0"
-        height="0"
-        className={styles.logoFilter}
-        aria-hidden="true"
-      >
-        <defs>
-          <filter id="sell-logo-ink" colorInterpolationFilters="sRGB">
-            <feColorMatrix
-              type="matrix"
-              values="0 0 0 0 .360784 0 0 0 0 .007843 0 0 0 0 .007843 1.59375 0 0 0 -.575"
-            />
-          </filter>
-        </defs>
-      </svg>
       <a href="#sell-content" className={styles.skip}>
         Bỏ qua điều hướng
       </a>
       <Header />
       <main id="sell-content" className={styles.page}>
         <header className={styles.intro}>
-          <h1>{auction ? "Tạo sách đấu giá" : "Đăng sách"}</h1>
-          <p className={styles.tagline}>Để sách đi tiếp.</p>
-          <p>
+          <div className={styles.introTitleRow}>
+            <h1>{auction ? "Tạo sách đấu giá" : "Đăng sách"}</h1>
+            <p className={styles.tagline}>Để sách đi tiếp.</p>
+          </div>
+          <p className={styles.introSubtitle}>
             {auction
               ? "Sách đấu giá là bài đăng riêng, không hiển thị trên kệ mua/đổi. Sau khi được duyệt, bạn gửi sách tới điểm giao nhận để kiểm tra trước khi mở phiên."
-              : "Thêm ảnh và kể rõ tình trạng bản sách. Kiểm tra một lượt trước khi gửi duyệt."}
+              : "Thêm ảnh thật và kể rõ tình trạng bản sách. Kiểm tra một lượt trước khi gửi duyệt."}
           </p>
         </header>
         {step === 6 ? (
@@ -1632,116 +1640,123 @@ export function SellBookPage() {
           />
         ) : (
           <>
-            <nav className={styles.steps} aria-label="Các bước đăng sách">
-              <span
-                className={styles.activeStep}
-                style={{ transform: `translateX(${(step - 1) * 100}%)` }}
-                aria-hidden="true"
-              />
-              <ol>
-                {steps.map((label, index) => {
-                  const stepNum = index + 1;
-                  const isCurrent = step === stepNum;
-                  const isComplete = completeStep(stepNum);
-                  const isError =
-                    !isComplete &&
-                    (checkedSteps.includes(stepNum) ||
-                      hasAttempt ||
-                      validationFailure ||
-                      (stepNum < step && Boolean(stepError(stepNum))));
+            <div className={styles.stepDock}>
+              <nav className={styles.steps} aria-label="Các bước đăng sách">
+                <span
+                  className={styles.activeStep}
+                  style={{ transform: `translateX(${(step - 1) * 100}%)` }}
+                  aria-hidden="true"
+                />
+                <ol>
+                  {steps.map((label, index) => {
+                    const stepNum = index + 1;
+                    const isCurrent = step === stepNum;
+                    const isComplete = completeStep(stepNum);
+                    const isError =
+                      !isComplete &&
+                      (checkedSteps.includes(stepNum) ||
+                        hasAttempt ||
+                        validationFailure ||
+                        (stepNum < step && Boolean(stepError(stepNum))));
 
-                  return (
-                    <li key={label}>
-                      <button
-                        type="button"
-                        aria-current={isCurrent ? "step" : undefined}
-                        disabled={submitting}
-                        aria-label={`${stepNum}. ${label}, ${statusForStep(stepNum).toLowerCase()}`}
-                        onClick={() => changeStep(stepNum)}
-                        className={
-                          isCurrent
-                            ? styles.stepCurrent
-                            : isComplete
-                            ? styles.stepComplete
-                            : isError
-                            ? styles.stepHasError
-                            : ""
-                        }
-                      >
-                        <span
-                          className={`${styles.stepNumber} ${
-                            isComplete
-                              ? styles.stepNumberComplete
+                    return (
+                      <li key={label}>
+                        <button
+                          type="button"
+                          aria-current={isCurrent ? "step" : undefined}
+                          disabled={submitting}
+                          aria-label={`${stepNum}. ${label}, ${statusForStep(stepNum).toLowerCase()}`}
+                          onClick={() => changeStep(stepNum)}
+                          className={
+                            isCurrent
+                              ? styles.stepCurrent
+                              : isComplete
+                              ? styles.stepComplete
                               : isError
-                              ? styles.stepNumberError
+                              ? styles.stepHasError
                               : ""
-                          }`}
+                          }
                         >
-                          {isComplete ? (
-                            <Check size={15} strokeWidth={2.8} aria-hidden="true" />
-                          ) : isError ? (
-                            <X size={15} strokeWidth={2.8} aria-hidden="true" />
-                          ) : (
-                            stepNum
-                          )}
-                        </span>
-                        <span className={styles.stepLabel}>
-                          {label}
-                          <small
-                            className={
-                              isCurrent
-                                ? ""
-                                : isComplete
-                                ? styles.stepStatusComplete
+                          <span
+                            className={`${styles.stepNumber} ${
+                              isComplete
+                                ? styles.stepNumberComplete
                                 : isError
-                                ? styles.stepStatusError
+                                ? styles.stepNumberError
                                 : ""
-                            }
+                            }`}
                           >
-                            {statusForStep(stepNum)}
-                          </small>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </nav>
-            <div
-              className={styles.progressBarCard}
-              role="region"
-              aria-label="Tiến độ điền thông tin sách"
-            >
-              <div className={styles.progressBarHeader}>
-                <div className={styles.progressBarLead}>
-                  <Sparkles size={16} className={styles.progressSparkleIcon} aria-hidden="true" />
-                  <span className={styles.progressBarTitle}>Tiến độ điền thông tin</span>
-                  {formProgressPercent === 100 && (
-                    <span className={styles.progressCompleteBadge}>Hoàn thành 100%</span>
-                  )}
-                </div>
-                <div className={styles.progressBarStats}>
-                  <span className={styles.progressBarCount}>
-                    <strong>{validFieldsCount}</strong>/{totalFieldsCount} khung hợp lệ
-                  </span>
-                  <span className={styles.progressBarPercent}>
-                    {formProgressPercent}%
-                  </span>
-                </div>
-              </div>
+                            {isComplete ? (
+                              <Check size={14} strokeWidth={2.5} aria-hidden="true" />
+                            ) : isError ? (
+                              <X size={14} strokeWidth={2.5} aria-hidden="true" />
+                            ) : (
+                              stepNum
+                            )}
+                          </span>
+                          <span className={styles.stepLabel}>
+                            <span>{label}</span>
+                            <small
+                              className={
+                                isCurrent
+                                  ? ""
+                                  : isComplete
+                                  ? styles.stepStatusComplete
+                                  : isError
+                                  ? styles.stepStatusError
+                                  : ""
+                              }
+                            >
+                              {statusForStep(stepNum)}
+                            </small>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </nav>
               <div
-                className={styles.progressTrack}
-                role="progressbar"
-                aria-valuenow={formProgressPercent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Tiến độ hoàn thiện: ${formProgressPercent}% (${validFieldsCount} trên ${totalFieldsCount} khung điền)`}
+                className={styles.stepProgress}
+                role="region"
+                aria-label="Tiến độ điền thông tin sách"
               >
+                <div className={styles.stepProgressMetaRow}>
+                  <span className={styles.stepProgressCurrent}>
+                    <span className={styles.stepProgressCurrentStep}>
+                      Bước {step}/5 · {steps[step - 1]}
+                    </span>
+                    <span className={styles.stepProgressSummary}>
+                      {formProgressPercent === 100
+                        ? "Đã sẵn sàng gửi duyệt"
+                        : "Tiến độ hoàn thiện"}
+                    </span>
+                  </span>
+                  <span className={styles.stepProgressStats}>
+                    <span>
+                      Đã đủ <strong>{validFieldsCount}/{totalFieldsCount}</strong> mục
+                    </span>
+                    <span
+                      className={styles.stepProgressPercent}
+                      data-complete={formProgressPercent === 100}
+                    >
+                      {formProgressPercent}%
+                    </span>
+                  </span>
+                </div>
                 <div
-                  className={styles.progressFill}
-                  style={{ width: `${formProgressPercent}%` }}
+                  className={styles.progressTrack}
+                  role="progressbar"
+                  aria-valuenow={formProgressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`Tiến độ hoàn thiện: ${formProgressPercent}% (${validFieldsCount} trên ${totalFieldsCount} khung điền)`}
                 >
-                  <div className={styles.progressShimmer} aria-hidden="true" />
+                  <div
+                    className={styles.progressFill}
+                    data-complete={formProgressPercent === 100}
+                    style={{ width: `${formProgressPercent}%` }}
+                  />
                 </div>
               </div>
             </div>
@@ -1755,24 +1770,30 @@ export function SellBookPage() {
               </aside>
               <details className={styles.compactPreview}>
                 <summary>
-                  Xem bản nháp <span>{imageFiles.length}/8 ảnh</span>
+                  <span>Xem trước bản nháp</span>
+                  <span className={styles.compactPreviewMeta}>
+                    {imageFiles.length}/8 ảnh
+                    <ChevronDown size={16} aria-hidden="true" />
+                  </span>
                 </summary>
                 {preview}
               </details>
               <div className={styles.formArea}>
                 <div ref={stepBody} className={styles.stepBody}>
                   <div className={styles.slipHeader}>
-                    <div className={styles.slipBrand}>
-                      <span
-                        className={styles.slipLogo}
-                        aria-hidden="true"
-                        inert
-                      >
-                        <Logo />
+                    <div className={styles.slipMeta}>
+                      <span className={styles.slipStepBadge}>Bước {step} / 5</span>
+                      <span className={styles.slipChannel}>
+                        {auction
+                          ? "Đấu giá qua điểm giao nhận"
+                          : bundle
+                            ? "Đăng bán nguyên bộ"
+                            : "Phiếu thông tin sách"}
                       </span>
-                      <span>Phiếu thông tin sách</span>
                     </div>
-                    <span className={styles.draftStamp}>Bản nháp</span>
+                    <span className={styles.slipStatus}>
+                      {hasAttempt ? "Đang khóa để thử gửi lại" : "Bản nháp"}
+                    </span>
                   </div>
                   <h2 ref={heading} tabIndex={-1}>
                     {steps[step - 1]}
@@ -1810,26 +1831,31 @@ export function SellBookPage() {
                       <div className={styles.bookInfoFields} hidden={step !== 1}>
                           {!auction && <>
                             <div className={styles.bookType}>
-                              <span id="sell-book-type">Bạn đăng</span>
-                              <div className={styles.typeChoice} role="group" aria-labelledby="sell-book-type">
-                                <button type="button" aria-pressed={!bundle} onClick={() => {
-                                  if (!bundle) return;
-                                  bundleDraft.current = bundle;
-                                  bundlePrice.current = formData.salePrice;
-                                  setBundle(null);
-                                  setOwnershipDeclared(false);
-                                  if (singleTerms.current) setFormData(previous => ({ ...previous, ...singleTerms.current! }));
-                                }}>Sách lẻ</button>
-                                <button type="button" aria-pressed={!!bundle} onClick={() => {
-                                  if (bundle) return;
-                                  singleTerms.current = { mode: formData.mode, salePrice: formData.salePrice, exchangeValue: formData.exchangeValue, condition: formData.condition };
-                                  const restored = bundleDraft.current || { title: '', wholeOnly: true as const, exclusiveOwnershipDeclared: true as const,
-                                    items: [{ label: '', condition: 'Good' as const, notes: '' }, { label: '', condition: 'Good' as const, notes: '' }] };
-                                  setBundle(restored);
-                                  setOwnershipDeclared(false);
-                                  setFormData(previous => ({ ...previous, mode: 'Sale', salePrice: bundlePrice.current, exchangeValue: '', condition: bundleCondition(restored) }));
-                                }}>Bộ sách</button>
+                              <div className={styles.bookTypeLead}>
+                                <span id="sell-book-type">Bạn đăng</span>
+                                <div className={styles.typeChoice} role="group" aria-labelledby="sell-book-type">
+                                  <button type="button" aria-pressed={!bundle} onClick={() => {
+                                    if (!bundle) return;
+                                    bundleDraft.current = bundle;
+                                    bundlePrice.current = formData.salePrice;
+                                    setBundle(null);
+                                    setOwnershipDeclared(false);
+                                    if (singleTerms.current) setFormData(previous => ({ ...previous, ...singleTerms.current! }));
+                                  }}>Sách lẻ</button>
+                                  <button type="button" aria-pressed={!!bundle} onClick={() => {
+                                    if (bundle) return;
+                                    singleTerms.current = { mode: formData.mode, salePrice: formData.salePrice, exchangeValue: formData.exchangeValue, condition: formData.condition };
+                                    const restored = bundleDraft.current || { title: '', wholeOnly: true as const, exclusiveOwnershipDeclared: true as const,
+                                      items: [{ label: '', condition: 'Good' as const, notes: '' }, { label: '', condition: 'Good' as const, notes: '' }] };
+                                    setBundle(restored);
+                                    setOwnershipDeclared(false);
+                                    setFormData(previous => ({ ...previous, mode: 'Sale', salePrice: bundlePrice.current, exchangeValue: '', condition: bundleCondition(restored) }));
+                                  }}>Bộ sách</button>
+                                </div>
                               </div>
+                              <span className={styles.bookTypeHint}>
+                                {bundle ? "Bán trọn bộ cùng lúc trong một bài đăng" : "Đăng 1 cuốn lẻ hoặc chuyển sang bộ nhiều cuốn"}
+                              </span>
                             </div>
                             {bundle && <BundleEditor value={bundle} error={shownError('bundle')} onChange={next => {
                               setBundle(next);
@@ -1950,7 +1976,10 @@ export function SellBookPage() {
                             {!selectedBook && entryMode === "manual" && (
                               <>
                                 <div className={styles.bookIdentity}>
-                                  <p className={styles.help}>Ghi tên sách và tác giả như trên bìa.</p>
+                                  <div className={styles.subSectionBar}>
+                                    <strong>Thông tin trên bìa</strong>
+                                    <span>Ghi tên sách và tác giả như trên bìa.</span>
+                                  </div>
                                   {(
                                     [
                                       ["title", "Tên sách", "Ví dụ: Truyện Kiều"],
@@ -2062,9 +2091,6 @@ export function SellBookPage() {
                       </div>
                       {step === 2 && (
                         <>
-                          <p className={styles.help}>
-                            {bundle ? "Chọn ảnh thấy rõ toàn bộ các cuốn trong bộ. Thêm ảnh gáy, ruột và lỗi của từng cuốn ở bên phải." : "Chọn ảnh bìa ở bên trái. Thêm ảnh gáy, ruột sách và phần đã qua sử dụng ở bên phải."}
-                          </p>
                           <div
                             className={styles.photos}
                             role="group"
@@ -2075,7 +2101,10 @@ export function SellBookPage() {
                               role="group"
                               aria-label="Ảnh bìa"
                             >
-                              <h3 className={styles.photoLabel}>Ảnh bìa</h3>
+                              <div className={styles.photoPaneHead}>
+                                <h3 className={styles.photoLabel}>Ảnh bìa</h3>
+                                <span className={styles.photoPaneMeta}>Khung dọc 3:4</span>
+                              </div>
                               {hasCoverPhoto && coverCropMeta ? (
                                 <div className={styles.coverCropContainer}>
                                   <div
@@ -2199,7 +2228,7 @@ export function SellBookPage() {
                                           <span
                                             className={styles.cropAdjustLabel}
                                           >
-                                            Vị trí khung cắt:
+                                            Vị trí khung cắt
                                           </span>
                                           <div
                                             className={styles.alignButtons}
@@ -2324,6 +2353,9 @@ export function SellBookPage() {
                                             }
                                           />
                                         </div>
+                                        <p className={styles.cropHelpText}>
+                                          Kéo khung trên ảnh hoặc thanh trượt để chọn phần bìa hiển thị.
+                                        </p>
                                       </div>
                                     )}
 
@@ -2340,9 +2372,6 @@ export function SellBookPage() {
                                       <span>Thay ảnh bìa</span>
                                     </button>
                                   </div>
-                                  <p className={styles.cropHelpText}>
-                                    Kéo khung trên ảnh hoặc thanh trượt để chọn phần bìa hiển thị.
-                                  </p>
                                 </div>
                               ) : hasCoverPhoto ? (
                                 <div className={styles.photoTile}>
@@ -2380,6 +2409,7 @@ export function SellBookPage() {
                                 >
                                   <ImagePlus size={28} aria-hidden="true" />
                                   <strong>Chọn ảnh bìa</strong>
+                                  <span>Chụp rõ mặt bìa trước</span>
                                 </button>
                               )}
                               <input
@@ -2401,7 +2431,12 @@ export function SellBookPage() {
                               role="group"
                               aria-label="Ảnh phụ"
                             >
-                              <h3 className={styles.photoLabel}>Ảnh phụ</h3>
+                              <div className={styles.photoPaneHead}>
+                                <h3 className={styles.photoLabel}>Ảnh phụ</h3>
+                                <span className={styles.photoPaneMeta}>
+                                  {Math.max(0, imageFiles.length - Number(hasCoverPhoto))}/7 ảnh
+                                </span>
+                              </div>
                               <div className={styles.supportGrid}>
                                 {formData.images
                                   .slice(Number(hasCoverPhoto))
@@ -2463,10 +2498,29 @@ export function SellBookPage() {
                                   }
                                   onClick={() => supportInput.current?.click()}
                                 >
-                                  <ImagePlus size={28} aria-hidden="true" />
+                                  <ImagePlus size={26} aria-hidden="true" />
                                   <strong>Thêm ảnh phụ</strong>
-                                  <span>Có thể chọn nhiều ảnh</span>
+                                  <span>Chọn nhiều ảnh cùng lúc</span>
                                 </button>
+                              </div>
+                              <div className={styles.shotGuide} aria-label="Gợi ý góc chụp ảnh phụ">
+                                <span className={styles.shotGuideLabel}>Gợi ý góc chụp:</span>
+                                <div className={styles.shotGuideChips}>
+                                  {supportPhotoGuides.map((guide, guideIndex) => {
+                                    const covered =
+                                      imageFiles.length - Number(hasCoverPhoto) > guideIndex;
+                                    return (
+                                      <span
+                                        key={guide}
+                                        className={styles.shotGuideChip}
+                                        data-covered={covered}
+                                      >
+                                        {covered && <Check size={12} aria-hidden="true" />}
+                                        {guide}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
                               </div>
                               <input
                                 ref={supportInput}
@@ -2505,73 +2559,149 @@ export function SellBookPage() {
                             </div>
                           </div>
                           {fieldFeedback("images")}
-                          <p id="image-help" className={styles.help}>
-                            {imageFiles.length}/8 ảnh · Có thể chọn nhiều ảnh
-                            cùng lúc. JPEG, PNG, WebP · tối đa 10 MB/ảnh. Bấm
-                            vào ảnh để thay, hoặc nút × để xóa. Ảnh được tải lên
-                            khi gửi duyệt.
-                          </p>
+                          <div id="image-help" className={styles.photoSpecStrip}>
+                            <div className={styles.photoSpecItem}>
+                              <Images size={16} aria-hidden="true" />
+                              <div>
+                                <strong>{imageFiles.length}/8 ảnh</strong>
+                                <span>Chọn nhiều ảnh cùng lúc</span>
+                              </div>
+                            </div>
+                            <div className={styles.photoSpecItem}>
+                              <FileImage size={16} aria-hidden="true" />
+                              <div>
+                                <strong>JPEG, PNG, WebP</strong>
+                                <span>Tối đa 10 MB mỗi ảnh</span>
+                              </div>
+                            </div>
+                            <div className={styles.photoSpecItem}>
+                              <SlidersHorizontal size={16} aria-hidden="true" />
+                              <div>
+                                <strong>Bấm ảnh để thay</strong>
+                                <span>Nút × để xóa · tải lên khi gửi duyệt</span>
+                              </div>
+                            </div>
+                          </div>
                         </>
                       )}
                       {step === 3 && (
                         <>
-                          <div className={styles.field}>
-                            <label htmlFor="condition">
-                              Mức độ đã qua sử dụng
-                            </label>
-                            <select
-                              id="condition"
-                              disabled={!!bundle}
-                              value={formData.condition}
-                              onChange={(event) =>
-                                setFormData((previous) => ({
-                                  ...previous,
-                                  condition: event.target.value,
-                                }))
-                              }
+                          <div className={styles.conditionPickerCard}>
+                            <div className={styles.conditionPickerHead}>
+                              <label htmlFor="condition">
+                                Mức độ đã qua sử dụng
+                              </label>
+                              <select
+                                id="condition"
+                                className={styles.conditionCompactSelect}
+                                disabled={!!bundle}
+                                value={formData.condition}
+                                onChange={(event) =>
+                                  setFormData((previous) => ({
+                                    ...previous,
+                                    condition: event.target.value,
+                                  }))
+                                }
+                              >
+                                {Object.entries(conditions).map(
+                                  ([value, label]) => (
+                                    <option key={value} value={value}>
+                                      {label}
+                                    </option>
+                                  ),
+                                )}
+                              </select>
+                            </div>
+                            <div
+                              className={styles.conditionCards}
+                              role="group"
+                              aria-label="Chọn nhanh mức độ sách"
                             >
-                              {Object.entries(conditions).map(
-                                ([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ),
-                              )}
-                            </select>
-                            {bundle && <p>Tình trạng chung theo cuốn có tình trạng thấp nhất. Chỉnh từng cuốn ở bước Thông tin sách.</p>}
+                              {(
+                                Object.entries(conditions) as [
+                                  keyof typeof conditions,
+                                  string,
+                                ][]
+                              ).map(([value, label]) => {
+                                const selected = formData.condition === value;
+                                return (
+                                  <button
+                                    key={value}
+                                    type="button"
+                                    className={styles.conditionCard}
+                                    aria-pressed={selected}
+                                    disabled={!!bundle || submitting || hasAttempt}
+                                    onClick={() =>
+                                      setFormData((previous) => ({
+                                        ...previous,
+                                        condition: value,
+                                      }))
+                                    }
+                                  >
+                                    <span className={styles.conditionCardTop}>
+                                      <strong>{label}</strong>
+                                      {selected && <Check size={14} aria-hidden="true" />}
+                                    </span>
+                                    <small>{conditionHints[value]}</small>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {bundle && (
+                              <p className={styles.help}>
+                                Tình trạng chung theo cuốn có tình trạng thấp nhất. Chỉnh từng cuốn ở bước Thông tin sách.
+                              </p>
+                            )}
                           </div>
                           <div className={styles.conditionFields}>
-                            {textFields.map(([key, label, hint]) => (
-                              <div className={styles.field} key={key}>
-                                <label htmlFor={key}>{label}</label>
-                                <p id={`${key}-hint`} className={styles.help}>
-                                  {hint}
-                                </p>
-                                <textarea
-                                  id={key}
-                                  rows={key === "description" ? 4 : 2}
-                                  required
-                                  value={formData[key]}
-                                  onChange={(event) =>
-                                    setFormData((previous) => ({
-                                      ...previous,
-                                      [key]: event.target.value,
-                                    }))
-                                  }
-                                  {...feedbackProps(key, `${key}-hint`)}
-                                />
-                                {fieldFeedback(key)}
-                              </div>
-                            ))}
+                            {textFields.map(([key, label, hint]) => {
+                              const descCount = key === "description" ? formData.description.trim().length : 0;
+                              return (
+                                <div className={styles.field} key={key}>
+                                  {key === "description" ? (
+                                    <div className={styles.fieldLabelRow}>
+                                      <label htmlFor={key}>{label}</label>
+                                      <span
+                                        className={styles.charCounter}
+                                        data-ready={descCount >= 30}
+                                      >
+                                        {descCount}/30 ký tự tối thiểu
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <label htmlFor={key}>{label}</label>
+                                  )}
+                                  <p id={`${key}-hint`} className={styles.help}>
+                                    {hint}
+                                  </p>
+                                  <textarea
+                                    id={key}
+                                    rows={key === "description" ? 4 : 2}
+                                    required
+                                    value={formData[key]}
+                                    onChange={(event) =>
+                                      setFormData((previous) => ({
+                                        ...previous,
+                                        [key]: event.target.value,
+                                      }))
+                                    }
+                                    {...feedbackProps(key, `${key}-hint`)}
+                                  />
+                                  {fieldFeedback(key)}
+                                </div>
+                              );
+                            })}
                           </div>
                           <div className={styles.questions}>
-                            <h3>Kiểm tra điều kiện đăng</h3>
-                            <p
-                              id="condition-choice-hint"
-                              className={styles.help}
-                            >
-                              Nhấn lại đáp án đang chọn để bỏ chọn.
-                            </p>
+                            <div className={styles.questionsHead}>
+                              <h3>Kiểm tra điều kiện đăng</h3>
+                              <p
+                                id="condition-choice-hint"
+                                className={styles.questionsHint}
+                              >
+                                Nhấn lại đáp án đang chọn để bỏ chọn.
+                              </p>
+                            </div>
                             {questions.map(([key, label]) => (
                               <fieldset
                                 key={key}
@@ -2937,13 +3067,62 @@ export function SellBookPage() {
                       )}
                       {step === 5 && (
                         <div className={styles.reviewSheet}>
+                          <div className={styles.reviewHero} aria-label="Tóm tắt bài đăng">
+                            <div className={styles.reviewHeroCover}>
+                              {hasCoverPhoto && formData.images[0] ? (
+                                <img
+                                  src={formData.images[0]}
+                                  alt={`Bìa ${bundle?.title || formData.title || "bản sách"}`}
+                                />
+                              ) : (
+                                <BookOpen size={22} aria-hidden="true" />
+                              )}
+                            </div>
+                            <div className={styles.reviewHeroMain}>
+                              <strong className={styles.reviewHeroTitle}>
+                                {bundle?.title || formData.title || "Chưa nhập tên sách"}
+                              </strong>
+                              <span className={styles.reviewHeroMeta}>
+                                {[
+                                  formData.author || "Chưa có tác giả",
+                                  categoryFor(classification.categoryId)?.label || selectedBook?.category,
+                                  conditions[formData.condition as keyof typeof conditions],
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </span>
+                            </div>
+                            <div className={styles.reviewHeroPrice}>
+                              <span className={styles.reviewHeroMode}>
+                                {auction
+                                  ? "Đấu giá"
+                                  : formData.mode === "Sale"
+                                    ? "Bán sách"
+                                    : formData.mode === "Exchange"
+                                      ? "Đổi sách"
+                                      : "Bán hoặc đổi"}
+                              </span>
+                              <strong>
+                                {formData.mode !== "Exchange"
+                                  ? validPrice(formData.salePrice)
+                                    ? formatVnd(Number(formData.salePrice))
+                                    : "Chưa có giá"
+                                  : validPrice(formData.exchangeValue)
+                                    ? formatVnd(Number(formData.exchangeValue))
+                                    : "Chưa có giá trị đổi"}
+                              </strong>
+                            </div>
+                          </div>
                           <BundleManifest bundle={bundle} />
                           <section className={styles.reviewSection} aria-labelledby="sell-review-book">
                             <div className={styles.reviewHeading}>
-                              <h3 id="sell-review-book">Thông tin đầu sách</h3>
+                              <h3 id="sell-review-book">
+                                <BookOpen size={16} aria-hidden="true" />
+                                Thông tin đầu sách
+                              </h3>
                               {reviewEdit(1)}
                             </div>
-                            <dl className={styles.reviewFacts}>
+                            <dl className={`${styles.reviewFacts} ${styles.reviewBookFacts}`}>
                               {[
                                 ["Tên sách", formData.title],
                                 ["Tác giả", formData.author],
@@ -2994,7 +3173,10 @@ export function SellBookPage() {
                           </section>
                           <section className={styles.reviewSection} aria-labelledby="sell-review-photos">
                             <div className={styles.reviewHeading}>
-                              <h3 id="sell-review-photos">Ảnh bản sách <span className={styles.reviewCount}>{imageFiles.length}/8</span></h3>
+                              <h3 id="sell-review-photos">
+                                <Images size={16} aria-hidden="true" />
+                                Ảnh bản sách <span className={styles.reviewCount}>{imageFiles.length}/8</span>
+                              </h3>
                               {reviewEdit(2)}
                             </div>
                             {formData.images.length > 0 ? (
@@ -3017,11 +3199,14 @@ export function SellBookPage() {
                           </section>
                           <section className={styles.reviewSection} aria-labelledby="sell-review-condition">
                             <div className={styles.reviewHeading}>
-                              <h3 id="sell-review-condition">Tình trạng bản sách</h3>
+                              <h3 id="sell-review-condition">
+                                <ClipboardCheck size={16} aria-hidden="true" />
+                                Tình trạng bản sách
+                              </h3>
                               {reviewEdit(3)}
                             </div>
                             <dl className={styles.reviewFacts}>
-                              <div>
+                              <div className={styles.reviewFullWidth}>
                                 <dt>Mức độ đã qua sử dụng</dt>
                                 <dd>
                                   {
@@ -3037,6 +3222,8 @@ export function SellBookPage() {
                                   <dd>{formData[key] || "Chưa nhập"}</dd>
                                 </div>
                               ))}
+                            </dl>
+                            <dl className={styles.reviewChecks}>
                               {questions.map(([key, label]) => (
                                 <div key={key}>
                                   <dt>{label}</dt>
@@ -3053,7 +3240,10 @@ export function SellBookPage() {
                           </section>
                           <section className={styles.reviewSection} aria-labelledby="sell-review-trade">
                             <div className={styles.reviewHeading}>
-                              <h3 id="sell-review-trade">{auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Bán hoặc đổi"}</h3>
+                              <h3 id="sell-review-trade">
+                                <Tag size={16} aria-hidden="true" />
+                                {auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Bán hoặc đổi"}
+                              </h3>
                               {reviewEdit(4)}
                             </div>
                             <dl className={styles.reviewFacts}>
@@ -3090,7 +3280,7 @@ export function SellBookPage() {
                                 </div>
                               )}
                               {!auction && formData.mode !== "Sale" && (formData.targetCategory.trim() || formData.targetAuthor.trim() || formData.targetDescription.trim()) && (
-                                <div>
+                                <div className={styles.reviewFullWidth}>
                                   <dt>Mong muốn đổi</dt>
                                   <dd>
                                     {[
@@ -3104,7 +3294,7 @@ export function SellBookPage() {
                                 </div>
                               )}
                               {needsOrigin && (
-                                <div>
+                                <div className={styles.reviewFullWidth}>
                                   <dt>Nơi gửi sách</dt>
                                   <dd>
                                     {originAddressId
@@ -3125,17 +3315,40 @@ export function SellBookPage() {
                           </section>
                           <section className={styles.reviewConfirmation} aria-labelledby="sell-review-confirm">
                             <h3 id="sell-review-confirm">Trước khi gửi duyệt</h3>
-                            <p>
-                              {auction
-                                ? "Bài đấu giá sẽ được kiểm duyệt. Khi bài được duyệt, bạn mang sách đến điểm giao nhận."
-                                : "Bài đăng sẽ xuất hiện trên kệ sau khi được duyệt."}
-                            </p>
-                            {!auction && formData.mode !== "Exchange" && (
-                              <p>
-                                Đơn Mua ngay được chốt theo giá niêm yết khi người mua thanh toán. Bạn có 48 giờ để bàn giao sách.
-                                Hai bên vẫn có thể thương lượng riêng qua chat.
-                              </p>
-                            )}
+                            <div
+                              className={styles.confirmNotices}
+                              data-columns={!auction && formData.mode !== "Exchange" ? "2" : "1"}
+                            >
+                              <div className={styles.confirmNoticeCard}>
+                                <span className={styles.confirmNoticeIcon} aria-hidden="true">
+                                  <ShieldCheck size={17} />
+                                </span>
+                                <div>
+                                  <strong>
+                                    {auction ? "Kiểm duyệt & gửi tới điểm giao nhận" : "Duyệt trước khi hiển thị"}
+                                  </strong>
+                                  <p>
+                                    {auction
+                                      ? "Bài đấu giá sẽ được kiểm duyệt. Khi bài được duyệt, bạn mang sách đến điểm giao nhận."
+                                      : "Bài đăng sẽ xuất hiện trên kệ sau khi được duyệt."}
+                                  </p>
+                                </div>
+                              </div>
+                              {!auction && formData.mode !== "Exchange" && (
+                                <div className={styles.confirmNoticeCard}>
+                                  <span className={styles.confirmNoticeIcon} aria-hidden="true">
+                                    <Clock size={17} />
+                                  </span>
+                                  <div>
+                                    <strong>Mua ngay & bàn giao trong 48 giờ</strong>
+                                    <p>
+                                      Đơn Mua ngay được chốt theo giá niêm yết khi người mua thanh toán. Bạn có 48 giờ để bàn giao sách.
+                                      Hai bên vẫn có thể thương lượng riêng qua chat.
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                             <label className={styles.ownership}>
                               <input
                                 id="ownership"
@@ -3222,17 +3435,15 @@ export function SellBookPage() {
                         )}
                       </div>
                     )}
-                    {step === 1 || step === 4 || step === 5 ? (
-                      <details className={styles.postingLimit}>
-                        <summary>
-                          <span>Giới hạn đăng bài</span>
-                          <ChevronDown size={16} aria-hidden="true" />
-                        </summary>
-                        <p className={styles.help}>{postingLimit}</p>
-                      </details>
-                    ) : (
+                    <details className={styles.postingLimit}>
+                      <summary>
+                        <Info size={15} aria-hidden="true" className={styles.postingLimitIcon} />
+                        <span>Giới hạn đăng bài</span>
+                        <span className={styles.postingLimitHint}>Miễn phí · Tối đa 5 bài đang mở</span>
+                        <ChevronDown size={15} aria-hidden="true" className={styles.postingLimitChevron} />
+                      </summary>
                       <p className={styles.help}>{postingLimit}</p>
-                    )}
+                    </details>
                     {hasAttempt && (
                       <p role="status" className={styles.help}>
                         Thông tin đã khóa cho lần gửi này để giữ đúng dữ liệu
