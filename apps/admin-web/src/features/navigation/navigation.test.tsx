@@ -12,6 +12,7 @@ describe("workspace navigation permissions", () => {
   it("shows Staff's desks without Admin decisions, directory or catalog review", () => {
     expect(paths({ ...base, roles: ["STAFF"] })).toEqual([
       "/dashboard",
+      "/statistics/operations",
       "/statistics",
       "/review/listings",
       "/ai-review-checks",
@@ -25,6 +26,9 @@ describe("workspace navigation permissions", () => {
   it("gives Admin the auction intake desk while reserving collection and simulation for their own roles", () => {
     expect(paths({ ...base, roles: ["ADMIN"] })).toEqual([
       "/dashboard",
+      "/statistics/finance",
+      "/statistics/cashflow",
+      "/statistics/operations",
       "/statistics",
       "/review/catalog-requests",
       "/review/listings",
@@ -56,7 +60,7 @@ describe("workspace navigation permissions", () => {
   it("combines actual roles without duplicate links or a guessed account role", () => {
     const user = { ...base, roles: ["ADMIN", "STAFF", "TEST_OPERATOR"] } satisfies CurrentUser;
     const links = paths(user);
-    expect(links).toHaveLength(22);
+    expect(links).toHaveLength(25);
     expect(new Set(links).size).toBe(links.length);
     expect(workspaceRole(user)).toBe("Quản trị viên · Nhân viên · Vận hành thử");
     expect(workspaceRole(undefined)).toBe("Chờ xác minh quyền");
@@ -75,11 +79,11 @@ describe("sidebar route semantics", () => {
     expect(html).not.toMatch(/id="nav-items-workspace" hidden/);
     expect(html).toMatch(/id="nav-items-management" hidden=""/);
   });
-  it("opens review on overview and exposes Staff’s single complaint destination directly", () => {
+  it("opens statistics on overview and exposes Staff’s single complaint destination directly", () => {
     const html = renderToStaticMarkup(<MemoryRouter initialEntries={["/dashboard"]}>
       <SidebarNavigation user={{ ...base, roles: ["STAFF", "TEST_OPERATOR"] }} />
     </MemoryRouter>);
-    expect(html).toMatch(/aria-expanded="true" aria-controls="nav-items-review"/);
+    expect(html).toMatch(/aria-expanded="true" aria-controls="nav-items-statistics"/);
     expect(html).toMatch(/aria-expanded="false" aria-controls="nav-items-simulation"/);
     expect(html).toContain('href="/simulator/deliveries"');
     expect(html).not.toMatch(/id="nav-items-cases" hidden/);

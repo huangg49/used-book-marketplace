@@ -9,11 +9,11 @@ export const FINANCE_POLICY = {
 } as const;
 
 export const FINANCE_NOTES: string[] = [
-  'Tiền trong báo cáo là số liệu mô phỏng trên sổ cái (ADR 0018), không phải giao dịch ngân hàng thật.',
-  'Phí chặng giao từ điểm (outboundFee) là khoản thu hộ (pass-through), hiển thị riêng và không cộng vào doanh thu hay lợi nhuận.',
-  'Chi phí vận hành điểm và phí carrier mô phỏng chưa có tài khoản sổ cái riêng nên chưa trừ vào lợi nhuận.',
-  'Cọc đấu giá bị tịch thu và khoản chia 50% cọc cho người bán (ADR 0087) ghi nhận theo ngày hạch toán từng bút toán.',
-  'Trao đổi sách áp dụng phí 0đ (POL-14), chỉ báo cáo khối lượng luân chuyển và không cộng vào GMV bán hay doanh thu.',
+  'Số liệu trong báo cáo được tổng hợp trực tiếp từ sổ cái bất biến của hệ thống.',
+  'Phí chặng giao từ điểm (outboundFee) là khoản thu hộ, hiển thị riêng và không cộng vào doanh thu hay lợi nhuận.',
+  'Chi phí vận hành điểm và phí vận chuyển chưa có tài khoản sổ cái riêng nên chưa trừ vào lợi nhuận.',
+  'Cọc đấu giá bị tịch thu và khoản chia 50% cọc cho người bán được ghi nhận theo ngày hạch toán từng bút toán.',
+  'Trao đổi sách áp dụng phí 0đ, chỉ báo cáo khối lượng luân chuyển và không cộng vào GMV bán hay doanh thu.',
 ];
 
 export type FinanceTotalsInput = {

@@ -89,6 +89,9 @@ describe('finance & cashflow authorization guards in service', () => {
       await expect(
         service.cashflow({} as never, { from: '2026-11-01', to: '2026-11-07' }),
       ).rejects.toThrow();
+      await expect(
+        service.holds({} as never, { kind: 'All', page: 1 }),
+      ).rejects.toThrow();
     },
   );
 
@@ -106,6 +109,9 @@ describe('finance & cashflow authorization guards in service', () => {
       ).rejects.toThrow();
       await expect(
         service.cashflow({} as never, { from: '2026-11-01', to: '2026-11-07' }),
+      ).rejects.toThrow();
+      await expect(
+        service.holds({} as never, { kind: 'All', page: 1 }),
       ).rejects.toThrow();
     },
   );

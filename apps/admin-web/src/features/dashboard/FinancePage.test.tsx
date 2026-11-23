@@ -83,7 +83,7 @@ const sampleData: FinanceOverview = {
     initiatorValue: 250000,
     recipientValue: 270000,
   },
-  notes: ["Dữ liệu mô phỏng (ADR 0018)."],
+  notes: ["Dữ liệu mô phỏng."],
 };
 
 describe("FinancePage", () => {
@@ -109,7 +109,7 @@ describe("FinancePage", () => {
       </MemoryRouter>,
     );
 
-    expect(html).toContain("Lợi nhuận (Lỗ mô phỏng)");
+    expect(html).toContain("Lợi nhuận ròng (Đang lỗ)");
     expect(html).toContain("Phí ship chặng giao từ điểm");
     expect(html).toContain("Thu hộ");
     expect(html).toContain("Khối lượng Trao đổi sách");

@@ -15,7 +15,6 @@ import { ErrorNotice } from "../../core/ui";
 import { dashboardAnalyticsQuery } from "./queries";
 import { dateInputInHcm, formatVnd, subtractDays } from "./revenue";
 import { formatBps } from "./finance";
-import { StatisticsSubNav } from "./StatisticsSubNav";
 import styles from "./StatisticsHub.module.css";
 
 function RateBar({ bps }: { bps: number | null }) {
@@ -60,7 +59,6 @@ export function OperationsAnalyticsPage() {
   if (denied) {
     return (
       <div className={styles.page}>
-        <StatisticsSubNav user={user} />
         <section className={styles.denied} aria-labelledby="ops-denied">
           <h1 id="ops-denied">Không có quyền xem thống kê vận hành</h1>
         </section>
@@ -72,14 +70,9 @@ export function OperationsAnalyticsPage() {
 
   return (
     <div className={styles.page}>
-      <StatisticsSubNav user={user} />
-
       <header className={styles.header}>
         <div className={styles.headerTitle}>
           <h1>Giao dịch & Rủi ro</h1>
-          <p className={styles.subtitle}>
-            Hiệu suất 3 kênh Mua bán · Trao đổi · Đấu giá, theo dõi tranh chấp và tổng quan thành viên.
-          </p>
         </div>
 
         <div className={styles.controls}>
@@ -106,18 +99,20 @@ export function OperationsAnalyticsPage() {
             }}
           >
             <label className={styles.dateField}>
-              Từ ngày
+              <span>Từ</span>
               <input
                 type="date"
+                aria-label="Từ ngày"
                 value={fromDraft}
                 max={toDraft}
                 onChange={(e) => setFromDraft(e.target.value)}
               />
             </label>
             <label className={styles.dateField}>
-              Đến ngày
+              <span>Đến</span>
               <input
                 type="date"
+                aria-label="Đến ngày"
                 value={toDraft}
                 min={fromDraft}
                 onChange={(e) => setToDraft(e.target.value)}
@@ -166,7 +161,7 @@ export function OperationsAnalyticsPage() {
                     Tỉ lệ hoàn tất: <strong>{formatBps(data.sales.completionRateBps)}</strong>
                   </p>
                 </div>
-                <ShoppingBag size={18} color="#5c0202" aria-hidden="true" />
+                <ShoppingBag size={18} aria-hidden="true" />
               </div>
               <RateBar bps={data.sales.completionRateBps} />
               <ul className={styles.statList}>
@@ -199,7 +194,7 @@ export function OperationsAnalyticsPage() {
                     Tỉ lệ hoàn tất: <strong>{formatBps(data.exchanges.completionRateBps)}</strong>
                   </p>
                 </div>
-                <Repeat size={18} color="#5c0202" aria-hidden="true" />
+                <Repeat size={18} aria-hidden="true" />
               </div>
               <RateBar bps={data.exchanges.completionRateBps} />
               <ul className={styles.statList}>
@@ -232,7 +227,7 @@ export function OperationsAnalyticsPage() {
                     Sell-through: <strong>{formatBps(data.auctions.sellThroughRateBps)}</strong>
                   </p>
                 </div>
-                <Gavel size={18} color="#5c0202" aria-hidden="true" />
+                <Gavel size={18} aria-hidden="true" />
               </div>
               <RateBar bps={data.auctions.sellThroughRateBps} />
               <ul className={styles.statList}>
@@ -266,7 +261,7 @@ export function OperationsAnalyticsPage() {
                   <h2 id="risk-title">Rủi ro, tranh chấp & Quỹ sự cố</h2>
                   <p className={styles.panelHint}>Các vụ việc mở hiện tại và mức chi quỹ trong kỳ.</p>
                 </div>
-                <ShieldAlert size={18} color="#912b0e" aria-hidden="true" />
+                <ShieldAlert size={18} aria-hidden="true" />
               </div>
               <ul className={styles.statList}>
                 <li className={styles.statRow}>
@@ -314,7 +309,7 @@ export function OperationsAnalyticsPage() {
                   <h2 id="users-title">Thành viên toàn hệ thống</h2>
                   <p className={styles.panelHint}>Tổng hợp trực tiếp toàn bộ tài khoản Member.</p>
                 </div>
-                <Users size={18} color="#5c0202" aria-hidden="true" />
+                <Users size={18} aria-hidden="true" />
               </div>
               <ul className={styles.statList}>
                 <li className={styles.statRow}>

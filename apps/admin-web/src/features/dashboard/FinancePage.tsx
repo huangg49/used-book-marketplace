@@ -4,8 +4,8 @@ import { useOutletContext } from "react-router-dom";
 import { ApiError, type CurrentUser } from "@used-books/session-client";
 import {
   BadgePercent,
+  CircleAlert,
   Coins,
-  Info,
   RefreshCw,
   Repeat,
   ShoppingBag,
@@ -22,8 +22,41 @@ import {
   formatSignedVnd,
   type FinanceOverview,
 } from "./finance";
-import { StatisticsSubNav } from "./StatisticsSubNav";
 import styles from "./StatisticsHub.module.css";
+
+function FormulaTip({
+  label,
+  formula,
+  note,
+  align = "left",
+}: {
+  label: string;
+  formula: string;
+  note: string;
+  align?: "left" | "right";
+}) {
+  return (
+    <span className={styles.formulaTipWrap}>
+      <button
+        type="button"
+        className={styles.formulaTipBtn}
+        aria-label={`Xem công thức ${label}`}
+      >
+        <CircleAlert size={13} aria-hidden="true" />
+      </button>
+      <span
+        role="tooltip"
+        className={`${styles.formulaTipBox} ${
+          align === "right" ? styles.formulaTipRight : ""
+        }`}
+      >
+        <strong className={styles.formulaTipTitle}>Công thức {label}</strong>
+        <code className={styles.formulaTipFormula}>{formula}</code>
+        <span className={styles.formulaTipNote}>{note}</span>
+      </span>
+    </span>
+  );
+}
 
 function DeltaPill({
   current,
@@ -170,7 +203,9 @@ function ProfitChart({ daily }: { daily: FinanceOverview["daily"] }) {
                   fill="#f4cb67"
                 />
               )}
-              {(i % labelStep === 0 || i === daily.length - 1) && (
+              {(i === daily.length - 1 ||
+                (i % labelStep === 0 &&
+                  daily.length - 1 - i >= Math.ceil(labelStep / 2))) && (
                 <text
                   x={cx}
                   y={height - 10}
@@ -231,7 +266,6 @@ export function FinancePage() {
   if (denied) {
     return (
       <div className={styles.page}>
-        <StatisticsSubNav user={user} />
         <section className={styles.denied} aria-labelledby="finance-denied">
           <h1 id="finance-denied">Không có quyền xem báo cáo tài chính</h1>
           <p className={styles.subtitle}>
@@ -249,14 +283,9 @@ export function FinancePage() {
 
   return (
     <div className={styles.page}>
-      <StatisticsSubNav user={user} />
-
       <header className={styles.header}>
         <div className={styles.headerTitle}>
           <h1>Tài chính & Lợi nhuận</h1>
-          <p className={styles.subtitle}>
-            Tổng hợp doanh thu ròng, chi phí vận hành và lợi nhuận từ sổ cái bất biến.
-          </p>
         </div>
 
         <div className={styles.controls}>
@@ -283,18 +312,20 @@ export function FinancePage() {
             }}
           >
             <label className={styles.dateField}>
-              Từ ngày
+              <span>Từ</span>
               <input
                 type="date"
+                aria-label="Từ ngày"
                 value={fromDraft}
                 max={toDraft}
                 onChange={(e) => setFromDraft(e.target.value)}
               />
             </label>
             <label className={styles.dateField}>
-              Đến ngày
+              <span>Đến</span>
               <input
                 type="date"
+                aria-label="Đến ngày"
                 value={toDraft}
                 min={fromDraft}
                 onChange={(e) => setToDraft(e.target.value)}
@@ -315,11 +346,6 @@ export function FinancePage() {
           </form>
         </div>
       </header>
-
-      <div className={styles.simBanner} role="note">
-        <Info size={15} aria-hidden="true" />
-        Dữ liệu mô phỏng (ADR 0018) — phản ánh đúng sổ cái ứng dụng, không phải giao dịch ngân hàng thật.
-      </div>
 
       {query.isError && (
         <ErrorNotice
@@ -342,7 +368,14 @@ export function FinancePage() {
           <section className={styles.kpiGrid4} aria-label="Chỉ số tài chính trọng tâm">
             <article className={`${styles.kpiCard} ${isLoss ? styles.kpiCardLoss : styles.kpiCardHero}`}>
               <div className={styles.kpiHeader}>
-                <span>{isLoss ? "Lợi nhuận (Lỗ mô phỏng)" : "Lợi nhuận (mô phỏng)"}</span>
+                <span className={styles.kpiTitleRow}>
+                  <span>{isLoss ? "Lợi nhuận ròng (Đang lỗ)" : "Lợi nhuận ròng"}</span>
+                  <FormulaTip
+                    label="Lợi nhuận ròng"
+                    formula="Doanh thu ròng − Bồi thường Quỹ sự cố"
+                    note="Phần lãi thực còn lại (hoặc lỗ nếu âm) sau khi trừ các khoản bồi thường sự cố phát sinh trong kỳ."
+                  />
+                </span>
                 <Coins size={16} aria-hidden="true" />
               </div>
               <div className={`${styles.kpiValue} ${isLoss ? styles.kpiValueLoss : styles.kpiValuePositive}`}>
@@ -356,7 +389,14 @@ export function FinancePage() {
 
             <article className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span>Doanh thu ròng nền tảng</span>
+                <span className={styles.kpiTitleRow}>
+                  <span>Doanh thu ròng nền tảng</span>
+                  <FormulaTip
+                    label="Doanh thu ròng"
+                    formula="Hoa hồng trực tiếp + Hoa hồng đấu giá + Cọc tịch thu − Chia 50% cọc người bán + Phí đăng lịch sử"
+                    note="Không gồm phí ship thu hộ và giao dịch trao đổi sách (phí 0đ)."
+                  />
+                </span>
                 <TrendingUp size={16} aria-hidden="true" />
               </div>
               <div className={styles.kpiValue}>{formatVnd(cur.netRevenue)}</div>
@@ -368,7 +408,15 @@ export function FinancePage() {
 
             <article className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span>Tổng giá trị bán (GMV)</span>
+                <span className={styles.kpiTitleRow}>
+                  <span>Tổng giá trị bán (GMV)</span>
+                  <FormulaTip
+                    label="GMV"
+                    formula="Tổng giá sách (bookPrice) của các đơn bán trực tiếp & đấu giá đã tất toán"
+                    note="Không gồm phí ship, đơn đang tạm giữ chưa hoàn tất và khối lượng trao đổi sách."
+                    align="right"
+                  />
+                </span>
                 <ShoppingBag size={16} aria-hidden="true" />
               </div>
               <div className={styles.kpiValue}>{formatVnd(cur.gmv)}</div>
@@ -380,12 +428,20 @@ export function FinancePage() {
 
             <article className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span>Tỉ lệ hoa hồng (Take-rate)</span>
+                <span className={styles.kpiTitleRow}>
+                  <span>Tỉ lệ hoa hồng (Take-rate)</span>
+                  <FormulaTip
+                    label="Take-rate"
+                    formula="(Hoa hồng trực tiếp + Hoa hồng đấu giá) ÷ GMV × 100%"
+                    note="Tỉ lệ hoa hồng thực thu trên mỗi đồng sách bán ra (mục tiêu chuẩn 5,00%)."
+                    align="right"
+                  />
+                </span>
                 <BadgePercent size={16} aria-hidden="true" />
               </div>
               <div className={styles.kpiValue}>{formatBps(cur.takeRateBps)}</div>
               <div className={styles.kpiFoot}>
-                <span>Mục tiêu POL-13: 5,00%</span>
+                <span>Mục tiêu chuẩn: 5,00%</span>
                 <span>Kỳ trước: {formatBps(prev.takeRateBps)}</span>
               </div>
             </article>
@@ -467,7 +523,7 @@ export function FinancePage() {
                       <td>{formatSignedVnd(cur.forfeitedDeposits - prev.forfeitedDeposits)}</td>
                     </tr>
                     <tr>
-                      <td>Trừ: Chia 50% cọc cho người bán (ADR 0087)</td>
+                      <td>Trừ: Chia 50% cọc cho người bán</td>
                       <td className={cur.depositShare > 0 ? styles.negativeAmt : undefined}>
                         {cur.depositShare > 0 ? `-${formatVnd(cur.depositShare)}` : formatVnd(0)}
                       </td>
@@ -475,7 +531,7 @@ export function FinancePage() {
                       <td>{formatSignedVnd(prev.depositShare - cur.depositShare)}</td>
                     </tr>
                     <tr>
-                      <td>Phí đăng bán lịch sử (trước ADR 0040)</td>
+                      <td>Phí đăng bán lịch sử</td>
                       <td>{formatVnd(cur.legacyListingFees)}</td>
                       <td>{formatVnd(prev.legacyListingFees)}</td>
                       <td>{formatSignedVnd(cur.legacyListingFees - prev.legacyListingFees)}</td>
@@ -491,7 +547,7 @@ export function FinancePage() {
                       <td colSpan={4}>II. Chi phí vận hành ghi nhận</td>
                     </tr>
                     <tr>
-                      <td>Bồi thường từ Quỹ sự cố (POL-42)</td>
+                      <td>Bồi thường từ Quỹ sự cố</td>
                       <td className={cur.incidentCompensation > 0 ? styles.negativeAmt : undefined}>
                         {cur.incidentCompensation > 0
                           ? `-${formatVnd(cur.incidentCompensation)}`
@@ -506,7 +562,7 @@ export function FinancePage() {
                     </tr>
 
                     <tr className={styles.totalRow}>
-                      <td>III. Lợi nhuận ròng (mô phỏng)</td>
+                      <td>III. Lợi nhuận ròng</td>
                       <td className={cur.profit < 0 ? styles.negativeAmt : styles.positiveAmt}>
                         {cur.profit < 0 ? `-${formatVnd(Math.abs(cur.profit))}` : formatVnd(cur.profit)}
                       </td>
@@ -539,10 +595,10 @@ export function FinancePage() {
                   <div>
                     <h2 id="exchange-vol-title">Khối lượng Trao đổi sách</h2>
                     <p className={styles.panelHint}>
-                      Phí đổi 0đ (POL-14) — báo cáo riêng, không cộng vào GMV bán hay doanh thu.
+                      Phí đổi 0đ — báo cáo riêng, không cộng vào GMV bán hay doanh thu.
                     </p>
                   </div>
-                  <Repeat size={18} color="#5c0202" aria-hidden="true" />
+                  <Repeat size={18} aria-hidden="true" />
                 </div>
                 <ul className={styles.statList}>
                   <li className={styles.statRow}>

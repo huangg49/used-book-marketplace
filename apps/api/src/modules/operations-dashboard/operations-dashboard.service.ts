@@ -1085,6 +1085,1179 @@ export class OperationsDashboardService {
     });
   }
 
+  holds(
+    auth: Actor,
+    query: Record<string, string | number>,
+  ): Promise<Wire['FinanceHolds']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      financeAdmin(actor);
+      const kindFilter = String(query.kind ?? 'All');
+      const search = String(query.q ?? '').trim().toLowerCase();
+      const page = Math.max(1, Number(query.page ?? 1));
+      const pageSize = 15 as const;
+      const now = await tx.now();
+
+      const activeHolds = await tx.c.ledger_entries
+        .aggregate<{
+          _id: string;
+          balance: number;
+          purpose: 'OrderHold' | 'AuctionBidHold' | 'WithdrawalHold';
+          orderId: string | null;
+          auctionId: string | null;
+          holderId: string | null;
+          withdrawalId: string | null;
+          lastPostedAt: Date | null;
+        }>([
+          {
+            $lookup: {
+              from: 'wallet_accounts',
+              localField: 'accountId',
+              foreignField: '_id',
+              as: 'a',
+            },
+          },
+          { $unwind: '$a' },
+          {
+            $match: {
+              'a.purpose': {
+                $in: ['OrderHold', 'AuctionBidHold', 'WithdrawalHold'],
+              },
+            },
+          },
+          {
+            $group: {
+              _id: '$accountId',
+              balance: { $sum: { $subtract: ['$debit', '$credit'] } },
+              purpose: { $first: '$a.purpose' },
+              orderId: { $first: '$a.orderId' },
+              auctionId: { $first: '$a.auctionId' },
+              holderId: { $first: '$a.holderId' },
+              withdrawalId: { $first: '$a.withdrawalId' },
+            },
+          },
+          { $match: { balance: { $gt: 0 } } },
+        ])
+        .toArray();
+
+      const orderIds = activeHolds
+        .filter((h) => h.purpose === 'OrderHold' && h.orderId)
+        .map((h) => h.orderId!);
+      const auctionIds = activeHolds
+        .filter((h) => h.purpose === 'AuctionBidHold' && h.auctionId)
+        .map((h) => h.auctionId!);
+      const withdrawalIds = activeHolds
+        .filter((h) => h.purpose === 'WithdrawalHold' && h.withdrawalId)
+        .map((h) => h.withdrawalId!);
+
+      const [directOrders, pointOrders, exchanges, auctions, withdrawals] =
+        await Promise.all([
+          orderIds.length
+            ? tx.c.direct_orders.find({ _id: { $in: orderIds } }).toArray()
+            : Promise.resolve([]),
+          orderIds.length
+            ? tx.c.point_orders.find({ _id: { $in: orderIds } }).toArray()
+            : Promise.resolve([]),
+          orderIds.length
+            ? tx.c.exchanges
+                .find({
+                  $or: [
+                    { initiatorOrderId: { $in: orderIds } },
+                    { recipientOrderId: { $in: orderIds } },
+                  ],
+                })
+                .toArray()
+            : Promise.resolve([]),
+          auctionIds.length
+            ? tx.c.auctions.find({ _id: { $in: auctionIds } }).toArray()
+            : Promise.resolve([]),
+          withdrawalIds.length
+            ? tx.c.withdrawals.find({ _id: { $in: withdrawalIds } }).toArray()
+            : Promise.resolve([]),
+        ]);
+
+      const directById = new Map(directOrders.map((o) => [o._id, o]));
+      const pointById = new Map(pointOrders.map((o) => [o._id, o]));
+      const exchangeByOrderId = new Map<
+        string,
+        { exchange: (typeof exchanges)[number]; isInit: boolean }
+      >();
+      for (const ex of exchanges) {
+        exchangeByOrderId.set(ex.initiatorOrderId, { exchange: ex, isInit: true });
+        exchangeByOrderId.set(ex.recipientOrderId, { exchange: ex, isInit: false });
+      }
+      const auctionById = new Map(auctions.map((a) => [a._id, a]));
+      const withdrawalById = new Map(withdrawals.map((w) => [w._id, w]));
+
+      const kindLabels: Record<Wire['FinanceHoldKind'], string> = {
+        Exchange: 'Cọc trao đổi',
+        AuctionBid: 'Cọc đấu giá',
+        DirectOrder: 'Đơn mua trực tiếp',
+        PointOrder: 'Đơn đấu giá tại điểm',
+        Withdrawal: 'Chờ rút tiền',
+      };
+
+      const rawItems: Array<{
+        accountId: string;
+        kind: Wire['FinanceHoldKind'];
+        holderId: string | null;
+        amount: number;
+        referenceId: string | null;
+        status: string;
+        updatedAt: Date | null;
+      }> = [];
+
+      for (const hold of activeHolds) {
+        if (hold.purpose === 'AuctionBidHold') {
+          const auc = hold.auctionId ? auctionById.get(hold.auctionId) : undefined;
+          rawItems.push({
+            accountId: hold._id,
+            kind: 'AuctionBid',
+            holderId: hold.holderId ?? null,
+            amount: hold.balance,
+            referenceId: hold.auctionId ?? null,
+            status: auc?.state ?? 'Active',
+            updatedAt: auc?.updatedAt ?? auc?.publishedAt ?? null,
+          });
+        } else if (hold.purpose === 'WithdrawalHold') {
+          const wd = hold.withdrawalId
+            ? withdrawalById.get(hold.withdrawalId)
+            : undefined;
+          rawItems.push({
+            accountId: hold._id,
+            kind: 'Withdrawal',
+            holderId: wd?.ownerId ?? null,
+            amount: hold.balance,
+            referenceId: hold.withdrawalId ?? null,
+            status: wd?.state ?? 'Requested',
+            updatedAt: wd?.updatedAt ?? wd?.createdAt ?? null,
+          });
+        } else if (hold.orderId) {
+          const direct = directById.get(hold.orderId);
+          if (direct) {
+            rawItems.push({
+              accountId: hold._id,
+              kind: 'DirectOrder',
+              holderId: direct.buyerId,
+              amount: hold.balance,
+              referenceId: direct._id,
+              status: direct.state,
+              updatedAt: direct.paidAt ?? direct.createdAt,
+            });
+            continue;
+          }
+          const point = pointById.get(hold.orderId);
+          if (point) {
+            rawItems.push({
+              accountId: hold._id,
+              kind: 'PointOrder',
+              holderId: point.buyerId,
+              amount: hold.balance,
+              referenceId: point._id,
+              status: point.state,
+              updatedAt: point.updatedAt ?? point.createdAt,
+            });
+            continue;
+          }
+          const exMatch = exchangeByOrderId.get(hold.orderId);
+          if (exMatch) {
+            const { exchange, isInit } = exMatch;
+            rawItems.push({
+              accountId: hold._id,
+              kind: 'Exchange',
+              holderId: isInit ? exchange.initiatorId : exchange.recipientId,
+              amount: hold.balance,
+              referenceId: exchange._id,
+              status: exchange.status,
+              updatedAt: exchange.createdAt ?? null,
+            });
+            continue;
+          }
+          rawItems.push({
+            accountId: hold._id,
+            kind: 'DirectOrder',
+            holderId: null,
+            amount: hold.balance,
+            referenceId: hold.orderId,
+            status: 'Held',
+            updatedAt: null,
+          });
+        }
+      }
+
+      const holderIds = Array.from(
+        new Set(
+          rawItems
+            .map((item) => item.holderId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+      const users = holderIds.length
+        ? await tx.c.users.find({ _id: { $in: holderIds } }).toArray()
+        : [];
+      const userById = new Map(users.map((u) => [u._id, u]));
+
+      const allKinds: Wire['FinanceHoldKind'][] = [
+        'Exchange',
+        'AuctionBid',
+        'DirectOrder',
+        'PointOrder',
+        'Withdrawal',
+      ];
+      const byKindMap = new Map<
+        Wire['FinanceHoldKind'],
+        { count: number; amount: number }
+      >(allKinds.map((k) => [k, { count: 0, amount: 0 }]));
+
+      const enriched: Wire['FinanceHolds']['items'] = rawItems.map((item) => {
+        const bucket = byKindMap.get(item.kind)!;
+        bucket.count += 1;
+        bucket.amount += item.amount;
+        const user = item.holderId ? userById.get(item.holderId) : undefined;
+        return {
+          accountId: item.accountId,
+          kind: item.kind,
+          kindLabel: kindLabels[item.kind],
+          holderId: item.holderId,
+          holderName: user?.displayName ?? item.holderId ?? 'Không xác định',
+          holderEmail: user?.emailNormalized ?? null,
+          amount: item.amount,
+          referenceId: item.referenceId,
+          status: item.status,
+          updatedAt: item.updatedAt ? item.updatedAt.toISOString() : null,
+        };
+      });
+
+      const filtered = enriched
+        .filter((item) => kindFilter === 'All' || item.kind === kindFilter)
+        .filter((item) => {
+          if (!search) return true;
+          return (
+            item.holderName.toLowerCase().includes(search) ||
+            (item.holderEmail?.toLowerCase().includes(search) ?? false) ||
+            (item.referenceId?.toLowerCase().includes(search) ?? false) ||
+            item.accountId.toLowerCase().includes(search) ||
+            item.kindLabel.toLowerCase().includes(search)
+          );
+        })
+        .sort(
+          (a, b) =>
+            b.amount - a.amount ||
+            (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '') ||
+            a.accountId.localeCompare(b.accountId),
+        );
+
+      const startIdx = (page - 1) * pageSize;
+      const paged = filtered.slice(startIdx, startIdx + pageSize);
+
+      return {
+        serverTime: now.toISOString(),
+        simulated: true,
+        summary: {
+          totalHeld: enriched.reduce((sum, item) => sum + item.amount, 0),
+          totalAccounts: enriched.length,
+          byKind: allKinds.map((kind) => ({
+            kind,
+            label: kindLabels[kind],
+            count: byKindMap.get(kind)!.count,
+            amount: byKindMap.get(kind)!.amount,
+          })),
+        },
+        page,
+        pageSize,
+        totalItems: filtered.length,
+        items: paged,
+      };
+    });
+  }
+
+  holdHistory(
+    auth: Actor,
+    query: Record<string, string | number>,
+  ): Promise<Wire['FinanceHoldHistory']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      financeAdmin(actor);
+      const kindFilter = String(query.kind ?? 'All');
+      const search = String(query.q ?? '').trim().toLowerCase();
+      const page = Math.max(1, Number(query.page ?? 1));
+      const pageSize = 15 as const;
+      const now = await tx.now();
+
+      const rows = await tx.c.ledger_journals
+        .aggregate<{
+          _id: string;
+          type:
+            | 'AuctionBidRelease'
+            | 'AuctionDepositForfeit'
+            | 'OrderRefund'
+            | 'WithdrawalRefund'
+            | 'ExchangeReturnRefund';
+          auctionId: string | null;
+          orderId: string | null;
+          withdrawalId?: string | null;
+          postedAt: Date;
+          entries: Array<{
+            debit: number;
+            credit: number;
+            accountId: string;
+            account?: {
+              purpose: string;
+              ownerId?: string | null;
+              holderId?: string | null;
+            };
+          }>;
+        }>([
+          {
+            $match: {
+              type: {
+                $in: [
+                  'AuctionBidRelease',
+                  'AuctionDepositForfeit',
+                  'OrderRefund',
+                  'WithdrawalRefund',
+                  'ExchangeReturnRefund',
+                ],
+              },
+            },
+          },
+          { $sort: { postedAt: -1, sequence: -1 } },
+          { $limit: 500 },
+          {
+            $lookup: {
+              from: 'ledger_entries',
+              localField: '_id',
+              foreignField: 'journalId',
+              as: 'rawEntries',
+            },
+          },
+          {
+            $lookup: {
+              from: 'wallet_accounts',
+              localField: 'rawEntries.accountId',
+              foreignField: '_id',
+              as: 'accounts',
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              type: 1,
+              auctionId: 1,
+              orderId: 1,
+              withdrawalId: 1,
+              postedAt: 1,
+              entries: {
+                $map: {
+                  input: '$rawEntries',
+                  as: 'e',
+                  in: {
+                    debit: '$$e.debit',
+                    credit: '$$e.credit',
+                    accountId: '$$e.accountId',
+                    account: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$accounts',
+                            as: 'a',
+                            cond: { $eq: ['$$a._id', '$$e.accountId'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ])
+        .toArray();
+
+      const kindLabels: Record<Wire['FinanceHoldHistoryKind'], string> = {
+        AuctionRelease: 'Hoàn cọc đấu giá',
+        AuctionForfeit: 'Tịch thu cọc đấu giá',
+        OrderRefund: 'Hoàn cọc / tiền đơn',
+        WithdrawalRefund: 'Hoàn lệnh rút tiền',
+      };
+
+      const rawItems: Array<{
+        journalId: string;
+        kind: Wire['FinanceHoldHistoryKind'];
+        outcome: 'ReturnedToWallet' | 'Forfeited';
+        holderId: string | null;
+        amount: number;
+        referenceId: string | null;
+        detail: string;
+        postedAt: Date;
+      }> = [];
+
+      for (const row of rows) {
+        const userDebitEntry = row.entries.find(
+          (e) => e.account?.purpose === 'UserAvailable' && e.debit > 0,
+        );
+        const userCreditEntry = row.entries.find(
+          (e) =>
+            (e.account?.purpose === 'UserAvailable' ||
+              e.account?.purpose === 'AuctionBidHold') &&
+            e.credit > 0,
+        );
+        const holdCreditEntry = row.entries.find(
+          (e) =>
+            (e.account?.purpose === 'AuctionBidHold' ||
+              e.account?.purpose === 'OrderHold' ||
+              e.account?.purpose === 'WithdrawalHold') &&
+            e.credit > 0,
+        );
+
+        if (row.type === 'AuctionBidRelease') {
+          const amount = userDebitEntry?.debit ?? holdCreditEntry?.credit ?? 0;
+          if (amount <= 0) continue;
+          const holderId =
+            userDebitEntry?.account?.ownerId ??
+            holdCreditEntry?.account?.holderId ??
+            null;
+          rawItems.push({
+            journalId: row._id,
+            kind: 'AuctionRelease',
+            outcome: 'ReturnedToWallet',
+            holderId,
+            amount,
+            referenceId: row.auctionId ?? null,
+            detail: 'Trả cọc đấu giá về ví khả dụng (thua phiên / đã tất toán / hủy phiên)',
+            postedAt: row.postedAt,
+          });
+        } else if (row.type === 'AuctionDepositForfeit') {
+          const platformDebit = row.entries.find(
+            (e) => e.account?.purpose === 'PlatformCommission' && e.debit > 0,
+          );
+          const amount = platformDebit?.debit ?? userCreditEntry?.credit ?? 0;
+          if (amount <= 0) continue;
+          const holderId =
+            userCreditEntry?.account?.holderId ??
+            userCreditEntry?.account?.ownerId ??
+            null;
+          rawItems.push({
+            journalId: row._id,
+            kind: 'AuctionForfeit',
+            outcome: 'Forfeited',
+            holderId,
+            amount,
+            referenceId: row.auctionId ?? null,
+            detail: 'Tịch thu cọc do người thắng quá hạn thanh toán (50% người bán · 50% nền tảng)',
+            postedAt: row.postedAt,
+          });
+        } else if (row.type === 'WithdrawalRefund') {
+          const amount = userDebitEntry?.debit ?? holdCreditEntry?.credit ?? 0;
+          if (amount <= 0) continue;
+          rawItems.push({
+            journalId: row._id,
+            kind: 'WithdrawalRefund',
+            outcome: 'ReturnedToWallet',
+            holderId: userDebitEntry?.account?.ownerId ?? null,
+            amount,
+            referenceId: row.withdrawalId ?? null,
+            detail: 'Hoàn tiền lệnh rút bị từ chối / thất bại về ví khả dụng',
+            postedAt: row.postedAt,
+          });
+        } else {
+          // OrderRefund | ExchangeReturnRefund
+          const amount = userDebitEntry?.debit ?? holdCreditEntry?.credit ?? 0;
+          if (amount <= 0) continue;
+          rawItems.push({
+            journalId: row._id,
+            kind: 'OrderRefund',
+            outcome: 'ReturnedToWallet',
+            holderId: userDebitEntry?.account?.ownerId ?? null,
+            amount,
+            referenceId: row.orderId ?? null,
+            detail:
+              row.type === 'ExchangeReturnRefund'
+                ? 'Hoàn cọc trao đổi về ví khả dụng sau giải quyết tranh chấp'
+                : 'Hoàn tiền đơn hàng / cọc trao đổi về ví khả dụng',
+            postedAt: row.postedAt,
+          });
+        }
+      }
+
+      const holderIds = Array.from(
+        new Set(
+          rawItems
+            .map((item) => item.holderId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+      const users = holderIds.length
+        ? await tx.c.users.find({ _id: { $in: holderIds } }).toArray()
+        : [];
+      const userById = new Map(users.map((u) => [u._id, u]));
+
+      const allKinds: Wire['FinanceHoldHistoryKind'][] = [
+        'AuctionRelease',
+        'AuctionForfeit',
+        'OrderRefund',
+        'WithdrawalRefund',
+      ];
+      const byKindMap = new Map<
+        Wire['FinanceHoldHistoryKind'],
+        { count: number; amount: number }
+      >(allKinds.map((k) => [k, { count: 0, amount: 0 }]));
+
+      let totalRefunded = 0;
+      let totalForfeited = 0;
+      const enriched: Wire['FinanceHoldHistory']['items'] = rawItems.map(
+        (item) => {
+          const bucket = byKindMap.get(item.kind)!;
+          bucket.count += 1;
+          bucket.amount += item.amount;
+          if (item.outcome === 'ReturnedToWallet') totalRefunded += item.amount;
+          else totalForfeited += item.amount;
+          const user = item.holderId ? userById.get(item.holderId) : undefined;
+          return {
+            journalId: item.journalId,
+            kind: item.kind,
+            kindLabel: kindLabels[item.kind],
+            outcome: item.outcome,
+            holderId: item.holderId,
+            holderName: user?.displayName ?? item.holderId ?? 'Không xác định',
+            holderEmail: user?.emailNormalized ?? null,
+            amount: item.amount,
+            referenceId: item.referenceId,
+            detail: item.detail,
+            postedAt: item.postedAt.toISOString(),
+          };
+        },
+      );
+
+      const filtered = enriched
+        .filter((item) => kindFilter === 'All' || item.kind === kindFilter)
+        .filter((item) => {
+          if (!search) return true;
+          return (
+            item.holderName.toLowerCase().includes(search) ||
+            (item.holderEmail?.toLowerCase().includes(search) ?? false) ||
+            (item.referenceId?.toLowerCase().includes(search) ?? false) ||
+            item.journalId.toLowerCase().includes(search) ||
+            item.kindLabel.toLowerCase().includes(search) ||
+            item.detail.toLowerCase().includes(search)
+          );
+        });
+
+      const startIdx = (page - 1) * pageSize;
+      const paged = filtered.slice(startIdx, startIdx + pageSize);
+
+      return {
+        serverTime: now.toISOString(),
+        simulated: true,
+        summary: {
+          totalRefunded,
+          totalForfeited,
+          totalEvents: enriched.length,
+          byKind: allKinds.map((kind) => ({
+            kind,
+            label: kindLabels[kind],
+            count: byKindMap.get(kind)!.count,
+            amount: byKindMap.get(kind)!.amount,
+          })),
+        },
+        page,
+        pageSize,
+        totalItems: filtered.length,
+        items: paged,
+      };
+    });
+  }
+
+  holdLocks(
+    auth: Actor,
+    query: Record<string, string | number>,
+  ): Promise<Wire['FinanceHoldLocks']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      financeAdmin(actor);
+      const kindFilter = String(query.kind ?? 'All');
+      const search = String(query.q ?? '').trim().toLowerCase();
+      const page = Math.max(1, Number(query.page ?? 1));
+      const pageSize = 15 as const;
+      const now = await tx.now();
+
+      const rows = await tx.c.ledger_journals
+        .aggregate<{
+          _id: string;
+          type: 'AuctionBidHold' | 'OrderPayment' | 'WithdrawalHold';
+          auctionId?: string | null;
+          orderId?: string | null;
+          withdrawalId?: string | null;
+          postedAt: Date;
+          entries: Array<{
+            debit: number;
+            credit: number;
+            accountId: string;
+            account?: {
+              purpose: string;
+              ownerId?: string | null;
+              holderId?: string | null;
+              orderId?: string | null;
+              auctionId?: string | null;
+              withdrawalId?: string | null;
+            };
+          }>;
+        }>([
+          {
+            $match: {
+              type: {
+                $in: ['AuctionBidHold', 'OrderPayment', 'WithdrawalHold'],
+              },
+            },
+          },
+          { $sort: { postedAt: -1, sequence: -1 } },
+          { $limit: 500 },
+          {
+            $lookup: {
+              from: 'ledger_entries',
+              localField: '_id',
+              foreignField: 'journalId',
+              as: 'rawEntries',
+            },
+          },
+          {
+            $lookup: {
+              from: 'wallet_accounts',
+              localField: 'rawEntries.accountId',
+              foreignField: '_id',
+              as: 'accounts',
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              type: 1,
+              auctionId: 1,
+              orderId: 1,
+              withdrawalId: 1,
+              postedAt: 1,
+              entries: {
+                $map: {
+                  input: '$rawEntries',
+                  as: 'e',
+                  in: {
+                    debit: '$$e.debit',
+                    credit: '$$e.credit',
+                    accountId: '$$e.accountId',
+                    account: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$accounts',
+                            as: 'a',
+                            cond: { $eq: ['$$a._id', '$$e.accountId'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ])
+        .toArray();
+
+      const orderIds = Array.from(
+        new Set(
+          rows
+            .filter((r) => r.type === 'OrderPayment')
+            .map((r) => {
+              const holdEntry = r.entries.find(
+                (e) => e.account?.purpose === 'OrderHold' && e.debit > 0,
+              );
+              return r.orderId ?? holdEntry?.account?.orderId ?? null;
+            })
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+
+      const [directOrders, pointOrders, exchanges] = await Promise.all([
+        orderIds.length
+          ? tx.c.direct_orders
+              .find({ _id: { $in: orderIds } }, { projection: { _id: 1 } })
+              .toArray()
+          : Promise.resolve([]),
+        orderIds.length
+          ? tx.c.point_orders
+              .find({ _id: { $in: orderIds } }, { projection: { _id: 1 } })
+              .toArray()
+          : Promise.resolve([]),
+        orderIds.length
+          ? tx.c.exchanges
+              .find(
+                {
+                  $or: [
+                    { initiatorOrderId: { $in: orderIds } },
+                    { recipientOrderId: { $in: orderIds } },
+                  ],
+                },
+                {
+                  projection: {
+                    _id: 1,
+                    initiatorOrderId: 1,
+                    recipientOrderId: 1,
+                  },
+                },
+              )
+              .toArray()
+          : Promise.resolve([]),
+      ]);
+
+      const directIds = new Set(directOrders.map((o) => o._id));
+      const pointIds = new Set(pointOrders.map((o) => o._id));
+      const exchangeByOrderId = new Map<string, string>();
+      for (const ex of exchanges) {
+        exchangeByOrderId.set(ex.initiatorOrderId, ex._id);
+        exchangeByOrderId.set(ex.recipientOrderId, ex._id);
+      }
+
+      const kindLabels: Record<Wire['FinanceHoldKind'], string> = {
+        Exchange: 'Cọc trao đổi',
+        AuctionBid: 'Cọc đấu giá',
+        DirectOrder: 'Đơn mua trực tiếp',
+        PointOrder: 'Đơn đấu giá tại điểm',
+        Withdrawal: 'Tạm giữ rút tiền',
+      };
+
+      const rawItems: Array<{
+        journalId: string;
+        kind: Wire['FinanceHoldKind'];
+        holderId: string | null;
+        amount: number;
+        referenceId: string | null;
+        detail: string;
+        postedAt: Date;
+      }> = [];
+
+      for (const row of rows) {
+        const userCreditEntry = row.entries.find(
+          (e) => e.account?.purpose === 'UserAvailable' && e.credit > 0,
+        );
+        const holdDebitEntry = row.entries.find(
+          (e) =>
+            (e.account?.purpose === 'AuctionBidHold' ||
+              e.account?.purpose === 'OrderHold' ||
+              e.account?.purpose === 'WithdrawalHold') &&
+            e.debit > 0,
+        );
+        const amount = holdDebitEntry?.debit ?? userCreditEntry?.credit ?? 0;
+        if (amount <= 0) continue;
+
+        const holderId =
+          userCreditEntry?.account?.ownerId ??
+          holdDebitEntry?.account?.holderId ??
+          null;
+
+        if (row.type === 'AuctionBidHold') {
+          rawItems.push({
+            journalId: row._id,
+            kind: 'AuctionBid',
+            holderId,
+            amount,
+            referenceId:
+              row.auctionId ?? holdDebitEntry?.account?.auctionId ?? null,
+            detail:
+              'Hệ thống tạm giữ tiền cọc khi người dùng tham gia / đặt giá phiên đấu giá',
+            postedAt: row.postedAt,
+          });
+        } else if (row.type === 'WithdrawalHold') {
+          rawItems.push({
+            journalId: row._id,
+            kind: 'Withdrawal',
+            holderId,
+            amount,
+            referenceId:
+              row.withdrawalId ??
+              holdDebitEntry?.account?.withdrawalId ??
+              null,
+            detail:
+              'Hệ thống tạm giữ số dư khi người dùng gửi yêu cầu rút tiền chờ duyệt',
+            postedAt: row.postedAt,
+          });
+        } else {
+          // OrderPayment
+          const oid = row.orderId ?? holdDebitEntry?.account?.orderId ?? null;
+          if (oid && exchangeByOrderId.has(oid)) {
+            rawItems.push({
+              journalId: row._id,
+              kind: 'Exchange',
+              holderId,
+              amount,
+              referenceId: exchangeByOrderId.get(oid)!,
+              detail:
+                'Hệ thống tạm giữ tiền cọc đảm bảo giao dịch trao đổi sách',
+              postedAt: row.postedAt,
+            });
+          } else if (oid && pointIds.has(oid)) {
+            rawItems.push({
+              journalId: row._id,
+              kind: 'PointOrder',
+              holderId,
+              amount,
+              referenceId: oid,
+              detail:
+                'Hệ thống tạm giữ tiền thanh toán đơn thắng đấu giá giao tại điểm',
+              postedAt: row.postedAt,
+            });
+          } else if (oid && directIds.has(oid)) {
+            rawItems.push({
+              journalId: row._id,
+              kind: 'DirectOrder',
+              holderId,
+              amount,
+              referenceId: oid,
+              detail:
+                'Hệ thống tạm giữ tiền thanh toán đơn mua sách trực tiếp chờ tất toán',
+              postedAt: row.postedAt,
+            });
+          } else {
+            rawItems.push({
+              journalId: row._id,
+              kind: 'DirectOrder',
+              holderId,
+              amount,
+              referenceId: oid,
+              detail: 'Hệ thống tạm giữ tiền thanh toán đơn hàng trên sổ cái',
+              postedAt: row.postedAt,
+            });
+          }
+        }
+      }
+
+      const holderIds = Array.from(
+        new Set(
+          rawItems
+            .map((item) => item.holderId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+      const users = holderIds.length
+        ? await tx.c.users.find({ _id: { $in: holderIds } }).toArray()
+        : [];
+      const userById = new Map(users.map((u) => [u._id, u]));
+
+      const allKinds: Wire['FinanceHoldKind'][] = [
+        'Exchange',
+        'AuctionBid',
+        'DirectOrder',
+        'PointOrder',
+        'Withdrawal',
+      ];
+      const byKindMap = new Map<
+        Wire['FinanceHoldKind'],
+        { count: number; amount: number }
+      >(allKinds.map((k) => [k, { count: 0, amount: 0 }]));
+
+      let totalLocked = 0;
+      const enriched: Wire['FinanceHoldLocks']['items'] = rawItems.map(
+        (item) => {
+          const bucket = byKindMap.get(item.kind)!;
+          bucket.count += 1;
+          bucket.amount += item.amount;
+          totalLocked += item.amount;
+          const user = item.holderId ? userById.get(item.holderId) : undefined;
+          return {
+            journalId: item.journalId,
+            kind: item.kind,
+            kindLabel: kindLabels[item.kind],
+            holderId: item.holderId,
+            holderName: user?.displayName ?? item.holderId ?? 'Không xác định',
+            holderEmail: user?.emailNormalized ?? null,
+            amount: item.amount,
+            referenceId: item.referenceId,
+            detail: item.detail,
+            postedAt: item.postedAt.toISOString(),
+          };
+        },
+      );
+
+      const filtered = enriched
+        .filter((item) => kindFilter === 'All' || item.kind === kindFilter)
+        .filter((item) => {
+          if (!search) return true;
+          return (
+            item.holderName.toLowerCase().includes(search) ||
+            (item.holderEmail?.toLowerCase().includes(search) ?? false) ||
+            (item.referenceId?.toLowerCase().includes(search) ?? false) ||
+            item.journalId.toLowerCase().includes(search) ||
+            item.kindLabel.toLowerCase().includes(search) ||
+            item.detail.toLowerCase().includes(search)
+          );
+        });
+
+      const startIdx = (page - 1) * pageSize;
+      const paged = filtered.slice(startIdx, startIdx + pageSize);
+
+      return {
+        serverTime: now.toISOString(),
+        simulated: true,
+        summary: {
+          totalLocked,
+          totalEvents: enriched.length,
+          byKind: allKinds.map((kind) => ({
+            kind,
+            label: kindLabels[kind],
+            count: byKindMap.get(kind)!.count,
+            amount: byKindMap.get(kind)!.amount,
+          })),
+        },
+        page,
+        pageSize,
+        totalItems: filtered.length,
+        items: paged,
+      };
+    });
+  }
+
+  transfers(
+    auth: Actor,
+    query: Record<string, string | number>,
+  ): Promise<Wire['FinanceTransfers']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      financeAdmin(actor);
+      const kindFilter = String(query.kind ?? 'All');
+      const search = String(query.q ?? '').trim().toLowerCase();
+      const page = Math.max(1, Number(query.page ?? 1));
+      const pageSize = 15 as const;
+      const now = await tx.now();
+
+      const rows = await tx.c.ledger_journals
+        .aggregate<{
+          _id: string;
+          type: 'Topup' | 'WithdrawalPayout';
+          topupId?: string | null;
+          withdrawalId?: string | null;
+          postedAt: Date;
+          entries: Array<{
+            debit: number;
+            credit: number;
+            accountId: string;
+            account?: {
+              purpose: string;
+              ownerId?: string | null;
+              withdrawalId?: string | null;
+            };
+          }>;
+        }>([
+          {
+            $match: {
+              type: { $in: ['Topup', 'WithdrawalPayout'] },
+            },
+          },
+          { $sort: { postedAt: -1, sequence: -1 } },
+          { $limit: 500 },
+          {
+            $lookup: {
+              from: 'ledger_entries',
+              localField: '_id',
+              foreignField: 'journalId',
+              as: 'rawEntries',
+            },
+          },
+          {
+            $lookup: {
+              from: 'wallet_accounts',
+              localField: 'rawEntries.accountId',
+              foreignField: '_id',
+              as: 'accounts',
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              type: 1,
+              topupId: 1,
+              withdrawalId: 1,
+              postedAt: 1,
+              entries: {
+                $map: {
+                  input: '$rawEntries',
+                  as: 'e',
+                  in: {
+                    debit: '$$e.debit',
+                    credit: '$$e.credit',
+                    accountId: '$$e.accountId',
+                    account: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$accounts',
+                            as: 'a',
+                            cond: { $eq: ['$$a._id', '$$e.accountId'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ])
+        .toArray();
+
+      const withdrawalIds = Array.from(
+        new Set(
+          rows
+            .filter((r) => r.type === 'WithdrawalPayout')
+            .map((r) => {
+              const holdCredit = r.entries.find(
+                (e) => e.account?.purpose === 'WithdrawalHold' && e.credit > 0,
+              );
+              return r.withdrawalId ?? holdCredit?.account?.withdrawalId ?? null;
+            })
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+
+      const withdrawals = withdrawalIds.length
+        ? await tx.c.withdrawals
+            .find(
+              { _id: { $in: withdrawalIds } },
+              { projection: { _id: 1, ownerId: 1 } },
+            )
+            .toArray()
+        : [];
+      const withdrawalOwnerById = new Map(
+        withdrawals.map((w) => [w._id, w.ownerId]),
+      );
+
+      const rawItems: Array<{
+        journalId: string;
+        kind: Wire['FinanceTransferKind'];
+        kindLabel: string;
+        userId: string | null;
+        amount: number;
+        referenceId: string | null;
+        detail: string;
+        postedAt: Date;
+      }> = [];
+
+      for (const row of rows) {
+        if (row.type === 'Topup') {
+          const userDebit = row.entries.find(
+            (e) => e.account?.purpose === 'UserAvailable' && e.debit > 0,
+          );
+          const amount = userDebit?.debit ?? 0;
+          if (amount <= 0) continue;
+          rawItems.push({
+            journalId: row._id,
+            kind: 'Topup',
+            kindLabel: 'Nạp tiền vào ví',
+            userId: userDebit?.account?.ownerId ?? null,
+            amount,
+            referenceId: row.topupId ?? row._id,
+            detail: 'Nạp tiền thành công vào ví khả dụng thành viên',
+            postedAt: row.postedAt,
+          });
+        } else {
+          const holdCredit = row.entries.find(
+            (e) => e.account?.purpose === 'WithdrawalHold' && e.credit > 0,
+          );
+          const clearingDebit = row.entries.find(
+            (e) => e.account?.purpose === 'SimulatorClearing' && e.debit > 0,
+          );
+          const amount = holdCredit?.credit ?? clearingDebit?.debit ?? 0;
+          if (amount <= 0) continue;
+          const wid =
+            row.withdrawalId ?? holdCredit?.account?.withdrawalId ?? null;
+          const userId = wid ? (withdrawalOwnerById.get(wid) ?? null) : null;
+          rawItems.push({
+            journalId: row._id,
+            kind: 'WithdrawalPayout',
+            kindLabel: 'Rút tiền hoàn tất',
+            userId,
+            amount,
+            referenceId: wid ?? row._id,
+            detail: 'Admin đã duyệt và chi trả lệnh rút tiền ra khỏi hệ thống',
+            postedAt: row.postedAt,
+          });
+        }
+      }
+
+      const userIds = Array.from(
+        new Set(
+          rawItems
+            .map((item) => item.userId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+      const users = userIds.length
+        ? await tx.c.users.find({ _id: { $in: userIds } }).toArray()
+        : [];
+      const userById = new Map(users.map((u) => [u._id, u]));
+
+      let totalTopup = 0;
+      let topupCount = 0;
+      let totalWithdrawal = 0;
+      let withdrawalCount = 0;
+
+      const enriched: Wire['FinanceTransfers']['items'] = rawItems.map(
+        (item) => {
+          if (item.kind === 'Topup') {
+            totalTopup += item.amount;
+            topupCount += 1;
+          } else {
+            totalWithdrawal += item.amount;
+            withdrawalCount += 1;
+          }
+          const user = item.userId ? userById.get(item.userId) : undefined;
+          return {
+            journalId: item.journalId,
+            kind: item.kind,
+            kindLabel: item.kindLabel,
+            userId: item.userId,
+            userName: user?.displayName ?? item.userId ?? 'Không xác định',
+            userEmail: user?.emailNormalized ?? null,
+            amount: item.amount,
+            referenceId: item.referenceId,
+            detail: item.detail,
+            postedAt: item.postedAt.toISOString(),
+          };
+        },
+      );
+
+      const filtered = enriched
+        .filter((item) => kindFilter === 'All' || item.kind === kindFilter)
+        .filter((item) => {
+          if (!search) return true;
+          return (
+            item.userName.toLowerCase().includes(search) ||
+            (item.userEmail?.toLowerCase().includes(search) ?? false) ||
+            (item.referenceId?.toLowerCase().includes(search) ?? false) ||
+            item.journalId.toLowerCase().includes(search) ||
+            item.kindLabel.toLowerCase().includes(search) ||
+            item.detail.toLowerCase().includes(search)
+          );
+        });
+
+      const startIdx = (page - 1) * pageSize;
+      const paged = filtered.slice(startIdx, startIdx + pageSize);
+
+      return {
+        serverTime: now.toISOString(),
+        simulated: true,
+        summary: {
+          totalTopup,
+          topupCount,
+          totalWithdrawal,
+          withdrawalCount,
+          netFlow: totalTopup - totalWithdrawal,
+        },
+        page,
+        pageSize,
+        totalItems: filtered.length,
+        items: paged,
+      };
+    });
+  }
+
   analytics(
     auth: Actor,
     query: Record<string, string | number>,

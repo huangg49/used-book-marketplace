@@ -8,9 +8,14 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Clock,
-  Info,
+  Coins,
+  Gavel,
+  Landmark,
+  Layers,
+  Lock,
   RefreshCw,
   Scale,
+  ShieldAlert,
   Wallet,
 } from "lucide-react";
 import { canViewFinance, session } from "../../core/session";
@@ -23,7 +28,8 @@ import {
   subtractDays,
 } from "./revenue";
 import { formatSignedVnd, type FinanceCashflow } from "./finance";
-import { StatisticsSubNav } from "./StatisticsSubNav";
+import { HoldsExplorer } from "./HoldsExplorer";
+import { TransfersExplorer } from "./TransfersExplorer";
 import styles from "./StatisticsHub.module.css";
 
 function CashflowChart({ daily }: { daily: FinanceCashflow["daily"] }) {
@@ -112,7 +118,9 @@ function CashflowChart({ daily }: { daily: FinanceCashflow["daily"] }) {
                   fill="#f68b51"
                 />
               )}
-              {(i % labelStep === 0 || i === daily.length - 1) && (
+              {(i === daily.length - 1 ||
+                (i % labelStep === 0 &&
+                  daily.length - 1 - i >= Math.ceil(labelStep / 2))) && (
                 <text
                   x={cx}
                   y={height - 10}
@@ -164,7 +172,6 @@ export function CashflowPage() {
   if (denied) {
     return (
       <div className={styles.page}>
-        <StatisticsSubNav user={user} />
         <section className={styles.denied} aria-labelledby="cashflow-denied">
           <h1 id="cashflow-denied">Không có quyền xem dòng tiền & đối soát</h1>
           <p className={styles.subtitle}>
@@ -184,26 +191,39 @@ export function CashflowPage() {
       cons.listingFeeHeld
     : 0;
 
-  const segments = cons
-    ? [
-        { label: "Ví khả dụng thành viên", value: cons.memberAvailable, color: "#255a43" },
-        { label: "Tiền đang giữ (Escrow / Hold)", value: totalHeld, color: "#f68b51" },
-        { label: "Tài khoản nền tảng", value: cons.platformCommission, color: "#5c0202" },
-        { label: "Nguồn vốn còn lại", value: cons.sourceRemaining, color: "#d9cbbd" },
-      ]
-    : [];
-  const segSum = Math.max(1, segments.reduce((s, x) => s + x.value, 0));
+  const circulatingSum = cons
+    ? cons.memberAvailable + totalHeld + cons.platformCommission
+    : 0;
+
+  const circulatingSegments =
+    cons && circulatingSum > 0
+      ? [
+          {
+            label: "Ví khả dụng thành viên",
+            value: cons.memberAvailable,
+            color: "#255a43",
+            pct: ((cons.memberAvailable / circulatingSum) * 100).toFixed(1).replace(".", ","),
+          },
+          {
+            label: "Tiền đang giữ (Escrow / Hold)",
+            value: totalHeld,
+            color: "#f68b51",
+            pct: ((totalHeld / circulatingSum) * 100).toFixed(1).replace(".", ","),
+          },
+          {
+            label: "Tài khoản nền tảng",
+            value: cons.platformCommission,
+            color: "#5c0202",
+            pct: ((cons.platformCommission / circulatingSum) * 100).toFixed(1).replace(".", ","),
+          },
+        ]
+      : [];
 
   return (
     <div className={styles.page}>
-      <StatisticsSubNav user={user} />
-
       <header className={styles.header}>
         <div className={styles.headerTitle}>
           <h1>Dòng tiền & Đối soát</h1>
-          <p className={styles.subtitle}>
-            Kiểm tra bảo toàn vốn sổ cái, tiền đang giữ (float), nhịp nạp/rút và hàng chờ duyệt rút.
-          </p>
         </div>
 
         <div className={styles.controls}>
@@ -230,18 +250,20 @@ export function CashflowPage() {
             }}
           >
             <label className={styles.dateField}>
-              Từ ngày
+              <span>Từ</span>
               <input
                 type="date"
+                aria-label="Từ ngày"
                 value={fromDraft}
                 max={toDraft}
                 onChange={(e) => setFromDraft(e.target.value)}
               />
             </label>
             <label className={styles.dateField}>
-              Đến ngày
+              <span>Đến</span>
               <input
                 type="date"
+                aria-label="Đến ngày"
                 value={toDraft}
                 min={fromDraft}
                 onChange={(e) => setToDraft(e.target.value)}
@@ -262,11 +284,6 @@ export function CashflowPage() {
           </form>
         </div>
       </header>
-
-      <div className={styles.simBanner} role="note">
-        <Info size={15} aria-hidden="true" />
-        Dòng tiền nạp/rút và số dư đang giữ không phải doanh thu (AC-47).
-      </div>
 
       {query.isError && (
         <ErrorNotice
@@ -291,7 +308,7 @@ export function CashflowPage() {
               <div>
                 <h2 id="conservation-title">Đối soát bảo toàn vốn sổ cái</h2>
                 <p className={styles.panelHint}>
-                  Tổng các tài khoản sổ cái phải bằng chính xác nguồn vốn mô phỏng ({formatVnd(cons.capitalTarget)}).
+                  Tổng các tài khoản sổ cái phải cân bằng chính xác với tổng nguồn vốn hệ thống ({formatVnd(cons.capitalTarget)}).
                 </p>
               </div>
               <span
@@ -311,60 +328,149 @@ export function CashflowPage() {
               </span>
             </div>
 
-            <div className={styles.segmentBar} role="img" aria-label="Tỷ trọng phân bổ vốn sổ cái">
-              {segments.map((seg) => (
+            {/* Conservation Equation Card */}
+            <div className={styles.equationCard} role="region" aria-label="Phương trình cân đối vốn">
+              <div className={styles.equationPart}>
+                <span className={styles.equationSub}>Tổng nguồn vốn hệ thống</span>
+                <strong className={styles.equationValPrimary}>{formatVnd(cons.capitalTarget)}</strong>
+                <span className={styles.equationTag}>Mục tiêu bảo toàn</span>
+              </div>
+              <div className={styles.equationOperator} aria-hidden="true">=</div>
+              <div className={styles.equationPart}>
+                <span className={styles.equationSub}>Vốn đang lưu thông</span>
+                <strong className={styles.equationValGreen}>{formatVnd(circulatingSum)}</strong>
+                <span className={styles.equationTag}>Ví thành viên, Tiền giữ & Nền tảng</span>
+              </div>
+              <div className={styles.equationOperator} aria-hidden="true">+</div>
+              <div className={styles.equationPart}>
+                <span className={styles.equationSub}>Nguồn vốn còn lại</span>
+                <strong className={styles.equationValMuted}>{formatVnd(cons.sourceRemaining)}</strong>
+                <span className={styles.equationTag}>Kho đệm chưa cấp</span>
+              </div>
+            </div>
+
+            {/* Circulating Capital Breakdown */}
+            {circulatingSum > 0 && (
+              <div className={styles.circulatingSection}>
+                <div className={styles.circulatingHeader}>
+                  <span>Cơ cấu phân bổ vốn đang lưu thông trên hệ thống</span>
+                  <span className={styles.circulatingTotal}>{formatVnd(circulatingSum)}</span>
+                </div>
+
                 <div
-                  key={seg.label}
-                  style={{
-                    width: `${(seg.value / segSum) * 100}%`,
-                    background: seg.color,
-                  }}
-                  title={`${seg.label}: ${formatVnd(seg.value)}`}
-                />
-              ))}
-            </div>
+                  className={styles.segmentBar}
+                  role="img"
+                  aria-label="Tỷ trọng vốn đang lưu thông"
+                >
+                  {circulatingSegments.map((seg) => (
+                    <div
+                      key={seg.label}
+                      style={{
+                        width: `${(seg.value / circulatingSum) * 100}%`,
+                        background: seg.color,
+                      }}
+                      title={`${seg.label}: ${formatVnd(seg.value)} (${seg.pct}%)`}
+                    />
+                  ))}
+                </div>
 
-            <div className={styles.legend}>
-              {segments.map((seg) => (
-                <span key={seg.label} className={styles.legendItem}>
-                  <span className={styles.swatch} style={{ background: seg.color }} />
-                  {seg.label}
-                </span>
-              ))}
-            </div>
+                <div className={styles.circulatingLegend}>
+                  {circulatingSegments.map((seg) => (
+                    <div key={seg.label} className={styles.circulatingLegendItem}>
+                      <div className={styles.circulatingLegendTop}>
+                        <span className={styles.circulatingLabelWrap}>
+                          <span className={styles.swatch} style={{ background: seg.color }} />
+                          <span className={styles.circulatingLabel}>{seg.label}</span>
+                        </span>
+                        <span className={styles.circulatingPct}>{seg.pct}%</span>
+                      </div>
+                      <strong className={styles.circulatingAmount}>{formatVnd(seg.value)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
+            {/* 8 Ledger Accounts Grid (4 cols x 2 rows) */}
             <div className={styles.accountGrid}>
-              <div className={styles.accountCell}>
-                <span>Ví khả dụng thành viên</span>
-                <strong>{formatVnd(cons.memberAvailable)}</strong>
+              <div className={styles.accountCard}>
+                <div className={styles.accountCardTop}>
+                  <span className={`${styles.accountBadge} ${styles.badgeGreen}`}>Ví thành viên</span>
+                  <Wallet size={15} className={styles.accountIconGreen} aria-hidden="true" />
+                </div>
+                <div className={styles.accountLabel}>Ví khả dụng thành viên</div>
+                <strong className={styles.accountValue}>{formatVnd(cons.memberAvailable)}</strong>
+                <span className={styles.accountHint}>Số dư sẵn sàng rút hoặc mua hàng</span>
               </div>
-              <div className={styles.accountCell}>
-                <span>Đang giữ đơn & trao đổi</span>
-                <strong>{formatVnd(cons.transactionHeld)}</strong>
+
+              <div className={styles.accountCard}>
+                <div className={styles.accountCardTop}>
+                  <span className={`${styles.accountBadge} ${styles.badgeAmber}`}>Tạm giữ giao dịch</span>
+                  <Lock size={15} className={styles.accountIconAmber} aria-hidden="true" />
+                </div>
+                <div className={styles.accountLabel}>Đang giữ đơn & trao đổi</div>
+                <strong className={styles.accountValue}>{formatVnd(cons.transactionHeld)}</strong>
+                <span className={styles.accountHint}>Ký quỹ mua hàng và cọc trao đổi</span>
               </div>
-              <div className={styles.accountCell}>
-                <span>Đang giữ cọc đấu giá</span>
-                <strong>{formatVnd(cons.auctionHeld)}</strong>
+
+              <div className={styles.accountCard}>
+                <div className={styles.accountCardTop}>
+                  <span className={`${styles.accountBadge} ${styles.badgeAmber}`}>Cọc đấu giá</span>
+                  <Gavel size={15} className={styles.accountIconAmber} aria-hidden="true" />
+                </div>
+                <div className={styles.accountLabel}>Đang giữ cọc đấu giá</div>
+                <strong className={styles.accountValue}>{formatVnd(cons.auctionHeld)}</strong>
+                <span className={styles.accountHint}>Cọc phiên đang diễn ra chờ kết quả</span>
               </div>
-              <div className={styles.accountCell}>
-                <span>Đang giữ chờ rút</span>
-                <strong>{formatVnd(cons.withdrawalHeld)}</strong>
+
+              <div className={styles.accountCard}>
+                <div className={styles.accountCardTop}>
+                  <span className={`${styles.accountBadge} ${styles.badgeAmber}`}>Chờ rút tiền</span>
+                  <ArrowUpRight size={15} className={styles.accountIconAmber} aria-hidden="true" />
+                </div>
+                <div className={styles.accountLabel}>Đang giữ chờ rút</div>
+                <strong className={styles.accountValue}>{formatVnd(cons.withdrawalHeld)}</strong>
+                <span className={styles.accountHint}>Lệnh rút đã trừ ví, chờ chuyển khoản</span>
               </div>
-              <div className={styles.accountCell}>
-                <span>Tài khoản nền tảng</span>
-                <strong>{formatVnd(cons.platformCommission)}</strong>
+
+              <div className={styles.accountCard}>
+                <div className={styles.accountCardTop}>
+                  <span className={`${styles.accountBadge} ${styles.badgeWine}`}>Doanh thu sàn</span>
+                  <Coins size={15} className={styles.accountIconWine} aria-hidden="true" />
+                </div>
+                <div className={styles.accountLabel}>Tài khoản nền tảng</div>
+                <strong className={styles.accountValue}>{formatVnd(cons.platformCommission)}</strong>
+                <span className={styles.accountHint}>Hoa hồng dịch vụ đã tất toán</span>
               </div>
-              <div className={styles.accountCell}>
-                <span>Phí đăng đang giữ</span>
-                <strong>{formatVnd(cons.listingFeeHeld)}</strong>
+
+              <div className={styles.accountCard}>
+                <div className={styles.accountCardTop}>
+                  <span className={`${styles.accountBadge} ${styles.badgeWine}`}>Quỹ dự phòng</span>
+                  <ShieldAlert size={15} className={styles.accountIconWine} aria-hidden="true" />
+                </div>
+                <div className={styles.accountLabel}>Quỹ sự cố độc lập</div>
+                <strong className={styles.accountValue}>{formatVnd(cons.incidentFundBalance)}</strong>
+                <span className={styles.accountHint}>Sổ quỹ riêng tách khỏi nguồn vốn 1.000 tỷ</span>
               </div>
-              <div className={styles.accountCell}>
-                <span>Nguồn vốn còn lại</span>
-                <strong>{formatVnd(cons.sourceRemaining)}</strong>
+
+              <div className={styles.accountCard}>
+                <div className={styles.accountCardTop}>
+                  <span className={`${styles.accountBadge} ${styles.badgeNeutral}`}>Phí niêm yết</span>
+                  <Layers size={15} className={styles.accountIconNeutral} aria-hidden="true" />
+                </div>
+                <div className={styles.accountLabel}>Phí đăng đang giữ</div>
+                <strong className={styles.accountValue}>{formatVnd(cons.listingFeeHeld)}</strong>
+                <span className={styles.accountHint}>Phí đăng sách giữ theo kỳ/phiên</span>
               </div>
-              <div className={styles.accountCell}>
-                <span>Quỹ sự cố độc lập (POL-42)</span>
-                <strong>{formatVnd(cons.incidentFundBalance)}</strong>
+
+              <div className={styles.accountCard}>
+                <div className={styles.accountCardTop}>
+                  <span className={`${styles.accountBadge} ${styles.badgeNeutral}`}>Kho vốn gốc</span>
+                  <Landmark size={15} className={styles.accountIconNeutral} aria-hidden="true" />
+                </div>
+                <div className={styles.accountLabel}>Nguồn vốn còn lại</div>
+                <strong className={styles.accountValue}>{formatVnd(cons.sourceRemaining)}</strong>
+                <span className={styles.accountHint}>Nguồn vốn dự trữ chưa cấp ra thị trường</span>
               </div>
             </div>
           </section>
@@ -374,7 +480,7 @@ export function CashflowPage() {
             <article className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
                 <span>Tổng nạp ví trong kỳ</span>
-                <ArrowDownLeft size={16} color="#255a43" aria-hidden="true" />
+                <ArrowDownLeft size={16} aria-hidden="true" />
               </div>
               <div className={`${styles.kpiValue} ${styles.kpiValuePositive}`}>
                 {formatVnd(data.period.topupTotal)}
@@ -387,7 +493,7 @@ export function CashflowPage() {
             <article className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
                 <span>Tổng rút hoàn tất trong kỳ</span>
-                <ArrowUpRight size={16} color="#912b0e" aria-hidden="true" />
+                <ArrowUpRight size={16} aria-hidden="true" />
               </div>
               <div className={styles.kpiValue}>{formatVnd(data.period.withdrawalTotal)}</div>
               <div className={styles.kpiFoot}>
@@ -441,7 +547,7 @@ export function CashflowPage() {
                   <h2 id="withdrawal-queue-title">Hàng chờ duyệt rút tiền</h2>
                   <p className={styles.panelHint}>Các yêu cầu ở trạng thái chờ Admin xác nhận.</p>
                 </div>
-                <Wallet size={18} color="#5c0202" aria-hidden="true" />
+                <Wallet size={18} aria-hidden="true" />
               </div>
               <ul className={styles.statList}>
                 <li className={styles.statRow}>
@@ -471,6 +577,12 @@ export function CashflowPage() {
               </div>
             </section>
           </div>
+
+          {/* Section 4: Comprehensive Active Holds & Deposits Explorer */}
+          <HoldsExplorer user={user} />
+
+          {/* Section 5: External Cashflow In/Out (Topup & Withdrawal Payouts) */}
+          <TransfersExplorer user={user} />
         </>
       ) : null}
     </div>

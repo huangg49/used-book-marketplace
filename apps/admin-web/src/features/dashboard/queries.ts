@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import type { CurrentUser } from "@used-books/session-client";
 import { dashboardKeys, dashboardRefresh } from "../../core/dashboard-cache";
 import { canReview, canViewFinance } from "../../core/session";
@@ -8,7 +8,11 @@ import { moderationOverview } from "./overview";
 import { revenueOverview } from "./revenue";
 import {
   financeCashflow,
+  financeHoldHistory,
+  financeHoldLocks,
+  financeHolds,
   financeOverview,
+  financeTransfers,
   operationsAnalytics,
 } from "./finance";
 
@@ -91,6 +95,89 @@ export function dashboardCashflowQuery(
       ),
     enabled:
       canViewFinance(user) && from.length > 0 && to.length > 0 && from <= to,
+  });
+}
+export function dashboardHoldsQuery(
+  user: CurrentUser,
+  kind: string,
+  q: string,
+  page: number,
+  request: Request,
+) {
+  const params = new URLSearchParams({ kind, page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.holds(user, kind, q.trim(), page),
+    queryFn: () =>
+      request(`/operations/finance-holds?${params.toString()}`, financeHolds),
+    enabled: canViewFinance(user),
+    placeholderData: keepPreviousData,
+  });
+}
+export function dashboardHoldHistoryQuery(
+  user: CurrentUser,
+  kind: string,
+  q: string,
+  page: number,
+  request: Request,
+  enabled = true,
+) {
+  const params = new URLSearchParams({ kind, page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.holdHistory(user, kind, q.trim(), page),
+    queryFn: () =>
+      request(
+        `/operations/finance-hold-history?${params.toString()}`,
+        financeHoldHistory,
+      ),
+    enabled: canViewFinance(user) && enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+export function dashboardHoldLocksQuery(
+  user: CurrentUser,
+  kind: string,
+  q: string,
+  page: number,
+  request: Request,
+  enabled = true,
+) {
+  const params = new URLSearchParams({ kind, page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.holdLocks(user, kind, q.trim(), page),
+    queryFn: () =>
+      request(
+        `/operations/finance-hold-locks?${params.toString()}`,
+        financeHoldLocks,
+      ),
+    enabled: canViewFinance(user) && enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+export function dashboardTransfersQuery(
+  user: CurrentUser,
+  kind: string,
+  q: string,
+  page: number,
+  request: Request,
+) {
+  const params = new URLSearchParams({ kind, page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.transfers(user, kind, q.trim(), page),
+    queryFn: () =>
+      request(
+        `/operations/finance-transfers?${params.toString()}`,
+        financeTransfers,
+      ),
+    enabled: canViewFinance(user),
+    placeholderData: keepPreviousData,
   });
 }
 export function dashboardAnalyticsQuery(

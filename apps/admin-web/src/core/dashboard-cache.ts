@@ -36,6 +36,14 @@ export const dashboardKeys = {
   cashflowScope: (user: CurrentUser) => [...scope(user), "cashflow"] as const,
   cashflow: (user: CurrentUser, from: string, to: string) =>
     [...scope(user), "cashflow", from, to] as const,
+  holds: (user: CurrentUser, kind: string, q: string, page: number) =>
+    [...scope(user), "holds", kind, q, page] as const,
+  holdHistory: (user: CurrentUser, kind: string, q: string, page: number) =>
+    [...scope(user), "holdHistory", kind, q, page] as const,
+  holdLocks: (user: CurrentUser, kind: string, q: string, page: number) =>
+    [...scope(user), "holdLocks", kind, q, page] as const,
+  transfers: (user: CurrentUser, kind: string, q: string, page: number) =>
+    [...scope(user), "transfers", kind, q, page] as const,
   analyticsScope: (user: CurrentUser) => [...scope(user), "analytics"] as const,
   analytics: (user: CurrentUser, from: string, to: string) =>
     [...scope(user), "analytics", from, to] as const,

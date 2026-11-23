@@ -7,15 +7,21 @@ import {
   canReview,
   canReviewCatalog,
   canSimulate,
+  canViewFinance,
 } from "../../core/session";
 
 export type NavigationIcon =
   | "dashboard" | "statistics" | "books" | "catalog" | "review" | "rating"
   | "ai" | "intake" | "collection" | "incident" | "resolution" | "auction"
   | "overdue" | "point" | "operations" | "users" | "wallet" | "carrier"
-  | "support" | "simulation";
+  | "support" | "simulation" | "ledger";
 
-export type NavigationItem = { label: string; to: string; icon: NavigationIcon };
+export type NavigationItem = {
+  label: string;
+  to: string;
+  icon: NavigationIcon;
+  end?: boolean;
+};
 export type NavigationGroup = {
   id: string;
   label: string;
@@ -36,7 +42,17 @@ const workspaceGroups: RouteGroup[] = [
     label: "Tổng quan",
     items: [
       { label: "Tổng quan", to: "/dashboard", icon: "dashboard" },
-      { label: "Thống kê", to: "/statistics", icon: "statistics", visibleTo: canReview },
+    ],
+  },
+  {
+    id: "statistics",
+    label: "Thống kê",
+    icon: "statistics",
+    items: [
+      { label: "Tài chính & Lợi nhuận", to: "/statistics/finance", icon: "statistics", visibleTo: canViewFinance },
+      { label: "Dòng tiền & Đối soát", to: "/statistics/cashflow", icon: "wallet", visibleTo: canViewFinance },
+      { label: "Giao dịch & Rủi ro", to: "/statistics/operations", icon: "overdue", visibleTo: canReview },
+      { label: "Ghi sổ & Nổi bật", to: "/statistics", icon: "ledger", end: true, visibleTo: canReview },
     ],
   },
   {

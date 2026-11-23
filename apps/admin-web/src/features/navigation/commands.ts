@@ -15,8 +15,20 @@ const details: Record<string, [string, string]> = {
     "tong quan dashboard ban bien tap ke sach home",
   ],
   "/statistics": [
-    "Xem doanh thu nền tảng theo khoảng ngày",
-    "thong ke doanh thu tai chinh settlement bao cao",
+    "Xem doanh thu ghi sổ, sách nổi bật và nhật ký bút toán",
+    "thong ke doanh thu ghi so settlement bao cao noi bat",
+  ],
+  "/statistics/finance": [
+    "Xem GMV, hoa hồng, cọc tịch thu, chi phí và lợi nhuận",
+    "tai chinh loi nhuan p&l gmv hoa hong coc tich thu",
+  ],
+  "/statistics/cashflow": [
+    "Đối soát bảo toàn vốn sổ cái, nạp rút và hàng chờ rút tiền",
+    "dong tien doi soat so cai nap rut float",
+  ],
+  "/statistics/operations": [
+    "Hiệu suất 3 kênh mua bán, trao đổi, đấu giá và rủi ro",
+    "giao dich rui ro hieu suat kenh thanh vien tranh chap",
   ],
   "/review/listings": [
     "Đọc hồ sơ, đối chiếu ảnh và kiểm duyệt bài đăng",

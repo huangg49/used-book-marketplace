@@ -3256,6 +3256,192 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/finance-holds:
+    get:
+      operationId: getFinanceHolds
+      tags: [Operations]
+      summary: Active escrows, deposits and held wallet balances across the platform
+      description: >-
+        ACTIVE ADMIN only. Read-only snapshot of every active ledger hold account
+        with balance > 0 (exchange deposits, auction bid holds, direct/point order
+        escrows and pending withdrawal holds), enriched with holder and reference metadata.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [All, Exchange, AuctionBid, DirectOrder, PointOrder, Withdrawal]
+            default: All
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Active hold breakdown by category and paginated hold items.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceHolds"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-hold-history:
+    get:
+      operationId: getFinanceHoldHistory
+      tags: [Operations]
+      summary: Historical deposit releases, refunds and forfeitures from the immutable ledger
+      description: >-
+        ACTIVE ADMIN only. Read-only ledger journal audit of released auction bid deposits,
+        forfeited deposits, order/exchange deposit refunds and refunded withdrawals.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [All, AuctionRelease, AuctionForfeit, OrderRefund, WithdrawalRefund]
+            default: All
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Summary and paginated deposit release/refund/forfeit ledger events.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceHoldHistory"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-hold-locks:
+    get:
+      operationId: getFinanceHoldLocks
+      tags: [Operations]
+      summary: Historical deposit locks and hold placements from the immutable ledger
+      description: >-
+        ACTIVE ADMIN only. Read-only ledger journal audit of every time funds
+        were locked from a member wallet into a hold account (auction bid
+        deposits, exchange deposits, direct/point order holds, withdrawal holds).
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [All, Exchange, AuctionBid, DirectOrder, PointOrder, Withdrawal]
+            default: All
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Summary and paginated deposit lock/hold placement ledger events.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceHoldLocks"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-transfers:
+    get:
+      operationId: getFinanceTransfers
+      tags: [Operations]
+      summary: Historical wallet top-ups and completed withdrawal payouts from the immutable ledger
+      description: >-
+        ACTIVE ADMIN only. Read-only ledger journal audit of external cashflow
+        in (Topup) and out (WithdrawalPayout) of the platform.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [All, Topup, WithdrawalPayout]
+            default: All
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Summary and paginated wallet top-up and withdrawal payout ledger events.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceTransfers"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/operations-analytics:
     get:
       operationId: getOperationsAnalytics
@@ -23759,6 +23945,274 @@ components:
             pendingCount: { type: integer, minimum: 0 }
             pendingAmount: { type: integer, minimum: 0 }
             oldestRequestedAt: { type: [string, "null"], format: date-time }
+    FinanceHoldKind:
+      type: string
+      enum: [Exchange, AuctionBid, DirectOrder, PointOrder, Withdrawal]
+    FinanceHolds:
+      type: object
+      additionalProperties: false
+      required:
+        - serverTime
+        - simulated
+        - summary
+        - page
+        - pageSize
+        - totalItems
+        - items
+      properties:
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalHeld, totalAccounts, byKind]
+          properties:
+            totalHeld: { type: integer, minimum: 0 }
+            totalAccounts: { type: integer, minimum: 0 }
+            byKind:
+              type: array
+              maxItems: 5
+              items:
+                type: object
+                additionalProperties: false
+                required: [kind, label, count, amount]
+                properties:
+                  kind:
+                    $ref: "#/components/schemas/FinanceHoldKind"
+                  label: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  amount: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, const: 15 }
+        totalItems: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - accountId
+              - kind
+              - kindLabel
+              - holderId
+              - holderName
+              - holderEmail
+              - amount
+              - referenceId
+              - status
+              - updatedAt
+            properties:
+              accountId: { type: string }
+              kind:
+                $ref: "#/components/schemas/FinanceHoldKind"
+              kindLabel: { type: string }
+              holderId: { type: [string, "null"] }
+              holderName: { type: string }
+              holderEmail: { type: [string, "null"] }
+              amount: { type: integer, minimum: 1 }
+              referenceId: { type: [string, "null"] }
+              status: { type: string }
+              updatedAt: { type: [string, "null"], format: date-time }
+    FinanceHoldHistoryKind:
+      type: string
+      enum: [AuctionRelease, AuctionForfeit, OrderRefund, WithdrawalRefund]
+    FinanceHoldHistory:
+      type: object
+      additionalProperties: false
+      required:
+        - serverTime
+        - simulated
+        - summary
+        - page
+        - pageSize
+        - totalItems
+        - items
+      properties:
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalRefunded, totalForfeited, totalEvents, byKind]
+          properties:
+            totalRefunded: { type: integer, minimum: 0 }
+            totalForfeited: { type: integer, minimum: 0 }
+            totalEvents: { type: integer, minimum: 0 }
+            byKind:
+              type: array
+              maxItems: 4
+              items:
+                type: object
+                additionalProperties: false
+                required: [kind, label, count, amount]
+                properties:
+                  kind:
+                    $ref: "#/components/schemas/FinanceHoldHistoryKind"
+                  label: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  amount: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, const: 15 }
+        totalItems: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - journalId
+              - kind
+              - kindLabel
+              - outcome
+              - holderId
+              - holderName
+              - holderEmail
+              - amount
+              - referenceId
+              - detail
+              - postedAt
+            properties:
+              journalId: { type: string }
+              kind:
+                $ref: "#/components/schemas/FinanceHoldHistoryKind"
+              kindLabel: { type: string }
+              outcome:
+                type: string
+                enum: [ReturnedToWallet, Forfeited]
+              holderId: { type: [string, "null"] }
+              holderName: { type: string }
+              holderEmail: { type: [string, "null"] }
+              amount: { type: integer, minimum: 1 }
+              referenceId: { type: [string, "null"] }
+              detail: { type: string }
+              postedAt: { type: string, format: date-time }
+    FinanceHoldLocks:
+      type: object
+      additionalProperties: false
+      required:
+        - serverTime
+        - simulated
+        - summary
+        - page
+        - pageSize
+        - totalItems
+        - items
+      properties:
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalLocked, totalEvents, byKind]
+          properties:
+            totalLocked: { type: integer, minimum: 0 }
+            totalEvents: { type: integer, minimum: 0 }
+            byKind:
+              type: array
+              maxItems: 5
+              items:
+                type: object
+                additionalProperties: false
+                required: [kind, label, count, amount]
+                properties:
+                  kind:
+                    $ref: "#/components/schemas/FinanceHoldKind"
+                  label: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  amount: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, const: 15 }
+        totalItems: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - journalId
+              - kind
+              - kindLabel
+              - holderId
+              - holderName
+              - holderEmail
+              - amount
+              - referenceId
+              - detail
+              - postedAt
+            properties:
+              journalId: { type: string }
+              kind:
+                $ref: "#/components/schemas/FinanceHoldKind"
+              kindLabel: { type: string }
+              holderId: { type: [string, "null"] }
+              holderName: { type: string }
+              holderEmail: { type: [string, "null"] }
+              amount: { type: integer, minimum: 1 }
+              referenceId: { type: [string, "null"] }
+              detail: { type: string }
+              postedAt: { type: string, format: date-time }
+    FinanceTransferKind:
+      type: string
+      enum: [Topup, WithdrawalPayout]
+    FinanceTransfers:
+      type: object
+      additionalProperties: false
+      required:
+        - serverTime
+        - simulated
+        - summary
+        - page
+        - pageSize
+        - totalItems
+        - items
+      properties:
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalTopup, topupCount, totalWithdrawal, withdrawalCount, netFlow]
+          properties:
+            totalTopup: { type: integer, minimum: 0 }
+            topupCount: { type: integer, minimum: 0 }
+            totalWithdrawal: { type: integer, minimum: 0 }
+            withdrawalCount: { type: integer, minimum: 0 }
+            netFlow: { type: integer }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, const: 15 }
+        totalItems: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - journalId
+              - kind
+              - kindLabel
+              - userId
+              - userName
+              - userEmail
+              - amount
+              - referenceId
+              - detail
+              - postedAt
+            properties:
+              journalId: { type: string }
+              kind:
+                $ref: "#/components/schemas/FinanceTransferKind"
+              kindLabel: { type: string }
+              userId: { type: [string, "null"] }
+              userName: { type: string }
+              userEmail: { type: [string, "null"] }
+              amount: { type: integer, minimum: 1 }
+              referenceId: { type: [string, "null"] }
+              detail: { type: string }
+              postedAt: { type: string, format: date-time }
     OperationsAnalytics:
       type: object
       additionalProperties: false

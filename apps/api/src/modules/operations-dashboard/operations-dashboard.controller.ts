@@ -42,6 +42,38 @@ export class OperationsDashboardController {
       this.input.query('getFinanceCashflow', query),
     );
   }
+  @Get('finance-holds')
+  @Roles('ADMIN')
+  holds(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.holds(
+      req.auth,
+      this.input.query('getFinanceHolds', query),
+    );
+  }
+  @Get('finance-hold-history')
+  @Roles('ADMIN')
+  holdHistory(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.holdHistory(
+      req.auth,
+      this.input.query('getFinanceHoldHistory', query),
+    );
+  }
+  @Get('finance-hold-locks')
+  @Roles('ADMIN')
+  holdLocks(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.holdLocks(
+      req.auth,
+      this.input.query('getFinanceHoldLocks', query),
+    );
+  }
+  @Get('finance-transfers')
+  @Roles('ADMIN')
+  transfers(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.transfers(
+      req.auth,
+      this.input.query('getFinanceTransfers', query),
+    );
+  }
   @Get('operations-analytics')
   @Roles('STAFF', 'ADMIN')
   analytics(@Req() req: AuthenticatedRequest, @Query() query: unknown) {

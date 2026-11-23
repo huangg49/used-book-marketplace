@@ -7,7 +7,6 @@ import { canReview, session } from "../../core/session";
 import { ErrorNotice } from "../../core/ui";
 import { dashboardKeys } from "../../core/dashboard-cache";
 import { dashboardRevenueQuery } from "./queries";
-import { StatisticsSubNav } from "./StatisticsSubNav";
 import {
   dateInputInHcm,
   formatRevenueDate,
@@ -168,13 +167,9 @@ export function StatisticsPage() {
 
   return (
     <main className={styles.page}>
-      <StatisticsSubNav user={user} />
       <header className={styles.pageHeader}>
         <div>
           <h1>Ghi sổ & Điểm nổi bật</h1>
-          <p className={styles.intro}>
-            Theo dõi khoản hoa hồng & phí đã ghi nhận trên sổ cái, sách nổi bật và nhật ký bút toán.
-          </p>
         </div>
         <div className={styles.headerActions}>
           <form

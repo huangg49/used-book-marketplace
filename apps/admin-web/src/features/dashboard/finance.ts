@@ -149,8 +149,179 @@ export const operationsAnalytics = z.object({
   }),
 }) satisfies z.ZodType<components["schemas"]["OperationsAnalytics"]>;
 
+export const financeHoldKind = z.enum([
+  "Exchange",
+  "AuctionBid",
+  "DirectOrder",
+  "PointOrder",
+  "Withdrawal",
+]);
+
+export const financeHolds = z.object({
+  serverTime: z.string().datetime(),
+  simulated: z.literal(true),
+  summary: z.object({
+    totalHeld: nonNegInt,
+    totalAccounts: nonNegInt,
+    byKind: z
+      .array(
+        z.object({
+          kind: financeHoldKind,
+          label: z.string(),
+          count: nonNegInt,
+          amount: nonNegInt,
+        }),
+      )
+      .max(5),
+  }),
+  page: z.number().int().positive(),
+  pageSize: z.literal(15),
+  totalItems: nonNegInt,
+  items: z
+    .array(
+      z.object({
+        accountId: z.string(),
+        kind: financeHoldKind,
+        kindLabel: z.string(),
+        holderId: z.string().nullable(),
+        holderName: z.string(),
+        holderEmail: z.string().nullable(),
+        amount: z.number().int().positive(),
+        referenceId: z.string().nullable(),
+        status: z.string(),
+        updatedAt: z.string().datetime().nullable(),
+      }),
+    )
+    .max(15),
+}) satisfies z.ZodType<components["schemas"]["FinanceHolds"]>;
+
+export const financeHoldHistoryKind = z.enum([
+  "AuctionRelease",
+  "AuctionForfeit",
+  "OrderRefund",
+  "WithdrawalRefund",
+]);
+
+export const financeHoldHistory = z.object({
+  serverTime: z.string().datetime(),
+  simulated: z.literal(true),
+  summary: z.object({
+    totalRefunded: nonNegInt,
+    totalForfeited: nonNegInt,
+    totalEvents: nonNegInt,
+    byKind: z
+      .array(
+        z.object({
+          kind: financeHoldHistoryKind,
+          label: z.string(),
+          count: nonNegInt,
+          amount: nonNegInt,
+        }),
+      )
+      .max(4),
+  }),
+  page: z.number().int().positive(),
+  pageSize: z.literal(15),
+  totalItems: nonNegInt,
+  items: z
+    .array(
+      z.object({
+        journalId: z.string(),
+        kind: financeHoldHistoryKind,
+        kindLabel: z.string(),
+        outcome: z.enum(["ReturnedToWallet", "Forfeited"]),
+        holderId: z.string().nullable(),
+        holderName: z.string(),
+        holderEmail: z.string().nullable(),
+        amount: z.number().int().positive(),
+        referenceId: z.string().nullable(),
+        detail: z.string(),
+        postedAt: z.string().datetime(),
+      }),
+    )
+    .max(15),
+}) satisfies z.ZodType<components["schemas"]["FinanceHoldHistory"]>;
+
+export const financeHoldLocks = z.object({
+  serverTime: z.string().datetime(),
+  simulated: z.literal(true),
+  summary: z.object({
+    totalLocked: nonNegInt,
+    totalEvents: nonNegInt,
+    byKind: z
+      .array(
+        z.object({
+          kind: financeHoldKind,
+          label: z.string(),
+          count: nonNegInt,
+          amount: nonNegInt,
+        }),
+      )
+      .max(5),
+  }),
+  page: z.number().int().positive(),
+  pageSize: z.literal(15),
+  totalItems: nonNegInt,
+  items: z
+    .array(
+      z.object({
+        journalId: z.string(),
+        kind: financeHoldKind,
+        kindLabel: z.string(),
+        holderId: z.string().nullable(),
+        holderName: z.string(),
+        holderEmail: z.string().nullable(),
+        amount: z.number().int().positive(),
+        referenceId: z.string().nullable(),
+        detail: z.string(),
+        postedAt: z.string().datetime(),
+      }),
+    )
+    .max(15),
+}) satisfies z.ZodType<components["schemas"]["FinanceHoldLocks"]>;
+
+export const financeTransferKind = z.enum(["Topup", "WithdrawalPayout"]);
+
+export const financeTransfers = z.object({
+  serverTime: z.string().datetime(),
+  simulated: z.literal(true),
+  summary: z.object({
+    totalTopup: nonNegInt,
+    topupCount: nonNegInt,
+    totalWithdrawal: nonNegInt,
+    withdrawalCount: nonNegInt,
+    netFlow: z.number().int(),
+  }),
+  page: z.number().int().positive(),
+  pageSize: z.literal(15),
+  totalItems: nonNegInt,
+  items: z
+    .array(
+      z.object({
+        journalId: z.string(),
+        kind: financeTransferKind,
+        kindLabel: z.string(),
+        userId: z.string().nullable(),
+        userName: z.string(),
+        userEmail: z.string().nullable(),
+        amount: z.number().int().positive(),
+        referenceId: z.string().nullable(),
+        detail: z.string(),
+        postedAt: z.string().datetime(),
+      }),
+    )
+    .max(15),
+}) satisfies z.ZodType<components["schemas"]["FinanceTransfers"]>;
+
 export type FinanceOverview = z.infer<typeof financeOverview>;
 export type FinanceCashflow = z.infer<typeof financeCashflow>;
+export type FinanceHoldKind = z.infer<typeof financeHoldKind>;
+export type FinanceHolds = z.infer<typeof financeHolds>;
+export type FinanceHoldHistoryKind = z.infer<typeof financeHoldHistoryKind>;
+export type FinanceHoldHistory = z.infer<typeof financeHoldHistory>;
+export type FinanceHoldLocks = z.infer<typeof financeHoldLocks>;
+export type FinanceTransferKind = z.infer<typeof financeTransferKind>;
+export type FinanceTransfers = z.infer<typeof financeTransfers>;
 export type OperationsAnalytics = z.infer<typeof operationsAnalytics>;
 
 export function formatSignedVnd(value: number) {
