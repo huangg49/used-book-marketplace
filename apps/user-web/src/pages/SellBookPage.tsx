@@ -1382,7 +1382,7 @@ export function SellBookPage() {
             </span>
           )}
         </div>
-        {formData.images.length > 1 && (
+        {formData.images.length > 0 && (
           <div
             className={styles.previewThumbnails}
             role="group"
@@ -1770,7 +1770,7 @@ export function SellBookPage() {
               </aside>
               <details className={styles.compactPreview}>
                 <summary>
-                  <span>Xem trước bản nháp</span>
+                  <span>Xem bản nháp</span>
                   <span className={styles.compactPreviewMeta}>
                     {imageFiles.length}/8 ảnh
                     <ChevronDown size={16} aria-hidden="true" />
@@ -2403,6 +2403,7 @@ export function SellBookPage() {
                                   id="images"
                                   type="button"
                                   className={styles.upload}
+                                  aria-label="Chọn ảnh bìa"
                                   disabled={hasAttempt || submitting}
                                   onClick={() => coverInput.current?.click()}
                                   {...feedbackProps("images", "image-help")}
