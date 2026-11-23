@@ -403,7 +403,7 @@ describe('Exchange Agreement Amounts & Invariants', () => {
       expect(scope!.ownerBookValue).toBe(300000);
     });
 
-    it('Migration 0088 adds resolutionCompensationAmount and Demo Skip works in Delivered before both confirm', () => {
+    it('Migration 0088 adds resolutionCompensationAmount and Demo Skip requires both acknowledgements in Delivered', () => {
       const exchangeSpec = currentCollections().find((c) => c.name === 'exchanges');
       expect((exchangeSpec?.schema.properties as Record<string, unknown>)?.resolutionCompensationAmount).toBeDefined();
 
@@ -420,7 +420,10 @@ describe('Exchange Agreement Amounts & Invariants', () => {
         disputedBy: null,
         disputeReason: null,
       } as unknown as ExchangeDoc;
-      expect(currentDemoDeadline(delivered, now, false)).toBe('Inspection');
+      expect(currentDemoDeadline(delivered, now, false)).toBeUndefined();
+      expect(
+        currentDemoDeadline({ ...delivered, recipientCompletedAt: now }, now, false),
+      ).toBe('Inspection');
     });
   });
 });
