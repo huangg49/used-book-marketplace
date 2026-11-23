@@ -1,8 +1,20 @@
-/** Display clock only; new server data can start a new countdown after expiry. */
-export function startServerCountdown(endAt: string, serverTime: string | undefined, update: (remaining: number) => void) {
+import { createServerNow, serverClock, type ServerClock } from '@used-books/session-client';
+
+/**
+ * Display clock only; new server data can start a new countdown after expiry.
+ * Time comes from the shared server clock (round-trip corrected, monotonic);
+ * before its first sample, from the offset of `serverTime`. Without
+ * `serverTime` it is a local countdown on the device date.
+ */
+export function startServerCountdown(
+  endAt: string,
+  serverTime: string | undefined,
+  update: (remaining: number) => void,
+  clock: ServerClock = serverClock,
+) {
   const deadline = Date.parse(endAt);
-  const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0;
-  const remaining = () => Math.max(0, deadline - (Date.now() + offset));
+  const now = createServerNow(serverTime, clock);
+  const remaining = () => Math.max(0, deadline - now());
   const initial = remaining();
   update(initial);
   if (!(initial > 0)) return () => {};

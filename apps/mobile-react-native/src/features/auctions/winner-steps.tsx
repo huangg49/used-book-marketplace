@@ -1,3 +1,4 @@
+import { createServerNow } from "../../core/api/session-client";
 import { ReviewEntry } from "../reviews/review-entry";
 import { useEffect, useState } from "react";
 import { View, TouchableOpacity } from "react-native";
@@ -71,9 +72,8 @@ function useRemaining(deadline: string | null, serverTime: string | undefined) {
   );
   useEffect(() => {
     if (!deadline || !serverTime) return;
-    const offset = Date.parse(serverTime) - Date.now();
-    const tick = () =>
-      setMs(Math.max(0, Date.parse(deadline) - (Date.now() + offset)));
+    const serverNow = createServerNow(serverTime);
+    const tick = () => setMs(Math.max(0, Date.parse(deadline) - serverNow()));
     const first = setTimeout(tick, 0);
     const timer = setInterval(tick, 1000);
     return () => {

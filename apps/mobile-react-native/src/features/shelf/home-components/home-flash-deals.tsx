@@ -1,3 +1,4 @@
+import { createServerNow } from "../../../core/api/session-client";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
@@ -23,13 +24,14 @@ export function HomeLiveAuctions({
   onSeeAllPress,
 }: HomeLiveAuctionsProps) {
   const active = useForeground();
-  const anchor = useRef<{ source: string; local: number } | null>(null);
+  // Shared server clock; before its first sample, the offset of `serverTime` as first seen.
+  const anchor = useRef<{ source: string; now: () => number } | null>(null);
   const [clock, setClock] = useState({ source: serverTime, now: serverTime ? Date.parse(serverTime) : 0 });
   useEffect(() => {
     if (!active || !serverTime || !items.length) return;
-    if (anchor.current?.source !== serverTime) anchor.current = { source: serverTime, local: Date.now() };
-    const local = anchor.current.local;
-    const timer = setInterval(() => setClock({ source: serverTime, now: Date.parse(serverTime) + Math.max(0, Date.now() - local) }), 1000);
+    if (anchor.current?.source !== serverTime) anchor.current = { source: serverTime, now: createServerNow(serverTime) };
+    const serverNow = anchor.current.now;
+    const timer = setInterval(() => setClock({ source: serverTime, now: serverNow() }), 1000);
     return () => clearInterval(timer);
   }, [active, serverTime, items.length]);
   const now = clock.source === serverTime ? clock.now : (serverTime ? Date.parse(serverTime) : 0);

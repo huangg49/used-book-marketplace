@@ -6,6 +6,7 @@ import {
   type CurrentUser,
   type LoginRequest,
 } from "./schemas";
+import { ServerClock, serverClock } from "./server-clock";
 
 export interface TokenStorage {
   read(): Promise<string | null>;
@@ -44,6 +45,7 @@ export class SessionClient {
     private readonly baseUrl: string,
     private readonly storage: TokenStorage,
     private readonly fetcher: Fetcher = (url, init) => fetch(url, init),
+    private readonly clock: ServerClock = serverClock,
   ) {}
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => {
@@ -77,11 +79,13 @@ export class SessionClient {
       if (!headers.has("Content-Type"))
         headers.set("Content-Type", "application/json");
       if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+      const sentAt = this.clock.mark();
       const response = await this.fetcher(`${this.baseUrl}${path}`, {
         ...init,
         signal: controller.signal,
         headers,
       });
+      const receivedAt = this.clock.mark();
       if (response.status === 204) return undefined;
       const body: unknown = await response.json().catch(() => null);
       if (controller.signal.aborted)
@@ -100,6 +104,9 @@ export class SessionClient {
           typeof detail.requestId === "string" ? detail.requestId : undefined,
         );
       }
+      // Responses stamped with serverTime keep the shared countdown clock in sync.
+      if (body && typeof body === "object")
+        this.clock.observe((body as Record<string, unknown>).serverTime, sentAt, receivedAt);
       return body;
     } catch (error) {
       if (error instanceof ApiError) throw error;
