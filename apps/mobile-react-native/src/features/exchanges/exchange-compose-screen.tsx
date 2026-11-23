@@ -7,6 +7,7 @@ import { useExchangeRecovery } from "./exchange-recovery";
 import { exchangeSchema } from "./contracts";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -133,7 +134,8 @@ function InventoryBookRow({
 
         {isMatched && (
           <View style={styles.matchedBadge}>
-            <AppText style={styles.matchedBadgeText}>✨ Khớp mong muốn</AppText>
+            <Icon name="star" size={11} color={stitchTokens.wine} />
+            <AppText style={styles.matchedBadgeText}>Khớp mong muốn</AppText>
           </View>
         )}
 
@@ -170,6 +172,7 @@ export function ExchangeComposeScreen() {
 function ExchangeComposeContent({ identity }: { identity: string }) {
   const params = useLocalSearchParams<{ book?: string }>();
   const targetListingId = typeof params.book === "string" ? params.book : "";
+  const insets = useSafeAreaInsets();
 
   const { client, state } = useSession();
   const { proposal: retained, created } = useExchangeRecovery(
@@ -225,14 +228,21 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
     null;
   const effectiveAddressId = selectedAddressId ?? defaultAddressId;
 
-  // Filter eligible listings: must have trade available and not Sale-only
+  // Filter eligible listings: single book (no bundle), Confirmed catalog, exchange value & photo present
   const myEligibleListings = (myInventoryQuery.data?.items ?? []).filter(
     (item) => {
+      const content = item.currentRevision.content;
       const isAvailable =
-        item.state.trade === "Available" && item.state.visibility === "Visible";
-      const mode = item.currentRevision.content.mode;
+        item.state.trade === "Available" &&
+        item.state.visibility === "Visible" &&
+        item.catalogStatus === "Confirmed";
+      const mode = content.mode;
       const canExchange = mode === "Exchange" || mode === "Both";
-      return isAvailable && canExchange;
+      const hasValueAndPhoto =
+        !content.bundle &&
+        (content.exchangeValue ?? 0) > 0 &&
+        content.mediaIds.length > 0;
+      return isAvailable && canExchange && hasValueAndPhoto;
     },
   );
 
@@ -429,26 +439,32 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
 
   return (
     <Screen
-      appearance="browse"
+      appearance="home"
+      canvasColor="#F6F2EB"
       compactFooter={true}
       header={
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top, 10) + 6, paddingBottom: 14 },
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Quay lại"
+            hitSlop={8}
             onPress={() => {
               if (router.canGoBack()) router.back();
               else router.replace("/");
             }}
             style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
           >
-            <Icon name="back" size={20} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Quay lại</AppText>
+            <Icon name="back" size={19} color={stitchTokens.white} />
           </Pressable>
 
           <AppText style={styles.headerTitle}>Soạn đề nghị đổi sách</AppText>
 
-          <View style={{ width: 40 }} />
+          <View style={{ width: 38 }} />
         </View>
       }
       footer={
@@ -458,21 +474,39 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
               <Notice tone="error">{errorNotice}</Notice>
             </View>
           ) : null}
-          <Button
-            title={
-              submitProposalMutation.isPending
-                ? "Đang gửi đề nghị..."
-                : chosenMyListings.length > 0
-                  ? `Gửi đề xuất đổi ${chosenMyListings.length} cuốn (${diff > 0 ? "Bù " + formatVnd(diff) : diff < 0 ? "Nhận bù " + formatVnd(-diff) : "Ngang giá"})`
-                  : "Vui lòng chọn ít nhất 1 cuốn sách để đổi"
-            }
-            wine
-            busy={submitProposalMutation.isPending}
-            disabled={
-              chosenMyListings.length === 0 || submitProposalMutation.isPending
-            }
-            onPress={() => submitProposalMutation.mutate()}
-          />
+          <View style={styles.composeDockRow}>
+            <View style={styles.composeDockInfo}>
+              <AppText style={styles.composeDockLabel}>
+                {chosenMyListings.length > 0
+                  ? `Đã chọn ${chosenMyListings.length} cuốn · ${diff > 0 ? "Bạn bù " + formatVnd(diff) : diff < 0 ? "Nhận bù " + formatVnd(-diff) : "Ngang giá"}`
+                  : "Chưa chọn sách nào"}
+              </AppText>
+              <AppText style={styles.composeDockAmount}>
+                {chosenMyListings.length > 0
+                  ? `Cọc dự kiến: ${formatVnd(totalMyValue + (diff > 0 ? diff : 0))}`
+                  : "Chọn sách từ kệ bên trên"}
+              </AppText>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              disabled={
+                chosenMyListings.length === 0 ||
+                submitProposalMutation.isPending
+              }
+              onPress={() => submitProposalMutation.mutate()}
+              style={({ pressed }) => [
+                styles.composeDockBtn,
+                (chosenMyListings.length === 0 ||
+                  submitProposalMutation.isPending) &&
+                  styles.composeDockBtnDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <AppText style={styles.composeDockBtnText}>
+                {submitProposalMutation.isPending ? "Đang gửi..." : "Gửi đề nghị"}
+              </AppText>
+            </Pressable>
+          </View>
         </View>
       }
     >
@@ -604,8 +638,8 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
                 <View style={styles.prefHintRow}>
                   <Icon name="star" size={12} color={stitchTokens.goldBronze} />
                   <AppText style={styles.prefHint}>
-                    Sách trên kệ của bạn khớp tiêu chí sẽ có huy hiệu{" "}
-                    <AppText style={styles.prefHintHighlight}>✨ Khớp mong muốn</AppText>
+                    Sách trên kệ khớp tiêu chí sẽ có nhãn{" "}
+                    <AppText style={styles.prefHintHighlight}>Khớp mong muốn</AppText>
                   </AppText>
                 </View>
               </View>
@@ -649,20 +683,20 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
           )}
         </View>
 
-        {/* 3. So khớp giá trị & Chênh lệch (nếu đã chọn sách) */}
+        {/* 3. So khớp giá trị & Cọc tỷ lệ (đồng bộ công thức Web) */}
         {chosenMyListings.length > 0 && (
           <View style={styles.diffCard}>
             <View style={styles.diffHeader}>
-              <Icon name="swap" size={16} color={stitchTokens.wineDark} />
+              <Icon name="shield" size={16} color={stitchTokens.wine} />
               <AppText style={styles.diffTitle}>
-                So khớp giá trị trao đổi
+                Nếu hai bên đồng ý (dự tính đặt cọc)
               </AppText>
             </View>
 
             <View style={styles.diffGrid}>
               <View style={styles.diffItem}>
                 <AppText style={styles.diffItemLabel}>
-                  Sách bạn gửi ({chosenMyListings.length} cuốn)
+                  Cọc của bạn ({chosenMyListings.length} cuốn gửi)
                 </AppText>
                 <AppText style={styles.diffItemValue}>
                   {formatVnd(totalMyValue)}
@@ -670,11 +704,11 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
               </View>
 
               <View style={styles.diffDivider}>
-                <Icon name="arrow" size={14} color={stitchTokens.roseBrown} />
+                <Icon name="swap" size={14} color={stitchTokens.subtleGray} />
               </View>
 
               <View style={styles.diffItem}>
-                <AppText style={styles.diffItemLabel}>Sách bạn nhận</AppText>
+                <AppText style={styles.diffItemLabel}>Cọc đối tác</AppText>
                 <AppText style={styles.diffItemValue}>
                   {formatVnd(targetValue)}
                 </AppText>
@@ -702,12 +736,23 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
                 ]}
               >
                 {diff > 0
-                  ? `Bạn bù thêm: +${formatVnd(diff)}`
+                  ? `Bạn bù thêm: ${formatVnd(diff)} · Tổng bạn nộp: ${formatVnd(totalMyValue + diff)}`
                   : diff < 0
-                    ? `Đối tác bù thêm: +${formatVnd(-diff)}`
-                    : "Trao đổi ngang giá (0 ₫ chênh lệch)"}
+                    ? `Đối tác bù cho bạn: ${formatVnd(-diff)} · Tổng bạn nộp: ${formatVnd(totalMyValue)}`
+                    : `Trao đổi ngang giá · Tổng bạn nộp: ${formatVnd(totalMyValue)}`}
               </AppText>
             </View>
+
+            <AppText
+              style={{
+                fontSize: 11.5,
+                color: stitchTokens.subtleGray,
+                lineHeight: 16,
+              }}
+            >
+              Gửi đề nghị chưa giữ sách hay trừ tiền ví. Tiền cọc được hoàn 100%
+              khi giao dịch hoàn tất.
+            </AppText>
           </View>
         )}
 
@@ -828,53 +873,102 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
 
 const styles = StyleSheet.create({
   header: {
-    height: 54,
     paddingHorizontal: space.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: stitchTokens.roseWarmBlur,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.cardBorder,
+    backgroundColor: stitchTokens.wine,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
   },
   backBtn: {
-    flexDirection: "row",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
+    justifyContent: "center",
   },
   backLabel: {
     fontSize: 14,
     fontWeight: "700",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.white,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 16.5,
     fontWeight: "800",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.white,
+  },
+  composeDockRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  composeDockInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  composeDockLabel: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: stitchTokens.subtleGray,
+  },
+  composeDockAmount: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  composeDockBtn: {
+    minHeight: 46,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.wine,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  composeDockBtnDisabled: {
+    opacity: 0.45,
+  },
+  composeDockBtnText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: stitchTokens.white,
   },
   scrollContainer: {
     flex: 1,
-    backgroundColor: stitchTokens.creamBg,
+    backgroundColor: "#F6F2EB",
   },
   scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
     paddingBottom: space.section,
-    gap: space.md,
+    gap: 14,
   },
   errorBox: {
     padding: space.lg,
     gap: space.md,
   },
   targetCard: {
-    marginHorizontal: -space.xl,
-    marginTop: -space.xl,
-    paddingHorizontal: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md + 4,
-    backgroundColor: stitchTokens.wine,
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 18,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(92, 2, 2, 0.06)",
     gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.wineDark,
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
   targetCardBadgeRow: {
     flexDirection: "row",
@@ -885,33 +979,33 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: stitchTokens.goldLight,
+    backgroundColor: stitchTokens.roseParchment,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   targetBadgeText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: stitchTokens.wine,
   },
   targetOwner: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
-    color: stitchTokens.goldLight,
+    color: stitchTokens.subtleGray,
   },
   targetBookRow: {
     flexDirection: "row",
     gap: 12,
   },
   photoBox: {
-    width: 65,
-    height: 85,
-    borderRadius: 8,
+    width: 60,
+    height: 80,
+    borderRadius: 6,
     overflow: "hidden",
-    backgroundColor: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.canvasMuted,
     borderWidth: 1,
-    borderColor: stitchTokens.whiteAlpha20,
+    borderColor: stitchTokens.borderWarm,
   },
   targetDetails: {
     flex: 1,
@@ -920,13 +1014,13 @@ const styles = StyleSheet.create({
   },
   targetBookTitle: {
     fontSize: 15,
-    fontWeight: "800",
-    color: stitchTokens.white,
-    lineHeight: 19,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+    lineHeight: 20,
   },
   targetBookAuthors: {
-    fontSize: 12,
-    color: stitchTokens.goldLight,
+    fontSize: 12.5,
+    color: stitchTokens.subtleGray,
   },
   valueRow: {
     flexDirection: "row",
@@ -935,25 +1029,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   valueLabel: {
-    fontSize: 11,
-    color: stitchTokens.creamBg,
+    fontSize: 12,
+    color: stitchTokens.subtleGray,
   },
   targetValueText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: stitchTokens.gold,
+    fontSize: 14,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
   },
   sectionCard: {
-    padding: space.md,
-    borderRadius: 18,
+    padding: 18,
+    borderRadius: 20,
     backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachMuted,
+    borderWidth: 1,
+    borderColor: "rgba(92, 2, 2, 0.06)",
     gap: 12,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     elevation: 3,
   },
   sectionHeader: {
@@ -1101,23 +1196,26 @@ const styles = StyleSheet.create({
   bookOptionCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 16,
     backgroundColor: stitchTokens.parchment,
     borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorderAlpha40,
+    borderColor: "transparent",
     gap: 12,
   },
   bookOptionCardSelected: {
-    borderColor: stitchTokens.wineMid,
+    borderColor: stitchTokens.wine,
     backgroundColor: stitchTokens.roseWarmSurface,
   },
   bookOptionCardMatched: {
-    borderColor: stitchTokens.goldBorder,
-    backgroundColor: stitchTokens.ivoryWhite,
+    borderColor: stitchTokens.goldAccent,
+    backgroundColor: stitchTokens.goldLight,
   },
   matchedBadge: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: stitchTokens.goldVeryLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -1192,12 +1290,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   diffCard: {
-    padding: space.md,
-    borderRadius: 18,
-    backgroundColor: stitchTokens.amberBg,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.goldBorder,
-    gap: 10,
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAccent,
+    gap: 12,
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
   diffHeader: {
     flexDirection: "row",

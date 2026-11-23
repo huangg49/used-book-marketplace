@@ -80,7 +80,7 @@ export function ProposalHistory({ detail }: { detail: ExchangeDetail }) {
           <div className={styles.agreementCard}>
             <dt>Cọc của bạn</dt>
             <dd>{amount(detail.viewerDeposit)}</dd>
-            <span className={styles.agreementHint}>Hoàn trả khi nhận sách</span>
+            <span className={styles.agreementHint}>Hoàn trả khi hoàn tất trao đổi</span>
           </div>
           <div className={styles.agreementCard}>
             <dt>Cọc của đối tác</dt>

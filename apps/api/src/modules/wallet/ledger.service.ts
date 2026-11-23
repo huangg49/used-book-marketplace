@@ -32,7 +32,10 @@ import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
 import { checkOrder } from '../orders/order-invariants.js';
 import { checkPointOrder } from '../auctions/point-order-invariants.js';
-import { exchangeSettlementScope } from '../exchanges/exchange-return-resolution.js';
+import {
+  exchangeCompensationAmount,
+  exchangeSettlementScope,
+} from '../exchanges/exchange-return-resolution.js';
 import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
 import {
   FEE_JOURNAL_TYPES,
@@ -277,13 +280,18 @@ export async function checkJournal(tx: Tx, journalId: string) {
       $or: [{ initiatorOrderId: j.orderId! }, { recipientOrderId: j.orderId! }],
     });
     const baseReceipt = ex?.returnResolution?.settlementReceiptId;
-    if (!ex || !baseReceipt || ex.status !== 'Cancelled' || ex.returnResolution?.phase !== 'Closed')
+    const validStatus =
+      ex?.status === 'Cancelled' ||
+      (ex?.status === 'Completed' && Boolean(ex.resolutionCompensationAmount));
+    if (!ex || !baseReceipt || !validStatus || ex.returnResolution?.phase !== 'Closed')
       throw new Error('Exchange return journal requires a closed resolution');
     const move = exchangeReturnMoves(ex).find((candidate) =>
-      candidate.kind === j.type && candidate.orderId === j.orderId);
+      candidate.kind === j.type &&
+      candidate.orderId === j.orderId &&
+      j.receiptId === exchangeReturnJournalRef(baseReceipt, candidate.code));
     const debit = entries.find((entry) => entry.debit > 0);
     const credit = entries.find((entry) => entry.credit > 0);
-    if (!move || j.receiptId !== exchangeReturnJournalRef(baseReceipt, move.code) ||
+    if (!move ||
         !debit || debit.debit !== move.amount ||
         account(debit.accountId)?.purpose !== 'UserAvailable' ||
         account(debit.accountId)?.ownerId !== move.recipientId ||
@@ -691,13 +699,65 @@ export class LedgerService {
     const account = await tx.c.wallet_accounts.findOne({ ownerId });
     return account ? balanceOf(tx, account._id) : 0;
   }
-  // Holds of the buyer's DirectDelivery and ViaPoint (auction) Orders.
+  // Holds of DirectDelivery, ViaPoint (auction), Exchange escrows, and pending listing fees.
   async held(tx: Tx, buyerId: string) {
     return (
       (await this.heldIn(tx, 'direct_orders', buyerId)) +
       (await this.heldIn(tx, 'point_orders', buyerId)) +
+      (await this.heldInExchanges(tx, buyerId)) +
       (await this.pendingListingFees(tx, buyerId))
     );
+  }
+  private async heldInExchanges(tx: Tx, userId: string) {
+    const rows = await tx.c.exchanges
+      .find(
+        {
+          $or: [{ initiatorId: userId }, { recipientId: userId }],
+          status: {
+            $in: [
+              'AcceptedAwaitingFunding',
+              'Preparing',
+              'InTransit',
+              'Delivered',
+              'ResolutionPending',
+            ],
+          },
+        },
+        { projection: { initiatorId: 1, initiatorOrderId: 1, recipientOrderId: 1 } },
+      )
+      .toArray();
+    const orderIds = rows.map((row) =>
+      row.initiatorId === userId ? row.initiatorOrderId : row.recipientOrderId,
+    );
+    if (!orderIds.length) return 0;
+    const [sum] = await tx.c.wallet_accounts
+      .aggregate<{ amount: number }>([
+        { $match: { orderId: { $in: orderIds }, purpose: 'OrderHold' } },
+        {
+          $lookup: {
+            from: 'ledger_entries',
+            localField: '_id',
+            foreignField: 'accountId',
+            as: 'e',
+          },
+        },
+        { $unwind: { path: '$e', preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: null,
+            amount: {
+              $sum: {
+                $subtract: [
+                  { $ifNull: ['$e.debit', 0] },
+                  { $ifNull: ['$e.credit', 0] },
+                ],
+              },
+            },
+          },
+        },
+      ])
+      .toArray();
+    return sum?.amount ?? 0;
   }
   private async heldIn(
     tx: Tx,
@@ -1471,19 +1531,66 @@ function exchangeReturnJournalRef(receiptId: string, allocation: string) {
   return [hash.slice(0, 8), hash.slice(8, 12), hash.slice(12, 16), hash.slice(16, 20), hash.slice(20, 32)].join('-');
 }
 
-function exchangeReturnMoves(exchange: ExchangeDoc) {
+export function exchangeReturnMoves(exchange: ExchangeDoc) {
   const scope = exchangeSettlementScope(exchange);
   const outcome = exchange.returnResolution?.outcome;
   if (!scope || !outcome) throw new Error('Exchange return allocation requires a final outcome');
   const compensated = outcome === 'Compensated';
+  const ownerLocked =
+    scope.ownerDeposit +
+    (scope.differencePayerId === scope.ownerId ? scope.differenceAmount : 0);
+  const holderLocked =
+    scope.holderDeposit +
+    (scope.differencePayerId === scope.holderId ? scope.differenceAmount : 0);
+
+  // Type 2 partial damage deduction (Completed exchange with damage deduction D).
+  if (
+    compensated &&
+    exchange.status === 'Completed' &&
+    exchange.resolutionCompensationAmount != null &&
+    exchange.resolutionCompensationAmount > 0
+  ) {
+    const damage = exchange.resolutionCompensationAmount;
+    if (scope.differencePayerId === scope.ownerId && scope.differenceAmount > 0) {
+      const diffToHolder = Math.max(0, scope.differenceAmount - damage);
+      const ownerRefund = ownerLocked - diffToHolder;
+      const compFromHolder = Math.max(0, damage - scope.differenceAmount);
+      const holderRefund = holderLocked - compFromHolder;
+      return ([
+        { code: 'exchange-owner-refund', kind: 'ExchangeReturnRefund', orderId: scope.ownerOrderId,
+          recipientId: scope.ownerId, amount: ownerRefund },
+        { code: 'exchange-owner-diff-transfer', kind: 'ExchangeNonReturnCompensation', orderId: scope.ownerOrderId,
+          recipientId: scope.holderId, amount: diffToHolder },
+        { code: 'exchange-holder-refund', kind: 'ExchangeReturnRefund', orderId: scope.holderOrderId,
+          recipientId: scope.holderId, amount: holderRefund },
+        { code: 'exchange-compensation', kind: 'ExchangeNonReturnCompensation', orderId: scope.holderOrderId,
+          recipientId: scope.ownerId, amount: compFromHolder },
+      ] as const).filter((move) => move.amount > 0);
+    }
+    const holderToOwner = Math.min(
+      holderLocked,
+      (scope.differencePayerId === scope.holderId ? scope.differenceAmount : 0) + damage,
+    );
+    const holderRefund = holderLocked - holderToOwner;
+    return ([
+      { code: 'exchange-owner-refund', kind: 'ExchangeReturnRefund', orderId: scope.ownerOrderId,
+        recipientId: scope.ownerId, amount: ownerLocked },
+      { code: 'exchange-holder-refund', kind: 'ExchangeReturnRefund', orderId: scope.holderOrderId,
+        recipientId: scope.holderId, amount: holderRefund },
+      { code: 'exchange-compensation', kind: 'ExchangeNonReturnCompensation', orderId: scope.holderOrderId,
+        recipientId: scope.ownerId, amount: holderToOwner },
+    ] as const).filter((move) => move.amount > 0);
+  }
+
+  const compensation = compensated ? exchangeCompensationAmount(scope) : 0;
+  const holderRefund = holderLocked - compensation;
   return ([
     { code: 'exchange-owner-refund', kind: 'ExchangeReturnRefund', orderId: scope.ownerOrderId,
-      recipientId: scope.ownerId, amount: scope.ownerDeposit + (scope.differencePayerId === scope.ownerId ? scope.differenceAmount : 0) },
+      recipientId: scope.ownerId, amount: ownerLocked },
     { code: 'exchange-holder-refund', kind: 'ExchangeReturnRefund', orderId: scope.holderOrderId,
-      recipientId: scope.holderId, amount: (compensated ? 0 : scope.holderDeposit) +
-        (scope.differencePayerId === scope.holderId ? scope.differenceAmount : 0) },
+      recipientId: scope.holderId, amount: holderRefund },
     { code: 'exchange-compensation', kind: 'ExchangeNonReturnCompensation', orderId: scope.holderOrderId,
-      recipientId: scope.ownerId, amount: compensated ? scope.holderDeposit : 0 },
+      recipientId: scope.ownerId, amount: compensation },
   ] as const).filter((move) => move.amount > 0);
 }
 
@@ -1513,17 +1620,49 @@ async function checkExchangeReturn(tx: Tx, exchange: ExchangeDoc) {
 }
 
 // Listings can be revised and traded again after return. Check their resulting
-// state only in the settlement transaction, while both listings are locked.
+// state only in the settlement transaction, while all listings are locked.
 async function checkExchangeReturnBooks(tx: Tx, exchange: ExchangeDoc) {
   const scope = exchangeSettlementScope(exchange)!;
-  const [affected, retained] = await Promise.all([
-    tx.c.listings.findOne({ _id: scope.listingId }),
-    tx.c.listings.findOne({ _id: scope.otherListingId }),
+  const [ownerBooks, holderBooks] = await Promise.all([
+    tx.c.listings.find({ _id: { $in: scope.ownerListingIds } }).toArray(),
+    tx.c.listings.find({ _id: { $in: scope.holderListingIds } }).toArray(),
   ]);
+  if (
+    ownerBooks.length !== scope.ownerListingIds.length ||
+    holderBooks.length !== scope.holderListingIds.length
+  ) {
+    throw new Error('Exchange return listing missing');
+  }
   const compensated = exchange.returnResolution?.outcome === 'Compensated';
-  if (affected?.trade !== (compensated ? 'ClosedUnavailable' : 'Available') ||
-      (!compensated && affected.moderation !== 'Draft') || retained?.trade !== 'Available')
+  if (exchange.status === 'Completed' && compensated) {
+    if (
+      ownerBooks.some((b) => b.trade !== 'Exchanged') ||
+      holderBooks.some((b) => b.trade !== 'Exchanged')
+    ) {
+      throw new Error('Exchange partial compensation listing projection mismatch');
+    }
+    return;
+  }
+  if (scope.bothShipped && compensated) {
+    if (
+      ownerBooks.some((b) => b.trade !== 'ClosedUnavailable') ||
+      holderBooks.some((b) => b.trade !== 'ClosedUnavailable')
+    ) {
+      throw new Error('Exchange full compensation listing projection mismatch');
+    }
+    return;
+  }
+  const expectedOwnerTrade = compensated ? 'ClosedUnavailable' : 'Available';
+  if (
+    ownerBooks.some(
+      (b) =>
+        b.trade !== expectedOwnerTrade ||
+        (!compensated && b.moderation !== 'Draft'),
+    ) ||
+    holderBooks.some((b) => b.trade !== 'Available')
+  ) {
     throw new Error('Exchange return listing projection mismatch');
+  }
 }
 
 // Commit-time replacement for latlai_check_topup.

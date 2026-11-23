@@ -5,24 +5,45 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AppText, AppTextInput, Icon, space, stitchTokens } from "../../core/ui";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  AppText,
+  AppTextInput,
+  Icon,
+  space,
+  stitchTokens,
+} from "../../core/ui";
 import { useSession } from "../../core/session/session-provider";
 import {
   exchangeMessagePageSchema,
   type ExchangeMessage,
 } from "./contracts";
 import { z } from "zod";
-import { ApiError, CHAT_RATE_LIMIT_TEXT, clipChatMessage } from "@used-books/session-client";
+import {
+  ApiError,
+  CHAT_RATE_LIMIT_TEXT,
+  clipChatMessage,
+} from "@used-books/session-client";
 
 interface ExchangeChatBoxProps {
   exchangeId: string;
   partnerName: string;
   isReadOnly?: boolean;
 }
+
+const QUICK_REPLIES = [
+  "Chào bạn, sách còn đủ trang và bìa đẹp như mô tả chứ?",
+  "Mình đang đóng gói và gửi đơn vận chuyển hôm nay nhé.",
+  "Khi nào nhận được bưu kiện bạn nhắn mình nha!",
+];
 
 function formatMessageTime(isoString: string): string {
   try {
@@ -50,7 +71,12 @@ export function ExchangeChatBox({
 
   const latestShown = useRef<string | undefined>(undefined);
   const nearBottom = useRef(true);
-  const messagesKey = ["exchange-messages", currentUserId, exchangeId] as const;
+  const messagesKey = [
+    "exchange-messages",
+    currentUserId,
+    exchangeId,
+  ] as const;
+
   const messagesQuery = useInfiniteQuery({
     queryKey: messagesKey,
     initialPageParam: undefined as string | undefined,
@@ -64,10 +90,13 @@ export function ExchangeChatBox({
     },
     getNextPageParam: (page) => page.olderCursor ?? undefined,
     enabled: Boolean(exchangeId) && currentUserId !== null,
-    refetchInterval: (query) => 3500 * Math.max(1, query.state.data?.pages.length ?? 0),
+    refetchInterval: (query) =>
+      3500 * Math.max(1, query.state.data?.pages.length ?? 0),
   });
-  const denied = messagesQuery.error instanceof ApiError
-    && [401, 403, 404].includes(messagesQuery.error.status);
+
+  const denied =
+    messagesQuery.error instanceof ApiError &&
+    [401, 403, 404].includes(messagesQuery.error.status);
 
   const sendMutation = useMutation({
     mutationFn: async (bodyText: string) => {
@@ -93,59 +122,97 @@ export function ExchangeChatBox({
     sendMutation.mutate(trimmed);
   };
 
-  const messages = denied ? [] : messagesQuery.data?.pages.slice().reverse().flatMap((page) => page.items) ?? [];
+  const messages = denied
+    ? []
+    : (messagesQuery.data?.pages
+        .slice()
+        .reverse()
+        .flatMap((page) => page.items) ?? []);
   const latest = messages.at(-1)?.id;
+  const partnerInitial = (partnerName.trim()[0] || "Đ").toUpperCase();
 
   return (
-    <View style={styles.card}>
-      {/* Chat Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.avatarMini}>
-            <Icon name="person" size={16} color={stitchTokens.white} />
-          </View>
-          <View>
-            <AppText style={styles.title}>Hộp thoại trao đổi</AppText>
-            <AppText style={styles.subtitle}>
-              Trò chuyện cùng <AppText style={styles.partnerName}>{partnerName}</AppText>
-            </AppText>
-          </View>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+    >
+      {/* Slim Trust & Sync Sub-Strip (no duplicate partner header!) */}
+      <View style={styles.trustBar}>
+        <View style={styles.trustLeft}>
+          <Icon name="shield" size={13} color={stitchTokens.wine} />
+          <AppText style={styles.trustText} numberOfLines={1}>
+            Tin nhắn được lưu làm bằng chứng bảo vệ giao dịch
+          </AppText>
         </View>
-
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Làm mới tin nhắn"
+          hitSlop={8}
           onPress={() => void messagesQuery.refetch()}
-          style={({ pressed }) => [styles.refreshBtn, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.refreshChip,
+            pressed && styles.pressed,
+          ]}
         >
-          <Icon
-            name="sync"
-            size={14}
-            color={stitchTokens.wineMid}
-          />
+          <Icon name="sync" size={12} color={stitchTokens.wine} />
         </Pressable>
       </View>
 
-      {messagesQuery.isError && (denied || !messagesQuery.isFetchNextPageError) && (
-        <AppText accessibilityRole="alert" style={styles.emptySubtitle}>
-          {denied ? "Bạn hiện không thể xem tin nhắn trong giao dịch này." : "Chưa tải được tin nhắn. Dùng nút làm mới để thử lại."}
-        </AppText>
-      )}
-
-      {/* Messages List */}
-      <View style={styles.messageListContainer}>
-        {messagesQuery.isPending && messages.length === 0 ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={stitchTokens.wine} />
-            <AppText style={styles.loadingText}>Đang tải tin nhắn...</AppText>
-          </View>
-        ) : messages.length === 0 && messagesQuery.isError ? null : messages.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Icon name="message" size={26} color={stitchTokens.roseBrown} />
-            <AppText style={styles.emptyTitle}>Chưa có tin nhắn</AppText>
-            <AppText style={styles.emptySubtitle}>
-              Gửi tin nhắn mở lời về tình trạng sách hoặc phương thức bàn giao.
+      {messagesQuery.isError &&
+        (denied || !messagesQuery.isFetchNextPageError) && (
+          <View style={styles.alertBanner}>
+            <AppText accessibilityRole="alert" style={styles.alertBannerText}>
+              {denied
+                ? "Bạn hiện không thể xem tin nhắn trong giao dịch này."
+                : "Chưa tải được tin nhắn. Nhấn biểu tượng làm mới để thử lại."}
             </AppText>
+          </View>
+        )}
+
+      {/* Full-Height Message Area */}
+      <View style={styles.canvas}>
+        {messagesQuery.isPending && messages.length === 0 ? (
+          <View style={styles.centerBox}>
+            <ActivityIndicator size="small" color={stitchTokens.wine} />
+            <AppText style={styles.loadingText}>
+              Đang tải cuộc trò chuyện...
+            </AppText>
+          </View>
+        ) : messages.length === 0 && messagesQuery.isError ? null : messages.length ===
+          0 ? (
+          <View style={styles.centerBox}>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="message" size={24} color={stitchTokens.wine} />
+            </View>
+            <AppText style={styles.emptyTitle}>
+              Trò chuyện cùng {partnerName}
+            </AppText>
+            <AppText style={styles.emptySubtitle}>
+              Trao đổi thêm về tình trạng sách, cách đóng gói hoặc hẹn giờ giao
+              nhận tại đây.
+            </AppText>
+
+            {!isReadOnly && !denied ? (
+              <View style={styles.quickSuggestionsWrap}>
+                <AppText style={styles.quickSuggestionsTitle}>
+                  Gợi ý nhắn nhanh:
+                </AppText>
+                {QUICK_REPLIES.map((reply) => (
+                  <Pressable
+                    key={reply}
+                    accessibilityRole="button"
+                    onPress={() => setInputText(reply)}
+                    style={({ pressed }) => [
+                      styles.quickChip,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <AppText style={styles.quickChipText}>{reply}</AppText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
         ) : (
           <FlatList
@@ -153,10 +220,14 @@ export function ExchangeChatBox({
             data={messages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
             maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
             onScroll={({ nativeEvent }) => {
-              nearBottom.current = nativeEvent.contentSize.height
-                - nativeEvent.contentOffset.y - nativeEvent.layoutMeasurement.height < 120;
+              nearBottom.current =
+                nativeEvent.contentSize.height -
+                  nativeEvent.contentOffset.y -
+                  nativeEvent.layoutMeasurement.height <
+                120;
             }}
             scrollEventThrottle={32}
             onContentSizeChange={() => {
@@ -167,34 +238,55 @@ export function ExchangeChatBox({
                 flatListRef.current?.scrollToEnd({ animated: true });
               }
             }}
-            ListHeaderComponent={messagesQuery.hasNextPage ? (
-              <Pressable
-                accessibilityRole="button"
-                disabled={messagesQuery.isFetching}
-                onPress={() => void messagesQuery.fetchNextPage({ cancelRefetch: false })}
-              >
-                <AppText style={styles.emptySubtitle}>
-                  {messagesQuery.isFetchingNextPage
-                    ? "Đang tải tin nhắn cũ…"
-                    : messagesQuery.isFetchNextPageError ? "Thử tải lại tin nhắn cũ" : "Tải tin nhắn cũ"}
-                </AppText>
-              </Pressable>
-            ) : null}
+            ListHeaderComponent={
+              messagesQuery.hasNextPage ? (
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={messagesQuery.isFetching}
+                  style={styles.loadOlderBtn}
+                  onPress={() =>
+                    void messagesQuery.fetchNextPage({ cancelRefetch: false })
+                  }
+                >
+                  <AppText style={styles.loadOlderText}>
+                    {messagesQuery.isFetchingNextPage
+                      ? "Đang tải tin nhắn cũ…"
+                      : messagesQuery.isFetchNextPageError
+                        ? "Thử tải lại tin nhắn cũ"
+                        : "Xem tin nhắn cũ hơn"}
+                  </AppText>
+                </Pressable>
+              ) : null
+            }
             renderItem={({ item }: { item: ExchangeMessage }) => {
               const isMe = item.senderId === currentUserId;
-              const isVerdict = item.body.startsWith("[Phán quyết của Quản trị viên]");
+              const isVerdict = item.body.startsWith(
+                "[Phán quyết của Quản trị viên]",
+              );
               const isDispute = item.body.startsWith("[Sự cố]:");
-              const isSystem = isVerdict || isDispute || (item.body.startsWith("[") && item.body.includes("]"));
+              const isSystem =
+                isVerdict ||
+                isDispute ||
+                (item.body.startsWith("[") && item.body.includes("]"));
 
               if (isVerdict) {
                 return (
                   <View style={styles.verdictCard}>
                     <View style={styles.verdictHeader}>
-                      <Icon name="shield" size={14} color={stitchTokens.wineDark} />
-                      <AppText style={styles.verdictHeaderTitle}>PHÁN QUYẾT CỦA QUẢN TRỊ VIÊN</AppText>
+                      <Icon
+                        name="shield"
+                        size={14}
+                        color={stitchTokens.wineDark}
+                      />
+                      <AppText style={styles.verdictHeaderTitle}>
+                        PHÁN QUYẾT CỦA QUẢN TRỊ VIÊN
+                      </AppText>
                     </View>
                     <AppText style={styles.verdictBody}>
-                      {item.body.replace("[Phán quyết của Quản trị viên]\n", "").replace("[Phán quyết của Quản trị viên]", "").trim()}
+                      {item.body
+                        .replace("[Phán quyết của Quản trị viên]\n", "")
+                        .replace("[Phán quyết của Quản trị viên]", "")
+                        .trim()}
                     </AppText>
                     <AppText style={styles.verdictTime}>
                       {formatMessageTime(item.sentAt)}
@@ -207,10 +299,18 @@ export function ExchangeChatBox({
                 return (
                   <View style={styles.disputeCard}>
                     <View style={styles.disputeCardHeader}>
-                      <Icon name="info" size={14} color={stitchTokens.flashRed} />
-                      <AppText style={styles.disputeCardTitle}>BIÊN BẢN KHIẾU NẠI SÁCH</AppText>
+                      <Icon
+                        name="info"
+                        size={14}
+                        color={stitchTokens.flashRed}
+                      />
+                      <AppText style={styles.disputeCardTitle}>
+                        BIÊN BẢN KHIẾU NẠI SÁCH
+                      </AppText>
                     </View>
-                    <AppText style={styles.disputeCardBody}>{item.body}</AppText>
+                    <AppText style={styles.disputeCardBody}>
+                      {item.body}
+                    </AppText>
                     <AppText style={styles.disputeCardTime}>
                       {formatMessageTime(item.sentAt)}
                     </AppText>
@@ -236,6 +336,14 @@ export function ExchangeChatBox({
                     isMe ? styles.messageRowMe : styles.messageRowPartner,
                   ]}
                 >
+                  {!isMe ? (
+                    <View style={styles.msgAvatar}>
+                      <AppText style={styles.msgAvatarText}>
+                        {partnerInitial}
+                      </AppText>
+                    </View>
+                  ) : null}
+
                   <View
                     style={[
                       styles.bubble,
@@ -267,173 +375,236 @@ export function ExchangeChatBox({
       </View>
 
       {sendMutation.isError && !denied && (
-        <AppText accessibilityRole="alert" style={styles.emptySubtitle}>
-          {sendMutation.error instanceof ApiError && sendMutation.error.status === 429
-            ? CHAT_RATE_LIMIT_TEXT
-            : "Chưa xác nhận tin nhắn đã gửi. Nội dung vẫn còn để bạn kiểm tra và thử lại."}
-        </AppText>
-      )}
-
-      {/* Input Bar */}
-      {!isReadOnly ? (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={12}
-        >
-          <View style={styles.inputBar}>
-            <View style={styles.inputContainer}>
-              <AppTextInput
-                style={styles.textInput}
-                value={inputText}
-                onChangeText={(text) => setInputText(clipChatMessage(text))}
-                editable={!denied && !sendMutation.isPending}
-                placeholder="Nhắn tin về việc đổi sách..."
-                placeholderTextColor={stitchTokens.subtleGray}
-                multiline
-              />
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Gửi tin nhắn"
-              onPress={handleSend}
-              disabled={!inputText.trim() || sendMutation.isPending || denied}
-              style={({ pressed }) => [
-                styles.sendBtn,
-                inputText.trim()
-                  ? styles.sendBtnActive
-                  : styles.sendBtnDisabled,
-                pressed && styles.pressed,
-              ]}
-            >
-              {sendMutation.isPending ? (
-                <ActivityIndicator
-                  size="small"
-                  color={
-                    inputText.trim()
-                      ? stitchTokens.whiteSurface
-                      : stitchTokens.wineDark
-                  }
-                />
-              ) : (
-                <Icon
-                  name="arrow"
-                  size={19}
-                  color={
-                    inputText.trim()
-                      ? stitchTokens.whiteSurface
-                      : stitchTokens.subtleGray
-                  }
-                  strokeWidth={2.2}
-                />
-              )}
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      ) : (
-        <View style={styles.readOnlyBanner}>
-          <AppText style={styles.readOnlyText}>
-            Giao dịch đã kết thúc hoặc bị hủy, cuộc trò chuyện chuyển sang chỉ đọc.
+        <View style={styles.alertBanner}>
+          <AppText accessibilityRole="alert" style={styles.alertBannerText}>
+            {sendMutation.error instanceof ApiError &&
+            sendMutation.error.status === 429
+              ? CHAT_RATE_LIMIT_TEXT
+              : "Chưa xác nhận tin nhắn đã gửi. Nội dung vẫn còn để bạn kiểm tra và thử lại."}
           </AppText>
         </View>
       )}
-    </View>
+
+      {/* Horizontal quick chips strip when there are already messages */}
+      {!isReadOnly && !denied && messages.length > 0 && !inputText ? (
+        <View style={styles.quickStripOuter}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickStripContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {QUICK_REPLIES.map((reply) => (
+              <Pressable
+                key={reply}
+                onPress={() => setInputText(reply)}
+                style={({ pressed }) => [
+                  styles.quickStripPill,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <AppText style={styles.quickStripPillText} numberOfLines={1}>
+                  {reply}
+                </AppText>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {/* Docked Bottom Input Composer Bar */}
+      {!isReadOnly ? (
+        <View style={styles.inputBar}>
+          <AppTextInput
+            style={styles.textInput}
+            value={inputText}
+            onChangeText={(text) => setInputText(clipChatMessage(text))}
+            editable={!denied && !sendMutation.isPending}
+            placeholder={`Nhắn tin cho ${partnerName}...`}
+            placeholderTextColor={stitchTokens.subtleGray}
+            multiline
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Gửi tin nhắn"
+            onPress={handleSend}
+            disabled={!inputText.trim() || sendMutation.isPending || denied}
+            style={({ pressed }) => [
+              styles.sendBtn,
+              inputText.trim() ? styles.sendBtnActive : styles.sendBtnDisabled,
+              pressed && styles.pressed,
+            ]}
+          >
+            {sendMutation.isPending ? (
+              <ActivityIndicator
+                size="small"
+                color={
+                  inputText.trim()
+                    ? stitchTokens.whiteSurface
+                    : stitchTokens.wineDark
+                }
+              />
+            ) : (
+              <Icon
+                name="arrow"
+                size={18}
+                color={
+                  inputText.trim()
+                    ? stitchTokens.whiteSurface
+                    : stitchTokens.subtleGray
+                }
+                strokeWidth={2.3}
+              />
+            )}
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.readOnlyBanner}>
+          <Icon name="lock" size={13} color={stitchTokens.subtleGray} />
+          <AppText style={styles.readOnlyText}>
+            Giao dịch đã kết thúc, cuộc trò chuyện chuyển sang chế độ chỉ đọc.
+          </AppText>
+        </View>
+      )}
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 18,
-    backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachMuted,
-    overflow: "hidden",
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+  root: {
+    flex: 1,
+    backgroundColor: "#F6F2EB",
   },
-  header: {
+  trustBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: space.md,
-    paddingVertical: 12,
-    backgroundColor: stitchTokens.roseWarmSurface,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#FAF7F2",
     borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.peachBorder,
+    borderBottomColor: "#EFEAE2",
   },
-  headerLeft: {
+  trustLeft: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 6,
   },
-  avatarMini: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: stitchTokens.wineDark,
+  trustText: {
+    flex: 1,
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: stitchTokens.subtleGray,
+  },
+  refreshChip: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
   },
-  title: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
+  alertBanner: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: stitchTokens.flashRedBg,
   },
-  subtitle: {
-    fontSize: 11,
-    color: stitchTokens.roseBrown,
+  alertBannerText: {
+    fontSize: 12,
+    color: stitchTokens.crimson,
+    textAlign: "center",
   },
-  partnerName: {
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
+  canvas: {
+    flex: 1,
   },
-  refreshBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: stitchTokens.terracottaSoft,
-  },
-  messageListContainer: {
-    minHeight: 220,
-    maxHeight: 340,
-    backgroundColor: stitchTokens.parchment,
-  },
-  messagesList: {
-    padding: space.md,
-    gap: 10,
-  },
-  loadingBox: {
-    height: 180,
+  centerBox: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 24,
     gap: 8,
   },
   loadingText: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: stitchTokens.subtleGray,
   },
-  emptyBox: {
-    height: 180,
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: space.xl,
-    gap: 6,
+    marginBottom: 4,
   },
   emptyTitle: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
     color: stitchTokens.darkWood,
   },
   emptySubtitle: {
-    fontSize: 11,
+    fontSize: 12.5,
     color: stitchTokens.subtleGray,
     textAlign: "center",
-    lineHeight: 16,
+    lineHeight: 18,
+  },
+  quickSuggestionsWrap: {
+    width: "100%",
+    marginTop: 14,
+    gap: 8,
+  },
+  quickSuggestionsTitle: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: stitchTokens.subtleGray,
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  quickChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: "#E8E0D5",
+    alignItems: "center",
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  quickChipText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+    textAlign: "center",
+  },
+  messagesList: {
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    gap: 10,
+  },
+  loadOlderBtn: {
+    alignSelf: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.whiteSurface,
+    marginBottom: 8,
+  },
+  loadOlderText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: stitchTokens.wine,
   },
   messageRow: {
     flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
     width: "100%",
   },
   messageRowMe: {
@@ -442,26 +613,50 @@ const styles = StyleSheet.create({
   messageRowPartner: {
     justifyContent: "flex-start",
   },
-  bubble: {
-    maxWidth: "80%",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  msgAvatar: {
+    width: 28,
+    height: 28,
     borderRadius: 14,
+    backgroundColor: stitchTokens.roseParchment,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  msgAvatarText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+  },
+  bubble: {
+    maxWidth: "78%",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
     gap: 3,
   },
   bubbleMe: {
-    backgroundColor: stitchTokens.wineMid,
-    borderBottomRightRadius: 3,
+    backgroundColor: stitchTokens.wine,
+    borderBottomRightRadius: 4,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.14,
+    shadowRadius: 4,
+    elevation: 2,
   },
   bubblePartner: {
     backgroundColor: stitchTokens.whiteSurface,
+    borderBottomLeftRadius: 4,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    borderBottomLeftRadius: 3,
+    borderColor: "#EAE3D9",
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   bubbleText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
   },
   bubbleTextMe: {
     color: stitchTokens.white,
@@ -470,97 +665,91 @@ const styles = StyleSheet.create({
     color: stitchTokens.darkWood,
   },
   timeText: {
-    fontSize: 9,
+    fontSize: 10,
     alignSelf: "flex-end",
+    fontVariant: ["tabular-nums"],
   },
   timeTextMe: {
-    color: stitchTokens.roseWarmTag,
+    color: "rgba(255, 248, 231, 0.72)",
   },
   timeTextPartner: {
     color: stitchTokens.subtleGray,
   },
   systemBubble: {
     alignSelf: "center",
-    backgroundColor: stitchTokens.amberBg,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: stitchTokens.goldBorder,
+    borderColor: "#EAE3D9",
     marginVertical: 4,
     alignItems: "center",
     maxWidth: "90%",
   },
   systemText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "600",
     color: stitchTokens.darkWood,
     textAlign: "center",
   },
   systemTime: {
-    fontSize: 9,
-    color: stitchTokens.roseBrown,
+    fontSize: 9.5,
+    color: stitchTokens.subtleGray,
     marginTop: 2,
   },
   verdictCard: {
     alignSelf: "center",
-    backgroundColor: stitchTokens.amberBg,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.goldBorder,
+    backgroundColor: stitchTokens.goldLight,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAccent,
     marginVertical: 6,
-    maxWidth: "94%",
-    width: "94%",
+    width: "96%",
     gap: 6,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
   },
   verdictHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingBottom: 4,
+    paddingBottom: 5,
     borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.goldBorder,
+    borderBottomColor: stitchTokens.goldAccent,
   },
   verdictHeaderTitle: {
     fontSize: 11,
     fontWeight: "800",
     color: stitchTokens.wineDark,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   verdictBody: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: "600",
     color: stitchTokens.darkWood,
     lineHeight: 18,
   },
   verdictTime: {
-    fontSize: 9,
+    fontSize: 10,
     color: stitchTokens.roseBrown,
     alignSelf: "flex-end",
   },
   disputeCard: {
     alignSelf: "center",
     backgroundColor: stitchTokens.roseWarmSurface,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
     marginVertical: 6,
-    maxWidth: "94%",
-    width: "94%",
+    width: "96%",
     gap: 6,
   },
   disputeCardHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingBottom: 4,
+    paddingBottom: 5,
     borderBottomWidth: 1,
     borderBottomColor: stitchTokens.peachBorder,
   },
@@ -568,82 +757,101 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     color: stitchTokens.crimson,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   disputeCardBody: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: stitchTokens.darkWood,
-    lineHeight: 17,
+    lineHeight: 18,
   },
   disputeCardTime: {
-    fontSize: 9,
+    fontSize: 10,
     color: stitchTokens.subtleGray,
     alignSelf: "flex-end",
+  },
+  quickStripOuter: {
+    paddingVertical: 8,
+    backgroundColor: "#F6F2EB",
+  },
+  quickStripContent: {
+    paddingHorizontal: 14,
+    gap: 8,
+  },
+  quickStripPill: {
+    maxWidth: 230,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: "#E8E0D5",
+  },
+  quickStripPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
   },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 10,
-    paddingHorizontal: space.md,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 10,
     backgroundColor: stitchTokens.whiteSurface,
     borderTopWidth: 1,
-    borderTopColor: stitchTokens.peachBorder,
-  },
-  inputContainer: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 110,
-    borderRadius: 14,
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1.2,
-    borderColor: stitchTokens.peachBorder,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 4 : 2,
-    justifyContent: "center",
+    borderTopColor: "#EFEAE2",
   },
   textInput: {
     flex: 1,
+    minHeight: 42,
+    maxHeight: 110,
+    borderRadius: 21,
+    backgroundColor: "#F5F1EB",
+    borderWidth: 1,
+    borderColor: "#E6DDD2",
     fontSize: 14,
     lineHeight: 20,
-    color: stitchTokens.wineDark,
-    paddingVertical: Platform.OS === "ios" ? 8 : 6,
-    paddingHorizontal: 0,
+    color: stitchTokens.darkWood,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 10 : 9,
+    paddingBottom: Platform.OS === "ios" ? 10 : 9,
     textAlignVertical: "center",
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
   },
   sendBtnActive: {
-    backgroundColor: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.wine,
     shadowColor: stitchTokens.wineDark,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
     elevation: 3,
   },
   sendBtnDisabled: {
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1.2,
-    borderColor: stitchTokens.peachBorder,
-    opacity: 0.75,
+    backgroundColor: "#EFEAE2",
   },
   readOnlyBanner: {
-    padding: 10,
-    backgroundColor: stitchTokens.canvasMuted,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: space.md,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderTopWidth: 1,
+    borderTopColor: "#EFEAE2",
   },
   readOnlyText: {
-    fontSize: 11,
+    fontSize: 12,
     color: stitchTokens.subtleGray,
-    fontStyle: "italic",
-    textAlign: "center",
   },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.78,
   },
 });

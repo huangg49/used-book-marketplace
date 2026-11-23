@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { ArrowLeftRight, ArrowUpRight, Check, ChevronUp, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, Check, ChevronUp, Clock, AlertCircle, Paperclip, X } from "lucide-react";
 import { BrandIcon } from "../../BrandIcon";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { session } from "../../../lib/session";
@@ -74,7 +74,7 @@ interface Props {
   onConfirmReceived: () => Promise<void>;
   onRetry: () => Promise<void>;
   onComplete: () => Promise<void>;
-  onDispute?: (reason: string) => Promise<void>;
+  onDispute?: (reason: string, files?: File[]) => Promise<void>;
   onAdvanceDemoShipping?: () => Promise<void>;
   onAdvanceDemoDeadline?: () => Promise<void>;
 }
@@ -134,6 +134,8 @@ export function ActionCard(props: Props) {
   const [reason, setReason] = useState("");
   const [disputeCategory, setDisputeCategory] = useState("Sách rách nát / hư hỏng nặng");
   const [disputeDetail, setDisputeDetail] = useState("");
+  const [disputeBookIds, setDisputeBookIds] = useState<string[]>([]);
+  const [disputeFiles, setDisputeFiles] = useState<File[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   useExchangeRecovery();
   const pending = pendingExchange(detail.id);
@@ -272,13 +274,20 @@ export function ActionCard(props: Props) {
     if (!inspectionExpired && props.onDispute) actions.push("dispute");
   } else if (inspecting) {
     if (!detail.viewerCompletedAt && !expired) actions.push("complete");
-    if (!inspectionExpired && props.onDispute) actions.push("dispute");
+    if (!detail.viewerCompletedAt && !inspectionExpired && props.onDispute) {
+      actions.push("dispute");
+    }
   } else if (detail.status === "COMPLETED") {
+    const partialDamage = detail.resolutionCompensationAmount ?? 0;
     instructions =
-      detail.resolutionDecision === "CompleteExchange" &&
-      detail.resolutionReason
-        ? `Trao đổi đã hoàn tất theo phán quyết của người phụ trách: "${detail.resolutionReason}". Khoản cọc bảo chứng và tiền bù đã được tất toán.`
-        : "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
+      partialDamage > 0 &&
+      (detail.resolutionDecision === "CompensateInitiator" ||
+        detail.resolutionDecision === "CompensateRecipient")
+        ? `Trao đổi đã hoàn tất theo phán quyết kèm khấu trừ thiệt hại ${formatVnd(partialDamage)}.${detail.resolutionReason ? ` Lý do: "${detail.resolutionReason}".` : ""} Khoản ký quỹ đã được tất toán về ví.`
+        : detail.resolutionDecision === "CompleteExchange" &&
+            detail.resolutionReason
+          ? `Trao đổi đã hoàn tất theo phán quyết của người phụ trách: "${detail.resolutionReason}". Khoản cọc bảo chứng và tiền bù đã được tất toán.`
+          : "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
   } else if (detail.status === "RESOLUTION_PENDING") {
     instructions = detail.disputeReason
       ? `Giao dịch đang có tranh chấp / báo sự cố: "${detail.disputeReason}". Toàn bộ tiền cọc bảo chứng và tiền bù đang được tạm khóa an toàn trên Ledger để bảo vệ quyền lợi của hai bên.`
@@ -419,7 +428,13 @@ export function ActionCard(props: Props) {
       let finalDisputeReason = reason.trim();
       if (action === "dispute") {
         const detailText = disputeDetail.trim();
-        finalDisputeReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}`;
+        const selectedBookTitles = detail.receiveBooks
+          .filter((b) => disputeBookIds.includes(b.id))
+          .map((b) => b.title);
+        const booksLine = selectedBookTitles.length
+          ? `\n[Sách gặp sự cố]: ${selectedBookTitles.join(", ")}`
+          : "";
+        finalDisputeReason = `[Sự cố]: ${disputeCategory}${booksLine}\n[Chi tiết]: ${detailText}`;
       }
       const run: Record<Exclude<Action, "counter">, () => Promise<void>> = {
         accept: () => props.onAccept(selectedAddressId || undefined),
@@ -433,10 +448,15 @@ export function ActionCard(props: Props) {
         advanceDemoShipping: async () => detail.demoDeadline ? props.onAdvanceDemoDeadline?.() : props.onAdvanceDemoShipping?.(),
         dispute: () =>
           props.onDispute
-            ? props.onDispute(finalDisputeReason)
+            ? props.onDispute(finalDisputeReason, disputeFiles)
             : Promise.resolve(),
       };
       await run[action]();
+      if (action === "dispute") {
+        setDisputeDetail("");
+        setDisputeBookIds([]);
+        setDisputeFiles([]);
+      }
       setAction(undefined);
     } catch (failure) {
       if (pendingExchange(detail.id)) setAction(undefined);
@@ -872,6 +892,44 @@ export function ActionCard(props: Props) {
                 </div>
               </div>
 
+              {detail.receiveBooks.length > 1 && (
+                <div className={styles.formGroup}>
+                  <span className={styles.inputLabel}>
+                    Chọn cuốn sách gặp sự cố (không bắt buộc)
+                  </span>
+                  <div className={styles.disputeBookList} role="group" aria-label="Sách gặp sự cố">
+                    {detail.receiveBooks.map((book) => {
+                      const checked = disputeBookIds.includes(book.id);
+                      return (
+                        <label
+                          key={book.id}
+                          className={styles.disputeBookCheck}
+                          data-checked={checked || undefined}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={busy || !!pending}
+                            onChange={(e) => {
+                              const nextChecked = e.target.checked;
+                              setDisputeBookIds((prev) =>
+                                nextChecked
+                                  ? [...prev, book.id]
+                                  : prev.filter((id) => id !== book.id),
+                              );
+                            }}
+                          />
+                          <span>
+                            <strong>{book.title}</strong>
+                            {book.price != null && ` · ${formatVnd(book.price)}`}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className={styles.formGroup}>
                 <div className={styles.labelWithCounter}>
                   <label htmlFor="dispute-detail" className={styles.inputLabel}>
@@ -879,24 +937,66 @@ export function ActionCard(props: Props) {
                     <span className={styles.reqStar}>*</span>
                   </label>
                   <span className={styles.charCounter}>
-                    {disputeDetail.length}/220 ký tự
+                    {disputeDetail.length}/500 ký tự
                   </span>
                 </div>
                 <textarea
                   id="dispute-detail"
                   className={styles.textarea}
                   value={disputeDetail}
-                  maxLength={220}
-                  placeholder="Ví dụ: Sách thiếu trang 45 đến 52."
+                  maxLength={500}
+                  placeholder="Ví dụ: Cuốn Nhà Giả Kim bị rách gáy và thiếu trang 45 đến 52..."
                   disabled={busy || !!pending}
                   onChange={(e) => setDisputeDetail(e.target.value)}
                 />
               </div>
 
-              {/* Bằng chứng thẩm định */}
-              <p>
-                Gửi báo cáo trước hạn. Sau đó bạn có thể bổ sung ảnh, PDF hoặc video trong mục Bằng chứng sự cố.
-              </p>
+              <div className={styles.formGroup}>
+                <label htmlFor="dispute-files" className={styles.inputLabel}>
+                  <span>Đính kèm bằng chứng ngay (không bắt buộc · tối đa 3 tệp)</span>
+                </label>
+                <div className={styles.disputeFilePicker}>
+                  <input
+                    id="dispute-files"
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp,application/pdf,video/mp4"
+                    disabled={busy || !!pending || disputeFiles.length >= 3}
+                    onChange={(e) => {
+                      const picked = Array.from(e.target.files ?? []);
+                      if (!picked.length) return;
+                      setDisputeFiles((prev) => [...prev, ...picked].slice(0, 3));
+                      e.target.value = "";
+                    }}
+                  />
+                  <span className={styles.disputeFileHint}>
+                    Nhận ảnh JPG, PNG, WebP (≤10 MB), PDF (≤20 MB) hoặc video MP4 (≤100 MB). Bạn vẫn có thể bổ sung thêm sau khi gửi báo cáo.
+                  </span>
+                </div>
+                {disputeFiles.length > 0 && (
+                  <ul className={styles.disputeFileList}>
+                    {disputeFiles.map((file, idx) => (
+                      <li key={`${file.name}-${idx}`}>
+                        <span className={styles.disputeFileName}>
+                          <Paperclip size={13} aria-hidden="true" />
+                          {file.name}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.disputeFileRemove}
+                          disabled={busy}
+                          aria-label={`Bỏ tệp ${file.name}`}
+                          onClick={() =>
+                            setDisputeFiles((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                        >
+                          <X size={13} aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         ) : action === "reject" ? (

@@ -97,7 +97,7 @@ export function ExchangeEvidencePanel({
             "video/mp4",
           ].includes(mime)
         )
-          throw Error("Chỉ nhận ảnh JPG, PNG hoặc video MP4.");
+          throw Error("Chỉ nhận ảnh JPG, PNG, WebP, tài liệu PDF hoặc video MP4.");
 
         const max = mime.startsWith("image/")
           ? 10000000

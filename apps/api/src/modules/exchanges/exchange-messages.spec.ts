@@ -45,9 +45,14 @@ function setup(actorId = memberId) {
       exchange_messages: { find },
     },
   } as unknown as Tx;
+  const actor = { _id: actorId, roles: [{ role: 'MEMBER' }] } as CurrentActor;
   const commands = {
     read: (_auth: Actor, work: (tx: Tx, actor: CurrentActor) => unknown) =>
-      work(tx, { _id: actorId } as CurrentActor),
+      work(tx, actor),
+    readObligation: (
+      _auth: Actor,
+      work: (tx: Tx, actor: CurrentActor) => unknown,
+    ) => work(tx, actor),
   } as MongoCommandService;
   const service = new ExchangesService(
     null!,

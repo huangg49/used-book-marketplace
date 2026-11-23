@@ -61,6 +61,7 @@ export interface ExchangeDetail {
   disputeReason?: string;
   disputedBy?: string;
   resolutionDecision?: 'RefundBoth' | 'CompleteExchange' | 'CompensateInitiator' | 'CompensateRecipient' | null;
+  resolutionCompensationAmount?: number | null;
   resolutionReason?: string | null;
   resolvedBy?: string | null;
   resolvedAt?: string | null;

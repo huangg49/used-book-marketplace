@@ -6,26 +6,26 @@ const TIPS = [
   {
     id: "camera",
     icon: "camera" as const,
-    title: "Chụp ảnh trước khi gửi:",
-    desc: "Luôn chụp lại tình trạng sách, bìa, gáy sách trước khi đóng gói để làm bằng chứng đối chiếu khi cần.",
+    title: "Chụp ảnh & quay video trước khi gửi",
+    desc: "Ghi lại tình trạng bìa, gáy sách và quá trình đóng gói để đối chiếu nếu phát sinh sự cố.",
   },
   {
     id: "box",
     icon: "bag" as const,
-    title: "Đóng gói cẩn thận:",
-    desc: "Bọc sách bằng màng xốp bong bóng chống sốc hoặc bìa carton cứng tránh gãy góc trong khi vận chuyển.",
+    title: "Bọc chống sốc cẩn thận",
+    desc: "Dùng màng xốp hoặc bìa carton cứng để tránh cong góc, rách bìa khi vận chuyển.",
   },
   {
     id: "receipt",
     icon: "ticket" as const,
-    title: "Lưu giữ mã vận đơn:",
-    desc: "Giữ biên lai bưu cục và điền mã vận đơn vào đơn trao đổi. Khung chat chỉ dùng để trao đổi thêm.",
+    title: "Lưu giữ mã vận đơn",
+    desc: "Cập nhật mã vận đơn đúng trên phiếu; trò chuyện chỉ dùng để trao đổi thêm thông tin.",
   },
   {
     id: "shield",
     icon: "shield" as const,
-    title: "Đồng kiểm 72 giờ:",
-    desc: "Chỉ bấm xác nhận khi đã nhận và kiểm tra sách thực tế. Dùng nút 'Báo sự cố' nếu sách không đúng mô tả.",
+    title: "Đồng kiểm 72 giờ an toàn",
+    desc: "Chỉ bấm xác nhận hài lòng khi đã kiểm tra kỹ. Nếu có sai lệch, bấm Báo sự cố trước hạn.",
   },
 ];
 
@@ -36,32 +36,30 @@ export function ExchangeSafetyTips() {
     <View style={styles.card}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Mẹo an toàn khi trao đổi sách"
+        accessibilityState={{ expanded }}
+        accessibilityLabel="Hướng dẫn giao nhận và bảo quản"
         onPress={() => setExpanded((prev) => !prev)}
-        style={styles.header}
+        style={({ pressed }) => [styles.header, pressed && styles.pressed]}
       >
-        <View style={styles.iconCircle}>
-          <Icon name="shield" size={18} color={stitchTokens.wineDark} />
-        </View>
-        <View style={styles.headerText}>
-          <AppText style={styles.title}>Mẹo An Toàn Khi Trao Đổi</AppText>
-          <AppText style={styles.subtitle}>
-            {expanded ? "Bấm để thu gọn hướng dẫn" : "Bấm để xem 4 lưu ý bảo vệ quyền lợi"}
-          </AppText>
+        <View style={styles.headerLeft}>
+          <View style={styles.iconPill}>
+            <Icon name="shield" size={14} color={stitchTokens.wine} />
+          </View>
+          <AppText style={styles.title}>Lưu ý giao nhận & bảo vệ cọc</AppText>
         </View>
         <Icon
-          name={expanded ? "close" : "arrow"}
+          name={expanded ? "chevronUp" : "chevronDown"}
           size={16}
-          color={stitchTokens.roseBrown}
+          color={stitchTokens.subtleGray}
         />
       </Pressable>
 
-      {expanded && (
+      {expanded ? (
         <View style={styles.content}>
           {TIPS.map((tip) => (
             <View key={tip.id} style={styles.tipRow}>
               <View style={styles.tipIconBox}>
-                <Icon name={tip.icon} size={15} color={stitchTokens.wineDark} />
+                <Icon name={tip.icon} size={14} color={stitchTokens.wine} />
               </View>
               <View style={styles.tipTextCol}>
                 <AppText style={styles.tipTitle}>{tip.title}</AppText>
@@ -70,7 +68,7 @@ export function ExchangeSafetyTips() {
             </View>
           ))}
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -78,75 +76,73 @@ export function ExchangeSafetyTips() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
-    padding: space.md,
-    gap: 12,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(92, 2, 2, 0.05)",
+    paddingHorizontal: 16,
+    paddingVertical: 13,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: stitchTokens.parchment,
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  iconPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
   },
-  headerText: {
-    flex: 1,
-    gap: 1,
+  pressed: {
+    opacity: 0.75,
   },
   title: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: stitchTokens.roseBrown,
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
   },
   content: {
-    paddingTop: 4,
-    gap: 10,
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: stitchTokens.peachBorder,
+    borderTopColor: stitchTokens.surfaceSoft,
+    gap: space.md,
   },
   tipRow: {
     flexDirection: "row",
-    gap: 10,
     alignItems: "flex-start",
+    gap: 10,
   },
   tipIconBox: {
     width: 28,
     height: 28,
-    borderRadius: 6,
-    backgroundColor: stitchTokens.parchment,
+    borderRadius: 9,
+    backgroundColor: stitchTokens.surfaceSoft,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
+    marginTop: 1,
   },
   tipTextCol: {
     flex: 1,
     gap: 2,
   },
   tipTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.darkWood,
   },
   tipDesc: {
-    fontSize: 11,
-    lineHeight: 15,
-    color: stitchTokens.roseBrown,
+    fontSize: 12,
+    color: stitchTokens.subtleGray,
+    lineHeight: 17.5,
   },
 });

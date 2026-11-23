@@ -24472,6 +24472,11 @@ components:
           anyOf:
             - type: string
             - type: "null"
+        resolutionCompensationAmount:
+          anyOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
         resolutionReason:
           anyOf:
             - type: string
@@ -25243,6 +25248,10 @@ components:
           type: string
           minLength: 5
           maxLength: 500
+        compensationAmount:
+          type: integer
+          minimum: 1
+          description: Optional partial or full damage deduction amount in VND for CompensateInitiator or CompensateRecipient; omitted defaults to full compensation.
     ExchangeReviewsResponse:
       $ref: "#/components/schemas/TransactionReviewsResponse"
     ReviewTransactionsPage:

@@ -69,19 +69,21 @@ export function useMarkNotificationsRead(client: SessionClient | null) {
         },
       );
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       queryClient.setQueryData<MemberNotificationPage | undefined>(
         NOTIFICATIONS_QUERY_KEY,
         (old) => {
           if (!old) return old;
           const nowIso = new Date().toISOString();
+          const targetIds = new Set(variables.ids ?? []);
           return {
             ...old,
             unreadCount: result.unreadCount,
-            items: old.items.map((it) => ({
-              ...it,
-              readAt: it.readAt ?? nowIso,
-            })),
+            items: old.items.map((it) =>
+              variables.all || targetIds.has(it.id)
+                ? { ...it, readAt: it.readAt ?? nowIso }
+                : it,
+            ),
           };
         },
       );

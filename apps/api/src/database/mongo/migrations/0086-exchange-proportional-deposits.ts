@@ -67,7 +67,14 @@ export function createExchangeProportionalDepositsMigration(previous: Collection
       if (!currentExchange) throw new Error('Expected current Exchange collection spec');
       await applyCollectionSpecs(db, [currentExchange]);
       const exchanges = db.collection<ExchangeDoc>('exchanges');
-      for await (const row of exchanges.find({ agreement: { $ne: null } })) {
+      // Only backfill exchanges where neither party has locked funds yet so
+      // active/historical exchanges stay consistent with immutable Ledger holds.
+      for await (const row of exchanges.find({
+        agreement: { $ne: null },
+        initiatorFundedAt: null,
+        recipientFundedAt: null,
+        status: { $in: ['Proposed', 'AcceptedAwaitingFunding'] },
+      })) {
         if (row.agreement) {
           const amounts = exchangeAmounts(
             row.agreement,

@@ -31,6 +31,7 @@ import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
 import { exchangeSchema, formatCancelReason } from "./contracts";
 import { ExchangeReviewsCard } from "./exchange-reviews-card";
+import { ExchangeShippingCard } from "./exchange-shipping-card";
 import {
   addressBook,
   addressReceipt,
@@ -46,8 +47,14 @@ import { useSession } from "../../core/session/session-provider";
 interface ExchangeActionsCardProps {
   exchange: Exchange;
   isInitiator: boolean;
+  partnerName?: string;
   readError?: boolean;
   onReload?: () => Promise<unknown>;
+  isViewingHistory?: boolean;
+  onReturnToLive?: () => void;
+  onOpenChat?: () => void;
+  bottomInset?: number;
+  renderScrollBody?: (actionsBody: React.ReactNode) => React.ReactNode;
 }
 
 const CARRIER_OPTIONS = [
@@ -62,6 +69,7 @@ const DISPUTE_CATEGORIES = [
   "Sách rách nát / hư hỏng nặng",
   "Giao sai sách / Không đúng cam kết",
   "Thiếu sách / Bưu kiện rỗng",
+  "Đối tác chưa gửi sách",
   "Sách nghi vấn bản in lậu / photo",
   "Sự cố giao nhận khác",
 ];
@@ -104,9 +112,15 @@ export function ExchangeActionsCard(props: ExchangeActionsCardProps) {
 function ExchangeActionsContent({
   exchange,
   isInitiator,
+  partnerName = "Đối tác",
   identity,
   readError,
   onReload,
+  isViewingHistory = false,
+  onReturnToLive,
+  onOpenChat,
+  bottomInset = 12,
+  renderScrollBody,
 }: ExchangeActionsCardProps & { identity: string }) {
   const { pending, ack } = useExchangeRecovery(exchange.id);
   const { client, state } = useSession();
@@ -122,9 +136,13 @@ function ExchangeActionsContent({
   const [disputeModalOpen, setDisputeModalOpen] = useState(false);
   const [disputeCategory, setDisputeCategory] = useState(DISPUTE_CATEGORIES[0]);
   const [disputeDetail, setDisputeDetail] = useState("");
+  const [disputeBookIds, setDisputeBookIds] = useState<string[]>([]);
   const [disputeError, setDisputeError] = useState<string | null>(null);
-  // Accept with address selector & inline address creation
+  // Accept with address selector, inline address creation & diff negotiation
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
+  const [isNegotiatingDiff, setIsNegotiatingDiff] = useState(false);
+  const [negotiatedPayer, setNegotiatedPayer] = useState<"me" | "partner" | "none">("none");
+  const [negotiatedDiffInput, setNegotiatedDiffInput] = useState("0");
   const [selectedAcceptAddressId, setSelectedAcceptAddressId] = useState<
     string | null
   >(null);
@@ -162,7 +180,8 @@ function ExchangeActionsContent({
     queryFn: () => client.request("/me/wallet", walletSummary),
     enabled:
       state.status === "authenticated" &&
-      exchange.status === "AcceptedAwaitingFunding",
+      (exchange.status === "AcceptedAwaitingFunding" ||
+        (exchange.status === "Proposed" && acceptModalOpen)),
   });
 
   const addressesQuery = useQuery({
@@ -170,7 +189,6 @@ function ExchangeActionsContent({
     queryFn: () => client.request("/me/addresses", addressBook),
     enabled:
       state.status === "authenticated" &&
-      !isInitiator &&
       exchange.status === "Proposed",
   });
 
@@ -305,15 +323,24 @@ function ExchangeActionsContent({
   const counterMutation = useMutation({
     mutationFn: ({
       listingIds,
+      negotiatedDiffAmount,
+      diffPayerId,
+      deliveryAddressId,
       note,
     }: {
-      listingIds: string[];
-      note: string;
+      listingIds?: string[];
+      negotiatedDiffAmount?: number;
+      diffPayerId?: string | null;
+      deliveryAddressId?: string | null;
+      note?: string;
     }) =>
       command("counter", {
         expectedVersion: exchange.revision,
-        listingIds,
-        note: note.trim() || undefined,
+        ...(listingIds ? { listingIds } : {}),
+        ...(negotiatedDiffAmount !== undefined ? { negotiatedDiffAmount } : {}),
+        ...(diffPayerId !== undefined ? { diffPayerId } : {}),
+        ...(deliveryAddressId ? { deliveryAddressId } : {}),
+        note: note?.trim() || undefined,
       }),
     onSuccess: success,
     onError: failure,
@@ -389,6 +416,10 @@ function ExchangeActionsContent({
   const hasRecovery = Boolean(pending || ack);
   const blocked = hasRecovery || Boolean(readError);
 
+  const receiveSnapshots = isInitiator
+    ? (exchange.agreement ? [exchange.agreement.recipientBook] : [])
+    : (exchange.agreement?.initiatorBooks ?? []);
+
   const handleConfirmDispute = () => {
     const detailText = disputeDetail.trim();
     if (detailText.length < 5) {
@@ -397,7 +428,13 @@ function ExchangeActionsContent({
     }
     setDisputeError(null);
 
-    const finalReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}`;
+    const selectedBookTitles = receiveSnapshots
+      .filter((b) => disputeBookIds.includes(b.listingId))
+      .map((b) => b.book.title);
+    const booksLine = selectedBookTitles.length
+      ? `\n[Sách gặp sự cố]: ${selectedBookTitles.join(", ")}`
+      : "";
+    const finalReason = `[Sự cố]: ${disputeCategory}${booksLine}\n[Chi tiết]: ${detailText}`;
 
     disputeMutation.mutate(finalReason);
   };
@@ -504,7 +541,8 @@ function ExchangeActionsContent({
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
-        quality: 0.85,
+        quality: 0.7,
+        base64: true,
       });
       if (!res.canceled && res.assets?.[0]) {
         const asset = res.assets[0];
@@ -512,7 +550,11 @@ function ExchangeActionsContent({
           setShipFormError("Dung lượng ảnh tối đa là 10MB.");
           return;
         }
-        setPackagingPhoto(asset.uri);
+        const mime = asset.mimeType || "image/jpeg";
+        const resolvedUrl = asset.base64
+          ? `data:${mime};base64,${asset.base64}`
+          : asset.uri;
+        setPackagingPhoto(resolvedUrl);
         setPackagingPhotoName(asset.fileName || "anh-sach-chua-dong-hop.jpg");
         return;
       }
@@ -709,12 +751,86 @@ function ExchangeActionsContent({
     }
   };
 
-  return (
-    <View style={styles.card}>
-      <View style={styles.titleRow}>
-        <Icon name="verified" size={16} color={stitchTokens.wineDark} />
-        <AppText style={styles.title}>Hành động tiếp theo</AppText>
-      </View>
+  const openAcceptSheet = () => {
+    setAddressFormError(null);
+    setIsNegotiatingDiff(false);
+    const currentPayer =
+      exchange.diffAmount <= 0 || !exchange.diffPayerId
+        ? "none"
+        : exchange.diffPayerId === currentUserId
+          ? "me"
+          : "partner";
+    setNegotiatedPayer(currentPayer);
+    setNegotiatedDiffInput(String(exchange.diffAmount || 0));
+    if (!addressesQuery.data?.items?.length) {
+      setIsAddingNewAddress(true);
+    } else {
+      setIsAddingNewAddress(false);
+    }
+    setAcceptModalOpen(true);
+  };
+
+  const openShipSheet = () => {
+    setShipFormError(null);
+    setGhnSuccessMsg(null);
+    setShipModalOpen(true);
+  };
+
+  const openDisputeSheet = (defaultCategory?: string) => {
+    setDisputeError(null);
+    if (defaultCategory) setDisputeCategory(defaultCategory);
+    setDisputeModalOpen(true);
+  };
+
+  const dockedMode = Boolean(renderScrollBody);
+  const shippingExpired = Boolean(
+    exchange.shippingDeadline &&
+      Date.parse(exchange.shippingDeadline) <= Date.now(),
+  );
+  const missedOneSided =
+    exchange.status === "Preparing" &&
+    shippingExpired &&
+    Boolean(isShippedByMe) !== Boolean(isPartnerShipped);
+  const myRole = isInitiator ? "Initiator" : "Recipient";
+  const partnerRole = isInitiator ? "Recipient" : "Initiator";
+  const isPartnerFunded = isInitiator
+    ? Boolean(exchange.recipientFundedAt)
+    : Boolean(exchange.initiatorFundedAt);
+  const isPartnerCompleted = isInitiator
+    ? Boolean(exchange.recipientCompletedAt)
+    : Boolean(exchange.initiatorCompletedAt);
+
+  const isHandoverWorkspace =
+    !blocked &&
+    (exchange.status === "Preparing" || exchange.status === "InTransit");
+  const isEmptyProposedWorkspace =
+    dockedMode && !blocked && exchange.status === "Proposed" && !actionError && !hasRecovery && !readError;
+
+  const sectionTitle =
+    exchange.status === "Proposed"
+      ? isAwaitingMyResponse
+        ? "Đề nghị chờ bạn phản hồi"
+        : "Đang chờ đối tác phản hồi"
+      : exchange.status === "AcceptedAwaitingFunding"
+        ? "Tiến độ đặt cọc bảo chứng"
+        : exchange.status === "Delivered"
+          ? "Đồng kiểm sách 72 giờ"
+          : exchange.status === "ResolutionPending"
+            ? "Hồ sơ tranh chấp"
+            : exchange.status === "Completed"
+              ? "Đánh giá & Ghi nhận"
+              : "Trạng thái giao dịch";
+
+  const actionsBody = isEmptyProposedWorkspace ? null : (
+    <View style={isHandoverWorkspace ? styles.plainContainer : styles.card}>
+      {!isHandoverWorkspace ? (
+        <View style={styles.titleRow}>
+          <View style={styles.titleIconPill}>
+            <Icon name="verified" size={14} color={stitchTokens.wine} />
+          </View>
+          <AppText style={styles.title}>{sectionTitle}</AppText>
+        </View>
+      ) : null}
 
       {exchange.status !== "Delivered" && (
         isInitiator
@@ -734,7 +850,7 @@ function ExchangeActionsContent({
       ) : null}
 
       {actionError && !hasRecovery ? (
-        <View style={{ marginTop: space.sm, marginBottom: space.xs }}>
+        <View style={{ marginTop: space.xs }}>
           <Notice tone="error">{actionError}</Notice>
         </View>
       ) : null}
@@ -766,8 +882,8 @@ function ExchangeActionsContent({
       )}
       {!blocked && (
         <>
-          {/* State: PROPOSED */}
-          {exchange.status === "Proposed" && (
+          {/* State: PROPOSED (only rendered inline if not docked) */}
+          {exchange.status === "Proposed" && !dockedMode && (
             <View style={styles.actionsBox}>
               {isAwaitingMyResponse ? (
                 <View style={styles.buttonGroup}>
@@ -780,17 +896,17 @@ function ExchangeActionsContent({
                       </AppText>
                     </AppText>
                   </View>
-                  <AppText style={styles.hintText}>
-                    Đối tác đề nghị trao đổi sách với bạn. Bạn có thể đồng ý,
-                    yêu chọn sách của mình thay thế, hoặc từ chối đề nghị.
-                  </AppText>
                   <View style={styles.rowTwoButtons}>
                     <View style={{ flex: 1 }}>
                       <Button
-                        title="Từ chối"
+                        title={isInitiator ? "Hủy đề nghị" : "Từ chối"}
                         secondary
                         busy={isBusy}
-                        onPress={() => setConfirmRejectOpen(true)}
+                        onPress={() =>
+                          isInitiator
+                            ? setConfirmCancelOpen(true)
+                            : setConfirmRejectOpen(true)
+                        }
                       />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -798,15 +914,7 @@ function ExchangeActionsContent({
                         title="Đồng ý đổi"
                         wine
                         busy={isBusy}
-                        onPress={() => {
-                          setAddressFormError(null);
-                          if (!addressesQuery.data?.items?.length) {
-                            setIsAddingNewAddress(true);
-                          } else {
-                            setIsAddingNewAddress(false);
-                          }
-                          setAcceptModalOpen(true);
-                        }}
+                        onPress={openAcceptSheet}
                       />
                     </View>
                   </View>
@@ -819,26 +927,20 @@ function ExchangeActionsContent({
                 </View>
               ) : (
                 <View style={styles.buttonGroup}>
-                  <View style={styles.proposalNoticeBox}>
-                    <Icon name="tag" size={14} color={stitchTokens.wineDark} />
-                    <AppText style={styles.proposalNoticeText}>
-                      Tiền bù tính từ sách:{" "}
-                      <AppText style={{ fontWeight: "700" }}>
-                        {diffPayerLabel}
-                      </AppText>
-                    </AppText>
-                  </View>
                   <AppText style={styles.hintText}>
-                    Đề nghị đã gửi, sách chưa được giữ. Đang chờ đối tác phản
-                    hồi; bạn có thể rút đề nghị nếu đổi ý.
+                    {isInitiator
+                      ? "Đề nghị đã gửi, sách chưa được giữ. Đang chờ đối tác phản hồi."
+                      : "Bạn đã gửi đề xuất điều chỉnh. Đang chờ đối tác phản hồi."}
                   </AppText>
-                  <Button
-                    title="Hủy đề nghị đổi sách"
-                    secondary
-                    wine
-                    busy={isBusy}
-                    onPress={() => setConfirmCancelOpen(true)}
-                  />
+                  {isInitiator && (
+                    <Button
+                      title="Hủy đề nghị đổi sách"
+                      secondary
+                      wine
+                      busy={isBusy}
+                      onPress={() => setConfirmCancelOpen(true)}
+                    />
+                  )}
                 </View>
               )}
             </View>
@@ -847,6 +949,84 @@ function ExchangeActionsContent({
           {/* State: ACCEPTED / FUNDING */}
           {exchange.status === "AcceptedAwaitingFunding" && (
             <View style={styles.actionsBox}>
+              {/* 2-side Funding Status Pills */}
+              <View style={styles.twoSideGrid}>
+                <View
+                  style={[
+                    styles.sideStatusPill,
+                    isFundedByMe
+                      ? styles.sideStatusPillDone
+                      : styles.sideStatusPillPending,
+                  ]}
+                >
+                  <View style={styles.sideStatusHeader}>
+                    <View
+                      style={[
+                        styles.statusDotSmall,
+                        {
+                          backgroundColor: isFundedByMe
+                            ? stitchTokens.likeNewGreen
+                            : stitchTokens.wine,
+                        },
+                      ]}
+                    />
+                    <AppText style={styles.sideStatusOwner}>Bạn</AppText>
+                  </View>
+                  <AppText
+                    style={[
+                      styles.sideStatusValue,
+                      {
+                        color: isFundedByMe
+                          ? stitchTokens.likeNewGreen
+                          : stitchTokens.wine,
+                      },
+                    ]}
+                  >
+                    {isFundedByMe ? "Đã đặt cọc" : "Chờ bạn đặt cọc"}
+                  </AppText>
+                </View>
+
+                <View
+                  style={[
+                    styles.sideStatusPill,
+                    isPartnerFunded
+                      ? styles.sideStatusPillDone
+                      : styles.sideStatusPillIdle,
+                  ]}
+                >
+                  <View style={styles.sideStatusHeader}>
+                    <View
+                      style={[
+                        styles.statusDotSmall,
+                        {
+                          backgroundColor: isPartnerFunded
+                            ? stitchTokens.likeNewGreen
+                            : stitchTokens.subtleGray,
+                        },
+                      ]}
+                    />
+                    <AppText
+                      style={styles.sideStatusOwner}
+                      numberOfLines={1}
+                    >
+                      {partnerName}
+                    </AppText>
+                  </View>
+                  <AppText
+                    style={[
+                      styles.sideStatusValue,
+                      {
+                        color: isPartnerFunded
+                          ? stitchTokens.likeNewGreen
+                          : stitchTokens.subtleGray,
+                      },
+                    ]}
+                  >
+                    {isPartnerFunded ? "Đã đặt cọc" : "Đang chờ cọc"}
+                  </AppText>
+                </View>
+              </View>
+
               {isFundedByMe ? (
                 <View style={styles.buttonGroup}>
                   <View style={styles.successNote}>
@@ -856,235 +1036,218 @@ function ExchangeActionsContent({
                       color={stitchTokens.likeNewGreen}
                     />
                     <AppText style={styles.successNoteText}>
-                      Bạn đã hoàn tất đặt cọc bảo chứng (
-                      {formatVnd(amountToPay)}). Đang chờ đối tác cọc để chuyển
-                      sang giai đoạn gửi sách.
+                      Bạn đã ký quỹ {formatVnd(amountToPay)}. Hệ thống sẽ tự
+                      động mở bước gửi sách ngay khi {partnerName} hoàn tất cọc.
                     </AppText>
                   </View>
-                  <AppText style={styles.hintText}>
-                    Nếu đối tác không cọc hoặc bạn muốn dừng giao dịch trước khi
-                    bắt đầu gửi sách, bạn vẫn có thể hủy. Tiền cọc sẽ được hoàn
-                    lại 100% về ví ngay lập tức.
-                  </AppText>
-                  <Button
-                    title="Hủy giao dịch trao đổi"
-                    secondary
-                    wine
-                    busy={isBusy}
-                    onPress={() => setConfirmCancelOpen(true)}
-                  />
-                </View>
-              ) : (
-                <View style={styles.buttonGroup}>
-                  {/* Wallet funding summary box */}
-                  <View style={styles.fundingSummaryCard}>
-                    <View style={styles.fundingSummaryRow}>
-                      <AppText style={styles.fundingSummaryLabel}>
-                        Tiền cọc cần nạp:
-                      </AppText>
-                      <AppText style={styles.fundingSummaryAmount}>
-                        {formatVnd(amountToPay)}
-                      </AppText>
-                    </View>
-                    <View style={styles.fundingSummaryRow}>
-                      <AppText style={styles.fundingSummarySubLabel}>
-                        Số dư ví khả dụng:
-                      </AppText>
-                      <AppText style={styles.fundingSummaryWallet}>
-                        {formatVnd(walletAvailable)}
-                      </AppText>
-                    </View>
-                  </View>
-
-                  {hasInsufficientFunds && (
-                    <View style={styles.insufficientBox}>
-                      <Notice tone="error">
-                        Số dư ví của bạn không đủ để đặt cọc (còn thiếu{" "}
-                        {formatVnd(amountToPay - walletAvailable)}). Vui lòng
-                        nạp thêm tiền vào ví để tiếp tục.
-                      </Notice>
-                      <Button
-                        title="Nạp tiền vào ví ngay ↗"
-                        secondary
-                        onPress={() => router.push("/wallet")}
-                      />
-                    </View>
-                  )}
-
-                  <AppText style={styles.hintText}>
-                    Cả hai bên đã đồng thuận. Hãy đặt cọc bảo chứng từ số dư ví
-                    để kích hoạt quy trình giao nhận. Tiền cọc được khóa an toàn
-                    trên hệ thống.
-                  </AppText>
-
-                  <Button
-                    title={
-                      fundMutation.isPending
-                        ? "Đang xử lý đặt cọc..."
-                        : `Đặt cọc bảo chứng ngay (${formatVnd(amountToPay)})`
-                    }
-                    wine
-                    busy={isBusy}
-                    disabled={hasInsufficientFunds || isBusy}
-                    onPress={() => fundMutation.mutate()}
-                  />
-                  <Button
-                    title="Hủy giao dịch trao đổi"
-                    secondary
-                    busy={isBusy}
-                    onPress={() => setConfirmCancelOpen(true)}
-                  />
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* State: PREPARING (SHIP) */}
-          {exchange.status === "Preparing" && (
-            <View style={styles.actionsBox}>
-              {exchange.shippingDeadline && (
-                <View style={styles.deadlineContainer}>
-                  <Icon name="clock" size={14} color={stitchTokens.wineDark} />
-                  <AppText style={styles.deadlineText}>
-                    Hạn chót gửi sách:{" "}
-                    {new Date(exchange.shippingDeadline).toLocaleString(
-                      "vi-VN",
-                    )}{" "}
-                    (72 giờ)
-                  </AppText>
-                </View>
-              )}
-
-              {exchange.cancellationRequestedBy && (
-                <View style={styles.proposalNoticeBox}>
-                  <Icon
-                    name={
-                      exchange.cancellationRequestedBy ===
-                      (isInitiator ? "Initiator" : "Recipient")
-                        ? "clock"
-                        : "info"
-                    }
-                    size={16}
-                    color={stitchTokens.wineDark}
-                  />
-                  <AppText style={styles.proposalNoticeText}>
-                    {exchange.cancellationRequestedBy ===
-                    (isInitiator ? "Initiator" : "Recipient")
-                      ? "Bạn đã gửi yêu cầu hủy giao dịch trước khi gửi sách. Đang chờ đối tác xác nhận. Nếu đối tác đồng thuận, 100% tiền cọc và tiền bù sẽ được hoàn lại về ví của cả hai bên."
-                      : "Đối tác đã đề nghị hủy giao dịch trao đổi này trước khi gửi sách. Nếu bạn đồng ý hủy, 100% tiền cọc bảo chứng và tiền bù sẽ được hoàn trả về ví. Nếu muốn tiếp tục, bạn có thể bấm Từ chối yêu cầu hủy hoặc tiếp tục gửi sách."}
-                  </AppText>
-                </View>
-              )}
-
-              {isShippedByMe ? (
-                <View style={styles.successNote}>
-                  <Icon
-                    name="check"
-                    size={16}
-                    color={stitchTokens.likeNewGreen}
-                  />
-                  <AppText style={styles.successNoteText}>
-                    Bạn đã báo gửi sách thành công. Mã vận đơn đã được lưu trên
-                    hệ thống để đối tác cùng theo dõi.
-                  </AppText>
-                </View>
-              ) : (
-                <View style={styles.buttonGroup}>
-                  <AppText style={styles.hintText}>
-                    Cả hai bên đã hoàn tất đặt cọc. Hãy đóng gói cẩn thận và gửi
-                    sách đến địa chỉ của đối tác theo thỏa thuận, sau đó cập
-                    nhật mã vận đơn dưới đây.
-                  </AppText>
-                  <Button
-                    title="📦 Báo gửi sách & Nhập mã vận đơn"
-                    wine
-                    busy={isBusy}
-                    onPress={() => {
-                      setShipFormError(null);
-                      setGhnSuccessMsg(null);
-                      setShipModalOpen(true);
-                    }}
-                  />
-                  {!isPartnerShipped && !exchange.cancellationRequestedBy && (
+                  {!dockedMode ? (
                     <Button
-                      title="🛑 Đề nghị hủy giao dịch"
+                      title="Hủy trao đổi"
                       secondary
                       wine
                       busy={isBusy}
                       onPress={() => setConfirmCancelOpen(true)}
                     />
-                  )}
-                  {!isPartnerShipped &&
-                    exchange.cancellationRequestedBy ===
-                      (isInitiator ? "Recipient" : "Initiator") && (
-                      <>
-                        <Button
-                          title="🤝 Đồng ý hủy (Hoàn cọc 100%)"
-                          secondary
-                          wine
-                          busy={isBusy}
-                          onPress={() => setConfirmCancelOpen(true)}
-                        />
-                        <Button
-                          title="❌ Từ chối yêu cầu hủy"
-                          secondary
-                          busy={isBusy}
-                          onPress={() => setConfirmRejectOpen(true)}
-                        />
-                      </>
-                    )}
-                </View>
-              )}
-              {receiveAction}
-              {isReceivedByMe && disputeAction}
-            </View>
-          )}
-
-          {/* State: IN_TRANSIT (SHIP IF NOT YET, RECEIVE OR DISPUTE) */}
-          {exchange.status === "InTransit" && (
-            <View style={styles.actionsBox}>
-              {!isShippedByMe && (
-                <View style={[styles.buttonGroup, { marginBottom: 8 }]}>
-                  <AppText style={styles.hintText}>
-                    Đối tác đã báo gửi sách chiều về. Vui lòng đóng gói cẩn thận
-                    và gửi sách chiều đi của bạn trước thời hạn 72 giờ:
-                  </AppText>
-                  <Button
-                    title="📦 Báo gửi sách & Nhập mã vận đơn"
-                    wine
-                    busy={isBusy}
-                    onPress={() => {
-                      setShipFormError(null);
-                      setGhnSuccessMsg(null);
-                      setShipModalOpen(true);
-                    }}
-                  />
-                </View>
-              )}
-              {isReceivedByMe ? (
-                <View style={styles.successNote}>
-                  <Icon
-                    name="check"
-                    size={16}
-                    color={stitchTokens.likeNewGreen}
-                  />
-                  <AppText style={styles.successNoteText}>
-                    Bạn có 72 giờ kiểm tra từ lúc nhận sách. Cọc vẫn được giữ
-                    đến khi cả hai hạn kết thúc và không có tranh chấp.
-                  </AppText>
+                  ) : null}
                 </View>
               ) : (
                 <View style={styles.buttonGroup}>
-                  <AppText style={styles.hintText}>
-                    Sách đang trên đường giao đến bạn. Khi nhận sách và kiểm tra
-                    đúng mô tả, hãy bấm nút xác nhận dưới đây.
-                  </AppText>
-                  {receiveAction}
+                  {/* Clean Digital Receipt */}
+                  <View style={styles.receiptBox}>
+                    <View style={styles.receiptRow}>
+                      <AppText style={styles.receiptLabel}>
+                        Cọc sách gửi (hoàn 100% khi xong)
+                      </AppText>
+                      <AppText style={styles.receiptVal}>
+                        {formatVnd(baseDeposit)}
+                      </AppText>
+                    </View>
+                    {diffRequired > 0 ? (
+                      <View style={styles.receiptRow}>
+                        <AppText style={styles.receiptLabel}>
+                          Tiền bù chênh lệch bạn trả
+                        </AppText>
+                        <AppText style={styles.receiptVal}>
+                          {formatVnd(diffRequired)}
+                        </AppText>
+                      </View>
+                    ) : null}
+                    <View style={styles.receiptDivider} />
+                    <View style={styles.receiptRow}>
+                      <AppText style={styles.receiptTotalLabel}>
+                        Tổng cần nộp
+                      </AppText>
+                      <AppText style={styles.receiptTotalVal}>
+                        {formatVnd(amountToPay)}
+                      </AppText>
+                    </View>
+                    <View style={styles.receiptRow}>
+                      <AppText style={styles.receiptLabel}>
+                        Số dư ví khả dụng
+                      </AppText>
+                      <AppText
+                        style={[
+                          styles.receiptWalletVal,
+                          hasInsufficientFunds && {
+                            color: stitchTokens.crimson,
+                          },
+                        ]}
+                      >
+                        {walletQuery.isPending
+                          ? "Đang tải..."
+                          : formatVnd(walletAvailable)}
+                      </AppText>
+                    </View>
+                  </View>
+
+                  {hasInsufficientFunds && (
+                    <Notice tone="error">
+                      Số dư ví còn thiếu{" "}
+                      {formatVnd(amountToPay - walletAvailable)}. Nạp thêm vào
+                      ví để hoàn tất đặt cọc.
+                    </Notice>
+                  )}
+
+                  {!dockedMode ? (
+                    <>
+                      {hasInsufficientFunds && (
+                        <Button
+                          title="Mở ví để nạp thêm"
+                          secondary
+                          onPress={() => router.push("/wallet")}
+                        />
+                      )}
+                      <Button
+                        title={
+                          fundMutation.isPending
+                            ? "Đang xử lý đặt cọc..."
+                            : walletQuery.isPending
+                              ? "Đang kiểm tra số dư ví..."
+                              : `Đặt cọc ${formatVnd(amountToPay)}`
+                        }
+                        wine
+                        busy={isBusy}
+                        disabled={
+                          hasInsufficientFunds || walletQuery.isPending || isBusy
+                        }
+                        onPress={() => fundMutation.mutate()}
+                      />
+                      <Button
+                        title="Hủy trao đổi"
+                        secondary
+                        busy={isBusy}
+                        onPress={() => setConfirmCancelOpen(true)}
+                      />
+                    </>
+                  ) : null}
                 </View>
               )}
-              {disputeAction}
             </View>
           )}
+
+          {/* State: PREPARING & IN_TRANSIT — Unified 2-Leg Shipping Workspace */}
+          {(exchange.status === "Preparing" ||
+            exchange.status === "InTransit") &&
+            (() => {
+              const sendActionNode =
+                !dockedMode && !isShippedByMe ? (
+                  <Button
+                    title="Tạo đơn gửi sách"
+                    wine
+                    busy={isBusy}
+                    onPress={openShipSheet}
+                  />
+                ) : null;
+
+              const outgoingExtraNode =
+                exchange.status === "Preparing" && !isShippedByMe ? (
+                  <>
+                    {exchange.cancellationRequestedBy ? (
+                      <Notice tone="info">
+                        {exchange.cancellationRequestedBy === myRole
+                          ? "Bạn đã đề nghị hủy giao dịch trước khi gửi sách. Đang chờ đối tác phản hồi."
+                          : "Đối tác đề nghị hủy giao dịch trước khi gửi sách. Nếu đồng ý, 100% tiền cọc và tiền bù sẽ được hoàn về ví."}
+                      </Notice>
+                    ) : null}
+                    {!dockedMode &&
+                    !isPartnerShipped &&
+                    !exchange.cancellationRequestedBy ? (
+                      <Button
+                        title="Đề nghị hủy giao dịch"
+                        secondary
+                        busy={isBusy}
+                        onPress={() => setConfirmCancelOpen(true)}
+                      />
+                    ) : null}
+                    {!isPartnerShipped &&
+                    exchange.cancellationRequestedBy === partnerRole ? (
+                      <View style={styles.rowTwoButtons}>
+                        <View style={{ flex: 1 }}>
+                          <Button
+                            title="Đồng ý hủy"
+                            secondary
+                            wine
+                            busy={isBusy}
+                            onPress={() => setConfirmCancelOpen(true)}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Button
+                            title="Từ chối hủy"
+                            secondary
+                            busy={isBusy}
+                            onPress={() => setConfirmRejectOpen(true)}
+                          />
+                        </View>
+                      </View>
+                    ) : null}
+                  </>
+                ) : null;
+
+              const incomingExtraNode = (
+                <>
+                  {isReceivedByMe ? (
+                    <View style={styles.successNote}>
+                      <Icon
+                        name="check"
+                        size={15}
+                        color={stitchTokens.likeNewGreen}
+                      />
+                      <AppText style={styles.successNoteText}>
+                        Bạn đã nhận sách và có 72 giờ kiểm tra. Tiền cọc giữ an
+                        toàn đến khi cả hai hoàn tất.
+                      </AppText>
+                    </View>
+                  ) : null}
+                  {!dockedMode &&
+                  (exchange.status === "InTransit" || isReceivedByMe)
+                    ? disputeAction
+                    : !dockedMode && missedOneSided ? (
+                        <Button
+                          title="Báo sự cố (Đối tác chưa gửi sách)"
+                          secondary
+                          wine
+                          busy={isBusy}
+                          onPress={() =>
+                            openDisputeSheet("Đối tác chưa gửi sách")
+                          }
+                        />
+                      ) : null}
+                </>
+              );
+
+              return (
+                <ExchangeShippingCard
+                  exchange={exchange}
+                  isInitiator={isInitiator}
+                  partnerName={partnerName}
+                  sendAction={sendActionNode}
+                  receiveAction={dockedMode ? null : receiveAction}
+                  outgoingExtra={outgoingExtraNode}
+                  incomingExtra={incomingExtraNode}
+                />
+              );
+            })()}
 
           {/* State: DELIVERED (INSPECTING, ACKNOWLEDGE OR DISPUTE) */}
           {exchange.status === "Delivered" &&
@@ -1093,7 +1256,6 @@ function ExchangeActionsContent({
                 ? exchange.initiatorInspectionDeadline
                 : exchange.recipientInspectionDeadline;
               const commonDeadline = exchange.inspectionDeadline;
-
               const myDeadlineStr = myDeadline
                 ? new Date(myDeadline).toLocaleString("vi-VN")
                 : null;
@@ -1103,116 +1265,125 @@ function ExchangeActionsContent({
 
               return (
                 <View style={styles.actionsBox}>
-                  {/* Card Thông tin & Lưu ý Đồng kiểm 72h */}
-                  <View style={styles.inspectionCard}>
-                    <View style={styles.inspectionHeader}>
-                      <View style={styles.inspectionTitleRow}>
-                        <View style={styles.inspectionIconBadge}>
-                          <Icon
-                            name="clock"
-                            size={15}
-                            color={stitchTokens.wine}
-                          />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <AppText style={styles.inspectionTitle}>
-                            Thời hạn đồng kiểm sách 72 giờ
-                          </AppText>
-                          <AppText style={styles.inspectionSubtitle}>
-                            {myDeadlineStr
-                              ? `Hạn kiểm tra của bạn: ${myDeadlineStr}`
-                              : commonDeadlineStr
-                                ? `Hạn kiểm tra chung: ${commonDeadlineStr}`
-                                : "Trong vòng 72 giờ tính từ khi nhận sách"}
-                          </AppText>
-                        </View>
+                  {/* 2-side inspection confirmation pills */}
+                  <View style={styles.twoSideGrid}>
+                    <View
+                      style={[
+                        styles.sideStatusPill,
+                        isCompletedByMe
+                          ? styles.sideStatusPillDone
+                          : styles.sideStatusPillPending,
+                      ]}
+                    >
+                      <View style={styles.sideStatusHeader}>
+                        <View
+                          style={[
+                            styles.statusDotSmall,
+                            {
+                              backgroundColor: isCompletedByMe
+                                ? stitchTokens.likeNewGreen
+                                : stitchTokens.wine,
+                            },
+                          ]}
+                        />
+                        <AppText style={styles.sideStatusOwner}>Bạn</AppText>
                       </View>
-                      {commonDeadlineStr &&
-                        myDeadlineStr &&
-                        commonDeadlineStr !== myDeadlineStr && (
-                          <View style={styles.commonDeadlineTag}>
-                            <AppText style={styles.commonDeadlineText}>
-                              🕒 Hạn tất toán chung: {commonDeadlineStr}
-                            </AppText>
-                          </View>
-                        )}
+                      <AppText
+                        style={[
+                          styles.sideStatusValue,
+                          {
+                            color: isCompletedByMe
+                              ? stitchTokens.likeNewGreen
+                              : stitchTokens.wine,
+                          },
+                        ]}
+                      >
+                        {isCompletedByMe ? "Đã nghiệm thu" : "Chờ kiểm tra"}
+                      </AppText>
                     </View>
 
-                    {/* Danh sách lưu ý trực quan */}
-                    <View style={styles.inspectionGuidelines}>
-                      <View style={styles.guidelineItem}>
-                        <Icon
-                          name="shield"
-                          size={14}
-                          color={stitchTokens.wineDark}
+                    <View
+                      style={[
+                        styles.sideStatusPill,
+                        isPartnerCompleted
+                          ? styles.sideStatusPillDone
+                          : styles.sideStatusPillIdle,
+                      ]}
+                    >
+                      <View style={styles.sideStatusHeader}>
+                        <View
+                          style={[
+                            styles.statusDotSmall,
+                            {
+                              backgroundColor: isPartnerCompleted
+                                ? stitchTokens.likeNewGreen
+                                : stitchTokens.subtleGray,
+                            },
+                          ]}
                         />
-                        <AppText style={styles.guidelineText}>
-                          <AppText style={styles.guidelineBold}>
-                            Bảo chứng an toàn:
-                          </AppText>{" "}
-                          Tiền cọc và tiền bù được giữ an toàn trên ví trong suốt
-                          thời gian đồng kiểm.
+                        <AppText
+                          style={styles.sideStatusOwner}
+                          numberOfLines={1}
+                        >
+                          {partnerName}
                         </AppText>
                       </View>
-                      <View style={styles.guidelineItem}>
-                        <Icon
-                          name="check"
-                          size={14}
-                          color={stitchTokens.verifiedGreen}
-                        />
-                        <AppText style={styles.guidelineText}>
-                          <AppText style={styles.guidelineBold}>
-                            Kiểm tra thực tế:
-                          </AppText>{" "}
-                          Đối chiếu kỹ sách nhận được với thông tin & hình ảnh cam
-                          kết ban đầu.
-                        </AppText>
-                      </View>
-                      <View style={styles.guidelineItem}>
-                        <Icon
-                          name="info"
-                          size={14}
-                          color={stitchTokens.wineDark}
-                        />
-                        <AppText style={styles.guidelineText}>
-                          Cọc được giữ đến khi cả hai hết hạn kiểm tra và
-                          giao dịch không có khiếu nại.
-                        </AppText>
-                      </View>
+                      <AppText
+                        style={[
+                          styles.sideStatusValue,
+                          {
+                            color: isPartnerCompleted
+                              ? stitchTokens.likeNewGreen
+                              : stitchTokens.subtleGray,
+                          },
+                        ]}
+                      >
+                        {isPartnerCompleted ? "Đã nghiệm thu" : "Đang kiểm tra"}
+                      </AppText>
                     </View>
                   </View>
 
-                  {/* Nhóm thao tác chính */}
-                  {isCompletedByMe ? (
-                    <View style={styles.completedInspectionBox}>
-                      <View style={styles.completedHeaderRow}>
+                  {commonDeadlineStr &&
+                    myDeadlineStr &&
+                    commonDeadlineStr !== myDeadlineStr && (
+                      <View style={styles.commonDeadlineTag}>
                         <Icon
-                          name="check"
-                          size={18}
-                          color={stitchTokens.verifiedGreen}
+                          name="clock"
+                          size={12}
+                          color={stitchTokens.subtleGray}
                         />
-                        <AppText style={styles.completedInspectionTitle}>
-                          Bạn đã xác nhận sách đạt chuẩn
+                        <AppText style={styles.commonDeadlineText}>
+                          Hạn tất toán chung: {commonDeadlineStr}
                         </AppText>
                       </View>
-                      <AppText style={styles.completedInspectionDesc}>
-                        {inspectionOpen
-                          ? "Bạn vẫn có thể báo sự cố trong hạn kiểm tra của mình."
-                          : "Đã hết hạn kiểm tra sách của bạn."}
-                      </AppText>
-                      {disputeAction}
-                    </View>
-                  ) : (
-                    <View style={styles.buttonGroup}>
-                      <Button
-                        title="✓ Xác nhận đã kiểm tra sách"
-                        wine
-                        busy={isBusy}
-                        onPress={() => setConfirmCompleteOpen(true)}
+                    )}
+
+                  {isCompletedByMe ? (
+                    <View style={styles.successNote}>
+                      <Icon
+                        name="check"
+                        size={17}
+                        color={stitchTokens.likeNewGreen}
                       />
+                      <AppText style={styles.successNoteText}>
+                        Bạn đã xác nhận sách đạt chuẩn. Đang chờ {partnerName}{" "}
+                        xác nhận (hoặc hết hạn 72 giờ) để hoàn tiền cọc về ví.
+                      </AppText>
+                    </View>
+                  ) : !dockedMode ? (
+                    <View style={styles.buttonGroup}>
+                      {isReceivedByMe && inspectionOpen && (
+                        <Button
+                          title="Xác nhận đã kiểm tra"
+                          wine
+                          busy={isBusy}
+                          onPress={() => setConfirmCompleteOpen(true)}
+                        />
+                      )}
+                      {!isReceivedByMe && receiveAction}
                       {disputeAction}
                     </View>
-                  )}
+                  ) : null}
                 </View>
               );
             })()}
@@ -1221,36 +1392,61 @@ function ExchangeActionsContent({
           {exchange.status === "ResolutionPending" &&
             (() => {
               const parsed = parseDisputeReason(exchange.disputeReason || "");
+              const phase = exchange.returnResolution?.phase;
+              const stageIdx =
+                phase &&
+                [
+                  "ReturnOrdered",
+                  "ReturnInProgress",
+                  "ReturnIssue",
+                  "CheckingReturn",
+                  "CompensationOrdered",
+                  "Closed",
+                ].includes(phase)
+                  ? 2
+                  : phase === "Evidence" ||
+                      Boolean(exchange.outboundDeliveryVerification)
+                    ? 1
+                    : 0;
               return (
                 <View style={styles.disputeRichBox}>
-                  <View style={styles.disputeHeaderRow}>
-                    <View style={styles.disputeHeaderTitleRow}>
-                      <Icon
-                        name="shield"
-                        size={18}
-                        color={stitchTokens.crimson}
-                      />
-                      <AppText style={styles.disputeTitle}>
-                        Đang giải quyết khiếu nại
-                      </AppText>
-                    </View>
-                    <View style={styles.pendingBadge}>
-                      <AppText style={styles.pendingBadgeText}>
-                        Chờ phân xử
-                      </AppText>
-                    </View>
+                  <View style={styles.disputeMiniTrack}>
+                    {[
+                      "1. Đã tiếp nhận",
+                      "2. Bằng chứng",
+                      "3. Phán quyết",
+                    ].map((stageLabel, idx) => (
+                      <View
+                        key={stageLabel}
+                        style={[
+                          styles.disputeMiniPill,
+                          idx === stageIdx && styles.disputeMiniPillActive,
+                          idx < stageIdx && styles.disputeMiniPillDone,
+                        ]}
+                      >
+                        <AppText
+                          style={[
+                            styles.disputeMiniText,
+                            idx === stageIdx && styles.disputeMiniTextActive,
+                            idx < stageIdx && styles.disputeMiniTextDone,
+                          ]}
+                        >
+                          {stageLabel}
+                        </AppText>
+                      </View>
+                    ))}
                   </View>
 
                   <View style={styles.disputeCategoryTag}>
                     <AppText style={styles.disputeCategoryText}>
-                      ⚠️ {parsed.category}
+                      {parsed.category}
                     </AppText>
                   </View>
 
                   {parsed.detailText ? (
                     <View style={styles.disputeDetailBlock}>
                       <AppText style={styles.disputeDetailLabel}>
-                        Mô tả chi tiết:
+                        Nội dung phản ánh
                       </AppText>
                       <AppText style={styles.disputeDetailText}>
                         {parsed.detailText}
@@ -1258,15 +1454,20 @@ function ExchangeActionsContent({
                     </View>
                   ) : null}
 
-                  <AppText>Tệp đã gửi được kiểm tra riêng ở mục Bằng chứng sự cố. Tên tệp trong mô tả cũ không chứng minh tệp đã được tải lên.</AppText>
-                  {!exchange.returnResolution && !exchange.outboundDeliveryVerification && receiveAction}
+                  <AppText style={styles.hintText}>
+                    Tệp bằng chứng được quản lý ở mục Bằng chứng sự cố bên dưới.
+                  </AppText>
+                  {!dockedMode &&
+                    !exchange.returnResolution &&
+                    !exchange.outboundDeliveryVerification &&
+                    receiveAction}
 
                   <View style={styles.ledgerNoticeCallout}>
-                    <Icon name="info" size={14} color={stitchTokens.wineDark} />
+                    <Icon name="shield" size={14} color={stitchTokens.wine} />
                     <AppText style={styles.disputeHint}>
-                      Quy trình tự động tất toán 72 giờ đã được tạm dừng. Tiền
-                      cọc và tiền bù đang được bảo vệ an toàn trên Ledger trong
-                      khi Quản trị viên thẩm định đối chiếu bằng chứng.
+                      Tự động tất toán 72h đã tạm dừng. Tiền cọc và tiền bù được
+                      khóa an toàn trên Ledger cho đến khi Quản trị viên thẩm
+                      định xong.
                     </AppText>
                   </View>
                 </View>
@@ -1274,16 +1475,19 @@ function ExchangeActionsContent({
             })()}
 
           <ExchangeReviewsCard exchange={exchange} />
-          {/* State: COMPLETED (WITH REVIEWS) */}
+          {/* State: COMPLETED (Verdict callout if resolved via dispute) */}
           {exchange.status === "Completed" && (
             <View style={{ gap: space.sm }}>
-              {exchange.resolutionDecision === "CompleteExchange" && (
+              {(exchange.resolutionDecision === "CompleteExchange" ||
+                ((exchange.resolutionCompensationAmount ?? 0) > 0 &&
+                  (exchange.resolutionDecision === "CompensateInitiator" ||
+                    exchange.resolutionDecision === "CompensateRecipient"))) && (
                 <View
                   style={[
                     styles.disputeBox,
                     {
                       backgroundColor: stitchTokens.likeNewGreenBg,
-                      borderColor: stitchTokens.verifiedGreen,
+                      borderColor: stitchTokens.mintGreen,
                     },
                   ]}
                 >
@@ -1299,7 +1503,9 @@ function ExchangeActionsContent({
                         { color: stitchTokens.verifiedGreen },
                       ]}
                     >
-                      Trao đổi hoàn tất theo phán quyết của Quản trị viên
+                      {(exchange.resolutionCompensationAmount ?? 0) > 0
+                        ? `Hoàn tất theo phán quyết · Khấu trừ thiệt hại ${formatVnd(exchange.resolutionCompensationAmount!)}`
+                        : "Trao đổi hoàn tất theo phán quyết của Quản trị viên"}
                     </AppText>
                     <AppText
                       style={{
@@ -1308,13 +1514,14 @@ function ExchangeActionsContent({
                         marginTop: 2,
                       }}
                     >
-                      Toàn bộ tiền cọc bảo chứng và tiền bù đã được tất toán
-                      theo thỏa thuận.
+                      {(exchange.resolutionCompensationAmount ?? 0) > 0
+                        ? "Hai bên giữ sách đã nhận. Hệ thống đã khấu trừ mức thiệt hại theo phán quyết và hoàn phần tiền ký quỹ còn lại về ví."
+                        : "Toàn bộ tiền cọc bảo chứng và tiền bù đã được tất toán theo thỏa thuận."}
                     </AppText>
                     {exchange.resolutionReason && (
                       <AppText
                         style={{
-                          fontSize: 13,
+                          fontSize: 12.5,
                           fontWeight: "600",
                           color: stitchTokens.wineDark,
                           marginTop: 4,
@@ -1327,7 +1534,6 @@ function ExchangeActionsContent({
                   </View>
                 </View>
               )}
-
             </View>
           )}
 
@@ -1360,15 +1566,19 @@ function ExchangeActionsContent({
                     : null;
 
                   const decisionTitle = isCompInit
-                    ? "Phán quyết Quản trị viên: Chấp thuận khiếu nại của Bên khởi tạo"
+                    ? "Phán quyết: Chấp thuận khiếu nại Bên khởi tạo"
                     : isCompRecip
-                      ? "Phán quyết Quản trị viên: Chấp thuận khiếu nại của Bên đối tác"
-                      : "Phán quyết Quản trị viên: Hủy đơn & Hoàn tiền (RefundBoth)";
+                      ? "Phán quyết: Chấp thuận khiếu nại Bên đối tác"
+                      : "Phán quyết: Hủy giao dịch & Hoàn cọc hai bên";
 
+                  const compAmt =
+                    exchange.resolutionCompensationAmount ??
+                    exchange.returnResolution?.compensation ??
+                    0;
                   const decisionDesc =
                     isCompInit || isCompRecip
-                      ? "Giao dịch đã được hủy theo phán quyết bảo vệ bên khiếu nại. Sổ cái đã hoàn trả 100% tiền cọc bảo chứng cùng tiền bù và ghi nhận biên bản vi phạm quy chế sàn đối với bên có lỗi."
-                      : "Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví mô phỏng của cả hai bên. Sách đã được mở lại trên kệ.";
+                      ? `Giao dịch đã hủy theo phán quyết bồi thường${compAmt > 0 ? ` (${formatVnd(compAmt)})` : ""}. Bên bị hại được hoàn ký quỹ + nhận bồi thường; phần dư (nếu có) đã hoàn lại ví.`
+                      : "Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví của cả hai bên. Sách chưa gửi đã mở lại trên kệ.";
 
                   return (
                     <View
@@ -1406,7 +1616,7 @@ function ExchangeActionsContent({
                         {cleanReason && (
                           <AppText
                             style={{
-                              fontSize: 13,
+                              fontSize: 12.5,
                               fontWeight: "600",
                               color: stitchTokens.wineDark,
                               marginTop: 4,
@@ -1430,20 +1640,19 @@ function ExchangeActionsContent({
                     {exchange.cancelReason === "MutualAgreement" && (
                       <AppText
                         style={{
-                          fontSize: 13,
+                          fontSize: 12.5,
                           color: stitchTokens.darkWood,
                           marginTop: 2,
                         }}
                       >
-                        Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách.
-                        Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại
-                        100% về ví mô phỏng. Sách đã được mở lại trên kệ.
+                        Hai bên đã đồng thuận hủy trước khi gửi sách. Toàn bộ
+                        tiền cọc và tiền bù đã hoàn 100% về ví.
                       </AppText>
                     )}
                     {exchange.resolutionReason && (
                       <AppText
                         style={{
-                          fontSize: 13,
+                          fontSize: 12.5,
                           color: stitchTokens.darkWood,
                           marginTop: 2,
                         }}
@@ -1458,6 +1667,475 @@ function ExchangeActionsContent({
           )}
         </>
       )}
+    </View>
+  );
+
+  // =========================================================================
+  // NATIVE STICKY THUMB-ZONE BOTTOM ACTION DOCK
+  // =========================================================================
+  const renderBottomDock = () => {
+    if (!dockedMode) return null;
+
+    if (isViewingHistory && onReturnToLive) {
+      return (
+        <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onReturnToLive}
+            style={({ pressed }) => [
+              styles.dockPrimaryBtn,
+              { flex: 1 },
+              pressed && styles.dockPressed,
+            ]}
+          >
+            <Icon name="arrow" size={16} color={stitchTokens.white} />
+            <AppText style={styles.dockPrimaryText}>
+              Quay về bước hiện tại
+            </AppText>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (blocked) {
+      return (
+        <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void onReload?.()}
+            style={({ pressed }) => [
+              styles.dockPrimaryBtn,
+              { flex: 1 },
+              pressed && styles.dockPressed,
+            ]}
+          >
+            <Icon name="sync" size={16} color={stitchTokens.white} />
+            <AppText style={styles.dockPrimaryText}>
+              Tải lại trạng thái phiếu
+            </AppText>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (exchange.status === "Proposed") {
+      if (isAwaitingMyResponse) {
+        return (
+          <View style={[styles.bottomDockCol, { paddingBottom: bottomInset }]}>
+            <View style={styles.dockTopMetaRow}>
+              <AppText style={styles.dockTopMetaLabel} numberOfLines={1}>
+                {diffPayerLabel}
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isBusy}
+                onPress={() => setCounterModalOpen(true)}
+                style={({ pressed }) => [
+                  styles.dockLinkChip,
+                  pressed && styles.dockPressed,
+                ]}
+              >
+                <Icon name="swap" size={13} color={stitchTokens.wine} />
+                <AppText style={styles.dockLinkChipText}>Đổi sách khác</AppText>
+              </Pressable>
+            </View>
+            <View style={styles.dockActionRow}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isBusy}
+                onPress={() =>
+                  isInitiator
+                    ? setConfirmCancelOpen(true)
+                    : setConfirmRejectOpen(true)
+                }
+                style={({ pressed }) => [
+                  styles.dockSecondaryBtn,
+                  pressed && styles.dockPressed,
+                ]}
+              >
+                <AppText style={styles.dockSecondaryText}>
+                  {isInitiator ? "Hủy" : "Từ chối"}
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={isBusy}
+                onPress={openAcceptSheet}
+                style={({ pressed }) => [
+                  styles.dockPrimaryBtn,
+                  { flex: 1 },
+                  pressed && styles.dockPressed,
+                  isBusy && styles.dockDisabled,
+                ]}
+              >
+                <Icon name="check" size={16} color={stitchTokens.white} />
+                <AppText style={styles.dockPrimaryText}>Đồng ý đổi</AppText>
+              </Pressable>
+            </View>
+          </View>
+        );
+      }
+
+      if (!isInitiator) return null;
+
+      return (
+        <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+          <View style={styles.dockInfoSlot}>
+            <AppText style={styles.dockInfoTitle}>Đang chờ phản hồi</AppText>
+            <AppText style={styles.dockInfoSub} numberOfLines={1}>
+              {partnerName} sẽ sớm xem phiếu
+            </AppText>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isBusy}
+            onPress={() => setConfirmCancelOpen(true)}
+            style={({ pressed }) => [
+              styles.dockDangerOutlineBtn,
+              pressed && styles.dockPressed,
+            ]}
+          >
+            <AppText style={styles.dockDangerOutlineText}>Hủy đề nghị</AppText>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (exchange.status === "AcceptedAwaitingFunding") {
+      if (!isFundedByMe) {
+        return (
+          <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+            <View style={styles.dockInfoSlot}>
+              <AppText style={styles.dockInfoSub}>
+                {hasInsufficientFunds ? "Ví còn thiếu" : "Tổng cần nộp"}
+              </AppText>
+              <AppText
+                style={[
+                  styles.dockAmountText,
+                  hasInsufficientFunds && { color: stitchTokens.crimson },
+                ]}
+              >
+                {hasInsufficientFunds
+                  ? formatVnd(amountToPay - walletAvailable)
+                  : formatVnd(amountToPay)}
+              </AppText>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={() => setConfirmCancelOpen(true)}
+              style={({ pressed }) => [
+                styles.dockGhostBtn,
+                pressed && styles.dockPressed,
+              ]}
+            >
+              <AppText style={styles.dockGhostText}>Hủy</AppText>
+            </Pressable>
+
+            {hasInsufficientFunds ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push("/wallet")}
+                style={({ pressed }) => [
+                  styles.dockPrimaryBtn,
+                  pressed && styles.dockPressed,
+                ]}
+              >
+                <Icon name="wallet" size={16} color={stitchTokens.white} />
+                <AppText style={styles.dockPrimaryText}>Nạp thêm ví</AppText>
+              </Pressable>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                disabled={walletQuery.isPending || isBusy}
+                onPress={() => fundMutation.mutate()}
+                style={({ pressed }) => [
+                  styles.dockPrimaryBtn,
+                  pressed && styles.dockPressed,
+                  (walletQuery.isPending || isBusy) && styles.dockDisabled,
+                ]}
+              >
+                <Icon name="wallet" size={16} color={stitchTokens.white} />
+                <AppText style={styles.dockPrimaryText}>
+                  {fundMutation.isPending ? "Đang xử lý..." : "Đặt cọc ngay"}
+                </AppText>
+              </Pressable>
+            )}
+          </View>
+        );
+      }
+
+      return (
+        <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+          <View style={styles.dockInfoSlot}>
+            <AppText
+              style={[
+                styles.dockInfoTitle,
+                { color: stitchTokens.likeNewGreen },
+              ]}
+            >
+              Đã cọc {formatVnd(amountToPay)}
+            </AppText>
+            <AppText style={styles.dockInfoSub} numberOfLines={1}>
+              Chờ {partnerName} hoàn tất cọc
+            </AppText>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isBusy}
+            onPress={() => setConfirmCancelOpen(true)}
+            style={({ pressed }) => [
+              styles.dockSecondaryBtn,
+              pressed && styles.dockPressed,
+            ]}
+          >
+            <AppText style={styles.dockSecondaryText}>Hủy & Hoàn cọc</AppText>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (exchange.status === "Preparing" || exchange.status === "InTransit") {
+      if (!isShippedByMe) {
+        return (
+          <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+            {exchange.status === "Preparing" &&
+            !isPartnerShipped &&
+            !exchange.cancellationRequestedBy ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={isBusy}
+                onPress={() => setConfirmCancelOpen(true)}
+                style={({ pressed }) => [
+                  styles.dockSecondaryBtn,
+                  pressed && styles.dockPressed,
+                ]}
+              >
+                <AppText style={styles.dockSecondaryText}>Đề nghị hủy</AppText>
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={openShipSheet}
+              style={({ pressed }) => [
+                styles.dockPrimaryBtn,
+                { flex: 1 },
+                pressed && styles.dockPressed,
+                isBusy && styles.dockDisabled,
+              ]}
+            >
+              <Icon name="truck" size={16} color={stitchTokens.white} />
+              <AppText style={styles.dockPrimaryText}>Tạo đơn gửi sách</AppText>
+            </Pressable>
+          </View>
+        );
+      }
+
+      if (partnerPickedUpAt && !isReceivedByMe) {
+        return (
+          <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+            {inspectionOpen && exchange.status === "InTransit" ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={isBusy}
+                onPress={() => openDisputeSheet()}
+                style={({ pressed }) => [
+                  styles.dockDangerOutlineBtn,
+                  pressed && styles.dockPressed,
+                ]}
+              >
+                <AppText style={styles.dockDangerOutlineText}>Báo sự cố</AppText>
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={() => receiveMutation.mutate()}
+              style={({ pressed }) => [
+                styles.dockPrimaryBtn,
+                { flex: 1 },
+                pressed && styles.dockPressed,
+                isBusy && styles.dockDisabled,
+              ]}
+            >
+              <Icon name="check" size={16} color={stitchTokens.white} />
+              <AppText style={styles.dockPrimaryText}>
+                Xác nhận đã nhận sách
+              </AppText>
+            </Pressable>
+          </View>
+        );
+      }
+
+      const canReportShippingIssue =
+        missedOneSided ||
+        ((exchange.status === "InTransit" || isReceivedByMe) && inspectionOpen);
+      if (!canReportShippingIssue) return null;
+
+      return (
+        <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+          <View style={styles.dockInfoSlot}>
+            <AppText style={styles.dockInfoTitle}>
+              {isReceivedByMe ? "Bạn đã nhận sách" : "Đã gửi sách đi"}
+            </AppText>
+            <AppText style={styles.dockInfoSub} numberOfLines={1}>
+              {missedOneSided
+                ? `${partnerName} đã quá hạn gửi`
+                : `Đang chờ ${partnerName}`}
+            </AppText>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={isBusy}
+            onPress={() =>
+              openDisputeSheet(
+                missedOneSided ? "Đối tác chưa gửi sách" : undefined,
+              )
+            }
+            style={({ pressed }) => [
+              styles.dockDangerOutlineBtn,
+              pressed && styles.dockPressed,
+            ]}
+          >
+            <Icon name="shield" size={14} color={stitchTokens.crimson} />
+            <AppText style={styles.dockDangerOutlineText}>Báo sự cố</AppText>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (exchange.status === "Delivered") {
+      if (isCompletedByMe) {
+        return null;
+      }
+
+      return (
+        <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+          {inspectionOpen ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={() => openDisputeSheet()}
+              style={({ pressed }) => [
+                styles.dockDangerOutlineBtn,
+                pressed && styles.dockPressed,
+              ]}
+            >
+              <AppText style={styles.dockDangerOutlineText}>Báo sự cố</AppText>
+            </Pressable>
+          ) : null}
+
+          {!isReceivedByMe && partnerPickedUpAt ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={() => receiveMutation.mutate()}
+              style={({ pressed }) => [
+                styles.dockPrimaryBtn,
+                { flex: 1 },
+                pressed && styles.dockPressed,
+                isBusy && styles.dockDisabled,
+              ]}
+            >
+              <Icon name="check" size={16} color={stitchTokens.white} />
+              <AppText style={styles.dockPrimaryText}>
+                Xác nhận đã nhận sách
+              </AppText>
+            </Pressable>
+          ) : isReceivedByMe && inspectionOpen ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={() => setConfirmCompleteOpen(true)}
+              style={({ pressed }) => [
+                styles.dockPrimaryBtn,
+                { flex: 1 },
+                pressed && styles.dockPressed,
+                isBusy && styles.dockDisabled,
+              ]}
+            >
+              <Icon name="check" size={16} color={stitchTokens.white} />
+              <AppText style={styles.dockPrimaryText}>
+                Xác nhận hài lòng
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      );
+    }
+
+    if (exchange.status === "ResolutionPending") {
+      const canReceiveInDispute =
+        !exchange.returnResolution &&
+        !exchange.outboundDeliveryVerification &&
+        Boolean(partnerPickedUpAt) &&
+        !isReceivedByMe;
+      if (!canReceiveInDispute) return null;
+
+      return (
+        <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+          <View style={styles.dockInfoSlot}>
+            <AppText
+              style={[styles.dockInfoTitle, { color: stitchTokens.crimson }]}
+            >
+              Admin đang thụ lý
+            </AppText>
+            <AppText style={styles.dockInfoSub} numberOfLines={1}>
+              Tiền cọc đang được bảo vệ an toàn
+            </AppText>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isBusy}
+            onPress={() => receiveMutation.mutate()}
+            style={({ pressed }) => [
+              styles.dockPrimaryBtn,
+              pressed && styles.dockPressed,
+            ]}
+          >
+            <AppText style={styles.dockPrimaryText}>Đã nhận sách</AppText>
+          </Pressable>
+        </View>
+      );
+    }
+
+    // Completed or Cancelled
+    return (
+      <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/wallet")}
+          style={({ pressed }) => [
+            styles.dockSecondaryBtn,
+            { flex: 1 },
+            pressed && styles.dockPressed,
+          ]}
+        >
+          <Icon name="wallet" size={15} color={stitchTokens.wine} />
+          <AppText style={styles.dockSecondaryText}>Kiểm tra ví</AppText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/")}
+          style={({ pressed }) => [
+            styles.dockPrimaryBtn,
+            { flex: 1.2 },
+            pressed && styles.dockPressed,
+          ]}
+        >
+          <Icon name="search" size={15} color={stitchTokens.white} />
+          <AppText style={styles.dockPrimaryText}>Khám phá sách</AppText>
+        </Pressable>
+      </View>
+    );
+  };
+
+  const modals = (
+    <>
 
       {/* Confirm Dialogs */}
       <ConfirmDialog
@@ -1537,21 +2215,24 @@ function ExchangeActionsContent({
       <AppModal
         visible={disputeModalOpen}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setDisputeModalOpen(false)}
       >
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, styles.disputeModalCard]}>
+          <View style={[styles.modalCard, styles.disputeModalCard, { paddingBottom: Math.max(bottomInset, 16) }]}>
+            <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
               <View
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 6,
+                  gap: 8,
                   flex: 1,
                 }}
               >
-                <Icon name="shield" size={18} color={stitchTokens.crimson} />
+                <View style={styles.sheetIconBadgeDanger}>
+                  <Icon name="shield" size={16} color={stitchTokens.crimson} />
+                </View>
                 <AppText style={styles.modalTitle} numberOfLines={1}>
                   Báo sự cố / Khiếu nại
                 </AppText>
@@ -1559,9 +2240,10 @@ function ExchangeActionsContent({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Đóng modal"
+                style={styles.sheetCloseBtn}
                 onPress={() => setDisputeModalOpen(false)}
               >
-                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+                <Icon name="close" size={18} color={stitchTokens.darkWood} />
               </Pressable>
             </View>
 
@@ -1620,6 +2302,49 @@ function ExchangeActionsContent({
                   })}
                 </ScrollView>
               </View>
+              {receiveSnapshots.length > 1 && (
+                <View style={styles.formGroup}>
+                  <AppText style={styles.formLabel}>
+                    Chọn cuốn sách gặp sự cố (không bắt buộc)
+                  </AppText>
+                  <View style={{ gap: 6 }}>
+                    {receiveSnapshots.map((snap) => {
+                      const checked = disputeBookIds.includes(snap.listingId);
+                      return (
+                        <Pressable
+                          key={snap.listingId}
+                          onPress={() =>
+                            setDisputeBookIds((prev) =>
+                              checked
+                                ? prev.filter((id) => id !== snap.listingId)
+                                : [...prev, snap.listingId],
+                            )
+                          }
+                          style={[
+                            styles.sideOptionItem,
+                            checked && styles.sideOptionItemActive,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.radioCircle,
+                              checked && styles.radioCircleActive,
+                            ]}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <AppText style={styles.sideOptionTitle} numberOfLines={1}>
+                              {snap.book.title}
+                            </AppText>
+                            <AppText style={styles.sideOptionDesc}>
+                              Định giá: {formatVnd(snap.exchangeValue)}
+                            </AppText>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
               {/* Detail Input */}
               <View style={styles.formGroup}>
                 <View
@@ -1634,7 +2359,7 @@ function ExchangeActionsContent({
                     <AppText style={{ color: stitchTokens.crimson }}>*</AppText>
                   </AppText>
                   <AppText style={styles.charCountText}>
-                    {disputeDetail.length}/220 ký tự
+                    {disputeDetail.length}/500 ký tự
                   </AppText>
                 </View>
                 <AppTextInput
@@ -1642,7 +2367,7 @@ function ExchangeActionsContent({
                   multiline
                   numberOfLines={3}
                   value={disputeDetail}
-                  maxLength={220}
+                  maxLength={500}
                   placeholder="Mô tả cụ thể vị trí hư hại, vết rách hoặc sự sai lệch của sách lúc mở gói..."
                   placeholderTextColor={stitchTokens.subtleGray}
                   onChangeText={(val) => {
@@ -1691,16 +2416,19 @@ function ExchangeActionsContent({
       <AppModal
         visible={acceptModalOpen}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setAcceptModalOpen(false)}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(bottomInset, 16) }]}>
+            <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
               <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}
               >
-                <Icon name="check" size={18} color={stitchTokens.wineDark} />
+                <View style={styles.sheetIconBadge}>
+                  <Icon name="check" size={16} color={stitchTokens.wine} />
+                </View>
                 <AppText style={styles.modalTitle}>
                   Xác nhận đồng ý đổi sách
                 </AppText>
@@ -1708,16 +2436,182 @@ function ExchangeActionsContent({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Đóng modal"
+                style={styles.sheetCloseBtn}
                 onPress={() => setAcceptModalOpen(false)}
               >
-                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+                <Icon name="close" size={18} color={stitchTokens.darkWood} />
               </Pressable>
             </View>
 
             <AppText style={styles.modalSub}>
               Khi đồng ý, bài đăng của bạn sẽ tạm khóa khỏi sàn để chuẩn bị giao
-              dịch. Vui lòng chọn địa chỉ để đối tác gửi sách cho bạn:
+              dịch. Kiểm tra khoản cọc, tiền bù và chọn địa chỉ nhận sách:
             </AppText>
+
+            {/* Financial Summary + Optional Diff Negotiation */}
+            {(() => {
+              const myBookVal = isInitiator
+                ? (exchange.agreement?.initiatorBooks.reduce((s, b) => s + b.exchangeValue, 0) ?? exchange.initiatorDeposit)
+                : (exchange.agreement?.recipientBook.exchangeValue ?? exchange.recipientDeposit);
+              const partnerBookVal = isInitiator
+                ? (exchange.agreement?.recipientBook.exchangeValue ?? exchange.recipientDeposit)
+                : (exchange.agreement?.initiatorBooks.reduce((s, b) => s + b.exchangeValue, 0) ?? exchange.initiatorDeposit);
+              const defaultDiff = Math.abs(myBookVal - partnerBookVal);
+              const parsedNeg = Number.parseInt(negotiatedDiffInput.replace(/\D/g, ""), 10) || 0;
+              const effDiff = isNegotiatingDiff
+                ? negotiatedPayer === "none"
+                  ? 0
+                  : parsedNeg
+                : exchange.diffAmount;
+              const effPayer: "me" | "partner" | "none" = isNegotiatingDiff
+                ? effDiff === 0
+                  ? "none"
+                  : negotiatedPayer
+                : exchange.diffAmount <= 0 || !exchange.diffPayerId
+                  ? "none"
+                  : exchange.diffPayerId === currentUserId
+                    ? "me"
+                    : "partner";
+              const effMyTotal = baseDeposit + (effPayer === "me" ? effDiff : 0);
+              const lowerVal = Math.min(myBookVal, partnerBookVal);
+              const higherVal = Math.max(myBookVal, partnerBookVal);
+              const cheaperIsMe = myBookVal < partnerBookVal;
+              const cheaperPays =
+                effPayer === "none"
+                  ? 0
+                  : (cheaperIsMe && effPayer === "me") || (!cheaperIsMe && effPayer === "partner")
+                    ? effDiff
+                    : 0;
+              const protectedCap = Math.min(higherVal, lowerVal + cheaperPays);
+              const showCapWarning = defaultDiff > 0 && protectedCap < higherVal;
+
+              return (
+                <View style={[styles.fundingSummaryCard, { gap: 6 }]}>
+                  <View style={styles.fundingSummaryRow}>
+                    <AppText style={styles.fundingSummarySubLabel}>
+                      Cọc của bạn (giá trị sách gửi):
+                    </AppText>
+                    <AppText style={styles.fundingSummaryWallet}>
+                      {formatVnd(baseDeposit)}
+                    </AppText>
+                  </View>
+                  <View style={styles.fundingSummaryRow}>
+                    <AppText style={styles.fundingSummarySubLabel}>
+                      Tiền bù chênh lệch:
+                    </AppText>
+                    <AppText style={styles.fundingSummaryWallet}>
+                      {effPayer === "none"
+                        ? "0 đ (Đổi ngang)"
+                        : effPayer === "me"
+                          ? `Bạn bù ${formatVnd(effDiff)}`
+                          : `Đối tác bù ${formatVnd(effDiff)}`}
+                    </AppText>
+                  </View>
+                  <View style={styles.fundingSummaryRow}>
+                    <AppText style={styles.fundingSummaryLabel}>
+                      Tổng cần nộp khi cọc:
+                    </AppText>
+                    <AppText style={styles.fundingSummaryAmount}>
+                      {formatVnd(effMyTotal)}
+                    </AppText>
+                  </View>
+                  {walletQuery.data ? (
+                    <AppText
+                      style={{
+                        fontSize: 11.5,
+                        color:
+                          walletQuery.data.available >= effMyTotal
+                            ? stitchTokens.likeNewGreen
+                            : stitchTokens.crimson,
+                        fontWeight: "600",
+                      }}
+                    >
+                      Ví khả dụng: {formatVnd(walletQuery.data.available)}
+                      {walletQuery.data.available >= effMyTotal
+                        ? " (Đủ số dư)"
+                        : ` (Thiếu ${formatVnd(effMyTotal - walletQuery.data.available)})`}
+                    </AppText>
+                  ) : null}
+
+                  <Pressable
+                    onPress={() => setIsNegotiatingDiff((v) => !v)}
+                    style={{ alignSelf: "flex-start", paddingVertical: 2 }}
+                  >
+                    <AppText
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "700",
+                        color: stitchTokens.wineDark,
+                        textDecorationLine: "underline",
+                      }}
+                    >
+                      {isNegotiatingDiff
+                        ? "← Quay lại chấp nhận mức hiện tại"
+                        : "✎ Thỏa thuận lại tiền bù"}
+                    </AppText>
+                  </Pressable>
+
+                  {isNegotiatingDiff ? (
+                    <View style={{ gap: 8, marginTop: 4 }}>
+                      <View style={{ flexDirection: "row", gap: 6 }}>
+                        {(
+                          [
+                            { id: "me", label: "Bạn bù" },
+                            { id: "partner", label: "Đối tác bù" },
+                            { id: "none", label: "Đổi ngang" },
+                          ] as const
+                        ).map((opt) => (
+                          <Pressable
+                            key={opt.id}
+                            onPress={() => {
+                              setNegotiatedPayer(opt.id);
+                              if (opt.id === "none") setNegotiatedDiffInput("0");
+                            }}
+                            style={[
+                              styles.categoryPill,
+                              negotiatedPayer === opt.id && styles.categoryPillActive,
+                              { flex: 1, alignItems: "center" },
+                            ]}
+                          >
+                            <AppText
+                              style={[
+                                styles.categoryPillText,
+                                negotiatedPayer === opt.id &&
+                                  styles.categoryPillTextActive,
+                              ]}
+                            >
+                              {opt.label}
+                            </AppText>
+                          </Pressable>
+                        ))}
+                      </View>
+                      {negotiatedPayer !== "none" ? (
+                        <AppTextInput
+                          style={styles.singleLineInput}
+                          keyboardType="number-pad"
+                          value={negotiatedDiffInput}
+                          onChangeText={(txt) =>
+                            setNegotiatedDiffInput(txt.replace(/\D/g, ""))
+                          }
+                          placeholder="Nhập số tiền bù (VND)"
+                          placeholderTextColor={stitchTokens.subtleGray}
+                        />
+                      ) : null}
+                    </View>
+                  ) : null}
+
+                  {showCapWarning ? (
+                    <Notice tone="info">
+                      Lưu ý mức bảo chứng tối đa: Tiền bù đang thấp hơn chênh
+                      lệch định giá ({formatVnd(defaultDiff)}). Nếu phát sinh sự
+                      cố, mức bồi thường tối đa từ quỹ ký quỹ của bên gửi sách
+                      giá thấp hơn chỉ đạt {formatVnd(protectedCap)} (cọc{" "}
+                      {formatVnd(lowerVal)} + tiền bù {formatVnd(cheaperPays)}).
+                    </Notice>
+                  ) : null}
+                </View>
+              );
+            })()}
 
             {/* Address Selection or Inline Address Creation */}
             {!isAddingNewAddress && addressesQuery.data?.items?.length ? (
@@ -1810,15 +2704,47 @@ function ExchangeActionsContent({
                     />
                   </View>
                   <View style={{ flex: 1.5 }}>
-                    <Button
-                      title="Đồng ý đổi sách"
-                      wine
-                      disabled={!effectiveAcceptAddressId}
-                      busy={acceptMutation.isPending}
-                      onPress={() =>
-                        acceptMutation.mutate(effectiveAcceptAddressId)
-                      }
-                    />
+                    {isNegotiatingDiff ? (
+                      <Button
+                        title="Gửi đề xuất tiền bù"
+                        wine
+                        busy={counterMutation.isPending}
+                        onPress={() => {
+                          const parsed =
+                            negotiatedPayer === "none"
+                              ? 0
+                              : Number.parseInt(
+                                  negotiatedDiffInput.replace(/\D/g, ""),
+                                  10,
+                                ) || 0;
+                          const partnerId = isInitiator
+                            ? exchange.recipientId
+                            : exchange.initiatorId;
+                          const finalPayerId =
+                            negotiatedPayer === "none" || parsed === 0
+                              ? null
+                              : negotiatedPayer === "me"
+                                ? currentUserId
+                                : partnerId;
+                          counterMutation.mutate({
+                            negotiatedDiffAmount: parsed,
+                            diffPayerId: finalPayerId,
+                            deliveryAddressId: effectiveAcceptAddressId,
+                            note: `Thương lượng tiền bù: ${formatVnd(parsed)}`,
+                          });
+                        }}
+                      />
+                    ) : (
+                      <Button
+                        title="Đồng ý đổi sách"
+                        wine
+                        disabled={!effectiveAcceptAddressId}
+                        busy={acceptMutation.isPending}
+                        onPress={() =>
+                          acceptMutation.mutate(effectiveAcceptAddressId)
+                        }
+                      />
+                    )}
                   </View>
                 </View>
               </View>
@@ -1986,18 +2912,35 @@ function ExchangeActionsContent({
         </View>
       </AppModal>
 
-      {/* Modal 2: Đề xuất lại mức bù tiền */}
+      {/* Modal 2: Đề xuất sách thay thế */}
       <AppModal
         visible={counterModalOpen}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => {
           if (!counterMutation.isPending) setCounterModalOpen(false);
         }}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <AppText style={styles.modalTitle}>Đề xuất sách thay thế</AppText>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(bottomInset, 16) }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                <View style={styles.sheetIconBadge}>
+                  <Icon name="swap" size={16} color={stitchTokens.wine} />
+                </View>
+                <AppText style={styles.modalTitle}>Đề xuất sách thay thế</AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng modal"
+                style={styles.sheetCloseBtn}
+                disabled={counterMutation.isPending}
+                onPress={() => setCounterModalOpen(false)}
+              >
+                <Icon name="close" size={18} color={stitchTokens.darkWood} />
+              </Pressable>
+            </View>
             {actionError && <Notice tone="error">{actionError}</Notice>}
             {counterModalOpen && (
               <ExchangeCounterForm
@@ -2021,12 +2964,6 @@ function ExchangeActionsContent({
                 }
               />
             )}
-            <Button
-              title="Quay lại"
-              secondary
-              disabled={counterMutation.isPending}
-              onPress={() => setCounterModalOpen(false)}
-            />
           </View>
         </View>
       </AppModal>
@@ -2035,24 +2972,28 @@ function ExchangeActionsContent({
       <AppModal
         visible={shipModalOpen}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShipModalOpen(false)}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(bottomInset, 16) }]}>
+            <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
               <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}
               >
-                <Icon name="truck" size={18} color={stitchTokens.wineDark} />
+                <View style={styles.sheetIconBadge}>
+                  <Icon name="truck" size={16} color={stitchTokens.wine} />
+                </View>
                 <AppText style={styles.modalTitle}>Xác nhận gửi sách</AppText>
               </View>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Đóng modal"
+                style={styles.sheetCloseBtn}
                 onPress={() => setShipModalOpen(false)}
               >
-                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+                <Icon name="close" size={18} color={stitchTokens.darkWood} />
               </Pressable>
             </View>
 
@@ -2681,46 +3622,378 @@ function ExchangeActionsContent({
           </View>
         </View>
       </AppModal>
+    </>
+  );
+
+  if (renderScrollBody) {
+    return (
+      <View style={styles.dockedRoot}>
+        <View style={styles.dockedBody}>{renderScrollBody(actionsBody)}</View>
+        {renderBottomDock()}
+        {modals}
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      {actionsBody}
+      {modals}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  dockedRoot: {
+    flex: 1,
+  },
+  dockedBody: {
+    flex: 1,
+  },
+  plainContainer: {
+    gap: 14,
+  },
   card: {
-    padding: space.md,
-    borderRadius: 18,
+    padding: 18,
+    borderRadius: 20,
     backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachMuted,
-    gap: 12,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(92, 2, 2, 0.06)",
+    gap: 14,
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
     elevation: 3,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.peachBorder,
+    gap: 10,
+  },
+  titleIconPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseParchment,
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
+    fontSize: 15.5,
+    fontWeight: "800",
+    color: stitchTokens.darkWood,
+  },
+  twoSideGrid: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  sideStatusPill: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    gap: 4,
+  },
+  sideStatusPillDone: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+  },
+  sideStatusPillPending: {
+    backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  sideStatusPillIdle: {
+    backgroundColor: stitchTokens.surfaceSoft,
+  },
+  sideStatusHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statusDotSmall: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  sideStatusOwner: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: stitchTokens.subtleGray,
+    flexShrink: 1,
+  },
+  sideStatusValue: {
+    fontSize: 13.5,
+    fontWeight: "800",
+  },
+  receiptBox: {
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 16,
+    padding: 14,
+    gap: 9,
+  },
+  receiptRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  receiptLabel: {
+    fontSize: 12.5,
+    color: stitchTokens.subtleGray,
+    flex: 1,
+  },
+  receiptVal: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+    fontVariant: ["tabular-nums"],
+  },
+  receiptDivider: {
+    height: 1,
+    backgroundColor: stitchTokens.borderWarm,
+    marginVertical: 2,
+  },
+  receiptTotalLabel: {
     fontSize: 14,
     fontWeight: "800",
+    color: stitchTokens.darkWood,
+  },
+  receiptTotalVal: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  receiptWalletVal: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.likeNewGreen,
+    fontVariant: ["tabular-nums"],
+  },
+  disputeMiniTrack: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  disputeMiniPill: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.surfaceSoft,
+    alignItems: "center",
+  },
+  disputeMiniPillActive: {
+    backgroundColor: stitchTokens.wine,
+  },
+  disputeMiniPillDone: {
+    backgroundColor: stitchTokens.roseParchment,
+  },
+  disputeMiniText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: stitchTokens.subtleGray,
+  },
+  disputeMiniTextActive: {
+    color: stitchTokens.white,
+  },
+  disputeMiniTextDone: {
     color: stitchTokens.wineDark,
   },
-  actionsBox: {
+  /* Native Sticky Thumb-Zone Bottom Dock */
+  bottomDock: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderTopWidth: 1,
+    borderColor: "rgba(92, 2, 2, 0.06)",
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    elevation: 14,
+  },
+  bottomDockCol: {
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderTopWidth: 1,
+    borderColor: "rgba(92, 2, 2, 0.06)",
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    elevation: 14,
+  },
+  dockTopMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
+  },
+  dockTopMetaLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.subtleGray,
+  },
+  dockLinkChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseParchment,
+  },
+  dockLinkChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+  },
+  dockActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  dockInfoSlot: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  dockInfoTitle: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: stitchTokens.darkWood,
+  },
+  dockInfoSub: {
+    fontSize: 11.5,
+    color: stitchTokens.subtleGray,
+  },
+  dockAmountText: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  dockPrimaryBtn: {
+    minHeight: 48,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.wine,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  dockPrimaryText: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: stitchTokens.white,
+  },
+  dockSecondaryBtn: {
+    minHeight: 48,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  dockSecondaryText: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  dockDangerOutlineBtn: {
+    minHeight: 48,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  dockDangerOutlineText: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.crimson,
+  },
+  dockGhostBtn: {
+    minHeight: 44,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dockGhostText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.subtleGray,
+  },
+  dockPressed: {
+    opacity: 0.78,
+  },
+  dockDisabled: {
+    opacity: 0.5,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: stitchTokens.borderWarm,
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  sheetIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: stitchTokens.roseParchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetIconBadgeDanger: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: stitchTokens.flashRedBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: stitchTokens.surfaceSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionsBox: {
+    gap: 10,
   },
   proposalNoticeBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     padding: 10,
-    backgroundColor: stitchTokens.amberBg,
+    backgroundColor: stitchTokens.parchment,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
@@ -2829,10 +4102,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   commonDeadlineTag: {
-    backgroundColor: stitchTokens.canvasMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.surfaceSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     alignSelf: "flex-start",
   },
   commonDeadlineText: {
@@ -3048,36 +4324,35 @@ const styles = StyleSheet.create({
     color: stitchTokens.flashRed,
     fontWeight: "600",
   },
-  /* Modal Styles */
+  /* Native Bottom Sheet Modal Styles */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: stitchTokens.modalScrim,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: space.md,
+    backgroundColor: "rgba(22, 13, 10, 0.56)",
+    justifyContent: "flex-end",
   },
   modalCard: {
     width: "100%",
-    maxWidth: 420,
+    maxHeight: "90%",
     backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 20,
-    padding: space.lg,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
-    gap: 14,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 22,
+    gap: 12,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 18,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.peachBorder,
     paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.surfaceSoft,
   },
   modalTitle: {
     fontSize: 16,

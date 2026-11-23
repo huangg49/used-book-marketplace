@@ -6,6 +6,7 @@ import { appPrivileges } from '../../src/database/mongo/roles.js';
 import { testUrl } from './harness.js';
 import { exchangeFlexibleDiffSpecs } from '../../src/database/mongo/migrations/0055-exchange-negotiated-diff-payer.js';
 import { withProportionalExchangeDeposits } from '../../src/database/mongo/migrations/0086-exchange-proportional-deposits.js';
+import { withLegacyFundedExchangeDepositCompat } from '../../src/database/mongo/migrations/0087-exchange-legacy-funded-deposit-compat.js';
 
 it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting applied checksums, ledger or Exchange rules', async (order) => {
   const pending = [...(order === 'main-first' ? ['0054-local-demo-completion'] : ['0054-exchange-negotiated-diff', '0055-exchange-negotiated-diff-payer']), '0060-wallet-withdrawals', '0061-manual-wallet-withdrawals', '0062-message-send-limits', '0063-auction-buy-now-mode', '0064-auction-bid-holds', '0065-auction-types', '0066-auction-registration', '0067-auction-lifecycle', '0068-auction-resume', '0069-auction-scheduled-open', '0070-auction-open-month', '0071-support-target-index', '0072-auction-pause-budget', '0073-auction-reached-notice', '0074-auction-second-chance', '0075-auction-deposit-share'];
@@ -17,6 +18,8 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     '0080-exchange-inspection-verdict',
     '0085-direct-order-validator-reconciliation',
     '0086-exchange-proportional-deposits',
+    '0087-exchange-legacy-funded-deposit-compat',
+    '0088-exchange-dispute-compensation',
   );
   const client = await new MongoClient(testUrl(`local_demo_upgrade_${randomUUID().replaceAll('-', '')}_test`)).connect();
   const db = client.db();
@@ -38,10 +41,11 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     const previousExchange = exchangeFlexibleDiffSpecs[0];
     const currentExchange = currentCollections().find(spec => spec.name === 'exchanges')!;
     expect(exchange.options.validator).toEqual(validatorOf(currentExchange));
-    const { returnResolution, outboundDeliveryVerification, demoArchivedAt, resolutionDecision, ...previousProperties } = currentExchange.schema.properties as Record<string, unknown>;
+    const { returnResolution, outboundDeliveryVerification, demoArchivedAt, resolutionDecision, resolutionCompensationAmount, ...previousProperties } = currentExchange.schema.properties as Record<string, unknown>;
     expect(returnResolution).toBeDefined();
     expect(outboundDeliveryVerification).toBeDefined();
     expect(demoArchivedAt).toEqual({ bsonType: 'date' });
+    expect(resolutionCompensationAmount).toBeDefined();
     const { resolutionDecision: previousDecision, ...baselineProperties } =
       previousExchange.schema.properties as Record<string, { enum?: unknown[] }>;
     expect(resolutionDecision).toMatchObject({
@@ -50,7 +54,9 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     expect(previousProperties).toEqual(baselineProperties);
     expect(currentExchange.expr).toMatchObject({
       $and: [
-        withProportionalExchangeDeposits(previousExchange).expr,
+        withLegacyFundedExchangeDepositCompat(
+          withProportionalExchangeDeposits(previousExchange),
+        ).expr,
         expect.any(Object),
       ],
     });

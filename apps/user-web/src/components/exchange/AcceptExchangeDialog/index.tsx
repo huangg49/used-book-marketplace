@@ -364,38 +364,40 @@ export function AcceptExchangeDialog({
                   <h3 className={styles.sectionTitle}>
                     <Banknote size={13} /> Thỏa thuận tài chính
                   </h3>
-                  {isAlreadyNegotiated ? (
+                  <div className={styles.compHeaderActions}>
                     <div className={styles.lockedBadge}>
-                      <Lock size={11} /> Đã chốt theo thương lượng
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div className={styles.lockedBadge}>
-                        <ShieldCheck size={11} /> Theo giá duyệt
-                      </div>
-                      {onCounter && (
-                        <button
-                          type="button"
-                          className={isNegotiating ? styles.headerResetBtn : styles.headerToggleBtn}
-                          onClick={() => {
-                            const nextState = !isNegotiating;
-                            setIsNegotiating(nextState);
-                            if (!nextState) updateNegotiatedDiff(defaultDiffAmount);
-                          }}
-                        >
-                          {isNegotiating ? (
-                            <>
-                              <RotateCcw size={11} /> Mặc định
-                            </>
-                          ) : (
-                            <>
-                              <SlidersHorizontal size={11} /> Thỏa thuận lại
-                            </>
-                          )}
-                        </button>
+                      {isAlreadyNegotiated ? (
+                        <>
+                          <Lock size={11} /> Đã thương lượng
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck size={11} /> Theo giá duyệt
+                        </>
                       )}
                     </div>
-                  )}
+                    {onCounter && (
+                      <button
+                        type="button"
+                        className={isNegotiating ? styles.headerResetBtn : styles.headerToggleBtn}
+                        onClick={() => {
+                          const nextState = !isNegotiating;
+                          setIsNegotiating(nextState);
+                          if (!nextState) updateNegotiatedDiff(defaultDiffAmount);
+                        }}
+                      >
+                        {isNegotiating ? (
+                          <>
+                            <RotateCcw size={11} /> Mặc định
+                          </>
+                        ) : (
+                          <>
+                            <SlidersHorizontal size={11} /> Thỏa thuận lại
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className={styles.financialBox}>
@@ -485,6 +487,37 @@ export function AcceptExchangeDialog({
                       )}
                     </div>
                   )}
+
+                  {(() => {
+                    if (defaultDiffAmount <= 0) return null;
+                    const lowerValue = Math.min(totalReceivePrice, totalGivePrice);
+                    const higherValue = Math.max(totalReceivePrice, totalGivePrice);
+                    const cheaperSideIsViewer = totalGivePrice < totalReceivePrice;
+                    const effectivePayer = isNegotiating
+                      ? negotiatedPayer
+                      : detail.moneyCompensationType === 'user_pays'
+                        ? 'viewer'
+                        : detail.moneyCompensationType === 'other_pays'
+                          ? 'partner'
+                          : 'none';
+                    const cheaperSidePays =
+                      effectivePayer === 'none'
+                        ? 0
+                        : (cheaperSideIsViewer && effectivePayer === 'viewer') ||
+                            (!cheaperSideIsViewer && effectivePayer === 'partner')
+                          ? currentDiff
+                          : 0;
+                    const protectedCap = Math.min(higherValue, lowerValue + cheaperSidePays);
+                    if (protectedCap >= higherValue) return null;
+                    return (
+                      <div className={styles.escrowCapWarning} role="status">
+                        <AlertTriangle size={14} aria-hidden="true" />
+                        <span>
+                          <strong>Lưu ý mức bảo chứng tối đa:</strong> Tiền bù đang thấp hơn chênh lệch định giá ({formatVnd(defaultDiffAmount)}). Nếu phát sinh sự cố hư hại hoặc thất lạc, mức bồi thường tối đa từ quỹ ký quỹ của bên gửi sách giá thấp hơn chỉ đạt <strong>{formatVnd(protectedCap)}</strong> (cọc {formatVnd(lowerValue)} + tiền bù {formatVnd(cheaperSidePays)}).
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   <div className={styles.financialLine}>
                     <span className={styles.financialLabel}>Tổng nộp:</span>
@@ -628,7 +661,7 @@ export function AcceptExchangeDialog({
 
           <div className={isNegotiating ? styles.noticeBoxCounter : styles.noticeBox}>
             {isNegotiating
-              ? 'Đề xuất tiền bù mới sẽ gửi qua chat để đối tác kiểm tra và xác nhận.'
+              ? 'Đề xuất tiền bù mới sẽ cập nhật trực tiếp trên phiếu trao đổi để đối tác xem và phản hồi.'
               : 'Sau khi khóa hợp đồng, hai bên có 24 giờ để nộp cọc và tiền bù trước khi gửi sách.'}
           </div>
 

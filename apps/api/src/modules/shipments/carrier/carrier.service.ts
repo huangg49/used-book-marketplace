@@ -112,13 +112,22 @@ export class CarrierService {
           { 'initiatorShipment.trackingCode': trackingCode },
           { 'recipientShipment.trackingCode': trackingCode },
         ],
-        status: { $in: ['Preparing', 'InTransit', 'Delivered'] },
+        status: { $in: ['Preparing', 'InTransit', 'Delivered', 'ResolutionPending'] },
       }).limit(2).toArray();
       if (matches.length !== 1) throw invalidState('Không xác định được đúng kiện đang giao.');
       const [{ _id: id }] = matches;
       await tx.lock('exchanges', [id]);
       const row = await tx.c.exchanges.findOne({ _id: id });
-      if (!row || !['Preparing', 'InTransit', 'Delivered'].includes(row.status) || !hasCarrierLabels(row))
+      const resolutionReceivable =
+        row?.status === 'ResolutionPending' &&
+        status === 'DELIVERED' &&
+        !row.returnResolution &&
+        !row.outboundDeliveryVerification;
+      if (
+        !row ||
+        (!['Preparing', 'InTransit', 'Delivered'].includes(row.status) && !resolutionReceivable) ||
+        !hasCarrierLabels(row)
+      )
         throw invalidState('Phiếu cần đủ hai mã vận đơn và còn ở bước giao nhận.');
 
       const initiator = row.initiatorShipment?.trackingCode === trackingCode;
@@ -165,7 +174,7 @@ export class CarrierService {
           changes.initiatorInspectionDeadline = deadline;
         }
         if (otherReceivedAt) {
-          changes.status = 'Delivered';
+          if (row.status !== 'ResolutionPending') changes.status = 'Delivered';
           changes.inspectionDeadline = inspectionDeadlines({ ...row, ...changes }).all;
         }
       }

@@ -1,9 +1,3 @@
-import { ExchangeEvidenceCard } from "./exchange-evidence-card";
-import { confirmExchangeRead, readExchange } from "@used-books/session-client";
-import {
-  ExchangeRecoveryPanel,
-  useExchangeRecovery,
-} from "./exchange-recovery";
 import React, { useEffect, useState } from "react";
 import {
   Pressable,
@@ -15,32 +9,44 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
+import { confirmExchangeRead, readExchange } from "@used-books/session-client";
 import {
   AppText,
   Button,
   Icon,
   Notice,
   StatePanel,
-  TopNavbar,
-  colorRoles,
-  colors,
   presentError,
-  radius,
   space,
   stitchTokens,
 } from "../../core/ui";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import { exchangeSchema } from "./contracts";
-import { ExchangeProposalCard } from "./exchange-proposal-card";
+import {
+  ExchangeBookGroup,
+  ExchangeFundingHistoryCard,
+  ExchangeInspectionHistoryCard,
+  ExchangeProposalCard,
+} from "./exchange-proposal-card";
 import { ExchangeActionsCard } from "./exchange-actions-card";
-import { ExchangeProgressStepper } from "./exchange-progress-stepper";
+import {
+  ExchangeProgressStepper,
+  getCurrentExchangeStep,
+  getExchangeStageHero,
+  hasExchangeStepFacts,
+  type ExchangeStepId,
+} from "./exchange-progress-stepper";
 import { ExchangeShippingCard } from "./exchange-shipping-card";
 import { ExchangeSettlementCard } from "./exchange-settlement-card";
 import { ExchangeSafetyTips } from "./exchange-safety-tips";
 import { ExchangeChatBox } from "./exchange-chat-box";
 import { ExchangeReturnAndDemoCard } from "./exchange-return-card";
-import { MemberNavigation } from "../navigation/member-navigation";
+import { ExchangeEvidenceCard } from "./exchange-evidence-card";
+import {
+  ExchangeRecoveryPanel,
+  useExchangeRecovery,
+} from "./exchange-recovery";
 
 export function ExchangeDetailScreen() {
   const params = useLocalSearchParams<{ id?: string; tab?: string }>();
@@ -56,8 +62,9 @@ export function ExchangeDetailScreen() {
   const [activePanel, setActivePanel] = useState<"proposal" | "chat">(
     initialTab,
   );
+  const [viewedHistoryStep, setViewedHistoryStep] =
+    useState<ExchangeStepId | null>(null);
 
-  // 1. Fetch Exchange Data
   const exchangeQuery = useQuery({
     queryKey: ["exchange", id, identity],
     queryFn: () => readExchange(client, id, exchangeSchema),
@@ -69,50 +76,65 @@ export function ExchangeDetailScreen() {
     ack && (!exchangeQuery.data || ack.revision > exchangeQuery.data.revision)
       ? ack
       : exchangeQuery.data;
+
   useEffect(() => {
-    if (exchangeQuery.data)
+    if (exchangeQuery.data) {
       confirmExchangeRead(client, id, exchangeQuery.data.revision);
+    }
   }, [client, id, exchangeQuery.data, exchangeQuery.dataUpdatedAt, identity]);
+
+  // Reset history selection whenever the live stage advances
+  const liveStep = exchange
+    ? getCurrentExchangeStep(exchange.status)
+    : "proposal";
+  useEffect(() => {
+    setViewedHistoryStep(null);
+  }, [liveStep]);
+
+  const handleBack = () => {
+    if (activePanel === "chat") {
+      setActivePanel("proposal");
+      return;
+    }
+    if (router.canGoBack()) router.back();
+    else router.replace("/exchanges");
+  };
 
   if (state.status !== "authenticated") {
     return (
       <View style={styles.screenRoot}>
-        <StatusBar barStyle="light-content" />
-        <TopNavbar
-          subtitle="CHI TIẾT TRAO ĐỔI"
-          onNotificationsPress={() => router.push("/")}
-          onMessagesPress={() => router.push("/chat-inbox")}
-        />
-        <View style={styles.subHeader}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Quay lại"
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-          >
-            <Icon name="back" size={18} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Quay lại</AppText>
-          </Pressable>
-          <AppText style={styles.subHeaderTitle}>Yêu cầu đăng nhập</AppText>
-          <View style={{ width: 60 }} />
+        <StatusBar barStyle="dark-content" />
+        <View
+          style={[styles.topBarShell, { paddingTop: Math.max(insets.top, 8) }]}
+        >
+          <View style={styles.navBar}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Quay lại"
+              hitSlop={8}
+              onPress={handleBack}
+              style={({ pressed }) => [
+                styles.backBtn,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Icon name="back" size={19} color={stitchTokens.darkWood} />
+            </Pressable>
+            <AppText style={styles.simpleHeaderTitle}>
+              Chi tiết trao đổi
+            </AppText>
+            <View style={styles.headerSpacer} />
+          </View>
         </View>
-        <View style={{ flex: 1, justifyContent: "center" }}>
+        <View style={styles.centeredBox}>
           <StatePanel
             title="Yêu cầu đăng nhập"
-            message="Vui lòng đăng nhập để xem chi tiết và tham gia đơn trao đổi sách."
+            message="Đăng nhập để xem chi tiết và thao tác trên phiếu trao đổi sách."
             action={{
               label: "Đăng nhập",
               onPress: () => router.push("/account"),
             }}
           />
-        </View>
-        <View
-          style={[
-            styles.footerContainer,
-            { paddingBottom: Math.max(insets.bottom, 8) },
-          ]}
-        >
-          <MemberNavigation current="/account" />
         </View>
       </View>
     );
@@ -121,40 +143,31 @@ export function ExchangeDetailScreen() {
   if (exchangeQuery.isPending && !exchange) {
     return (
       <View style={styles.screenRoot}>
-        <StatusBar barStyle="light-content" />
-        <TopNavbar
-          subtitle="CHI TIẾT TRAO ĐỔI"
-          onNotificationsPress={() => router.push("/")}
-          onMessagesPress={() => router.push("/chat-inbox")}
-        />
-        <View style={styles.subHeader}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Quay lại"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/chat-inbox");
-            }}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-          >
-            <Icon name="back" size={18} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Quay lại</AppText>
-          </Pressable>
-          <AppText style={styles.subHeaderTitle}>
-            Đang tải cuộc trao đổi…
-          </AppText>
-          <View style={{ width: 60 }} />
-        </View>
-        <View style={{ flex: 1, justifyContent: "center" }}>
-          <StatePanel loading title="Đang mở đơn trao đổi sách…" />
-        </View>
+        <StatusBar barStyle="dark-content" />
         <View
-          style={[
-            styles.footerContainer,
-            { paddingBottom: Math.max(insets.bottom, 8) },
-          ]}
+          style={[styles.topBarShell, { paddingTop: Math.max(insets.top, 8) }]}
         >
-          <MemberNavigation current="/account" />
+          <View style={styles.navBar}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Quay lại"
+              hitSlop={8}
+              onPress={handleBack}
+              style={({ pressed }) => [
+                styles.backBtn,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Icon name="back" size={19} color={stitchTokens.darkWood} />
+            </Pressable>
+            <AppText style={styles.simpleHeaderTitle}>
+              Đang tải phiếu trao đổi…
+            </AppText>
+            <View style={styles.headerSpacer} />
+          </View>
+        </View>
+        <View style={styles.centeredBox}>
+          <StatePanel loading title="Đang mở phiếu trao đổi…" />
         </View>
       </View>
     );
@@ -163,27 +176,28 @@ export function ExchangeDetailScreen() {
   if (!exchange) {
     return (
       <View style={styles.screenRoot}>
-        <StatusBar barStyle="light-content" />
-        <TopNavbar
-          subtitle="CHI TIẾT TRAO ĐỔI"
-          onNotificationsPress={() => router.push("/")}
-          onMessagesPress={() => router.push("/chat-inbox")}
-        />
-        <View style={styles.subHeader}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Quay lại"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/chat-inbox");
-            }}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-          >
-            <Icon name="back" size={18} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Quay lại</AppText>
-          </Pressable>
-          <AppText style={styles.subHeaderTitle}>Lỗi kết nối</AppText>
-          <View style={{ width: 60 }} />
+        <StatusBar barStyle="dark-content" />
+        <View
+          style={[styles.topBarShell, { paddingTop: Math.max(insets.top, 8) }]}
+        >
+          <View style={styles.navBar}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Quay lại"
+              hitSlop={8}
+              onPress={handleBack}
+              style={({ pressed }) => [
+                styles.backBtn,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Icon name="back" size={19} color={stitchTokens.darkWood} />
+            </Pressable>
+            <AppText style={styles.simpleHeaderTitle}>
+              Không tìm thấy phiếu
+            </AppText>
+            <View style={styles.headerSpacer} />
+          </View>
         </View>
         <View style={styles.errorContainer}>
           <ExchangeRecoveryPanel
@@ -196,24 +210,13 @@ export function ExchangeDetailScreen() {
           <Notice tone="error">
             {exchangeQuery.error
               ? presentError(exchangeQuery.error).message
-              : "Không tìm thấy giao dịch trao đổi này."}
+              : "Không tìm thấy phiếu trao đổi này."}
           </Notice>
           <Button
-            title="Quay lại danh sách tin nhắn"
+            title="Về danh sách trao đổi"
             secondary
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/chat-inbox");
-            }}
+            onPress={() => router.replace("/exchanges")}
           />
-        </View>
-        <View
-          style={[
-            styles.footerContainer,
-            { paddingBottom: Math.max(insets.bottom, 8) },
-          ]}
-        >
-          <MemberNavigation current="/account" />
         </View>
       </View>
     );
@@ -228,172 +231,231 @@ export function ExchangeDetailScreen() {
       ? exchange.agreement?.recipientBook.ownerDisplayName
       : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName) ??
     partnerAddressName ??
-    "Đối tác trao đổi";
+    "Đối tác";
+  const partnerInitial = (partnerName.trim()[0] || "Đ").toUpperCase();
 
   const isReadOnly = ["Completed", "Cancelled"].includes(exchange.status);
+  const selectedStep: ExchangeStepId =
+    viewedHistoryStep &&
+    viewedHistoryStep !== liveStep &&
+    hasExchangeStepFacts(viewedHistoryStep, exchange)
+      ? viewedHistoryStep
+      : liveStep;
+  const isViewingHistory = selectedStep !== liveStep;
+  const reload = async () => {
+    await exchangeQuery.refetch();
+  };
+
+  const stageInfo = getExchangeStageHero(
+    exchange,
+    isInitiator,
+    currentUserId,
+    partnerName,
+  );
+
+  const receiveBooks = exchange.agreement
+    ? isInitiator
+      ? [exchange.agreement.recipientBook]
+      : exchange.agreement.initiatorBooks
+    : [];
 
   return (
     <View style={styles.screenRoot}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
-      {/* 1. Header Đỉnh Đỏ Rượu Vang TopNavbar */}
-      <TopNavbar
-        subtitle="CHI TIẾT TRAO ĐỔI"
-        onNotificationsPress={() => router.push("/")}
-        onMessagesPress={() => router.push("/chat-inbox")}
-      />
+      {/* Single Ultra-Clean Slim Top App Bar (~52px) */}
+      <View
+        style={[styles.topBarShell, { paddingTop: Math.max(insets.top, 8) }]}
+      >
+        <View style={styles.navBar}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
+            hitSlop={8}
+            onPress={handleBack}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+          >
+            <Icon name="back" size={19} color={stitchTokens.darkWood} />
+          </Pressable>
 
-      {/* 2. Subheader điều hướng Quay lại & Đối tác */}
-      <View style={styles.subHeader}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Quay lại"
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace("/chat-inbox");
-          }}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-        >
-          <Icon name="back" size={18} color={stitchTokens.wineDark} />
-          <AppText style={styles.backLabel}>Quay lại</AppText>
-        </Pressable>
+          <View style={styles.partnerPill}>
+            <View style={styles.partnerAvatar}>
+              <AppText style={styles.partnerInitial}>{partnerInitial}</AppText>
+            </View>
+            <View style={styles.partnerTextCol}>
+              <AppText numberOfLines={1} style={styles.partnerName}>
+                {partnerName}
+              </AppText>
+              <AppText numberOfLines={1} style={styles.partnerCode}>
+                Phiếu #{exchange.id.slice(0, 8).toUpperCase()}
+              </AppText>
+            </View>
+          </View>
 
-        <View style={styles.subHeaderCenter}>
-          <AppText numberOfLines={1} style={styles.subHeaderTitle}>
-            Trao đổi cùng @{partnerName}
-          </AppText>
-          <AppText numberOfLines={1} style={styles.subHeaderSubtitle}>
-            Mã giao dịch: #{exchange.id.slice(0, 8).toUpperCase()}
-          </AppText>
-        </View>
-
-        <View style={{ width: 60 }} />
-      </View>
-
-      {/* 3. Thanh chuyển đổi 2 Panel (Segmented Tabs Bar) */}
-      <View style={styles.segmentedTabBar} role="tablist">
-        <Pressable
-          accessibilityRole="tab"
-          accessibilityLabel="Xem Phiếu trao đổi"
-          accessibilityState={{ selected: activePanel === "proposal" }}
-          style={[
-            styles.segmentTab,
-            activePanel === "proposal" && styles.segmentTabActive,
-          ]}
-          onPress={() => setActivePanel("proposal")}
-        >
-          <Icon
-            name="ticket"
-            size={16}
-            color={
-              activePanel === "proposal" ? stitchTokens.wineDark : colors.muted
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              activePanel === "chat" ? "Xem phiếu trao đổi" : "Mở trò chuyện"
             }
-          />
-          <AppText
-            style={[
-              styles.segmentTabText,
-              activePanel === "proposal" && styles.segmentTabTextActive,
+            hitSlop={6}
+            onPress={() =>
+              setActivePanel((prev) =>
+                prev === "proposal" ? "chat" : "proposal",
+              )
+            }
+            style={({ pressed }) => [
+              styles.chatPillBtn,
+              activePanel === "chat" && styles.chatPillBtnActive,
+              pressed && styles.pressed,
             ]}
           >
-            Phiếu trao đổi
-          </AppText>
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="tab"
-          accessibilityLabel="Xem Trò chuyện"
-          accessibilityState={{ selected: activePanel === "chat" }}
-          style={[
-            styles.segmentTab,
-            activePanel === "chat" && styles.segmentTabActive,
-          ]}
-          onPress={() => setActivePanel("chat")}
-        >
-          <Icon
-            name="message"
-            size={16}
-            color={
-              activePanel === "chat" ? stitchTokens.wineDark : colors.muted
-            }
-          />
-          <AppText
-            style={[
-              styles.segmentTabText,
-              activePanel === "chat" && styles.segmentTabTextActive,
-            ]}
-          >
-            Trò chuyện
-          </AppText>
-        </Pressable>
-      </View>
-
-      {/* 4. Panel Nội dung */}
-      {activePanel === "proposal" ? (
-        <ScrollView
-          style={styles.tabContent}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {exchangeQuery.error && (
-            <Notice tone="error">
-              Chưa tải được trạng thái hiện tại. Thông tin đã xác nhận được giữ
-              lại.
-            </Notice>
-          )}
-          {/* 1. TIẾN TRÌNH CÁC BƯỚC TRAO ĐỔI (Progress Stepper) */}
-          <ExchangeProgressStepper
-            status={exchange.status}
-            isInitiator={isInitiator}
-            cancelReason={exchange.cancelReason}
-            rejectionReason={exchange.rejectionReason}
-            viewerRole={isInitiator ? "proposer" : "recipient"}
-          />
-
-          {/* 2. BIÊN NHẬN TẤT TOÁN TỰ ĐỘNG (Settlement Card khi Completed) */}
-          <ExchangeSettlementCard
-            exchange={exchange}
-            isInitiator={isInitiator}
-          />
-
-          {/* 3. PHIẾU ĐỀ NGHỊ ĐỔI SÁCH (Books Matching & Financial Diff) */}
-          <ExchangeProposalCard exchange={exchange} isInitiator={isInitiator} />
-
-          {/* 4. BẢNG HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Counter, Fund, Ship, Receive, Complete, Dispute) */}
-          {exchange.status === "ResolutionPending" && (
-            <ExchangeEvidenceCard
-              key={identity + ":" + id}
-              id={id}
-              revision={exchange.revision}
+            <Icon
+              name={activePanel === "chat" ? "ticket" : "message"}
+              size={14}
+              color={
+                activePanel === "chat" ? stitchTokens.white : stitchTokens.wine
+              }
             />
+            <AppText
+              style={[
+                styles.chatPillText,
+                activePanel === "chat" && styles.chatPillTextActive,
+              ]}
+            >
+              {activePanel === "chat" ? "Phiếu" : "Nhắn tin"}
+            </AppText>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Main Scrollable Content + Sticky Thumb-Zone Bottom Dock */}
+      {activePanel === "proposal" ? (
+        <ExchangeActionsCard
+          exchange={exchange}
+          isInitiator={isInitiator}
+          partnerName={partnerName}
+          readError={Boolean(exchangeQuery.error)}
+          onReload={reload}
+          isViewingHistory={isViewingHistory}
+          onReturnToLive={() => setViewedHistoryStep(null)}
+          onOpenChat={() => setActivePanel("chat")}
+          bottomInset={Math.max(insets.bottom, 12)}
+          renderScrollBody={(actionsBody) => (
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {exchangeQuery.error ? (
+                <Notice tone="error">
+                  Chưa tải được trạng thái mới nhất. Dữ liệu đã xác nhận được
+                  giữ lại.
+                </Notice>
+              ) : null}
+
+              {/* Hướng 1: Compact 5-Segment Progress Card + Vertical Timeline Bottom Sheet */}
+              <ExchangeProgressStepper
+                exchange={exchange}
+                selectedStep={selectedStep}
+                onSelectStep={(step) =>
+                  setViewedHistoryStep(step === liveStep ? null : step)
+                }
+                stageInfo={stageInfo}
+                bottomInset={Math.max(insets.bottom, 16)}
+              />
+
+              {isViewingHistory ? (
+                <View style={styles.workspace}>
+                  {selectedStep === "proposal" ? (
+                    <ExchangeProposalCard
+                      exchange={exchange}
+                      isInitiator={isInitiator}
+                    />
+                  ) : selectedStep === "funding" ? (
+                    <ExchangeFundingHistoryCard
+                      exchange={exchange}
+                      isInitiator={isInitiator}
+                    />
+                  ) : selectedStep === "handover" ? (
+                    <ExchangeShippingCard
+                      exchange={exchange}
+                      isInitiator={isInitiator}
+                      partnerName={partnerName}
+                      history
+                    />
+                  ) : (
+                    <>
+                      <ExchangeInspectionHistoryCard
+                        exchange={exchange}
+                        isInitiator={isInitiator}
+                      />
+                      {receiveBooks.length > 0 ? (
+                        <ExchangeBookGroup
+                          title="Sách bạn đã nhận"
+                          books={receiveBooks}
+                          exchangeId={exchange.id}
+                          incoming
+                        />
+                      ) : null}
+                    </>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.workspace}>
+                  {exchange.status === "Completed" ? (
+                    <ExchangeSettlementCard
+                      exchange={exchange}
+                      isInitiator={isInitiator}
+                    />
+                  ) : null}
+
+                  {actionsBody}
+
+                  {exchange.status === "Proposed" ? (
+                    <ExchangeProposalCard
+                      exchange={exchange}
+                      isInitiator={isInitiator}
+                    />
+                  ) : null}
+
+                  {exchange.status === "Delivered" &&
+                  receiveBooks.length > 0 ? (
+                    <ExchangeBookGroup
+                      title="Sách bạn đã nhận"
+                      subtitle={`Đối chiếu tình trạng gốc từ ${partnerName}`}
+                      books={receiveBooks}
+                      exchangeId={exchange.id}
+                      incoming
+                    />
+                  ) : null}
+
+                  {exchange.status === "ResolutionPending" ? (
+                    <ExchangeEvidenceCard
+                      key={identity + ":" + id}
+                      id={id}
+                      revision={exchange.revision}
+                    />
+                  ) : null}
+
+                  <ExchangeReturnAndDemoCard
+                    exchange={exchange}
+                    userId={currentUserId ?? ""}
+                    onReload={reload}
+                  />
+
+                  <ExchangeSafetyTips />
+                </View>
+              )}
+            </ScrollView>
           )}
-          <ExchangeReturnAndDemoCard
-            exchange={exchange}
-            userId={currentUserId ?? ""}
-            onReload={async () => {
-              await exchangeQuery.refetch();
-            }}
-          />
-          <ExchangeActionsCard
-            exchange={exchange}
-            isInitiator={isInitiator}
-            readError={Boolean(exchangeQuery.error)}
-            onReload={async () => {
-              await exchangeQuery.refetch();
-            }}
-          />
-
-          {/* 5. TIẾN TRÌNH GIAO NHẬN 2 CHIỀU ĐỘC LẬP (Shipping Tracking 2-Way) */}
-          <ExchangeShippingCard
-            exchange={exchange}
-            isInitiator={isInitiator}
-            partnerName={partnerName}
-          />
-
-          {/* 6. MẸO AN TOÀN KHI TRAO ĐỔI SÁCH (Safety Tips) */}
-          <ExchangeSafetyTips />
-        </ScrollView>
+        />
       ) : (
-        <View style={styles.chatContainer}>
+        <View
+          style={[
+            styles.chatContainer,
+            { paddingBottom: Math.max(insets.bottom, 6) },
+          ]}
+        >
           <ExchangeChatBox
             exchangeId={exchange.id}
             partnerName={partnerName}
@@ -401,16 +463,6 @@ export function ExchangeDetailScreen() {
           />
         </View>
       )}
-
-      {/* 5. Bottom Navbar chuẩn nền trắng */}
-      <View
-        style={[
-          styles.footerContainer,
-          { paddingBottom: Math.max(insets.bottom, 8) },
-        ]}
-      >
-        <MemberNavigation current="/account" />
-      </View>
     </View>
   );
 }
@@ -418,94 +470,113 @@ export function ExchangeDetailScreen() {
 const styles = StyleSheet.create({
   screenRoot: {
     flex: 1,
-    backgroundColor: stitchTokens.parchment,
+    backgroundColor: "#F6F2EB",
   },
-  subHeader: {
-    height: 48,
+  topBarShell: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EFEAE2",
+  },
+  navBar: {
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: space.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.rule,
+    paddingHorizontal: 14,
+    gap: 10,
   },
   backBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  backLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  subHeaderCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-  subHeaderTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  subHeaderSubtitle: {
-    fontSize: 11,
-    color: colors.muted,
-  },
-  segmentedTabBar: {
-    flexDirection: "row",
-    backgroundColor: stitchTokens.parchment,
-    marginHorizontal: space.md,
-    marginTop: space.xs,
-    marginBottom: space.xs,
-    borderRadius: radius.card,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: colors.rule,
-  },
-  segmentTab: {
-    flex: 1,
-    flexDirection: "row",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F5F1EB",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 9,
-    borderRadius: radius.small,
   },
-  segmentTabActive: {
-    backgroundColor: colors.surface,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  segmentTabText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.muted,
-  },
-  segmentTabTextActive: {
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  tabContent: {
+  simpleHeaderTitle: {
     flex: 1,
-    backgroundColor: stitchTokens.creamBg,
+    textAlign: "center",
+    fontSize: 15.5,
+    fontWeight: "800",
+    color: stitchTokens.darkWood,
+  },
+  headerSpacer: {
+    width: 36,
+  },
+  partnerPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    minWidth: 0,
+  },
+  partnerAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: stitchTokens.roseParchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  partnerInitial: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+  },
+  partnerTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  partnerName: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: stitchTokens.darkWood,
+  },
+  partnerCode: {
+    fontSize: 11,
+    color: stitchTokens.subtleGray,
+    fontVariant: ["tabular-nums"],
+  },
+  chatPillBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 17,
+    backgroundColor: stitchTokens.roseParchment,
+    borderWidth: 1,
+    borderColor: "#E8CFCB",
+  },
+  chatPillBtnActive: {
+    backgroundColor: stitchTokens.wine,
+    borderColor: stitchTokens.wine,
+  },
+  chatPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+  },
+  chatPillTextActive: {
+    color: stitchTokens.white,
+  },
+  pressed: {
+    opacity: 0.72,
+  },
+  scroll: {
+    flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.section,
-    gap: space.md,
+    padding: 14,
+    gap: 12,
+    paddingBottom: 28,
   },
-  chatContainer: {
+  workspace: {
+    gap: 12,
+  },
+  centeredBox: {
     flex: 1,
-    backgroundColor: stitchTokens.creamBg,
+    justifyContent: "center",
+    padding: space.lg,
   },
   errorContainer: {
     flex: 1,
@@ -513,14 +584,8 @@ const styles = StyleSheet.create({
     gap: space.md,
     justifyContent: "center",
   },
-  footerContainer: {
-    backgroundColor: colorRoles.navigationBackground,
-    paddingTop: space.xs,
-    paddingHorizontal: space.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.rule,
-  },
-  pressed: {
-    opacity: 0.7,
+  chatContainer: {
+    flex: 1,
+    backgroundColor: stitchTokens.whiteSurface,
   },
 });

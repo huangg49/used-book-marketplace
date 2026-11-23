@@ -5,6 +5,7 @@ import { ActivityIndicator,
   StyleSheet,
   View,
 } from "react-native";
+import { router } from "expo-router";
 import { AppText } from "../../../core/ui/text";
 import { AppModal, Button, Icon, StatePanel, stitchTokens  } from "../../../core/ui";
 import { useSession } from "../../../core/session/session-provider";
@@ -48,10 +49,32 @@ export function HomeNotificationsModal({
   const displayItems = useMemo(() => isAuthenticated ? (query.data?.items ?? []).map(it => ({
     id: it.id, title: it.title, message: it.body,
     time: formatNotificationTime(it.createdAt), read: Boolean(it.readAt),
+    targetType: it.targetType, targetId: it.targetId,
   })) : [], [isAuthenticated, query.data]);
   const handleMarkAllRead = () => { if (isAuthenticated) markRead.mutate({ all: true }); };
-  const handleItemPress = (id: string, read: boolean) => {
-    if (isAuthenticated && !read) markRead.mutate({ ids: [id] });
+  const handleItemPress = (item: (typeof displayItems)[number]) => {
+    if (isAuthenticated && !item.read) markRead.mutate({ ids: [item.id] });
+    onClose();
+    switch (item.targetType) {
+      case "Exchange":
+        router.push({ pathname: "/exchange", params: { id: item.targetId } });
+        break;
+      case "Order":
+        router.push({ pathname: "/orders", params: { id: item.targetId } });
+        break;
+      case "Auction":
+        router.push({ pathname: "/auction", params: { id: item.targetId } });
+        break;
+      case "SupportCase":
+        router.push("/support");
+        break;
+      case "Withdrawal":
+        router.push("/wallet");
+        break;
+      case "TransactionReview":
+        router.push("/account");
+        break;
+    }
   };
 
   return (
@@ -145,7 +168,7 @@ export function HomeNotificationsModal({
             {displayItems.map((item) => (
               <Pressable
                 key={item.id}
-                onPress={() => handleItemPress(item.id, item.read)}
+                onPress={() => handleItemPress(item)}
                 style={({ pressed }) => [
                   styles.notifItem,
                   !item.read && styles.notifUnread,

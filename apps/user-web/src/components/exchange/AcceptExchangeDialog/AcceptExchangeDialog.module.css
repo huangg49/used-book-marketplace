@@ -789,3 +789,29 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.compHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.escrowCapWarning {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--shop-gold, #b08d57);
+    background: var(--shop-shelf, #f6f1e7);
+    color: var(--shop-ink, #281914);
+    font-size: 0.75rem;
+    line-height: 1.45;
+}
+
+.escrowCapWarning svg {
+    flex: none;
+    margin-top: 2px;
+    color: var(--shop-wine, #5c0202);
+}

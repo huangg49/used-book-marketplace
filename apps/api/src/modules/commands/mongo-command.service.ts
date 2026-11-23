@@ -364,6 +364,7 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'decidePointOrderReceipt',
   'claimPointOrder',
   'cancelExchange',
+  'rejectExchange',
   'shipExchange',
   'receiveExchange',
   'completeExchange',

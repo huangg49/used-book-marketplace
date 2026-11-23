@@ -13,6 +13,16 @@ export function SettlementCard({ detail }: SettlementCardProps) {
 
     const moneyAmount = detail.moneyAmount || 0;
     const isCompensation = detail.moneyCompensationType !== 'none' && moneyAmount > 0;
+    const refundedDeposit = detail.viewerDeposit ?? detail.viewerFundingAmount ?? 0;
+    const partialDamage = detail.resolutionCompensationAmount ?? 0;
+    const isPartialDeduction =
+        partialDamage > 0 &&
+        (detail.resolutionDecision === 'CompensateInitiator' ||
+            detail.resolutionDecision === 'CompensateRecipient');
+    const viewerWonDeduction =
+        isPartialDeduction &&
+        ((detail.resolutionDecision === 'CompensateInitiator' && detail.viewerRole === 'proposer') ||
+            (detail.resolutionDecision === 'CompensateRecipient' && detail.viewerRole === 'recipient'));
 
     return (
         <div className={styles.card}>
@@ -23,7 +33,9 @@ export function SettlementCard({ detail }: SettlementCardProps) {
                 <div className={styles.bannerText}>
                     <h3 className={styles.title}>Giao dịch Trao đổi Hoàn tất Thành công!</h3>
                     <p className={styles.subtitle}>
-                        Thời hạn kiểm tra của cả hai bên đã kết thúc. Hệ thống đã tất toán ký quỹ và dòng tiền.
+                        {isPartialDeduction
+                            ? `Giao dịch hoàn tất theo phán quyết kèm khấu trừ thiệt hại ${formatVnd(partialDamage)}. Hệ thống đã tất toán ký quỹ về ví.`
+                            : 'Thời hạn kiểm tra của cả hai bên đã kết thúc. Hệ thống đã tất toán ký quỹ và dòng tiền.'}
                     </p>
                 </div>
             </div>
@@ -35,24 +47,38 @@ export function SettlementCard({ detail }: SettlementCardProps) {
                         <span className={styles.itemLabel}>Ký quỹ bảo chứng</span>
                     </div>
                     <p className={styles.itemValuePositive}>
-                        +{formatVnd(detail.viewerFundingAmount ?? 0)}
+                        +{formatVnd(refundedDeposit)}
                     </p>
-                    <span className={styles.itemSubtext}>Đã hoàn lại 100% vào Ví mô phỏng</span>
+                    <span className={styles.itemSubtext}>
+                        {isPartialDeduction
+                            ? 'Khoản cọc gốc đã tất toán theo phán quyết'
+                            : 'Đã hoàn lại 100% cọc vào Ví mô phỏng'}
+                    </span>
                 </div>
 
                 <div className={styles.summaryItem}>
                     <div className={styles.itemHeader}>
                         <Wallet size={16} className={styles.itemIcon} />
-                        <span className={styles.itemLabel}>Khoản bù chênh lệch</span>
+                        <span className={styles.itemLabel}>
+                            {isPartialDeduction ? 'Khấu trừ thiệt hại' : 'Khoản bù chênh lệch'}
+                        </span>
                     </div>
                     <p className={styles.itemValue}>
-                        {isCompensation
-                            ? (detail.moneyCompensationType === 'user_pays'
-                                ? `-${formatVnd(moneyAmount)} (Bạn bù)`
-                                : `+${formatVnd(moneyAmount)} (Đối tác bù)`)
-                            : '0 đ (Ngang giá)'}
+                        {isPartialDeduction
+                            ? viewerWonDeduction
+                                ? `+${formatVnd(partialDamage)} (Bạn nhận bồi hoàn)`
+                                : `-${formatVnd(partialDamage)} (Khấu trừ thiệt hại)`
+                            : isCompensation
+                                ? (detail.moneyCompensationType === 'user_pays'
+                                    ? `-${formatVnd(moneyAmount)} (Bạn bù)`
+                                    : `+${formatVnd(moneyAmount)} (Đối tác bù)`)
+                                : '0 đ (Ngang giá)'}
                     </p>
-                    <span className={styles.itemSubtext}>Đã kết chuyển hoàn tất</span>
+                    <span className={styles.itemSubtext}>
+                        {isPartialDeduction && isCompensation
+                            ? `Tiền bù thỏa thuận: ${formatVnd(moneyAmount)} · Đã tất toán`
+                            : 'Đã kết chuyển hoàn tất'}
+                    </span>
                 </div>
 
                 <div className={styles.summaryItem}>
@@ -61,7 +87,7 @@ export function SettlementCard({ detail }: SettlementCardProps) {
                         <span className={styles.itemLabel}>Trạng thái sách</span>
                     </div>
                     <p className={styles.itemValue}>Đã trao đổi</p>
-                    <span className={styles.itemSubtext}>Cả 2 sách chuyển sang Exchanged</span>
+                    <span className={styles.itemSubtext}>Các sách trong phiếu chuyển sang Exchanged</span>
                 </div>
             </div>
 

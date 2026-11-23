@@ -28,6 +28,8 @@ export const ROUTES = {
   auctionOrder: (id: string): string => `/auctions/${id}/order`,
   driver: (trackingCode?: string, demo = false): string => trackingCode
     ? `/driver?${new URLSearchParams({ trackingCode, ...(demo ? { demo: '1' } : {}) })}` : '/driver',
+  exchangeDriver: (exchangeId: string, leg: 'initiator' | 'recipient', trackingCode: string): string =>
+    `/driver?${new URLSearchParams({ kind: 'exchange', exchangeId, leg, trackingCode })}`,
   notifications: '/notifications',
 } as const
 

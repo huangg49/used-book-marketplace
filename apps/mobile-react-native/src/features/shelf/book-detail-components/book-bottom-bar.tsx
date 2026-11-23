@@ -30,7 +30,10 @@ export function BookBottomBar({
   const isAvailable = item.purchaseAvailability?.status === "Available";
   const canBuy = item.salePrice != null && isAvailable && !isOwner;
   const canExchange =
-    (item.mode === "Exchange" || item.mode === "Both") && isAvailable && !isOwner;
+    !item.bundle &&
+    (item.mode === "Exchange" || item.mode === "Both") &&
+    isAvailable &&
+    !isOwner;
 
   const displayPrice = item.salePrice ?? item.exchangeValue;
   const priceLabel =
