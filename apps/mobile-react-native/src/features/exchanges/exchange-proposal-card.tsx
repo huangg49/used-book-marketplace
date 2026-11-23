@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { AppText, Icon, space, stitchTokens } from "../../core/ui";
+import { AppText, Icon, stitchTokens } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
 import { mapExchangeStatusInfo } from "./contracts";
@@ -9,24 +9,56 @@ import { PublicPhoto } from "../shelf/public-photo";
 interface ExchangeProposalCardProps {
   exchange: Exchange;
   isInitiator: boolean;
+  initialCollapsed?: boolean;
 }
 
 function FrozenCondition({ book }: { book: NonNullable<Exchange['agreement']>['recipientBook'] }) {
   const [expanded, setExpanded] = useState(false);
-  return <View>
-    <AppText>{[book.book.edition, book.book.publicationYear, book.book.isbn].filter(Boolean).join(' · ')}</AppText>
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded((value) => !value)} style={{ minHeight: 48, justifyContent: 'center' }}>
-      <AppText>{expanded ? 'Thu gọn tình trạng' : 'Tình trạng đã ghi nhận'}</AppText>
-    </Pressable>
-    {expanded && <AppText>{[book.description, book.pages, book.coverNote, book.notes, book.accessories,
-      book.hasMissingPages ? 'Có thiếu trang' : 'Không thiếu trang', book.readable ? 'Đọc được' : 'Không đọc được'].filter(Boolean).join('. ')}</AppText>}
-  </View>;
+  const editionInfo = [book.book.edition, book.book.publicationYear].filter(Boolean).join(" · ");
+  const details = [
+    book.description,
+    book.pages ? `${book.pages} trang` : null,
+    book.coverNote,
+    book.notes,
+    book.accessories,
+    book.hasMissingPages ? "Có thiếu trang" : "Không thiếu trang",
+    book.readable ? "Đọc tốt" : "Khó đọc",
+  ].filter(Boolean).join(". ");
+
+  return (
+    <View style={styles.frozenContainer}>
+      {editionInfo ? (
+        <AppText style={styles.frozenEditionText} numberOfLines={1}>
+          {editionInfo}
+        </AppText>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? "Thu gọn tình trạng" : "Xem tình trạng đã ghi nhận"}
+        accessibilityState={{ expanded }}
+        onPress={() => setExpanded((value) => !value)}
+        style={styles.frozenToggleBtn}
+      >
+        <AppText style={styles.frozenToggleText}>
+          {expanded ? "▲ Thu gọn tình trạng" : "▼ Tình trạng đã ghi nhận"}
+        </AppText>
+      </Pressable>
+      {expanded && details ? (
+        <View style={styles.frozenDetailBox}>
+          <AppText style={styles.frozenDetailText}>{details}</AppText>
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 export function ExchangeProposalCard({
   exchange,
   isInitiator,
+  initialCollapsed,
 }: ExchangeProposalCardProps) {
+  const defaultCollapsed = initialCollapsed ?? exchange.status !== "Proposed";
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const statusInfo = mapExchangeStatusInfo(exchange.status, isInitiator);
 
   const initiatorListingCount =
@@ -82,311 +114,406 @@ export function ExchangeProposalCard({
   const partnerAddress = isInitiator ? exchange.recipientAddress : exchange.initiatorAddress;
 
   return (
-    <View style={styles.card}>
-      {!exchange.agreement && <AppText>Hồ sơ cũ thiếu bản chụp sách ban đầu. Cọc/bù là nghĩa vụ đã lưu; nội dung sách không được lấy từ bài đăng hiện tại.</AppText>}
-      {/* 1. Header with Code and Status Badge */}
-      <View style={styles.header}>
+    <View style={[styles.card, collapsed && styles.cardCollapsed]}>
+      {!exchange.agreement && (
+        <AppText style={styles.legacyNotice}>
+          Hồ sơ cũ thiếu bản chụp sách ban đầu. Cọc/bù là nghĩa vụ đã lưu; nội dung sách không được lấy từ bài đăng hiện tại.
+        </AppText>
+      )}
+
+      {/* 1. Header with Code, Status Badge & Collapse Toggle */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={collapsed ? "Mở rộng chi tiết đề nghị đổi sách" : "Thu gọn đề nghị đổi sách"}
+        onPress={() => setCollapsed((v) => !v)}
+        style={[styles.header, collapsed && styles.headerCollapsed]}
+      >
         <View style={styles.headerLeft}>
-          <AppText style={styles.codeText}>
-            #{exchange.id.slice(0, 8).toUpperCase()}
-          </AppText>
-          <AppText style={styles.dateText}>
-            Tạo ngày {new Date(exchange.createdAt).toLocaleDateString("vi-VN")}
-          </AppText>
-        </View>
-
-        <View style={[styles.statusBadge, { backgroundColor: statusInfo.badgeBg }]}>
-          <AppText style={[styles.statusText, { color: statusInfo.badgeColor }]}>
-            {statusInfo.label}
-          </AppText>
-        </View>
-      </View>
-
-      {/* 2. Book Exchange Matchup Cards */}
-      <View style={styles.booksComparison}>
-        {/* Your Books (Sách của bạn gửi đi) */}
-        <View style={styles.bookSideCard}>
-          <View style={styles.sideHeader}>
-            <AppText style={styles.sideBadge}>
-              {myBooks.length > 1
-                ? `SÁCH BẠN GỬI ĐI (${myBooks.length} CUỐN)`
-                : "SÁCH CỦA BẠN GỬI ĐI"}
+          <View style={styles.headerTitleRow}>
+            <AppText style={styles.codeText}>
+              #{exchange.id.slice(0, 8).toUpperCase()}
             </AppText>
+            <View style={[styles.statusBadge, { backgroundColor: statusInfo.badgeBg }]}>
+              <AppText style={[styles.statusText, { color: statusInfo.badgeColor }]}>
+                {statusInfo.label}
+              </AppText>
+            </View>
           </View>
-          <View style={{ gap: 8 }}>
-            {myBooks.length > 0 ? (
-              myBooks.map((item, idx) => (
-                <View key={item?.id ?? `my-${idx}`} style={styles.bookInfoRow}>
-                  <View style={styles.photoBox}>
-                    {item?.photos?.[0] ? (
-                      <PublicPhoto
-                        exchangeId={exchange.agreement ? exchange.id : undefined}
-                        listingId={item.id}
-                        revisionId={item.revisionId}
-                        mediaId={item.photos[0].id}
-                        label="Bìa sách bạn gửi"
-                        active={true}
-                        compact
-                      />
-                    ) : (
-                      <View style={styles.photoPlaceholder}>
-                        <Icon name="book" size={24} color={stitchTokens.roseBrown} />
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.bookTextCol}>
-                    {item ? (
-                      <>
-                        <AppText style={styles.bookTitle} numberOfLines={2}>
-                          {item.book.title}
-                        </AppText>
-                        <AppText style={styles.bookAuthors} numberOfLines={1}>
-                          {item.book.authors.join(", ")}
-                        </AppText>
-                        <AppText style={styles.bookValue}>
-                          Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
-                        </AppText>
-                        <FrozenCondition book={item.snapshot} />
-                      </>
-                    ) : (
-                      <>
-                        <AppText style={styles.bookTitle} numberOfLines={2}>
-                          Sách gửi trao đổi #{idx + 1}
-                        </AppText>
-                        <AppText style={styles.bookAuthors} numberOfLines={1}>
-                          {exchange.status === "Completed"
-                            ? "Đã giao nhận hoàn tất"
-                            : "Sách trong thỏa thuận trao đổi"}
-                        </AppText>
-                        <AppText style={styles.bookValue}>
-                          {exchange.status === "Completed"
-                            ? "Đã đối soát lưu ký"
-                            : "Chi tiết trong hồ sơ"}
-                        </AppText>
-                      </>
-                    )}
-                  </View>
-                </View>
-              ))
-            ) : null}
-          </View>
-        </View>
-
-        {/* Swap Icon Divider */}
-        <View style={styles.swapDivider}>
-          <View style={styles.swapLine} />
-          <View style={styles.swapCircle}>
-            <Icon name="sync" size={16} color={stitchTokens.wineDark} />
-          </View>
-          <View style={styles.swapLine} />
-        </View>
-
-        {/* Partner Books */}
-        <View style={styles.bookSideCard}>
-          <View style={styles.sideHeader}>
-            <AppText style={styles.sideBadgePartner}>
-              {partnerBooks.length > 1
-                ? `SÁCH BẠN NHẬN VỀ (${partnerBooks.length} CUỐN TỪ @${partnerName})`
-                : `SÁCH BẠN NHẬN VỀ (TỪ @${partnerName})`}
-            </AppText>
-          </View>
-          <View style={{ gap: 8 }}>
-            {partnerBooks.length > 0 ? (
-              partnerBooks.map((item, idx) => (
-                <View key={item?.id ?? `partner-${idx}`} style={styles.bookInfoRow}>
-                  <View style={styles.photoBox}>
-                    {item?.photos?.[0] ? (
-                      <PublicPhoto
-                        exchangeId={exchange.agreement ? exchange.id : undefined}
-                        listingId={item.id}
-                        revisionId={item.revisionId}
-                        mediaId={item.photos[0].id}
-                        label="Bìa sách bạn nhận"
-                        active={true}
-                        compact
-                      />
-                    ) : (
-                      <View style={styles.photoPlaceholder}>
-                        <Icon name="book" size={24} color={stitchTokens.roseBrown} />
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.bookTextCol}>
-                    {item ? (
-                      <>
-                        <AppText style={styles.bookTitle} numberOfLines={2}>
-                          {item.book.title}
-                        </AppText>
-                        <AppText style={styles.bookAuthors} numberOfLines={1}>
-                          {item.book.authors.join(", ")}
-                        </AppText>
-                        <AppText style={styles.bookValue}>
-                          Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
-                        </AppText>
-                        <FrozenCondition book={item.snapshot} />
-                      </>
-                    ) : (
-                      <>
-                        <AppText style={styles.bookTitle} numberOfLines={2}>
-                          Sách nhận từ đối tác #{idx + 1}
-                        </AppText>
-                        <AppText style={styles.bookAuthors} numberOfLines={1}>
-                          {exchange.status === "Completed"
-                            ? "Đã giao dịch hoàn tất"
-                            : "Sách trao đổi đối ứng"}
-                        </AppText>
-                        <AppText style={styles.bookValue}>
-                          {exchange.status === "Completed"
-                            ? "Đã tất toán lưu ký"
-                            : "Chi tiết trong hồ sơ"}
-                        </AppText>
-                      </>
-                    )}
-                  </View>
-                </View>
-              ))
-            ) : null}
-          </View>
-        </View>
-      </View>
-
-      {/* 3. Financial Settlement Box */}
-      <View style={[styles.settlementBox, { backgroundColor: moneyBg }]}>
-        <View style={styles.settlementRow}>
-          <Icon name="tag" size={17} color={moneyTone} />
-          <View style={{ flex: 1 }}>
-            <AppText style={[styles.settlementTitle, { color: moneyTone }]}>
-              {moneyLabel}
-            </AppText>
-            <AppText style={styles.settlementSub}>
-              Cọc đối soát: Bạn {formatVnd(myDeposit)} · Đối tác {formatVnd(partnerDeposit)}
-            </AppText>
-          </View>
-        </View>
-      </View>
-
-      {/* 4. Delivery Address Summary */}
-      <View style={styles.addressSection}>
-        <View style={styles.addressHeaderRow}>
-          <Icon name="pin" size={14} color={stitchTokens.wineMid} />
-          <AppText style={styles.addressHeaderTitle}>Địa chỉ giao nhận</AppText>
-        </View>
-
-        <View style={styles.addressBlock}>
-          <AppText style={styles.addressRoleLabel}>Địa chỉ của bạn:</AppText>
-          {myAddress ? (
-            <AppText style={styles.addressDetail}>
-              {myAddress.recipientName} ({myAddress.phone}) — {myAddress.detail}
-            </AppText>
+          {collapsed ? (
+            <View style={styles.collapsedSummaryRow}>
+              <Icon name="swap" size={13} color={stitchTokens.roseBrown} />
+              <AppText style={styles.collapsedSummaryText} numberOfLines={1}>
+                {myBooks[0]?.book.title ?? "Sách gửi"} ⇄ {partnerBooks[0]?.book.title ?? "Sách nhận"}
+              </AppText>
+            </View>
           ) : (
-            <AppText style={styles.addressMissing}>Chưa cấu hình địa chỉ nhận hàng</AppText>
+            <AppText style={styles.dateText}>
+              Tạo ngày {new Date(exchange.createdAt).toLocaleDateString("vi-VN")}
+            </AppText>
           )}
         </View>
 
-        {partnerAddress ? (
-          <View style={styles.addressBlock}>
-            <AppText style={styles.addressRoleLabel}>Địa chỉ đối tác:</AppText>
-            <AppText style={styles.addressDetail}>
-              {partnerAddress.recipientName} ({partnerAddress.phone}) — {partnerAddress.detail}
-            </AppText>
+        <View style={styles.collapseToggleBtn}>
+          <AppText style={styles.collapseToggleText}>
+            {collapsed ? "Chi tiết" : "Thu gọn"}
+          </AppText>
+          <Icon
+            name={collapsed ? "chevronDown" : "chevronUp"}
+            size={13}
+            color={stitchTokens.wineDark}
+          />
+        </View>
+      </Pressable>
+
+      {!collapsed && (
+        <>
+          {/* 2. Book Exchange Matchup Cards (Horizontal Row) */}
+          <View style={styles.booksComparison}>
+            {/* Your Books (Sách của bạn gửi đi) */}
+            <View style={styles.bookSideCard}>
+              <View style={styles.sideHeader}>
+                <AppText style={styles.sideBadge} numberOfLines={1}>
+                  {myBooks.length > 1
+                    ? `BẠN GỬI (${myBooks.length})`
+                    : "SÁCH BẠN GỬI"}
+                </AppText>
+              </View>
+              <View style={styles.booksListCol}>
+                {myBooks.length > 0 ? (
+                  myBooks.map((item, idx) => (
+                    <View key={item?.id ?? `my-${idx}`} style={styles.bookInfoCol}>
+                      <View style={styles.photoBox}>
+                        {item?.photos?.[0] ? (
+                          <PublicPhoto
+                            exchangeId={exchange.agreement ? exchange.id : undefined}
+                            listingId={item.id}
+                            revisionId={item.revisionId}
+                            mediaId={item.photos[0].id}
+                            label="Bìa sách bạn gửi"
+                            active={true}
+                            compact
+                          />
+                        ) : (
+                          <View style={styles.photoPlaceholder}>
+                            <Icon name="book" size={20} color={stitchTokens.roseBrown} />
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.bookTextCol}>
+                        {item ? (
+                          <>
+                            <AppText style={styles.bookTitle} numberOfLines={2}>
+                              {item.book.title}
+                            </AppText>
+                            <AppText style={styles.bookAuthors} numberOfLines={1}>
+                              {item.book.authors.join(", ")}
+                            </AppText>
+                            <AppText style={styles.bookValue}>
+                              Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
+                            </AppText>
+                            <FrozenCondition book={item.snapshot} />
+                          </>
+                        ) : (
+                          <>
+                            <AppText style={styles.bookTitle} numberOfLines={1}>
+                              Sách gửi #{idx + 1}
+                            </AppText>
+                            <AppText style={styles.bookAuthors} numberOfLines={1}>
+                              {exchange.status === "Completed"
+                                ? "Đã hoàn tất"
+                                : "Trong thỏa thuận"}
+                            </AppText>
+                            <AppText style={styles.bookValue}>
+                              {exchange.status === "Completed"
+                                ? "Đã đối soát"
+                                : "Xem chi tiết"}
+                            </AppText>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                  ))
+                ) : null}
+              </View>
+            </View>
+
+            {/* Swap Icon Center Indicator */}
+            <View style={styles.swapCenterBox}>
+              <View style={styles.swapCircle}>
+                <Icon name="sync" size={12} color={stitchTokens.wineDark} />
+              </View>
+            </View>
+
+            {/* Partner Books */}
+            <View style={styles.bookSideCard}>
+              <View style={styles.sideHeader}>
+                <AppText style={styles.sideBadgePartner} numberOfLines={1}>
+                  {partnerBooks.length > 1
+                    ? `NHẬN (${partnerBooks.length} TỪ @${partnerName})`
+                    : `SÁCH NHẬN (TỪ @${partnerName})`}
+                </AppText>
+              </View>
+              <View style={styles.booksListCol}>
+                {partnerBooks.length > 0 ? (
+                  partnerBooks.map((item, idx) => (
+                    <View key={item?.id ?? `partner-${idx}`} style={styles.bookInfoCol}>
+                      <View style={styles.photoBox}>
+                        {item?.photos?.[0] ? (
+                          <PublicPhoto
+                            exchangeId={exchange.agreement ? exchange.id : undefined}
+                            listingId={item.id}
+                            revisionId={item.revisionId}
+                            mediaId={item.photos[0].id}
+                            label="Bìa sách bạn nhận"
+                            active={true}
+                            compact
+                          />
+                        ) : (
+                          <View style={styles.photoPlaceholder}>
+                            <Icon name="book" size={20} color={stitchTokens.roseBrown} />
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.bookTextCol}>
+                        {item ? (
+                          <>
+                            <AppText style={styles.bookTitle} numberOfLines={2}>
+                              {item.book.title}
+                            </AppText>
+                            <AppText style={styles.bookAuthors} numberOfLines={1}>
+                              {item.book.authors.join(", ")}
+                            </AppText>
+                            <AppText style={styles.bookValue}>
+                              Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
+                            </AppText>
+                            <FrozenCondition book={item.snapshot} />
+                          </>
+                        ) : (
+                          <>
+                            <AppText style={styles.bookTitle} numberOfLines={1}>
+                              Sách nhận #{idx + 1}
+                            </AppText>
+                            <AppText style={styles.bookAuthors} numberOfLines={1}>
+                              {exchange.status === "Completed"
+                                ? "Đã giao dịch"
+                                : "Đối ứng"}
+                            </AppText>
+                            <AppText style={styles.bookValue}>
+                              {exchange.status === "Completed"
+                                ? "Đã tất toán"
+                                : "Xem chi tiết"}
+                            </AppText>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                  ))
+                ) : null}
+              </View>
+            </View>
           </View>
-        ) : null}
-      </View>
+
+          {/* 3. Financial Settlement Box */}
+          <View style={[styles.settlementBox, { backgroundColor: moneyBg }]}>
+            <View style={styles.settlementRow}>
+              <Icon name="tag" size={15} color={moneyTone} />
+              <View style={{ flex: 1 }}>
+                <AppText style={[styles.settlementTitle, { color: moneyTone }]}>
+                  {moneyLabel}
+                </AppText>
+                <AppText style={styles.settlementSub}>
+                  Cọc đối soát: Bạn {formatVnd(myDeposit)} · Đối tác {formatVnd(partnerDeposit)}
+                </AppText>
+              </View>
+            </View>
+          </View>
+
+          {/* 4. Delivery Address Summary */}
+          <View style={styles.addressSection}>
+            <View style={styles.addressHeaderRow}>
+              <Icon name="pin" size={13} color={stitchTokens.wineMid} />
+              <AppText style={styles.addressHeaderTitle}>Địa chỉ giao nhận</AppText>
+            </View>
+
+            <View style={styles.addressBlock}>
+              <AppText style={styles.addressRoleLabel}>Địa chỉ của bạn:</AppText>
+              {myAddress ? (
+                <AppText style={styles.addressDetail} numberOfLines={2}>
+                  {myAddress.recipientName} ({myAddress.phone}) — {myAddress.detail}
+                </AppText>
+              ) : (
+                <AppText style={styles.addressMissing}>Chưa cấu hình địa chỉ nhận hàng</AppText>
+              )}
+            </View>
+
+            {partnerAddress ? (
+              <View style={styles.addressBlock}>
+                <AppText style={styles.addressRoleLabel}>Địa chỉ đối tác:</AppText>
+                <AppText style={styles.addressDetail} numberOfLines={2}>
+                  {partnerAddress.recipientName} ({partnerAddress.phone}) — {partnerAddress.detail}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+        </>
+      )}
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
   card: {
-    padding: space.md,
-    borderRadius: 18,
+    padding: 10,
+    borderRadius: 14,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1.5,
     borderColor: stitchTokens.peachMuted,
-    gap: 12,
+    gap: 8,
     shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardCollapsed: {
+    paddingBottom: 8,
+  },
+  legacyNotice: {
+    fontSize: 11,
+    color: stitchTokens.crimson,
+    backgroundColor: stitchTokens.flashRedBg,
+    padding: 6,
+    borderRadius: 6,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: 10,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: stitchTokens.peachBorder,
   },
+  headerCollapsed: {
+    paddingBottom: 0,
+    borderBottomWidth: 0,
+  },
   headerLeft: {
+    flex: 1,
     gap: 2,
   },
+  headerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
   codeText: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: "800",
     color: stitchTokens.wineDark,
   },
   dateText: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: stitchTokens.roseBrown,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
   },
+  collapseToggleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 6,
+  },
+  collapseToggleText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  collapsedSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 2,
+  },
+  collapsedSummaryText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: stitchTokens.deepCocoa,
+    flex: 1,
+  },
   booksComparison: {
-    gap: 10,
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 4,
   },
   bookSideCard: {
-    padding: 10,
-    borderRadius: 12,
+    flex: 1,
+    padding: 8,
+    borderRadius: 10,
     backgroundColor: stitchTokens.parchment,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorderAlpha40,
-    gap: 8,
+    gap: 6,
+    justifyContent: "space-between",
   },
   sideHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
   },
   sideBadge: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
     color: stitchTokens.wineDark,
     backgroundColor: stitchTokens.terracottaSoft,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    textAlign: "center",
   },
   sideBadgePartner: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
     color: stitchTokens.white,
     backgroundColor: stitchTokens.wineMid,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    textAlign: "center",
   },
-  bookInfoRow: {
-    flexDirection: "row",
-    gap: 12,
+  booksListCol: {
+    flex: 1,
+    gap: 6,
+    justifyContent: "center",
+  },
+  bookInfoCol: {
+    alignItems: "center",
+    gap: 5,
   },
   photoBox: {
-    width: 65,
-    height: 85,
-    borderRadius: 8,
+    width: 48,
+    height: 66,
+    borderRadius: 6,
     overflow: "hidden",
     backgroundColor: stitchTokens.warmCard,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
+    alignSelf: "center",
   },
   photoPlaceholder: {
     flex: 1,
@@ -394,46 +521,76 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   bookTextCol: {
-    flex: 1,
-    justifyContent: "center",
-    gap: 3,
+    width: "100%",
+    alignItems: "center",
+    gap: 2,
   },
   bookTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-    lineHeight: 18,
-  },
-  bookAuthors: {
-    fontSize: 12,
-    color: stitchTokens.roseBrown,
-  },
-  bookValue: {
     fontSize: 12,
     fontWeight: "700",
+    color: stitchTokens.wineDark,
+    lineHeight: 16,
+    textAlign: "center",
+  },
+  bookAuthors: {
+    fontSize: 10.5,
+    color: stitchTokens.roseBrown,
+    textAlign: "center",
+  },
+  bookValue: {
+    fontSize: 11.5,
+    fontWeight: "700",
     color: stitchTokens.likeNewGreen,
+    marginTop: 1,
+    textAlign: "center",
+  },
+  frozenContainer: {
     marginTop: 2,
-  },
-  loadingBook: {
-    fontSize: 12,
-    color: stitchTokens.subtleGray,
-    fontStyle: "italic",
-  },
-  swapDivider: {
-    flexDirection: "row",
+    gap: 2,
     alignItems: "center",
-    gap: 10,
-    marginVertical: -2,
+    width: "100%",
   },
-  swapLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: stitchTokens.peachBorder,
+  frozenEditionText: {
+    fontSize: 10,
+    color: stitchTokens.subtleGray,
+    textAlign: "center",
+  },
+  frozenToggleBtn: {
+    alignSelf: "center",
+    paddingVertical: 1.5,
+    paddingHorizontal: 5,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderRadius: 4,
+  },
+  frozenToggleText: {
+    fontSize: 9.5,
+    fontWeight: "600",
+    color: stitchTokens.wineMid,
+    textAlign: "center",
+  },
+  frozenDetailBox: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 6,
+    padding: 6,
+    marginTop: 2,
+    width: "100%",
+  },
+  frozenDetailText: {
+    fontSize: 10,
+    color: stitchTokens.deepCocoa,
+    lineHeight: 14,
+  },
+  swapCenterBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
   },
   swapCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: stitchTokens.terracottaSoft,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
@@ -441,40 +598,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   settlementBox: {
-    padding: 12,
-    borderRadius: 12,
+    padding: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: stitchTokens.goldBorder,
   },
   settlementRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 7,
   },
   settlementTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
   },
   settlementSub: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: stitchTokens.darkWood,
-    marginTop: 2,
+    marginTop: 1,
   },
   addressSection: {
-    padding: 10,
-    borderRadius: 10,
+    padding: 8,
+    borderRadius: 8,
     backgroundColor: stitchTokens.roseWarmSurface,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorderAlpha40,
-    gap: 6,
+    gap: 4,
   },
   addressHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
   },
   addressHeaderTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: stitchTokens.wineDark,
   },
@@ -482,131 +639,19 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   addressRoleLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "700",
     color: stitchTokens.roseBrown,
     textTransform: "uppercase",
   },
   addressDetail: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: stitchTokens.darkWood,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   addressMissing: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: stitchTokens.crimson,
-    fontStyle: "italic",
-  },
-  shipmentSection: {
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
-    gap: 10,
-  },
-  shipmentHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.peachBorderAlpha40,
-  },
-  shipmentHeaderTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  shipmentCard: {
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorderAlpha40,
-    gap: 6,
-  },
-  shipmentTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  shipmentRole: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: stitchTokens.roseBrown,
-    textTransform: "uppercase",
-  },
-  shipmentStatusPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  shipmentStatusSent: {
-    backgroundColor: stitchTokens.likeNewGreenBg,
-  },
-  shipmentStatusWaiting: {
-    backgroundColor: stitchTokens.amberBg,
-  },
-  shipmentStatusText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  shipmentStatusTextSent: {
-    color: stitchTokens.likeNewGreen,
-  },
-  shipmentStatusTextWaiting: {
-    color: stitchTokens.goldBronze,
-  },
-  shipmentDetails: {
-    gap: 3,
-  },
-  shipmentMethodText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: stitchTokens.darkWood,
-  },
-  trackingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginVertical: 2,
-  },
-  trackingLabel: {
-    fontSize: 11,
-    color: stitchTokens.darkWood,
-  },
-  trackingBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: stitchTokens.terracottaSoft,
-  },
-  trackingCodeText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-    letterSpacing: 0.5,
-  },
-  shipmentDetailText: {
-    fontSize: 11,
-    color: stitchTokens.darkWood,
-    lineHeight: 15,
-  },
-  shipmentNotesText: {
-    fontSize: 11,
-    color: stitchTokens.subtleGray,
-    fontStyle: "italic",
-    lineHeight: 15,
-  },
-  shipmentDateText: {
-    fontSize: 10,
-    color: stitchTokens.roseBrown,
-    marginTop: 2,
-  },
-  shipmentPendingText: {
-    fontSize: 11,
-    color: stitchTokens.subtleGray,
     fontStyle: "italic",
   },
 });

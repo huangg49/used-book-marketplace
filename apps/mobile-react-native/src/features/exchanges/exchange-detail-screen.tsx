@@ -358,14 +358,7 @@ export function ExchangeDetailScreen() {
           {/* 3. PHIẾU ĐỀ NGHỊ ĐỔI SÁCH (Books Matching & Financial Diff) */}
           <ExchangeProposalCard exchange={exchange} isInitiator={isInitiator} />
 
-          {/* 4. TIẾN TRÌNH GIAO NHẬN 2 CHIỀU ĐỘC LẬP (Shipping Tracking 2-Way) */}
-          <ExchangeShippingCard
-            exchange={exchange}
-            isInitiator={isInitiator}
-            partnerName={partnerName}
-          />
-
-          {/* 5. BẢNG HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Counter, Fund, Ship, Receive, Complete, Dispute) */}
+          {/* 4. BẢNG HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Counter, Fund, Ship, Receive, Complete, Dispute) */}
           {exchange.status === "ResolutionPending" && (
             <ExchangeEvidenceCard
               key={identity + ":" + id}
@@ -387,6 +380,13 @@ export function ExchangeDetailScreen() {
             onReload={async () => {
               await exchangeQuery.refetch();
             }}
+          />
+
+          {/* 5. TIẾN TRÌNH GIAO NHẬN 2 CHIỀU ĐỘC LẬP (Shipping Tracking 2-Way) */}
+          <ExchangeShippingCard
+            exchange={exchange}
+            isInitiator={isInitiator}
+            partnerName={partnerName}
           />
 
           {/* 6. MẸO AN TOÀN KHI TRAO ĐỔI SÁCH (Safety Tips) */}

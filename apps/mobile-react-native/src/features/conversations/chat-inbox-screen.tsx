@@ -263,7 +263,7 @@ function ExchangeInboxItem({
     (exchange.status === "AcceptedAwaitingFunding" &&
       !(isInitiator ? exchange.initiatorFundedAt : exchange.recipientFundedAt)) ||
     (exchange.status === "Preparing" &&
-      !(isInitiator ? exchange.initiatorShippedAt : exchange.recipientShippedAt));
+      !(isInitiator ? (exchange.initiatorShipment || exchange.initiatorShippedAt) : (exchange.recipientShipment || exchange.recipientShippedAt)));
 
   let snippet = "Đang trao đổi về sách và phương thức giao nhận";
   let snippetHighlight = false;
@@ -491,7 +491,7 @@ export function ChatInboxScreen() {
         (e.status === "AcceptedAwaitingFunding" &&
           !(isInitiator ? e.initiatorFundedAt : e.recipientFundedAt)) ||
         (e.status === "Preparing" &&
-          !(isInitiator ? e.initiatorShippedAt : e.recipientShippedAt))
+          !(isInitiator ? (e.initiatorShipment || e.initiatorShippedAt) : (e.recipientShipment || e.recipientShippedAt)))
       );
     }).length;
     return purchaseCount + exchangeCount;
@@ -522,7 +522,7 @@ export function ChatInboxScreen() {
         (exchange.status === "AcceptedAwaitingFunding" &&
           !(isInitiator ? exchange.initiatorFundedAt : exchange.recipientFundedAt)) ||
         (exchange.status === "Preparing" &&
-          !(isInitiator ? exchange.initiatorShippedAt : exchange.recipientShippedAt));
+          !(isInitiator ? (exchange.initiatorShipment || exchange.initiatorShippedAt) : (exchange.recipientShipment || exchange.recipientShippedAt)));
       const time = new Date(exchange.updatedAt ?? exchange.createdAt).getTime();
       return {
         type: "exchange",

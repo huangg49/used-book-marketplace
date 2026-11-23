@@ -241,7 +241,7 @@ function ExchangeActionsContent({
   const invalidate = () => {
     if (exchangeCommandIdentity(client) !== identity) return;
     setActionError(null);
-    void queryClient.invalidateQueries({ queryKey: ["exchange", exchange.id] });
+    void queryClient.invalidateQueries({ queryKey: ["exchange"] });
     void queryClient.invalidateQueries({ queryKey: ["my-exchanges"] });
     void queryClient.invalidateQueries({
       queryKey: ["exchange-messages", exchange.id],
@@ -262,11 +262,13 @@ function ExchangeActionsContent({
     if (exchangeCommandIdentity(client) !== identity) return;
     closeForms();
     invalidate();
+    void onReload?.();
   };
   const failure = (error: unknown) => {
     if (exchangeCommandIdentity(client) !== identity) return;
     setActionError(presentError(error).message);
     if (pendingExchangeIntent(client, exchange.id)) closeForms();
+    void onReload?.();
   };
   const command = (action: ExchangeCommand, body: object) =>
     sendExchangeCommand(
@@ -416,12 +418,12 @@ function ExchangeActionsContent({
     : Boolean(exchange.recipientFundedAt);
 
   const isShippedByMe = isInitiator
-    ? Boolean(exchange.initiatorShippedAt)
-    : Boolean(exchange.recipientShippedAt);
+    ? Boolean(exchange.initiatorShipment || exchange.initiatorShippedAt)
+    : Boolean(exchange.recipientShipment || exchange.recipientShippedAt);
 
   const isPartnerShipped = isInitiator
-    ? Boolean(exchange.recipientShippedAt)
-    : Boolean(exchange.initiatorShippedAt);
+    ? Boolean(exchange.recipientShipment || exchange.recipientShippedAt)
+    : Boolean(exchange.initiatorShipment || exchange.initiatorShippedAt);
 
   const isReceivedByMe = isInitiator
     ? Boolean(exchange.initiatorReceivedAt)
@@ -682,7 +684,7 @@ function ExchangeActionsContent({
         <AppText style={styles.title}>Hành động tiếp theo</AppText>
       </View>
 
-      {(
+      {exchange.status !== "Delivered" && (
         isInitiator
           ? exchange.initiatorInspectionDeadline
           : exchange.recipientInspectionDeadline
@@ -1065,70 +1067,154 @@ function ExchangeActionsContent({
           )}
 
           {/* State: DELIVERED (INSPECTING, ACKNOWLEDGE OR DISPUTE) */}
-          {exchange.status === "Delivered" && (
-            <View style={styles.actionsBox}>
-              {exchange.inspectionDeadline && (
-                <View style={styles.deadlineContainer}>
-                  <Icon name="clock" size={14} color={stitchTokens.wineDark} />
-                  <AppText style={styles.deadlineText}>
-                    Hạn kiểm tra chung:{" "}
-                    {new Date(exchange.inspectionDeadline).toLocaleString(
-                      "vi-VN",
-                    )}
-                  </AppText>
-                </View>
-              )}
+          {exchange.status === "Delivered" &&
+            (() => {
+              const myDeadline = isInitiator
+                ? exchange.initiatorInspectionDeadline
+                : exchange.recipientInspectionDeadline;
+              const commonDeadline = exchange.inspectionDeadline;
 
-              {isCompletedByMe ? (
-                <View style={styles.successNote}>
-                  <Icon
-                    name="check"
-                    size={16}
-                    color={stitchTokens.likeNewGreen}
-                  />
-                  <AppText style={styles.successNoteText}>
-                    Bạn đã xác nhận kiểm tra sách. Cọc vẫn được giữ đến khi cả
-                    hai hạn kiểm tra kết thúc và không có tranh chấp.
-                  </AppText>
+              const myDeadlineStr = myDeadline
+                ? new Date(myDeadline).toLocaleString("vi-VN")
+                : null;
+              const commonDeadlineStr = commonDeadline
+                ? new Date(commonDeadline).toLocaleString("vi-VN")
+                : null;
+
+              return (
+                <View style={styles.actionsBox}>
+                  {/* Card Thông tin & Lưu ý Đồng kiểm 72h */}
+                  <View style={styles.inspectionCard}>
+                    <View style={styles.inspectionHeader}>
+                      <View style={styles.inspectionTitleRow}>
+                        <View style={styles.inspectionIconBadge}>
+                          <Icon
+                            name="clock"
+                            size={15}
+                            color={stitchTokens.wine}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <AppText style={styles.inspectionTitle}>
+                            Thời hạn đồng kiểm sách 72 giờ
+                          </AppText>
+                          <AppText style={styles.inspectionSubtitle}>
+                            {myDeadlineStr
+                              ? `Hạn kiểm tra của bạn: ${myDeadlineStr}`
+                              : commonDeadlineStr
+                                ? `Hạn kiểm tra chung: ${commonDeadlineStr}`
+                                : "Trong vòng 72 giờ tính từ khi nhận sách"}
+                          </AppText>
+                        </View>
+                      </View>
+                      {commonDeadlineStr &&
+                        myDeadlineStr &&
+                        commonDeadlineStr !== myDeadlineStr && (
+                          <View style={styles.commonDeadlineTag}>
+                            <AppText style={styles.commonDeadlineText}>
+                              🕒 Hạn tất toán chung: {commonDeadlineStr}
+                            </AppText>
+                          </View>
+                        )}
+                    </View>
+
+                    {/* Danh sách lưu ý trực quan */}
+                    <View style={styles.inspectionGuidelines}>
+                      <View style={styles.guidelineItem}>
+                        <Icon
+                          name="shield"
+                          size={14}
+                          color={stitchTokens.wineDark}
+                        />
+                        <AppText style={styles.guidelineText}>
+                          <AppText style={styles.guidelineBold}>
+                            Bảo chứng an toàn:
+                          </AppText>{" "}
+                          Tiền cọc và tiền bù được giữ an toàn trên ví trong suốt
+                          thời gian đồng kiểm.
+                        </AppText>
+                      </View>
+                      <View style={styles.guidelineItem}>
+                        <Icon
+                          name="check"
+                          size={14}
+                          color={stitchTokens.verifiedGreen}
+                        />
+                        <AppText style={styles.guidelineText}>
+                          <AppText style={styles.guidelineBold}>
+                            Kiểm tra thực tế:
+                          </AppText>{" "}
+                          Đối chiếu kỹ sách nhận được với thông tin & hình ảnh cam
+                          kết ban đầu.
+                        </AppText>
+                      </View>
+                      <View style={styles.guidelineItem}>
+                        <Icon
+                          name="info"
+                          size={14}
+                          color={stitchTokens.wineDark}
+                        />
+                        <AppText style={styles.guidelineText}>
+                          Xác nhận kiểm tra giúp hoàn tất sớm phần của bạn; cọc chỉ
+                          được hoàn khi cả hai bên cùng hoàn tất và không có khiếu nại.
+                        </AppText>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Nhóm thao tác chính */}
+                  {isCompletedByMe ? (
+                    <View style={styles.completedInspectionBox}>
+                      <View style={styles.completedHeaderRow}>
+                        <Icon
+                          name="check"
+                          size={18}
+                          color={stitchTokens.verifiedGreen}
+                        />
+                        <AppText style={styles.completedInspectionTitle}>
+                          Bạn đã xác nhận sách đạt chuẩn
+                        </AppText>
+                      </View>
+                      <AppText style={styles.completedInspectionDesc}>
+                        Hệ thống đang chờ đối tác hoàn tất kiểm tra hoặc đợi đến
+                        hết hạn chung để tự động tất toán cọc về ví của bạn.
+                      </AppText>
+                      <View style={{ marginTop: 4 }}>
+                        <Button
+                          title="⚠️ Báo cáo sự cố / Khiếu nại sách"
+                          secondary
+                          wine
+                          busy={isBusy}
+                          onPress={() => {
+                            setDisputeError(null);
+                            setDisputeModalOpen(true);
+                          }}
+                        />
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.buttonGroup}>
+                      <Button
+                        title="✓ Xác nhận đã kiểm tra sách"
+                        wine
+                        busy={isBusy}
+                        onPress={() => setConfirmCompleteOpen(true)}
+                      />
+                      <Button
+                        title="⚠️ Báo cáo sự cố / Khiếu nại sách"
+                        secondary
+                        wine
+                        busy={isBusy}
+                        onPress={() => {
+                          setDisputeError(null);
+                          setDisputeModalOpen(true);
+                        }}
+                      />
+                    </View>
+                  )}
                 </View>
-              ) : (
-                <View style={styles.buttonGroup}>
-                  <AppText style={styles.hintText}>
-                    Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận sách. Xác nhận
-                    đã kiểm tra không tất toán hoặc hoàn cọc sớm.
-                  </AppText>
-                  <Button
-                    title="Xác nhận đã kiểm tra"
-                    wine
-                    busy={isBusy}
-                    onPress={() => setConfirmCompleteOpen(true)}
-                  />
-                  <Button
-                    title="Báo cáo khiếu nại sách"
-                    secondary
-                    wine
-                    busy={isBusy}
-                    onPress={() => {
-                      setDisputeError(null);
-                      setDisputeModalOpen(true);
-                    }}
-                  />
-                </View>
-              )}
-              {isCompletedByMe && (
-                <Button
-                  title="Báo cáo khiếu nại sách"
-                  secondary
-                  wine
-                  busy={isBusy}
-                  onPress={() => {
-                    setDisputeError(null);
-                    setDisputeModalOpen(true);
-                  }}
-                />
-              )}
-            </View>
-          )}
+              );
+            })()}
 
           {/* State: RESOLUTION_PENDING */}
           {exchange.status === "ResolutionPending" &&
@@ -2704,6 +2790,97 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: stitchTokens.wineDark,
     flex: 1,
+  },
+  inspectionCard: {
+    backgroundColor: stitchTokens.parchment,
+    borderColor: stitchTokens.borderWarm,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  inspectionHeader: {
+    gap: 6,
+  },
+  inspectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  inspectionIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.warmCard,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inspectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  inspectionSubtitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.darkWood,
+    marginTop: 2,
+  },
+  commonDeadlineTag: {
+    backgroundColor: stitchTokens.canvasMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  commonDeadlineText: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+    fontWeight: "500",
+  },
+  inspectionGuidelines: {
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.cardBorder,
+    paddingTop: 8,
+  },
+  guidelineItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  guidelineText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    color: stitchTokens.darkWood,
+  },
+  guidelineBold: {
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  completedInspectionBox: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    borderColor: stitchTokens.verifiedGreen,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  completedHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  completedInspectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: stitchTokens.verifiedGreen,
+  },
+  completedInspectionDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: stitchTokens.darkWood,
   },
   disputeBox: {
     flexDirection: "row",
