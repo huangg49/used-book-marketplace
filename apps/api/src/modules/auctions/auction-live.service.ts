@@ -11,6 +11,8 @@ export const POLL_MS = 2_000;
 // 5 min) is re-read this often, so a counter-bid from the worker or another
 // instance reaches its watchers within half a second instead of two.
 export const FAST_POLL_MS = 500;
+/** Open auctions the list pass tracks; covers the 50 that GET /auctions shows. */
+export const LIST_TRACKED = 200;
 
 type LiveRow = { _id: string; version: number; state?: string; buyNowAt?: Date | null; endAt?: Date };
 const LIVE_FIELDS = { version: 1, state: 1, buyNowAt: 1, endAt: 1 } as const;
@@ -173,9 +175,18 @@ export class AuctionLiveService implements OnModuleDestroy {
     }
   }
 
+  /**
+   * Open auctions a list watcher can see. GET /auctions shows the 50 soonest
+   * to end, so the bounded pass follows the same order (state+endAt index):
+   * with more than LIST_TRACKED open auctions the visible ones stay tracked
+   * instead of an arbitrary subset.
+   */
   private async activeVersions() {
     return (await this.mongo.c.auctions
-      .find({ state: 'Active' }, { projection: LIVE_FIELDS, limit: 200 })
+      .find(
+        { state: 'Active' },
+        { projection: LIVE_FIELDS, sort: { endAt: 1, _id: 1 }, limit: LIST_TRACKED },
+      )
       .toArray()) as LiveRow[];
   }
   private idle() {
