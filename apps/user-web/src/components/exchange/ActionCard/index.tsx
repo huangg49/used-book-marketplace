@@ -828,7 +828,7 @@ export function ActionCard(props: Props) {
                 : action === "retry"
                   ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
                   : action === "complete"
-                    ? "Bạn vẫn có thể báo sự cố đến hết hạn của mình. Tiền cọc tiếp tục được giữ đến khi cả hai hết hạn kiểm tra và giao dịch không có khiếu nại."
+                    ? "Bạn có chắc chắn đã kiểm tra sách kỹ lưỡng và hài lòng? Sau khi xác nhận nghiệm thu, bạn sẽ từ bỏ quyền khiếu nại hay báo sự cố. Khi đối tác cũng xác nhận nghiệm thu, toàn bộ tiền cọc và tiền bù sẽ được hoàn tất và chuyển về ví của cả hai bên ngay lập tức."
                     : action === "cancel" && detail.status === "FUNDING"
                       ? "Sách sẽ được mở lại. Khoản đã nộp sẽ được hoàn về ví của người đã nộp."
                     : action === "cancel" &&

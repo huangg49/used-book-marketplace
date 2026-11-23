@@ -20,6 +20,7 @@ import { createDemoPointOrderSettlementMigration } from './0081-demo-point-order
 import { restorePlatformCommissionMigration } from './0082-restore-platform-commission-account.js';
 import { createDirectOrderDeliveryJourneyMigration, directDeliveryJourneySpec, withDirectOrderDeliveryJourney } from './0083-direct-order-delivery-journey.js';
 import { directOrderIssueEvidenceMigration, directOrderIssueEvidenceSpec } from './0084-direct-order-issue-evidence.js';
+import { createExchangeProportionalDepositsMigration, withProportionalExchangeDeposits } from './0086-exchange-proportional-deposits.js';
 import { onlinePriceCatalogRevisionMigration, withOnlinePriceCatalogRevision } from './0076-online-price-catalog-revision.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
@@ -583,7 +584,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
 
 export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals).map(withWithdrawalProofReference), registrationSpec, ...withdrawalProofSpecs].map((spec) =>
   onlinePriceSpecs.some(({ name }) => name === spec.name) ? withOnlinePriceCatalogRevision(spec) : spec,
-).map(withExchangeReturnResolution).map(withExchangeOutboundDeliveryVerification).map(withExchangeDemoArchive).map(withExchangeInspectionVerdict).map((spec) =>
+).map(withExchangeReturnResolution).map(withExchangeOutboundDeliveryVerification).map(withExchangeDemoArchive).map(withExchangeInspectionVerdict).map(withProportionalExchangeDeposits).map((spec) =>
   spec.name === 'point_orders' ? demoPointOrderSettlementMigration.definition.collections[0] : spec,
 ).map(withDirectOrderDeliveryJourney).concat(directDeliveryJourneySpec, directOrderIssueEvidenceSpec);
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
@@ -683,7 +684,8 @@ const exchangeOutboundMigration = createExchangeOutboundDeliveryMigration(
 migrations.push(exchangeOutboundMigration);
 const exchangeDemoArchiveMigration = createExchangeDemoArchiveMigration(exchangeOutboundMigration.definition.collections[0]);
 migrations.push(exchangeDemoArchiveMigration);
-migrations.push(createExchangeInspectionVerdictMigration(exchangeDemoArchiveMigration.definition.collections[0]));
+const exchangeInspectionVerdictMigration = createExchangeInspectionVerdictMigration(exchangeDemoArchiveMigration.definition.collections[0]);
+migrations.push(exchangeInspectionVerdictMigration);
 const demoPointOrderSettlementMigration = createDemoPointOrderSettlementMigration(
   secondChanceMigration.definition.collections.find((spec) => spec.name === 'point_orders')!,
 );
@@ -698,3 +700,4 @@ migrations.push(directOrderDeliveryJourneyMigration, directOrderIssueEvidenceMig
 migrations.push(createDirectOrderValidatorReconciliationMigration(
   directOrderDeliveryJourneyMigration.definition.collections.find(spec => spec.name === 'direct_orders')!,
 ));
+migrations.push(createExchangeProportionalDepositsMigration(exchangeInspectionVerdictMigration.definition.collections[0]));
