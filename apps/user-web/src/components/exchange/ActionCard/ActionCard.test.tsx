@@ -76,12 +76,13 @@ describe("merged Exchange inspection semantics", () => {
     expect(html).toContain("200.000");
     expect(html).toContain("Đặt cọc mô phỏng");
   });
-  it("closes only the viewer's claim when their deadline passes", () => {
+  it("closes the viewer's claim when their deadline passes or after confirmation", () => {
+    expect(render({})).toContain(">Báo sự cố</button>");
     const html = render({ viewerInspectionDeadline: "2020-01-01T00:00:00Z" });
     expect(html).toContain("Đã hết hạn kiểm tra của bạn.");
     expect(html).toContain("Xác nhận đã kiểm tra");
     expect(html).not.toContain(">Báo sự cố</button>");
-    expect(render({ viewerCompletedAt: base.createdAt })).toContain(">Báo sự cố</button>");
+    expect(render({ viewerCompletedAt: base.createdAt })).not.toContain(">Báo sự cố</button>");
   });
 });
 
@@ -127,5 +128,17 @@ describe("Exchange handover actions", () => {
     expect(after).toContain("Bạn đã nhận sách");
     expect(after).toContain("Tạo đơn gửi sách");
     expect(after).not.toContain("Xác nhận đã nhận sách");
+  });
+
+  it("lets the first receiver report during preparation until their own deadline", () => {
+    const preparing = {
+      status: "WAITING_YOU_SEND",
+      rawStatus: "Preparing",
+      shippingDeadline: "2099-01-01T00:00:00Z",
+      partnerShipping: { sentAt: base.createdAt },
+    } satisfies Partial<ExchangeDetail>;
+    expect(render(preparing, true)).toContain("Báo sự cố");
+    expect(render({ ...preparing, viewerShipping: {} }, true)).not.toContain("Báo sự cố");
+    expect(render({ ...preparing, viewerInspectionDeadline: "2020-01-01T00:00:00Z" }, true)).not.toContain("Báo sự cố");
   });
 });

@@ -795,3 +795,101 @@
   font-family: monospace;
   pointer-events: none;
 }
+
+.disputeBookList {
+  display: grid;
+  gap: 6px;
+}
+
+.disputeBookCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 6px;
+  background: var(--shop-paper, #fffcf5);
+  font-size: 0.8125rem;
+  color: var(--shop-ink, #281914);
+  cursor: pointer;
+}
+
+.disputeBookCheck[data-checked="true"] {
+  border-color: var(--shop-wine, #5c0202);
+  background: var(--shop-shelf, #f6f1e7);
+}
+
+.disputeBookCheck input {
+  accent-color: var(--shop-wine, #5c0202);
+  flex: none;
+}
+
+.disputeFilePicker {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px dashed var(--shop-control, #c4b5a5);
+  border-radius: 8px;
+  background: var(--shop-shelf, #f6f1e7);
+}
+
+.disputeFilePicker input {
+  font-size: 0.8125rem;
+  color: var(--shop-ink, #281914);
+}
+
+.disputeFileHint {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--shop-muted, #716157);
+}
+
+.disputeFileList {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.disputeFileList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 6px;
+  background: var(--shop-paper, #fffcf5);
+  font-size: 0.8125rem;
+}
+
+.disputeFileName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--shop-ink, #281914);
+}
+
+.disputeFileRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--shop-muted, #716157);
+  cursor: pointer;
+  flex: none;
+}
+
+.disputeFileRemove:hover:not(:disabled) {
+  border-color: var(--shop-wine, #5c0202);
+  color: var(--shop-wine, #5c0202);
+}

@@ -594,19 +594,17 @@ export function ExchangeOffer({
                   </div>
 
                   <div className={styles.balanceRow}>
-                    <span>Cọc của bạn (dự kiến)</span>
-                    <strong>{formatVnd(book.exchangeValue ?? 0)}</strong>
+                    <span>Cọc của bạn (bằng giá trị sách gửi)</span>
+                    <strong>{formatVnd(total)}</strong>
                   </div>
                   <div className={styles.balanceRow}>
-                    <span>Cọc của đối tác (dự kiến)</span>
-                    <strong>{formatVnd(total)}</strong>
+                    <span>Cọc của đối tác (bằng giá trị sách gửi)</span>
+                    <strong>{formatVnd(book.exchangeValue ?? 0)}</strong>
                   </div>
                   <div className={styles.balanceRow}>
                     <span>Khoản bạn nộp nếu chấp nhận</span>
                     <strong>
-                      {formatVnd(
-                        (book.exchangeValue ?? 0) + Math.max(difference, 0),
-                      )}
+                      {formatVnd(total + Math.max(difference, 0))}
                     </strong>
                   </div>
                   <p className={styles.helpText}>

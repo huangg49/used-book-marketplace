@@ -233,7 +233,7 @@ export function ExchangeFinanceSummary({
           </dl>
           <p className={local.note}>
             Người mở đề nghị chọn sách đem đổi. Phiếu sẽ ghi giá trị hai phía,
-            bên bù và hai khoản cọc; mỗi bên cọc bằng giá trị sách mình nhận.
+            bên bù và hai khoản cọc; mỗi bên cọc bằng giá trị sách mình gửi.
             Chưa giữ sách hoặc tiền ở bước này.
           </p>
         </>

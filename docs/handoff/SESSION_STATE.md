@@ -1,3 +1,39 @@
+# Đồng bộ toàn diện luồng Trao đổi & Khiếu nại (API, Admin, Web, RN) + UI Đăng sách & Duyệt bài — 23/11/2026
+
+- Nhánh `codex/exchange-driver-links` (từ `785106fa` / `main` `2f9af522`).
+- **Contract, API, Ledger & Migrations (`0087`–`0089`)**: bổ sung khấu trừ thiệt hại một phần/toàn phần (`compensationAmount`, `resolutionCompensationAmount`), tính khoản giữ trong ví và khóa phiếu khi xác nhận nhận sách. Chat giữ yêu cầu tài khoản hoạt động. API chỉ cho phát lại biên nhận `RefundBoth` lịch sử; Demo Skip ở bước kiểm tra sách (`Delivered` -> `Inspection`) hoạt động khi chưa có khiếu nại. Giữ migration `0086` của main. Migration `0089` dùng biên nhận đặt cọc để khôi phục mức cọc cũ nếu `0086` đã ghi đè, giữ nguyên sổ cái và revision.
+- **Admin Web, Member Web & Mobile RN**:
+  - Admin Dispute Desk: bộ chọn mức bồi thường (Toàn phần / Khấu trừ 1 phần), xem trước cách chia tiền và nhận phụ trách. Gỡ tùy chọn `RefundBoth` và form nộp khi chưa đủ nhận sách hai chiều để khớp API; giới hạn 300.000đ chỉ gắn với quy trình trả sách một chiều, Nhân viên được phụ trách vẫn phán quyết khiếu nại kiểm tra sách hai chiều (theo ADR 0057 / lựa chọn A của chủ dự án).
+  - Member Web: đồng bộ cọc tỷ lệ theo sách gửi, thỏa thuận tiền bù nhiều vòng kèm cảnh báo trần bảo chứng, thanh 5 bước bấm xem lại lịch sử, form báo sự cố 1 bước chọn từng cuốn sách và mở Driver Simulator theo chiều vận chuyển.
+  - Mobile RN: thiết kế lại chuẩn native app với thanh tiến độ 5 vạch gọn + Bottom Sheet Timeline dọc, Sticky Bottom Action Dock vùng ngón cái, 4 modal dạng Bottom Sheet trượt từ đáy, giao diện Chat full-screen kèm chip gợi ý nhanh.
+  - Gom cùng gói UI Đăng sách (`SellBookPage`) và Admin Duyệt bài/Catalog (`features/review/*`) theo yêu cầu chủ dự án.
+- **Kiểm chứng**: PASS `pnpm contract:check`, `pnpm contract:routes` (293 op/41 controller), `pnpm docs:check`, `git diff --check`; API unit `57/57` (`566/566`), Member Web unit `61/61` (`491/491`) + build, Mobile RN `tsc --noEmit` + unit `28/28` (`243/243`), Admin Web build + `exchange-resolution-safety.mjs`. Đã kiểm tra trực quan Web (Playwright 390/1440px) và Mobile RN trên Android Emulator.
+- **PR #125**: đã chạy đạt bốn ca HTTP tập trung trên Mongo QA (biên nhận cọc cũ, backfill hạn kiểm tra, quyết định bồi thường và quyền LOCKED) và hai ca nâng cấp Mongo. Bỏ qua kiểm tra riêng job Operations and public shelf CI theo yêu cầu chủ dự án.
+
+# Mở Driver Simulator theo chiều vận chuyển — 23/11/2026
+
+- Nhánh `codex/exchange-driver-links` từ `785106fa`. Trong Member Web chạy
+  dev trên loopback, mỗi kiện có mã vận đơn từ máy chủ hiện nút mở Simulator
+  trong **Xem hành trình**. Link mang ID phiếu, chiều gửi và mã vận đơn.
+  Simulator có đường quay về phần giao nhận của phiếu.
+- PASS 494 test Member Web, typecheck và Vite production build. Chromium với
+  fixture ở 390/1440 px kiểm hai chiều, điều kiện lấy kiện, làm mới và quay về.
+  GET local đối chiếu đúng hai vận đơn trên cùng phiếu, không chạy thao tác
+  giao hàng. RN và readiness nằm ngoài phạm vi thay đổi.
+
+# Báo sự cố khi nhận sách trước — 23/11/2026
+
+- Nhánh `codex/exchange-early-inspection-report` từ `b1d6a247` (`main` `be0f3e0b`).
+  Member Web và RN cho người đã nhận sách báo sự cố trong hạn riêng, kể cả khi
+  chiều còn lại chưa được nhận hoặc chưa lấy kiện. Khiếu nại giữ tiền và sách.
+  Xác nhận nhận kiện đã gửi vẫn ghi được trong lúc xử lý và giữ hồ sơ mở.
+- Ca một cuốn đã giao và chiều còn lại chưa gửi vẫn chỉ vào quy trình hoàn theo
+  ADR0089 khi đến hạn gửi gốc. Không cần migration. Xem [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md).
+- PASS 9 ca Exchange HTTP trên Mongo QA, gồm giao một chiều qua simulator, quyền
+  báo sự cố, replay, giữ tiền, hạn riêng và hồi quy quy trình hoàn. Chromium
+  fixture 390/1440 px xác nhận nút hiện rồi ẩn theo hạn riêng. RN lint/typecheck,
+  243 unit và Expo web export qua. Chưa kiểm bằng thiết bị native.
+
 # Tối ưu UI hành trình trao đổi, Stepper 3D, Phiếu đề nghị thu gọn và Thẻ Đồng kiểm 72h (RN) — 21/11/2026
 
 - Đã tạo nhánh `feat/mobile-exchange-ui-polish` từ `main` (`c678b413`).
@@ -12,6 +48,41 @@
   - Phân cấp nút: `✓ Xác nhận đã kiểm tra sách` (Primary Wine) và `⚠️ Báo cáo sự cố / Khiếu nại sách` (Secondary Outlined);
   - Đóng gói thẻ Đánh giá trải nghiệm (`review-entry.tsx`) với phong cách thẻ phụ nhã nhặn, nút viền nhẹ tránh cạnh tranh thị giác.
 - PASS `typecheck` cho `@used-books/mobile-react-native`. Đã push lên GitHub nhánh `feat/mobile-exchange-ui-polish`.
+
+# Sửa lỗi sau PR #122: DB demo, quyền LOCKED, kiểm thử ví/đơn và đồng bộ hiển thị giao nhận — 20/11/2026
+
+- Nhánh `codex/post-pr122-fixes` từ `origin/main` (`c678b413`, PR #122). Giữ nguyên
+  hai file untracked cục bộ (`apps/api/src/seed-user1-user2-books.ts`,
+  `apps/user-web/public/illustrations/reading-pattern.webp`) và các worktree
+  (`price-assist-review` chưa chốt). Chủ dự án xác nhận bỏ phần AI tự duyệt bài;
+  cờ cục bộ `LISTING_AUTO_REVIEW_ENABLED` đã tắt trong `apps/api/.env`.
+- DB demo `latlai` đã áp `0085-direct-order-validator-reconciliation` và chạy
+  `pnpm db:bootstrap`; `pnpm doctor:local` xác nhận 107/107 migration khớp checksum
+  và bucket private hợp lệ.
+- Quyền `ExistingObligation`: bổ sung `decidePointOrderReceipt`,
+  `reserveDirectOrderIssueEvidence`, `uploadDirectOrderIssueEvidence` vào
+  `EXISTING_OBLIGATION_OPERATIONS` và chuyển `@ExistingObligation()` xuống từng
+  method của `DirectOrderIssueEvidenceController` (khớp OpenAPI `0.84.0`, Admin
+  bị khóa vẫn bị chặn bởi `admin(actor)`).
+- Member web: sửa `NegotiationWorkspace.tsx` để poll `Inspection`/`PendingSellerConfirmation`/
+  `SettlementPending` và xóa cache ví khi đơn chuyển `Completed` không phụ thuộc
+  `deliveryJourney`; đồng bộ `order-list-read-access.mjs` theo bố cục nút lọc và
+  `tabBadge` sau thay đổi 16/11 của `DirectOrderPage.tsx`.
+- Đồng bộ hiển thị tách giao/nhận đấu giá trên Admin `simulator.tsx`, Member web
+  `AuctionDriverView.tsx`, [ADR 0044](../adr/0044-auction-delivery-from-point.md),
+  và RN (`winner-steps.tsx` kiểm `GET /demo/skip` + hiển thị đúng phí giao hàng;
+  `support-screen.tsx` bỏ gọi route `/reopen` không tồn tại; `wishlist-screen.tsx`
+  điều hướng đầu sách tới `/search?q=...` thay vì `/showcase-book`).
+- Kiểm chứng (20/11/2026): PASS `contract:check`, `contract:routes` (293 op/41 controller),
+  `docs:check`, `git diff --check`; typecheck/lint/build API, Admin web, Member web;
+  unit API 551/551 (`configure-app.spec.ts` qua khi chạy độc lập), Admin web, Member web
+  và RN 243/243; Mongo QA (`57017`) E2E `obligations.e2e-spec.ts` (21/21), ca
+  `LOCKED` buyer/seller `receipt-decision` trong `auctions.e2e-spec.ts` và ca
+  `LOCKED` buyer/seller/admin `order-evidence` trong `orders.e2e-spec.ts`; Chromium
+  fixture `order-wallet-cache` (12/12), `order-list-read-access` (8/8),
+  `auction-driver`, `order-chat-workspace`, `wallet-status-recovery` và Admin
+  `auction-step-read-contract` (8/8). Chưa chạy thiết bị native thật hay nghiệm thu
+  người thật; các gate trong [READINESS](READINESS.md) giữ nguyên.
 
 # Rà soát gói demo đăng sách, giao nhận và trao đổi — 19/11/2026
 

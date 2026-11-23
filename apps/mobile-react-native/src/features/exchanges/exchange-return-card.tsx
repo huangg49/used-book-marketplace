@@ -12,6 +12,7 @@ import { useSession } from "../../core/session/session-provider";
 import {
   AppText,
   Button,
+  ConfirmDialog,
   Notice,
   TextField,
   colors,
@@ -64,6 +65,7 @@ export function ExchangeReturnAndDemoCard({
   const { client } = useSession();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<ExchangeReturnAction | null>(null);
+  const [confirmAckOpen, setConfirmAckOpen] = useState(false);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,8 +122,12 @@ export function ExchangeReturnAndDemoCard({
   const submitReturnAction = async (action: ExchangeReturnAction) => {
     const config = ACTION_CONFIG[action];
     if (!config) return;
-    if (config.field && !value.trim()) {
-      setError(`Vui lòng nhập ${config.fieldLabel?.toLowerCase() ?? "thông tin"}.`);
+    if (config.field === "note" && value.trim().length < 5) {
+      setError(`Vui lòng nhập ${config.fieldLabel?.toLowerCase() ?? "nội dung"} ít nhất 5 ký tự.`);
+      return;
+    }
+    if (config.field === "trackingCode" && value.trim().length < 3) {
+      setError("Vui lòng nhập mã vận đơn hợp lệ (tối thiểu 3 ký tự).");
       return;
     }
     setBusy(true);
@@ -270,9 +276,72 @@ export function ExchangeReturnAndDemoCard({
               gap: 4,
             }}
           >
-            <AppText kind="small" color={stitchTokens.darkWood}>
-              Mức bồi hoàn dự kiến: <AppText kind="bold">{formatVnd(r.compensation)}</AppText>
+            <AppText kind="small" color={stitchTokens.wineDark}>
+              Vai trò của bạn:{" "}
+              <AppText kind="bold">
+                {r.ownerId === userId ? "Chủ sách (bên nhận hoàn / bồi thường)" : "Bên đang giữ sách"}
+              </AppText>
             </AppText>
+            {r.evidenceDueAt && r.phase === "Evidence" ? (
+              <AppText kind="small" color={stitchTokens.darkWood}>
+                Hạn bổ sung bằng chứng:{" "}
+                <AppText kind="bold">
+                  {new Date(r.evidenceDueAt).toLocaleString("vi-VN")}
+                </AppText>
+              </AppText>
+            ) : null}
+            {r.appealDueAt &&
+            (r.phase === "ReturnOrdered" || r.phase === "CompensationOrdered") &&
+            !r.effectiveAt ? (
+              <AppText kind="small" color={stitchTokens.darkWood}>
+                Hạn kháng nghị:{" "}
+                <AppText kind="bold">
+                  {new Date(r.appealDueAt).toLocaleString("vi-VN")}
+                </AppText>
+              </AppText>
+            ) : null}
+            {r.returnDueAt && r.phase === "ReturnOrdered" ? (
+              <AppText kind="small" color={stitchTokens.darkWood}>
+                Hạn gửi hoàn sách:{" "}
+                <AppText kind="bold">
+                  {new Date(r.returnDueAt).toLocaleString("vi-VN")}
+                </AppText>
+              </AppText>
+            ) : null}
+            {r.checkDueAt && r.phase === "CheckingReturn" ? (
+              <AppText kind="small" color={stitchTokens.darkWood}>
+                Hạn kiểm tra sách hoàn:{" "}
+                <AppText kind="bold">
+                  {new Date(r.checkDueAt).toLocaleString("vi-VN")}
+                </AppText>
+              </AppText>
+            ) : null}
+            {r.ownerId !== userId &&
+            (r.phase === "ReturnOrdered" || r.phase === "ReturnInProgress") ? (() => {
+              const returnAddr =
+                r.ownerId === exchange.initiatorId
+                  ? exchange.initiatorAddress
+                  : exchange.recipientAddress;
+              return returnAddr ? (
+                <AppText kind="small" color={stitchTokens.darkWood}>
+                  Địa chỉ gửi trả sách:{" "}
+                  <AppText kind="bold">
+                    {returnAddr.recipientName} ({returnAddr.phone}) · {returnAddr.detail}
+                  </AppText>
+                </AppText>
+              ) : null;
+            })() : null}
+            <AppText kind="small" color={stitchTokens.darkWood}>
+              Cọc chủ sách: <AppText kind="bold">{formatVnd(r.ownerDeposit)}</AppText> · Cọc bên giữ sách:{" "}
+              <AppText kind="bold">{formatVnd(r.holderDeposit)}</AppText>
+              {r.differenceAmount > 0 ? ` · Tiền bù: ${formatVnd(r.differenceAmount)}` : ""}
+            </AppText>
+            {r.compensation > 0 ? (
+              <AppText kind="small" color={stitchTokens.darkWood}>
+                Mức bồi hoàn dự kiến:{" "}
+                <AppText kind="bold">{formatVnd(r.compensation)}</AppText>
+              </AppText>
+            ) : null}
             {r.trackingCode ? (
               <AppText kind="small" color={stitchTokens.darkWood}>
                 Mã vận đơn hoàn: <AppText kind="bold">{r.trackingCode}</AppText>
@@ -315,7 +384,9 @@ export function ExchangeReturnAndDemoCard({
                       title={cfg.label}
                       disabled={busy}
                       onPress={() => {
-                        if (!cfg.field) {
+                        if (act === "AcknowledgeReturn") {
+                          setConfirmAckOpen(true);
+                        } else if (!cfg.field) {
                           void submitReturnAction(act);
                         } else {
                           setSelected(act);
@@ -360,15 +431,33 @@ export function ExchangeReturnAndDemoCard({
       {hasDemoAdvance ? (
         <View
           style={{
-            padding: space.md,
-            borderRadius: radius.card,
-            backgroundColor: stitchTokens.warmIvory,
+            padding: 14,
+            borderRadius: 18,
+            backgroundColor: stitchTokens.whiteSurface,
             borderWidth: 1,
-            borderStyle: "dashed",
-            borderColor: stitchTokens.goldDark,
-            gap: space.xs,
+            borderColor: stitchTokens.wineAlpha05,
+            gap: 10,
           }}
         >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
+            <AppText
+              kind="small"
+              color={stitchTokens.subtleGray}
+              style={{ fontWeight: "700" }}
+            >
+              Tua nhanh thời hạn (Demo)
+            </AppText>
+            <AppText kind="small" color={stitchTokens.subtleGray}>
+              Chế độ kiểm thử
+            </AppText>
+          </View>
           <Button
             secondary
             title={
@@ -379,14 +468,23 @@ export function ExchangeReturnAndDemoCard({
             busy={busy}
             onPress={() => void runDemoAdvance()}
           />
-          <AppText kind="small" color={colors.muted}>
-            Mô phỏng hết thời hạn chờ hiện tại để kiểm thử bước tiếp theo ngay lập tức.
-          </AppText>
         </View>
       ) : null}
 
       {notice ? <Notice tone="success">{notice}</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
+
+      <ConfirmDialog
+        visible={confirmAckOpen}
+        title="Xác nhận đã nhận sách hoàn?"
+        message="Chỉ xác nhận khi bạn đã nhận lại bưu kiện sách hoàn. Sau bước này bạn có 48 giờ để kiểm tra tình trạng sách trước khi hoàn tất tất toán."
+        confirmLabel="Đã nhận sách hoàn"
+        onCancel={() => setConfirmAckOpen(false)}
+        onConfirm={() => {
+          setConfirmAckOpen(false);
+          void submitReturnAction("AcknowledgeReturn");
+        }}
+      />
     </View>
   );
 }

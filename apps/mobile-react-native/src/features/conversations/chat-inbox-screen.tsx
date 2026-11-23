@@ -241,25 +241,47 @@ function ExchangeInboxItem({
     ? exchange.recipientListingId
     : (exchange.initiatorListingIds?.[0] ?? exchange.initiatorListingId);
 
+  const partnerSnapshot = isInitiator
+    ? exchange.agreement?.recipientBook
+    : exchange.agreement?.initiatorBooks?.[0];
   const listingQuery = useQuery({
     queryKey: ["public-listing", targetListingId],
     queryFn: () =>
       client.publicRequest(`/listings/${targetListingId}?bundleSupport=whole-v1`, publicListing),
     staleTime: 60000,
-    enabled: Boolean(targetListingId),
+    enabled: Boolean(targetListingId) && !partnerSnapshot,
   });
 
   const listing = listingQuery.data;
   const partnerName =
-    listing?.seller.displayName ?? (isInitiator ? "Đối tác" : "Người đề nghị");
-  const bookTitle = listing?.bundle?.title || listing?.book.title || "Đang tải thông tin sách…";
+    partnerSnapshot?.ownerDisplayName ||
+    listing?.seller.displayName ||
+    (isInitiator ? "Đối tác" : "Người đề nghị");
+  const partnerBookCount = isInitiator
+    ? 1
+    : Math.max(1, exchange.agreement?.initiatorBooks?.length ?? exchange.initiatorListingIds?.length ?? 1);
+  const bookTitle = partnerSnapshot
+    ? partnerBookCount > 1
+      ? `${partnerSnapshot.book.title} (+${partnerBookCount - 1} cuốn)`
+      : partnerSnapshot.book.title
+    : listing?.bundle?.title || listing?.book.title || "Đang tải thông tin sách…";
   const primaryPhoto = listing?.photos?.[0];
   const revisionId = listing?.revisionId;
 
-  const statusInfo = mapExchangeStatusInfo(exchange.status, isInitiator);
+  const awaitingMyReply =
+    exchange.status === "Proposed" &&
+    (exchange.lastProposedById
+      ? exchange.lastProposedById !== currentUserId
+      : !isInitiator);
+
+  const statusInfo = mapExchangeStatusInfo(
+    exchange.status,
+    exchange.status === "Proposed" ? !awaitingMyReply : isInitiator,
+  );
 
   const isActionNeeded =
-    (exchange.status === "Proposed" && !isInitiator) ||
+    awaitingMyReply ||
+    exchange.status === "ResolutionPending" ||
     (exchange.status === "AcceptedAwaitingFunding" &&
       !(isInitiator ? exchange.initiatorFundedAt : exchange.recipientFundedAt)) ||
     (exchange.status === "Preparing" &&
@@ -269,8 +291,8 @@ function ExchangeInboxItem({
   let snippetHighlight = false;
 
   if (exchange.status === "Proposed") {
-    if (isInitiator) {
-      snippet = "Đang chờ đối tác duyệt đề nghị đổi sách của bạn…";
+    if (!awaitingMyReply) {
+      snippet = "Đang chờ đối tác phản hồi đề nghị đổi sách của bạn…";
     } else {
       snippet = `⚡ Đối tác gửi đề nghị đổi sách ${
         exchange.diffAmount > 0
@@ -287,6 +309,9 @@ function ExchangeInboxItem({
     snippetHighlight = isActionNeeded;
   } else if (exchange.status === "InTransit") {
     snippet = "Sách đang được vận chuyển tới bạn";
+  } else if (exchange.status === "ResolutionPending") {
+    snippet = "⚠️ Đang có khiếu nại / xử lý sự cố · Tiền ký quỹ được giữ an toàn";
+    snippetHighlight = true;
   } else if (exchange.status === "Completed") {
     snippet = "Giao dịch trao đổi sách đã hoàn tất thành công";
   } else if (exchange.status === "Cancelled") {

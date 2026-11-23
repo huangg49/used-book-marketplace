@@ -44,7 +44,7 @@ try {
       window.setInterval = (callback, delay, ...args) => interval(delay === 1000
         ? (...values) => { window.qaDeadlineTicks++; callback(...values); } : callback, delay, ...args);
     });
-    let state = 'AcceptedAwaitingFunding', deadline = iso(epoch + 120000), fundingDeadline;
+    let state = 'AcceptedAwaitingFunding', deadline = iso(epoch + 120000), fundingDeadline, firstReceiverDeadline;
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url()), p = url.pathname;
       if (p === '/api/v1/auth/login') return route.fulfill({ json: {
@@ -61,10 +61,11 @@ try {
         fundingDeadline: state === 'AcceptedAwaitingFunding' ? deadline : fundingDeadline,
         shippingDeadline: state === 'Preparing' ? deadline : undefined,
         inspectionDeadline: state === 'Delivered' ? deadline : undefined,
-        initiatorInspectionDeadline: state === 'Delivered' ? deadline : undefined,
+        initiatorInspectionDeadline: state === 'Delivered' ? deadline : firstReceiverDeadline,
         recipientInspectionDeadline: state === 'Delivered' ? deadline : undefined,
-        initiatorReceivedAt: state === 'Delivered' ? iso(epoch) : undefined,
+        initiatorReceivedAt: state === 'Delivered' || firstReceiverDeadline ? iso(epoch) : undefined,
         recipientReceivedAt: state === 'Delivered' ? iso(epoch) : undefined,
+        recipientShippedAt: firstReceiverDeadline ? iso(epoch) : undefined,
       } });
       if (p === '/api/v1/listings/' + id(4)) return route.fulfill({ json: listing(4) });
       if (p === '/api/v1/listings/' + id(5)) return route.fulfill({ json: listing(5) });
@@ -114,6 +115,21 @@ try {
       const after = await page.evaluate(() => window.qaDeadlineTicks);
       assert.equal(after, baseline ? 2 : 0);
       results.push({ status, beforeExpiryCallbacksIn2s: before, afterExpiryCallbacksIn2s: after });
+    }
+    if (!baseline) {
+      state = 'Preparing';
+      const now = await page.evaluate(() => Date.now());
+      deadline = iso(now + 120000);
+      firstReceiverDeadline = iso(now + 20000);
+      const report = card.getByRole('button', { name: 'Báo sự cố', exact: true });
+      await expect.poll(async () => {
+        await page.clock.runFor(1000);
+        return report.count();
+      }).toBe(1);
+      await expect(report).toBeVisible();
+      await page.clock.runFor(21000);
+      await expect(report).toHaveCount(0);
+      results.push({ status: 'Preparing', firstReceiverClaimEndsAtOwnDeadline: true });
     }
     await card.screenshot({ path: path.join(out, `card-${width}${baseline ? '-before' : ''}.png`) });
     assert.deepEqual(errors, []);

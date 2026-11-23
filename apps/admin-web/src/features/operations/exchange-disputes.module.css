@@ -406,6 +406,184 @@
   min-width: 0;
 }
 
+.stickyColumn {
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+}
+
+.quickAssign {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-shelf);
+}
+
+.quickAssign p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--shop-ink);
+}
+
+.quickAssign label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--shop-ink);
+}
+
+.quickAssign input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--shop-control);
+  background: var(--shop-paper);
+  font-size: 0.875rem;
+}
+
+.damageBox {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-shelf);
+}
+
+.damageBoxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.damageBoxHead strong {
+  font-size: 0.875rem;
+  color: var(--shop-ink);
+}
+
+.damageModeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+  border: 1px solid var(--shop-line);
+}
+
+.damageModeBadge[data-mode="full"] {
+  background: var(--error-surface);
+  color: var(--shop-error);
+}
+
+.damagePresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.damagePresetBtn {
+  min-height: 34px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.damagePresetBtn:hover:not(:disabled) {
+  border-color: var(--shop-wine);
+  color: var(--shop-wine);
+}
+
+.damagePresetActive {
+  background: var(--shop-wine);
+  border-color: var(--shop-wine);
+  color: var(--shop-paper);
+}
+
+.damagePresetActive:hover:not(:disabled) {
+  background: var(--shop-wine-hover);
+  color: var(--shop-paper);
+}
+
+.damageInputRow {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.damageInputRow label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--shop-ink);
+}
+
+.damageInputRow input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--shop-control);
+  background: var(--shop-paper);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.damageHint {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--shop-muted);
+}
+
+.disputedBooksList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.disputedBooksList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--shop-wine);
+}
+
+.disputedBookName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--shop-ink);
+}
+
+.disputedBookName svg {
+  flex: none;
+  color: var(--shop-wine);
+}
+
+.disputedBookValue {
+  font-size: 0.75rem;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex: none;
+}
+
 .card,
 .nextStep {
   min-width: 0;
@@ -1105,9 +1283,9 @@
 
 .settlementPartyRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .settlementPartyName {
@@ -1115,8 +1293,10 @@
   font-weight: 700;
   color: var(--shop-ink);
   display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
 }
 
 .settlementPartyRole {
@@ -1130,6 +1310,8 @@
   font-weight: 800;
   color: #065f46;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .settlementAmountNegative {
@@ -1137,6 +1319,8 @@
   font-weight: 800;
   color: #991b1b;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .settlementAmountNeutral {
@@ -1144,6 +1328,8 @@
   font-weight: 800;
   color: var(--shop-ink);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .settlementPartyDetail {
@@ -1174,6 +1360,9 @@
 @container (max-width: 66rem) {
   .detailGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .stickyColumn {
+    position: static;
   }
 }
 @container (max-width: 36rem) {

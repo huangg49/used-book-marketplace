@@ -84,14 +84,15 @@ Member web mở `/driver` với mã vận đơn đã cấp khi điểm bàn giao
 mã cho người mua của đơn và Test Operator đang hoạt động, độc lập với giao dịch.
 Kết quả gồm thời điểm bàn giao, hạn giao và kết quả đã ghi nhận, không có tên,
 điện thoại hay địa chỉ người nhận. Driver dùng lại lệnh báo kết quả mô phỏng
-hiện có cho Test Operator. Giao thành công mở hạn kiểm tra theo FR-T03.
+hiện có cho Test Operator. Giao thành công ghi nhận sự kiện hãng và giữ đơn ở
+`InTransit` chờ người mua xác nhận đã nhận để mở hạn kiểm tra 72 giờ theo FR-T03.
 
 Khi máy demo bật `DEMO_SKIP_ENABLED` và dùng Mongo local, người thắng
 mở Simulator từ đơn đang vận chuyển. **Bắt đầu đi giao** ghi mốc mô phỏng
-trong receipt, rồi **Giao thành công** ghi sự kiện carrier và mở hạn kiểm
-tra 72 giờ. Bước đầu giữ đơn ở InTransit. Cả hai lệnh kiểm quyền người mua,
-bàn giao, hạn giao và phiên bản. Driver vận hành tiếp tục dùng quyền
-Test Operator.
+trong receipt, rồi **Giao thành công** ghi sự kiện carrier `Delivered`; đơn vẫn
+chờ người mua xác nhận đã nhận mới mở hạn kiểm tra 72 giờ. Bước đầu giữ đơn ở
+`InTransit`. Cả hai lệnh kiểm quyền người mua, bàn giao, hạn giao và phiên bản.
+Driver vận hành tiếp tục dùng quyền Test Operator.
 
 Nút **Hoàn tất kiểm tra ngay · Demo** từ bước kiểm tra dùng cùng quy trình
 giải ngân với job hết hạn. Migration 0081 giữ hạn kiểm tra 72 giờ và ghi

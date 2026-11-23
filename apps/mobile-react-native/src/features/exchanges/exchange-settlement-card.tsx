@@ -1,7 +1,6 @@
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { router } from "expo-router";
-import { AppText, Icon, space, stitchTokens } from "../../core/ui";
+import { StyleSheet, View } from "react-native";
+import { AppText, Icon, stitchTokens } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
 
@@ -27,121 +26,105 @@ export function ExchangeSettlementCard({
     exchange.diffPayerId ===
     (isInitiator ? exchange.initiatorId : exchange.recipientId);
 
+  const partialDamage = exchange.resolutionCompensationAmount ?? 0;
+  const isPartialDeduction =
+    partialDamage > 0 &&
+    (exchange.resolutionDecision === "CompensateInitiator" ||
+      exchange.resolutionDecision === "CompensateRecipient");
+  const viewerWonDeduction =
+    isPartialDeduction &&
+    ((exchange.resolutionDecision === "CompensateInitiator" && isInitiator) ||
+      (exchange.resolutionDecision === "CompensateRecipient" && !isInitiator));
+
   let compensationText = "0 đ (Ngang giá)";
   let isPositive = false;
 
-  if (diff > 0) {
+  if (isPartialDeduction) {
+    compensationText = viewerWonDeduction
+      ? `+${formatVnd(partialDamage)}`
+      : `-${formatVnd(partialDamage)}`;
+    isPositive = viewerWonDeduction;
+  } else if (diff > 0) {
     if (isPayer) {
-      compensationText = `-${formatVnd(diff)} (Bạn bù)`;
+      compensationText = `-${formatVnd(diff)}`;
       isPositive = false;
     } else {
-      compensationText = `+${formatVnd(diff)} (Đối tác bù)`;
+      compensationText = `+${formatVnd(diff)}`;
       isPositive = true;
     }
   }
 
   return (
     <View style={styles.card}>
-      {/* 1. Celebration Banner */}
-      <View style={styles.banner}>
+      {/* Celebratory Header */}
+      <View style={styles.header}>
         <View style={styles.iconCircle}>
-          <Icon
-            name="celebration"
-            size={24}
-            color={stitchTokens.whiteSurface}
-          />
+          <Icon name="celebration" size={22} color={stitchTokens.whiteSurface} />
         </View>
-        <View style={styles.bannerText}>
-          <AppText style={styles.title}>
-            Giao dịch Trao đổi Hoàn tất Thành công!
-          </AppText>
+        <View style={styles.headerText}>
+          <AppText style={styles.title}>Biên lai tất toán hoàn tất</AppText>
           <AppText style={styles.subtitle}>
-            Thời hạn kiểm tra của cả hai bên đã kết thúc. Hệ thống đã tất toán ký quỹ và kết chuyển dòng tiền.
+            {isPartialDeduction
+              ? `Hoàn tất theo phán quyết kèm khấu trừ thiệt hại ${formatVnd(partialDamage)}.`
+              : "Tiền ký quỹ và tiền bù đã được kết chuyển vào ví của cả hai bên."}
           </AppText>
         </View>
       </View>
 
-      {/* 2. Three-Item Settlement Breakdown Receipt */}
-      <View style={styles.summaryContainer}>
-        {/* Item 1: Ký quỹ hoàn lại */}
-        <View style={styles.summaryItem}>
-          <View style={styles.itemHeader}>
-            <Icon name="wallet" size={15} color={stitchTokens.likeNewGreen} />
-            <AppText style={styles.itemLabel}>Ký quỹ bảo chứng</AppText>
+      {/* Clean Receipt Rows — No boxes-inside-boxes */}
+      <View style={styles.receiptList}>
+        <View style={styles.receiptRow}>
+          <View style={styles.receiptLeft}>
+            <AppText style={styles.rowLabel}>Ký quỹ bảo chứng</AppText>
+            <AppText style={styles.rowSub}>
+              {isPartialDeduction
+                ? "Tất toán theo phán quyết"
+                : "Hoàn lại 100% vào Ví"}
+            </AppText>
           </View>
-          <AppText style={styles.itemValuePositive}>
-            +{formatVnd(myDeposit)}
-          </AppText>
-          <AppText style={styles.itemSubtext}>
-            Đã hoàn lại 100% vào Ví
-          </AppText>
+          <AppText style={styles.valuePositive}>+{formatVnd(myDeposit)}</AppText>
         </View>
 
-        {/* Item 2: Bù chênh lệch */}
-        <View style={styles.summaryItem}>
-          <View style={styles.itemHeader}>
-            <Icon name="tag" size={15} color={stitchTokens.wineDark} />
-            <AppText style={styles.itemLabel}>Khoản bù chênh lệch</AppText>
+        <View style={[styles.receiptRow, styles.rowDivider]}>
+          <View style={styles.receiptLeft}>
+            <AppText style={styles.rowLabel}>
+              {isPartialDeduction ? "Khấu trừ thiệt hại" : "Khoản bù chênh lệch"}
+            </AppText>
+            <AppText style={styles.rowSub}>
+              {isPartialDeduction && diff > 0
+                ? `Tiền bù thỏa thuận: ${formatVnd(diff)}`
+                : isPartialDeduction
+                  ? viewerWonDeduction
+                    ? "Bồi hoàn thiệt hại về ví bạn"
+                    : "Khấu trừ từ tiền ký quỹ"
+                  : diff > 0
+                    ? isPayer
+                      ? "Bạn bù cho đối tác"
+                      : "Đối tác bù vào ví bạn"
+                    : "Trao đổi ngang giá"}
+            </AppText>
           </View>
           <AppText
             style={[
-              styles.itemValue,
-              isPositive && styles.itemValuePositive,
+              styles.valueNeutral,
+              isPositive && styles.valuePositive,
+              !isPositive && (isPartialDeduction || (diff > 0 && isPayer)) && styles.valueWine,
             ]}
           >
             {compensationText}
           </AppText>
-          <AppText style={styles.itemSubtext}>
-            Đã kết chuyển hoàn tất
-          </AppText>
         </View>
 
-        {/* Item 3: Trạng thái sách */}
-        <View style={styles.summaryItem}>
-          <View style={styles.itemHeader}>
-            <Icon name="book" size={15} color={stitchTokens.wineDark} />
-            <AppText style={styles.itemLabel}>Trạng thái sách</AppText>
+        <View style={[styles.receiptRow, styles.rowDivider]}>
+          <View style={styles.receiptLeft}>
+            <AppText style={styles.rowLabel}>Trạng thái sách</AppText>
+            <AppText style={styles.rowSub}>Đã cập nhật quyền sở hữu</AppText>
           </View>
-          <AppText style={styles.itemValue}>Đã trao đổi</AppText>
-          <AppText style={styles.itemSubtext}>
-            Chuyển sang Exchanged
-          </AppText>
+          <View style={styles.statusChip}>
+            <Icon name="check" size={11} color={stitchTokens.likeNewGreen} />
+            <AppText style={styles.statusChipText}>Đã trao đổi</AppText>
+          </View>
         </View>
-      </View>
-
-      {/* 3. Action Buttons - Perfectly Symmetrical Equal-Height */}
-      <View style={styles.actionsRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Kiểm tra số dư Ví"
-          onPress={() => router.push("/wallet")}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            styles.actionBtnPrimary,
-            pressed && styles.btnPressed,
-          ]}
-        >
-          <Icon name="wallet" size={16} color={stitchTokens.lemonBg} />
-          <AppText style={styles.actionBtnPrimaryText} numberOfLines={1}>
-            Kiểm tra số dư Ví
-          </AppText>
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Khám phá sách khác"
-          onPress={() => router.push("/")}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            styles.actionBtnSecondary,
-            pressed && styles.btnPressed,
-          ]}
-        >
-          <Icon name="search" size={16} color={stitchTokens.wineDark} />
-          <AppText style={styles.actionBtnSecondaryText} numberOfLines={1}>
-            Khám phá sách khác
-          </AppText>
-        </Pressable>
       </View>
     </View>
   );
@@ -150,20 +133,20 @@ export function ExchangeSettlementCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.likeNewGreen,
-    padding: space.md,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: stitchTokens.greenBorderSoft,
+    padding: 18,
     gap: 14,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
     elevation: 3,
   },
-  banner: {
+  header: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 12,
   },
   iconCircle: {
@@ -174,109 +157,78 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bannerText: {
+  headerText: {
     flex: 1,
-    gap: 3,
+    gap: 2,
   },
   title: {
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: "800",
-    color: stitchTokens.wineDark,
-    lineHeight: 21,
+    color: stitchTokens.darkWood,
   },
   subtitle: {
     fontSize: 12,
-    color: stitchTokens.roseBrown,
-    lineHeight: 16,
+    color: stitchTokens.subtleGray,
+    lineHeight: 17,
   },
-  summaryContainer: {
+  receiptList: {
     backgroundColor: stitchTokens.parchment,
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
   },
-  summaryItem: {
-    backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 10,
-    padding: 10,
-    gap: 2,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-  },
-  itemHeader: {
+  receiptRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 11,
   },
-  itemLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
+  rowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
   },
-  itemValue: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  itemValuePositive: {
-    color: stitchTokens.likeNewGreen,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  itemSubtext: {
-    fontSize: 10,
-    color: stitchTokens.roseBrown,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "stretch",
-  },
-  actionBtn: {
+  receiptLeft: {
     flex: 1,
-    minHeight: 48,
-    borderRadius: 12,
+    minWidth: 0,
+    gap: 2,
+  },
+  rowLabel: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+  },
+  rowSub: {
+    fontSize: 11.5,
+    color: stitchTokens.subtleGray,
+  },
+  valuePositive: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: stitchTokens.likeNewGreen,
+    fontVariant: ["tabular-nums"],
+  },
+  valueNeutral: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: stitchTokens.darkWood,
+    fontVariant: ["tabular-nums"],
+  },
+  valueWine: {
+    color: stitchTokens.wine,
+  },
+  statusChip: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 12,
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.likeNewGreenBg,
   },
-  actionBtnPrimary: {
-    backgroundColor: stitchTokens.wineDark,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  actionBtnPrimaryText: {
-    fontSize: 13,
+  statusChipText: {
+    fontSize: 11.5,
     fontWeight: "700",
-    color: stitchTokens.whiteSurface,
-    textAlign: "center",
-  },
-  actionBtnSecondary: {
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  actionBtnSecondaryText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-    textAlign: "center",
-  },
-  btnPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+    color: stitchTokens.likeNewGreen,
   },
 });

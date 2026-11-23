@@ -473,3 +473,72 @@
 .workspacePage [aria-label="Đánh giá giao dịch này"] { margin-top:24px; padding:16px; gap:12px; }
 .workspacePage [aria-label="Đánh giá giao dịch này"] h3 { font-size:1rem; line-height:1.5; margin-bottom:6px; }
 .workspacePage [aria-label="Đánh giá giao dịch này"] p { font-size:.8125rem; line-height:1.55; }
+
+.disputeDossier {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid var(--shop-line);
+    border-radius: 12px;
+    background: var(--shop-shelf);
+}
+
+.disputeDossierHeader {
+    display: grid;
+    gap: 10px;
+}
+
+.disputeDossierTitleRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--shop-wine);
+}
+
+.disputeDossierTitleRow h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--shop-wine);
+}
+
+.disputeStages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.disputeStages li {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--shop-line);
+    background: var(--shop-paper);
+    color: var(--shop-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.disputeStages li[data-state="current"] {
+    border-color: var(--shop-wine);
+    background: var(--shop-wine);
+    color: var(--shop-paper);
+}
+
+.disputeStages li[data-state="done"] {
+    border-color: var(--shop-gold);
+    color: var(--shop-ink);
+}
+
+.disputeUploadNotice {
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--shop-gold);
+    background: var(--shop-paper);
+    color: var(--shop-ink);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}

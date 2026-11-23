@@ -1550,6 +1550,7 @@ export interface ExchangeDoc extends Lockable {
   disputeReason?: string | null;
   disputedBy?: string | null;
   resolutionDecision?: string | null;
+  resolutionCompensationAmount?: number | null;
   resolutionReason?: string | null;
   resolvedBy?: string | null;
   resolvedAt?: Date | null;

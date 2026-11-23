@@ -13,9 +13,10 @@ import {
   Search,
   ShieldAlert,
   Truck,
+  UserCheck,
   Wallet,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
   useLocation,
@@ -23,7 +24,9 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
+import { z } from "zod";
 import {
+  ApiError,
   exchangeEvidenceAccessSchema,
   demoExchangeDeadlineLabel,
   exchangeEvidenceListSchema,
@@ -62,6 +65,8 @@ export function ExchangeDisputesPage() {
 }
 
 const queuePath = "/operations/exchange-disputes";
+const STAFF_LIMIT = 300_000;
+const assignReceiptSchema = z.object({ entityId: z.string(), state: z.string() });
 const pageSize = 10;
 const normalizeSearch = (value: string) =>
   value
@@ -83,6 +88,13 @@ const exchangeCode = (item: ExchangeDisputeItem) =>
   "#" + item.id.slice(0, 8).toUpperCase();
 const totalDeposit = (item: ExchangeDisputeItem) =>
   item.initiatorDeposit + item.recipientDeposit + item.diffAmount;
+const needsAdminLimit = (item: ExchangeDisputeItem) =>
+  totalDeposit(item) > STAFF_LIMIT &&
+  Boolean(
+    item.canStartReturnResolution ||
+      item.returnResolution ||
+      item.canVerifyOutboundDelivery,
+  );
 
 function shipmentIssue(item: ExchangeDisputeItem) {
   if (Boolean(item.initiatorShippedAt) === Boolean(item.recipientShippedAt))
@@ -267,7 +279,7 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
         )}
         <ol className={styles.queueList} ref={list} start={start + 1}>
           {visible.map((item) => {
-            const isHighValue = totalDeposit(item) > 300000;
+            const isHighValue = needsAdminLimit(item);
             const initiator = disputeParty(item, "initiator");
             const recipient = disputeParty(item, "recipient");
             return (
@@ -419,6 +431,120 @@ const actionText: Partial<
   },
 };
 
+function QuickAssignBox({
+  id,
+  userId,
+  isAdmin,
+  assigneeId,
+  version,
+  onAssigned,
+}: {
+  id: string;
+  userId: string;
+  isAdmin: boolean;
+  assigneeId: string | null | undefined;
+  version: number | undefined;
+  onAssigned: () => Promise<unknown>;
+}) {
+  const queryClient = useQueryClient();
+  const [reason, setReason] = useState(
+    "Tiếp nhận đối chiếu bằng chứng và xử lý hồ sơ khiếu nại.",
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [intent, setIntent] = useState<
+    | { key: string; body: { expectedVersion: number; reason: string } }
+    | undefined
+  >(undefined);
+
+  const takenByOther = Boolean(assigneeId && assigneeId !== userId);
+  const blockedForStaff = takenByOther && !isAdmin;
+
+  async function handleAssign() {
+    if (busy || version === undefined || blockedForStaff) return;
+    setBusy(true);
+    setError("");
+    const command = intent ?? {
+      key: crypto.randomUUID(),
+      body: { expectedVersion: version, reason: reason.trim() },
+    };
+    setIntent(command);
+    try {
+      await session.request(
+        `/operations/exchanges/${id}/evidence-access`,
+        assignReceiptSchema,
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": command.key },
+          body: JSON.stringify(command.body),
+        },
+      );
+      setIntent(undefined);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["operations", "exchange-evidence-access", userId, id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["operations", "exchange-evidence", userId, id],
+        }),
+      ]);
+      await onAssigned();
+    } catch (e) {
+      if (e instanceof ApiError && [400, 409, 422].includes(e.status)) {
+        setIntent(undefined);
+        await queryClient.invalidateQueries({
+          queryKey: ["operations", "exchange-evidence-access", userId, id],
+        });
+      }
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Chưa xác nhận tiếp nhận. Thử lại cùng yêu cầu.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={styles.quickAssign}>
+      <p>
+        {takenByOther
+          ? isAdmin
+            ? "Hồ sơ đang được nhân sự khác phụ trách. Admin có thể nhận lại với lý do bên dưới."
+            : "Hồ sơ đã có người phụ trách. Chỉ Admin có thể tiếp nhận lại."
+          : "Nhận phụ trách ngay tại đây để mở khóa bằng chứng và ra phán quyết."}
+      </p>
+      {!blockedForStaff && (
+        <>
+          <label>
+            Lý do tiếp nhận hồ sơ
+            <input
+              type="text"
+              value={reason}
+              disabled={busy || Boolean(intent)}
+              maxLength={300}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </label>
+          {error && <Notice tone="error">{error}</Notice>}
+          <Button
+            variant="primary"
+            busy={busy}
+            disabled={
+              version === undefined || (!intent && reason.trim().length < 5)
+            }
+            onClick={() => void handleAssign()}
+          >
+            {!busy && <UserCheck size={16} aria-hidden="true" />}
+            {intent ? "Thử lại tiếp nhận" : "Nhận phụ trách hồ sơ"}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function OperationsReturnActions({
   item,
   user,
@@ -525,7 +651,17 @@ function OperationsReturnActions({
     <section aria-label="Bước tiếp theo của hồ sơ" className={styles.nextStep}>
       <h2>Bước tiếp theo</h2>
       {!assigned && !pending && (
-        <p>Nhận phụ trách ở mục bằng chứng để thực hiện bước tiếp theo.</p>
+        <QuickAssignBox
+          id={item.id}
+          userId={user.id}
+          isAdmin={admin}
+          assigneeId={access.data?.assigneeId}
+          version={access.data?.version}
+          onAssigned={async () => {
+            await access.refetch();
+            await reload();
+          }}
+        />
       )}
       {(assigned || pending) && (
         <>
@@ -764,6 +900,135 @@ function OperationsReturnActions({
   );
 }
 
+type ResolutionDecision =
+  | "CompleteExchange"
+  | "CompensateInitiator"
+  | "CompensateRecipient";
+
+function computeDamageSettlement(
+  item: ExchangeDisputeItem,
+  victimSide: "initiator" | "recipient",
+  requestedDamage: number | undefined,
+  bothReceived: boolean,
+) {
+  const victimIsInitiator = victimSide === "initiator";
+  const ownerId = victimIsInitiator ? item.initiatorId : item.recipientId;
+  const holderId = victimIsInitiator ? item.recipientId : item.initiatorId;
+  const ownerDeposit = victimIsInitiator
+    ? item.initiatorDeposit
+    : item.recipientDeposit;
+  const holderDeposit = victimIsInitiator
+    ? item.recipientDeposit
+    : item.initiatorDeposit;
+  const initiatorBookValue = item.agreement
+    ? item.agreement.initiatorBooks.reduce((sum, b) => sum + b.exchangeValue, 0)
+    : item.recipientDeposit;
+  const recipientBookValue = item.agreement
+    ? item.agreement.recipientBook.exchangeValue
+    : item.initiatorDeposit;
+  const ownerBookValue = victimIsInitiator
+    ? initiatorBookValue
+    : recipientBookValue;
+  const holderBookValue = victimIsInitiator
+    ? recipientBookValue
+    : initiatorBookValue;
+  const diff = item.diffAmount;
+  const diffPayerId = item.diffPayerId;
+  const ownerLocked =
+    ownerDeposit + (diffPayerId === ownerId && diff > 0 ? diff : 0);
+  const holderLocked =
+    holderDeposit + (diffPayerId === holderId && diff > 0 ? diff : 0);
+  const maxDamage = Math.max(
+    0,
+    diffPayerId === ownerId && diff > 0
+      ? Math.min(holderBookValue, diff + Math.min(ownerBookValue, holderLocked))
+      : Math.min(holderBookValue, holderDeposit),
+  );
+  const fullComp = Math.min(ownerBookValue, holderLocked);
+  const validPartial =
+    bothReceived &&
+    requestedDamage !== undefined &&
+    Number.isInteger(requestedDamage) &&
+    requestedDamage >= 1 &&
+    requestedDamage < maxDamage;
+
+  if (validPartial) {
+    const d = requestedDamage!;
+    if (diffPayerId === ownerId && diff > 0) {
+      const diffToHolder = Math.max(0, diff - d);
+      const compFromHolder = Math.max(0, d - diff);
+      const ownerReceives = ownerLocked - diffToHolder + compFromHolder;
+      const holderReceives = holderLocked - compFromHolder + diffToHolder;
+      const diffRefundedToOwner = diff - diffToHolder;
+      return {
+        isPartial: true,
+        maxDamage,
+        applied: d,
+        ownerReceives,
+        holderReceives,
+        ownerDetail:
+          `Hoàn ${money(ownerDeposit)} cọc` +
+          (diffRefundedToOwner > 0
+            ? ` + hoàn ${money(diffRefundedToOwner)} tiền bù`
+            : "") +
+          (compFromHolder > 0
+            ? ` + nhận ${money(compFromHolder)} từ cọc đối tác`
+            : ""),
+        holderDetail:
+          `Hoàn ${money(holderDeposit - compFromHolder)} cọc` +
+          (diffToHolder > 0
+            ? ` + nhận ${money(diffToHolder)} tiền bù còn lại`
+            : "") +
+          ` · Đã khấu trừ ${money(d)} thiệt hại`,
+      };
+    }
+    const holderToOwner = Math.min(
+      holderLocked,
+      (diffPayerId === holderId && diff > 0 ? diff : 0) + d,
+    );
+    const ownerReceives = ownerLocked + holderToOwner;
+    const holderReceives = holderLocked - holderToOwner;
+    return {
+      isPartial: true,
+      maxDamage,
+      applied: d,
+      ownerReceives,
+      holderReceives,
+      ownerDetail:
+        `Hoàn ${money(ownerDeposit)} cọc` +
+        (diffPayerId === holderId && diff > 0
+          ? ` + nhận ${money(diff)} tiền bù`
+          : "") +
+        ` + nhận ${money(d)} khấu trừ thiệt hại`,
+      holderDetail:
+        `Khấu trừ ${money(d)} thiệt hại` +
+        (diffPayerId === holderId && diff > 0
+          ? ` + chuyển ${money(diff)} tiền bù`
+          : "") +
+        (holderReceives > 0 ? ` · Hoàn ${money(holderReceives)} phần dư` : ""),
+    };
+  }
+
+  const ownerReceives = ownerLocked + fullComp;
+  const holderReceives = holderLocked - fullComp;
+  return {
+    isPartial: false,
+    maxDamage,
+    applied: fullComp,
+    ownerReceives,
+    holderReceives,
+    ownerDetail:
+      `Hoàn ${money(ownerDeposit)} cọc + nhận ${money(fullComp)} bồi thường` +
+      (diffPayerId === ownerId && diff > 0
+        ? ` + hoàn ${money(diff)} tiền bù`
+        : ""),
+    holderDetail:
+      `Trừ ${money(fullComp)} từ khoản ký quỹ để bồi thường` +
+      (holderReceives > 0 ? ` · Hoàn ${money(holderReceives)} phần dư` : "") +
+      " · Ghi nhận vi phạm · Đóng bài đăng",
+  };
+}
+
 function InspectionDisputeActions({
   item,
   user,
@@ -787,6 +1052,14 @@ function InspectionDisputeActions({
       ),
   });
   const assigned = access.isSuccess && access.data.assigneeId === user.id;
+  const isAdmin = user.roles.includes("ADMIN");
+
+  const bothReceived = Boolean(
+    item.initiatorShippedAt &&
+      item.recipientShippedAt &&
+      item.initiatorReceivedAt &&
+      item.recipientReceivedAt,
+  );
 
   const initiatorName =
     item.participants?.initiator?.displayName?.trim() || "Bên khởi tạo";
@@ -798,58 +1071,175 @@ function InspectionDisputeActions({
   const isComplainantInitiator =
     item.disputedBy === item.initiatorId || item.disputedBy === "Initiator";
 
+  const defaultDecision: ResolutionDecision = isComplainantRecipient
+    ? "CompensateRecipient"
+    : isComplainantInitiator
+      ? "CompensateInitiator"
+      : "CompleteExchange";
+
+  const [decision, setDecision] = useState<ResolutionDecision>(defaultDecision);
+  const [note, setNote] = useState("");
+
+  const victimSide: "initiator" | "recipient" =
+    decision === "CompensateInitiator" ? "initiator" : "recipient";
+  const isCompensate =
+    decision === "CompensateInitiator" || decision === "CompensateRecipient";
+
+  const baseComp = computeDamageSettlement(
+    item,
+    victimSide,
+    undefined,
+    bothReceived,
+  );
+  const [damageInput, setDamageInput] = useState<string>(
+    String(baseComp.maxDamage),
+  );
+
+  useEffect(() => {
+    setDecision(defaultDecision);
+  }, [item.id, defaultDecision]);
+
+  useEffect(() => {
+    setDamageInput(String(baseComp.maxDamage));
+  }, [item.id, decision, baseComp.maxDamage]);
+
+  const digits = damageInput.replace(/[^\d]/g, "");
+  const parsedDamage = digits ? Number.parseInt(digits, 10) : NaN;
+  const damageValid =
+    !bothReceived ||
+    !isCompensate ||
+    baseComp.maxDamage <= 0 ||
+    (Number.isInteger(parsedDamage) &&
+      parsedDamage >= 1 &&
+      parsedDamage <= baseComp.maxDamage);
+
+  const compForRecipient = computeDamageSettlement(
+    item,
+    "recipient",
+    decision === "CompensateRecipient" && damageValid
+      ? parsedDamage
+      : undefined,
+    bothReceived,
+  );
+  const compForInitiator = computeDamageSettlement(
+    item,
+    "initiator",
+    decision === "CompensateInitiator" && damageValid
+      ? parsedDamage
+      : undefined,
+    bothReceived,
+  );
+
   const initiatorDeposit = item.initiatorDeposit;
   const recipientDeposit = item.recipientDeposit;
   const diffAmount = item.diffAmount;
   const diffPayerIsInitiator = item.diffPayerId === item.initiatorId;
   const diffPayerIsRecipient = item.diffPayerId === item.recipientId;
 
-  const canCompensate = (item.initiatorListingIds?.length ?? 1) === 1;
-  const defaultDecision = canCompensate && isComplainantRecipient
-    ? "CompensateRecipient"
-    : canCompensate && isComplainantInitiator
-      ? "CompensateInitiator"
-      : "CompleteExchange";
+  const faultySnapshots =
+    victimSide === "recipient"
+      ? (item.agreement?.initiatorBooks ?? [])
+      : item.agreement
+        ? [item.agreement.recipientBook]
+        : [];
 
-  const [decision, setDecision] = useState<
-    "CompleteExchange" | "CompensateInitiator" | "CompensateRecipient"
-  >(defaultDecision);
-  const [note, setNote] = useState("");
+  const presets: { label: string; amount: number }[] = [];
+  if (bothReceived && isCompensate && baseComp.maxDamage > 0) {
+    const seen = new Set<number>();
+    if (faultySnapshots.length > 1) {
+      faultySnapshots.forEach((snap, idx) => {
+        if (snap.exchangeValue >= 1 && snap.exchangeValue < baseComp.maxDamage && !seen.has(snap.exchangeValue)) {
+          seen.add(snap.exchangeValue);
+          const shortTitle =
+            snap.book.title.length > 22
+              ? snap.book.title.slice(0, 22) + "…"
+              : snap.book.title;
+          presets.push({
+            label: `Cuốn ${idx + 1}: ${shortTitle} (${money(snap.exchangeValue)})`,
+            amount: snap.exchangeValue,
+          });
+        }
+      });
+    } else {
+      const quarter = Math.round(baseComp.maxDamage * 0.25);
+      if (quarter >= 1 && quarter < baseComp.maxDamage && !seen.has(quarter)) {
+        seen.add(quarter);
+        presets.push({ label: `25% (${money(quarter)})`, amount: quarter });
+      }
+    }
+    const half = Math.round(baseComp.maxDamage * 0.5);
+    if (half >= 1 && half < baseComp.maxDamage && !seen.has(half)) {
+      seen.add(half);
+      presets.push({ label: `50% (${money(half)})`, amount: half });
+    }
+    presets.push({
+      label: `Toàn phần (${money(baseComp.maxDamage)})`,
+      amount: baseComp.maxDamage,
+    });
+  }
 
-  const recipientTotal =
-    recipientDeposit +
-    initiatorDeposit +
-    (diffPayerIsRecipient && diffAmount > 0 ? diffAmount : 0);
-
-  const initiatorTotal =
-    initiatorDeposit +
-    recipientDeposit +
-    (diffPayerIsInitiator && diffAmount > 0 ? diffAmount : 0);
-
-  const decisionMeta = {
+  const decisionMeta: Record<
+    ResolutionDecision,
+    {
+      label: string;
+      ruling: string;
+      confirmTitle: string;
+      party1: {
+        name: string;
+        role: string;
+        amount: string;
+        isPositive: boolean;
+        detail: string;
+      };
+      party2: {
+        name: string;
+        role: string;
+        amount: string;
+        isPositive: boolean;
+        detail: string;
+      };
+      footerText: string;
+    }
+  > = {
     CompensateRecipient: {
-      label: `Bồi thường cho ${recipientName} (+${money(recipientTotal)})`,
-      ruling: `Xác định sách do ${initiatorName} gửi đến bị hư hại/không đúng mô tả. Chấp nhận khiếu nại của ${recipientName}.`,
-      confirmTitle: `Xác nhận bồi thường cho ${recipientName}?`,
+      label: compForRecipient.isPartial
+        ? `Khấu trừ ${money(compForRecipient.applied)} cho ${recipientName} · Hoàn tất trao đổi`
+        : `Bồi thường cho ${recipientName} (+${money(compForRecipient.ownerReceives)})`,
+      ruling: compForRecipient.isPartial
+        ? `Xác định thiệt hại một phần trên sách do ${initiatorName} gửi (${money(compForRecipient.applied)}). Hai bên giữ sách đã nhận và hoàn tất trao đổi.`
+        : `Xác định sách do ${initiatorName} gửi không đạt thỏa thuận. Chấp nhận bồi thường toàn phần cho ${recipientName}.`,
+      confirmTitle: compForRecipient.isPartial
+        ? `Xác nhận khấu trừ ${money(compForRecipient.applied)} cho ${recipientName}?`
+        : `Xác nhận bồi thường cho ${recipientName}?`,
       party1: {
         name: recipientName,
-        role: "Bên bị hại · Nhận bồi thường",
-        amount: `+${money(recipientTotal)}`,
+        role: compForRecipient.isPartial
+          ? "Bên bị hại · Nhận khấu trừ thiệt hại"
+          : "Bên bị hại · Nhận bồi thường",
+        amount: `+${money(compForRecipient.ownerReceives)}`,
         isPositive: true,
-        detail: `Hoàn ${money(recipientDeposit)} cọc + nhận ${money(initiatorDeposit)} bồi thường${diffPayerIsRecipient && diffAmount > 0 ? ` + hoàn ${money(diffAmount)} tiền bù` : ""}`,
+        detail: compForRecipient.ownerDetail,
       },
       party2: {
         name: initiatorName,
-        role: "Bên chịu bồi thường",
-        amount: diffPayerIsInitiator && diffAmount > 0 ? `+${money(diffAmount)}` : money(0),
-        isPositive: diffPayerIsInitiator && diffAmount > 0,
-        detail: `Dùng ${money(initiatorDeposit)} cọc để bồi thường${diffPayerIsInitiator && diffAmount > 0 ? ` · Hoàn ${money(diffAmount)} tiền bù` : ""} · Ghi nhận vi phạm · Đóng bài đăng`,
+        role: compForRecipient.isPartial
+          ? "Bên chịu khấu trừ · Hoàn tất"
+          : "Bên chịu bồi thường",
+        amount:
+          compForRecipient.holderReceives > 0
+            ? `+${money(compForRecipient.holderReceives)}`
+            : money(0),
+        isPositive: compForRecipient.holderReceives > 0,
+        detail: compForRecipient.holderDetail,
       },
-      footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + diffAmount)} về ví`,
+      footerText: compForRecipient.isPartial
+        ? `Két ký quỹ giải ngân ${money(totalDeposit(item))} · Phiếu chuyển sang Hoàn tất`
+        : `Két ký quỹ giải ngân ${money(totalDeposit(item))} · Phiếu hủy & đóng bài đăng`,
     },
     CompleteExchange: {
       label: "Bác khiếu nại (Hoàn tất trao đổi, hoàn 100% cọc)",
-      ruling: "Sách đúng mô tả ban đầu, khiếu nại không đủ cơ sở. Hoàn tất trao đổi bình thường.",
+      ruling:
+        "Sách đúng mô tả ban đầu, khiếu nại không đủ cơ sở. Hoàn tất trao đổi bình thường.",
       confirmTitle: "Xác nhận bác khiếu nại & hoàn tất trao đổi?",
       party1: {
         name: initiatorName,
@@ -868,28 +1258,61 @@ function InspectionDisputeActions({
       footerText: "Cả hai bên đều nhận lại 100% tiền cọc về ví",
     },
     CompensateInitiator: {
-      label: `Bồi thường cho ${initiatorName} (+${money(initiatorTotal)})`,
-      ruling: `Xác định sách do ${recipientName} gửi đến bị hư hại/không đúng mô tả. Chấp nhận khiếu nại của ${initiatorName}.`,
-      confirmTitle: `Xác nhận bồi thường cho ${initiatorName}?`,
+      label: compForInitiator.isPartial
+        ? `Khấu trừ ${money(compForInitiator.applied)} cho ${initiatorName} · Hoàn tất trao đổi`
+        : `Bồi thường cho ${initiatorName} (+${money(compForInitiator.ownerReceives)})`,
+      ruling: compForInitiator.isPartial
+        ? `Xác định thiệt hại một phần trên sách do ${recipientName} gửi (${money(compForInitiator.applied)}). Hai bên giữ sách đã nhận và hoàn tất trao đổi.`
+        : `Xác định sách do ${recipientName} gửi không đạt thỏa thuận. Chấp nhận bồi thường toàn phần cho ${initiatorName}.`,
+      confirmTitle: compForInitiator.isPartial
+        ? `Xác nhận khấu trừ ${money(compForInitiator.applied)} cho ${initiatorName}?`
+        : `Xác nhận bồi thường cho ${initiatorName}?`,
       party1: {
         name: initiatorName,
-        role: "Bên bị hại · Nhận bồi thường",
-        amount: `+${money(initiatorTotal)}`,
+        role: compForInitiator.isPartial
+          ? "Bên bị hại · Nhận khấu trừ thiệt hại"
+          : "Bên bị hại · Nhận bồi thường",
+        amount: `+${money(compForInitiator.ownerReceives)}`,
         isPositive: true,
-        detail: `Hoàn ${money(initiatorDeposit)} cọc + nhận ${money(recipientDeposit)} bồi thường${diffPayerIsInitiator && diffAmount > 0 ? ` + hoàn ${money(diffAmount)} tiền bù` : ""}`,
+        detail: compForInitiator.ownerDetail,
       },
       party2: {
         name: recipientName,
-        role: "Bên chịu bồi thường",
-        amount: diffPayerIsRecipient && diffAmount > 0 ? `+${money(diffAmount)}` : money(0),
-        isPositive: diffPayerIsRecipient && diffAmount > 0,
-        detail: `Dùng ${money(recipientDeposit)} cọc để bồi thường${diffPayerIsRecipient && diffAmount > 0 ? ` · Hoàn ${money(diffAmount)} tiền bù` : ""} · Ghi nhận vi phạm · Đóng bài đăng`,
+        role: compForInitiator.isPartial
+          ? "Bên chịu khấu trừ · Hoàn tất"
+          : "Bên chịu bồi thường",
+        amount:
+          compForInitiator.holderReceives > 0
+            ? `+${money(compForInitiator.holderReceives)}`
+            : money(0),
+        isPositive: compForInitiator.holderReceives > 0,
+        detail: compForInitiator.holderDetail,
       },
-      footerText: `Két ký quỹ: Giải ngân ${money(initiatorDeposit + recipientDeposit + diffAmount)} về ví`,
+      footerText: compForInitiator.isPartial
+        ? `Két ký quỹ giải ngân ${money(totalDeposit(item))} · Phiếu chuyển sang Hoàn tất`
+        : `Két ký quỹ giải ngân ${money(totalDeposit(item))} · Phiếu hủy & đóng bài đăng`,
     },
   };
 
   const active = decisionMeta[decision];
+  const currentComp =
+    decision === "CompensateRecipient" ? compForRecipient : compForInitiator;
+
+  if (!bothReceived) {
+    return (
+      <section
+        aria-label="Phán quyết sự cố vận chuyển / giao nhận"
+        className={styles.nextStep}
+      >
+        <h2>Phán quyết sự cố vận chuyển / giao nhận</h2>
+        <Notice tone="info">
+          {item.canVerifyOutboundDelivery
+            ? "Tiền và sách đang được giữ. Admin phụ trách có thể xác minh giao sách từ bằng chứng bàn giao để mở quy trình trả sách một chiều."
+            : "Phán quyết trực tiếp chỉ khả dụng sau khi cả hai bên đã xác nhận nhận sách (kiểm tra sách hai chiều). Hồ sơ hiện tiếp tục giữ tiền và sách trong lúc đối chiếu hoặc chờ quy trình trả sách một chiều."}
+        </Notice>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -898,9 +1321,17 @@ function InspectionDisputeActions({
     >
       <h2>Phán quyết khiếu nại kiểm tra sách</h2>
       {!assigned ? (
-        <p>
-          Nhận phụ trách ở mục bằng chứng để đưa ra phán quyết cho hồ sơ này.
-        </p>
+        <QuickAssignBox
+          id={item.id}
+          userId={user.id}
+          isAdmin={isAdmin}
+          assigneeId={access.data?.assigneeId}
+          version={access.data?.version}
+          onAssigned={async () => {
+            await access.refetch();
+            await reload();
+          }}
+        />
       ) : (
         <ActionPanel
           label="Phán quyết"
@@ -913,21 +1344,94 @@ function InspectionDisputeActions({
                 <select
                   value={decision}
                   disabled={locked}
-                  onChange={(e) => setDecision(e.target.value as any)}
+                  onChange={(e) =>
+                    setDecision(e.target.value as ResolutionDecision)
+                  }
                 >
-                  <option value="CompensateRecipient" disabled={!canCompensate}>
+                  <option value="CompensateRecipient">
                     {decisionMeta.CompensateRecipient.label}
                   </option>
                   <option value="CompleteExchange">
                     {decisionMeta.CompleteExchange.label}
                   </option>
-                  <option value="CompensateInitiator" disabled={!canCompensate}>
+                  <option value="CompensateInitiator">
                     {decisionMeta.CompensateInitiator.label}
                   </option>
                 </select>
               </label>
 
-              {!canCompensate && <p className="muted">Bồi thường tại đây áp dụng cho phiếu có một cuốn sách mỗi bên.</p>}
+              {bothReceived && isCompensate && baseComp.maxDamage > 0 && (
+                <div className={styles.damageBox}>
+                  <div className={styles.damageBoxHead}>
+                    <strong>Mức khấu trừ thiệt hại</strong>
+                    <span
+                      className={styles.damageModeBadge}
+                      data-mode={currentComp.isPartial ? "partial" : "full"}
+                    >
+                      {currentComp.isPartial
+                        ? "Khấu trừ từng phần · Hoàn tất trao đổi"
+                        : "Bồi thường toàn phần · Hủy & đóng bài đăng"}
+                    </span>
+                  </div>
+
+                  {presets.length > 0 && (
+                    <div
+                      className={styles.damagePresets}
+                      role="group"
+                      aria-label="Chọn nhanh mức khấu trừ"
+                    >
+                      {presets.map((preset) => {
+                        const isActive = parsedDamage === preset.amount;
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            disabled={locked}
+                            className={
+                              isActive
+                                ? `${styles.damagePresetBtn} ${styles.damagePresetActive}`
+                                : styles.damagePresetBtn
+                            }
+                            onClick={() =>
+                              setDamageInput(String(preset.amount))
+                            }
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className={styles.damageInputRow}>
+                    <label>
+                      Số tiền khấu trừ (tối đa {money(baseComp.maxDamage)})
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={baseComp.maxDamage}
+                        step={1000}
+                        disabled={locked}
+                        value={damageInput}
+                        onChange={(e) => setDamageInput(e.target.value)}
+                      />
+                    </label>
+                  </div>
+
+                  {!damageValid ? (
+                    <p className={styles.damageHint} role="alert">
+                      Nhập số tiền nguyên từ 1đ đến {money(baseComp.maxDamage)}.
+                    </p>
+                  ) : (
+                    <p className={styles.damageHint}>
+                      {currentComp.isPartial
+                        ? `Khấu trừ ${money(parsedDamage)} dưới mức tối đa (${money(baseComp.maxDamage)}): hai bên giữ sách đã nhận, giao dịch đóng ở trạng thái Hoàn tất.`
+                        : `Mức tối đa (${money(baseComp.maxDamage)}): áp dụng bồi thường toàn phần (${money(currentComp.applied)}), hủy giao dịch và đóng bài đăng.`}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className={styles.settlementCard}>
                 <div className={styles.settlementHeader}>
@@ -938,9 +1442,17 @@ function InspectionDisputeActions({
                   <div className={styles.settlementPartyRow}>
                     <div className={styles.settlementPartyName}>
                       <span>{active.party1.name}</span>
-                      <span className={styles.settlementPartyRole}>({active.party1.role})</span>
+                      <span className={styles.settlementPartyRole}>
+                        ({active.party1.role})
+                      </span>
                     </div>
-                    <div className={active.party1.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNegative}>
+                    <div
+                      className={
+                        active.party1.isPositive
+                          ? styles.settlementAmountPositive
+                          : styles.settlementAmountNegative
+                      }
+                    >
                       {active.party1.amount}
                     </div>
                   </div>
@@ -955,9 +1467,17 @@ function InspectionDisputeActions({
                   <div className={styles.settlementPartyRow}>
                     <div className={styles.settlementPartyName}>
                       <span>{active.party2.name}</span>
-                      <span className={styles.settlementPartyRole}>({active.party2.role})</span>
+                      <span className={styles.settlementPartyRole}>
+                        ({active.party2.role})
+                      </span>
                     </div>
-                    <div className={active.party2.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNeutral}>
+                    <div
+                      className={
+                        active.party2.isPositive
+                          ? styles.settlementAmountPositive
+                          : styles.settlementAmountNeutral
+                      }
+                    >
                       {active.party2.amount}
                     </div>
                   </div>
@@ -979,14 +1499,14 @@ function InspectionDisputeActions({
                   minLength={10}
                   maxLength={500}
                   rows={3}
-                  placeholder="Ví dụ: Đối chiếu video đóng gói của bên gửi và ảnh nhận hàng, xác nhận sách rách nát trước khi giao..."
+                  placeholder="Ví dụ: Đối chiếu video đóng gói của bên gửi và ảnh nhận hàng, xác nhận 1 cuốn bị rách gáy trước khi giao..."
                   onChange={(e) => setNote(e.target.value)}
                 />
               </label>
             </>
           )}
           dirty={note.trim().length > 0}
-          validate={() => note.trim().length >= 10}
+          validate={() => note.trim().length >= 10 && damageValid}
           submitLabel="Xác nhận phán quyết"
           confirmTitle={active.confirmTitle}
           confirmBody={
@@ -994,28 +1514,44 @@ function InspectionDisputeActions({
               <p>
                 <strong>Phán quyết:</strong> {active.ruling}
               </p>
-              <div className={styles.settlementCard} style={{ margin: "10px 0" }}>
+              <div className={styles.settlementCard}>
                 <div className={styles.settlementPartyBlock}>
                   <div className={styles.settlementPartyRow}>
                     <strong>{active.party1.name}</strong>
-                    <span className={active.party1.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNegative}>
+                    <span
+                      className={
+                        active.party1.isPositive
+                          ? styles.settlementAmountPositive
+                          : styles.settlementAmountNegative
+                      }
+                    >
                       {active.party1.amount}
                     </span>
                   </div>
-                  <small className={styles.settlementPartyDetail}>{active.party1.detail}</small>
+                  <small className={styles.settlementPartyDetail}>
+                    {active.party1.detail}
+                  </small>
                 </div>
                 <hr className={styles.settlementDivider} />
                 <div className={styles.settlementPartyBlock}>
                   <div className={styles.settlementPartyRow}>
                     <strong>{active.party2.name}</strong>
-                    <span className={active.party2.isPositive ? styles.settlementAmountPositive : styles.settlementAmountNeutral}>
+                    <span
+                      className={
+                        active.party2.isPositive
+                          ? styles.settlementAmountPositive
+                          : styles.settlementAmountNeutral
+                      }
+                    >
                       {active.party2.amount}
                     </span>
                   </div>
-                  <small className={styles.settlementPartyDetail}>{active.party2.detail}</small>
+                  <small className={styles.settlementPartyDetail}>
+                    {active.party2.detail}
+                  </small>
                 </div>
               </div>
-              <p style={{ marginTop: 8 }}>
+              <p>
                 <strong>Lý do ghi nhận:</strong> {note}
               </p>
             </div>
@@ -1026,6 +1562,12 @@ function InspectionDisputeActions({
               expectedVersion: item.revision,
               decision,
               reason: note.trim(),
+              ...(bothReceived &&
+              isCompensate &&
+              baseComp.maxDamage > 0 &&
+              damageValid
+                ? { compensationAmount: parsedDamage }
+                : {}),
             },
           })}
           schema={exchangeDisputeResolution}
@@ -1038,7 +1580,9 @@ function InspectionDisputeActions({
               text:
                 decision === "CompleteExchange"
                   ? "Đã bác khiếu nại và hoàn tất trao đổi thành công. Tiền cọc đã được tất toán về ví."
-                  : "Đã ra phán quyết bồi thường hư hại thành công. Tiền bồi thường đã được chuyển về ví.",
+                  : currentComp.isPartial
+                    ? `Đã khấu trừ thiệt hại ${money(currentComp.applied)} và hoàn tất trao đổi thành công.`
+                    : "Đã ra phán quyết bồi thường toàn phần thành công. Tiền bồi thường đã được chuyển về ví.",
               close: true,
             };
           }}
@@ -1122,7 +1666,6 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
       <div className={styles.detailGrid}>
         {item && (
           <div className={styles.column}>
-            <ShipmentOverview item={item} viewerId={user.id} />
             {(() => {
               const isRecipientComplainant =
                 item.disputedBy === item.recipientId ||
@@ -1140,13 +1683,14 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                 : isInitiatorComplainant
                   ? disputeParty(item, "recipient")
                   : null;
-              const disputedBook = respondentParty?.books?.[0];
+              const disputedSnapshots = respondentParty?.snapshots ?? [];
 
               const rawReason = item.disputeReason || "";
               const catMatch = rawReason.match(/\[Sự cố\]:\s*([^\n]+)/);
               const detailMatch = rawReason.match(/\[Chi tiết\]:\s*([\s\S]+)/);
               const category = catMatch?.[1]?.trim() || "Sách không đúng mô tả";
-              const userNote = detailMatch?.[1]?.trim() || (!catMatch ? rawReason : "");
+              const userNote =
+                detailMatch?.[1]?.trim() || (!catMatch ? rawReason : "");
 
               return (
                 <section
@@ -1155,29 +1699,45 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                 >
                   <div className={styles.incidentHeader}>
                     <div className={styles.incidentTitleWrap}>
-                      <ShieldAlert size={18} aria-hidden="true" color="var(--shop-wine)" />
+                      <ShieldAlert size={18} aria-hidden="true" />
                       <h2>Nội dung báo sự cố</h2>
                     </div>
-                    <span className={styles.incidentTag}>
-                      {category}
-                    </span>
+                    <span className={styles.incidentTag}>{category}</span>
                   </div>
 
                   <div className={styles.incidentRelationship}>
                     <div className={styles.relationshipRow}>
                       <span className={styles.complainantDot} />
-                      <strong>{complainantParty ? complainantParty.name : "Người nhận"}</strong>
-                      <span className={styles.muted}>khiếu nại về sách nhận từ</span>
-                      <strong>{respondentParty ? respondentParty.name : "Người gửi"}</strong>
+                      <strong>
+                        {complainantParty ? complainantParty.name : "Người nhận"}
+                      </strong>
+                      <span className={styles.muted}>
+                        khiếu nại về sách nhận từ
+                      </span>
+                      <strong>
+                        {respondentParty ? respondentParty.name : "Người gửi"}
+                      </strong>
                     </div>
-                    {disputedBook && respondentParty && (
-                      <div className={styles.relationshipRow} style={{ color: "var(--shop-wine)" }}>
-                        <BookOpen size={14} aria-hidden="true" />
-                        <span>Cuốn sách: <strong>{disputedBook}</strong></span>
-                      </div>
+                    {disputedSnapshots.length > 0 && (
+                      <ul
+                        className={styles.disputedBooksList}
+                        aria-label="Sách thuộc chiều bị khiếu nại"
+                      >
+                        {disputedSnapshots.map((snap) => (
+                          <li key={snap.listingId}>
+                            <span className={styles.disputedBookName}>
+                              <BookOpen size={14} aria-hidden="true" />
+                              <strong>{snap.book.title}</strong>
+                            </span>
+                            <span className={styles.disputedBookValue}>
+                              {money(snap.exchangeValue)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                     {item.disputedAt && (
-                      <time className={styles.muted} dateTime={item.disputedAt} style={{ fontSize: "0.775rem" }}>
+                      <time className={styles.muted} dateTime={item.disputedAt}>
                         Mở khiếu nại lúc {dateText(item.disputedAt)}
                       </time>
                     )}
@@ -1185,13 +1745,16 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
 
                   {userNote && (
                     <div className={styles.incidentQuoteBox}>
-                      <div className={styles.incidentQuoteLabel}>Nội dung phản ánh từ người nhận</div>
+                      <div className={styles.incidentQuoteLabel}>
+                        Nội dung phản ánh từ người gửi khiếu nại
+                      </div>
                       <p className={styles.incidentQuoteText}>"{userNote}"</p>
                     </div>
                   )}
                 </section>
               );
             })()}
+            <ShipmentOverview item={item} viewerId={user.id} />
             {(item.returnResolution || item.status === "ResolutionPending") && (
               <section
                 className={styles.card}
@@ -1213,28 +1776,14 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
             )}
           </div>
         )}
-        <div className={styles.column}>
+        <div className={`${styles.column} ${styles.stickyColumn}`}>
+          {item && <PaymentOverview item={item} />}
           {item?.returnResolution && (
-            <ReturnOverview resolution={item.returnResolution} />
+            <ReturnOverview
+              resolution={item.returnResolution}
+              compensationAmount={item.resolutionCompensationAmount}
+            />
           )}
-          {item?.status === "ResolutionPending" &&
-            !item.canStartReturnResolution && (
-              Boolean(item.initiatorReceivedAt && item.recipientReceivedAt) ? (
-                <InspectionDisputeActions
-                  item={item}
-                  user={user}
-                  reload={() => result.refetch()}
-                  onFinish={setOutcome}
-                  onPending={setPending}
-                />
-              ) : (
-                <Notice tone="info">
-                  {item.canVerifyOutboundDelivery
-                    ? "Tiền và sách đang được giữ. Admin phụ trách có thể xác minh giao sách từ bằng chứng bàn giao."
-                    : "Hồ sơ tiếp tục giữ tiền và sách trong lúc đối chiếu. Chưa đủ điều kiện chạy quy trình trả sách một chiều."}
-                </Notice>
-              )
-            )}
           {retained &&
             (pending ||
               (item?.status === "ResolutionPending" &&
@@ -1249,7 +1798,18 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                 onPending={setPending}
               />
             )}
-          {item && <PaymentOverview item={item} />}
+          {item?.status === "ResolutionPending" &&
+            !item.canStartReturnResolution &&
+            !item.returnResolution &&
+            !(item.canVerifyOutboundDelivery && user.roles.includes("ADMIN")) && (
+              <InspectionDisputeActions
+                item={item}
+                user={user}
+                reload={() => result.refetch()}
+                onFinish={setOutcome}
+                onPending={setPending}
+              />
+            )}
         </div>
       </div>
     </div>
@@ -1611,6 +2171,7 @@ function ShipmentOverview({
 
 function PaymentOverview({ item }: { item: ExchangeDisputeItem }) {
   const funded = Boolean(item.initiatorFundedAt && item.recipientFundedAt);
+  const isHighValue = needsAdminLimit(item);
   const diffPayer =
     item.diffPayerId === item.initiatorId
       ? "Bên khởi tạo"
@@ -1622,6 +2183,12 @@ function PaymentOverview({ item }: { item: ExchangeDisputeItem }) {
       <h2>
         <Wallet size={20} aria-hidden="true" /> Đối chiếu khoản tiền
       </h2>
+      {isHighValue && (
+        <span className={styles.adminRequiredBadge}>
+          <ShieldAlert size={13} aria-hidden="true" /> Vượt 300.000đ · Thẩm
+          quyền Admin
+        </span>
+      )}
       <dl className={styles.facts}>
         <div>
           <dt>Cọc bên khởi tạo</dt>
@@ -1654,9 +2221,12 @@ function PaymentOverview({ item }: { item: ExchangeDisputeItem }) {
 
 function ReturnOverview({
   resolution: r,
+  compensationAmount,
 }: {
   resolution: NonNullable<ExchangeDisputeItem["returnResolution"]>;
+  compensationAmount?: number | null;
 }) {
+  const displayedComp = compensationAmount ?? r.compensation;
   return (
     <section className={styles.card} aria-label="Quyết định trả sách">
       <h2>{exchangeReturnPhase[r.phase]}</h2>
@@ -1694,10 +2264,10 @@ function ReturnOverview({
             <dd>{dateText(r.checkDueAt)}</dd>
           </div>
         )}
-        {r.compensation > 0 && (
+        {displayedComp > 0 && (
           <div>
-            <dt>Bồi thường từ cọc bên giữ sách</dt>
-            <dd>{money(r.compensation)}</dd>
+            <dt>Khấu trừ / bồi thường</dt>
+            <dd>{money(displayedComp)}</dd>
           </div>
         )}
       </dl>
@@ -1706,14 +2276,16 @@ function ReturnOverview({
           Nếu có kháng nghị, hạn tính lại khi Admin giữ quyết định.
         </p>
       )}
-      {r.compensation > 0 && (
-        <p className={styles.muted}>Hoàn tiền bù cho người đã nộp.</p>
+      {displayedComp > 0 && (
+        <p className={styles.muted}>
+          Phần tiền ký quỹ còn dư (nếu có) sau khi trừ bồi thường sẽ được hoàn lại ví bên giữ sách.
+        </p>
       )}
       {r.outcome && (
         <p>
           {r.outcome === "Returned"
             ? "Đã ghi nhận trả sách và hoàn tiền."
-            : "Đã chi bồi thường và ghi nhận vi phạm không trả sách."}
+            : "Đã tất toán khấu trừ/bồi thường theo phán quyết."}
         </p>
       )}
     </section>

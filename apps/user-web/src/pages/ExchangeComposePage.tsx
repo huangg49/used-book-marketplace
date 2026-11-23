@@ -287,10 +287,10 @@ function ExchangeCompose({ listingId }: { listingId: string | null }) {
                 <section className={styles.amounts} aria-labelledby="proposal-money">
                   <h2 id="proposal-money">Nếu hai bên đồng ý</h2>
                   <dl>
-                    <div><dt>Cọc của bạn</dt><dd>{formatVnd(targetValue)}</dd></div>
+                    <div><dt>Cọc của bạn (bằng giá trị sách gửi)</dt><dd>{formatVnd(ownValue)}</dd></div>
                     <div><dt>{difference < 0 ? `Tiền bù của ${book.seller.displayName}` : "Tiền bù của bạn"}</dt><dd>{formatVnd(Math.abs(difference))}</dd></div>
-                    <div className={styles.total}><dt>Bạn cần nộp</dt><dd>{formatVnd(targetValue + Math.max(0, difference))}</dd></div>
-                    <div><dt>{book.seller.displayName} cần nộp</dt><dd>{formatVnd(ownValue + Math.max(0, -difference))}</dd></div>
+                    <div className={styles.total}><dt>Bạn cần nộp</dt><dd>{formatVnd(ownValue + Math.max(0, difference))}</dd></div>
+                    <div><dt>{book.seller.displayName} cần nộp</dt><dd>{formatVnd(targetValue + Math.max(0, -difference))}</dd></div>
                   </dl>
                   <p>Gửi đề nghị chưa giữ sách hay trừ tiền.</p>
                 </section>
