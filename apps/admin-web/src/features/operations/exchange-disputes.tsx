@@ -39,6 +39,7 @@ import {
   type ExchangeReturnAction,
 } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
+import { errorText } from "../../core/errors";
 import { canReview, session } from "../../core/session";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
 import { EmptyArt } from "../../core/EmptyArt";
@@ -1155,7 +1156,7 @@ function InspectionDisputeActions({
               ? snap.book.title.slice(0, 22) + "…"
               : snap.book.title;
           presets.push({
-            label: `Cuốn ${idx + 1}: ${shortTitle} (${money(snap.exchangeValue)})`,
+            label: `Cuốn ${idx + 1}: ${shortTitle} (${money(snap.exchangeValue)}) · Giữ sách`,
             amount: snap.exchangeValue,
           });
         }
@@ -1164,16 +1165,16 @@ function InspectionDisputeActions({
       const quarter = Math.round(baseComp.maxDamage * 0.25);
       if (quarter >= 1 && quarter < baseComp.maxDamage && !seen.has(quarter)) {
         seen.add(quarter);
-        presets.push({ label: `25% (${money(quarter)})`, amount: quarter });
+        presets.push({ label: `25% (${money(quarter)}) · Giữ sách`, amount: quarter });
       }
     }
     const half = Math.round(baseComp.maxDamage * 0.5);
     if (half >= 1 && half < baseComp.maxDamage && !seen.has(half)) {
       seen.add(half);
-      presets.push({ label: `50% (${money(half)})`, amount: half });
+      presets.push({ label: `50% (${money(half)}) · Giữ sách`, amount: half });
     }
     presets.push({
-      label: `Toàn phần (${money(baseComp.maxDamage)})`,
+      label: `Toàn phần (${money(baseComp.applied)}) · Hủy đơn`,
       amount: baseComp.maxDamage,
     });
   }
@@ -1184,6 +1185,7 @@ function InspectionDisputeActions({
       label: string;
       ruling: string;
       confirmTitle: string;
+      bookDisposition: string;
       party1: {
         name: string;
         role: string;
@@ -1203,14 +1205,17 @@ function InspectionDisputeActions({
   > = {
     CompensateRecipient: {
       label: compForRecipient.isPartial
-        ? `Khấu trừ ${money(compForRecipient.applied)} cho ${recipientName} · Hoàn tất trao đổi`
-        : `Bồi thường cho ${recipientName} (+${money(compForRecipient.ownerReceives)})`,
+        ? `1. Khấu trừ ${money(compForRecipient.applied)} cho ${recipientName} (Hai bên giữ sách)`
+        : `1. Bồi thường cho ${recipientName} (+${money(compForRecipient.ownerReceives)}) (Hủy đơn)`,
       ruling: compForRecipient.isPartial
         ? `Xác định thiệt hại một phần trên sách do ${initiatorName} gửi (${money(compForRecipient.applied)}). Hai bên giữ sách đã nhận và hoàn tất trao đổi.`
         : `Xác định sách do ${initiatorName} gửi không đạt thỏa thuận. Chấp nhận bồi thường toàn phần cho ${recipientName}.`,
       confirmTitle: compForRecipient.isPartial
         ? `Xác nhận khấu trừ ${money(compForRecipient.applied)} cho ${recipientName}?`
         : `Xác nhận bồi thường cho ${recipientName}?`,
+      bookDisposition: compForRecipient.isPartial
+        ? `Hai bên giữ sách đã nhận. Bên vi phạm (${initiatorName}) bồi thường thiệt hại ${money(compForRecipient.applied)} cho bên bị hại (${recipientName}) để bù đắp chênh lệch. Giao dịch đóng ở trạng thái Hoàn tất.`
+        : `Hủy giao dịch trao đổi. ${recipientName} giữ sách hỏng / không nhận sách. Bài đăng sách của ${initiatorName} bị đóng vĩnh viễn và ghi nhận vi phạm.`,
       party1: {
         name: recipientName,
         role: compForRecipient.isPartial
@@ -1237,10 +1242,12 @@ function InspectionDisputeActions({
         : `Két ký quỹ giải ngân ${money(totalDeposit(item))} · Phiếu hủy & đóng bài đăng`,
     },
     CompleteExchange: {
-      label: "Bác khiếu nại (Hoàn tất trao đổi, hoàn 100% cọc)",
+      label: "2. Bác khiếu nại (Hoàn tất trao đổi, hoàn 100% cọc) (Hai bên giữ sách)",
       ruling:
         "Sách đúng mô tả ban đầu, khiếu nại không đủ cơ sở. Hoàn tất trao đổi bình thường.",
       confirmTitle: "Xác nhận bác khiếu nại & hoàn tất trao đổi?",
+      bookDisposition:
+        "Hai bên giữ sách đã nhận. Đơn khiếu nại bị bác do sách đúng cam kết ban đầu. Cả hai bên nhận lại 100% tiền cọc về ví và giao dịch hoàn tất thành công.",
       party1: {
         name: initiatorName,
         role: "Bên khởi tạo · Hoàn tất",
@@ -1259,14 +1266,17 @@ function InspectionDisputeActions({
     },
     CompensateInitiator: {
       label: compForInitiator.isPartial
-        ? `Khấu trừ ${money(compForInitiator.applied)} cho ${initiatorName} · Hoàn tất trao đổi`
-        : `Bồi thường cho ${initiatorName} (+${money(compForInitiator.ownerReceives)})`,
+        ? `3. Khấu trừ ${money(compForInitiator.applied)} cho ${initiatorName} (Hai bên giữ sách)`
+        : `3. Bồi thường cho ${initiatorName} (+${money(compForInitiator.ownerReceives)}) (Hủy đơn)`,
       ruling: compForInitiator.isPartial
         ? `Xác định thiệt hại một phần trên sách do ${recipientName} gửi (${money(compForInitiator.applied)}). Hai bên giữ sách đã nhận và hoàn tất trao đổi.`
         : `Xác định sách do ${recipientName} gửi không đạt thỏa thuận. Chấp nhận bồi thường toàn phần cho ${initiatorName}.`,
       confirmTitle: compForInitiator.isPartial
         ? `Xác nhận khấu trừ ${money(compForInitiator.applied)} cho ${initiatorName}?`
         : `Xác nhận bồi thường cho ${initiatorName}?`,
+      bookDisposition: compForInitiator.isPartial
+        ? `Hai bên giữ sách đã nhận. Bên vi phạm (${recipientName}) bồi thường thiệt hại ${money(compForInitiator.applied)} cho bên bị hại (${initiatorName}) để bù đắp chênh lệch. Giao dịch đóng ở trạng thái Hoàn tất.`
+        : `Hủy giao dịch trao đổi. ${initiatorName} giữ sách hỏng / không nhận sách. Bài đăng sách của ${recipientName} bị đóng vĩnh viễn và ghi nhận vi phạm.`,
       party1: {
         name: initiatorName,
         role: compForInitiator.isPartial
@@ -1434,6 +1444,23 @@ function InspectionDisputeActions({
               )}
 
               <div className={styles.settlementCard}>
+                <div style={{
+                  padding: "0.75rem 0.95rem",
+                  marginBottom: "0.85rem",
+                  borderRadius: "8px",
+                  background: "#fdfbf7",
+                  border: "1px solid #d9cbbd",
+                  fontSize: "0.875rem",
+                  lineHeight: "1.5"
+                }}>
+                  <div style={{ fontWeight: 700, color: "var(--shop-wine)", display: "flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.3rem" }}>
+                    <BookOpen size={16} aria-hidden="true" /> Xử lý sách vật lý
+                  </div>
+                  <p style={{ margin: 0, color: "var(--shop-ink)" }}>
+                    {active.bookDisposition}
+                  </p>
+                </div>
+
                 <div className={styles.settlementHeader}>
                   <span>Dòng tiền sau phán quyết</span>
                   <span>Sổ cái</span>
@@ -1654,11 +1681,39 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
           Tải lại hồ sơ
         </Button>
       </header>
-      {outcome && <Notice tone={outcome.tone}>{outcome.text}</Notice>}
+      {outcome && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
+          <Notice tone={outcome.tone}>{outcome.text}</Notice>
+          <div>
+            <Link
+              to={{ pathname: queuePath, search }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.6rem 1.25rem",
+                borderRadius: "8px",
+                background: "var(--shop-wine, #5c1d24)",
+                color: "#fff",
+                textDecoration: "none",
+                fontWeight: 600,
+                fontSize: "0.925rem",
+              }}
+            >
+              <ArrowLeft size={16} aria-hidden="true" /> Quay lại danh sách khiếu nại
+            </Link>
+          </div>
+        </div>
+      )}
       {result.isPending && <p role="status">Đang tải hồ sơ…</p>}
-      {result.isError && (
+      {result.isError && !outcome && (
         <ErrorNotice
           error={result.error}
+          describe={(err) =>
+            err instanceof ApiError && err.status === 404
+              ? "Hồ sơ khiếu nại này đã được xử lý hoàn tất và đóng, hoặc không còn trong hàng đợi."
+              : errorText(err)
+          }
           retry={() => void result.refetch()}
           busy={result.isFetching || pending}
         />
@@ -1769,6 +1824,12 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                     embedded
                     id={item.id}
                     userId={user.id}
+                    parties={{
+                      initiatorId: item.initiatorId,
+                      initiatorName: item.participants?.initiator?.displayName?.trim() || "Trần Minh Thư",
+                      recipientId: item.recipientId,
+                      recipientName: item.participants?.recipient?.displayName?.trim() || "Đặng Hoàng Nam",
+                    }}
                     onAssignment={() => result.refetch()}
                   />
                 )}

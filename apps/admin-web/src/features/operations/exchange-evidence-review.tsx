@@ -8,6 +8,7 @@ import {
 } from "@used-books/session-client";
 import { z } from "zod";
 import { ApiError } from "@used-books/session-client";
+import { dateText } from "../../core/format";
 import { session } from "../../core/session";
 import { Button, Notice } from "../../core/ui";
 import styles from "./exchange-evidence-review.module.css";
@@ -15,11 +16,18 @@ const receipt = z.object({ entityId: z.string(), state: z.string() });
 export function ExchangeEvidenceReview({
   id,
   userId,
+  parties,
   onAssignment,
   embedded = false,
 }: {
   id: string;
   userId: string;
+  parties?: {
+    initiatorId?: string;
+    initiatorName?: string;
+    recipientId?: string;
+    recipientName?: string;
+  };
   embedded?: boolean;
   onAssignment?: () => Promise<unknown>;
 }) {
@@ -188,28 +196,58 @@ export function ExchangeEvidenceReview({
                 </p>
               )}
               <ul>
-                {list.data?.items.map((e) => (
-                  <li key={e.id}>
-                    <div className={styles.file}>
-                      <FileText size={18} aria-hidden="true" />
-                      <div>
-                        <strong>{e.fileName}</strong>
-                        <span>
-                          {e.mimeType} · {Math.ceil(e.byteSize / 1000)} KB
-                        </span>
+                {list.data?.items.map((e) => {
+                  const uploaderInfo = (() => {
+                    if (!parties) return null;
+                    if (e.uploaderId === parties.initiatorId) {
+                      return { name: parties.initiatorName || "Trần Minh Thư", role: "Bên khởi tạo" };
+                    }
+                    if (e.uploaderId === parties.recipientId) {
+                      return { name: parties.recipientName || "Đặng Hoàng Nam", role: "Bên nhận đề xuất" };
+                    }
+                    return null;
+                  })();
+
+                  return (
+                    <li key={e.id}>
+                      <div className={styles.file}>
+                        <FileText size={18} aria-hidden="true" />
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                            <strong>{e.fileName}</strong>
+                            {uploaderInfo && (
+                              <span
+                                style={{
+                                  fontSize: "0.78rem",
+                                  fontWeight: 600,
+                                  padding: "2px 8px",
+                                  borderRadius: "4px",
+                                  backgroundColor: uploaderInfo.role === "Bên nhận đề xuất" ? "#fef3c7" : "#e0e7ff",
+                                  color: uploaderInfo.role === "Bên nhận đề xuất" ? "#92400e" : "#3730a3",
+                                }}
+                              >
+                                {uploaderInfo.name}
+                              </span>
+                            )}
+                          </div>
+                          <span>
+                            {e.mimeType} · {Math.ceil(e.byteSize / 1000)} KB
+                            {e.createdAt && <> · {dateText(e.createdAt)}</>}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <Button
-                      aria-label={`Cấp quyền tải ${e.fileName}`}
-                      disabled={
-                        e.status !== "Ready" || reason.trim().length < 5
-                      }
-                      onClick={() => void read(e.id, e.fileName, e.mimeType)}
-                    >
-                      Cấp quyền tải
-                    </Button>
-                  </li>
-                ))}
+                      <Button
+                        aria-label={`Cấp quyền tải ${e.fileName}`}
+                        disabled={
+                          e.status !== "Ready" || reason.trim().length < 5
+                        }
+                        onClick={() => void read(e.id, e.fileName, e.mimeType)}
+                      >
+                        Cấp quyền tải
+                      </Button>
+                    </li>
+                  );
+                })}
               </ul>
             </>
           )}
