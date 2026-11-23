@@ -826,7 +826,15 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(await db.c.exchanges.findOne({ _id: legacy.id })).toEqual(funded);
     expect(await db.c.exchanges.findOne({ _id: current.id })).toEqual(currentFunded);
     expect(await db.c.ledger_entries.find({ journalId: payment!._id }).sort({ _id: 1 }).toArray()).toEqual(postings);
-    await post(path + '/funding', {}, user2).expect(200);
+    const legacyFunded = (await post(path + '/funding', {}, user2).expect(200)).body;
+    // Shared QA worker tests run beyond these shipping deadlines. Close both
+    // funded fixtures explicitly so their refunds cannot affect later assertions.
+    for (const row of [legacyFunded, current]) {
+      const cancel = `/exchanges/${row.id}/cancel`;
+      const pending = (await post(cancel, { expectedVersion: row.revision }, user1).expect(200)).body;
+      const cancelled = (await post(cancel, { expectedVersion: pending.revision }, user2).expect(200)).body;
+      expect(cancelled.status).toBe('Cancelled');
+    }
     expect((await reconcile()).balanced).toBe(true);
   });
 
