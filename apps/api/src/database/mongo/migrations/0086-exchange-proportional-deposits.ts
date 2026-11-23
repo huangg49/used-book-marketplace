@@ -5,24 +5,54 @@ import { exchangeAmounts } from '../../../modules/exchanges/exchange-agreement.j
 
 export function withProportionalExchangeDeposits(spec: CollectionSpec): CollectionSpec {
   if (spec.name !== 'exchanges') return spec;
-  const exprStr = JSON.stringify(spec.expr);
-  const updatedExprStr = exprStr
-    .replace(
-      '["$initiatorDeposit","$agreement.recipientBook.exchangeValue"]',
-      '["$initiatorDeposit",{"$sum":"$agreement.initiatorBooks.exchangeValue"}]',
-    )
-    .replace(
-      '["$recipientDeposit",{"$sum":"$agreement.initiatorBooks.exchangeValue"}]',
-      '["$recipientDeposit","$agreement.recipientBook.exchangeValue"]',
-    )
-    .replace(
-      '{"$gt":["$initiatorDeposit","$recipientDeposit"]},"$initiatorId","$recipientId"',
-      '{"$lt":["$initiatorDeposit","$recipientDeposit"]},"$initiatorId","$recipientId"',
+  const rewrite = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(rewrite);
+    if (!value || typeof value !== 'object') return value;
+    const record = value as Record<string, unknown>;
+    if ('$eq' in record) {
+      const pair = record.$eq;
+      if (
+        Array.isArray(pair) &&
+        pair[0] === '$initiatorDeposit' &&
+        pair[1] === '$agreement.recipientBook.exchangeValue'
+      ) {
+        return {
+          $eq: [
+            '$initiatorDeposit',
+            { $sum: '$agreement.initiatorBooks.exchangeValue' },
+          ],
+        };
+      }
+      if (
+        Array.isArray(pair) &&
+        pair[0] === '$recipientDeposit' &&
+        typeof pair[1] === 'object' &&
+        pair[1] !== null &&
+        (pair[1] as Record<string, unknown>).$sum ===
+          '$agreement.initiatorBooks.exchangeValue'
+      ) {
+        return {
+          $eq: ['$recipientDeposit', '$agreement.recipientBook.exchangeValue'],
+        };
+      }
+    }
+    if ('$gt' in record) {
+      const pair = record.$gt;
+      if (
+        Array.isArray(pair) &&
+        pair[0] === '$initiatorDeposit' &&
+        pair[1] === '$recipientDeposit'
+      ) {
+        return { $lt: ['$initiatorDeposit', '$recipientDeposit'] };
+      }
+    }
+    return Object.fromEntries(
+      Object.entries(record).map(([key, nested]) => [key, rewrite(nested)]),
     );
-
+  };
   return {
     ...spec,
-    expr: JSON.parse(updatedExprStr),
+    expr: rewrite(spec.expr) as CollectionSpec['expr'],
   };
 }
 
@@ -32,8 +62,10 @@ export function createExchangeProportionalDepositsMigration(previous: Collection
     id: '0086-exchange-proportional-deposits',
     definition: { collections, backfill: 'proportionalDepositsV1' },
     async up(db: Db) {
-      const { applyCollectionSpecs } = await import('./index.js');
-      await applyCollectionSpecs(db, collections);
+      const { applyCollectionSpecs, currentCollections } = await import('./index.js');
+      const currentExchange = currentCollections().find((spec) => spec.name === 'exchanges');
+      if (!currentExchange) throw new Error('Expected current Exchange collection spec');
+      await applyCollectionSpecs(db, [currentExchange]);
       const exchanges = db.collection<ExchangeDoc>('exchanges');
       for await (const row of exchanges.find({ agreement: { $ne: null } })) {
         if (row.agreement) {
