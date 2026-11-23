@@ -88,6 +88,13 @@ const exchangeCode = (item: ExchangeDisputeItem) =>
   "#" + item.id.slice(0, 8).toUpperCase();
 const totalDeposit = (item: ExchangeDisputeItem) =>
   item.initiatorDeposit + item.recipientDeposit + item.diffAmount;
+const needsAdminLimit = (item: ExchangeDisputeItem) =>
+  totalDeposit(item) > STAFF_LIMIT &&
+  Boolean(
+    item.canStartReturnResolution ||
+      item.returnResolution ||
+      item.canVerifyOutboundDelivery,
+  );
 
 function shipmentIssue(item: ExchangeDisputeItem) {
   if (Boolean(item.initiatorShippedAt) === Boolean(item.recipientShippedAt))
@@ -272,7 +279,7 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
         )}
         <ol className={styles.queueList} ref={list} start={start + 1}>
           {visible.map((item) => {
-            const isHighValue = totalDeposit(item) > 300000;
+            const isHighValue = needsAdminLimit(item);
             const initiator = disputeParty(item, "initiator");
             const recipient = disputeParty(item, "recipient");
             return (
@@ -896,8 +903,7 @@ function OperationsReturnActions({
 type ResolutionDecision =
   | "CompleteExchange"
   | "CompensateInitiator"
-  | "CompensateRecipient"
-  | "RefundBoth";
+  | "CompensateRecipient";
 
 function computeDamageSettlement(
   item: ExchangeDisputeItem,
@@ -1047,7 +1053,6 @@ function InspectionDisputeActions({
   });
   const assigned = access.isSuccess && access.data.assigneeId === user.id;
   const isAdmin = user.roles.includes("ADMIN");
-  const overStaffLimit = totalDeposit(item) > STAFF_LIMIT && !isAdmin;
 
   const bothReceived = Boolean(
     item.initiatorShippedAt &&
@@ -1055,11 +1060,6 @@ function InspectionDisputeActions({
       item.initiatorReceivedAt &&
       item.recipientReceivedAt,
   );
-  const hasAnyShipment = Boolean(
-    item.initiatorShippedAt || item.recipientShippedAt,
-  );
-  const canCompensate = bothReceived || hasAnyShipment;
-  const canRefundBoth = !bothReceived && isAdmin;
 
   const initiatorName =
     item.participants?.initiator?.displayName?.trim() || "Bên khởi tạo";
@@ -1071,17 +1071,11 @@ function InspectionDisputeActions({
   const isComplainantInitiator =
     item.disputedBy === item.initiatorId || item.disputedBy === "Initiator";
 
-  const defaultDecision: ResolutionDecision = !bothReceived
-    ? canRefundBoth
-      ? "RefundBoth"
-      : isComplainantRecipient
-        ? "CompensateRecipient"
-        : "CompensateInitiator"
-    : isComplainantRecipient
-      ? "CompensateRecipient"
-      : isComplainantInitiator
-        ? "CompensateInitiator"
-        : "CompleteExchange";
+  const defaultDecision: ResolutionDecision = isComplainantRecipient
+    ? "CompensateRecipient"
+    : isComplainantInitiator
+      ? "CompensateInitiator"
+      : "CompleteExchange";
 
   const [decision, setDecision] = useState<ResolutionDecision>(defaultDecision);
   const [note, setNote] = useState("");
@@ -1103,7 +1097,7 @@ function InspectionDisputeActions({
 
   useEffect(() => {
     setDecision(defaultDecision);
-  }, [item.id, bothReceived, canRefundBoth]);
+  }, [item.id, defaultDecision]);
 
   useEffect(() => {
     setDamageInput(String(baseComp.maxDamage));
@@ -1141,10 +1135,6 @@ function InspectionDisputeActions({
   const diffAmount = item.diffAmount;
   const diffPayerIsInitiator = item.diffPayerId === item.initiatorId;
   const diffPayerIsRecipient = item.diffPayerId === item.recipientId;
-  const initiatorLocked =
-    initiatorDeposit + (diffPayerIsInitiator && diffAmount > 0 ? diffAmount : 0);
-  const recipientLocked =
-    recipientDeposit + (diffPayerIsRecipient && diffAmount > 0 ? diffAmount : 0);
 
   const faultySnapshots =
     victimSide === "recipient"
@@ -1302,50 +1292,35 @@ function InspectionDisputeActions({
         ? `Két ký quỹ giải ngân ${money(totalDeposit(item))} · Phiếu chuyển sang Hoàn tất`
         : `Két ký quỹ giải ngân ${money(totalDeposit(item))} · Phiếu hủy & đóng bài đăng`,
     },
-    RefundBoth: {
-      label: "Hủy giao dịch & hoàn 100% tiền ký quỹ cho cả hai bên (Admin)",
-      ruling:
-        "Dùng khi hàng thất lạc trong quá trình vận chuyển hoặc sự cố khách quan trước khi giao xong hai chiều. Hoàn nguyên 100% tiền ký quỹ cho cả hai bên.",
-      confirmTitle: "Xác nhận hủy giao dịch & hoàn 100% tiền cho cả hai bên?",
-      party1: {
-        name: initiatorName,
-        role: "Bên khởi tạo · Hoàn 100% ký quỹ",
-        amount: `+${money(initiatorLocked)}`,
-        isPositive: true,
-        detail: `Hoàn ${money(initiatorDeposit)} cọc${diffPayerIsInitiator && diffAmount > 0 ? ` + hoàn ${money(diffAmount)} tiền bù` : ""}`,
-      },
-      party2: {
-        name: recipientName,
-        role: "Bên nhận đề xuất · Hoàn 100% ký quỹ",
-        amount: `+${money(recipientLocked)}`,
-        isPositive: true,
-        detail: `Hoàn ${money(recipientDeposit)} cọc${diffPayerIsRecipient && diffAmount > 0 ? ` + hoàn ${money(diffAmount)} tiền bù` : ""}`,
-      },
-      footerText: `Hoàn trả toàn bộ ${money(totalDeposit(item))} ký quỹ · Các bài đăng chưa gửi mở lại`,
-    },
   };
 
   const active = decisionMeta[decision];
   const currentComp =
     decision === "CompensateRecipient" ? compForRecipient : compForInitiator;
 
+  if (!bothReceived) {
+    return (
+      <section
+        aria-label="Phán quyết sự cố vận chuyển / giao nhận"
+        className={styles.nextStep}
+      >
+        <h2>Phán quyết sự cố vận chuyển / giao nhận</h2>
+        <Notice tone="info">
+          {item.canVerifyOutboundDelivery
+            ? "Tiền và sách đang được giữ. Admin phụ trách có thể xác minh giao sách từ bằng chứng bàn giao để mở quy trình trả sách một chiều."
+            : "Phán quyết trực tiếp chỉ khả dụng sau khi cả hai bên đã xác nhận nhận sách (kiểm tra sách hai chiều). Hồ sơ hiện tiếp tục giữ tiền và sách trong lúc đối chiếu hoặc chờ quy trình trả sách một chiều."}
+        </Notice>
+      </section>
+    );
+  }
+
   return (
     <section
       aria-label="Phán quyết khiếu nại kiểm tra sách"
       className={styles.nextStep}
     >
-      <h2>
-        {bothReceived
-          ? "Phán quyết khiếu nại kiểm tra sách"
-          : "Phán quyết sự cố vận chuyển / giao nhận"}
-      </h2>
-      {overStaffLimit ? (
-        <Notice tone="info">
-          Tổng khoản giữ là {money(totalDeposit(item))} (vượt hạn mức 300.000đ
-          của Nhân viên). Chỉ tài khoản Admin mới có thẩm quyền ra phán quyết hồ
-          sơ này.
-        </Notice>
-      ) : !assigned ? (
+      <h2>Phán quyết khiếu nại kiểm tra sách</h2>
+      {!assigned ? (
         <QuickAssignBox
           id={item.id}
           userId={user.id}
@@ -1373,20 +1348,15 @@ function InspectionDisputeActions({
                     setDecision(e.target.value as ResolutionDecision)
                   }
                 >
-                  <option value="CompensateRecipient" disabled={!canCompensate}>
+                  <option value="CompensateRecipient">
                     {decisionMeta.CompensateRecipient.label}
                   </option>
-                  <option value="CompleteExchange" disabled={!bothReceived}>
+                  <option value="CompleteExchange">
                     {decisionMeta.CompleteExchange.label}
                   </option>
-                  <option value="CompensateInitiator" disabled={!canCompensate}>
+                  <option value="CompensateInitiator">
                     {decisionMeta.CompensateInitiator.label}
                   </option>
-                  {!bothReceived && (
-                    <option value="RefundBoth" disabled={!canRefundBoth}>
-                      {decisionMeta.RefundBoth.label}
-                    </option>
-                  )}
                 </select>
               </label>
 
@@ -1610,11 +1580,9 @@ function InspectionDisputeActions({
               text:
                 decision === "CompleteExchange"
                   ? "Đã bác khiếu nại và hoàn tất trao đổi thành công. Tiền cọc đã được tất toán về ví."
-                  : decision === "RefundBoth"
-                    ? "Đã hủy giao dịch và hoàn 100% tiền ký quỹ cho cả hai bên."
-                    : currentComp.isPartial
-                      ? `Đã khấu trừ thiệt hại ${money(currentComp.applied)} và hoàn tất trao đổi thành công.`
-                      : "Đã ra phán quyết bồi thường toàn phần thành công. Tiền bồi thường đã được chuyển về ví.",
+                  : currentComp.isPartial
+                    ? `Đã khấu trừ thiệt hại ${money(currentComp.applied)} và hoàn tất trao đổi thành công.`
+                    : "Đã ra phán quyết bồi thường toàn phần thành công. Tiền bồi thường đã được chuyển về ví.",
               close: true,
             };
           }}
@@ -1833,14 +1801,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
           {item?.status === "ResolutionPending" &&
             !item.canStartReturnResolution &&
             !item.returnResolution &&
-            (Boolean(
-              item.initiatorShippedAt &&
-                item.recipientShippedAt &&
-                item.initiatorReceivedAt &&
-                item.recipientReceivedAt,
-            ) ||
-            Boolean(item.initiatorShippedAt || item.recipientShippedAt) ||
-            user.roles.includes("ADMIN") ? (
+            !(item.canVerifyOutboundDelivery && user.roles.includes("ADMIN")) && (
               <InspectionDisputeActions
                 item={item}
                 user={user}
@@ -1848,13 +1809,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                 onFinish={setOutcome}
                 onPending={setPending}
               />
-            ) : (
-              <Notice tone="info">
-                {item.canVerifyOutboundDelivery
-                  ? "Tiền và sách đang được giữ. Admin phụ trách có thể xác minh giao sách từ bằng chứng bàn giao."
-                  : "Hồ sơ tiếp tục giữ tiền và sách trong lúc đối chiếu. Chưa đủ điều kiện chạy quy trình trả sách một chiều."}
-              </Notice>
-            ))}
+            )}
         </div>
       </div>
     </div>
@@ -2216,7 +2171,7 @@ function ShipmentOverview({
 
 function PaymentOverview({ item }: { item: ExchangeDisputeItem }) {
   const funded = Boolean(item.initiatorFundedAt && item.recipientFundedAt);
-  const isHighValue = totalDeposit(item) > STAFF_LIMIT;
+  const isHighValue = needsAdminLimit(item);
   const diffPayer =
     item.diffPayerId === item.initiatorId
       ? "Bên khởi tạo"

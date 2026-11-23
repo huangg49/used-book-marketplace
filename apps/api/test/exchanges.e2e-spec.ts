@@ -2435,26 +2435,23 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         }, user2).expect(200)).body;
         const advanceInspection = (revision: number) =>
           post(inspectionPath + '/demo-advance', { deadline: 'Inspection', expectedVersion: revision }, user1);
-        expect((await get(inspectionPath, user1).expect(200)).body).not.toHaveProperty('demoDeadline');
-        await advanceInspection(delivered.revision).expect(409);
+        expect((await get(inspectionPath, user1).expect(200)).body.demoDeadline).toBe('Inspection');
+        await advanceInspection(firstReceipt.revision).expect(409);
 
         const acknowledged = (await post(inspectionPath + '/complete', {
           expectedVersion: delivered.revision,
         }, user1).expect(200)).body;
         expect(acknowledged).toMatchObject({ status: 'Delivered', completedAt: null, recipientCompletedAt: null });
-        expect((await get(inspectionPath, user1).expect(200)).body).not.toHaveProperty('demoDeadline');
-        await advanceInspection(acknowledged.revision).expect(409);
+        expect((await get(inspectionPath, user1).expect(200)).body.demoDeadline).toBe('Inspection');
 
-        const bothAcknowledged = (await post(inspectionPath + '/complete', {
-          expectedVersion: acknowledged.revision,
-        }, user2).expect(200)).body;
-        expect(bothAcknowledged).toMatchObject({
+        const settledByDemo = (await advanceInspection(acknowledged.revision).expect(200)).body;
+        expect(settledByDemo).toMatchObject({
           status: 'Completed',
           completedAt: expect.any(String),
           initiatorReceivedAt: delivered.initiatorReceivedAt,
           recipientReceivedAt: delivered.recipientReceivedAt,
           initiatorCompletedAt: acknowledged.initiatorCompletedAt,
-          recipientCompletedAt: expect.any(String),
+          recipientCompletedAt: null,
         });
 
         const proposalA = await createApprovedListing(user1, 100000, 'Both');
