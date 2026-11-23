@@ -1704,8 +1704,8 @@ export class ExchangesService {
           (isInitiator
             ? exchange.recipientCompletedAt
             : exchange.initiatorCompletedAt) != null;
-        // Acknowledgement never waives either participant's inspection window.
-        const willBeBothCompleted = bothAcknowledged && inspectionMaySettle(exchange, now);
+        // When both participants confirm inspection without dispute, mutual early settlement completes immediately.
+        const willBeBothCompleted = bothAcknowledged && !hasExchangeDispute(exchange);
 
         if (willBeBothCompleted) {
           setFields.status = 'Completed';
@@ -1936,8 +1936,9 @@ export class ExchangesService {
           const exchange = await this.exchange(tx, initialExchange._id);
 
           const now = await tx.now();
+          const isInitiator = actor._id === exchange.initiatorId;
           const deadlines = inspectionDeadlines(exchange);
-          const deadline = actor._id === exchange.initiatorId ? deadlines.initiator : deadlines.recipient;
+          const deadline = isInitiator ? deadlines.initiator : deadlines.recipient;
           const lateOneSided = exchange.status === 'Preparing' && exchange.shippingDeadline &&
             now >= exchange.shippingDeadline &&
             Boolean(exchange.initiatorShippedAt) !== Boolean(exchange.recipientShippedAt);
@@ -1950,6 +1951,9 @@ export class ExchangesService {
           }
 
           if (deadline && now >= deadline) throw invalidState();
+          if (isInitiator ? exchange.initiatorCompletedAt : exchange.recipientCompletedAt) {
+            throw invalidState();
+          }
           const next = await tx.c.exchanges.findOneAndUpdate(
             { _id: exchange._id, revision: exchange.revision },
             {

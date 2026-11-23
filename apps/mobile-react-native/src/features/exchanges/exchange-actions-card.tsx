@@ -1523,9 +1523,9 @@ function ExchangeActionsContent({
 
       <ConfirmDialog
         visible={confirmCompleteOpen}
-        title="Xác nhận đã kiểm tra sách?"
-        message="Xác nhận bạn đã kiểm tra sách. Cọc vẫn được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
-        confirmLabel="Xác nhận đã kiểm tra"
+        title="Xác nhận nghiệm thu sách?"
+        message="Bạn có chắc chắn đã kiểm tra sách kỹ lưỡng và hài lòng? Sau khi xác nhận, bạn sẽ từ bỏ quyền khiếu nại. Khi đối tác cũng xác nhận, cọc và tiền bù sẽ được hoàn tất về ví của cả hai ngay lập tức."
+        confirmLabel="Xác nhận nghiệm thu"
         onCancel={() => setConfirmCompleteOpen(false)}
         onConfirm={() => {
           setConfirmCompleteOpen(false);
@@ -2012,8 +2012,8 @@ function ExchangeActionsContent({
                 }
                 partnerValue={
                   isInitiator
-                    ? exchange.initiatorDeposit
-                    : exchange.recipientDeposit
+                    ? exchange.recipientDeposit
+                    : exchange.initiatorDeposit
                 }
                 busy={counterMutation.isPending}
                 onSubmit={(listingIds, note) =>

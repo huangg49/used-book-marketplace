@@ -157,7 +157,7 @@ export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
                             <span>Tiền cọc bảo chứng</span>
                         </div>
                         <div className={styles.bentoTileValue}>
-                            {detail.viewerDeposit !== undefined ? formatVnd(detail.viewerDeposit) : '100% giá trị sách đối tác'}
+                            {detail.viewerDeposit !== undefined ? formatVnd(detail.viewerDeposit) : '100% giá trị sách của bạn'}
                         </div>
                         <div className={styles.bentoTileNote}>
                             Hoàn lại 100% vào ví khi hoàn tất giao dịch an toàn (POL-14)

@@ -271,10 +271,11 @@ async function run() {
 
     // 5 Sách của tài khoản
     for (const bookDef of userDef.books) {
-      // Kiểm tra sách đã tồn tại chưa
-      const existingCatalog = await c.catalog_revisions.findOne({ title: bookDef.title });
-      if (existingCatalog) {
-        const matchingRevs = await c.listing_revisions.find({ bookId: existingCatalog.bookId }).toArray();
+      // Kiểm tra sách đã tồn tại chưa bằng cách tìm tất cả catalog revision có cùng title
+      const existingCatalogs = await c.catalog_revisions.find({ title: bookDef.title }).toArray();
+      if (existingCatalogs.length > 0) {
+        const existingBookIds = existingCatalogs.map(cat => cat.bookId);
+        const matchingRevs = await c.listing_revisions.find({ bookId: { $in: existingBookIds } }).toArray();
         const existingListing = await c.listings.findOne({
           _id: { $in: matchingRevs.map(r => r.listingId) },
           ownerId: userId,

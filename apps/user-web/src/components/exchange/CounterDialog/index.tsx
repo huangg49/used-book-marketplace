@@ -161,8 +161,8 @@ export function CounterDialog({ detail, onClose, onSubmit, isBusy }: Props) {
               </li>)}</ul>
               <dl>
                 <div><dt>Giá trị sách bạn gửi</dt><dd>{formatVnd(ownValue)}</dd></div>
-                <div><dt>Cọc của bạn</dt><dd>{formatVnd(receiveValue)}</dd></div>
-                <div><dt>Cọc của đối tác</dt><dd>{formatVnd(ownValue)}</dd></div>
+                <div><dt>Cọc của bạn</dt><dd>{formatVnd(ownValue)}</dd></div>
+                <div><dt>Cọc của đối tác</dt><dd>{formatVnd(receiveValue)}</dd></div>
                 <div className={styles.compensation}>
                   <dt>{difference > 0 ? "Bạn bù" : difference < 0 ? "Đối tác bù" : "Tiền bù"}</dt>
                   <dd>{formatVnd(Math.abs(difference))}</dd>
