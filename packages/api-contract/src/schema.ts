@@ -1279,6 +1279,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/finance-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Platform finance and profit by ledger posting date
+         * @description ACTIVE ADMIN only. Read-only snapshot-consistent aggregate of immutable ledger journals in Asia/Ho_Chi_Minh, inclusive dates, max 366 days. Simulated money. Revenue excludes pass-through shipping fees; transfers, top-ups and withdrawals are excluded from revenue.
+         */
+        get: operations["getFinanceOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/finance-cashflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Platform cashflow, wallet holds and ledger capital conservation
+         * @description ACTIVE ADMIN only. Read-only snapshot-consistent summary of simulated capital conservation, top-ups, withdrawal payouts and pending withdrawal queue in Asia/Ho_Chi_Minh.
+         */
+        get: operations["getFinanceCashflow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/finance-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active escrows, deposits and held wallet balances across the platform
+         * @description ACTIVE ADMIN only. Read-only snapshot of every active ledger hold account with balance > 0 (exchange deposits, auction bid holds, direct/point order escrows and pending withdrawal holds), enriched with holder and reference metadata.
+         */
+        get: operations["getFinanceHolds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/finance-hold-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historical deposit releases, refunds and forfeitures from the immutable ledger
+         * @description ACTIVE ADMIN only. Read-only ledger journal audit of released auction bid deposits, forfeited deposits, order/exchange deposit refunds and refunded withdrawals.
+         */
+        get: operations["getFinanceHoldHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/finance-hold-locks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historical deposit locks and hold placements from the immutable ledger
+         * @description ACTIVE ADMIN only. Read-only ledger journal audit of every time funds were locked from a member wallet into a hold account (auction bid deposits, exchange deposits, direct/point order holds, withdrawal holds).
+         */
+        get: operations["getFinanceHoldLocks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/finance-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historical wallet top-ups and completed withdrawal payouts from the immutable ledger
+         * @description ACTIVE ADMIN only. Read-only ledger journal audit of external cashflow in (Topup) and out (WithdrawalPayout) of the platform.
+         */
+        get: operations["getFinanceTransfers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/operations-analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Channel funnel performance and operational risk metrics
+         * @description ACTIVE STAFF/ADMIN only. Read-only aggregate of Direct Sale, Exchange and Auction channel throughput plus dispute, incident and user status indicators in Asia/Ho_Chi_Minh.
+         */
+        get: operations["getOperationsAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings": {
         parameters: {
             query?: never;
@@ -8152,6 +8292,292 @@ export interface components {
                 mediaId: string | null;
             }[];
         };
+        FinanceTotals: {
+            directCommission: number;
+            auctionCommission: number;
+            forfeitedDeposits: number;
+            depositShare: number;
+            legacyListingFees: number;
+            netRevenue: number;
+            passThroughShipping: number;
+            incidentCompensation: number;
+            profit: number;
+            gmv: number;
+            settledOrders: number;
+            takeRateBps: number | null;
+        };
+        FinanceOverview: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            simulated: true;
+            current: components["schemas"]["FinanceTotals"];
+            previous: {
+                /** Format: date */
+                from: string;
+                /** Format: date */
+                to: string;
+                totals: components["schemas"]["FinanceTotals"];
+            };
+            daily: {
+                /** Format: date */
+                date: string;
+                directCommission: number;
+                auctionCommission: number;
+                forfeitedDeposits: number;
+                depositShare: number;
+                netRevenue: number;
+                incidentCompensation: number;
+                profit: number;
+                gmv: number;
+                settledOrders: number;
+            }[];
+            exchange: {
+                completed: number;
+                initiatorValue: number;
+                recipientValue: number;
+            };
+            notes: string[];
+        };
+        FinanceCashflow: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            simulated: true;
+            conservation: {
+                balanced: boolean;
+                capitalTarget: number;
+                accountedTotal: number;
+                discrepancy: number;
+                sourceRemaining: number;
+                memberAvailable: number;
+                transactionHeld: number;
+                auctionHeld: number;
+                withdrawalHeld: number;
+                platformCommission: number;
+                listingFeeHeld: number;
+                incidentFundBalance: number;
+            };
+            period: {
+                topupTotal: number;
+                topupCount: number;
+                withdrawalTotal: number;
+                withdrawalCount: number;
+                netCashflow: number;
+            };
+            daily: {
+                /** Format: date */
+                date: string;
+                topupAmount: number;
+                topupCount: number;
+                withdrawalAmount: number;
+                withdrawalCount: number;
+                netCashflow: number;
+            }[];
+            withdrawalQueue: {
+                pendingCount: number;
+                pendingAmount: number;
+                /** Format: date-time */
+                oldestRequestedAt: string | null;
+            };
+        };
+        /** @enum {string} */
+        FinanceHoldKind: "Exchange" | "AuctionBid" | "DirectOrder" | "PointOrder" | "Withdrawal";
+        FinanceHolds: {
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            simulated: true;
+            summary: {
+                totalHeld: number;
+                totalAccounts: number;
+                byKind: {
+                    kind: components["schemas"]["FinanceHoldKind"];
+                    label: string;
+                    count: number;
+                    amount: number;
+                }[];
+            };
+            page: number;
+            /** @constant */
+            pageSize: 15;
+            totalItems: number;
+            items: {
+                accountId: string;
+                kind: components["schemas"]["FinanceHoldKind"];
+                kindLabel: string;
+                holderId: string | null;
+                holderName: string;
+                holderEmail: string | null;
+                amount: number;
+                referenceId: string | null;
+                status: string;
+                /** Format: date-time */
+                updatedAt: string | null;
+            }[];
+        };
+        /** @enum {string} */
+        FinanceHoldHistoryKind: "AuctionRelease" | "AuctionForfeit" | "OrderRefund" | "WithdrawalRefund";
+        FinanceHoldHistory: {
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            simulated: true;
+            summary: {
+                totalRefunded: number;
+                totalForfeited: number;
+                totalEvents: number;
+                byKind: {
+                    kind: components["schemas"]["FinanceHoldHistoryKind"];
+                    label: string;
+                    count: number;
+                    amount: number;
+                }[];
+            };
+            page: number;
+            /** @constant */
+            pageSize: 15;
+            totalItems: number;
+            items: {
+                journalId: string;
+                kind: components["schemas"]["FinanceHoldHistoryKind"];
+                kindLabel: string;
+                /** @enum {string} */
+                outcome: "ReturnedToWallet" | "Forfeited";
+                holderId: string | null;
+                holderName: string;
+                holderEmail: string | null;
+                amount: number;
+                referenceId: string | null;
+                detail: string;
+                /** Format: date-time */
+                postedAt: string;
+            }[];
+        };
+        FinanceHoldLocks: {
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            simulated: true;
+            summary: {
+                totalLocked: number;
+                totalEvents: number;
+                byKind: {
+                    kind: components["schemas"]["FinanceHoldKind"];
+                    label: string;
+                    count: number;
+                    amount: number;
+                }[];
+            };
+            page: number;
+            /** @constant */
+            pageSize: 15;
+            totalItems: number;
+            items: {
+                journalId: string;
+                kind: components["schemas"]["FinanceHoldKind"];
+                kindLabel: string;
+                holderId: string | null;
+                holderName: string;
+                holderEmail: string | null;
+                amount: number;
+                referenceId: string | null;
+                detail: string;
+                /** Format: date-time */
+                postedAt: string;
+            }[];
+        };
+        /** @enum {string} */
+        FinanceTransferKind: "Topup" | "WithdrawalPayout";
+        FinanceTransfers: {
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            simulated: true;
+            summary: {
+                totalTopup: number;
+                topupCount: number;
+                totalWithdrawal: number;
+                withdrawalCount: number;
+                netFlow: number;
+            };
+            page: number;
+            /** @constant */
+            pageSize: 15;
+            totalItems: number;
+            items: {
+                journalId: string;
+                kind: components["schemas"]["FinanceTransferKind"];
+                kindLabel: string;
+                userId: string | null;
+                userName: string;
+                userEmail: string | null;
+                amount: number;
+                referenceId: string | null;
+                detail: string;
+                /** Format: date-time */
+                postedAt: string;
+            }[];
+        };
+        OperationsAnalytics: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            serverTime: string;
+            sales: {
+                created: number;
+                completed: number;
+                active: number;
+                cancelled: number;
+                completionRateBps: number | null;
+            };
+            exchanges: {
+                proposed: number;
+                completed: number;
+                active: number;
+                disputed: number;
+                cancelled: number;
+                completionRateBps: number | null;
+            };
+            auctions: {
+                created: number;
+                active: number;
+                sold: number;
+                paymentExpired: number;
+                cancelled: number;
+                sellThroughRateBps: number | null;
+            };
+            risk: {
+                openExchangeDisputes: number;
+                openPointIncidents: number;
+                incidentFundBalance: number;
+                incidentCompensationInPeriod: number;
+                underfundedIncidents: number;
+            };
+            users: {
+                totalMembers: number;
+                newInPeriod: number;
+                activeMembers: number;
+                restrictedMembers: number;
+                lockedMembers: number;
+            };
+        };
         OperationsPoint: {
             /** Format: uuid */
             id: string;
@@ -11319,6 +11745,220 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RevenueOverview"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getFinanceOverview: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Finance totals, comparison with previous period, daily breakdown and exchange volume. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceOverview"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getFinanceCashflow: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ledger conservation snapshot, daily top-up/withdrawal flow and withdrawal queue health. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceCashflow"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getFinanceHolds: {
+        parameters: {
+            query?: {
+                kind?: "All" | "Exchange" | "AuctionBid" | "DirectOrder" | "PointOrder" | "Withdrawal";
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active hold breakdown by category and paginated hold items. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceHolds"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getFinanceHoldHistory: {
+        parameters: {
+            query?: {
+                kind?: "All" | "AuctionRelease" | "AuctionForfeit" | "OrderRefund" | "WithdrawalRefund";
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary and paginated deposit release/refund/forfeit ledger events. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceHoldHistory"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getFinanceHoldLocks: {
+        parameters: {
+            query?: {
+                kind?: "All" | "Exchange" | "AuctionBid" | "DirectOrder" | "PointOrder" | "Withdrawal";
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary and paginated deposit lock/hold placement ledger events. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceHoldLocks"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getFinanceTransfers: {
+        parameters: {
+            query?: {
+                kind?: "All" | "Topup" | "WithdrawalPayout";
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary and paginated wallet top-up and withdrawal payout ledger events. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceTransfers"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getOperationsAnalytics: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel performance metrics and risk/dispute indicators. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsAnalytics"];
                 };
             };
             400: components["responses"]["ListingError"];

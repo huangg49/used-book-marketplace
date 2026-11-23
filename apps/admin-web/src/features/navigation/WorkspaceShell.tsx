@@ -11,6 +11,7 @@ import { Link, matchPath, NavLink, useLocation } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import {
   BookCheck,
+  BookOpen,
   BookPlus,
   ChevronDown,
   ClipboardCheck,
@@ -61,6 +62,7 @@ const getMobile = () => window.matchMedia(mobileQuery).matches;
 const icons: Record<NavigationIcon, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
   statistics: ChartNoAxesCombined,
+  ledger: BookOpen,
   books: BookCheck,
   catalog: BookPlus,
   review: ClipboardCheck,
@@ -163,6 +165,7 @@ export function SidebarNavigation({
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    end={item.end}
                     className={styles.link}
                     title={item.label}
                     aria-label={item.label}

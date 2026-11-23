@@ -3169,6 +3169,322 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/finance-overview:
+    get:
+      operationId: getFinanceOverview
+      tags: [Operations]
+      summary: Platform finance and profit by ledger posting date
+      description: >-
+        ACTIVE ADMIN only. Read-only snapshot-consistent aggregate of immutable
+        ledger journals in Asia/Ho_Chi_Minh, inclusive dates, max 366 days.
+        Simulated money. Revenue excludes pass-through shipping fees; transfers,
+        top-ups and withdrawals are excluded from revenue.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Finance totals, comparison with previous period, daily breakdown and exchange volume.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceOverview"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-cashflow:
+    get:
+      operationId: getFinanceCashflow
+      tags: [Operations]
+      summary: Platform cashflow, wallet holds and ledger capital conservation
+      description: >-
+        ACTIVE ADMIN only. Read-only snapshot-consistent summary of simulated
+        capital conservation, top-ups, withdrawal payouts and pending withdrawal
+        queue in Asia/Ho_Chi_Minh.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Ledger conservation snapshot, daily top-up/withdrawal flow and withdrawal queue health.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceCashflow"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-holds:
+    get:
+      operationId: getFinanceHolds
+      tags: [Operations]
+      summary: Active escrows, deposits and held wallet balances across the platform
+      description: >-
+        ACTIVE ADMIN only. Read-only snapshot of every active ledger hold account
+        with balance > 0 (exchange deposits, auction bid holds, direct/point order
+        escrows and pending withdrawal holds), enriched with holder and reference metadata.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [All, Exchange, AuctionBid, DirectOrder, PointOrder, Withdrawal]
+            default: All
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Active hold breakdown by category and paginated hold items.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceHolds"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-hold-history:
+    get:
+      operationId: getFinanceHoldHistory
+      tags: [Operations]
+      summary: Historical deposit releases, refunds and forfeitures from the immutable ledger
+      description: >-
+        ACTIVE ADMIN only. Read-only ledger journal audit of released auction bid deposits,
+        forfeited deposits, order/exchange deposit refunds and refunded withdrawals.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [All, AuctionRelease, AuctionForfeit, OrderRefund, WithdrawalRefund]
+            default: All
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Summary and paginated deposit release/refund/forfeit ledger events.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceHoldHistory"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-hold-locks:
+    get:
+      operationId: getFinanceHoldLocks
+      tags: [Operations]
+      summary: Historical deposit locks and hold placements from the immutable ledger
+      description: >-
+        ACTIVE ADMIN only. Read-only ledger journal audit of every time funds
+        were locked from a member wallet into a hold account (auction bid
+        deposits, exchange deposits, direct/point order holds, withdrawal holds).
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [All, Exchange, AuctionBid, DirectOrder, PointOrder, Withdrawal]
+            default: All
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Summary and paginated deposit lock/hold placement ledger events.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceHoldLocks"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-transfers:
+    get:
+      operationId: getFinanceTransfers
+      tags: [Operations]
+      summary: Historical wallet top-ups and completed withdrawal payouts from the immutable ledger
+      description: >-
+        ACTIVE ADMIN only. Read-only ledger journal audit of external cashflow
+        in (Topup) and out (WithdrawalPayout) of the platform.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [All, Topup, WithdrawalPayout]
+            default: All
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Summary and paginated wallet top-up and withdrawal payout ledger events.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceTransfers"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/operations-analytics:
+    get:
+      operationId: getOperationsAnalytics
+      tags: [Operations]
+      summary: Channel funnel performance and operational risk metrics
+      description: >-
+        ACTIVE STAFF/ADMIN only. Read-only aggregate of Direct Sale, Exchange
+        and Auction channel throughput plus dispute, incident and user status
+        indicators in Asia/Ho_Chi_Minh.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Channel performance metrics and risk/dispute indicators.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsAnalytics"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/listings:
     get:
       operationId: listListingReviewQueue
@@ -23447,6 +23763,531 @@ components:
               referenceId: { type: string }
               listingId: { type: string, format: uuid }
               mediaId: { type: [string, "null"], format: uuid }
+    FinanceTotals:
+      type: object
+      additionalProperties: false
+      required:
+        - directCommission
+        - auctionCommission
+        - forfeitedDeposits
+        - depositShare
+        - legacyListingFees
+        - netRevenue
+        - passThroughShipping
+        - incidentCompensation
+        - profit
+        - gmv
+        - settledOrders
+        - takeRateBps
+      properties:
+        directCommission: { type: integer, minimum: 0 }
+        auctionCommission: { type: integer, minimum: 0 }
+        forfeitedDeposits: { type: integer, minimum: 0 }
+        depositShare: { type: integer, minimum: 0 }
+        legacyListingFees: { type: integer, minimum: 0 }
+        netRevenue: { type: integer }
+        passThroughShipping: { type: integer, minimum: 0 }
+        incidentCompensation: { type: integer, minimum: 0 }
+        profit: { type: integer }
+        gmv: { type: integer, minimum: 0 }
+        settledOrders: { type: integer, minimum: 0 }
+        takeRateBps: { type: [integer, "null"], minimum: 0 }
+    FinanceOverview:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - timezone
+        - serverTime
+        - simulated
+        - current
+        - previous
+        - daily
+        - exchange
+        - notes
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        timezone: { type: string, const: Asia/Ho_Chi_Minh }
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        current:
+          $ref: "#/components/schemas/FinanceTotals"
+        previous:
+          type: object
+          additionalProperties: false
+          required: [from, to, totals]
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+            totals:
+              $ref: "#/components/schemas/FinanceTotals"
+        daily:
+          type: array
+          minItems: 1
+          maxItems: 366
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - date
+              - directCommission
+              - auctionCommission
+              - forfeitedDeposits
+              - depositShare
+              - netRevenue
+              - incidentCompensation
+              - profit
+              - gmv
+              - settledOrders
+            properties:
+              date: { type: string, format: date }
+              directCommission: { type: integer, minimum: 0 }
+              auctionCommission: { type: integer, minimum: 0 }
+              forfeitedDeposits: { type: integer, minimum: 0 }
+              depositShare: { type: integer, minimum: 0 }
+              netRevenue: { type: integer }
+              incidentCompensation: { type: integer, minimum: 0 }
+              profit: { type: integer }
+              gmv: { type: integer, minimum: 0 }
+              settledOrders: { type: integer, minimum: 0 }
+        exchange:
+          type: object
+          additionalProperties: false
+          required: [completed, initiatorValue, recipientValue]
+          properties:
+            completed: { type: integer, minimum: 0 }
+            initiatorValue: { type: integer, minimum: 0 }
+            recipientValue: { type: integer, minimum: 0 }
+        notes:
+          type: array
+          maxItems: 6
+          items: { type: string }
+    FinanceCashflow:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - timezone
+        - serverTime
+        - simulated
+        - conservation
+        - period
+        - daily
+        - withdrawalQueue
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        timezone: { type: string, const: Asia/Ho_Chi_Minh }
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        conservation:
+          type: object
+          additionalProperties: false
+          required:
+            - balanced
+            - capitalTarget
+            - accountedTotal
+            - discrepancy
+            - sourceRemaining
+            - memberAvailable
+            - transactionHeld
+            - auctionHeld
+            - withdrawalHeld
+            - platformCommission
+            - listingFeeHeld
+            - incidentFundBalance
+          properties:
+            balanced: { type: boolean }
+            capitalTarget: { type: integer, minimum: 0 }
+            accountedTotal: { type: integer, minimum: 0 }
+            discrepancy: { type: integer }
+            sourceRemaining: { type: integer, minimum: 0 }
+            memberAvailable: { type: integer, minimum: 0 }
+            transactionHeld: { type: integer, minimum: 0 }
+            auctionHeld: { type: integer, minimum: 0 }
+            withdrawalHeld: { type: integer, minimum: 0 }
+            platformCommission: { type: integer, minimum: 0 }
+            listingFeeHeld: { type: integer, minimum: 0 }
+            incidentFundBalance: { type: integer, minimum: 0 }
+        period:
+          type: object
+          additionalProperties: false
+          required: [topupTotal, topupCount, withdrawalTotal, withdrawalCount, netCashflow]
+          properties:
+            topupTotal: { type: integer, minimum: 0 }
+            topupCount: { type: integer, minimum: 0 }
+            withdrawalTotal: { type: integer, minimum: 0 }
+            withdrawalCount: { type: integer, minimum: 0 }
+            netCashflow: { type: integer }
+        daily:
+          type: array
+          minItems: 1
+          maxItems: 366
+          items:
+            type: object
+            additionalProperties: false
+            required: [date, topupAmount, topupCount, withdrawalAmount, withdrawalCount, netCashflow]
+            properties:
+              date: { type: string, format: date }
+              topupAmount: { type: integer, minimum: 0 }
+              topupCount: { type: integer, minimum: 0 }
+              withdrawalAmount: { type: integer, minimum: 0 }
+              withdrawalCount: { type: integer, minimum: 0 }
+              netCashflow: { type: integer }
+        withdrawalQueue:
+          type: object
+          additionalProperties: false
+          required: [pendingCount, pendingAmount, oldestRequestedAt]
+          properties:
+            pendingCount: { type: integer, minimum: 0 }
+            pendingAmount: { type: integer, minimum: 0 }
+            oldestRequestedAt: { type: [string, "null"], format: date-time }
+    FinanceHoldKind:
+      type: string
+      enum: [Exchange, AuctionBid, DirectOrder, PointOrder, Withdrawal]
+    FinanceHolds:
+      type: object
+      additionalProperties: false
+      required:
+        - serverTime
+        - simulated
+        - summary
+        - page
+        - pageSize
+        - totalItems
+        - items
+      properties:
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalHeld, totalAccounts, byKind]
+          properties:
+            totalHeld: { type: integer, minimum: 0 }
+            totalAccounts: { type: integer, minimum: 0 }
+            byKind:
+              type: array
+              maxItems: 5
+              items:
+                type: object
+                additionalProperties: false
+                required: [kind, label, count, amount]
+                properties:
+                  kind:
+                    $ref: "#/components/schemas/FinanceHoldKind"
+                  label: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  amount: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, const: 15 }
+        totalItems: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - accountId
+              - kind
+              - kindLabel
+              - holderId
+              - holderName
+              - holderEmail
+              - amount
+              - referenceId
+              - status
+              - updatedAt
+            properties:
+              accountId: { type: string }
+              kind:
+                $ref: "#/components/schemas/FinanceHoldKind"
+              kindLabel: { type: string }
+              holderId: { type: [string, "null"] }
+              holderName: { type: string }
+              holderEmail: { type: [string, "null"] }
+              amount: { type: integer, minimum: 1 }
+              referenceId: { type: [string, "null"] }
+              status: { type: string }
+              updatedAt: { type: [string, "null"], format: date-time }
+    FinanceHoldHistoryKind:
+      type: string
+      enum: [AuctionRelease, AuctionForfeit, OrderRefund, WithdrawalRefund]
+    FinanceHoldHistory:
+      type: object
+      additionalProperties: false
+      required:
+        - serverTime
+        - simulated
+        - summary
+        - page
+        - pageSize
+        - totalItems
+        - items
+      properties:
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalRefunded, totalForfeited, totalEvents, byKind]
+          properties:
+            totalRefunded: { type: integer, minimum: 0 }
+            totalForfeited: { type: integer, minimum: 0 }
+            totalEvents: { type: integer, minimum: 0 }
+            byKind:
+              type: array
+              maxItems: 4
+              items:
+                type: object
+                additionalProperties: false
+                required: [kind, label, count, amount]
+                properties:
+                  kind:
+                    $ref: "#/components/schemas/FinanceHoldHistoryKind"
+                  label: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  amount: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, const: 15 }
+        totalItems: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - journalId
+              - kind
+              - kindLabel
+              - outcome
+              - holderId
+              - holderName
+              - holderEmail
+              - amount
+              - referenceId
+              - detail
+              - postedAt
+            properties:
+              journalId: { type: string }
+              kind:
+                $ref: "#/components/schemas/FinanceHoldHistoryKind"
+              kindLabel: { type: string }
+              outcome:
+                type: string
+                enum: [ReturnedToWallet, Forfeited]
+              holderId: { type: [string, "null"] }
+              holderName: { type: string }
+              holderEmail: { type: [string, "null"] }
+              amount: { type: integer, minimum: 1 }
+              referenceId: { type: [string, "null"] }
+              detail: { type: string }
+              postedAt: { type: string, format: date-time }
+    FinanceHoldLocks:
+      type: object
+      additionalProperties: false
+      required:
+        - serverTime
+        - simulated
+        - summary
+        - page
+        - pageSize
+        - totalItems
+        - items
+      properties:
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalLocked, totalEvents, byKind]
+          properties:
+            totalLocked: { type: integer, minimum: 0 }
+            totalEvents: { type: integer, minimum: 0 }
+            byKind:
+              type: array
+              maxItems: 5
+              items:
+                type: object
+                additionalProperties: false
+                required: [kind, label, count, amount]
+                properties:
+                  kind:
+                    $ref: "#/components/schemas/FinanceHoldKind"
+                  label: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  amount: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, const: 15 }
+        totalItems: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - journalId
+              - kind
+              - kindLabel
+              - holderId
+              - holderName
+              - holderEmail
+              - amount
+              - referenceId
+              - detail
+              - postedAt
+            properties:
+              journalId: { type: string }
+              kind:
+                $ref: "#/components/schemas/FinanceHoldKind"
+              kindLabel: { type: string }
+              holderId: { type: [string, "null"] }
+              holderName: { type: string }
+              holderEmail: { type: [string, "null"] }
+              amount: { type: integer, minimum: 1 }
+              referenceId: { type: [string, "null"] }
+              detail: { type: string }
+              postedAt: { type: string, format: date-time }
+    FinanceTransferKind:
+      type: string
+      enum: [Topup, WithdrawalPayout]
+    FinanceTransfers:
+      type: object
+      additionalProperties: false
+      required:
+        - serverTime
+        - simulated
+        - summary
+        - page
+        - pageSize
+        - totalItems
+        - items
+      properties:
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalTopup, topupCount, totalWithdrawal, withdrawalCount, netFlow]
+          properties:
+            totalTopup: { type: integer, minimum: 0 }
+            topupCount: { type: integer, minimum: 0 }
+            totalWithdrawal: { type: integer, minimum: 0 }
+            withdrawalCount: { type: integer, minimum: 0 }
+            netFlow: { type: integer }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, const: 15 }
+        totalItems: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - journalId
+              - kind
+              - kindLabel
+              - userId
+              - userName
+              - userEmail
+              - amount
+              - referenceId
+              - detail
+              - postedAt
+            properties:
+              journalId: { type: string }
+              kind:
+                $ref: "#/components/schemas/FinanceTransferKind"
+              kindLabel: { type: string }
+              userId: { type: [string, "null"] }
+              userName: { type: string }
+              userEmail: { type: [string, "null"] }
+              amount: { type: integer, minimum: 1 }
+              referenceId: { type: [string, "null"] }
+              detail: { type: string }
+              postedAt: { type: string, format: date-time }
+    OperationsAnalytics:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - timezone
+        - serverTime
+        - sales
+        - exchanges
+        - auctions
+        - risk
+        - users
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        timezone: { type: string, const: Asia/Ho_Chi_Minh }
+        serverTime: { type: string, format: date-time }
+        sales:
+          type: object
+          additionalProperties: false
+          required: [created, completed, active, cancelled, completionRateBps]
+          properties:
+            created: { type: integer, minimum: 0 }
+            completed: { type: integer, minimum: 0 }
+            active: { type: integer, minimum: 0 }
+            cancelled: { type: integer, minimum: 0 }
+            completionRateBps: { type: [integer, "null"], minimum: 0 }
+        exchanges:
+          type: object
+          additionalProperties: false
+          required: [proposed, completed, active, disputed, cancelled, completionRateBps]
+          properties:
+            proposed: { type: integer, minimum: 0 }
+            completed: { type: integer, minimum: 0 }
+            active: { type: integer, minimum: 0 }
+            disputed: { type: integer, minimum: 0 }
+            cancelled: { type: integer, minimum: 0 }
+            completionRateBps: { type: [integer, "null"], minimum: 0 }
+        auctions:
+          type: object
+          additionalProperties: false
+          required: [created, active, sold, paymentExpired, cancelled, sellThroughRateBps]
+          properties:
+            created: { type: integer, minimum: 0 }
+            active: { type: integer, minimum: 0 }
+            sold: { type: integer, minimum: 0 }
+            paymentExpired: { type: integer, minimum: 0 }
+            cancelled: { type: integer, minimum: 0 }
+            sellThroughRateBps: { type: [integer, "null"], minimum: 0 }
+        risk:
+          type: object
+          additionalProperties: false
+          required:
+            - openExchangeDisputes
+            - openPointIncidents
+            - incidentFundBalance
+            - incidentCompensationInPeriod
+            - underfundedIncidents
+          properties:
+            openExchangeDisputes: { type: integer, minimum: 0 }
+            openPointIncidents: { type: integer, minimum: 0 }
+            incidentFundBalance: { type: integer, minimum: 0 }
+            incidentCompensationInPeriod: { type: integer, minimum: 0 }
+            underfundedIncidents: { type: integer, minimum: 0 }
+        users:
+          type: object
+          additionalProperties: false
+          required: [totalMembers, newInPeriod, activeMembers, restrictedMembers, lockedMembers]
+          properties:
+            totalMembers: { type: integer, minimum: 0 }
+            newInPeriod: { type: integer, minimum: 0 }
+            activeMembers: { type: integer, minimum: 0 }
+            restrictedMembers: { type: integer, minimum: 0 }
+            lockedMembers: { type: integer, minimum: 0 }
     OperationsPoint:
       type: object
       additionalProperties: false

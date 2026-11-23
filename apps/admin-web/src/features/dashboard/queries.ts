@@ -1,11 +1,20 @@
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import type { CurrentUser } from "@used-books/session-client";
 import { dashboardKeys, dashboardRefresh } from "../../core/dashboard-cache";
-import { canReview } from "../../core/session";
+import { canReview, canViewFinance } from "../../core/session";
 import type { Request } from "../../core/command";
 import type { DashboardSource } from "./sources";
 import { moderationOverview } from "./overview";
 import { revenueOverview } from "./revenue";
+import {
+  financeCashflow,
+  financeHoldHistory,
+  financeHoldLocks,
+  financeHolds,
+  financeOverview,
+  financeTransfers,
+  operationsAnalytics,
+} from "./finance";
 
 export function dashboardSourceQuery(
   user: CurrentUser,
@@ -48,6 +57,142 @@ export function dashboardRevenueQuery(
       request(
         `/operations/revenue-overview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&page=${page}`,
         revenueOverview,
+      ),
+    enabled: canReview(user) && from.length > 0 && to.length > 0 && from <= to,
+  });
+}
+export function dashboardFinanceQuery(
+  user: CurrentUser,
+  from: string,
+  to: string,
+  request: Request,
+) {
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.finance(user, from, to),
+    queryFn: () =>
+      request(
+        `/operations/finance-overview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        financeOverview,
+      ),
+    enabled:
+      canViewFinance(user) && from.length > 0 && to.length > 0 && from <= to,
+  });
+}
+export function dashboardCashflowQuery(
+  user: CurrentUser,
+  from: string,
+  to: string,
+  request: Request,
+) {
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.cashflow(user, from, to),
+    queryFn: () =>
+      request(
+        `/operations/finance-cashflow?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        financeCashflow,
+      ),
+    enabled:
+      canViewFinance(user) && from.length > 0 && to.length > 0 && from <= to,
+  });
+}
+export function dashboardHoldsQuery(
+  user: CurrentUser,
+  kind: string,
+  q: string,
+  page: number,
+  request: Request,
+) {
+  const params = new URLSearchParams({ kind, page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.holds(user, kind, q.trim(), page),
+    queryFn: () =>
+      request(`/operations/finance-holds?${params.toString()}`, financeHolds),
+    enabled: canViewFinance(user),
+    placeholderData: keepPreviousData,
+  });
+}
+export function dashboardHoldHistoryQuery(
+  user: CurrentUser,
+  kind: string,
+  q: string,
+  page: number,
+  request: Request,
+  enabled = true,
+) {
+  const params = new URLSearchParams({ kind, page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.holdHistory(user, kind, q.trim(), page),
+    queryFn: () =>
+      request(
+        `/operations/finance-hold-history?${params.toString()}`,
+        financeHoldHistory,
+      ),
+    enabled: canViewFinance(user) && enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+export function dashboardHoldLocksQuery(
+  user: CurrentUser,
+  kind: string,
+  q: string,
+  page: number,
+  request: Request,
+  enabled = true,
+) {
+  const params = new URLSearchParams({ kind, page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.holdLocks(user, kind, q.trim(), page),
+    queryFn: () =>
+      request(
+        `/operations/finance-hold-locks?${params.toString()}`,
+        financeHoldLocks,
+      ),
+    enabled: canViewFinance(user) && enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+export function dashboardTransfersQuery(
+  user: CurrentUser,
+  kind: string,
+  q: string,
+  page: number,
+  request: Request,
+) {
+  const params = new URLSearchParams({ kind, page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.transfers(user, kind, q.trim(), page),
+    queryFn: () =>
+      request(
+        `/operations/finance-transfers?${params.toString()}`,
+        financeTransfers,
+      ),
+    enabled: canViewFinance(user),
+    placeholderData: keepPreviousData,
+  });
+}
+export function dashboardAnalyticsQuery(
+  user: CurrentUser,
+  from: string,
+  to: string,
+  request: Request,
+) {
+  return queryOptions({
+    ...dashboardRefresh,
+    queryKey: dashboardKeys.analytics(user, from, to),
+    queryFn: () =>
+      request(
+        `/operations/operations-analytics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        operationsAnalytics,
       ),
     enabled: canReview(user) && from.length > 0 && to.length > 0 && from <= to,
   });

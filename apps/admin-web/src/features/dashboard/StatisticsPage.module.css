@@ -7,9 +7,9 @@
 }
 .pageHeader {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
   padding: 4px 0 6px;
 }
 .pageHeader h1 {

@@ -1,3 +1,17 @@
+# Trung tâm Thống kê Admin đa trang (Tài chính, Dòng tiền & Giao dịch/Rủi ro) — 23/11/2026
+
+- Nhánh `feat/admin-finance-statistics` từ `main` (`53d1cdcd`), đã merge `main` (`ecfe2189` / PR #126).
+- **Contract & API (Read-only trên sổ cái bất biến)**:
+  - `GET /operations/finance-overview?from&to` (ADMIN-only): tổng hợp GMV, hoa hồng bán trực tiếp 5%, hoa hồng đấu giá 5% (tách bạch `outboundFee` thu hộ), cọc đấu giá bị tịch thu, chia 50% cọc cho seller (ADR 0087), chi phí bồi thường quỹ sự cố, lợi nhuận (cho phép số âm), take-rate (bps), so sánh kỳ liền trước và khối lượng Trao đổi (phí 0đ).
+  - `GET /operations/finance-cashflow?from&to` (ADMIN-only): đối soát bảo toàn vốn sổ cái mô phỏng, dòng tiền nạp/rút theo ngày và sức khỏe hàng chờ rút tiền (`Requested`).
+  - `GET /operations/operations-analytics?from&to` (STAFF/ADMIN): hiệu suất 3 kênh Mua bán/Trao đổi/Đấu giá, tranh chấp/sự cố tại điểm, quỹ sự cố và thống kê thành viên toàn hệ thống.
+- **Admin Web UI (4 trang chuyên biệt, thanh điều hướng mục `StatisticsSubNav`)**:
+  - `/statistics/finance` (`FinancePage.tsx`): Tài chính & Lợi nhuận (4 thẻ KPI, biểu đồ cột chồng + đường lợi nhuận, bảng P&L tách riêng khoản thu hộ, khối Trao đổi & mục định nghĩa).
+  - `/statistics/cashflow` (`CashflowPage.tsx`): Dòng tiền & Đối soát (trạng thái cân đối vốn, thanh phân bổ sổ cái, biểu đồ nạp/rút, hàng chờ duyệt rút).
+  - `/statistics/operations` (`OperationsAnalyticsPage.tsx`): Giao dịch & Rủi ro (3 thẻ hiệu suất kênh có progress bar, cảnh báo rủi ro/sự cố, tổng quan thành viên).
+  - `/statistics` (`StatisticsPage.tsx`): giữ nguyên luồng cũ, gắn `StatisticsSubNav` và đổi nhãn thẻ sang "Hoa hồng & phí đã ghi sổ".
+- **Kiểm chứng**: PASS `pnpm contract:check`, API `lint`/`typecheck`/`build` + `finance-overview.spec.ts` (10/10), Admin Web `lint`/`typecheck`/`test` (37/37 files, 253/253 tests) + `build` + bundle budget (`455 kB < 500 kB`). Chưa chạy Mongo QA live spec và chưa push lên remote.
+
 # Đồng hồ máy chủ dùng chung cho đếm ngược — 23/11/2026
 
 - Nhánh `feat/auction-server-clock` cắt từ `feat/auction-live-hardening` (`4b58c8e3`),

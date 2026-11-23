@@ -169,10 +169,7 @@ export function StatisticsPage() {
     <main className={styles.page}>
       <header className={styles.pageHeader}>
         <div>
-          <h1>Doanh thu theo kỳ</h1>
-          <p className={styles.intro}>
-            Theo dõi doanh thu nền tảng đã được ghi nhận theo từng ngày.
-          </p>
+          <h1>Ghi sổ & Điểm nổi bật</h1>
         </div>
         <div className={styles.headerActions}>
           <form
@@ -249,7 +246,7 @@ export function StatisticsPage() {
             <div className={styles.summary}>
               <div className={`${styles.primaryMetric} ${styles.metricCard}`}>
                 <div className={styles.metricHeader}>
-                  <span>Tổng doanh thu</span>
+                  <span>Hoa hồng & phí đã ghi sổ</span>
                   <span className={styles.metricIcon} aria-hidden="true">
                     <BarChart3 size={18} />
                   </span>
