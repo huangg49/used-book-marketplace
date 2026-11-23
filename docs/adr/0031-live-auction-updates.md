@@ -96,3 +96,23 @@ Same events, payloads and server protocol; no OpenAPI or migration change.
   tracked when more than 200 are open.
 - Still not done: a per-IP connection limit on the public namespace, Flutter, and a
   private socket channel (own standing stays a REST read).
+
+## Addendum 2026-11-23: shared server clock for countdowns
+
+Countdowns keep showing time on the server clock; the server still decides when
+an auction or a payment/acceptance window closes.
+
+- `ServerClock` in `packages/session-client` takes a sample from every successful
+  REST response that carries a top-level `serverTime`. The request is timed and the
+  stamp is placed at the round-trip midpoint; the shortest round trip wins, and a
+  sample older than 2 min gives way to the next one.
+- Time advances on `performance.now()`, so changing the device date mid-countdown
+  has no effect. The device date is tracked beside it: if the two disagree by more
+  than 1 s (sleep paused the monotonic clock, or the date changed), the later
+  estimate is shown and the next response re-syncs.
+- `createServerNow(serverTime)` reads that clock and falls back to the offset of
+  `serverTime` only before the first timed response; cached data no longer adds its
+  age to a countdown. Without `serverTime` it stays a local device-date timer.
+- Web `startServerCountdown`/`useCountdown`, the registration and schedule checks,
+  and RN auction, winner-step and home countdowns use it. Pushes do not feed it
+  (no round trip). At zero the web detail page shows "đang chốt kết quả" like RN.

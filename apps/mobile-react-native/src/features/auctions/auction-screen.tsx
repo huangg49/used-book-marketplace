@@ -4,7 +4,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { router } from "expo-router";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError } from "../../core/api/session-client";
+import { ApiError, createServerNow } from "../../core/api/session-client";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import { readAuctionNewest, useAuctionLive } from "./use-auction-live";
@@ -119,14 +119,14 @@ const time = (iso: string) =>
     month: "2-digit",
   });
 
-// Server clock: `serverTime` from the last read fixes the offset, so a wrong
-// device clock never shows a closed auction as open. Display only.
+// Server clock (shared, round-trip corrected and monotonic), so a wrong or
+// changed device clock never shows a closed auction as open. Display only.
 function useServerNow(serverTime: string | undefined, ticking: boolean) {
   const [now, setNow] = useState(() => (serverTime ? Date.parse(serverTime) : 0));
   useEffect(() => {
     if (!serverTime) return;
-    const offset = Date.parse(serverTime) - Date.now();
-    const tick = () => setNow(Date.now() + offset);
+    const serverNow = createServerNow(serverTime);
+    const tick = () => setNow(serverNow());
     const first = setTimeout(tick, 0);
     const timer = ticking ? setInterval(tick, 1000) : undefined;
     return () => {

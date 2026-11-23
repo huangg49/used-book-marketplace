@@ -1,5 +1,6 @@
 // ADR 0076: action panels for Dutch and sealed-bid auctions. English auctions
 // keep BidPanel. The server stays authoritative for prices, funds and timing.
+import { createServerNow } from '@used-books/session-client'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -81,9 +82,8 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
   const need = auction.minBidders ?? 2
   const count = auction.registeredCount ?? 0
   const registered = me?.registrationState === 'Registered'
-  const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
   // ADR 0085: below the minimum, or a full auction until 72 h before it opens.
-  const withdrawable = canWithdrawRegistration(auction, me, Date.now() + offset)
+  const withdrawable = canWithdrawRegistration(auction, me, createServerNow(serverTime)())
   const fullUntil = count >= need && auction.fullWithdrawUntil
     ? new Date(auction.fullWithdrawUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
     : null
@@ -354,9 +354,8 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
   const count = auction.registeredCount ?? 0
   const reached = count >= need
   const version = auction.version ?? 0
-  const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
   const openTime = openTimeOf(auction)
-  const untilOpen = Date.parse(openTime) - (Date.now() + offset)
+  const untilOpen = Date.parse(openTime) - createServerNow(serverTime)()
   const passed = untilOpen <= 0
   const frozen = untilOpen <= AUCTION_RESCHEDULE_FREEZE_MS
   // The dialog edits the open time and keeps the chosen length.

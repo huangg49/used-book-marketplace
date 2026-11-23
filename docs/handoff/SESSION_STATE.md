@@ -1,3 +1,15 @@
+# Đồng hồ máy chủ dùng chung cho đếm ngược — 23/11/2026
+
+- Nhánh `feat/auction-server-clock` cắt từ `feat/auction-live-hardening` (`4b58c8e3`),
+  chưa merge nhánh đó. Bổ sung [ADR0031](../adr/0031-live-auction-updates.md#addendum-2026-11-23-shared-server-clock-for-countdowns);
+  không đổi OpenAPI, migration hay READINESS.
+- `ServerClock`/`createServerNow` trong `packages/session-client`: lấy mẫu `serverTime`
+  từ phản hồi REST có đo round trip, chạy theo `performance.now()`, phát hiện ngủ máy
+  hoặc đổi giờ thiết bị và đồng bộ lại ở phản hồi kế tiếp.
+- Web và RN dùng chung cho các đếm ngược đấu giá/đơn; web hiện "đang chốt kết quả" khi hết giờ.
+- PASS: unit session-client 172, web 504, RN 251; typecheck/lint web, RN.
+- NOT RUN: browser và thiết bị native (API local không chạy). Chưa push/PR.
+
 # Kênh đấu giá trực tiếp web và React Native — 23/11/2026
 
 - Nhánh `feat/auction-live-hardening` từ `main` (`2f9af522`). Bổ sung

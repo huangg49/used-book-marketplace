@@ -519,7 +519,10 @@ function Countdown({ ms, open, endAt, live, state }: { ms: number; open: boolean
     return (
       <div className={styles.timerCard}>
         <span className={styles.timerClosed}>
-          {state === 'OnHold' ? 'Phiên tạm dừng, không nhận giá' : state === 'Cancelled' ? 'Phiên đã hủy' : `Phiên kết thúc lúc ${when(endAt)}`}
+          {state === 'OnHold' ? 'Phiên tạm dừng, không nhận giá' : state === 'Cancelled' ? 'Phiên đã hủy'
+            // Past endAt on the server clock but not closed yet: the server decides the result.
+            : state === 'Active' ? 'Đã hết giờ, đang chốt kết quả…'
+            : `Phiên kết thúc lúc ${when(endAt)}`}
         </span>
       </div>
     )
