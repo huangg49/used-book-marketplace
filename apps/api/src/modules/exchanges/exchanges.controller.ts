@@ -139,7 +139,6 @@ export class ExchangesController {
   }
 
   @Post(':id/reject')
-  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   rejectExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {

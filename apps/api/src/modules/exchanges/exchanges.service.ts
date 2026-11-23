@@ -37,7 +37,6 @@ import { recordViolation } from '../auctions/member-violations.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import {
-  EXCHANGE_STAFF_LIMIT,
   exchangeCompensationAmount,
   exchangeDisputeScope,
   exchangeMaxDamageDeduction,
@@ -2025,9 +2024,6 @@ export class ExchangesService {
           }
 
           if (deadline && now >= deadline) throw invalidState();
-          if (isInitiator ? exchange.initiatorCompletedAt : exchange.recipientCompletedAt) {
-            throw invalidState();
-          }
           const next = await tx.c.exchanges.findOneAndUpdate(
             { _id: exchange._id, revision: exchange.revision },
             {
@@ -2162,26 +2158,17 @@ export class ExchangesService {
           if (exchange.status !== 'ResolutionPending') throw invalidState();
           if (exchange.revision !== body.expectedVersion) throw conflict();
 
-          const isAdmin = actor.roles.some((role) => role.role === 'ADMIN');
-          const totalHeld =
-            exchange.initiatorDeposit +
-            exchange.recipientDeposit +
-            exchange.diffAmount;
-          if (totalHeld > EXCHANGE_STAFF_LIMIT && !isAdmin) {
-            throw new DomainError(
-              403,
-              'FORBIDDEN',
-              'Hồ sơ có tổng ký quỹ vượt 300.000đ cần Admin xử lý.',
-            );
+          if (body.decision === 'RefundBoth') {
+            throw invalidState('Hoàn cả hai theo quyết định cũ chỉ dùng để đối chiếu biên nhận đã ghi.');
           }
-
           if (
+            !hasInspectionHandover(exchange) ||
             !exchange.initiatorFundedAt ||
             !exchange.recipientFundedAt ||
             !exchange.disputedAt ||
             exchange.returnResolution
           ) {
-            throw invalidState('Hồ sơ chưa đủ điều kiện phân xử trực tiếp tại đây.');
+            throw invalidState('Chỉ phân xử tại đây khi cả hai đã đặt cọc và xác nhận nhận sách.');
           }
 
           const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
@@ -2196,85 +2183,7 @@ export class ExchangesService {
           let next: ExchangeDoc | null = null;
           const bothReceived = hasInspectionHandover(exchange);
 
-          if (body.decision === 'RefundBoth') {
-            if (!isAdmin) {
-              throw new DomainError(
-                403,
-                'FORBIDDEN',
-                'Chỉ Admin mới có quyền hoàn tiền cả hai bên.',
-              );
-            }
-            if (bothReceived) {
-              throw invalidState(
-                'Cả hai bên đã nhận sách; hãy chọn Bác khiếu nại hoặc Bồi thường thiệt hại.',
-              );
-            }
-            const initIds = this.getInitiatorListingIds(exchange);
-            const allIds = [...initIds, exchange.recipientListingId];
-            const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
-            for (const listingId of allIds) {
-              const listing = lockedMap.get(listingId);
-              if (listing && listing.trade === 'Reserved') {
-                await this.listings.project(
-                  tx,
-                  listing._id,
-                  listing.version,
-                  'Reserved',
-                  'Available',
-                );
-                const wasShipped =
-                  listingId === exchange.recipientListingId
-                    ? Boolean(exchange.recipientShippedAt)
-                    : Boolean(exchange.initiatorShippedAt);
-                if (wasShipped) {
-                  await this.listings.requireRevision(tx, listing._id);
-                }
-              }
-            }
-
-            next = await tx.c.exchanges.findOneAndUpdate(
-              { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
-              {
-                $set: {
-                  status: 'Cancelled',
-                  cancelReason: 'DisputeResolvedRefund',
-                  resolutionDecision: 'RefundBoth',
-                  resolutionCompensationAmount: 0,
-                  cancelledBy: 'Staff',
-                  cancelledAt: now,
-                  resolutionReason: trimmedReason,
-                  resolvedBy: actor._id,
-                  resolvedAt: now,
-                  updatedAt: now,
-                },
-                $inc: { revision: 1 },
-              },
-              { returnDocument: 'after' },
-            );
-            if (!next) throw conflict();
-
-            await this.ledger.refundExchange(tx, next, now);
-
-            await notifyExchange(
-              tx,
-              next,
-              'ExchangeCancelled',
-              [next.initiatorId, next.recipientId],
-              now,
-              { reason: `Phán quyết của Admin: Hủy giao dịch và hoàn 100% tiền ký quỹ cho cả hai bên. Lý do: ${trimmedReason}` },
-            );
-
-            await tx.c.exchange_messages.insertOne({
-              _id: randomUUID(),
-              exchangeId: exchange._id,
-              senderId: actor._id,
-              body: `[Phán quyết của Admin]\nQuyết định: Hủy giao dịch & Hoàn 100% tiền ký quỹ cho cả hai bên\nLý do: ${trimmedReason}`,
-              sentAt: now,
-            });
-          } else if (body.decision === 'CompleteExchange') {
-            if (!bothReceived) {
-              throw invalidState('Chỉ bác khiếu nại & hoàn tất khi cả hai bên đã xác nhận nhận sách.');
-            }
+          if (body.decision === 'CompleteExchange') {
             const initIds = this.getInitiatorListingIds(exchange);
             const allIds = [...initIds, exchange.recipientListingId];
             const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
@@ -2298,7 +2207,6 @@ export class ExchangesService {
                   status: 'Completed',
                   completedAt: now,
                   resolutionDecision: 'CompleteExchange',
-                  resolutionCompensationAmount: 0,
                   resolutionReason: trimmedReason,
                   resolvedBy: actor._id,
                   resolvedAt: now,
@@ -2329,9 +2237,6 @@ export class ExchangesService {
               sentAt: now,
             });
           } else if (body.decision === 'CompensateInitiator' || body.decision === 'CompensateRecipient') {
-            if (!bothReceived && !exchange.initiatorShippedAt && !exchange.recipientShippedAt) {
-              throw invalidState('Chưa có chặng gửi sách nào để áp dụng phán quyết bồi thường.');
-            }
             const victimIsInitiator = body.decision === 'CompensateInitiator';
             const scope = exchangeDisputeScope(exchange, victimIsInitiator);
             const maxDamage = exchangeMaxDamageDeduction(scope);
@@ -2396,21 +2301,8 @@ export class ExchangesService {
                   );
                 }
               }
-            } else if (scope.bothShipped) {
-              for (const listingId of allIds) {
-                const listing = lockedMap.get(listingId);
-                if (listing && listing.trade === 'Reserved') {
-                  await this.listings.project(
-                    tx,
-                    listing._id,
-                    listing.version,
-                    'Reserved',
-                    'ClosedUnavailable',
-                  );
-                }
-              }
             } else {
-              for (const listingId of scope.ownerListingIds) {
+              for (const listingId of scope.holderListingIds) {
                 const listing = lockedMap.get(listingId);
                 if (listing && listing.trade === 'Reserved') {
                   await this.listings.project(
@@ -2422,7 +2314,7 @@ export class ExchangesService {
                   );
                 }
               }
-              for (const listingId of scope.holderListingIds) {
+              for (const listingId of scope.ownerListingIds) {
                 const listing = lockedMap.get(listingId);
                 if (listing && listing.trade === 'Reserved') {
                   await this.listings.project(
@@ -2432,6 +2324,7 @@ export class ExchangesService {
                     'Reserved',
                     'Available',
                   );
+                  await this.listings.requireRevision(tx, listing._id);
                 }
               }
             }
@@ -2455,7 +2348,6 @@ export class ExchangesService {
                       status: 'Cancelled',
                       cancelReason: 'DisputeResolvedRefund',
                       resolutionDecision: body.decision,
-                      resolutionCompensationAmount: appliedCompensation,
                       cancelledBy: 'Staff',
                       cancelledAt: now,
                       resolutionReason: trimmedReason,

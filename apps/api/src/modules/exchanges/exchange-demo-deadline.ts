@@ -27,7 +27,8 @@ export function currentDemoDeadline(row: ExchangeDoc, now: Date, operations: boo
       case 'Preparing': return row.shippingDeadline && !hasExchangeDispute(row) ? 'Shipping' : undefined;
       case 'InTransit': return !row.initiatorReceivedAt || !row.recipientReceivedAt ? 'Transit' : undefined;
       case 'Delivered':
-        return !hasExchangeDispute(row) && inspectionDeadlines(row).all
+        return row.initiatorCompletedAt && row.recipientCompletedAt &&
+          !hasExchangeDispute(row) && inspectionDeadlines(row).all
           ? 'Inspection'
           : undefined;
     }

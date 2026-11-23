@@ -1553,7 +1553,7 @@
 }
 .previewThumbnails button {
   height: 52px;
-  min-width: 0;
+  min-width: 44px;
   padding: 3px;
   border: 1px solid var(--shop-line);
   border-radius: 6px;
@@ -1648,8 +1648,8 @@
 }
 .desktopPreview {
   position: sticky;
-  top: 96px;
-  max-height: calc(100dvh - 116px);
+  top: 112px;
+  max-height: calc(100dvh - 136px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;

@@ -756,6 +756,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(comp2Res.body.completedAt).toBeDefined();
     expect((await db.c.listings.findOne({ _id: l1.listingId }))?.trade).toBe('Exchanged');
     expect((await db.c.exchanges.findOne({ _id: exchangeId }))?.status).toBe('Completed');
+    await worker.tick(new Date(Date.parse(comp2Res.body.inspectionDeadline) + 1));
 
     // 8. Verify listings are now Exchanged!
     const l1Final = await db.c.listings.findOne({ _id: l1.listingId });
@@ -910,9 +911,39 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     });
     const database = db.client.db();
     // This test deliberately reapplies the frozen 0039 validator. Simulate its
-    // historical shape, not documents containing fields introduced in 0052.
-    const agreements = await db.c.exchanges.find({ agreement: { $ne: null } }, { projection: { _id: 1, agreement: 1 } }).toArray();
-    await db.c.exchanges.updateMany({}, { $unset: { agreement: '' } });
+    // historical shape, not documents containing fields introduced in 0052+.
+    const post0039Rows = await db.c.exchanges
+      .find(
+        {
+          $or: [
+            { agreement: { $ne: null } },
+            { initiatorShipment: { $ne: null } },
+            { recipientShipment: { $ne: null } },
+            { returnResolution: { $ne: null } },
+          ],
+        },
+        {
+          projection: {
+            _id: 1,
+            agreement: 1,
+            initiatorShipment: 1,
+            recipientShipment: 1,
+            returnResolution: 1,
+          },
+        },
+      )
+      .toArray();
+    await db.c.exchanges.updateMany(
+      {},
+      {
+        $unset: {
+          agreement: '',
+          initiatorShipment: '',
+          recipientShipment: '',
+          returnResolution: '',
+        },
+      },
+    );
     try {
       const checksums = await database.collection('_migrations').find().sort({ _id: 1 }).toArray();
       const postings = await db.c.ledger_entries.countDocuments();
@@ -946,7 +977,16 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       // The frozen legacy migration replaces the validator. Restore the current
       // schema even after an assertion fails, without replaying any backfill.
       await applyCollectionSpecs(database, currentCollections().filter((spec) => spec.name === 'exchanges'));
-      for (const row of agreements) await db.c.exchanges.updateOne({ _id: row._id }, { $set: { agreement: row.agreement } });
+      for (const row of post0039Rows) {
+        const restore: Record<string, unknown> = {};
+        if (row.agreement !== undefined) restore.agreement = row.agreement;
+        if (row.initiatorShipment !== undefined) restore.initiatorShipment = row.initiatorShipment;
+        if (row.recipientShipment !== undefined) restore.recipientShipment = row.recipientShipment;
+        if (row.returnResolution !== undefined) restore.returnResolution = row.returnResolution;
+        if (Object.keys(restore).length > 0) {
+          await db.c.exchanges.updateOne({ _id: row._id }, { $set: restore });
+        }
+      }
     }
   });
 
@@ -1094,7 +1134,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       { expectedVersion: comp1.body.revision },
       user2,
     ).expect(200);
-    expect(comp2.body.status).toBe('Delivered');
+    expect(comp2.body.status).toBe('Completed');
     await worker.tick(new Date(Date.parse(comp2.body.inspectionDeadline) + 1));
 
     const final1a = await db.c.listings.findOne({ _id: l1a.listingId });
@@ -1309,7 +1349,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
 
     expect(created.diffPayerId).toBe(user2.id);
     expect(created.diffAmount).toBe(50000);
-    expect(created.recipientDeposit).toBe(150000);
+    expect(created.recipientDeposit).toBe(100000);
 
     const accepted = (
       await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200)
@@ -2744,8 +2784,8 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         const history = (await get('/me/wallet/history?limit=20', user1).expect(200)).body.items;
         const holderHistory = (await get('/me/wallet/history?limit=20', user2).expect(200)).body.items;
         expect(holderHistory.find((item: { type: string }) => item.type === 'ExchangeReturnRefund')?.amount)
-          .toBe(compensation ? undefined : 100000);
-        expect(history.find((item: { type: string }) => item.type === 'ExchangeReturnRefund')?.amount).toBe(500000);
+          .toBe(compensation ? 200000 : 300000);
+        expect(history.find((item: { type: string }) => item.type === 'ExchangeReturnRefund')?.amount).toBe(300000);
         expect(history.find((item: { type: string }) => item.type === 'ExchangeNonReturnCompensation')?.amount)
           .toBe(compensation ? 100000 : undefined);
         expect(await db.c.listings.findOne({ _id: ex.l1.listingId })).toMatchObject(compensation
@@ -2883,7 +2923,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       expect(settled).toMatchObject({
         status: 'Cancelled',
         resolutionDecision: verdict.decision,
-        returnResolution: { ownerId: user2.id, outcome: 'Compensated', compensation: ex.initiatorDeposit },
+        returnResolution: { ownerId: user2.id, outcome: 'Compensated', compensation: ex.recipientDeposit },
       });
       expect((await get(member, user2).expect(200)).body).toMatchObject({
         resolutionDecision: verdict.decision, returnResolution: settled.returnResolution,
@@ -2899,9 +2939,17 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       expect((await reconcile()).balanced).toBe(true);
 
       // Reproduce a prior verdict that was stored only in the command receipt.
-      await db.c.exchanges.updateOne({ _id: ex.id }, { $unset: { resolutionDecision: '' } });
-      const migration = migrations.find(m => m.id === '0080-exchange-inspection-verdict')!;
-      await migration.up(db.client.db(), db.client);
+      const savedAgreement = after.exchange.agreement;
+      await db.c.exchanges.updateOne({ _id: ex.id }, { $unset: { resolutionDecision: '', agreement: '' } });
+      try {
+        const migration = migrations.find(m => m.id === '0080-exchange-inspection-verdict')!;
+        await migration.up(db.client.db(), db.client);
+      } finally {
+        await applyCollectionSpecs(db.client.db(), currentCollections().filter((spec) => spec.name === 'exchanges'));
+        if (savedAgreement !== undefined) {
+          await db.c.exchanges.updateOne({ _id: ex.id }, { $set: { agreement: savedAgreement } });
+        }
+      }
       expect(await effects(ex.id)).toEqual(after);
       expect((await reconcile()).balanced).toBe(true);
     });
