@@ -917,9 +917,9 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
         {
           $or: [
             { agreement: { $ne: null } },
-            { initiatorShipment: { $ne: null } },
-            { recipientShipment: { $ne: null } },
-            { returnResolution: { $ne: null } },
+            { initiatorShipment: { $exists: true } },
+            { recipientShipment: { $exists: true } },
+            { returnResolution: { $exists: true } },
           ],
         },
         {
