@@ -11686,7 +11686,7 @@ paths:
       x-locked-access: existing-obligations
       tags:
         - Exchanges
-      description: Participant opens a dispute during delivery or inspection window, halting auto-settlement.
+      description: Participant opens a dispute during delivery or their own inspection window, even if the other parcel has not been picked up. A dispute holds the funds and halts auto-settlement.
       security:
         - bearerAuth: []
       parameters:
@@ -24472,6 +24472,11 @@ components:
           anyOf:
             - type: string
             - type: "null"
+        resolutionCompensationAmount:
+          anyOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
         resolutionReason:
           anyOf:
             - type: string
@@ -25243,6 +25248,10 @@ components:
           type: string
           minLength: 5
           maxLength: 500
+        compensationAmount:
+          type: integer
+          minimum: 1
+          description: Optional partial or full damage deduction amount in VND for CompensateInitiator or CompensateRecipient; omitted defaults to full compensation.
     ExchangeReviewsResponse:
       $ref: "#/components/schemas/TransactionReviewsResponse"
     ReviewTransactionsPage:

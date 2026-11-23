@@ -51,6 +51,18 @@ Ordinary ViaPoint, full dispute adjudication/return, funded mutual cancellation,
 native acceptance and independent human review retain their existing limitations.
 No migration, seed or automated test is authorized against the main local DB.
 
+## First receiver claim — 23/11/2026
+
+- The first receiver may open an inspection claim during `Preparing` if their
+  receipt already opened a personal inspection window. The claim moves the
+  exchange to `ResolutionPending` and keeps the funds and both reservations held.
+- A participant may confirm receipt of an already-dispatched parcel while the
+  case is open and no return or delivery verification has superseded that step.
+  The receipt records the other inspection deadline without closing the case.
+- For the single-book one-sided case in [ADR 0089](0089-one-sided-exchange-return.md),
+  operations may enter the existing return process once the original shipping
+  deadline passes. The initial claim retains its real timestamp.
+
 ## Verification
 
 Use isolated Mongo QA (`*_test`). Cover separate receipt times, no settlement at

@@ -559,6 +559,7 @@ export const exchangeDisputeResolution = z.object({
   disputeReason: z.string().nullable().optional(),
   disputedBy: z.string().nullable().optional(),
   resolutionDecision: z.string().nullable().optional(),
+  resolutionCompensationAmount: z.number().int().min(0).nullable().optional(),
   resolutionReason: z.string().nullable().optional(),
   resolvedBy: z.string().nullable().optional(),
   resolvedAt: time.nullable().optional(),

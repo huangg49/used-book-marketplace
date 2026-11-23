@@ -13,37 +13,103 @@ import {
 } from '../commands/domain-error.js';
 
 const HOUR = 3_600_000;
-const STAFF_LIMIT = 300_000;
+export const EXCHANGE_STAFF_LIMIT = 300_000;
 type Action = Wire['ExchangeReturnCommand']['action'];
 
-function oneSidedShipment(row: ExchangeDoc) {
+function initiatorListingIdsOf(row: ExchangeDoc): string[] {
+  return row.initiatorListingIds?.length
+    ? row.initiatorListingIds
+    : [row.initiatorListingId];
+}
+
+function bookValueOf(
+  row: ExchangeDoc,
+  isInitiator: boolean,
+  fallback: number,
+) {
+  if (!row.agreement) return fallback;
+  return isInitiator
+    ? row.agreement.initiatorBooks.reduce((sum, b) => sum + b.exchangeValue, 0)
+    : row.agreement.recipientBook.exchangeValue;
+}
+
+export function exchangeCompensationAmount(scope: {
+  ownerBookValue: number;
+  holderId: string;
+  holderDeposit: number;
+  differenceAmount: number;
+  differencePayerId: string | null;
+}) {
+  const holderLocked =
+    scope.holderDeposit +
+    (scope.differencePayerId === scope.holderId ? scope.differenceAmount : 0);
+  return Math.min(scope.ownerBookValue, holderLocked);
+}
+
+// Maximum damage deduction D on the faulty party's (holder's) shipment when
+// both parties keep the exchanged books under Type 2 partial/full compensation.
+export function exchangeMaxDamageDeduction(scope: {
+  ownerId: string;
+  ownerBookValue: number;
+  holderBookValue: number;
+  holderId: string;
+  holderDeposit: number;
+  differenceAmount: number;
+  differencePayerId: string | null;
+}) {
+  const holderLocked =
+    scope.holderDeposit +
+    (scope.differencePayerId === scope.holderId ? scope.differenceAmount : 0);
+  if (scope.differencePayerId === scope.ownerId && scope.differenceAmount > 0) {
+    return Math.min(
+      scope.holderBookValue,
+      scope.differenceAmount + Math.min(scope.ownerBookValue, holderLocked),
+    );
+  }
+  return Math.min(scope.holderBookValue, scope.holderDeposit);
+}
+
+function oneSidedShipment(row: ExchangeDoc, now?: Date) {
   const sent = Boolean(row.initiatorShippedAt);
   const shippedAt = sent ? row.initiatorShippedAt : row.recipientShippedAt;
   const receivedAt = sent ? row.recipientReceivedAt : row.initiatorReceivedAt;
-  // This decision covers one physical book per party.
+  const holderId = sent ? row.recipientId : row.initiatorId;
+  const holderDeposit = sent ? row.recipientDeposit : row.initiatorDeposit;
+  const initIds = initiatorListingIdsOf(row);
   if (
     sent === Boolean(row.recipientShippedAt) ||
-    (row.initiatorListingIds?.length ?? 1) !== 1 ||
     !row.initiatorFundedAt ||
     !row.recipientFundedAt ||
     !row.shippingDeadline ||
     !row.disputedAt ||
-    row.disputedAt < row.shippingDeadline ||
     !shippedAt ||
     shippedAt >= row.shippingDeadline ||
-    (sent ? row.recipientDeposit : row.initiatorDeposit) <= 0 ||
+    holderDeposit <= 0 ||
     (sent ? row.initiatorReceivedAt : row.recipientReceivedAt)
   )
     return null;
+  // An inspection claim can predate the shipping deadline. The return process
+  // still requires the deadline to pass, and the existing case remains valid
+  // for views and settlement once that process has begun.
+  if (row.disputedAt < row.shippingDeadline && !(
+    receivedAt && receivedAt <= row.disputedAt && row.disputedBy === holderId &&
+    (row.returnResolution || (now && now >= row.shippingDeadline))
+  )) return null;
+  const ownerDeposit = sent ? row.initiatorDeposit : row.recipientDeposit;
   return {
     shippedAt,
     receivedAt,
     ownerId: sent ? row.initiatorId : row.recipientId,
-    holderId: sent ? row.recipientId : row.initiatorId,
+    holderId,
     listingId: sent ? row.initiatorListingId : row.recipientListingId,
     otherListingId: sent ? row.recipientListingId : row.initiatorListingId,
-    ownerDeposit: sent ? row.initiatorDeposit : row.recipientDeposit,
-    holderDeposit: sent ? row.recipientDeposit : row.initiatorDeposit,
+    ownerListingIds: sent ? initIds : [row.recipientListingId],
+    holderListingIds: sent ? [row.recipientListingId] : initIds,
+    bothShipped: false,
+    ownerDeposit,
+    holderDeposit,
+    ownerBookValue: bookValueOf(row, sent, holderDeposit),
+    holderBookValue: bookValueOf(row, !sent, ownerDeposit),
     differenceAmount: row.diffAmount,
     differencePayerId: row.diffPayerId,
     ownerOrderId: sent ? row.initiatorOrderId : row.recipientOrderId,
@@ -51,8 +117,8 @@ function oneSidedShipment(row: ExchangeDoc) {
   };
 }
 
-export function oneSidedReturn(row: ExchangeDoc) {
-  const scope = oneSidedShipment(row);
+export function oneSidedReturn(row: ExchangeDoc, now?: Date) {
+  const scope = oneSidedShipment(row, now);
   return scope && (scope.receivedAt || row.outboundDeliveryVerification) ? scope : null;
 }
 
@@ -61,27 +127,64 @@ export function hasInspectionHandover(row: ExchangeDoc) {
     row.initiatorReceivedAt && row.recipientReceivedAt);
 }
 
+export function exchangeDisputeScope(
+  row: ExchangeDoc,
+  victimIsInitiator: boolean,
+) {
+  const initIds = initiatorListingIdsOf(row);
+  const ownerDeposit = victimIsInitiator
+    ? row.initiatorDeposit
+    : row.recipientDeposit;
+  const holderDeposit = victimIsInitiator
+    ? row.recipientDeposit
+    : row.initiatorDeposit;
+  return {
+    shippedAt: victimIsInitiator
+      ? row.recipientShippedAt
+      : row.initiatorShippedAt,
+    receivedAt: victimIsInitiator
+      ? row.initiatorReceivedAt
+      : row.recipientReceivedAt,
+    ownerId: victimIsInitiator ? row.initiatorId : row.recipientId,
+    holderId: victimIsInitiator ? row.recipientId : row.initiatorId,
+    listingId: victimIsInitiator
+      ? row.recipientListingId
+      : row.initiatorListingId,
+    otherListingId: victimIsInitiator
+      ? row.initiatorListingId
+      : row.recipientListingId,
+    ownerListingIds: victimIsInitiator ? initIds : [row.recipientListingId],
+    holderListingIds: victimIsInitiator ? [row.recipientListingId] : initIds,
+    bothShipped: Boolean(row.initiatorShippedAt && row.recipientShippedAt),
+    ownerDeposit,
+    holderDeposit,
+    ownerBookValue: bookValueOf(row, victimIsInitiator, holderDeposit),
+    holderBookValue: bookValueOf(row, !victimIsInitiator, ownerDeposit),
+    differenceAmount: row.diffAmount,
+    differencePayerId: row.diffPayerId,
+    ownerOrderId: victimIsInitiator
+      ? row.initiatorOrderId
+      : row.recipientOrderId,
+    holderOrderId: victimIsInitiator
+      ? row.recipientOrderId
+      : row.initiatorOrderId,
+  };
+}
+
 export function exchangeSettlementScope(row: ExchangeDoc) {
   const scope = oneSidedReturn(row);
   if (scope) return scope;
-  if (row.returnResolution && hasInspectionHandover(row)) {
-    const isRecipientComplainant = row.disputedBy === 'Recipient' || row.disputedBy === row.recipientId;
-    const victimIsInitiator = row.resolutionDecision === 'CompensateInitiator' ||
-      (row.resolutionDecision !== 'CompensateRecipient' && !isRecipientComplainant);
-    return {
-      shippedAt: victimIsInitiator ? row.recipientShippedAt : row.initiatorShippedAt,
-      receivedAt: victimIsInitiator ? row.initiatorReceivedAt : row.recipientReceivedAt,
-      ownerId: victimIsInitiator ? row.initiatorId : row.recipientId,
-      holderId: victimIsInitiator ? row.recipientId : row.initiatorId,
-      listingId: victimIsInitiator ? row.recipientListingId : row.initiatorListingId,
-      otherListingId: victimIsInitiator ? row.initiatorListingId : row.recipientListingId,
-      ownerDeposit: victimIsInitiator ? row.initiatorDeposit : row.recipientDeposit,
-      holderDeposit: victimIsInitiator ? row.recipientDeposit : row.initiatorDeposit,
-      differenceAmount: row.diffAmount,
-      differencePayerId: row.diffPayerId,
-      ownerOrderId: victimIsInitiator ? row.initiatorOrderId : row.recipientOrderId,
-      holderOrderId: victimIsInitiator ? row.recipientOrderId : row.initiatorOrderId,
-    };
+  const hasVerdict =
+    row.resolutionDecision === 'CompensateInitiator' ||
+    row.resolutionDecision === 'CompensateRecipient';
+  if (row.returnResolution && (hasInspectionHandover(row) || hasVerdict)) {
+    const isRecipientComplainant =
+      row.disputedBy === 'Recipient' || row.disputedBy === row.recipientId;
+    const victimIsInitiator =
+      row.resolutionDecision === 'CompensateInitiator' ||
+      (row.resolutionDecision !== 'CompensateRecipient' &&
+        !isRecipientComplainant);
+    return exchangeDisputeScope(row, victimIsInitiator);
   }
   return null;
 }
@@ -134,7 +237,7 @@ export function returnResolutionView(
     outcome: r.outcome,
     compensation:
       r.outcome === 'Compensated' || r.phase === 'CompensationOrdered'
-        ? scope.holderDeposit
+        ? (row.resolutionCompensationAmount ?? exchangeCompensationAmount(scope))
         : 0,
   };
 }
@@ -230,7 +333,7 @@ export async function exchangeReturnChange(
   now: Date,
 ): Promise<ExchangeReturnDoc> {
   if (body.action === 'VerifyOutboundDelivery') throw invalidState();
-  const scope = oneSidedReturn(row);
+  const scope = oneSidedReturn(row, now);
   requireState(
     Boolean(scope),
     'Luồng này xử lý một cuốn đã được bên nhận xác nhận và một cuốn đã quá hạn gửi.',
@@ -245,7 +348,7 @@ export async function exchangeReturnChange(
     (ADMIN_ACTIONS.has(action) ||
       (action !== 'RequestEvidence' &&
         row.initiatorDeposit + row.recipientDeposit + row.diffAmount >
-          STAFF_LIMIT)) &&
+          EXCHANGE_STAFF_LIMIT)) &&
     !admin
   )
     throw new DomainError(403, 'FORBIDDEN', 'Hồ sơ cần Admin xử lý.');
@@ -388,19 +491,26 @@ export async function exchangeReturnChange(
               Boolean(r.checkDueAt && now < r.checkDueAt))),
       );
       return { ...r, phase: 'ReturnIssue', note };
-    case 'OrderCompensation':
-      requireState(
+    case 'OrderCompensation': {
+      const overdueUnreturned =
         r.phase === 'ReturnOrdered' &&
-          Boolean(r.returnDueAt && now >= r.returnDueAt) &&
-          !r.dispatchedAt,
-        'Chỉ xét bồi thường khi đã quá hạn trả và hồ sơ chưa ghi nhận chặng hoàn.',
+        Boolean(r.returnDueAt && now >= r.returnDueAt) &&
+        !r.dispatchedAt;
+      const issueOnReturn = r.phase === 'ReturnIssue';
+      requireState(
+        overdueUnreturned || issueOnReturn,
+        'Chỉ xét bồi thường khi đã quá hạn trả chưa gửi hoàn hoặc có báo lỗi sách hoàn.',
       );
-      effective(r, now);
-      await requireEvidence(tx, row, evidenceId, r.returnDueAt);
+      if (overdueUnreturned) effective(r, now);
+      const evidenceSince = overdueUnreturned
+        ? r.returnDueAt
+        : (r.returnedAt ?? r.dispatchedAt ?? r.returnDueAt ?? row.disputedAt ?? null);
+      await requireEvidence(tx, row, evidenceId, evidenceSince);
       return {
         ...issue(r, 'CompensationOrdered', note, actor._id, now),
         evidenceId: evidenceId!,
       };
+    }
     case 'Settle':
       if (r.phase === 'CheckingReturn' && r.checkDueAt && now >= r.checkDueAt)
         return { ...r, phase: 'Closed', outcome: 'Returned' };

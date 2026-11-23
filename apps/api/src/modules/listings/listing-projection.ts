@@ -267,6 +267,7 @@ export async function checkListing(tx: Tx, listingId: string) {
         'Preparing',
         'InTransit',
         'Delivered',
+        'ResolutionPending',
       ],
     },
   });

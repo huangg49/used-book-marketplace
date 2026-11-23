@@ -531,7 +531,7 @@ export function WinnerSteps({
                   ? ask(
                       "pay",
                       `Thanh toán ${formatVnd(o.amounts.bookPrice + delivery.fee)} từ ví?`,
-                      `Tiền sách ${formatVnd(o.amounts.bookPrice)}. Giao hàng miễn phí. Số tiền được giữ an toàn trong Quỹ bảo chứng cho đến khi bạn nhận và kiểm tra sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`,
+                      `Tiền sách ${formatVnd(o.amounts.bookPrice)}. ${delivery.fee > 0 ? `Phí giao hàng ${formatVnd(delivery.fee)}.` : "Giao hàng miễn phí."} Số tiền được giữ an toàn trong Quỹ bảo chứng cho đến khi bạn nhận và kiểm tra sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`,
                       "Thanh toán",
                       undefined,
                       delivery,
@@ -1626,6 +1626,13 @@ function DeliveryPanel({
   onRefresh: () => void;
 }) {
   const { client } = useSession();
+  const demoStatus = useQuery({
+    queryKey: ["demo-skip"],
+    queryFn: () => getDemoSkipStatus(client),
+    staleTime: Infinity,
+    retry: false,
+  });
+  const demoEnabled = !!demoStatus.data?.enabled;
   const d = order.delivery;
   const [simBusy, setSimBusy] = useState(false);
   const [simError, setSimError] = useState<string | null>(null);
@@ -1880,7 +1887,7 @@ function DeliveryPanel({
       </View>
 
       {/* 3. KHÚC GIẢ LẬP GIAO HÀNG (Sử dụng chung API /demo với Web) */}
-      {order.state === "InTransit" && !step3Done && (
+      {demoEnabled && order.state === "InTransit" && !step3Done && (
         <View
           style={{
             gap: space.xs,

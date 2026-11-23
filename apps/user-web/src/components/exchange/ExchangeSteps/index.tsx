@@ -108,11 +108,17 @@ export function ExchangeSteps({ detail, children, navigation }: {
     currentButton.current?.focus();
   };
 
+  const stepLabel = (id: Step, fallback: string) =>
+    id === "result" && detail.status === "RESOLUTION_PENDING"
+      ? "Tranh chấp"
+      : fallback;
+
   return (
     <>
       <nav className={styles.steps} aria-label="Các bước đổi sách">
         <ol>
-          {steps.map(({ id, label }, index) => {
+          {steps.map(({ id, label: baseLabel }, index) => {
+            const label = stepLabel(id, baseLabel);
             const active = id === current;
             const available = index < currentIndex && hasStepFacts(id, detail);
             const selected = (viewing ?? current) === id;
@@ -141,7 +147,7 @@ export function ExchangeSteps({ detail, children, navigation }: {
           })}
         </ol>
       </nav>
-      <p className={styles.announcement} role="status">Bước hiện tại {steps[currentIndex].label}</p>
+      <p className={styles.announcement} role="status">Bước hiện tại {stepLabel(steps[currentIndex].id, steps[currentIndex].label)}</p>
       {viewing && (
         <section className={styles.history} data-viewing={viewing} aria-labelledby="exchange-history-heading">
           <header className={styles.historyHeader}>
@@ -157,7 +163,7 @@ export function ExchangeSteps({ detail, children, navigation }: {
               </p>
             </div>
             <button type="button" className={styles.backButton} onClick={backToCurrent}>
-              <ArrowLeft size={16} aria-hidden="true" /> Về bước {steps[currentIndex].label}
+              <ArrowLeft size={16} aria-hidden="true" /> Về bước {stepLabel(steps[currentIndex].id, steps[currentIndex].label)}
             </button>
           </header>
           <StepHistory step={viewing} detail={detail}

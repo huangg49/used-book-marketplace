@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock, Copy, ExternalLink, MapPin, Route } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock, Copy, ExternalLink, MapPin, Route, Truck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { exchangeHandoverAnchor, type HandoverNavigation } from "../../../lib/exchange-handover";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
+import { ROUTES } from "../../../lib/routes";
 import { CARRIERS, getTrackingUrl } from "../../../services/exchangeShipment";
 import { serviceAreasQuery } from "../../../services/service-areas";
 import { BookCover } from "../../BookCover";
@@ -28,6 +30,7 @@ const dateFormat = new Intl.DateTimeFormat("vi-VN", {
   month: "2-digit",
   year: "numeric",
 });
+const localDemoHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 function HandoverTime({ value }: { value: string }) {
   return <time dateTime={value}>{dateFormat.format(new Date(value))}</time>;
@@ -149,6 +152,9 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
   const carrier = CARRIERS.find(item => item.code === shipment?.carrierCode);
   const trackingCode = shipment?.trackingCode;
   const trackingUrl = getTrackingUrl(carrier?.code, trackingCode ?? undefined);
+  const demoDriverAvailable = import.meta.env.DEV && typeof window !== "undefined"
+    && localDemoHosts.has(window.location.hostname);
+  const leg = outgoing === (detail.viewerRole === "proposer") ? "initiator" : "recipient";
   const hasJourney = Boolean(address || registered || sentAt || receivedAt);
   const expired = shippingExpired && !sentAt;
   const inTransit = detail.status === "WAITING_YOU_CONFIRM" || detail.status === "DELIVERING";
@@ -217,6 +223,16 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
                     <CopyValue value={trackingCode} label="Sao chép mã vận đơn" />
                     {trackingUrl && <a href={trackingUrl} target="_blank" rel="noreferrer">Tra cứu tại hãng <ExternalLink size={14} aria-hidden="true" /></a>}
                   </div>
+                )}
+                {demoDriverAvailable && registered && trackingCode && !closed && (
+                  <Link
+                    className={styles.driverLink}
+                    to={ROUTES.exchangeDriver(detail.id, leg, trackingCode)}
+                    aria-label={`Mở Driver Simulator · Demo cho kiện bạn ${outgoing ? "gửi" : "nhận"}`}
+                  >
+                    <Truck size={16} aria-hidden="true" />
+                    Mở Driver Simulator · Demo
+                  </Link>
                 )}
                 <ol className={styles.timeline}>
                   {shipment?.registeredAt && <li><span>Đã tạo đơn</span><HandoverTime value={shipment.registeredAt} /></li>}

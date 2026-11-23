@@ -3821,7 +3821,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Participant opens a dispute during delivery or inspection window, halting auto-settlement. */
+        /** @description Participant opens a dispute during delivery or their own inspection window, even if the other parcel has not been picked up. A dispute holds the funds and halts auto-settlement. */
         post: operations["disputeExchange"];
         delete?: never;
         options?: never;
@@ -8487,6 +8487,7 @@ export interface components {
             disputeReason?: string | null;
             disputedBy?: string | null;
             resolutionDecision?: string | null;
+            resolutionCompensationAmount?: number | null;
             resolutionReason?: string | null;
             resolvedBy?: string | null;
             resolvedAt?: string | null;
@@ -8819,6 +8820,8 @@ export interface components {
             /** @enum {string} */
             decision: "RefundBoth" | "CompleteExchange" | "CompensateInitiator" | "CompensateRecipient";
             reason: string;
+            /** @description Optional partial or full damage deduction amount in VND for CompensateInitiator or CompensateRecipient; omitted defaults to full compensation. */
+            compensationAmount?: number;
         };
         ExchangeReviewsResponse: components["schemas"]["TransactionReviewsResponse"];
         ReviewTransactionsPage: {

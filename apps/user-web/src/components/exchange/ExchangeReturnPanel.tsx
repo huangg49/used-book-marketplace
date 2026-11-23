@@ -107,7 +107,13 @@ export function ExchangeReturnPanel({
     selected && available.includes(selected) ? actions[selected] : undefined;
   const deposit = owner ? r.ownerDeposit : r.holderDeposit;
   const difference = r.differencePayerId === userId ? r.differenceAmount : 0;
-  const ownRefund = r.outcome === "Compensated" && !owner ? 0 : deposit;
+  const compensatedHolder = r.outcome === "Compensated" && !owner;
+  const depositUsed = compensatedHolder ? Math.min(deposit, r.compensation) : 0;
+  const differenceUsed = compensatedHolder
+    ? Math.min(difference, Math.max(0, r.compensation - depositUsed))
+    : 0;
+  const ownRefund = deposit - depositUsed;
+  const ownDifferenceRefund = difference - differenceUsed;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -413,7 +419,7 @@ export function ExchangeReturnPanel({
                   <dt>Tiền bù bạn đã nộp được hoàn</dt>
                   <dd>
                     <span className={styles.depositAmount}>
-                      {formatVnd(difference)}
+                      {formatVnd(ownDifferenceRefund)}
                     </span>
                   </dd>
                 </div>

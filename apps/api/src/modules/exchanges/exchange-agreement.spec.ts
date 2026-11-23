@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import type { ExchangeDoc } from '../../database/mongo/documents.js';
 import { exchangeAmounts, type ExchangeAgreement } from './exchange-agreement.js';
+import {
+  exchangeDisputeScope,
+  exchangeMaxDamageDeduction,
+  oneSidedReturn,
+  returnResolutionView,
+} from './exchange-return-resolution.js';
+import { currentDemoDeadline } from './exchange-demo-deadline.js';
+import { exchangeReturnMoves } from '../wallet/ledger.service.js';
 import { currentCollections } from '../../database/mongo/migrations/index.js';
 
 describe('Exchange Agreement Amounts & Invariants', () => {
@@ -154,5 +163,267 @@ describe('Exchange Agreement Amounts & Invariants', () => {
     expect(exprStr).toContain('["$recipientDeposit","$agreement.recipientBook.exchangeValue"]');
     // diffPayer is initiator when initiatorDeposit < recipientDeposit
     expect(exprStr).toContain('{"$lt":["$initiatorDeposit","$recipientDeposit"]}');
+    // Migration 0087 keeps legacy cross-deposit compatibility for already-funded or closed rows
+    expect(exprStr).toContain('{"$gt":["$initiatorDeposit","$recipientDeposit"]}');
+    expect(exprStr).toContain('$initiatorFundedAt');
+  });
+
+  describe('Dispute Compensation & Ledger Allocation', () => {
+    const now = new Date('2026-11-23T08:00:00Z');
+    const makeDisputedExchange = (opts: {
+      agreement: ExchangeAgreement;
+      initiatorDeposit: number;
+      recipientDeposit: number;
+      diffAmount: number;
+      diffPayerId: string | null;
+      decision: 'CompensateRecipient' | 'CompensateInitiator';
+      outcome?: 'Compensated' | 'Returned';
+    }): ExchangeDoc =>
+      ({
+        _id: randomUUID(),
+        initiatorId: initId,
+        recipientId: recId,
+        initiatorListingId: opts.agreement.initiatorBooks[0].listingId,
+        initiatorListingIds: opts.agreement.initiatorBooks.map((b) => b.listingId),
+        recipientListingId: opts.agreement.recipientBook.listingId,
+        agreement: opts.agreement,
+        status: 'Cancelled',
+        revision: 8,
+        initiatorDeposit: opts.initiatorDeposit,
+        recipientDeposit: opts.recipientDeposit,
+        diffAmount: opts.diffAmount,
+        diffPayerId: opts.diffPayerId,
+        initiatorOrderId: randomUUID(),
+        recipientOrderId: randomUUID(),
+        initiatorFundedAt: now,
+        recipientFundedAt: now,
+        initiatorShippedAt: now,
+        recipientShippedAt: now,
+        initiatorReceivedAt: now,
+        recipientReceivedAt: now,
+        disputedAt: now,
+        disputedBy: opts.decision === 'CompensateRecipient' ? recId : initId,
+        disputeReason: 'Sách bị hư hại nặng',
+        resolutionDecision: opts.decision,
+        returnResolution: {
+          phase: 'Closed',
+          note: 'Đã đối chiếu bằng chứng',
+          evidenceDueAt: null,
+          appealDueAt: null,
+          appeals: [],
+          decisionBy: randomUUID(),
+          effectiveAt: now,
+          returnDueAt: null,
+          trackingCode: null,
+          dispatchedAt: null,
+          returnedAt: null,
+          checkDueAt: null,
+          outcome: opts.outcome ?? 'Compensated',
+          settlementReceiptId: randomUUID(),
+          evidenceId: null,
+        },
+      }) as unknown as ExchangeDoc;
+
+    it('A (100k) defaults on B (800k): B gets full 800k compensation + 800k own deposit; A gets 0đ', () => {
+      const agreement = makeAgreement([100000], 800000);
+      const amounts = exchangeAmounts(agreement, initId, recId);
+      const exchange = makeDisputedExchange({
+        agreement,
+        ...amounts,
+        decision: 'CompensateRecipient',
+      });
+
+      const view = returnResolutionView(exchange);
+      expect(view.compensation).toBe(800000);
+
+      const moves = exchangeReturnMoves(exchange);
+      expect(moves).toEqual([
+        expect.objectContaining({ code: 'exchange-owner-refund', recipientId: recId, amount: 800000 }),
+        expect.objectContaining({ code: 'exchange-compensation', recipientId: recId, amount: 800000 }),
+      ]);
+      // Total released equals exact total held (800k + 800k = 1.600k)
+      expect(moves.reduce((s, m) => s + m.amount, 0)).toBe(1600000);
+    });
+
+    it('B (800k) defaults on A (100k): A gets 100k compensation + 800k own locked funds; B gets 700k remainder', () => {
+      const agreement = makeAgreement([100000], 800000);
+      const amounts = exchangeAmounts(agreement, initId, recId);
+      const exchange = makeDisputedExchange({
+        agreement,
+        ...amounts,
+        decision: 'CompensateInitiator',
+      });
+
+      const view = returnResolutionView(exchange);
+      expect(view.compensation).toBe(100000);
+
+      const moves = exchangeReturnMoves(exchange);
+      expect(moves).toEqual([
+        expect.objectContaining({ code: 'exchange-owner-refund', recipientId: initId, amount: 800000 }),
+        expect.objectContaining({ code: 'exchange-holder-refund', recipientId: recId, amount: 700000 }),
+        expect.objectContaining({ code: 'exchange-compensation', recipientId: initId, amount: 100000 }),
+      ]);
+      expect(moves.reduce((s, m) => s + m.amount, 0)).toBe(1600000);
+    });
+
+    it('Negotiated diff (A locks 100k + 500k = 600k) and A defaults on B (800k): caps compensation at 600k locked', () => {
+      const agreement = makeAgreement([100000], 800000);
+      const amounts = exchangeAmounts(agreement, initId, recId, 500000, initId);
+      const exchange = makeDisputedExchange({
+        agreement,
+        ...amounts,
+        decision: 'CompensateRecipient',
+      });
+
+      expect(returnResolutionView(exchange).compensation).toBe(600000);
+      const moves = exchangeReturnMoves(exchange);
+      expect(moves).toEqual([
+        expect.objectContaining({ code: 'exchange-owner-refund', recipientId: recId, amount: 800000 }),
+        expect.objectContaining({ code: 'exchange-compensation', recipientId: recId, amount: 600000 }),
+      ]);
+      expect(moves.reduce((s, m) => s + m.amount, 0)).toBe(1400000);
+    });
+
+    it('Legacy cross-deposit funded before 0086 (initDep=800k, recDep=100k, A pays 700k): A defaults on B (800k)', () => {
+      const agreement = makeAgreement([100000], 800000);
+      const exchange = makeDisputedExchange({
+        agreement,
+        initiatorDeposit: 800000,
+        recipientDeposit: 100000,
+        diffAmount: 700000,
+        diffPayerId: initId,
+        decision: 'CompensateRecipient',
+      });
+
+      expect(returnResolutionView(exchange).compensation).toBe(800000);
+      const moves = exchangeReturnMoves(exchange);
+      expect(moves).toEqual([
+        expect.objectContaining({ code: 'exchange-owner-refund', recipientId: recId, amount: 100000 }),
+        expect.objectContaining({ code: 'exchange-holder-refund', recipientId: initId, amount: 700000 }),
+        expect.objectContaining({ code: 'exchange-compensation', recipientId: recId, amount: 800000 }),
+      ]);
+      expect(moves.reduce((s, m) => s + m.amount, 0)).toBe(1600000);
+    });
+
+    it('Type 2 Multi-book Partial (A=3x100k + 500k diff vs B=800k, 1/3 book damaged D=100k): B gets 1.400k, A gets 200k', () => {
+      const agreement = makeAgreement([100000, 100000, 100000], 800000);
+      const amounts = exchangeAmounts(agreement, initId, recId);
+      const exchange = {
+        ...makeDisputedExchange({
+          agreement,
+          ...amounts,
+          decision: 'CompensateRecipient',
+        }),
+        status: 'Completed',
+        completedAt: now,
+        resolutionCompensationAmount: 100000,
+      } as unknown as ExchangeDoc;
+
+      const scope = exchangeDisputeScope(exchange, false);
+      expect(exchangeMaxDamageDeduction(scope)).toBe(300000);
+      expect(returnResolutionView(exchange).compensation).toBe(100000);
+
+      const moves = exchangeReturnMoves(exchange);
+      const toB = moves.filter((m) => m.recipientId === recId).reduce((s, m) => s + m.amount, 0);
+      const toA = moves.filter((m) => m.recipientId === initId).reduce((s, m) => s + m.amount, 0);
+      expect(toB).toBe(1400000);
+      expect(toA).toBe(200000);
+      expect(toA + toB).toBe(1600000);
+    });
+
+    it('Type 2 Partial on B (A=3x100k + 500k diff vs B=800k, minor damage D=200k on B): A gets 500k, B gets 1.100k', () => {
+      const agreement = makeAgreement([100000, 100000, 100000], 800000);
+      const amounts = exchangeAmounts(agreement, initId, recId);
+      const exchange = {
+        ...makeDisputedExchange({
+          agreement,
+          ...amounts,
+          decision: 'CompensateInitiator',
+        }),
+        status: 'Completed',
+        completedAt: now,
+        resolutionCompensationAmount: 200000,
+      } as unknown as ExchangeDoc;
+
+      const scope = exchangeDisputeScope(exchange, true);
+      expect(exchangeMaxDamageDeduction(scope)).toBe(800000);
+
+      const moves = exchangeReturnMoves(exchange);
+      const toA = moves.filter((m) => m.recipientId === initId).reduce((s, m) => s + m.amount, 0);
+      const toB = moves.filter((m) => m.recipientId === recId).reduce((s, m) => s + m.amount, 0);
+      expect(toA).toBe(500000);
+      expect(toB).toBe(1100000);
+      expect(toA + toB).toBe(1600000);
+    });
+
+    it('InTransit dispute (both shipped, only B received) resolved via CompensateRecipient releases full 1.600k', () => {
+      const agreement = makeAgreement([100000], 800000);
+      const amounts = exchangeAmounts(agreement, initId, recId);
+      const exchange = {
+        ...makeDisputedExchange({
+          agreement,
+          ...amounts,
+          decision: 'CompensateRecipient',
+        }),
+        initiatorReceivedAt: null,
+        recipientReceivedAt: now,
+      } as unknown as ExchangeDoc;
+
+      const moves = exchangeReturnMoves(exchange);
+      const toB = moves.filter((m) => m.recipientId === recId).reduce((s, m) => s + m.amount, 0);
+      const toA = moves.filter((m) => m.recipientId === initId).reduce((s, m) => s + m.amount, 0);
+      expect(toB).toBe(1600000);
+      expect(toA).toBe(0);
+    });
+
+    it('Multi-book 1-sided return: A shipped 3 books (300k), B missed shipping deadline', () => {
+      const agreement = makeAgreement([100000, 100000, 100000], 800000);
+      const amounts = exchangeAmounts(agreement, initId, recId);
+      const shipped = new Date('2026-11-20T08:00:00Z');
+      const deadline = new Date('2026-11-22T08:00:00Z');
+      const row = {
+        ...makeDisputedExchange({
+          agreement,
+          ...amounts,
+          decision: 'CompensateInitiator',
+        }),
+        status: 'ResolutionPending',
+        shippingDeadline: deadline,
+        initiatorShippedAt: shipped,
+        recipientShippedAt: null,
+        initiatorReceivedAt: null,
+        recipientReceivedAt: shipped,
+        disputedAt: new Date('2026-11-22T09:00:00Z'),
+        returnResolution: null,
+      } as unknown as ExchangeDoc;
+
+      const scope = oneSidedReturn(row, now);
+      expect(scope).not.toBeNull();
+      expect(scope!.ownerListingIds).toHaveLength(3);
+      expect(scope!.ownerBookValue).toBe(300000);
+    });
+
+    it('Migration 0088 adds resolutionCompensationAmount and Demo Skip advances undisputed Delivered inspection', () => {
+      const exchangeSpec = currentCollections().find((c) => c.name === 'exchanges');
+      expect((exchangeSpec?.schema.properties as Record<string, unknown>)?.resolutionCompensationAmount).toBeDefined();
+
+      const delivered = {
+        status: 'Delivered',
+        initiatorReceivedAt: now,
+        recipientReceivedAt: now,
+        initiatorInspectionDeadline: new Date(+now + 72 * 3_600_000),
+        recipientInspectionDeadline: new Date(+now + 72 * 3_600_000),
+        inspectionDeadline: new Date(+now + 72 * 3_600_000),
+        initiatorCompletedAt: now,
+        recipientCompletedAt: null,
+        disputedAt: null,
+        disputedBy: null,
+        disputeReason: null,
+      } as unknown as ExchangeDoc;
+      expect(currentDemoDeadline(delivered, now, false)).toBe('Inspection');
+      expect(
+        currentDemoDeadline({ ...delivered, disputedAt: now }, now, false),
+      ).toBeUndefined();
+    });
   });
 });

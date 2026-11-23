@@ -9,9 +9,9 @@ import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinan
 import { exchangeStage } from "../lib/transaction-stage";
 import { exchangeHandoverTarget, isExchangeHandover } from "../lib/exchange-handover";
 import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
-import { useEffect } from "react";
-import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from "lucide-react";
-import { ApiError, confirmExchangeRead } from "@used-books/session-client";
+import { useEffect, useState } from "react";
+import { ArrowDownLeft, ArrowLeft, ArrowUpRight, ShieldAlert } from "lucide-react";
+import { ApiError, confirmExchangeRead, sendEvidence, type EvidenceInput } from "@used-books/session-client";
 import { session } from "../services/api";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../components/exchange/ExchangeRecoveryPanel";
@@ -89,6 +89,7 @@ function ExchangeDetailContent({
   const id = exchangeId ?? routeId;
   const queryClient = useQueryClient();
   const auth = useSession();
+  const [disputeUploadNotice, setDisputeUploadNotice] = useState<string>("");
   const conversations = useQuery({
     queryKey: [
       "purchase-conversations",
@@ -195,10 +196,63 @@ function ExchangeDetailContent({
     }
   };
 
-  const handleDispute = async (reason: string) => {
+  const handleDispute = async (reason: string, files?: File[]) => {
+    setDisputeUploadNotice("");
     const latest = await getExchangeDetail(id!).catch(() => detail);
     const rev = latest?.revision ?? detail!.revision!;
     await reportIssue(id!, rev, reason);
+
+    if (files && files.length > 0) {
+      const updated = await getExchangeDetail(id!).catch(() => undefined);
+      const nextRev = updated?.revision ?? rev + 1;
+      const allowedMimes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "application/pdf",
+        "video/mp4",
+      ];
+      let failedCount = 0;
+      for (const file of files.slice(0, 3)) {
+        const mime = file.type as EvidenceInput["mimeType"];
+        const max = mime.startsWith("image/")
+          ? 10_000_000
+          : mime === "application/pdf"
+            ? 20_000_000
+            : 100_000_000;
+        if (!allowedMimes.includes(mime) || file.size > max) {
+          failedCount++;
+          continue;
+        }
+        try {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const sha256 = Array.from(
+            new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+            (b) => b.toString(16).padStart(2, "0"),
+          ).join("");
+          await sendEvidence(
+            session,
+            id!,
+            {
+              bytes,
+              fileName: file.name,
+              mimeType: mime,
+              sha256,
+              expectedVersion: nextRev,
+            },
+            () => crypto.randomUUID(),
+          );
+        } catch {
+          failedCount++;
+        }
+      }
+      if (failedCount > 0) {
+        setDisputeUploadNotice(
+          `Báo sự cố đã được gửi, nhưng ${failedCount} tệp đính kèm chưa tải lên được. Bạn có thể tải lại trực tiếp ở mục Bằng chứng bên dưới.`,
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ["exchange-evidence"] });
+    }
     invalidate();
   };
 
@@ -376,13 +430,52 @@ function ExchangeDetailContent({
       compact={Boolean(returnResolution)}
     />
   );
+  const isDispute = detail.status === "RESOLUTION_PENDING";
+  const disputePhase = returnResolution?.phase;
+  const disputeStageIndex =
+    disputePhase && ["ReturnOrdered", "ReturnInProgress", "ReturnIssue", "CheckingReturn", "CompensationOrdered", "Closed"].includes(disputePhase)
+      ? 2
+      : disputePhase === "Evidence" || Boolean(detail.outboundDeliveryVerification)
+        ? 1
+        : 0;
   const actionSection = (
     <section
       id="exchange-actions"
-      className={styles.actionSection}
-      aria-label="Hành động của bạn"
+      className={isDispute ? `${styles.actionSection} ${styles.disputeDossier}` : styles.actionSection}
+      aria-label={isDispute ? "Hồ sơ tranh chấp" : "Hành động của bạn"}
       tabIndex={-1}
     >
+      {isDispute && (
+        <header className={styles.disputeDossierHeader}>
+          <div className={styles.disputeDossierTitleRow}>
+            <ShieldAlert size={18} aria-hidden="true" />
+            <h2>Hồ sơ tranh chấp · Đang khóa tiền ký quỹ an toàn</h2>
+          </div>
+          <ol className={styles.disputeStages} aria-label="Tiến độ xử lý tranh chấp">
+            {["1. Đã ghi nhận sự cố", "2. Bổ sung bằng chứng", "3. Đối chiếu & Phán quyết"].map(
+              (label, idx) => (
+                <li
+                  key={label}
+                  data-state={
+                    idx < disputeStageIndex
+                      ? "done"
+                      : idx === disputeStageIndex
+                        ? "current"
+                        : "upcoming"
+                  }
+                >
+                  {label}
+                </li>
+              ),
+            )}
+          </ol>
+          {disputeUploadNotice && (
+            <p className={styles.disputeUploadNotice} role="status">
+              {disputeUploadNotice}
+            </p>
+          )}
+        </header>
+      )}
       {(!detail.returnResolution || recoveringAction) && (
         <ActionCard
           compact={embedded || standaloneSheet || handover || inspecting}

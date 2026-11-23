@@ -1,10 +1,196 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { AppText, Icon, stitchTokens } from "../../core/ui";
+import { AppText, Icon, space, stitchTokens } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
-import { mapExchangeStatusInfo } from "./contracts";
 import { PublicPhoto } from "../shelf/public-photo";
+
+type FrozenBook = NonNullable<Exchange["agreement"]>["recipientBook"];
+
+const CONDITION_LABELS: Record<string, string> = {
+  LikeNew: "Như mới",
+  Good: "Tốt",
+  Fair: "Khá",
+  Acceptable: "Đọc được",
+};
+
+function ConditionDisclosure({ book }: { book: FrozenBook }) {
+  const [open, setOpen] = useState(false);
+  const edition = [book.book.edition, book.book.publicationYear]
+    .filter(Boolean)
+    .join(" · ");
+  const details = [
+    book.description,
+    book.pages ? `${book.pages} trang` : null,
+    book.coverNote,
+    book.notes,
+    book.accessories,
+    book.hasMissingPages ? "Có thiếu trang" : "Đủ trang",
+    book.readable ? "Đọc tốt" : "Khó đọc",
+  ]
+    .filter(Boolean)
+    .join(". ");
+
+  if (!edition && !details) return null;
+
+  return (
+    <View style={styles.disclosureWrap}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        hitSlop={6}
+        onPress={() => setOpen((v) => !v)}
+        style={styles.disclosureBtn}
+      >
+        <AppText style={styles.disclosureLabel}>
+          {open ? "Thu gọn mô tả" : "Xem tình trạng sách"}
+        </AppText>
+        <Icon
+          name={open ? "chevronUp" : "chevronDown"}
+          size={13}
+          color={stitchTokens.wine}
+        />
+      </Pressable>
+      {open ? (
+        <View style={styles.disclosureBody}>
+          {edition ? (
+            <AppText style={styles.disclosureMeta}>{edition}</AppText>
+          ) : null}
+          {details ? (
+            <AppText style={styles.disclosureText}>{details}</AppText>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function BookRowItem({
+  book,
+  exchangeId,
+  hasTopDivider,
+}: {
+  book: FrozenBook;
+  exchangeId: string;
+  hasTopDivider: boolean;
+}) {
+  return (
+    <View style={[styles.bookRow, hasTopDivider && styles.bookRowBorder]}>
+      <View style={styles.coverBox}>
+        {book.mediaIds[0] ? (
+          <PublicPhoto
+            exchangeId={exchangeId}
+            listingId={book.listingId}
+            revisionId={book.revisionId}
+            mediaId={book.mediaIds[0]}
+            label={`Bìa ${book.book.title}`}
+            active
+            compact
+          />
+        ) : (
+          <View style={styles.coverFallback}>
+            <Icon name="book" size={18} color={stitchTokens.subtleGray} />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.bookMeta}>
+        <AppText style={styles.bookTitle} numberOfLines={2}>
+          {book.book.title}
+        </AppText>
+        {book.book.authors.length > 0 ? (
+          <AppText style={styles.bookAuthor} numberOfLines={1}>
+            {book.book.authors.join(", ")}
+          </AppText>
+        ) : null}
+        <View style={styles.bookFactsRow}>
+          <View style={styles.conditionTag}>
+            <AppText style={styles.conditionTagText}>
+              {CONDITION_LABELS[book.condition] ?? book.condition}
+            </AppText>
+          </View>
+          <AppText style={styles.bookPrice}>
+            {formatVnd(book.exchangeValue)}
+          </AppText>
+        </View>
+        <ConditionDisclosure book={book} />
+      </View>
+    </View>
+  );
+}
+
+export function ExchangeBookGroup({
+  title,
+  subtitle,
+  books,
+  exchangeId,
+  incoming = false,
+}: {
+  title: string;
+  subtitle?: string;
+  books: FrozenBook[];
+  exchangeId: string;
+  incoming?: boolean;
+}) {
+  const totalValue = books.reduce((sum, b) => sum + (b.exchangeValue ?? 0), 0);
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.groupHeader}>
+        <View style={styles.groupTitleRow}>
+          <View
+            style={[
+              styles.directionBadge,
+              incoming
+                ? styles.directionBadgeIncoming
+                : styles.directionBadgeOutgoing,
+            ]}
+          >
+            <AppText
+              style={[
+                styles.directionBadgeText,
+                incoming
+                  ? styles.directionBadgeTextIncoming
+                  : styles.directionBadgeTextOutgoing,
+              ]}
+            >
+              {incoming ? "BẠN NHẬN" : "BẠN GỬI"}
+            </AppText>
+          </View>
+          <View style={styles.groupTitleText}>
+            <AppText style={styles.groupTitle}>{title}</AppText>
+            {subtitle ? (
+              <AppText style={styles.groupSubtitle} numberOfLines={1}>
+                {subtitle}
+              </AppText>
+            ) : null}
+          </View>
+        </View>
+        <View style={styles.groupTotalCol}>
+          <AppText style={styles.groupCount}>{books.length} cuốn</AppText>
+          <AppText style={styles.groupTotal}>{formatVnd(totalValue)}</AppText>
+        </View>
+      </View>
+
+      {books.length === 0 ? (
+        <AppText style={styles.emptyText}>
+          Phiếu cũ không lưu bản chụp chi tiết sách.
+        </AppText>
+      ) : (
+        <View style={styles.bookList}>
+          {books.map((book, idx) => (
+            <BookRowItem
+              key={book.listingId}
+              book={book}
+              exchangeId={exchangeId}
+              hasTopDivider={idx > 0}
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
 
 interface ExchangeProposalCardProps {
   exchange: Exchange;
@@ -12,646 +198,680 @@ interface ExchangeProposalCardProps {
   initialCollapsed?: boolean;
 }
 
-function FrozenCondition({ book }: { book: NonNullable<Exchange['agreement']>['recipientBook'] }) {
-  const [expanded, setExpanded] = useState(false);
-  const editionInfo = [book.book.edition, book.book.publicationYear].filter(Boolean).join(" · ");
-  const details = [
-    book.description,
-    book.pages ? `${book.pages} trang` : null,
-    book.coverNote,
-    book.notes,
-    book.accessories,
-    book.hasMissingPages ? "Có thiếu trang" : "Không thiếu trang",
-    book.readable ? "Đọc tốt" : "Khó đọc",
-  ].filter(Boolean).join(". ");
+export function ExchangeProposalCard({
+  exchange,
+  isInitiator,
+}: ExchangeProposalCardProps) {
+  const myBooks: FrozenBook[] = exchange.agreement
+    ? isInitiator
+      ? exchange.agreement.initiatorBooks
+      : [exchange.agreement.recipientBook]
+    : [];
+  const partnerBooks: FrozenBook[] = exchange.agreement
+    ? isInitiator
+      ? [exchange.agreement.recipientBook]
+      : exchange.agreement.initiatorBooks
+    : [];
+
+  const partnerName =
+    (isInitiator
+      ? exchange.agreement?.recipientBook.ownerDisplayName
+      : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName) ??
+    (isInitiator
+      ? exchange.recipientAddress?.recipientName
+      : exchange.initiatorAddress?.recipientName) ??
+    "Đối tác";
+
+  const myBooksTotal = myBooks.reduce(
+    (sum, b) => sum + (b.exchangeValue ?? 0),
+    0,
+  );
+  const partnerBooksTotal = partnerBooks.reduce(
+    (sum, b) => sum + (b.exchangeValue ?? 0),
+    0,
+  );
+
+  const myDeposit = isInitiator
+    ? exchange.initiatorDeposit
+    : exchange.recipientDeposit;
+  const partnerDeposit = isInitiator
+    ? exchange.recipientDeposit
+    : exchange.initiatorDeposit;
+  const myId = isInitiator ? exchange.initiatorId : exchange.recipientId;
+  const isPayer = exchange.diffPayerId === myId && exchange.diffAmount > 0;
+  const partnerPays =
+    Boolean(exchange.diffPayerId) &&
+    exchange.diffPayerId !== myId &&
+    exchange.diffAmount > 0;
 
   return (
-    <View style={styles.frozenContainer}>
-      {editionInfo ? (
-        <AppText style={styles.frozenEditionText} numberOfLines={1}>
-          {editionInfo}
-        </AppText>
-      ) : null}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={expanded ? "Thu gọn tình trạng" : "Xem tình trạng đã ghi nhận"}
-        accessibilityState={{ expanded }}
-        onPress={() => setExpanded((value) => !value)}
-        style={styles.frozenToggleBtn}
-      >
-        <AppText style={styles.frozenToggleText}>
-          {expanded ? "▲ Thu gọn tình trạng" : "▼ Tình trạng đã ghi nhận"}
-        </AppText>
-      </Pressable>
-      {expanded && details ? (
-        <View style={styles.frozenDetailBox}>
-          <AppText style={styles.frozenDetailText}>{details}</AppText>
+    <View style={styles.container}>
+      {!exchange.agreement ? (
+        <View style={styles.legacyBox}>
+          <Icon name="info" size={15} color={stitchTokens.subtleGray} />
+          <AppText style={styles.legacyText}>
+            Phiếu cũ thiếu bản chụp sách ban đầu. Mức cọc và tiền bù vẫn giữ
+            theo thỏa thuận đã lưu.
+          </AppText>
         </View>
       ) : null}
+
+      {/* Unified Tactile Trade Matchup Ticket */}
+      <View style={styles.card}>
+        {/* Outgoing Side */}
+        <View style={styles.sideSection}>
+          <View style={styles.sideHeaderRow}>
+            <View style={[styles.directionBadge, styles.directionBadgeOutgoing]}>
+              <AppText
+                style={[
+                  styles.directionBadgeText,
+                  styles.directionBadgeTextOutgoing,
+                ]}
+              >
+                BẠN ĐƯA ({myBooks.length})
+              </AppText>
+            </View>
+            <AppText style={styles.sideTotalText}>
+              {formatVnd(myBooksTotal)}
+            </AppText>
+          </View>
+          {myBooks.length === 0 ? (
+            <AppText style={styles.emptyText}>Chưa có bản chụp sách.</AppText>
+          ) : (
+            <View style={styles.bookList}>
+              {myBooks.map((book, idx) => (
+                <BookRowItem
+                  key={book.listingId}
+                  book={book}
+                  exchangeId={exchange.id}
+                  hasTopDivider={idx > 0}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Centered Swap Bridge */}
+        <View style={styles.swapBridge}>
+          <View style={styles.swapBridgeLine} />
+          <View style={styles.swapBridgeCircle}>
+            <Icon name="swap" size={15} color={stitchTokens.wine} />
+          </View>
+          <View style={styles.swapBridgeLine} />
+        </View>
+
+        {/* Incoming Side */}
+        <View style={styles.sideSection}>
+          <View style={styles.sideHeaderRow}>
+            <View style={styles.sideIncomingLabelGroup}>
+              <View
+                style={[styles.directionBadge, styles.directionBadgeIncoming]}
+              >
+                <AppText
+                  style={[
+                    styles.directionBadgeText,
+                    styles.directionBadgeTextIncoming,
+                  ]}
+                >
+                  BẠN NHẬN ({partnerBooks.length})
+                </AppText>
+              </View>
+              <AppText style={styles.partnerMiniName} numberOfLines={1}>
+                từ {partnerName}
+              </AppText>
+            </View>
+            <AppText style={styles.sideTotalText}>
+              {formatVnd(partnerBooksTotal)}
+            </AppText>
+          </View>
+          {partnerBooks.length === 0 ? (
+            <AppText style={styles.emptyText}>Chưa có bản chụp sách.</AppText>
+          ) : (
+            <View style={styles.bookList}>
+              {partnerBooks.map((book, idx) => (
+                <BookRowItem
+                  key={book.listingId}
+                  book={book}
+                  exchangeId={exchange.id}
+                  hasTopDivider={idx > 0}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Clean Digital Receipt Card: Deposit & Diff Terms */}
+      <View style={styles.card}>
+        <View style={styles.financeHeader}>
+          <View style={styles.financeIconPill}>
+            <Icon name="shield" size={14} color={stitchTokens.wine} />
+          </View>
+          <AppText style={styles.financeTitle}>Cam kết cọc & tiền bù</AppText>
+        </View>
+
+        <View style={styles.financeRows}>
+          <View style={styles.financeRow}>
+            <View style={styles.financeLabelCol}>
+              <AppText style={styles.financeLabel}>Cọc sách bạn gửi</AppText>
+              <AppText style={styles.financeHint}>
+                Hoàn 100% về ví khi trao đổi hoàn tất
+              </AppText>
+            </View>
+            <AppText style={styles.financeValue}>{formatVnd(myDeposit)}</AppText>
+          </View>
+
+          <View style={[styles.financeRow, styles.financeRowBorder]}>
+            <View style={styles.financeLabelCol}>
+              <AppText style={styles.financeLabel}>Cọc của {partnerName}</AppText>
+              <AppText style={styles.financeHint}>
+                Lật Lại khóa bảo chứng trên sổ cái
+              </AppText>
+            </View>
+            <AppText style={styles.financeValue}>
+              {formatVnd(partnerDeposit)}
+            </AppText>
+          </View>
+
+          <View style={[styles.financeRow, styles.financeRowBorder]}>
+            <View style={styles.financeLabelCol}>
+              <AppText style={styles.financeLabel}>
+                {isPayer
+                  ? "Tiền bù bạn trả"
+                  : partnerPays
+                    ? "Tiền bù bạn nhận"
+                    : "Chênh lệch giá trị"}
+              </AppText>
+              <AppText style={styles.financeHint}>
+                {isPayer
+                  ? "Kết chuyển cho đối tác khi xong"
+                  : partnerPays
+                    ? "Cộng thẳng vào ví bạn khi xong"
+                    : "Trao đổi ngang giá"}
+              </AppText>
+            </View>
+            <AppText
+              style={[
+                styles.financeValue,
+                isPayer && styles.financeValueWine,
+                partnerPays && styles.financeValueGreen,
+              ]}
+            >
+              {exchange.diffAmount > 0
+                ? `${partnerPays ? "+" : isPayer ? "-" : ""}${formatVnd(exchange.diffAmount)}`
+                : "0 đ"}
+            </AppText>
+          </View>
+        </View>
+
+        <View style={styles.totalBar}>
+          <AppText style={styles.totalLabel}>Tổng cần nộp lúc đặt cọc</AppText>
+          <AppText style={styles.totalValue}>
+            {formatVnd(myDeposit + (isPayer ? exchange.diffAmount : 0))}
+          </AppText>
+        </View>
+      </View>
     </View>
   );
 }
 
-export function ExchangeProposalCard({
+export function ExchangeFundingHistoryCard({
   exchange,
   isInitiator,
-  initialCollapsed,
-}: ExchangeProposalCardProps) {
-  const defaultCollapsed = initialCollapsed ?? exchange.status !== "Proposed";
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  const statusInfo = mapExchangeStatusInfo(exchange.status, isInitiator);
-
-  const initiatorListingCount =
-    exchange.initiatorListingIds && exchange.initiatorListingIds.length > 0
-      ? exchange.initiatorListingIds.length
-      : 1;
-
-  type FrozenBook = NonNullable<Exchange['agreement']>['recipientBook'];
-  const frozen = (book: FrozenBook) => ({
-    id: book.listingId, revisionId: book.revisionId, photos: book.mediaIds.map((id) => ({ id })),
-    book: book.book, snapshot: book, exchangeValue: book.exchangeValue, salePrice: null,
-  });
-  type BookView = ReturnType<typeof frozen>;
-  const initiatorBookList: (BookView | null)[] = exchange.agreement
-    ? exchange.agreement.initiatorBooks.map(frozen) : new Array(initiatorListingCount).fill(null);
-  const recipientBookList: (BookView | null)[] = exchange.agreement ? [frozen(exchange.agreement.recipientBook)] : [null];
-  const myBooks = isInitiator ? initiatorBookList : recipientBookList;
-  const partnerBooks = isInitiator ? recipientBookList : initiatorBookList;
-
-  const partnerAddressName = isInitiator
-    ? exchange.recipientAddress?.recipientName
-    : exchange.initiatorAddress?.recipientName;
-
-  const partnerName =
-    (isInitiator ? exchange.agreement?.recipientBook.ownerDisplayName : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName) ??
-    partnerAddressName ??
-    (isInitiator ? "Đối tác" : "Đối tác đề nghị");
-
-  // Financial calculations
-  const diff = exchange.diffAmount;
-  const isPayer = exchange.diffPayerId === (isInitiator ? exchange.initiatorId : exchange.recipientId);
-
-  let moneyLabel = "Trao đổi ngang giá";
-  let moneyTone: string = stitchTokens.likeNewGreen;
-  let moneyBg: string = stitchTokens.likeNewGreenBg;
-
-  if (diff > 0) {
-    if (isPayer) {
-      moneyLabel = `Bạn cần bù thêm: ${formatVnd(diff)}`;
-      moneyTone = stitchTokens.wineDark;
-      moneyBg = stitchTokens.amberBg;
-    } else {
-      moneyLabel = `Đối tác sẽ bù thêm: ${formatVnd(diff)}`;
-      moneyTone = stitchTokens.likeNewGreen;
-      moneyBg = stitchTokens.likeNewGreenBg;
-    }
-  }
-
-  const myDeposit = isInitiator ? exchange.initiatorDeposit : exchange.recipientDeposit;
-  const partnerDeposit = isInitiator ? exchange.recipientDeposit : exchange.initiatorDeposit;
-
-  const myAddress = isInitiator ? exchange.initiatorAddress : exchange.recipientAddress;
-  const partnerAddress = isInitiator ? exchange.recipientAddress : exchange.initiatorAddress;
+}: {
+  exchange: Exchange;
+  isInitiator: boolean;
+}) {
+  const myFundedAt = isInitiator
+    ? exchange.initiatorFundedAt
+    : exchange.recipientFundedAt;
+  const partnerFundedAt = isInitiator
+    ? exchange.recipientFundedAt
+    : exchange.initiatorFundedAt;
+  const myDeposit = isInitiator
+    ? exchange.initiatorDeposit
+    : exchange.recipientDeposit;
+  const partnerDeposit = isInitiator
+    ? exchange.recipientDeposit
+    : exchange.initiatorDeposit;
+  const myId = isInitiator ? exchange.initiatorId : exchange.recipientId;
+  const myDiff =
+    exchange.diffPayerId === myId && exchange.diffAmount > 0
+      ? exchange.diffAmount
+      : 0;
+  const partnerDiff =
+    exchange.diffPayerId &&
+    exchange.diffPayerId !== myId &&
+    exchange.diffAmount > 0
+      ? exchange.diffAmount
+      : 0;
 
   return (
-    <View style={[styles.card, collapsed && styles.cardCollapsed]}>
-      {!exchange.agreement && (
-        <AppText style={styles.legacyNotice}>
-          Hồ sơ cũ thiếu bản chụp sách ban đầu. Cọc/bù là nghĩa vụ đã lưu; nội dung sách không được lấy từ bài đăng hiện tại.
-        </AppText>
-      )}
-
-      {/* 1. Header with Code, Status Badge & Collapse Toggle */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={collapsed ? "Mở rộng chi tiết đề nghị đổi sách" : "Thu gọn đề nghị đổi sách"}
-        onPress={() => setCollapsed((v) => !v)}
-        style={[styles.header, collapsed && styles.headerCollapsed]}
-      >
-        <View style={styles.headerLeft}>
-          <View style={styles.headerTitleRow}>
-            <AppText style={styles.codeText}>
-              #{exchange.id.slice(0, 8).toUpperCase()}
-            </AppText>
-            <View style={[styles.statusBadge, { backgroundColor: statusInfo.badgeBg }]}>
-              <AppText style={[styles.statusText, { color: statusInfo.badgeColor }]}>
-                {statusInfo.label}
-              </AppText>
-            </View>
-          </View>
-          {collapsed ? (
-            <View style={styles.collapsedSummaryRow}>
-              <Icon name="swap" size={13} color={stitchTokens.roseBrown} />
-              <AppText style={styles.collapsedSummaryText} numberOfLines={1}>
-                {myBooks[0]?.book.title ?? "Sách gửi"} ⇄ {partnerBooks[0]?.book.title ?? "Sách nhận"}
-              </AppText>
-            </View>
-          ) : (
-            <AppText style={styles.dateText}>
-              Tạo ngày {new Date(exchange.createdAt).toLocaleDateString("vi-VN")}
-            </AppText>
-          )}
+    <View style={styles.card}>
+      <View style={styles.financeHeader}>
+        <View style={styles.financeIconPill}>
+          <Icon name="wallet" size={14} color={stitchTokens.wine} />
         </View>
-
-        <View style={styles.collapseToggleBtn}>
-          <AppText style={styles.collapseToggleText}>
-            {collapsed ? "Chi tiết" : "Thu gọn"}
+        <AppText style={styles.financeTitle}>Bản ghi đặt cọc bảo chứng</AppText>
+      </View>
+      <View style={styles.financeRows}>
+        <View style={styles.financeRow}>
+          <View style={styles.financeLabelCol}>
+            <AppText style={styles.financeLabel}>Phần của bạn</AppText>
+            <AppText style={styles.financeHint}>
+              {myFundedAt
+                ? `Đã cọc lúc ${new Date(myFundedAt).toLocaleString("vi-VN")}`
+                : "Chưa ghi nhận đặt cọc"}
+            </AppText>
+          </View>
+          <AppText style={styles.financeValue}>
+            {formatVnd(myDeposit + myDiff)}
           </AppText>
-          <Icon
-            name={collapsed ? "chevronDown" : "chevronUp"}
-            size={13}
-            color={stitchTokens.wineDark}
-          />
         </View>
-      </Pressable>
 
-      {!collapsed && (
-        <>
-          {/* 2. Book Exchange Matchup Cards (Horizontal Row) */}
-          <View style={styles.booksComparison}>
-            {/* Your Books (Sách của bạn gửi đi) */}
-            <View style={styles.bookSideCard}>
-              <View style={styles.sideHeader}>
-                <AppText style={styles.sideBadge} numberOfLines={1}>
-                  {myBooks.length > 1
-                    ? `BẠN GỬI (${myBooks.length})`
-                    : "SÁCH BẠN GỬI"}
-                </AppText>
-              </View>
-              <View style={styles.booksListCol}>
-                {myBooks.length > 0 ? (
-                  myBooks.map((item, idx) => (
-                    <View key={item?.id ?? `my-${idx}`} style={styles.bookInfoCol}>
-                      <View style={styles.photoBox}>
-                        {item?.photos?.[0] ? (
-                          <PublicPhoto
-                            exchangeId={exchange.agreement ? exchange.id : undefined}
-                            listingId={item.id}
-                            revisionId={item.revisionId}
-                            mediaId={item.photos[0].id}
-                            label="Bìa sách bạn gửi"
-                            active={true}
-                            compact
-                          />
-                        ) : (
-                          <View style={styles.photoPlaceholder}>
-                            <Icon name="book" size={20} color={stitchTokens.roseBrown} />
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.bookTextCol}>
-                        {item ? (
-                          <>
-                            <AppText style={styles.bookTitle} numberOfLines={2}>
-                              {item.book.title}
-                            </AppText>
-                            <AppText style={styles.bookAuthors} numberOfLines={1}>
-                              {item.book.authors.join(", ")}
-                            </AppText>
-                            <AppText style={styles.bookValue}>
-                              Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
-                            </AppText>
-                            <FrozenCondition book={item.snapshot} />
-                          </>
-                        ) : (
-                          <>
-                            <AppText style={styles.bookTitle} numberOfLines={1}>
-                              Sách gửi #{idx + 1}
-                            </AppText>
-                            <AppText style={styles.bookAuthors} numberOfLines={1}>
-                              {exchange.status === "Completed"
-                                ? "Đã hoàn tất"
-                                : "Trong thỏa thuận"}
-                            </AppText>
-                            <AppText style={styles.bookValue}>
-                              {exchange.status === "Completed"
-                                ? "Đã đối soát"
-                                : "Xem chi tiết"}
-                            </AppText>
-                          </>
-                        )}
-                      </View>
-                    </View>
-                  ))
-                ) : null}
-              </View>
-            </View>
-
-            {/* Swap Icon Center Indicator */}
-            <View style={styles.swapCenterBox}>
-              <View style={styles.swapCircle}>
-                <Icon name="sync" size={12} color={stitchTokens.wineDark} />
-              </View>
-            </View>
-
-            {/* Partner Books */}
-            <View style={styles.bookSideCard}>
-              <View style={styles.sideHeader}>
-                <AppText style={styles.sideBadgePartner} numberOfLines={1}>
-                  {partnerBooks.length > 1
-                    ? `NHẬN (${partnerBooks.length} TỪ @${partnerName})`
-                    : `SÁCH NHẬN (TỪ @${partnerName})`}
-                </AppText>
-              </View>
-              <View style={styles.booksListCol}>
-                {partnerBooks.length > 0 ? (
-                  partnerBooks.map((item, idx) => (
-                    <View key={item?.id ?? `partner-${idx}`} style={styles.bookInfoCol}>
-                      <View style={styles.photoBox}>
-                        {item?.photos?.[0] ? (
-                          <PublicPhoto
-                            exchangeId={exchange.agreement ? exchange.id : undefined}
-                            listingId={item.id}
-                            revisionId={item.revisionId}
-                            mediaId={item.photos[0].id}
-                            label="Bìa sách bạn nhận"
-                            active={true}
-                            compact
-                          />
-                        ) : (
-                          <View style={styles.photoPlaceholder}>
-                            <Icon name="book" size={20} color={stitchTokens.roseBrown} />
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.bookTextCol}>
-                        {item ? (
-                          <>
-                            <AppText style={styles.bookTitle} numberOfLines={2}>
-                              {item.book.title}
-                            </AppText>
-                            <AppText style={styles.bookAuthors} numberOfLines={1}>
-                              {item.book.authors.join(", ")}
-                            </AppText>
-                            <AppText style={styles.bookValue}>
-                              Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
-                            </AppText>
-                            <FrozenCondition book={item.snapshot} />
-                          </>
-                        ) : (
-                          <>
-                            <AppText style={styles.bookTitle} numberOfLines={1}>
-                              Sách nhận #{idx + 1}
-                            </AppText>
-                            <AppText style={styles.bookAuthors} numberOfLines={1}>
-                              {exchange.status === "Completed"
-                                ? "Đã giao dịch"
-                                : "Đối ứng"}
-                            </AppText>
-                            <AppText style={styles.bookValue}>
-                              {exchange.status === "Completed"
-                                ? "Đã tất toán"
-                                : "Xem chi tiết"}
-                            </AppText>
-                          </>
-                        )}
-                      </View>
-                    </View>
-                  ))
-                ) : null}
-              </View>
-            </View>
+        <View style={[styles.financeRow, styles.financeRowBorder]}>
+          <View style={styles.financeLabelCol}>
+            <AppText style={styles.financeLabel}>Phần của đối tác</AppText>
+            <AppText style={styles.financeHint}>
+              {partnerFundedAt
+                ? `Đã cọc lúc ${new Date(partnerFundedAt).toLocaleString("vi-VN")}`
+                : "Chưa ghi nhận đặt cọc"}
+            </AppText>
           </View>
+          <AppText style={styles.financeValue}>
+            {formatVnd(partnerDeposit + partnerDiff)}
+          </AppText>
+        </View>
+      </View>
+    </View>
+  );
+}
 
-          {/* 3. Financial Settlement Box */}
-          <View style={[styles.settlementBox, { backgroundColor: moneyBg }]}>
-            <View style={styles.settlementRow}>
-              <Icon name="tag" size={15} color={moneyTone} />
-              <View style={{ flex: 1 }}>
-                <AppText style={[styles.settlementTitle, { color: moneyTone }]}>
-                  {moneyLabel}
-                </AppText>
-                <AppText style={styles.settlementSub}>
-                  Cọc đối soát: Bạn {formatVnd(myDeposit)} · Đối tác {formatVnd(partnerDeposit)}
-                </AppText>
-              </View>
-            </View>
-          </View>
+export function ExchangeInspectionHistoryCard({
+  exchange,
+  isInitiator,
+}: {
+  exchange: Exchange;
+  isInitiator: boolean;
+}) {
+  const myDeadline = isInitiator
+    ? exchange.initiatorInspectionDeadline
+    : exchange.recipientInspectionDeadline;
+  const partnerDeadline = isInitiator
+    ? exchange.recipientInspectionDeadline
+    : exchange.initiatorInspectionDeadline;
+  const myDone = isInitiator
+    ? exchange.initiatorCompletedAt
+    : exchange.recipientCompletedAt;
+  const partnerDone = isInitiator
+    ? exchange.recipientCompletedAt
+    : exchange.initiatorCompletedAt;
 
-          {/* 4. Delivery Address Summary */}
-          <View style={styles.addressSection}>
-            <View style={styles.addressHeaderRow}>
-              <Icon name="pin" size={13} color={stitchTokens.wineMid} />
-              <AppText style={styles.addressHeaderTitle}>Địa chỉ giao nhận</AppText>
-            </View>
+  const fmt = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleString("vi-VN") : "Chưa ghi nhận";
 
-            <View style={styles.addressBlock}>
-              <AppText style={styles.addressRoleLabel}>Địa chỉ của bạn:</AppText>
-              {myAddress ? (
-                <AppText style={styles.addressDetail} numberOfLines={2}>
-                  {myAddress.recipientName} ({myAddress.phone}) — {myAddress.detail}
-                </AppText>
-              ) : (
-                <AppText style={styles.addressMissing}>Chưa cấu hình địa chỉ nhận hàng</AppText>
-              )}
-            </View>
-
-            {partnerAddress ? (
-              <View style={styles.addressBlock}>
-                <AppText style={styles.addressRoleLabel}>Địa chỉ đối tác:</AppText>
-                <AppText style={styles.addressDetail} numberOfLines={2}>
-                  {partnerAddress.recipientName} ({partnerAddress.phone}) — {partnerAddress.detail}
-                </AppText>
-              </View>
-            ) : null}
-          </View>
-        </>
-      )}
+  return (
+    <View style={styles.card}>
+      <View style={styles.financeHeader}>
+        <View style={styles.financeIconPill}>
+          <Icon name="clock" size={14} color={stitchTokens.wine} />
+        </View>
+        <AppText style={styles.financeTitle}>Các mốc kiểm tra 72 giờ</AppText>
+      </View>
+      <View style={styles.financeRows}>
+        <View style={styles.financeRow}>
+          <AppText style={styles.financeLabel}>Hạn kiểm tra của bạn</AppText>
+          <AppText style={styles.historyTime}>{fmt(myDeadline)}</AppText>
+        </View>
+        <View style={[styles.financeRow, styles.financeRowBorder]}>
+          <AppText style={styles.financeLabel}>Bạn xác nhận kiểm tra</AppText>
+          <AppText style={styles.historyTime}>{fmt(myDone)}</AppText>
+        </View>
+        <View style={[styles.financeRow, styles.financeRowBorder]}>
+          <AppText style={styles.financeLabel}>
+            Hạn kiểm tra của đối tác
+          </AppText>
+          <AppText style={styles.historyTime}>{fmt(partnerDeadline)}</AppText>
+        </View>
+        <View style={[styles.financeRow, styles.financeRowBorder]}>
+          <AppText style={styles.financeLabel}>Đối tác xác nhận</AppText>
+          <AppText style={styles.historyTime}>{fmt(partnerDone)}</AppText>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    gap: 14,
+  },
   card: {
-    padding: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: stitchTokens.wineAlpha05,
+    padding: 18,
+    gap: 14,
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  legacyBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: space.md,
     borderRadius: 14,
     backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachMuted,
-    gap: 8,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  cardCollapsed: {
-    paddingBottom: 8,
-  },
-  legacyNotice: {
-    fontSize: 11,
-    color: stitchTokens.crimson,
-    backgroundColor: stitchTokens.flashRedBg,
-    padding: 6,
-    borderRadius: 6,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.peachBorder,
-  },
-  headerCollapsed: {
-    paddingBottom: 0,
-    borderBottomWidth: 0,
-  },
-  headerLeft: {
+  legacyText: {
     flex: 1,
-    gap: 2,
-  },
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  codeText: {
-    fontSize: 13.5,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  dateText: {
-    fontSize: 10.5,
-    color: stitchTokens.roseBrown,
-  },
-  statusBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  collapseToggleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginLeft: 6,
-  },
-  collapseToggleText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  collapsedSummaryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 2,
-  },
-  collapsedSummaryText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: stitchTokens.deepCocoa,
-    flex: 1,
-  },
-  booksComparison: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    gap: 4,
-  },
-  bookSideCard: {
-    flex: 1,
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorderAlpha40,
-    gap: 6,
-    justifyContent: "space-between",
-  },
-  sideHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sideBadge: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-    backgroundColor: stitchTokens.terracottaSoft,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    letterSpacing: 0.2,
-    textAlign: "center",
-  },
-  sideBadgePartner: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: stitchTokens.white,
-    backgroundColor: stitchTokens.wineMid,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    letterSpacing: 0.2,
-    textAlign: "center",
-  },
-  booksListCol: {
-    flex: 1,
-    gap: 6,
-    justifyContent: "center",
-  },
-  bookInfoCol: {
-    alignItems: "center",
-    gap: 5,
-  },
-  photoBox: {
-    width: 48,
-    height: 66,
-    borderRadius: 6,
-    overflow: "hidden",
-    backgroundColor: stitchTokens.warmCard,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    alignSelf: "center",
-  },
-  photoPlaceholder: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bookTextCol: {
-    width: "100%",
-    alignItems: "center",
-    gap: 2,
-  },
-  bookTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-    lineHeight: 16,
-    textAlign: "center",
-  },
-  bookAuthors: {
-    fontSize: 10.5,
-    color: stitchTokens.roseBrown,
-    textAlign: "center",
-  },
-  bookValue: {
-    fontSize: 11.5,
-    fontWeight: "700",
-    color: stitchTokens.likeNewGreen,
-    marginTop: 1,
-    textAlign: "center",
-  },
-  frozenContainer: {
-    marginTop: 2,
-    gap: 2,
-    alignItems: "center",
-    width: "100%",
-  },
-  frozenEditionText: {
-    fontSize: 10,
+    fontSize: 12.5,
     color: stitchTokens.subtleGray,
-    textAlign: "center",
+    lineHeight: 18,
   },
-  frozenToggleBtn: {
-    alignSelf: "center",
-    paddingVertical: 1.5,
-    paddingHorizontal: 5,
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderRadius: 4,
+  sideSection: {
+    gap: 10,
   },
-  frozenToggleText: {
-    fontSize: 9.5,
-    fontWeight: "600",
-    color: stitchTokens.wineMid,
-    textAlign: "center",
-  },
-  frozenDetailBox: {
-    backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    borderRadius: 6,
-    padding: 6,
-    marginTop: 2,
-    width: "100%",
-  },
-  frozenDetailText: {
-    fontSize: 10,
-    color: stitchTokens.deepCocoa,
-    lineHeight: 14,
-  },
-  swapCenterBox: {
+  sideHeaderRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 2,
+    justifyContent: "space-between",
+    gap: 8,
   },
-  swapCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: stitchTokens.terracottaSoft,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  settlementBox: {
-    padding: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: stitchTokens.goldBorder,
-  },
-  settlementRow: {
+  sideIncomingLabelGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
+    flex: 1,
+    minWidth: 0,
   },
-  settlementTitle: {
+  partnerMiniName: {
     fontSize: 12,
-    fontWeight: "800",
+    color: stitchTokens.subtleGray,
+    fontWeight: "600",
+    flexShrink: 1,
   },
-  settlementSub: {
+  directionBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  directionBadgeOutgoing: {
+    backgroundColor: stitchTokens.roseParchment,
+  },
+  directionBadgeIncoming: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+  },
+  directionBadgeText: {
     fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  directionBadgeTextOutgoing: {
+    color: stitchTokens.wine,
+  },
+  directionBadgeTextIncoming: {
+    color: stitchTokens.likeNewGreen,
+  },
+  sideTotalText: {
+    fontSize: 14,
+    fontWeight: "800",
     color: stitchTokens.darkWood,
+    fontVariant: ["tabular-nums"],
+  },
+  swapBridge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginVertical: 2,
+  },
+  swapBridgeLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: stitchTokens.surfaceSoft,
+  },
+  swapBridgeCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: stitchTokens.roseParchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  groupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  groupTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    flex: 1,
+    minWidth: 0,
+  },
+  groupTitleText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  groupTitle: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: stitchTokens.darkWood,
+  },
+  groupSubtitle: {
+    fontSize: 11.5,
+    color: stitchTokens.subtleGray,
     marginTop: 1,
   },
-  addressSection: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorderAlpha40,
+  groupTotalCol: {
+    alignItems: "flex-end",
+  },
+  groupCount: {
+    fontSize: 11,
+    color: stitchTokens.subtleGray,
+    fontWeight: "600",
+  },
+  groupTotal: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  emptyText: {
+    fontSize: 12.5,
+    color: stitchTokens.subtleGray,
+  },
+  bookList: {
+    gap: 12,
+  },
+  bookRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  bookRowBorder: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.surfaceSoft,
+  },
+  coverBox: {
+    width: 56,
+    height: 76,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: stitchTokens.parchment,
+    shadowColor: stitchTokens.darkWood,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  coverFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bookMeta: {
+    flex: 1,
+    minWidth: 0,
     gap: 4,
   },
-  addressHeaderRow: {
+  bookTitle: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: stitchTokens.darkWood,
+    lineHeight: 20,
+  },
+  bookAuthor: {
+    fontSize: 12,
+    color: stitchTokens.subtleGray,
+  },
+  bookFactsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 2,
+  },
+  conditionTag: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.surfaceSoft,
+  },
+  conditionTagText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.deepCocoa,
+  },
+  bookPrice: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  disclosureWrap: {
+    marginTop: 3,
+  },
+  disclosureBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    alignSelf: "flex-start",
+    paddingVertical: 2,
   },
-  addressHeaderTitle: {
-    fontSize: 11,
+  disclosureLabel: {
+    fontSize: 12,
     fontWeight: "700",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.wine,
   },
-  addressBlock: {
-    gap: 1,
+  disclosureBody: {
+    marginTop: 6,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.surfaceSoft,
+    gap: 3,
   },
-  addressRoleLabel: {
-    fontSize: 9.5,
+  disclosureMeta: {
+    fontSize: 11.5,
     fontWeight: "700",
-    color: stitchTokens.roseBrown,
-    textTransform: "uppercase",
+    color: stitchTokens.deepCocoa,
   },
-  addressDetail: {
-    fontSize: 10.5,
+  disclosureText: {
+    fontSize: 12,
+    color: stitchTokens.subtleGray,
+    lineHeight: 17,
+  },
+  financeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  financeIconPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseParchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  financeTitle: {
+    fontSize: 15,
+    fontWeight: "800",
     color: stitchTokens.darkWood,
-    lineHeight: 14,
   },
-  addressMissing: {
-    fontSize: 10.5,
-    color: stitchTokens.crimson,
-    fontStyle: "italic",
+  financeRows: {
+    gap: 0,
+  },
+  financeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 10,
+  },
+  financeRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.surfaceSoft,
+  },
+  financeLabelCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  financeLabel: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+  },
+  financeHint: {
+    fontSize: 11.5,
+    color: stitchTokens.subtleGray,
+  },
+  financeValue: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: stitchTokens.darkWood,
+    fontVariant: ["tabular-nums"],
+  },
+  financeValueWine: {
+    color: stitchTokens.wine,
+  },
+  financeValueGreen: {
+    color: stitchTokens.likeNewGreen,
+  },
+  totalBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.parchment,
+  },
+  totalLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.deepCocoa,
+    flex: 1,
+  },
+  totalValue: {
+    fontSize: 16.5,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  historyTime: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: stitchTokens.deepCocoa,
+    fontVariant: ["tabular-nums"],
   },
 });

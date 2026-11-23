@@ -310,6 +310,26 @@
 .trackingCode > div > span { color: var(--shop-muted); font-size: .8125rem; }
 .trackingCode strong { font-variant-numeric: tabular-nums; }
 
+.driverLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 6px 10px;
+    margin-block: 4px 2px;
+    border: 1px solid var(--shop-control);
+    border-radius: 8px;
+    background: var(--shop-paper);
+    color: var(--leg-ink);
+    font-size: .8125rem;
+    font-weight: 650;
+    line-height: 1.35;
+    text-decoration: none;
+}
+
+.driverLink:hover { background: var(--leg-tint); }
+.driverLink svg { flex: none; }
+
 .timeline {
     margin-block: 10px;
     padding-inline-start: 15px;

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { exchangeHandoverAnchor } from '../lib/exchange-handover';
+import { ROUTES } from '../lib/routes';
 import { AuctionDriverView } from './AuctionDriverView';
 import { DirectDriverView } from './DirectDriverView';
 import { DriverCompleteAction, DriverParcelCard, DriverParcelRoute, DriverWorkspace } from './DriverWorkspace';
@@ -92,6 +94,10 @@ function ExchangeDriverView() {
   const [recentOrders, setRecentOrders] = useState<RecentOrderSummary[]>([]);
   const [legSteps, setLegSteps] = useState<Record<string, number>>({});
   const [lastAction, setLastAction] = useState<string>('');
+  const requestedCode = searchParams.get('trackingCode') || undefined;
+  const requestedExchange = searchParams.get('exchangeId') || undefined;
+  const legParam = searchParams.get('leg');
+  const requestedLeg = legParam === 'initiator' || legParam === 'recipient' ? legParam : undefined;
 
   // Xác định bước của bưu kiện: ưu tiên thao tác hiện tại -> sự kiện trong DB -> trạng thái giao
   const currentStep = (() => {
@@ -153,15 +159,12 @@ function ExchangeDriverView() {
   );
 
   useEffect(() => {
-    const qCode = searchParams.get('trackingCode') || undefined;
-    const qExId = searchParams.get('exchangeId') || undefined;
-    const qLeg = (searchParams.get('leg') as 'initiator' | 'recipient') || undefined;
-    void fetchActiveOrder(qCode, qExId, qLeg);
+    void fetchActiveOrder(requestedCode, requestedExchange, requestedLeg);
     void fetchRecentOrders();
-  }, [fetchActiveOrder, fetchRecentOrders, searchParams]);
+  }, [fetchActiveOrder, fetchRecentOrders, requestedCode, requestedExchange, requestedLeg]);
 
   const handleSearch = (trackingCode: string) => {
-    if (trackingCode === searchParams.get('trackingCode')) void fetchActiveOrder(trackingCode);
+    if (trackingCode === requestedCode) void fetchActiveOrder(requestedCode, requestedExchange, requestedLeg);
     else setSearchParams({ trackingCode });
   };
 
@@ -335,7 +338,14 @@ function ExchangeDriverView() {
       trackingCode={searchParams.get('trackingCode') ?? ''}
       searchLocked={loading || submitting}
       onSearch={handleSearch}
-      refresh={{ loading, disabled: submitting, run: () => void fetchActiveOrder(undefined, order?.exchangeId, order?.activeLeg) }}
+      refresh={{
+        loading, disabled: submitting,
+        run: () => void fetchActiveOrder(requestedCode, requestedExchange, requestedLeg),
+      }}
+      back={order ? {
+        to: `${ROUTES.exchangeDetail(order.exchangeId)}#${exchangeHandoverAnchor.overview}`,
+        label: 'Quay lại phiếu trao đổi',
+      } : undefined}
     >
         {/* Quick Chips: Chọn các đơn gần đây trong DB */}
         <div className={styles.chipsSection}>

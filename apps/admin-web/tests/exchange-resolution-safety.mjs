@@ -215,7 +215,7 @@ try {
   await expect(page.getByRole('heading', { name: 'Đối chiếu khoản tiền' })).toBeVisible();
   await expect(page.getByText('Đang giữ', { exact: true })).toBeVisible();
   await expect(page.getByText(/600[.]000/)).toBeVisible();
-  await expect(page.getByText(/Chưa đủ điều kiện chạy quy trình trả sách một chiều/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Phán quyết sự cố vận chuyển / giao nhận' })).toBeVisible();
   current = { ...current, recipientShippedAt: null };
   canVerify = true;
   await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
@@ -249,28 +249,21 @@ try {
   }
   eligible = false;
   current = { ...item, recipientShippedAt: now, initiatorReceivedAt: now, recipientReceivedAt: now,
+    diffPayerId: item.initiatorId,
     initiatorListingIds: item.agreement.initiatorBooks.map(book => book.listingId) };
   await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
   const verdict = page.getByLabel('Phương án phán quyết');
-  await expect(verdict).toHaveValue('CompleteExchange');
-  await expect(verdict.locator('option[value="CompensateRecipient"]')).toHaveJSProperty("disabled", true);
-  await expect(verdict.locator('option[value="CompensateInitiator"]')).toHaveJSProperty("disabled", true);
-  current = { ...current, initiatorListingIds: [item.initiatorListingId], diffPayerId: item.initiatorId,
-    agreement: { ...item.agreement, initiatorBooks: item.agreement.initiatorBooks.slice(0, 1) } };
-  await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
   await expect(verdict.locator('option[value="CompensateRecipient"]')).toHaveJSProperty("disabled", false);
+  await expect(verdict.locator('option[value="CompensateInitiator"]')).toHaveJSProperty("disabled", false);
   await verdict.selectOption('CompensateRecipient');
   await expect(verdict).toHaveValue('CompensateRecipient');
   const preview = page.getByRole('region', { name: 'Phán quyết khiếu nại kiểm tra sách' });
-  const refundDetail = /Dùng 300[.]000.*cọc để bồi thường.*Hoàn 100[.]000.*tiền bù/;
-  const refundAmount = /^[+]100[.]000/;
-  await expect(preview.getByText(refundDetail).filter({ visible: true })).toBeVisible();
-  await expect(preview.getByText(refundAmount).filter({ visible: true })).toBeVisible();
+  await preview.getByRole('button', { name: /Cuốn 1:.*100[.]000/ }).click();
+  await expect(preview.getByText('Khấu trừ từng phần · Hoàn tất trao đổi')).toBeVisible();
   await preview.getByRole('textbox', { name: 'Lý do phán quyết' }).fill('QA: đối chiếu chứng cứ của cả hai bên.');
   await preview.getByRole('button', { name: 'Xác nhận phán quyết', exact: true }).click();
-  const confirmation = page.getByRole('dialog', { name: /Xác nhận bồi thường cho Bình QA/ });
-  await expect(confirmation.getByText(refundDetail)).toBeVisible();
-  await expect(confirmation.getByText(refundAmount)).toBeVisible();
+  const confirmation = page.getByRole('dialog', { name: /Xác nhận khấu trừ 100[.]000.*cho Bình QA/ });
+  await expect(confirmation.getByText(/Khấu trừ 100[.]000.*thiệt hại/)).toBeVisible();
   assert.deepEqual(errors, []);
   console.log('PASS: held queue, read-only out-of-scope case, assignment, return evidence request, same key/body after lost ACK, error/retry/empty, inspection compensation eligibility, 1440/390/320 + 130% text. UI HTTP fixtures.');
 } finally {

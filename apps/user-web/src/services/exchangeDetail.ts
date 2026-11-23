@@ -72,6 +72,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     disputeReason: ex.disputeReason ?? undefined,
     disputedBy: ex.disputedBy ?? undefined,
     resolutionDecision: ex.resolutionDecision ?? undefined,
+    resolutionCompensationAmount: ex.resolutionCompensationAmount ?? null,
     resolutionReason: ex.resolutionReason ?? undefined,
     resolvedBy: ex.resolvedBy ?? undefined,
     resolvedAt: ex.resolvedAt ?? undefined,

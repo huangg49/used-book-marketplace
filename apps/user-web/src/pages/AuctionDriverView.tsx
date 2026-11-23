@@ -142,7 +142,7 @@ function AuctionDriverSession({
       setDemoPending(null)
       setMessage({ error: false, text: intent.step === 'Start'
         ? 'Bưu tá đã bắt đầu đi giao. Đơn đang ở bước Nhận sách.'
-        : 'Đã giao sách trong mô phỏng. Đơn đã sang Kiểm tra & kết quả.' })
+        : 'Đã ghi nhận hãng giao thành công trong mô phỏng. Quay lại đơn để người mua xác nhận đã nhận sách.' })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['point-order', intent.orderId] }),
         tracking.refetch(),

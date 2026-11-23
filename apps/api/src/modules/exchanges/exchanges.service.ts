@@ -36,7 +36,18 @@ import {
 import { recordViolation } from '../auctions/member-violations.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
-import { exchangeReturnChange, hasInspectionHandover, oneSidedReturn, pendingOutboundDelivery, resolutionMessage, returnResolutionView, verifyOutboundDelivery } from './exchange-return-resolution.js';
+import {
+  exchangeCompensationAmount,
+  exchangeDisputeScope,
+  exchangeMaxDamageDeduction,
+  exchangeReturnChange,
+  hasInspectionHandover,
+  oneSidedReturn,
+  pendingOutboundDelivery,
+  resolutionMessage,
+  returnResolutionView,
+  verifyOutboundDelivery,
+} from './exchange-return-resolution.js';
 import { notifyExchange } from './exchange-notifications.js';
 import { EXCHANGE_INSPECTION_MS, hasExchangeDispute, inspectionDeadlines, inspectionMaySettle } from './exchange-inspection.js';
 import { currentDemoDeadline, closeDemoDisputeWindow, demoExchangeDeadlineEnabled } from './exchange-demo-deadline.js';
@@ -215,11 +226,11 @@ export class ExchangesService {
     }
   }
 
-  private view(row: ExchangeDoc): Wire['Exchange'] {
+  private view(row: ExchangeDoc, now?: Date): Wire['Exchange'] {
     const deadlines = inspectionDeadlines(row);
     return {
       id: row._id,
-      ...(oneSidedReturn(row) && row.status === 'ResolutionPending' ? { canStartReturnResolution: true } : {}),
+      ...(row.status === 'ResolutionPending' && oneSidedReturn(row, now) ? { canStartReturnResolution: true } : {}),
       ...(pendingOutboundDelivery(row) ? { canVerifyOutboundDelivery: true } : {}),
       ...(row.outboundDeliveryVerification ? { outboundDeliveryVerification: {
         verifiedAt: row.outboundDeliveryVerification.verifiedAt.toISOString(),
@@ -326,6 +337,7 @@ export class ExchangesService {
       disputeReason: row.disputeReason ?? null,
       disputedBy: row.disputedBy ?? null,
       resolutionDecision: row.resolutionDecision ?? null,
+      resolutionCompensationAmount: row.resolutionCompensationAmount ?? null,
       resolutionReason: row.resolutionReason ?? null,
       resolvedBy: row.resolvedBy ?? null,
       resolvedAt: row.resolvedAt?.toISOString() ?? null,
@@ -594,7 +606,8 @@ export class ExchangesService {
           { sort: { updatedAt: -1, _id: -1 }, limit: 100 },
         )
         .toArray();
-      return { items: rows.map((r) => this.view(r)), nextCursor: null };
+      const now = await tx.now();
+      return { items: rows.map((r) => this.view(r, now)), nextCursor: null };
     });
   }
 
@@ -603,11 +616,11 @@ export class ExchangesService {
       member(actor);
       const row = await this.exchange(tx, id);
       this.participant(row, actor._id);
+      const now = await tx.now();
       const view = {
-        ...this.view(row),
+        ...this.view(row, now),
         ...(row.returnResolution ? { statements: await this.readDisputeStatements(tx, row, actor._id) } : {}),
       };
-      const now = await tx.now();
       const demoDeadline = actor.status === 'ACTIVE' && demoExchangeDeadlineEnabled(this.config, row)
         ? currentDemoDeadline(row, now, false) : undefined;
       if (demoDeadline) return { ...view, demoDeadline };
@@ -674,29 +687,52 @@ export class ExchangesService {
           );
         }
 
-        // Cancel any competing proposals for any involved listing
-        await tx.c.exchanges.updateMany(
-          {
-            _id: { $ne: exchange._id },
-            status: 'Proposed',
-            $or: [
-              { initiatorListingId: { $in: allIds } },
-              { initiatorListingIds: { $in: allIds } },
-              { recipientListingId: { $in: allIds } },
-            ],
-          },
-          {
-            $set: {
-              status: 'Cancelled',
-              rejectionReason: 'Listing no longer available',
-              cancelReason: 'ListingUnavailable',
-              cancelledBy: 'System',
-              cancelledAt: now,
-              updatedAt: now,
+        // Cancel any competing proposals for any involved listing and notify their proposers
+        const competingQuery = {
+          _id: { $ne: exchange._id },
+          status: 'Proposed' as const,
+          $or: [
+            { initiatorListingId: { $in: allIds } },
+            { initiatorListingIds: { $in: allIds } },
+            { recipientListingId: { $in: allIds } },
+          ],
+        };
+        const competing = await tx.c.exchanges
+          .find(competingQuery, {
+            projection: { _id: 1, initiatorId: 1, recipientId: 1 },
+          })
+          .toArray();
+        if (competing.length > 0) {
+          await tx.c.exchanges.updateMany(
+            { _id: { $in: competing.map((c) => c._id) }, status: 'Proposed' },
+            {
+              $set: {
+                status: 'Cancelled',
+                rejectionReason: 'Sách đã được giữ cho một giao dịch trao đổi khác.',
+                cancelReason: 'ListingUnavailable',
+                cancelledBy: 'System',
+                cancelledAt: now,
+                updatedAt: now,
+              },
+              $inc: { revision: 1 },
             },
-            $inc: { revision: 1 },
-          },
-        );
+          );
+          for (const other of competing) {
+            const targetUsers = [other.initiatorId, other.recipientId].filter(
+              (uid) => uid !== actor._id,
+            );
+            if (targetUsers.length > 0) {
+              await notifyExchange(
+                tx,
+                other as ExchangeDoc,
+                'ExchangeCancelled',
+                targetUsers,
+                now,
+                { reason: 'Sách đã được giữ cho một giao dịch trao đổi khác.' },
+              );
+            }
+          }
+        }
 
         // 24-hour funding deadline per POL-05
         const fundingDeadline = new Date(now.getTime() + 24 * 3600_000);
@@ -840,8 +876,11 @@ export class ExchangesService {
 
           if (isNegotiated && body.diffPayerId !== undefined && body.diffPayerId !== null) {
             if (body.diffPayerId !== exchange.initiatorId && body.diffPayerId !== exchange.recipientId) {
-              throw invalidState('Bên bù tiền phải là một trong hai người tham gia trao đổi.');
+              throw invalidField('/diffPayerId', 'Bên bù tiền phải là một trong hai người tham gia trao đổi.');
             }
+          }
+          if (isNegotiated && body.negotiatedDiffAmount! > 0 && body.diffPayerId === null) {
+            throw invalidField('/diffPayerId', 'Cần chỉ rõ bên bù tiền khi tiền bù lớn hơn 0.');
           }
 
           const amounts = exchangeAmounts(
@@ -851,21 +890,25 @@ export class ExchangesService {
             isNegotiated ? body.negotiatedDiffAmount : (isBooksChanged ? null : exchange.negotiatedDiffAmount),
             isNegotiated ? (body.negotiatedDiffAmount === 0 ? null : body.diffPayerId) : (isBooksChanged ? undefined : exchange.diffPayerId),
           );
+          if (amounts.diffAmount > 0 && !amounts.diffPayerId) {
+            throw invalidField('/diffPayerId', 'Cần chỉ rõ bên bù tiền khi tiền bù lớn hơn 0.');
+          }
           let updatedAddress: ExchangeAddressSnapshot | null = null;
           if (body.deliveryAddressId) {
             const addr = await tx.c.member_addresses.findOne({
               _id: body.deliveryAddressId,
               ownerId: actor._id,
             });
-            if (addr) {
-              updatedAddress = {
-                recipientName: addr.recipientName,
-                phone: addr.phone,
-                detail: addr.detail,
-                localityCode: addr.localityCode ?? null,
-                serviceAreaCode: addr.serviceAreaCode ?? null,
-              };
+            if (!addr) {
+              throw invalidField('/deliveryAddressId', 'Địa chỉ giao nhận không tồn tại hoặc không thuộc tài khoản của bạn.');
             }
+            updatedAddress = {
+              recipientName: addr.recipientName,
+              phone: addr.phone,
+              detail: addr.detail,
+              localityCode: addr.localityCode ?? null,
+              serviceAreaCode: addr.serviceAreaCode ?? null,
+            };
           }
 
           const setFields: Record<string, unknown> = {
@@ -914,6 +957,14 @@ export class ExchangesService {
             body: `[Đề xuất lại điều khoản]\n• Tiền bù: ${payerLabel}${addressPart}${notePart}`,
             sentAt: now,
           });
+          await notifyExchange(
+            tx,
+            next,
+            'ExchangeProposed',
+            [isInitiator ? exchange.recipientId : exchange.initiatorId],
+            now,
+            { reason: `Đối tác vừa gửi đề xuất lại điều khoản (${payerLabel}).` },
+          );
 
           return {
             entityType: 'Exchange',
@@ -936,7 +987,8 @@ export class ExchangesService {
     before?: string,
     limit?: number,
   ): Promise<Wire['ExchangeMessagesResponse']> {
-    return this.commands.read(auth, async (tx, actor) => {
+    return this.commands.readObligation(auth, async (tx, actor) => {
+      member(actor);
       const exchange = await this.exchange(tx, id);
       this.participant(exchange, actor._id);
       const paginated = before !== undefined || limit !== undefined;
@@ -978,12 +1030,20 @@ export class ExchangesService {
     id: string,
     body: Wire['CreateExchangeMessage'],
   ) {
-    return this.commands.read(auth, async (tx, actor) => {
+    return this.commands.readObligation(auth, async (tx, actor) => {
+      member(actor);
       const text = body.body.trim();
       if (!text || [...text].length > MESSAGE_MAX_LENGTH) throw invalidState();
 
       const exchange = await this.exchange(tx, id);
       this.participant(exchange, actor._id);
+      if (
+        !['AcceptedAwaitingFunding', 'Preparing', 'InTransit', 'Delivered', 'ResolutionPending'].includes(
+          exchange.status,
+        )
+      ) {
+        requireActive(actor);
+      }
 
       const now = await tx.now();
       await checkMessageSendRate(tx, actor._id, now);
@@ -1330,8 +1390,6 @@ export class ExchangesService {
         return this.exchange(tx, id);
       },
       mutate: async (tx, actor, initialExchange) => {
-        requireActive(actor);
-
         // Lock then re-read to get a fresh snapshot (race with expiry worker).
         await tx.lock('exchanges', [initialExchange._id]);
         const exchange = await this.exchange(tx, initialExchange._id);
@@ -1399,6 +1457,7 @@ export class ExchangesService {
           };
         }
 
+        requireActive(actor);
         if (exchange.recipientId !== actor._id) {
           throw conflict();
         }
@@ -1576,9 +1635,12 @@ export class ExchangesService {
         this.participant(current, actor._id);
         return current;
       },
-      mutate: async (tx, actor, exchange) => {
+      mutate: async (tx, actor, initialExchange) => {
         member(actor);
-        this.participant(exchange, actor._id);
+        this.participant(initialExchange, actor._id);
+
+        await tx.lock('exchanges', [initialExchange._id]);
+        const exchange = await this.exchange(tx, initialExchange._id);
 
         const isInitiator = exchange.initiatorId === actor._id;
         if (
@@ -1589,10 +1651,9 @@ export class ExchangesService {
         }
 
         const incomingShipment = isInitiator ? exchange.recipientShippedAt : exchange.initiatorShippedAt;
+        const duringDispute = exchange.status === 'ResolutionPending';
         const canRecordReceipt = ['Preparing', 'InTransit', 'Delivered'].includes(exchange.status) ||
-          (exchange.status === 'ResolutionPending' && !exchange.returnResolution && !exchange.outboundDeliveryVerification &&
-            Boolean(exchange.shippingDeadline) &&
-            Boolean(exchange.initiatorShippedAt) !== Boolean(exchange.recipientShippedAt));
+          (duringDispute && !exchange.returnResolution && !exchange.outboundDeliveryVerification);
         if (!incomingShipment || !canRecordReceipt) throw invalidState();
         const minAcceptableVersion = exchange.revision - 1;
         if (
@@ -1617,7 +1678,7 @@ export class ExchangesService {
             : exchange.initiatorReceivedAt) != null;
 
         if (willBeBothReceived) {
-          setFields.status = 'Delivered';
+          if (!duringDispute) setFields.status = 'Delivered';
           setFields.inspectionDeadline = inspectionDeadlines({ ...exchange, ...setFields } as ExchangeDoc).all;
         }
 
@@ -1751,6 +1812,18 @@ export class ExchangesService {
             'ExchangeCompleted',
             [next.initiatorId, next.recipientId],
             now,
+          );
+        } else {
+          await notifyExchange(
+            tx,
+            next,
+            'ExchangeReceived',
+            [isInitiator ? next.recipientId : next.initiatorId],
+            now,
+            {
+              reason:
+                'Đối tác đã xác nhận nghiệm thu sách. Hãy kiểm tra và xác nhận để hoàn tất giao dịch sớm.',
+            },
           );
         }
 
@@ -1936,24 +2009,21 @@ export class ExchangesService {
           const exchange = await this.exchange(tx, initialExchange._id);
 
           const now = await tx.now();
+          const isInitiator = actor._id === exchange.initiatorId;
+          const deadlines = inspectionDeadlines(exchange);
+          const deadline = isInitiator ? deadlines.initiator : deadlines.recipient;
           const lateOneSided = exchange.status === 'Preparing' && exchange.shippingDeadline &&
             now >= exchange.shippingDeadline &&
             Boolean(exchange.initiatorShippedAt) !== Boolean(exchange.recipientShippedAt);
-          if ((!['InTransit', 'Delivered'].includes(exchange.status) && !lateOneSided) || hasExchangeDispute(exchange)) {
+          const receivedWhilePreparing = exchange.status === 'Preparing' && deadline !== null;
+          if ((!['InTransit', 'Delivered'].includes(exchange.status) && !lateOneSided && !receivedWhilePreparing) || hasExchangeDispute(exchange)) {
             throw invalidState();
           }
           if (exchange.revision !== body.expectedVersion) {
             throw conflict();
           }
 
-          const isInitiator = actor._id === exchange.initiatorId;
-          const deadline = isInitiator
-            ? inspectionDeadlines(exchange).initiator
-            : inspectionDeadlines(exchange).recipient;
           if (deadline && now >= deadline) throw invalidState();
-          if (isInitiator ? exchange.initiatorCompletedAt : exchange.recipientCompletedAt) {
-            throw invalidState();
-          }
           const next = await tx.c.exchanges.findOneAndUpdate(
             { _id: exchange._id, revision: exchange.revision },
             {
@@ -2025,8 +2095,9 @@ export class ExchangesService {
       user._id,
       { displayName: user.displayName, avatarId: user.avatarId ?? null },
     ]));
+    const now = await tx.now();
     return rows.map((row) => ({
-      ...this.view(row),
+      ...this.view(row, now),
       participants: {
         initiator: participants.get(row.initiatorId) ?? null,
         recipient: participants.get(row.recipientId) ?? null,
@@ -2110,6 +2181,7 @@ export class ExchangesService {
             throw invalidField('/reason', 'Nhập lý do phán quyết ít nhất 10 ký tự.');
           const now = await tx.now();
           let next: ExchangeDoc | null = null;
+          const bothReceived = hasInspectionHandover(exchange);
 
           if (body.decision === 'CompleteExchange') {
             const initIds = this.getInitiatorListingIds(exchange);
@@ -2165,13 +2237,36 @@ export class ExchangesService {
               sentAt: now,
             });
           } else if (body.decision === 'CompensateInitiator' || body.decision === 'CompensateRecipient') {
-            if (this.getInitiatorListingIds(exchange).length !== 1) {
-              throw invalidState('Bồi thường theo phán quyết này áp dụng cho phiếu một sách mỗi bên.');
-            }
             const victimIsInitiator = body.decision === 'CompensateInitiator';
-            const defaulterId = victimIsInitiator ? exchange.recipientId : exchange.initiatorId;
-            const damagedListingId = victimIsInitiator ? exchange.recipientListingId : exchange.initiatorListingId;
-            const victimListingId = victimIsInitiator ? exchange.initiatorListingId : exchange.recipientListingId;
+            const scope = exchangeDisputeScope(exchange, victimIsInitiator);
+            const maxDamage = exchangeMaxDamageDeduction(scope);
+            const requestedAmount = body.compensationAmount;
+            if (requestedAmount !== undefined) {
+              if (!bothReceived) {
+                throw invalidField(
+                  '/compensationAmount',
+                  'Khấu trừ thiệt hại từng phần chỉ áp dụng khi cả hai bên đã nhận sách.',
+                );
+              }
+              if (
+                !Number.isInteger(requestedAmount) ||
+                requestedAmount < 1 ||
+                requestedAmount > maxDamage
+              ) {
+                throw invalidField(
+                  '/compensationAmount',
+                  `Mức khấu trừ thiệt hại phải từ 1đ đến ${maxDamage.toLocaleString('vi-VN')}đ.`,
+                );
+              }
+            }
+            const isPartial =
+              bothReceived &&
+              requestedAmount !== undefined &&
+              requestedAmount < maxDamage;
+            const appliedCompensation = isPartial
+              ? requestedAmount!
+              : exchangeCompensationAmount(scope);
+            const defaulterId = scope.holderId;
 
             const resolution: ExchangeReturnDoc = {
               phase: 'Closed',
@@ -2191,33 +2286,76 @@ export class ExchangesService {
               settlementReceiptId: receiptId,
             };
 
-            const allIds = [damagedListingId, victimListingId];
+            const allIds = [...scope.ownerListingIds, ...scope.holderListingIds];
             const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
-            const damagedListing = lockedMap.get(damagedListingId);
-            if (damagedListing && damagedListing.trade === 'Reserved') {
-              await this.listings.project(tx, damagedListing._id, damagedListing.version, 'Reserved', 'ClosedUnavailable');
-            }
-            const victimListing = lockedMap.get(victimListingId);
-            if (victimListing && victimListing.trade === 'Reserved') {
-              await this.listings.project(tx, victimListing._id, victimListing.version, 'Reserved', 'Available');
-              await this.listings.requireRevision(tx, victimListing._id);
+            if (isPartial) {
+              for (const listingId of allIds) {
+                const listing = lockedMap.get(listingId);
+                if (listing && listing.trade === 'Reserved') {
+                  await this.listings.project(
+                    tx,
+                    listing._id,
+                    listing.version,
+                    'Reserved',
+                    'Exchanged',
+                  );
+                }
+              }
+            } else {
+              for (const listingId of scope.holderListingIds) {
+                const listing = lockedMap.get(listingId);
+                if (listing && listing.trade === 'Reserved') {
+                  await this.listings.project(
+                    tx,
+                    listing._id,
+                    listing.version,
+                    'Reserved',
+                    'ClosedUnavailable',
+                  );
+                }
+              }
+              for (const listingId of scope.ownerListingIds) {
+                const listing = lockedMap.get(listingId);
+                if (listing && listing.trade === 'Reserved') {
+                  await this.listings.project(
+                    tx,
+                    listing._id,
+                    listing.version,
+                    'Reserved',
+                    'Available',
+                  );
+                  await this.listings.requireRevision(tx, listing._id);
+                }
+              }
             }
 
             next = await tx.c.exchanges.findOneAndUpdate(
               { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
               {
-                $set: {
-                  status: 'Cancelled',
-                  cancelReason: 'DisputeResolvedRefund',
-                  resolutionDecision: body.decision,
-                  cancelledBy: 'Staff',
-                  cancelledAt: now,
-                  resolutionReason: trimmedReason,
-                  resolvedBy: actor._id,
-                  resolvedAt: now,
-                  returnResolution: resolution,
-                  updatedAt: now,
-                },
+                $set: isPartial
+                  ? {
+                      status: 'Completed',
+                      completedAt: now,
+                      resolutionDecision: body.decision,
+                      resolutionCompensationAmount: appliedCompensation,
+                      resolutionReason: trimmedReason,
+                      resolvedBy: actor._id,
+                      resolvedAt: now,
+                      returnResolution: resolution,
+                      updatedAt: now,
+                    }
+                  : {
+                      status: 'Cancelled',
+                      cancelReason: 'DisputeResolvedRefund',
+                      resolutionDecision: body.decision,
+                      cancelledBy: 'Staff',
+                      cancelledAt: now,
+                      resolutionReason: trimmedReason,
+                      resolvedBy: actor._id,
+                      resolvedAt: now,
+                      returnResolution: resolution,
+                      updatedAt: now,
+                    },
                 $inc: { revision: 1 },
               },
               { returnDocument: 'after' },
@@ -2233,21 +2371,29 @@ export class ExchangesService {
               receiptId,
             });
 
+            const targetLabel = victimIsInitiator ? 'Bên khởi tạo' : 'Bên nhận đề xuất';
+            const amountLabel = appliedCompensation.toLocaleString('vi-VN') + 'đ';
             await notifyExchange(
               tx,
               next,
-              'ExchangeCancelled',
+              isPartial ? 'ExchangeCompleted' : 'ExchangeCancelled',
               [next.initiatorId, next.recipientId],
               now,
-              { reason: `Phán quyết của người phụ trách: Bồi thường hư hại cho bên bị hại. Lý do: ${trimmedReason}` },
+              {
+                reason: isPartial
+                  ? `Phán quyết của người phụ trách: Hoàn tất kèm khấu trừ thiệt hại ${amountLabel} cho ${targetLabel}. Lý do: ${trimmedReason}`
+                  : `Phán quyết của người phụ trách: Bồi thường ${amountLabel} cho ${targetLabel}. Lý do: ${trimmedReason}`,
+              },
             );
 
             await tx.c.exchange_messages.insertOne({
               _id: randomUUID(),
               exchangeId: exchange._id,
               senderId: actor._id,
-              body: `[Phán quyết của người phụ trách]\nQuyết định: Bồi thường thiệt hại cho ${
-                victimIsInitiator ? 'Bên khởi tạo' : 'Bên nhận đề xuất'
+              body: `[Phán quyết của người phụ trách]\nQuyết định: ${
+                isPartial
+                  ? `Hoàn tất kèm khấu trừ thiệt hại ${amountLabel} cho ${targetLabel}`
+                  : `Bồi thường toàn phần ${amountLabel} cho ${targetLabel}`
               }\nLý do: ${trimmedReason}`,
               sentAt: now,
             });
@@ -2369,11 +2515,15 @@ export class ExchangesService {
             : undefined;
           const resolution = verification ? undefined : await exchangeReturnChange(tx, row, actor, body, operations, now);
           const closing = resolution?.phase === 'Closed';
-          const scope = closing ? oneSidedReturn(row)! : undefined;
+          const scope = closing ? oneSidedReturn(row, now)! : undefined;
           if (scope && resolution) {
-            const books = await this.lockAllListingsOrdered(tx, [scope.listingId, scope.otherListingId]);
+            const ownerSet = new Set(scope.ownerListingIds);
+            const books = await this.lockAllListingsOrdered(tx, [
+              ...scope.ownerListingIds,
+              ...scope.holderListingIds,
+            ]);
             for (const listing of books.values()) {
-              const isReturnedBook = listing._id === scope.listingId;
+              const isReturnedBook = ownerSet.has(listing._id);
               const trade = isReturnedBook && resolution.outcome === 'Compensated' ? 'ClosedUnavailable' : 'Available';
               await this.listings.project(tx, listing._id, listing.version, 'Reserved', trade);
               if (isReturnedBook && trade === 'Available') await this.listings.requireRevision(tx, listing._id);
