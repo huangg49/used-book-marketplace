@@ -167,11 +167,11 @@ export function MyExchangesScreen() {
     return true;
   });
 
-  const tabs: ReadonlyArray<{
+  const tabs: readonly {
     id: "all" | "pending" | "active" | "completed";
     label: string;
     count: number;
-  }> = [
+  }[] = [
     { id: "all", label: "Tất cả", count: counts.all },
     { id: "pending", label: "Chờ phản hồi", count: counts.pending },
     { id: "active", label: "Đang diễn ra", count: counts.active },
@@ -529,7 +529,7 @@ export function MyExchangesScreen() {
 const styles = StyleSheet.create({
   screenRoot: {
     flex: 1,
-    backgroundColor: "#F6F2EB",
+    backgroundColor: stitchTokens.creamBg,
   },
   wineHeader: {
     backgroundColor: stitchTokens.wine,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: stitchTokens.whiteAlpha15,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 11.5,
-    color: "rgba(255, 248, 231, 0.78)",
+    color: stitchTokens.whiteAlpha85,
     marginTop: 1,
   },
   container: {
@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   tabCountBadgeActive: {
-    backgroundColor: "rgba(255, 223, 151, 0.25)",
+    backgroundColor: stitchTokens.goldAlpha20,
   },
   tabCountText: {
     fontSize: 11,
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.06)",
+    borderColor: stitchTokens.wineAlpha05,
     gap: 12,
     shadowColor: stitchTokens.darkWood,
     shadowOffset: { width: 0, height: 3 },
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   exchangeCardAction: {
-    borderColor: "rgba(92, 2, 2, 0.22)",
+    borderColor: stitchTokens.wineAlpha20,
   },
   cardTop: {
     flexDirection: "row",
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
   },
   miniCoverRecv: {
     borderWidth: 1,
-    borderColor: "rgba(27, 94, 32, 0.2)",
+    borderColor: stitchTokens.greenBorderSoft,
   },
   miniCoverFallback: {
     flex: 1,
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   footerContainer: {
     backgroundColor: stitchTokens.whiteSurface,
     borderTopWidth: 1,
-    borderTopColor: "rgba(92, 2, 2, 0.06)",
+    borderTopColor: stitchTokens.wineAlpha05,
   },
   pressed: {
     opacity: 0.75,

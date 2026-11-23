@@ -474,7 +474,7 @@ export function ExchangeChatBox({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#F6F2EB",
+    backgroundColor: stitchTokens.creamBg,
   },
   trustBar: {
     flexDirection: "row",
@@ -483,9 +483,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderBottomWidth: 1,
-    borderBottomColor: "#EFEAE2",
+    borderBottomColor: stitchTokens.borderParchmentSoft,
   },
   trustLeft: {
     flex: 1,
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "#E8E0D5",
+    borderColor: stitchTokens.borderWarmLight,
     alignItems: "center",
     shadowColor: stitchTokens.darkWood,
     shadowOffset: { width: 0, height: 1 },
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteSurface,
     borderBottomLeftRadius: 4,
     borderWidth: 1,
-    borderColor: "#EAE3D9",
+    borderColor: stitchTokens.borderWarmLight,
     shadowColor: stitchTokens.darkWood,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   timeTextMe: {
-    color: "rgba(255, 248, 231, 0.72)",
+    color: stitchTokens.whiteAlpha70,
   },
   timeTextPartner: {
     color: stitchTokens.subtleGray,
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#EAE3D9",
+    borderColor: stitchTokens.borderWarmLight,
     marginVertical: 4,
     alignItems: "center",
     maxWidth: "90%",
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
   },
   quickStripOuter: {
     paddingVertical: 8,
-    backgroundColor: "#F6F2EB",
+    backgroundColor: stitchTokens.creamBg,
   },
   quickStripContent: {
     paddingHorizontal: 14,
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "#E8E0D5",
+    borderColor: stitchTokens.borderWarmLight,
   },
   quickStripPillText: {
     fontSize: 12,
@@ -800,16 +800,16 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     backgroundColor: stitchTokens.whiteSurface,
     borderTopWidth: 1,
-    borderTopColor: "#EFEAE2",
+    borderTopColor: stitchTokens.borderParchmentSoft,
   },
   textInput: {
     flex: 1,
     minHeight: 42,
     maxHeight: 110,
     borderRadius: 21,
-    backgroundColor: "#F5F1EB",
+    backgroundColor: stitchTokens.surfaceSoft,
     borderWidth: 1,
-    borderColor: "#E6DDD2",
+    borderColor: stitchTokens.borderWarmLight,
     fontSize: 14,
     lineHeight: 20,
     color: stitchTokens.darkWood,
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sendBtnDisabled: {
-    backgroundColor: "#EFEAE2",
+    backgroundColor: stitchTokens.surfaceSoft,
   },
   readOnlyBanner: {
     flexDirection: "row",
@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     backgroundColor: stitchTokens.whiteSurface,
     borderTopWidth: 1,
-    borderTopColor: "#EFEAE2",
+    borderTopColor: stitchTokens.borderParchmentSoft,
   },
   readOnlyText: {
     fontSize: 12,

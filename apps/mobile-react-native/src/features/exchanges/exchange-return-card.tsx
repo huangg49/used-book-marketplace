@@ -435,7 +435,7 @@ export function ExchangeReturnAndDemoCard({
             borderRadius: 18,
             backgroundColor: stitchTokens.whiteSurface,
             borderWidth: 1,
-            borderColor: "rgba(92, 2, 2, 0.06)",
+            borderColor: stitchTokens.wineAlpha05,
             gap: 10,
           }}
         >

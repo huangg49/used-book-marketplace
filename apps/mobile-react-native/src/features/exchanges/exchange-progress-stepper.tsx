@@ -10,11 +10,11 @@ export type ExchangeStepId =
   | "inspection"
   | "result";
 
-export const EXCHANGE_STEPS: ReadonlyArray<{
+export const EXCHANGE_STEPS: readonly {
   id: ExchangeStepId;
   number: number;
   label: string;
-}> = [
+}[] = [
   { id: "proposal", number: 1, label: "Đề nghị" },
   { id: "funding", number: 2, label: "Đặt cọc" },
   { id: "handover", number: 3, label: "Giao nhận" },
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.06)",
+    borderColor: stitchTokens.wineAlpha05,
     padding: 16,
     gap: 11,
     shadowColor: stitchTokens.darkWood,
@@ -770,10 +770,10 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#EAE3D9",
+    backgroundColor: stitchTokens.borderWarmLight,
   },
   segmentBarMutedActive: {
-    backgroundColor: "#D8C3BE",
+    backgroundColor: stitchTokens.peachBorder,
   },
   segmentBarGold: {
     backgroundColor: stitchTokens.goldBronze,
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
-    backgroundColor: "#F5F1EB",
+    backgroundColor: stitchTokens.surfaceSoft,
   },
   deadlineText: {
     fontSize: 11,
@@ -844,9 +844,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderWidth: 1,
-    borderColor: "#EAE3D9",
+    borderColor: stitchTokens.borderWarmLight,
   },
   timelineTriggerLeft: {
     flex: 1,
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
   /* Vertical Timeline Bottom Sheet */
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(22, 13, 10, 0.52)",
+    backgroundColor: stitchTokens.modalScrim,
     justifyContent: "flex-end",
   },
   sheetCard: {
@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#F2ECE4",
+    borderBottomColor: stitchTokens.borderParchmentSoft,
   },
   sheetTitle: {
     fontSize: 16.5,
@@ -993,7 +993,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#F5F1EB",
+    backgroundColor: stitchTokens.surfaceSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   timelineRowSelected: {
-    backgroundColor: "#FAF5F3",
+    backgroundColor: stitchTokens.roseWarmSurface,
   },
   railCol: {
     alignItems: "center",
@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.crimson,
   },
   nodeCircleLocked: {
-    backgroundColor: "#EFEAE2",
+    backgroundColor: stitchTokens.surfaceSoft,
   },
   nodeNum: {
     fontSize: 12,
@@ -1051,7 +1051,7 @@ const styles = StyleSheet.create({
     width: 2,
     height: 28,
     marginTop: 4,
-    backgroundColor: "#EAE3D9",
+    backgroundColor: stitchTokens.borderWarmLight,
   },
   railConnectorDone: {
     backgroundColor: stitchTokens.likeNewGreen,
@@ -1102,7 +1102,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "#E4DCD2",
+    borderColor: stitchTokens.borderWarmLight,
   },
   rowPillActionText: {
     fontSize: 11.5,

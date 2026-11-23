@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.05)",
+    borderColor: stitchTokens.wineAlpha05,
     paddingHorizontal: 16,
     paddingVertical: 13,
   },

@@ -782,10 +782,11 @@ function ExchangeActionsContent({
     setDisputeModalOpen(true);
   };
 
+  const [renderNow] = useState(Date.now);
   const dockedMode = Boolean(renderScrollBody);
   const shippingExpired = Boolean(
     exchange.shippingDeadline &&
-      Date.parse(exchange.shippingDeadline) <= Date.now(),
+      Date.parse(exchange.shippingDeadline) <= renderNow,
   );
   const missedOneSided =
     exchange.status === "Preparing" &&
@@ -3658,7 +3659,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.06)",
+    borderColor: stitchTokens.wineAlpha05,
     gap: 14,
     shadowColor: stitchTokens.darkWood,
     shadowOffset: { width: 0, height: 3 },
@@ -3809,7 +3810,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     borderTopWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.06)",
+    borderColor: stitchTokens.wineAlpha05,
     shadowColor: stitchTokens.darkWood,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -3824,7 +3825,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     borderTopWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.06)",
+    borderColor: stitchTokens.wineAlpha05,
     shadowColor: stitchTokens.darkWood,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -4327,7 +4328,7 @@ const styles = StyleSheet.create({
   /* Native Bottom Sheet Modal Styles */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(22, 13, 10, 0.56)",
+    backgroundColor: stitchTokens.modalScrim,
     justifyContent: "flex-end",
   },
   modalCard: {

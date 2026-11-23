@@ -440,7 +440,7 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
   return (
     <Screen
       appearance="home"
-      canvasColor="#F6F2EB"
+      canvasColor={stitchTokens.creamBg}
       compactFooter={true}
       header={
         <View
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: stitchTokens.whiteAlpha15,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    backgroundColor: "#F6F2EB",
+    backgroundColor: stitchTokens.creamBg,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.06)",
+    borderColor: stitchTokens.wineAlpha05,
     gap: 12,
     shadowColor: stitchTokens.darkWood,
     shadowOffset: { width: 0, height: 3 },
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.06)",
+    borderColor: stitchTokens.wineAlpha05,
     gap: 12,
     shadowColor: stitchTokens.darkWood,
     shadowOffset: { width: 0, height: 3 },

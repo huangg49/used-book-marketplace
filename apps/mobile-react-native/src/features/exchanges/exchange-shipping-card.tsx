@@ -36,6 +36,7 @@ export function ExchangeShippingCard({
   history = false,
 }: ExchangeShippingCardProps) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [renderNow] = useState(Date.now);
 
   if (
     !history &&
@@ -114,7 +115,7 @@ export function ExchangeShippingCard({
   const deadlineText = formatDateTime(exchange.shippingDeadline);
   const shippingExpired = Boolean(
     exchange.shippingDeadline &&
-      Date.parse(exchange.shippingDeadline) <= Date.now(),
+      Date.parse(exchange.shippingDeadline) <= renderNow,
   );
 
   const outgoingStatus = partnerReceivedMine
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.06)",
+    borderColor: stitchTokens.wineAlpha05,
     padding: 18,
     gap: 14,
     shadowColor: stitchTokens.darkWood,

@@ -62,8 +62,10 @@ export function ExchangeDetailScreen() {
   const [activePanel, setActivePanel] = useState<"proposal" | "chat">(
     initialTab,
   );
-  const [viewedHistoryStep, setViewedHistoryStep] =
-    useState<ExchangeStepId | null>(null);
+  const [historySelection, setHistorySelection] = useState<{
+    forLiveStep: ExchangeStepId;
+    step: ExchangeStepId | null;
+  }>({ forLiveStep: "proposal", step: null });
 
   const exchangeQuery = useQuery({
     queryKey: ["exchange", id, identity],
@@ -83,13 +85,13 @@ export function ExchangeDetailScreen() {
     }
   }, [client, id, exchangeQuery.data, exchangeQuery.dataUpdatedAt, identity]);
 
-  // Reset history selection whenever the live stage advances
   const liveStep = exchange
     ? getCurrentExchangeStep(exchange.status)
     : "proposal";
-  useEffect(() => {
-    setViewedHistoryStep(null);
-  }, [liveStep]);
+  const viewedHistoryStep =
+    historySelection.forLiveStep === liveStep ? historySelection.step : null;
+  const setViewedHistoryStep = (step: ExchangeStepId | null) =>
+    setHistorySelection({ forLiveStep: liveStep, step });
 
   const handleBack = () => {
     if (activePanel === "chat") {
@@ -470,12 +472,12 @@ export function ExchangeDetailScreen() {
 const styles = StyleSheet.create({
   screenRoot: {
     flex: 1,
-    backgroundColor: "#F6F2EB",
+    backgroundColor: stitchTokens.creamBg,
   },
   topBarShell: {
     backgroundColor: stitchTokens.whiteSurface,
     borderBottomWidth: 1,
-    borderBottomColor: "#EFEAE2",
+    borderBottomColor: stitchTokens.borderParchmentSoft,
   },
   navBar: {
     height: 52,
@@ -488,7 +490,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F5F1EB",
+    backgroundColor: stitchTokens.surfaceSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -545,7 +547,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     backgroundColor: stitchTokens.roseParchment,
     borderWidth: 1,
-    borderColor: "#E8CFCB",
+    borderColor: stitchTokens.peachBorder,
   },
   chatPillBtnActive: {
     backgroundColor: stitchTokens.wine,

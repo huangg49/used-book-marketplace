@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(27, 94, 32, 0.16)",
+    borderColor: stitchTokens.greenBorderSoft,
     padding: 18,
     gap: 14,
     shadowColor: stitchTokens.darkWood,
