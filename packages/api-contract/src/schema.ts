@@ -1279,6 +1279,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/finance-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Platform finance and profit by ledger posting date
+         * @description ACTIVE ADMIN only. Read-only snapshot-consistent aggregate of immutable ledger journals in Asia/Ho_Chi_Minh, inclusive dates, max 366 days. Simulated money. Revenue excludes pass-through shipping fees; transfers, top-ups and withdrawals are excluded from revenue.
+         */
+        get: operations["getFinanceOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/finance-cashflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Platform cashflow, wallet holds and ledger capital conservation
+         * @description ACTIVE ADMIN only. Read-only snapshot-consistent summary of simulated capital conservation, top-ups, withdrawal payouts and pending withdrawal queue in Asia/Ho_Chi_Minh.
+         */
+        get: operations["getFinanceCashflow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/operations-analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Channel funnel performance and operational risk metrics
+         * @description ACTIVE STAFF/ADMIN only. Read-only aggregate of Direct Sale, Exchange and Auction channel throughput plus dispute, incident and user status indicators in Asia/Ho_Chi_Minh.
+         */
+        get: operations["getOperationsAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings": {
         parameters: {
             query?: never;
@@ -8152,6 +8212,154 @@ export interface components {
                 mediaId: string | null;
             }[];
         };
+        FinanceTotals: {
+            directCommission: number;
+            auctionCommission: number;
+            forfeitedDeposits: number;
+            depositShare: number;
+            legacyListingFees: number;
+            netRevenue: number;
+            passThroughShipping: number;
+            incidentCompensation: number;
+            profit: number;
+            gmv: number;
+            settledOrders: number;
+            takeRateBps: number | null;
+        };
+        FinanceOverview: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            simulated: true;
+            current: components["schemas"]["FinanceTotals"];
+            previous: {
+                /** Format: date */
+                from: string;
+                /** Format: date */
+                to: string;
+                totals: components["schemas"]["FinanceTotals"];
+            };
+            daily: {
+                /** Format: date */
+                date: string;
+                directCommission: number;
+                auctionCommission: number;
+                forfeitedDeposits: number;
+                depositShare: number;
+                netRevenue: number;
+                incidentCompensation: number;
+                profit: number;
+                gmv: number;
+                settledOrders: number;
+            }[];
+            exchange: {
+                completed: number;
+                initiatorValue: number;
+                recipientValue: number;
+            };
+            notes: string[];
+        };
+        FinanceCashflow: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            simulated: true;
+            conservation: {
+                balanced: boolean;
+                capitalTarget: number;
+                accountedTotal: number;
+                discrepancy: number;
+                sourceRemaining: number;
+                memberAvailable: number;
+                transactionHeld: number;
+                auctionHeld: number;
+                withdrawalHeld: number;
+                platformCommission: number;
+                listingFeeHeld: number;
+                incidentFundBalance: number;
+            };
+            period: {
+                topupTotal: number;
+                topupCount: number;
+                withdrawalTotal: number;
+                withdrawalCount: number;
+                netCashflow: number;
+            };
+            daily: {
+                /** Format: date */
+                date: string;
+                topupAmount: number;
+                topupCount: number;
+                withdrawalAmount: number;
+                withdrawalCount: number;
+                netCashflow: number;
+            }[];
+            withdrawalQueue: {
+                pendingCount: number;
+                pendingAmount: number;
+                /** Format: date-time */
+                oldestRequestedAt: string | null;
+            };
+        };
+        OperationsAnalytics: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            serverTime: string;
+            sales: {
+                created: number;
+                completed: number;
+                active: number;
+                cancelled: number;
+                completionRateBps: number | null;
+            };
+            exchanges: {
+                proposed: number;
+                completed: number;
+                active: number;
+                disputed: number;
+                cancelled: number;
+                completionRateBps: number | null;
+            };
+            auctions: {
+                created: number;
+                active: number;
+                sold: number;
+                paymentExpired: number;
+                cancelled: number;
+                sellThroughRateBps: number | null;
+            };
+            risk: {
+                openExchangeDisputes: number;
+                openPointIncidents: number;
+                incidentFundBalance: number;
+                incidentCompensationInPeriod: number;
+                underfundedIncidents: number;
+            };
+            users: {
+                totalMembers: number;
+                newInPeriod: number;
+                activeMembers: number;
+                restrictedMembers: number;
+                lockedMembers: number;
+            };
+        };
         OperationsPoint: {
             /** Format: uuid */
             id: string;
@@ -11319,6 +11527,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RevenueOverview"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getFinanceOverview: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Finance totals, comparison with previous period, daily breakdown and exchange volume. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceOverview"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getFinanceCashflow: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ledger conservation snapshot, daily top-up/withdrawal flow and withdrawal queue health. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceCashflow"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getOperationsAnalytics: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel performance metrics and risk/dispute indicators. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsAnalytics"];
                 };
             };
             400: components["responses"]["ListingError"];

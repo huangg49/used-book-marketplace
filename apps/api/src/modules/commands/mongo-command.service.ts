@@ -55,6 +55,15 @@ export function admin(actor: CurrentActor) {
       'Bạn không có quyền quản lý đầu sách.',
     );
 }
+export function financeAdmin(actor: CurrentActor) {
+  requireActive(actor);
+  if (!hasRole(actor, 'ADMIN'))
+    throw new DomainError(
+      403,
+      'FORBIDDEN',
+      'Bạn không có quyền xem báo cáo tài chính.',
+    );
+}
 export function reviewer(actor: CurrentActor) {
   requireActive(actor);
   if (!hasRole(actor, 'STAFF', 'ADMIN'))

@@ -26,6 +26,30 @@ export class OperationsDashboardController {
       this.input.query('getRevenueOverview', query),
     );
   }
+  @Get('finance-overview')
+  @Roles('ADMIN')
+  finance(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.finance(
+      req.auth,
+      this.input.query('getFinanceOverview', query),
+    );
+  }
+  @Get('finance-cashflow')
+  @Roles('ADMIN')
+  cashflow(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.cashflow(
+      req.auth,
+      this.input.query('getFinanceCashflow', query),
+    );
+  }
+  @Get('operations-analytics')
+  @Roles('STAFF', 'ADMIN')
+  analytics(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.analytics(
+      req.auth,
+      this.input.query('getOperationsAnalytics', query),
+    );
+  }
   @Get('users/:userId/avatar/read')
   @Roles('STAFF', 'ADMIN')
   avatar(@Req() req: AuthenticatedRequest, @Param('userId') userId: string) {

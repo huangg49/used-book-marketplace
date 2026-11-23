@@ -27,6 +27,21 @@ const StatisticsPage = lazy(() =>
     default: m.StatisticsPage,
   })),
 );
+const FinancePage = lazy(() =>
+  import("./features/dashboard/FinancePage").then((m) => ({
+    default: m.FinancePage,
+  })),
+);
+const CashflowPage = lazy(() =>
+  import("./features/dashboard/CashflowPage").then((m) => ({
+    default: m.CashflowPage,
+  })),
+);
+const OperationsAnalyticsPage = lazy(() =>
+  import("./features/dashboard/OperationsAnalyticsPage").then((m) => ({
+    default: m.OperationsAnalyticsPage,
+  })),
+);
 const Queue = lazy(() =>
   import("./features/review/queue").then((m) => ({ default: m.Queue })),
 );
@@ -139,6 +154,9 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "/dashboard", element: <DashboardPage /> },
       { path: "/statistics", element: <StatisticsPage /> },
+      { path: "/statistics/finance", element: <FinancePage /> },
+      { path: "/statistics/cashflow", element: <CashflowPage /> },
+      { path: "/statistics/operations", element: <OperationsAnalyticsPage /> },
       {
         path: "/review/:kind",
         element: <Queue />,

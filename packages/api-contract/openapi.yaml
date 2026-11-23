@@ -3169,6 +3169,136 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/finance-overview:
+    get:
+      operationId: getFinanceOverview
+      tags: [Operations]
+      summary: Platform finance and profit by ledger posting date
+      description: >-
+        ACTIVE ADMIN only. Read-only snapshot-consistent aggregate of immutable
+        ledger journals in Asia/Ho_Chi_Minh, inclusive dates, max 366 days.
+        Simulated money. Revenue excludes pass-through shipping fees; transfers,
+        top-ups and withdrawals are excluded from revenue.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Finance totals, comparison with previous period, daily breakdown and exchange volume.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceOverview"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/finance-cashflow:
+    get:
+      operationId: getFinanceCashflow
+      tags: [Operations]
+      summary: Platform cashflow, wallet holds and ledger capital conservation
+      description: >-
+        ACTIVE ADMIN only. Read-only snapshot-consistent summary of simulated
+        capital conservation, top-ups, withdrawal payouts and pending withdrawal
+        queue in Asia/Ho_Chi_Minh.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Ledger conservation snapshot, daily top-up/withdrawal flow and withdrawal queue health.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceCashflow"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/operations-analytics:
+    get:
+      operationId: getOperationsAnalytics
+      tags: [Operations]
+      summary: Channel funnel performance and operational risk metrics
+      description: >-
+        ACTIVE STAFF/ADMIN only. Read-only aggregate of Direct Sale, Exchange
+        and Auction channel throughput plus dispute, incident and user status
+        indicators in Asia/Ho_Chi_Minh.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Channel performance metrics and risk/dispute indicators.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsAnalytics"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/listings:
     get:
       operationId: listListingReviewQueue
@@ -23447,6 +23577,263 @@ components:
               referenceId: { type: string }
               listingId: { type: string, format: uuid }
               mediaId: { type: [string, "null"], format: uuid }
+    FinanceTotals:
+      type: object
+      additionalProperties: false
+      required:
+        - directCommission
+        - auctionCommission
+        - forfeitedDeposits
+        - depositShare
+        - legacyListingFees
+        - netRevenue
+        - passThroughShipping
+        - incidentCompensation
+        - profit
+        - gmv
+        - settledOrders
+        - takeRateBps
+      properties:
+        directCommission: { type: integer, minimum: 0 }
+        auctionCommission: { type: integer, minimum: 0 }
+        forfeitedDeposits: { type: integer, minimum: 0 }
+        depositShare: { type: integer, minimum: 0 }
+        legacyListingFees: { type: integer, minimum: 0 }
+        netRevenue: { type: integer }
+        passThroughShipping: { type: integer, minimum: 0 }
+        incidentCompensation: { type: integer, minimum: 0 }
+        profit: { type: integer }
+        gmv: { type: integer, minimum: 0 }
+        settledOrders: { type: integer, minimum: 0 }
+        takeRateBps: { type: [integer, "null"], minimum: 0 }
+    FinanceOverview:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - timezone
+        - serverTime
+        - simulated
+        - current
+        - previous
+        - daily
+        - exchange
+        - notes
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        timezone: { type: string, const: Asia/Ho_Chi_Minh }
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        current:
+          $ref: "#/components/schemas/FinanceTotals"
+        previous:
+          type: object
+          additionalProperties: false
+          required: [from, to, totals]
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+            totals:
+              $ref: "#/components/schemas/FinanceTotals"
+        daily:
+          type: array
+          minItems: 1
+          maxItems: 366
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - date
+              - directCommission
+              - auctionCommission
+              - forfeitedDeposits
+              - depositShare
+              - netRevenue
+              - incidentCompensation
+              - profit
+              - gmv
+              - settledOrders
+            properties:
+              date: { type: string, format: date }
+              directCommission: { type: integer, minimum: 0 }
+              auctionCommission: { type: integer, minimum: 0 }
+              forfeitedDeposits: { type: integer, minimum: 0 }
+              depositShare: { type: integer, minimum: 0 }
+              netRevenue: { type: integer }
+              incidentCompensation: { type: integer, minimum: 0 }
+              profit: { type: integer }
+              gmv: { type: integer, minimum: 0 }
+              settledOrders: { type: integer, minimum: 0 }
+        exchange:
+          type: object
+          additionalProperties: false
+          required: [completed, initiatorValue, recipientValue]
+          properties:
+            completed: { type: integer, minimum: 0 }
+            initiatorValue: { type: integer, minimum: 0 }
+            recipientValue: { type: integer, minimum: 0 }
+        notes:
+          type: array
+          maxItems: 6
+          items: { type: string }
+    FinanceCashflow:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - timezone
+        - serverTime
+        - simulated
+        - conservation
+        - period
+        - daily
+        - withdrawalQueue
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        timezone: { type: string, const: Asia/Ho_Chi_Minh }
+        serverTime: { type: string, format: date-time }
+        simulated: { type: boolean, const: true }
+        conservation:
+          type: object
+          additionalProperties: false
+          required:
+            - balanced
+            - capitalTarget
+            - accountedTotal
+            - discrepancy
+            - sourceRemaining
+            - memberAvailable
+            - transactionHeld
+            - auctionHeld
+            - withdrawalHeld
+            - platformCommission
+            - listingFeeHeld
+            - incidentFundBalance
+          properties:
+            balanced: { type: boolean }
+            capitalTarget: { type: integer, minimum: 0 }
+            accountedTotal: { type: integer, minimum: 0 }
+            discrepancy: { type: integer }
+            sourceRemaining: { type: integer, minimum: 0 }
+            memberAvailable: { type: integer, minimum: 0 }
+            transactionHeld: { type: integer, minimum: 0 }
+            auctionHeld: { type: integer, minimum: 0 }
+            withdrawalHeld: { type: integer, minimum: 0 }
+            platformCommission: { type: integer, minimum: 0 }
+            listingFeeHeld: { type: integer, minimum: 0 }
+            incidentFundBalance: { type: integer, minimum: 0 }
+        period:
+          type: object
+          additionalProperties: false
+          required: [topupTotal, topupCount, withdrawalTotal, withdrawalCount, netCashflow]
+          properties:
+            topupTotal: { type: integer, minimum: 0 }
+            topupCount: { type: integer, minimum: 0 }
+            withdrawalTotal: { type: integer, minimum: 0 }
+            withdrawalCount: { type: integer, minimum: 0 }
+            netCashflow: { type: integer }
+        daily:
+          type: array
+          minItems: 1
+          maxItems: 366
+          items:
+            type: object
+            additionalProperties: false
+            required: [date, topupAmount, topupCount, withdrawalAmount, withdrawalCount, netCashflow]
+            properties:
+              date: { type: string, format: date }
+              topupAmount: { type: integer, minimum: 0 }
+              topupCount: { type: integer, minimum: 0 }
+              withdrawalAmount: { type: integer, minimum: 0 }
+              withdrawalCount: { type: integer, minimum: 0 }
+              netCashflow: { type: integer }
+        withdrawalQueue:
+          type: object
+          additionalProperties: false
+          required: [pendingCount, pendingAmount, oldestRequestedAt]
+          properties:
+            pendingCount: { type: integer, minimum: 0 }
+            pendingAmount: { type: integer, minimum: 0 }
+            oldestRequestedAt: { type: [string, "null"], format: date-time }
+    OperationsAnalytics:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - timezone
+        - serverTime
+        - sales
+        - exchanges
+        - auctions
+        - risk
+        - users
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        timezone: { type: string, const: Asia/Ho_Chi_Minh }
+        serverTime: { type: string, format: date-time }
+        sales:
+          type: object
+          additionalProperties: false
+          required: [created, completed, active, cancelled, completionRateBps]
+          properties:
+            created: { type: integer, minimum: 0 }
+            completed: { type: integer, minimum: 0 }
+            active: { type: integer, minimum: 0 }
+            cancelled: { type: integer, minimum: 0 }
+            completionRateBps: { type: [integer, "null"], minimum: 0 }
+        exchanges:
+          type: object
+          additionalProperties: false
+          required: [proposed, completed, active, disputed, cancelled, completionRateBps]
+          properties:
+            proposed: { type: integer, minimum: 0 }
+            completed: { type: integer, minimum: 0 }
+            active: { type: integer, minimum: 0 }
+            disputed: { type: integer, minimum: 0 }
+            cancelled: { type: integer, minimum: 0 }
+            completionRateBps: { type: [integer, "null"], minimum: 0 }
+        auctions:
+          type: object
+          additionalProperties: false
+          required: [created, active, sold, paymentExpired, cancelled, sellThroughRateBps]
+          properties:
+            created: { type: integer, minimum: 0 }
+            active: { type: integer, minimum: 0 }
+            sold: { type: integer, minimum: 0 }
+            paymentExpired: { type: integer, minimum: 0 }
+            cancelled: { type: integer, minimum: 0 }
+            sellThroughRateBps: { type: [integer, "null"], minimum: 0 }
+        risk:
+          type: object
+          additionalProperties: false
+          required:
+            - openExchangeDisputes
+            - openPointIncidents
+            - incidentFundBalance
+            - incidentCompensationInPeriod
+            - underfundedIncidents
+          properties:
+            openExchangeDisputes: { type: integer, minimum: 0 }
+            openPointIncidents: { type: integer, minimum: 0 }
+            incidentFundBalance: { type: integer, minimum: 0 }
+            incidentCompensationInPeriod: { type: integer, minimum: 0 }
+            underfundedIncidents: { type: integer, minimum: 0 }
+        users:
+          type: object
+          additionalProperties: false
+          required: [totalMembers, newInPeriod, activeMembers, restrictedMembers, lockedMembers]
+          properties:
+            totalMembers: { type: integer, minimum: 0 }
+            newInPeriod: { type: integer, minimum: 0 }
+            activeMembers: { type: integer, minimum: 0 }
+            restrictedMembers: { type: integer, minimum: 0 }
+            lockedMembers: { type: integer, minimum: 0 }
     OperationsPoint:
       type: object
       additionalProperties: false

@@ -30,6 +30,15 @@ export const dashboardKeys = {
   revenueScope: (user: CurrentUser) => [...scope(user), "revenue"] as const,
   revenue: (user: CurrentUser, from: string, to: string, page: number) =>
     [...scope(user), "revenue", from, to, page] as const,
+  financeScope: (user: CurrentUser) => [...scope(user), "finance"] as const,
+  finance: (user: CurrentUser, from: string, to: string) =>
+    [...scope(user), "finance", from, to] as const,
+  cashflowScope: (user: CurrentUser) => [...scope(user), "cashflow"] as const,
+  cashflow: (user: CurrentUser, from: string, to: string) =>
+    [...scope(user), "cashflow", from, to] as const,
+  analyticsScope: (user: CurrentUser) => [...scope(user), "analytics"] as const,
+  analytics: (user: CurrentUser, from: string, to: string) =>
+    [...scope(user), "analytics", from, to] as const,
 };
 
 // Reconciliation calls this after ACK (or when re-reading a definite refusal).

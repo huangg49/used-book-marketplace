@@ -11,6 +11,9 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
 }));
 vi.mock("react-router-dom", () => ({
   useOutletContext: () => ({ id: "staff", status: "ACTIVE", roles: ["STAFF"] }),
+  NavLink: ({ children, to }: { children: unknown; to: string }) => (
+    <a href={to}>{children as never}</a>
+  ),
 }));
 
 const data = {
