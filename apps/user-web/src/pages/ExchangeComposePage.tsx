@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownLeft, ArrowLeft, ArrowRight, Check, ChevronDown } from "lucide-react";
-import { ApiError } from "@used-books/session-client";
+import { ApiError, exchangeServiceFeeText, exchangeShippingCostText } from "@used-books/session-client";
 import { categoryPath, foldCatalogText } from "@used-books/api-contract/catalog-taxonomy";
 import { z } from "zod";
 import { BookCover } from "../components/BookCover";
@@ -292,6 +292,8 @@ function ExchangeCompose({ listingId }: { listingId: string | null }) {
                     <div className={styles.total}><dt>Bạn cần nộp</dt><dd>{formatVnd(ownValue + Math.max(0, difference))}</dd></div>
                     <div><dt>{book.seller.displayName} cần nộp</dt><dd>{formatVnd(targetValue + Math.max(0, -difference))}</dd></div>
                   </dl>
+                  <p>{exchangeServiceFeeText}</p>
+                  <p>{exchangeShippingCostText}</p>
                   <p>Gửi đề nghị chưa giữ sách hay trừ tiền.</p>
                 </section>
               )}

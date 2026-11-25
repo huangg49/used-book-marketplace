@@ -49,7 +49,7 @@ export function HomeNotificationsModal({
   const displayItems = useMemo(() => isAuthenticated ? (query.data?.items ?? []).map(it => ({
     id: it.id, title: it.title, message: it.body,
     time: formatNotificationTime(it.createdAt), read: Boolean(it.readAt),
-    targetType: it.targetType, targetId: it.targetId,
+    kind: it.kind, targetType: it.targetType, targetId: it.targetId,
   })) : [], [isAuthenticated, query.data]);
   const handleMarkAllRead = () => { if (isAuthenticated) markRead.mutate({ all: true }); };
   const handleItemPress = (item: (typeof displayItems)[number]) => {
@@ -60,7 +60,8 @@ export function HomeNotificationsModal({
         router.push({ pathname: "/exchange", params: { id: item.targetId } });
         break;
       case "Order":
-        router.push({ pathname: "/orders", params: { id: item.targetId } });
+        if (item.kind === "OrderSaleSettled") router.push({ pathname: "/wallet", params: { sale: item.targetId } });
+        else router.push({ pathname: "/orders", params: { id: item.targetId } });
         break;
       case "Auction":
         router.push({ pathname: "/auction", params: { id: item.targetId } });
@@ -168,6 +169,9 @@ export function HomeNotificationsModal({
             {displayItems.map((item) => (
               <Pressable
                 key={item.id}
+                accessibilityRole="button"
+                accessibilityLabel={item.title}
+                accessibilityHint={item.message}
                 onPress={() => handleItemPress(item)}
                 style={({ pressed }) => [
                   styles.notifItem,

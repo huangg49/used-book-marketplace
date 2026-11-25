@@ -27,14 +27,15 @@ import {
   catalogFilterStages,
 } from '../catalog/catalog-classification.js';
 
-// One predicate for shelf, detail and signed reads (the PostgreSQL publicFrom +
-// publicEligible). These are current eligibility checks, not a historical
-// approval badge. Output documents carry r (revision), b (book), u (owner),
+// Shared predicate for shelf, detail and signed reads (the PostgreSQL publicFrom +
+// publicEligible). Only discovery hides an active direct order. These are current
+// eligibility checks. Output documents carry r (revision), b (book), u (owner),
 // rm (photo links) and m (photos). Marketplace reads never see Auction
 // listings (ADR 0042). ADR 0049 intake reuses this predicate for the source's
 // immutable channel, then additionally requires Available and a single book.
 export function publicEligibleStages(
   channel: ListingChannel = 'Marketplace',
+  surface: 'detail' | 'shelf' = 'detail',
 ): Document[] {
   const ready = {
     $and: [
@@ -123,7 +124,9 @@ export function publicEligibleStages(
     // A listing with an unpaid or otherwise active direct order must leave all
     // public shelves immediately, even if an older purchase conversation is
     // still active for another buyer. Cancellation returns trade to Available.
-    { $match: { 'activeOrder.0': { $exists: false } } },
+    ...(surface === 'shelf'
+      ? [{ $match: { 'activeOrder.0': { $exists: false } } }]
+      : []),
     {
       $lookup: {
         from: 'exchanges',
@@ -177,6 +180,7 @@ export function publicEligibleStages(
                 {
                   $or: [
                     { $gt: [{ $size: '$purchase' }, 0] },
+                    { $gt: [{ $size: '$activeOrder' }, 0] },
                     { $gt: [{ $size: '$activeExchange' }, 0] },
                   ],
                 },
@@ -512,7 +516,7 @@ export class PublicListingService {
       const page = await this.pages.page(
         tx.c.listings,
         [
-          ...publicEligibleStages(),
+          ...publicEligibleStages('Marketplace', 'shelf'),
           ...catalogFilterStages(classification, 'b.currentRevisionId'),
           { $match: { ...match, ...(and.length ? { $and: and } : {}) } },
           { $project: { key } },
@@ -535,7 +539,7 @@ export class PublicListingService {
       const rows = await tx.c.listings
         .aggregate<Eligible>([
           { $match: { _id: { $in: page.ids } } },
-          ...publicEligibleStages(),
+          ...publicEligibleStages('Marketplace', 'shelf'),
         ])
         .toArray();
       // Bounded metadata, origin and coarse-zone reads in this same snapshot,

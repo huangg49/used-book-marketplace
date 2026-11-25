@@ -247,56 +247,54 @@ export function PhotoAutofillPanel({
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, paddingRight: 8 }}>
             <View
               style={{
-                width: 34,
-                height: 34,
+                width: 36,
+                height: 36,
                 borderRadius: 10,
-                backgroundColor: stitchTokens.whiteAlpha14,
+                backgroundColor: stitchTokens.whiteSurface,
                 borderWidth: 1,
-                borderColor: stitchTokens.whiteAlpha25,
+                borderColor: stitchTokens.goldBorder,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Icon name="bolt" size={18} color={stitchTokens.goldAccent} />
+              <Icon name="bolt" size={18} color={stitchTokens.wine} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                 <AppText
                   kind="bold"
-                  color={stitchTokens.whiteSurface}
-                  style={{ fontSize: 15, lineHeight: 20 }}
+                  color={stitchTokens.wineDark}
+                  style={{ fontSize: 14, lineHeight: 19, includeFontPadding: false }}
                 >
                   Điền nhanh từ ảnh sách
                 </AppText>
                 <View
                   style={{
-                    backgroundColor: stitchTokens.goldAccent,
-                    paddingHorizontal: 7,
+                    backgroundColor: stitchTokens.wineDark,
+                    paddingHorizontal: 6,
                     paddingVertical: 2,
                     borderRadius: 6,
-                    borderWidth: 1,
-                    borderColor: stitchTokens.goldBorder,
                   }}
                 >
                   <AppText
                     kind="small"
-                    color={stitchTokens.wineDark}
-                    style={{ fontSize: 10, fontWeight: "800" }}
+                    color={stitchTokens.gold}
+                    style={{ fontSize: 10, lineHeight: 13, fontWeight: "800", includeFontPadding: false }}
                   >
-                    ✨ TRỢ LÝ AI
+                    AI
                   </AppText>
                 </View>
               </View>
               {!isExpanded ? (
                 <AppText
                   kind="small"
-                  color={stitchTokens.whiteAlpha85}
+                  color={stitchTokens.deepCocoa}
                   numberOfLines={1}
-                  style={{ fontSize: 11, lineHeight: 15 }}
+                  style={{ fontSize: 12, lineHeight: 16, includeFontPadding: false }}
                 >
                   {ready.length > 0
-                    ? `${ready.length} ảnh sẵn sàng · Chạm để AI quét bìa, tác giả`
-                    : "Chụp bìa, gáy để AI tự điền tên, tác giả, NXB…"}
+                    ? `${ready.length} ảnh sẵn sàng · Chạm để quét bìa, tác giả`
+                    : "Chụp bìa hoặc gáy để tự điền tên sách, tác giả"}
                 </AppText>
               ) : null}
             </View>
@@ -304,20 +302,20 @@ export function PhotoAutofillPanel({
 
           <View
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: stitchTokens.whiteAlpha14,
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              backgroundColor: stitchTokens.whiteSurface,
               borderWidth: 1,
-              borderColor: stitchTokens.whiteAlpha25,
+              borderColor: stitchTokens.goldBorder,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             <Icon
               name={isExpanded ? "chevronUp" : "chevronDown"}
-              size={16}
-              color={stitchTokens.goldAccent}
+              size={15}
+              color={stitchTokens.wineDark}
             />
           </View>
         </View>
@@ -841,51 +839,38 @@ export function PhotoAutofillPanel({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderBottomWidth: 3.5,
-    borderColor: stitchTokens.wineLight,
-    borderBottomColor: stitchTokens.wineDeep,
-    backgroundColor: stitchTokens.wineDark,
-    shadowColor: stitchTokens.shadowDeepCrimson,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorder,
+    backgroundColor: stitchTokens.goldLight,
     overflow: "hidden",
   },
   headerPressable: {
-    padding: 14,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
   expandedContent: {
     gap: 12,
-    padding: 14,
-    backgroundColor: stitchTokens.roseWarmTag,
-    borderTopWidth: 1.5,
-    borderTopColor: stitchTokens.peachBorder,
+    padding: 12,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.goldBorder,
   },
   barcodeBox: {
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: stitchTokens.parchment,
     padding: space.md,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderBottomWidth: 3,
-    borderColor: stitchTokens.peachBorder,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.warmBorder,
     gap: space.sm,
   },
   resultCard: {
-    backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 16,
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 12,
     padding: space.md,
-    borderWidth: 1.5,
-    borderBottomWidth: 3.5,
-    borderColor: stitchTokens.peachBorder,
+    borderWidth: 1,
+    borderColor: stitchTokens.warmBorder,
     gap: space.md,
-    shadowColor: stitchTokens.shadowDeepCrimson,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   fieldRow: {
     flexDirection: "row",

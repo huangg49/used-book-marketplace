@@ -1,6 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { AppText } from "../../../core/ui/text";
-import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { AppText, Icon, formatVnd, radius, space, stitchTokens } from "../../../core/ui";
 import { formatRemaining, waitingTime } from "../auctions-model";
 import type { PublicAuctionSummary } from "../contracts";
 import { AuctionCover } from "./auction-cover";
@@ -23,23 +22,21 @@ export function UpcomingAuctionsShelf({
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <Icon name="clock" size={16} color={stitchTokens.wineDark} />
-          <AppText kind="bold" style={styles.headerTitle}>
-            Sắp mở phiên
-          </AppText>
-          <View style={styles.badgeCount}>
-            <AppText kind="small" style={styles.badgeCountText}>
-              {items.length} phiên sắp mở
-            </AppText>
-          </View>
+          <Icon name="clock" size={16} color={stitchTokens.wine} />
+          <AppText kind="bold" style={styles.headerTitle}>Sắp mở phiên</AppText>
+        </View>
+        <View style={styles.badgeCount}>
+          <AppText style={styles.badgeCountText}>{items.length} phiên</AppText>
         </View>
       </View>
+
       <AppText kind="small" style={styles.subtitle}>
-        Sách đã qua kiểm định. Đăng ký và đặt cọc để giữ chỗ; phiên mở theo giờ người bán hẹn khi đủ số người tối thiểu. Không đủ người trước hạn thì phiên bị hủy và hoàn cọc.
+        Đăng ký đặt cọc trước để tham gia khi phiên mở.
       </AppText>
 
       <ScrollView
         horizontal
+        style={styles.scrollView}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollList}
       >
@@ -54,10 +51,7 @@ export function UpcomingAuctionsShelf({
               accessibilityRole="button"
               accessibilityLabel={`Phiên sắp mở: ${item.title}`}
               onPress={() => onOpenAuction(item.id)}
-              style={({ pressed }) => [
-                styles.card,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-              ]}
+              style={({ pressed }) => [styles.card, pressed && styles.pressed]}
             >
               <View style={styles.coverFrame}>
                 <AuctionCover
@@ -66,61 +60,37 @@ export function UpcomingAuctionsShelf({
                   label={item.title}
                 />
                 <View style={styles.timerBadge}>
-                  <Icon name="clock" size={11} color={stitchTokens.wineDark} />
-                  <AppText kind="small" style={styles.timerBadgeText}>
+                  <Icon name="clock" size={11} color={stitchTokens.gold} />
+                  <AppText style={styles.timerBadgeText}>
                     {waiting.label === "Hạn đăng ký"
                       ? `Hạn ĐK ${formatRemaining(msUntilStart)}`
                       : `Mở sau ${formatRemaining(msUntilStart)}`}
                   </AppText>
                 </View>
-                {item.book && (
-                  <View style={styles.conditionTag}>
-                    <AppText kind="small" style={styles.conditionTagText}>
-                      {conditionLabels[item.book.condition] ?? item.book.condition}
-                    </AppText>
-                  </View>
-                )}
               </View>
 
               <View style={styles.cardContent}>
-                <AppText kind="bold" numberOfLines={1} style={styles.cardTitle}>
+                <AppText kind="bold" numberOfLines={2} style={styles.cardTitle}>
                   {item.title}
                 </AppText>
-                <AppText kind="small" numberOfLines={1} style={styles.cardAuthor}>
-                  {authors || item.pointName}
+                <AppText kind="small" numberOfLines={1} style={styles.cardMeta}>
+                  {authors || (item.book ? conditionLabels[item.book.condition] : item.pointName)}
                 </AppText>
 
-                <View style={styles.priceRow}>
-                  <View>
-                    <AppText kind="small" style={styles.priceLabel}>
-                      Khởi điểm
-                    </AppText>
+                <View style={styles.footerRow}>
+                  <View style={styles.priceCol}>
+                    <AppText style={styles.priceLabel}>Khởi điểm</AppText>
                     <AppText kind="bold" style={styles.priceValue}>
                       {formatVnd(item.startPrice)}
                     </AppText>
                   </View>
                   {item.minBidders != null ? (
-                    <View style={styles.buyNowChip}>
-                      <Icon name="person" size={10} color={stitchTokens.wineDark} />
-                      <AppText kind="small" style={styles.buyNowText}>
+                    <View style={styles.regChip}>
+                      <AppText style={styles.regChipText}>
                         {`${item.registeredCount ?? 0}/${item.minBidders}`}
                       </AppText>
                     </View>
-                  ) : item.buyNowPrice !== null ? (
-                    <View style={styles.buyNowChip}>
-                      <Icon name="bolt" size={10} color={stitchTokens.wineDark} />
-                      <AppText kind="small" style={styles.buyNowText}>
-                        {formatVnd(item.buyNowPrice)}
-                      </AppText>
-                    </View>
                   ) : null}
-                </View>
-
-                <View style={styles.pointRow}>
-                  <Icon name="pin" size={11} color={stitchTokens.subtleGray} />
-                  <AppText kind="small" numberOfLines={1} style={styles.pointText}>
-                    {item.pointName}
-                  </AppText>
                 </View>
               </View>
             </Pressable>
@@ -133,154 +103,109 @@ export function UpcomingAuctionsShelf({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
-    backgroundColor: stitchTokens.roseWarmSurface,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    marginTop: space.md,
+    gap: 8,
   },
   headerRow: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 15,
-    color: stitchTokens.wineDark,
-  },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
+  headerTitle: { fontSize: 16, color: stitchTokens.wineDark },
   badgeCount: {
-    backgroundColor: stitchTokens.goldLight,
-    borderWidth: 1,
-    borderColor: stitchTokens.goldBorder,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderRadius: radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
   },
   badgeCountText: {
-    fontSize: 11,
-    color: stitchTokens.wineDark,
+    fontSize: 12,
+    lineHeight: 15,
     fontWeight: "700",
+    color: stitchTokens.wine,
+    includeFontPadding: false,
   },
   subtitle: {
-    paddingHorizontal: 16,
-    marginTop: 3,
-    marginBottom: 10,
-    fontSize: 12,
-    color: stitchTokens.subtleGray,
-    lineHeight: 16,
+    paddingHorizontal: space.lg,
+    color: stitchTokens.brownMuted,
+    lineHeight: 18,
   },
+  scrollView: { flexGrow: 0 },
   scrollList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     gap: 12,
+    paddingVertical: 4,
   },
   card: {
-    width: 160,
+    width: 176,
     backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
     overflow: "hidden",
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
   },
   coverFrame: {
-    width: "100%",
-    height: 125,
+    height: 124,
     backgroundColor: stitchTokens.parchment,
-    position: "relative",
+    overflow: "hidden",
   },
   timerBadge: {
     position: "absolute",
-    top: 6,
-    left: 6,
+    top: 8,
+    left: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: stitchTokens.wineDark,
     borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 0.5,
-    borderColor: stitchTokens.peachBorder,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   timerBadgeText: {
-    fontSize: 10,
-    color: stitchTokens.wineDark,
+    color: stitchTokens.warmIvory,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "700",
-  },
-  conditionTag: {
-    position: "absolute",
-    bottom: 6,
-    right: 6,
-    backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  conditionTagText: {
-    fontSize: 9,
-    color: stitchTokens.wineDark,
-    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   cardContent: {
     padding: 10,
     gap: 4,
-  },
-  cardTitle: {
-    fontSize: 12,
-    color: stitchTokens.deepCocoa,
-  },
-  cardAuthor: {
-    fontSize: 11,
-    color: stitchTokens.subtleGray,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 2,
-  },
-  priceLabel: {
-    fontSize: 10,
-    color: stitchTokens.subtleGray,
-  },
-  priceValue: {
-    fontSize: 12,
-    color: stitchTokens.wineDark,
-  },
-  buyNowChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  buyNowText: {
-    fontSize: 10,
-    color: stitchTokens.wineDark,
-    fontWeight: "700",
-  },
-  pointRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 2,
-  },
-  pointText: {
-    fontSize: 10,
-    color: stitchTokens.subtleGray,
     flex: 1,
+    justifyContent: "space-between",
   },
+  cardTitle: { color: stitchTokens.wineDark, fontSize: 13, lineHeight: 18 },
+  cardMeta: { color: stitchTokens.brownMuted, fontSize: 12 },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 6,
+    marginTop: 6,
+  },
+  priceCol: { flex: 1, minWidth: 0 },
+  priceLabel: { fontSize: 11, color: stitchTokens.brownMuted },
+  priceValue: {
+    fontSize: 14,
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  regChip: {
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  regChipText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
+  },
+  pressed: { opacity: 0.84 },
 });

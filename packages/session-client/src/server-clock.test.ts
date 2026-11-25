@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { JUMP_MS, SAMPLE_MAX_AGE_MS, ServerClock, createServerNow } from "./server-clock";
 import { SessionClient, type Fetcher } from "./session-client";
 
@@ -58,23 +58,27 @@ describe("ServerClock", () => {
     expect(clock.now()).toBe(serverNow + 200);
   });
 
-  it("ignores a device date change: the monotonic clock carries on", () => {
+  it.each([-1, 1])("ignores a device date change in direction %s", (direction) => {
     const { t, clock, advance } = device();
     const sent = clock.mark();
     advance(100);
     clock.observe(iso(SERVER + 50), sent, clock.mark());
     advance(10_000);
-    t.wall -= 60 * 60_000; // user sets the date back an hour
+    t.wall += direction * 60 * 60_000;
     expect(clock.now()).toBe(SERVER + 10_100);
   });
 
-  it("uses the device date after a sleep that paused the monotonic clock", () => {
+  it("catches up from a fresh response when sleep pauses the monotonic clock", () => {
     const { t, clock, advance } = device();
     const sent = clock.mark();
     advance(100);
     clock.observe(iso(SERVER + 50), sent, clock.mark());
     t.wall += 30 * 60_000; // 30 min asleep; monotonic did not move
-    expect(clock.now()).toBe(SERVER + 100 + 30 * 60_000);
+    expect(clock.now()).toBe(SERVER + 100);
+    const afterSleep = clock.mark();
+    advance(200);
+    clock.observe(iso(SERVER + 200 + 30 * 60_000), afterSleep, clock.mark());
+    expect(clock.now()).toBe(SERVER + 300 + 30 * 60_000);
   });
 
   it("re-syncs from the next response after a jump, even a slower one", () => {
@@ -82,8 +86,8 @@ describe("ServerClock", () => {
     let sent = clock.mark();
     advance(20);
     clock.observe(iso(SERVER + 10), sent, clock.mark());
-    t.wall += 60 * 60_000; // date set forward an hour: shown as later until re-sync
-    expect(clock.now()).toBe(SERVER + 20 + 60 * 60_000);
+    t.wall += 60 * 60_000;
+    expect(clock.now()).toBe(SERVER + 20);
     sent = clock.mark();
     advance(300);
     clock.observe(iso(SERVER + 170), sent, clock.mark());
@@ -119,16 +123,12 @@ describe("createServerNow", () => {
     expect(now()).toBe(SERVER + 100);
   });
 
-  it("falls back to the data's offset before the first timed response", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(SERVER);
-    try {
-      const now = createServerNow(iso(SERVER + 7_000), new ServerClock());
-      vi.advanceTimersByTime(1_000);
-      expect(now()).toBe(SERVER + 8_000);
-    } finally {
-      vi.useRealTimers();
-    }
+  it("follows a snapshot on the monotonic clock before the first timed response", () => {
+    const { clock, t, advance } = device(120_000);
+    const now = createServerNow(iso(SERVER + 7_000), clock);
+    advance(1_000);
+    t.wall += 3_600_000;
+    expect(now()).toBe(SERVER + 8_000);
   });
 
   it("uses the device date when the data has no serverTime", () => {

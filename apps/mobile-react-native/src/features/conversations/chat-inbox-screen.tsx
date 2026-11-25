@@ -3,20 +3,22 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StatusBar,
   StyleSheet,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
   AppText,
-  AppTextInput,
   Button,
   Icon,
+  Notice,
+  SearchField,
   StatePanel,
-  TopNavbar,
   colorRoles,
   colors,
   radius,
@@ -25,6 +27,7 @@ import {
 } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import { useSession } from "../../core/session/session-provider";
+import { useForeground } from "../../core/hooks/use-foreground";
 import { publicListing } from "../shelf/contracts";
 import { PublicPhoto } from "../shelf/public-photo";
 import { MemberNavigation } from "../navigation/member-navigation";
@@ -34,20 +37,230 @@ import {
   statusLabels,
 } from "./purchase-conversation-service";
 import type { PurchaseConversation } from "./contracts";
-import type { Exchange } from "../exchanges/contracts";
-import { exchangePageSchema, mapExchangeStatusInfo } from "../exchanges/contracts";
+import {
+  exchangePageSchema,
+  mapExchangeStatusInfo,
+  type Exchange,
+} from "../exchanges/contracts";
+import {
+  isOpen,
+  isScheduled,
+  myAuctionsOptions,
+} from "../auctions/auctions-model";
+import { AuctionCover } from "../auctions/components/auction-cover";
+import type { MyAuctionItem } from "../auctions/contracts";
 
-type InboxFilterTab = "all" | "exchange" | "action_needed" | "active" | "order_created";
+type TransactionTab = "all" | "buy" | "exchange" | "auction";
 
-const FILTER_TABS: { key: InboxFilterTab; label: string }[] = [
+const TRANSACTION_TABS: readonly {
+  key: TransactionTab;
+  label: string;
+}[] = [
   { key: "all", label: "Tất cả" },
-  { key: "exchange", label: "Trao đổi sách" },
-  { key: "action_needed", label: "Cần phản hồi" },
-  { key: "active", label: "Đang thương lượng" },
-  { key: "order_created", label: "Đã tạo đơn" },
+  { key: "buy", label: "Mua ngay" },
+  { key: "exchange", label: "Đổi sách" },
+  { key: "auction", label: "Đấu giá" },
 ];
 
-function ConversationInboxItem({
+function doesExchangeNeedAction(
+  exchange: Exchange,
+  currentUserId: string,
+): boolean {
+  if (!currentUserId) return false;
+  const isInitiator = exchange.initiatorId === currentUserId;
+  if (exchange.status === "Proposed") {
+    return exchange.lastProposedById
+      ? exchange.lastProposedById !== currentUserId
+      : !isInitiator;
+  }
+  if (exchange.status === "AcceptedAwaitingFunding") {
+    return isInitiator
+      ? !exchange.initiatorFundedAt
+      : !exchange.recipientFundedAt;
+  }
+  if (exchange.status === "Preparing" || exchange.status === "InTransit") {
+    const myShipped = isInitiator
+      ? Boolean(exchange.initiatorShippedAt || exchange.initiatorShipment)
+      : Boolean(exchange.recipientShippedAt || exchange.recipientShipment);
+    const partnerShipped = isInitiator
+      ? Boolean(exchange.recipientShippedAt)
+      : Boolean(exchange.initiatorShippedAt);
+    const myReceived = isInitiator
+      ? Boolean(exchange.initiatorReceivedAt)
+      : Boolean(exchange.recipientReceivedAt);
+    return !myShipped || (partnerShipped && !myReceived);
+  }
+  if (exchange.status === "Delivered") {
+    return isInitiator
+      ? !exchange.initiatorCompletedAt
+      : !exchange.recipientCompletedAt;
+  }
+  return exchange.status === "ResolutionPending";
+}
+
+function getExchangeActionCue(
+  exchange: Exchange,
+  currentUserId: string,
+  awaitingMyReply: boolean,
+): string {
+  const isInitiator = exchange.initiatorId === currentUserId;
+  if (exchange.status === "Proposed") {
+    return awaitingMyReply ? "Phản hồi đề nghị" : "Xem phiếu";
+  }
+  if (exchange.status === "AcceptedAwaitingFunding") {
+    const myFunded = isInitiator
+      ? Boolean(exchange.initiatorFundedAt)
+      : Boolean(exchange.recipientFundedAt);
+    return myFunded ? "Xem phiếu" : "Đặt cọc ngay";
+  }
+  if (exchange.status === "Preparing") {
+    const myShipped = isInitiator
+      ? Boolean(exchange.initiatorShippedAt || exchange.initiatorShipment)
+      : Boolean(exchange.recipientShippedAt || exchange.recipientShipment);
+    return myShipped ? "Theo dõi gửi sách" : "Gửi sách ngay";
+  }
+  if (exchange.status === "InTransit") {
+    const partnerShipped = isInitiator
+      ? Boolean(exchange.recipientShippedAt)
+      : Boolean(exchange.initiatorShippedAt);
+    const myReceived = isInitiator
+      ? Boolean(exchange.initiatorReceivedAt)
+      : Boolean(exchange.recipientReceivedAt);
+    return partnerShipped && !myReceived ? "Xác nhận nhận sách" : "Xem hành trình";
+  }
+  if (exchange.status === "Delivered") {
+    const myCompleted = isInitiator
+      ? Boolean(exchange.initiatorCompletedAt)
+      : Boolean(exchange.recipientCompletedAt);
+    return myCompleted ? "Xem phiếu" : "Đồng kiểm sách";
+  }
+  if (exchange.status === "ResolutionPending") return "Xem khiếu nại";
+  return "Xem chi tiết";
+}
+
+function getAuctionStatusMeta(
+  item: MyAuctionItem,
+  nowMs: number,
+): {
+  label: string;
+  badgeBg: string;
+  badgeColor: string;
+  needsAction: boolean;
+  actionCue: string;
+} {
+  const { auction } = item;
+  if (item.needsPayment) {
+    return {
+      label: "Chờ bạn thanh toán",
+      badgeBg: stitchTokens.terracottaSoft,
+      badgeColor: stitchTokens.wineDark,
+      needsAction: true,
+      actionCue: "Thanh toán ngay",
+    };
+  }
+  if (auction.state === "SecondChanceOffered" && item.role === "Bidder") {
+    return {
+      label: "Có lời mời mua lại",
+      badgeBg: stitchTokens.amberBg,
+      badgeColor: stitchTokens.orangeDeep,
+      needsAction: true,
+      actionCue: "Xem lời mời",
+    };
+  }
+  if (auction.state === "OnHold") {
+    return {
+      label: "Đang tạm dừng",
+      badgeBg: stitchTokens.amberBg,
+      badgeColor: stitchTokens.goldBronze,
+      needsAction: false,
+      actionCue: "Xem phiên",
+    };
+  }
+  if (auction.state === "Sold") {
+    return {
+      label: item.won
+        ? "Bạn đã thắng phiên"
+        : item.role === "Seller"
+          ? "Đã bán thành công"
+          : "Phiên đã kết thúc",
+      badgeBg: stitchTokens.likeNewGreenBg,
+      badgeColor: stitchTokens.verifiedGreen,
+      needsAction: false,
+      actionCue: "Xem kết quả",
+    };
+  }
+  if (
+    auction.state === "Unsold" ||
+    auction.state === "Cancelled" ||
+    auction.state === "PaymentExpired"
+  ) {
+    return {
+      label:
+        auction.state === "PaymentExpired"
+          ? "Quá hạn thanh toán"
+          : auction.state === "Cancelled"
+            ? "Phiên đã hủy"
+            : "Chưa có người mua",
+      badgeBg: stitchTokens.canvasMuted,
+      badgeColor: colors.muted,
+      needsAction: false,
+      actionCue: "Xem phiên",
+    };
+  }
+  if (auction.state === "AwaitingWinnerPayment") {
+    return {
+      label: item.role === "Seller" ? "Chờ người thắng thanh toán" : "Chờ thanh toán",
+      badgeBg: stitchTokens.amberBg,
+      badgeColor: stitchTokens.goldBronze,
+      needsAction: false,
+      actionCue: "Xem phiên",
+    };
+  }
+  if (isScheduled(auction, nowMs)) {
+    return {
+      label: "Sắp mở phiên",
+      badgeBg: stitchTokens.blueLightBg,
+      badgeColor: stitchTokens.blueTextDeep,
+      needsAction: false,
+      actionCue: "Xem lịch mở",
+    };
+  }
+  if (isOpen(auction, nowMs) || auction.state === "BuyNowPending") {
+    if (item.role === "Bidder") {
+      return item.leading
+        ? {
+            label: "Bạn đang dẫn giá",
+            badgeBg: stitchTokens.likeNewGreenBg,
+            badgeColor: stitchTokens.likeNewGreen,
+            needsAction: false,
+            actionCue: "Theo dõi phiên",
+          }
+        : {
+            label: "Đã bị vượt giá",
+            badgeBg: stitchTokens.tagExchangeBg,
+            badgeColor: stitchTokens.tagExchangeText,
+            needsAction: true,
+            actionCue: "Trả giá tiếp",
+          };
+    }
+    return {
+      label: "Đang diễn ra",
+      badgeBg: stitchTokens.likeNewGreenBg,
+      badgeColor: stitchTokens.likeNewGreen,
+      needsAction: false,
+      actionCue: "Theo dõi phiên",
+    };
+  }
+  return {
+    label: "Đang cập nhật",
+    badgeBg: stitchTokens.canvasMuted,
+    badgeColor: colors.muted,
+    needsAction: false,
+    actionCue: "Xem phiên",
+  };
+}
+
+function PurchaseTransactionCard({
   room,
   currentUserId,
   onPress,
@@ -59,173 +272,163 @@ function ConversationInboxItem({
   const { client } = useSession();
   const isBuyer = room.buyer.id === currentUserId;
   const partner = isBuyer ? room.seller : room.buyer;
+  const isExchangeRoom = room.terms?.mode === "Exchange";
 
-  // Fetch listing details for book identity
   const listingQuery = useQuery({
     queryKey: ["public-listing", room.listingId],
     queryFn: () =>
-      client.publicRequest(`/listings/${room.listingId}?bundleSupport=whole-v1`, publicListing),
-    staleTime: 60000,
+      client.publicRequest(
+        `/listings/${room.listingId}?bundleSupport=whole-v1`,
+        publicListing,
+      ),
+    staleTime: 60_000,
+    retry: false,
   });
 
   const listing = listingQuery.data;
-  const bookTitle = listing?.bundle?.title || listing?.book.title || "Đang tải thông tin sách…";
+  const bookTitle =
+    listing?.bundle?.title || listing?.book.title || "Đang tải tên sách…";
   const primaryPhoto = listing?.photos?.[0];
   const revisionId = listing?.revisionId;
 
   const proposal = room.terms?.pendingProposal;
   const isActionNeeded =
-    Boolean(proposal) && proposal?.proposedById !== currentUserId;
+    room.status === "Active" &&
+    Boolean(proposal) &&
+    proposal?.proposedById !== currentUserId;
   const isWaitingPartner =
-    Boolean(proposal) && proposal?.proposedById === currentUserId;
+    room.status === "Active" &&
+    Boolean(proposal) &&
+    proposal?.proposedById === currentUserId;
 
-  // Snippet text & tone
-  let snippet = "Chưa có tin nhắn mới";
-  let snippetHighlight = false;
+  let statusLabel = statusLabels[room.status] ?? room.status;
+  let badgeBg: string = stitchTokens.likeNewGreenBg;
+  let badgeColor: string = stitchTokens.likeNewGreen;
+  let actionCue = "Mở hội thoại";
 
   if (isActionNeeded) {
-    snippet =
+    statusLabel =
       proposal?.kind === "Price"
-        ? `⚡ Đối tác đề nghị giá ${formatVnd(proposal.amount ?? 0)} - Cần bạn phản hồi`
-        : "⚡ Đối tác đề nghị đổi sách - Cần bạn phản hồi";
-    snippetHighlight = true;
+        ? `Đề nghị ${formatVnd(proposal.amount ?? 0)} · Chờ bạn`
+        : "Đề nghị đổi sách · Chờ bạn";
+    badgeBg = stitchTokens.terracottaSoft;
+    badgeColor = stitchTokens.wineDark;
+    actionCue = "Phản hồi ngay";
   } else if (isWaitingPartner) {
-    snippet = "Đang chờ đối tác phản hồi đề xuất của bạn…";
+    statusLabel = "Đang chờ đối tác phản hồi";
+    badgeBg = stitchTokens.amberBg;
+    badgeColor = stitchTokens.goldBronze;
   } else if (room.status === "OrderCreated") {
-    snippet = isBuyer
-      ? "📦 Người bán đã tạo đơn - Bấm để thanh toán"
-      : "📦 Bạn đã tạo đơn - Chờ người mua thanh toán";
-    snippetHighlight = true;
-  } else if (room.terms?.agreedPrice != null) {
-    snippet = `Đã thống nhất giá: ${formatVnd(room.terms.agreedPrice)}`;
-  } else if (room.terms?.mode === "Exchange") {
-    snippet = "Đang trao đổi về sách và phương thức giao nhận";
-  } else {
-    snippet = "Đang trao đổi về tình trạng sách và giá";
+    statusLabel = isBuyer ? "Đã tạo đơn · Chờ thanh toán" : "Đã tạo đơn hàng";
+    badgeBg = stitchTokens.amberBg;
+    badgeColor = stitchTokens.orangeDeep;
+    actionCue = isBuyer ? "Thanh toán" : "Xem hội thoại";
+  } else if (room.status !== "Active") {
+    badgeBg = stitchTokens.canvasMuted;
+    badgeColor = colors.muted;
+    actionCue = "Xem lại";
   }
 
-  const isExchange = room.terms?.mode === "Exchange";
+  const listingAmount = listing?.salePrice ?? listing?.exchangeValue ?? null;
+  const priceLine =
+    room.terms?.agreedPrice != null
+      ? `Thống nhất ${formatVnd(room.terms.agreedPrice)}`
+      : listingAmount != null
+        ? formatVnd(listingAmount)
+        : null;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Cuộc trò chuyện với ${partner.displayName}`}
+      accessibilityLabel={`Hội thoại ${bookTitle} với ${partner.displayName}`}
       style={({ pressed }) => [
-        styles.itemCard,
-        isActionNeeded && styles.itemCardActionNeeded,
-        pressed && styles.itemPressed,
+        styles.txnCard,
+        isActionNeeded && styles.txnCardAttention,
+        pressed && styles.cardPressed,
       ]}
       onPress={onPress}
     >
-      {/* 1. Partner Avatar */}
-      <View style={styles.avatarCol}>
-        <View style={styles.avatarCircle}>
-          <AppText style={styles.avatarText}>
-            {partner.displayName.slice(0, 1).toUpperCase()}
-          </AppText>
+      <View style={styles.cardMainRow}>
+        <View style={styles.bookCoverFrame}>
+          {primaryPhoto && revisionId ? (
+            <PublicPhoto
+              listingId={room.listingId}
+              revisionId={revisionId}
+              mediaId={primaryPhoto.id}
+              label={bookTitle}
+              active
+              compact
+            />
+          ) : (
+            <View style={styles.coverFallback}>
+              <Icon
+                name={isExchangeRoom ? "swap" : "book"}
+                size={22}
+                color={stitchTokens.wine}
+              />
+            </View>
+          )}
         </View>
-        {isActionNeeded && <View style={styles.unreadBadgeDot} />}
-      </View>
 
-      {/* 2. Main Conversation Content */}
-      <View style={styles.contentCol}>
-        {/* Top: Partner Name + Role Tag + Timestamp */}
-        <View style={styles.nameRow}>
-          <View style={styles.nameGroup}>
-            <AppText numberOfLines={1} style={styles.partnerName}>
-              {partner.displayName}
-            </AppText>
-            <View
-              style={[
-                styles.roleTag,
-                isBuyer ? styles.roleTagSeller : styles.roleTagBuyer,
-              ]}
-            >
-              <AppText
-                style={[
-                  styles.roleTagText,
-                  isBuyer
-                    ? styles.roleTagTextSeller
-                    : styles.roleTagTextBuyer,
-                ]}
-              >
-                {isBuyer ? "Người bán" : "Người mua"}
+        <View style={styles.cardBody}>
+          <View style={styles.cardMetaRow}>
+            <View style={styles.categoryWrap}>
+              <Icon
+                name={isExchangeRoom ? "swap" : "message"}
+                size={13}
+                color={stitchTokens.wine}
+              />
+              <AppText style={styles.categoryText}>
+                {isExchangeRoom ? "Thỏa thuận đổi sách" : "Mua ngay"}
               </AppText>
             </View>
+            <AppText style={styles.timeText}>
+              {formatDateTimeVi(room.createdAt)}
+            </AppText>
           </View>
 
-          <AppText style={styles.timeText}>
-            {formatDateTimeVi(room.createdAt)}
-          </AppText>
-        </View>
-
-        {/* Middle: Associated Book Badge (Shopee Chat style) */}
-        <View style={styles.bookSnippetRow}>
-          <View style={styles.bookMiniCover}>
-            {primaryPhoto && revisionId ? (
-              <PublicPhoto
-                listingId={room.listingId}
-                revisionId={revisionId}
-                mediaId={primaryPhoto.id}
-                label={bookTitle}
-                active={true}
-                compact
-              />
-            ) : (
-              <Icon name="book" size={14} color={stitchTokens.wineDark} />
-            )}
-          </View>
-          <AppText numberOfLines={1} style={styles.bookMiniTitle}>
+          <AppText numberOfLines={2} style={styles.bookTitle}>
             {bookTitle}
           </AppText>
-          <View style={styles.modePill}>
-            <AppText style={styles.modePillText}>
-              {isExchange ? "Đổi" : "Mua"}
-            </AppText>
-          </View>
-        </View>
 
-        {/* Bottom: Latest Status Snippet */}
-        <View style={styles.snippetRow}>
+          <AppText numberOfLines={1} style={styles.partnerLine}>
+            {isBuyer ? "Người bán" : "Người mua"} · {partner.displayName}
+            {priceLine ? ` · ${priceLine}` : ""}
+          </AppText>
+        </View>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
           <AppText
             numberOfLines={1}
-            style={[
-              styles.snippetText,
-              snippetHighlight && styles.snippetTextHighlight,
-            ]}
+            style={[styles.statusBadgeText, { color: badgeColor }]}
           >
-            {snippet}
+            {statusLabel}
           </AppText>
-          <View
+        </View>
+
+        <View style={styles.actionCueRow}>
+          <AppText
             style={[
-              styles.statusPill,
-              room.status === "Active"
-                ? styles.statusActive
-                : room.status === "OrderCreated"
-                  ? styles.statusOrder
-                  : styles.statusClosed,
+              styles.actionCueText,
+              isActionNeeded && styles.actionCueTextUrgent,
             ]}
           >
-            <AppText
-              style={[
-                styles.statusText,
-                room.status === "Active"
-                  ? styles.statusTextActive
-                  : room.status === "OrderCreated"
-                    ? styles.statusTextOrder
-                    : styles.statusTextClosed,
-              ]}
-            >
-              {statusLabels[room.status] ?? room.status}
-            </AppText>
-          </View>
+            {actionCue}
+          </AppText>
+          <Icon
+            name="chevronRight"
+            size={15}
+            color={isActionNeeded ? stitchTokens.wine : colors.muted}
+          />
         </View>
       </View>
     </Pressable>
   );
 }
 
-function ExchangeInboxItem({
+function ExchangeTransactionCard({
   exchange,
   currentUserId,
   onPress,
@@ -237,36 +440,72 @@ function ExchangeInboxItem({
   const { client } = useSession();
   const isInitiator = exchange.initiatorId === currentUserId;
 
+  const partnerBooks = exchange.agreement
+    ? isInitiator
+      ? [exchange.agreement.recipientBook]
+      : exchange.agreement.initiatorBooks
+    : [];
+  const myBooks = exchange.agreement
+    ? isInitiator
+      ? exchange.agreement.initiatorBooks
+      : [exchange.agreement.recipientBook]
+    : [];
+
+  const partnerSnapshot = partnerBooks[0];
+  const mySnapshot = myBooks[0];
+  const snapshotCover = partnerSnapshot?.mediaIds?.[0]
+    ? {
+        listingId: partnerSnapshot.listingId,
+        revisionId: partnerSnapshot.revisionId,
+        mediaId: partnerSnapshot.mediaIds[0],
+      }
+    : mySnapshot?.mediaIds?.[0]
+      ? {
+          listingId: mySnapshot.listingId,
+          revisionId: mySnapshot.revisionId,
+          mediaId: mySnapshot.mediaIds[0],
+        }
+      : null;
+
   const targetListingId = isInitiator
     ? exchange.recipientListingId
     : (exchange.initiatorListingIds?.[0] ?? exchange.initiatorListingId);
 
-  const partnerSnapshot = isInitiator
-    ? exchange.agreement?.recipientBook
-    : exchange.agreement?.initiatorBooks?.[0];
   const listingQuery = useQuery({
     queryKey: ["public-listing", targetListingId],
     queryFn: () =>
-      client.publicRequest(`/listings/${targetListingId}?bundleSupport=whole-v1`, publicListing),
-    staleTime: 60000,
-    enabled: Boolean(targetListingId) && !partnerSnapshot,
+      client.publicRequest(
+        `/listings/${targetListingId}?bundleSupport=whole-v1`,
+        publicListing,
+      ),
+    staleTime: 60_000,
+    retry: false,
+    enabled: Boolean(targetListingId) && (!partnerSnapshot || !snapshotCover),
   });
 
   const listing = listingQuery.data;
   const partnerName =
     partnerSnapshot?.ownerDisplayName ||
     listing?.seller.displayName ||
-    (isInitiator ? "Đối tác" : "Người đề nghị");
+    (isInitiator
+      ? exchange.recipientAddress?.recipientName
+      : exchange.initiatorAddress?.recipientName) ||
+    "Đối tác trao đổi";
+
   const partnerBookCount = isInitiator
     ? 1
-    : Math.max(1, exchange.agreement?.initiatorBooks?.length ?? exchange.initiatorListingIds?.length ?? 1);
+    : Math.max(
+        1,
+        exchange.agreement?.initiatorBooks?.length ??
+          exchange.initiatorListingIds?.length ??
+          1,
+      );
+
   const bookTitle = partnerSnapshot
     ? partnerBookCount > 1
       ? `${partnerSnapshot.book.title} (+${partnerBookCount - 1} cuốn)`
       : partnerSnapshot.book.title
-    : listing?.bundle?.title || listing?.book.title || "Đang tải thông tin sách…";
-  const primaryPhoto = listing?.photos?.[0];
-  const revisionId = listing?.revisionId;
+    : listing?.bundle?.title || listing?.book.title || "Phiếu trao đổi sách";
 
   const awaitingMyReply =
     exchange.status === "Proposed" &&
@@ -274,529 +513,750 @@ function ExchangeInboxItem({
       ? exchange.lastProposedById !== currentUserId
       : !isInitiator);
 
+  const isActionNeeded = doesExchangeNeedAction(exchange, currentUserId);
   const statusInfo = mapExchangeStatusInfo(
     exchange.status,
     exchange.status === "Proposed" ? !awaitingMyReply : isInitiator,
   );
+  const actionCue = getExchangeActionCue(
+    exchange,
+    currentUserId,
+    awaitingMyReply,
+  );
 
-  const isActionNeeded =
-    awaitingMyReply ||
-    exchange.status === "ResolutionPending" ||
-    (exchange.status === "AcceptedAwaitingFunding" &&
-      !(isInitiator ? exchange.initiatorFundedAt : exchange.recipientFundedAt)) ||
-    (exchange.status === "Preparing" &&
-      !(isInitiator ? (exchange.initiatorShipment || exchange.initiatorShippedAt) : (exchange.recipientShipment || exchange.recipientShippedAt)));
+  const diffSummary =
+    exchange.diffAmount > 0
+      ? `${
+          (isInitiator && exchange.diffPayerId === exchange.initiatorId) ||
+          (!isInitiator && exchange.diffPayerId === exchange.recipientId)
+            ? "Bù"
+            : "Nhận"
+        } ${formatVnd(exchange.diffAmount)}`
+      : "Ngang giá";
 
-  let snippet = "Đang trao đổi về sách và phương thức giao nhận";
-  let snippetHighlight = false;
-
-  if (exchange.status === "Proposed") {
-    if (!awaitingMyReply) {
-      snippet = "Đang chờ đối tác phản hồi đề nghị đổi sách của bạn…";
-    } else {
-      snippet = `⚡ Đối tác gửi đề nghị đổi sách ${
-        exchange.diffAmount > 0
-          ? "(Bù " + formatVnd(exchange.diffAmount) + ")"
-          : "(Ngang giá)"
-      } - Cần bạn phản hồi`;
-      snippetHighlight = true;
-    }
-  } else if (exchange.status === "AcceptedAwaitingFunding") {
-    snippet = "Đã đồng ý trao đổi · Chờ đặt cọc bảo chứng";
-    snippetHighlight = isActionNeeded;
-  } else if (exchange.status === "Preparing") {
-    snippet = "Đã cọc bảo chứng · Đang chuẩn bị gửi sách trong 72h";
-    snippetHighlight = isActionNeeded;
-  } else if (exchange.status === "InTransit") {
-    snippet = "Sách đang được vận chuyển tới bạn";
-  } else if (exchange.status === "ResolutionPending") {
-    snippet = "⚠️ Đang có khiếu nại / xử lý sự cố · Tiền ký quỹ được giữ an toàn";
-    snippetHighlight = true;
-  } else if (exchange.status === "Completed") {
-    snippet = "Giao dịch trao đổi sách đã hoàn tất thành công";
-  } else if (exchange.status === "Cancelled") {
-    snippet = "Giao dịch trao đổi đã kết thúc/hủy";
-  }
+  const fallbackPhoto = listing?.photos?.[0];
+  const fallbackRevision = listing?.revisionId;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Cuộc trao đổi sách với ${partnerName}`}
+      accessibilityLabel={`Phiếu trao đổi ${bookTitle} với ${partnerName}`}
       style={({ pressed }) => [
-        styles.itemCard,
-        isActionNeeded && styles.itemCardActionNeeded,
-        pressed && styles.itemPressed,
+        styles.txnCard,
+        isActionNeeded && styles.txnCardAttention,
+        pressed && styles.cardPressed,
       ]}
       onPress={onPress}
     >
-      {/* 1. Partner Avatar */}
-      <View style={styles.avatarCol}>
-        <View
-          style={[
-            styles.avatarCircle,
-            { backgroundColor: stitchTokens.amberBg },
-          ]}
-        >
-          <AppText
-            style={[styles.avatarText, { color: stitchTokens.wineDark }]}
-          >
-            {partnerName.slice(0, 1).toUpperCase()}
-          </AppText>
-        </View>
-        {isActionNeeded && <View style={styles.unreadBadgeDot} />}
-      </View>
-
-      {/* 2. Main Content */}
-      <View style={styles.contentCol}>
-        <View style={styles.nameRow}>
-          <View style={styles.nameGroup}>
-            <AppText numberOfLines={1} style={styles.partnerName}>
-              {partnerName}
-            </AppText>
-            <View
-              style={[
-                styles.roleTag,
-                { backgroundColor: stitchTokens.tagExchangeBg },
-              ]}
-            >
-              <AppText
-                style={[
-                  styles.roleTagText,
-                  { color: stitchTokens.tagExchangeText },
-                ]}
-              >
-                Trao đổi sách
+      <View style={styles.cardMainRow}>
+        <View style={styles.bookCoverFrame}>
+          {snapshotCover ? (
+            <PublicPhoto
+              exchangeId={exchange.id}
+              listingId={snapshotCover.listingId}
+              revisionId={snapshotCover.revisionId}
+              mediaId={snapshotCover.mediaId}
+              label={bookTitle}
+              active
+              compact
+            />
+          ) : fallbackPhoto && fallbackRevision && targetListingId ? (
+            <PublicPhoto
+              listingId={targetListingId}
+              revisionId={fallbackRevision}
+              mediaId={fallbackPhoto.id}
+              label={bookTitle}
+              active
+              compact
+            />
+          ) : (
+            <View style={styles.coverFallback}>
+              <Icon name="swap" size={22} color={stitchTokens.wine} />
+            </View>
+          )}
+          {partnerBookCount > 1 && (
+            <View style={styles.coverCountChip}>
+              <AppText style={styles.coverCountText}>
+                +{partnerBookCount - 1}
               </AppText>
             </View>
-          </View>
-
-          <AppText style={styles.timeText}>
-            {formatDateTimeVi(exchange.updatedAt ?? exchange.createdAt)}
-          </AppText>
+          )}
         </View>
 
-        {/* Middle: Book Snippet */}
-        <View style={styles.bookSnippetRow}>
-          <View style={styles.bookMiniCover}>
-            {primaryPhoto && revisionId && targetListingId ? (
-              <PublicPhoto
-                listingId={targetListingId}
-                revisionId={revisionId}
-                mediaId={primaryPhoto.id}
-                label={bookTitle}
-                active={true}
-                compact
-              />
-            ) : (
-              <Icon name="swap" size={14} color={stitchTokens.wineDark} />
-            )}
+        <View style={styles.cardBody}>
+          <View style={styles.cardMetaRow}>
+            <View style={styles.categoryWrap}>
+              <Icon name="swap" size={13} color={stitchTokens.wine} />
+              <AppText style={styles.categoryText}>
+                Đổi sách · #{exchange.id.slice(0, 8).toUpperCase()}
+              </AppText>
+            </View>
+            <AppText style={styles.timeText}>
+              {formatDateTimeVi(exchange.updatedAt ?? exchange.createdAt)}
+            </AppText>
           </View>
-          <AppText numberOfLines={1} style={styles.bookMiniTitle}>
+
+          <AppText numberOfLines={2} style={styles.bookTitle}>
             {bookTitle}
           </AppText>
-          <View
-            style={[
-              styles.modePill,
-              { backgroundColor: stitchTokens.amberBg },
-            ]}
-          >
-            <AppText
-              style={[
-                styles.modePillText,
-                { color: stitchTokens.wineDark },
-              ]}
-            >
-              {exchange.diffAmount > 0
-                ? (isInitiator
-                    ? exchange.diffPayerId === exchange.initiatorId
-                      ? "Bù "
-                      : "Nhận "
-                    : exchange.diffPayerId === exchange.recipientId
-                      ? "Bù "
-                      : "Nhận ") + formatVnd(exchange.diffAmount)
-                : "Ngang giá"}
-            </AppText>
-          </View>
-        </View>
 
-        {/* Bottom: Latest Status Snippet */}
-        <View style={styles.snippetRow}>
+          <AppText numberOfLines={1} style={styles.partnerLine}>
+            Với {partnerName} · {diffSummary}
+          </AppText>
+        </View>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <View
+          style={[styles.statusBadge, { backgroundColor: statusInfo.badgeBg }]}
+        >
           <AppText
             numberOfLines={1}
-            style={[
-              styles.snippetText,
-              snippetHighlight && styles.snippetTextHighlight,
-            ]}
+            style={[styles.statusBadgeText, { color: statusInfo.badgeColor }]}
           >
-            {snippet}
+            {statusInfo.label}
           </AppText>
-          <View
+        </View>
+
+        <View style={styles.actionCueRow}>
+          <AppText
             style={[
-              styles.statusPill,
-              { backgroundColor: statusInfo.badgeBg },
+              styles.actionCueText,
+              isActionNeeded && styles.actionCueTextUrgent,
             ]}
           >
-            <AppText
-              style={[
-                styles.statusText,
-                { color: statusInfo.badgeColor },
-              ]}
-            >
-              {statusInfo.label}
-            </AppText>
-          </View>
+            {actionCue}
+          </AppText>
+          <Icon
+            name="chevronRight"
+            size={15}
+            color={isActionNeeded ? stitchTokens.wine : colors.muted}
+          />
         </View>
       </View>
     </Pressable>
   );
 }
 
-type CombinedInboxItem =
+function AuctionTransactionCard({
+  item,
+  nowMs,
+  onPress,
+}: {
+  item: MyAuctionItem;
+  nowMs: number;
+  onPress: () => void;
+}) {
+  const { auction } = item;
+  const meta = getAuctionStatusMeta(item, nowMs);
+  const priceAmount = auction.currentPrice ?? auction.startPrice;
+  const priceLabel =
+    auction.currentPrice != null ? "Giá hiện tại" : "Giá khởi điểm";
+  const coverMediaId = auction.book?.photos?.[0]?.id;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Phiên đấu giá ${auction.title}`}
+      style={({ pressed }) => [
+        styles.txnCard,
+        meta.needsAction && styles.txnCardAttention,
+        pressed && styles.cardPressed,
+      ]}
+      onPress={onPress}
+    >
+      <View style={styles.cardMainRow}>
+        <View style={styles.bookCoverFrame}>
+          <AuctionCover
+            auctionId={auction.id}
+            mediaId={coverMediaId}
+            label={auction.title}
+            iconSize={22}
+          />
+        </View>
+
+        <View style={styles.cardBody}>
+          <View style={styles.cardMetaRow}>
+            <View style={styles.categoryWrap}>
+              <Icon name="gavel" size={13} color={stitchTokens.wine} />
+              <AppText style={styles.categoryText}>
+                Đấu giá · {item.role === "Seller" ? "Sách bạn bán" : "Tham gia"}
+              </AppText>
+            </View>
+            <AppText style={styles.timeText}>
+              {formatDateTimeVi(auction.endAt)}
+            </AppText>
+          </View>
+
+          <AppText numberOfLines={2} style={styles.bookTitle}>
+            {auction.title}
+          </AppText>
+
+          <AppText numberOfLines={1} style={styles.partnerLine}>
+            {priceLabel}: {formatVnd(priceAmount)} · {auction.pointName}
+          </AppText>
+        </View>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <View style={[styles.statusBadge, { backgroundColor: meta.badgeBg }]}>
+          <AppText
+            numberOfLines={1}
+            style={[styles.statusBadgeText, { color: meta.badgeColor }]}
+          >
+            {meta.label}
+          </AppText>
+        </View>
+
+        <View style={styles.actionCueRow}>
+          <AppText
+            style={[
+              styles.actionCueText,
+              meta.needsAction && styles.actionCueTextUrgent,
+            ]}
+          >
+            {meta.actionCue}
+          </AppText>
+          <Icon
+            name="chevronRight"
+            size={15}
+            color={meta.needsAction ? stitchTokens.wine : colors.muted}
+          />
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+type CombinedTransactionItem =
   | {
       type: "purchase";
+      tab: "buy" | "exchange";
       id: string;
       time: number;
-      searchName: string;
-      isActionNeeded: boolean;
+      searchText: string;
+      needsAction: boolean;
       room: PurchaseConversation;
     }
   | {
       type: "exchange";
+      tab: "exchange";
       id: string;
       time: number;
-      searchName: string;
-      isActionNeeded: boolean;
+      searchText: string;
+      needsAction: boolean;
       exchange: Exchange;
+    }
+  | {
+      type: "auction";
+      tab: "auction";
+      id: string;
+      time: number;
+      searchText: string;
+      needsAction: boolean;
+      item: MyAuctionItem;
     };
 
 export function ChatInboxScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const foreground = useForeground();
   const { client, state } = useSession();
-  const [activeTab, setActiveTab] = useState<InboxFilterTab>("all");
+
+  const [activeTab, setActiveTab] = useState<TransactionTab>("all");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mountedAt] = useState(() => Date.now());
 
   const currentUserId = state.status === "authenticated" ? state.user.id : "";
+  const isAuthenticated = state.status === "authenticated";
 
   const conversationsQuery = useQuery({
-    queryKey: ["purchase-conversations"],
+    queryKey: ["purchase-conversations", currentUserId],
     queryFn: () => getPurchaseConversations(client),
-    enabled: state.status === "authenticated",
-    refetchInterval: 5000,
+    enabled: isAuthenticated && foreground,
+    refetchInterval: 8_000,
+    retry: false,
   });
 
   const exchangesQuery = useQuery({
-    queryKey: ["my-exchanges"],
+    queryKey: ["my-exchanges", currentUserId],
     queryFn: () => client.request("/exchanges", exchangePageSchema),
-    enabled: state.status === "authenticated",
-    refetchInterval: 5000,
+    enabled: isAuthenticated && foreground,
+    refetchInterval: 8_000,
+    retry: false,
+  });
+
+  const auctionsQuery = useInfiniteQuery({
+    ...myAuctionsOptions(client, currentUserId, "all"),
+    enabled: isAuthenticated && foreground,
+    refetchInterval: 20_000,
+    retry: false,
+  });
+  useTransactionLive("inbox", currentUserId, foreground, () => {
+    void Promise.all([conversationsQuery.refetch(), exchangesQuery.refetch(), auctionsQuery.refetch()]);
   });
 
   const allRooms = useMemo(
     () => conversationsQuery.data ?? [],
     [conversationsQuery.data],
   );
-
   const allExchanges = useMemo(
     () => exchangesQuery.data?.items ?? [],
     [exchangesQuery.data],
   );
+  const allAuctions = useMemo(
+    () => auctionsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [auctionsQuery.data],
+  );
 
-  const actionNeededCount = useMemo(() => {
-    const purchaseCount = allRooms.filter(
-      (r) =>
-        r.status === "Active" &&
-        r.terms?.pendingProposal &&
-        r.terms.pendingProposal.proposedById !== currentUserId,
-    ).length;
-    const exchangeCount = allExchanges.filter((e) => {
-      const isInitiator = e.initiatorId === currentUserId;
-      return (
-        (e.status === "Proposed" && !isInitiator) ||
-        (e.status === "AcceptedAwaitingFunding" &&
-          !(isInitiator ? e.initiatorFundedAt : e.recipientFundedAt)) ||
-        (e.status === "Preparing" &&
-          !(isInitiator ? (e.initiatorShipment || e.initiatorShippedAt) : (e.recipientShipment || e.recipientShippedAt)))
-      );
-    }).length;
-    return purchaseCount + exchangeCount;
-  }, [allRooms, allExchanges, currentUserId]);
+  const auctionNowMs = useMemo(() => {
+    const serverIso = auctionsQuery.data?.pages?.[0]?.serverTime;
+    const parsed = serverIso ? Date.parse(serverIso) : NaN;
+    return Number.isFinite(parsed) ? parsed : mountedAt;
+  }, [auctionsQuery.data, mountedAt]);
 
-  const allCombinedItems = useMemo<CombinedInboxItem[]>(() => {
-    const pItems: CombinedInboxItem[] = allRooms.map((room) => {
-      const isBuyer = room.buyer.id === currentUserId;
-      const partner = isBuyer ? room.seller : room.buyer;
-      const proposal = room.terms?.pendingProposal;
-      const isActionNeeded =
-        Boolean(proposal) && proposal?.proposedById !== currentUserId;
-      const time = new Date(room.createdAt).getTime();
-      return {
-        type: "purchase",
-        id: `purchase-${room.id}`,
-        time: isNaN(time) ? 0 : time,
-        searchName: partner.displayName.toLowerCase(),
-        isActionNeeded,
-        room,
-      };
-    });
+  const handleBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/");
+  };
 
-    const eItems: CombinedInboxItem[] = allExchanges.map((exchange) => {
-      const isInitiator = exchange.initiatorId === currentUserId;
-      const isActionNeeded =
-        (exchange.status === "Proposed" && !isInitiator) ||
-        (exchange.status === "AcceptedAwaitingFunding" &&
-          !(isInitiator ? exchange.initiatorFundedAt : exchange.recipientFundedAt)) ||
-        (exchange.status === "Preparing" &&
-          !(isInitiator ? (exchange.initiatorShipment || exchange.initiatorShippedAt) : (exchange.recipientShipment || exchange.recipientShippedAt)));
-      const time = new Date(exchange.updatedAt ?? exchange.createdAt).getTime();
-      return {
-        type: "exchange",
-        id: `exchange-${exchange.id}`,
-        time: isNaN(time) ? 0 : time,
-        searchName: "",
-        isActionNeeded,
-        exchange,
-      };
-    });
+  // Deduplicate exchange-mode chat rooms that already spawned an Exchange record
+  const combinedItems = useMemo<CombinedTransactionItem[]>(() => {
+    const exchangeIdSet = new Set(allExchanges.map((ex) => ex.id));
 
-    return [...pItems, ...eItems].sort((a, b) => b.time - a.time);
-  }, [allRooms, allExchanges, currentUserId]);
-
-  // Filter and search
-  const filteredItems = useMemo(() => {
-    let result = allCombinedItems;
-
-    // Filter by tab
-    if (activeTab === "exchange") {
-      result = result.filter((item) => item.type === "exchange");
-    } else if (activeTab === "action_needed") {
-      result = result.filter((item) => item.isActionNeeded);
-    } else if (activeTab === "active") {
-      result = result.filter((item) =>
-        item.type === "purchase"
-          ? item.room.status === "Active"
-          : [
-              "Proposed",
-              "AcceptedAwaitingFunding",
-              "Preparing",
-              "InTransit",
-            ].includes(item.exchange.status),
-      );
-    } else if (activeTab === "order_created") {
-      result = result.filter((item) =>
-        item.type === "purchase"
-          ? item.room.status === "OrderCreated"
-          : ["Preparing", "InTransit", "Completed"].includes(
-              item.exchange.status,
-            ),
-      );
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter((item) => {
-        if (item.type === "purchase") {
-          return item.searchName.includes(q);
-        }
-        return true;
+    const purchaseItems: CombinedTransactionItem[] = allRooms
+      .filter((room) => {
+        if (room.terms?.mode !== "Exchange") return true;
+        const hasLinkedExchange =
+          (room.terms.activeExchangeId &&
+            exchangeIdSet.has(room.terms.activeExchangeId)) ||
+          (room.terms.exchangeIds ?? []).some((id) => exchangeIdSet.has(id));
+        return !hasLinkedExchange;
+      })
+      .map((room) => {
+        const isBuyer = room.buyer.id === currentUserId;
+        const partner = isBuyer ? room.seller : room.buyer;
+        const proposal = room.terms?.pendingProposal;
+        const needsAction =
+          room.status === "Active" &&
+          Boolean(proposal) &&
+          proposal?.proposedById !== currentUserId;
+        const time = Date.parse(room.createdAt);
+        const isExchangeRoom = room.terms?.mode === "Exchange";
+        return {
+          type: "purchase",
+          tab: isExchangeRoom ? "exchange" : "buy",
+          id: `purchase-${room.id}`,
+          time: Number.isFinite(time) ? time : 0,
+          searchText: `${partner.displayName} ${room.id}`.toLowerCase(),
+          needsAction,
+          room,
+        };
       });
+
+    const exchangeItems: CombinedTransactionItem[] = allExchanges.map(
+      (exchange) => {
+        const isInitiator = exchange.initiatorId === currentUserId;
+        const partnerBooks = exchange.agreement
+          ? isInitiator
+            ? [exchange.agreement.recipientBook]
+            : exchange.agreement.initiatorBooks
+          : [];
+        const myBooks = exchange.agreement
+          ? isInitiator
+            ? exchange.agreement.initiatorBooks
+            : [exchange.agreement.recipientBook]
+          : [];
+        const titles = [...partnerBooks, ...myBooks]
+          .map((snap) => snap.book.title)
+          .join(" ");
+        const partnerName = partnerBooks[0]?.ownerDisplayName ?? "";
+        const time = Date.parse(exchange.updatedAt ?? exchange.createdAt);
+        return {
+          type: "exchange",
+          tab: "exchange",
+          id: `exchange-${exchange.id}`,
+          time: Number.isFinite(time) ? time : 0,
+          searchText:
+            `${partnerName} ${titles} ${exchange.id.slice(0, 8)}`.toLowerCase(),
+          needsAction: doesExchangeNeedAction(exchange, currentUserId),
+          exchange,
+        };
+      },
+    );
+
+    const auctionItems: CombinedTransactionItem[] = allAuctions.map((item) => {
+      const meta = getAuctionStatusMeta(item, auctionNowMs);
+      const time = Date.parse(item.auction.endAt);
+      return {
+        type: "auction",
+        tab: "auction",
+        id: `auction-${item.auction.id}`,
+        time: Number.isFinite(time) ? time : 0,
+        searchText:
+          `${item.auction.title} ${item.auction.pointName}`.toLowerCase(),
+        needsAction: meta.needsAction,
+        item,
+      };
+    });
+
+    return [...purchaseItems, ...exchangeItems, ...auctionItems].sort(
+      (a, b) => {
+        if (a.needsAction !== b.needsAction) return a.needsAction ? -1 : 1;
+        return b.time - a.time;
+      },
+    );
+  }, [allRooms, allExchanges, allAuctions, currentUserId, auctionNowMs]);
+
+  const counts = useMemo<Record<TransactionTab, number>>(
+    () => ({
+      all: combinedItems.length,
+      buy: combinedItems.filter((item) => item.tab === "buy").length,
+      exchange: combinedItems.filter((item) => item.tab === "exchange").length,
+      auction: combinedItems.filter((item) => item.tab === "auction").length,
+    }),
+    [combinedItems],
+  );
+
+  const attention = useMemo<Record<TransactionTab, number>>(
+    () => ({
+      all: combinedItems.filter((item) => item.needsAction).length,
+      buy: combinedItems.filter((item) => item.tab === "buy" && item.needsAction)
+        .length,
+      exchange: combinedItems.filter(
+        (item) => item.tab === "exchange" && item.needsAction,
+      ).length,
+      auction: combinedItems.filter(
+        (item) => item.tab === "auction" && item.needsAction,
+      ).length,
+    }),
+    [combinedItems],
+  );
+
+  const filteredItems = useMemo(() => {
+    let result =
+      activeTab === "all"
+        ? combinedItems
+        : combinedItems.filter((item) => item.tab === activeTab);
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter((item) => item.searchText.includes(q));
     }
-
     return result;
-  }, [allCombinedItems, activeTab, searchQuery]);
+  }, [combinedItems, activeTab, searchQuery]);
 
-  if (state.status !== "authenticated") {
+  if (!isAuthenticated) {
     return (
       <View style={styles.screenRoot}>
         <StatusBar barStyle="light-content" />
-        <TopNavbar
-          subtitle="HỘP THƯ CHAT"
-          onNotificationsPress={() => router.push("/")}
-          onMessagesPress={() => {}}
-        />
-        <View style={styles.subHeader}>
+        <View
+          style={[
+            styles.wineHeader,
+            { paddingTop: Math.max(insets.top, 10) + 6 },
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Quay lại"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/account");
-            }}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+            hitSlop={8}
+            onPress={handleBack}
+            style={({ pressed }) => [
+              styles.headerCircleBtn,
+              pressed && styles.pressed,
+            ]}
           >
-            <Icon name="back" size={18} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Quay lại</AppText>
+            <Icon name="back" size={19} color={stitchTokens.white} />
           </Pressable>
-          <AppText style={styles.subHeaderTitle}>Hộp thư trò chuyện</AppText>
-          <View style={{ width: 60 }} />
+          <View style={styles.headerTitleCol}>
+            <AppText style={styles.headerTitle}>Giao dịch của bạn</AppText>
+            <AppText style={styles.headerSubtitle}>
+              Mua ngay, đổi sách và đấu giá
+            </AppText>
+          </View>
+          <View style={styles.headerSpacer} />
         </View>
-        <View style={{ flex: 1, justifyContent: "center" }}>
+
+        <View style={styles.guestWrap}>
           <StatePanel
-            title="Đăng nhập để xem tin nhắn"
-            message="Bạn cần đăng nhập để xem lịch sử trò chuyện và thương lượng sách cùng người bán."
+            title="Đăng nhập để xem giao dịch"
+            message="Theo dõi hội thoại mua ngay, phiếu đổi sách và các phiên đấu giá tại cùng một nơi."
             action={{
               label: "Đăng nhập ngay",
               onPress: () => router.push("/account"),
             }}
           />
         </View>
+
         <View
           style={[
             styles.footerContainer,
             { paddingBottom: Math.max(insets.bottom, 8) },
           ]}
         >
-          <MemberNavigation current="/account" />
+          <MemberNavigation />
         </View>
       </View>
     );
   }
 
   const isRefreshing =
-    conversationsQuery.isRefetching || exchangesQuery.isRefetching;
-  const isLoading =
-    conversationsQuery.isLoading || exchangesQuery.isLoading;
+    conversationsQuery.isRefetching ||
+    exchangesQuery.isRefetching ||
+    auctionsQuery.isRefetching;
+  const isInitialLoading =
+    combinedItems.length === 0 &&
+    (conversationsQuery.isPending ||
+      exchangesQuery.isPending ||
+      auctionsQuery.isPending);
+
+  const failedSources: string[] = [];
+  if (conversationsQuery.isError) failedSources.push("mua ngay");
+  if (exchangesQuery.isError) failedSources.push("đổi sách");
+  if (auctionsQuery.isError) failedSources.push("đấu giá");
+
+  const attentionBreakdown = [
+    attention.buy ? `${attention.buy} mua ngay` : "",
+    attention.exchange ? `${attention.exchange} đổi sách` : "",
+    attention.auction ? `${attention.auction} đấu giá` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const headerSubtitle =
+    counts.all > 0
+      ? attention.all > 0
+        ? `${counts.all} giao dịch · ${attention.all} cần xử lý`
+        : `${counts.all} giao dịch đang theo dõi`
+      : "Mua ngay, đổi sách và đấu giá";
+
+  const handleRefreshAll = () => {
+    void conversationsQuery.refetch();
+    void exchangesQuery.refetch();
+    void auctionsQuery.refetch();
+  };
 
   return (
     <View style={styles.screenRoot}>
       <StatusBar barStyle="light-content" />
 
-      {/* 1. Header Đỉnh Đỏ Rượu Vang của Lật Lại (TopNavbar) */}
-      <TopNavbar
-        subtitle="HỘP THƯ CHAT"
-        onNotificationsPress={() => router.push("/")}
-        onMessagesPress={() => {}}
-      />
-
-      {/* 2. Subheader điều hướng Quay lại & Tiêu đề */}
-      <View style={styles.subHeader}>
+      {/* 1. Unified Curved Deep-Wine App Header */}
+      <View
+        style={[
+          styles.wineHeader,
+          { paddingTop: Math.max(insets.top, 10) + 6 },
+        ]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Quay lại"
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace("/account");
-          }}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+          hitSlop={8}
+          onPress={handleBack}
+          style={({ pressed }) => [
+            styles.headerCircleBtn,
+            pressed && styles.pressed,
+          ]}
         >
-          <Icon name="back" size={18} color={stitchTokens.wineDark} />
-          <AppText style={styles.backLabel}>Quay lại</AppText>
+          <Icon name="back" size={19} color={stitchTokens.white} />
         </Pressable>
 
-        <View style={styles.subHeaderCenter}>
-          <AppText style={styles.subHeaderTitle}>Tin nhắn thương lượng</AppText>
-          {allCombinedItems.length > 0 && (
-            <AppText style={styles.subHeaderSubtitle}>
-              {allCombinedItems.length} cuộc hội thoại
-            </AppText>
-          )}
+        <View style={styles.headerTitleCol}>
+          <AppText style={styles.headerTitle}>Giao dịch của bạn</AppText>
+          <AppText style={styles.headerSubtitle} numberOfLines={1}>
+            {headerSubtitle}
+          </AppText>
         </View>
 
-        <View style={{ width: 60 }} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            searchOpen ? "Đóng tìm kiếm" : "Tìm kiếm giao dịch"
+          }
+          hitSlop={8}
+          onPress={() => {
+            setSearchOpen((prev) => {
+              if (prev) setSearchQuery("");
+              return !prev;
+            });
+          }}
+          style={({ pressed }) => [
+            styles.headerCircleBtn,
+            searchOpen && styles.headerCircleBtnActive,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Icon
+            name={searchOpen ? "close" : "search"}
+            size={18}
+            color={stitchTokens.gold}
+          />
+        </Pressable>
       </View>
 
-      {/* 3. Ô tìm kiếm cuộc trò chuyện (Shopee Chat Search) */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Icon name="search" size={16} color={colors.muted} />
-          <AppTextInput
-            style={styles.searchInput}
+      {/* 2. Collapsible Search Bar */}
+      {searchOpen && (
+        <View style={styles.searchWrap}>
+          <SearchField
+            label="Tìm kiếm giao dịch"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Tìm theo tên người bán / người mua…"
-            placeholderTextColor={colors.muted}
-            returnKeyType="search"
+            placeholder="Tìm tên sách, đối tác hoặc mã phiếu…"
           />
-          {Boolean(searchQuery) && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Xóa tìm kiếm"
-              onPress={() => setSearchQuery("")}
-              style={styles.clearSearchBtn}
-            >
-              <Icon name="close" size={14} color={colors.muted} />
-            </Pressable>
-          )}
         </View>
-      </View>
+      )}
 
-      {/* 4. Thanh tab lọc nhanh Shopee (Pills Bar) */}
-      <View style={styles.filterTabsContainer}>
-        {FILTER_TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          const showBadge = tab.key === "action_needed" && actionNeededCount > 0;
-          return (
-            <Pressable
-              key={tab.key}
-              accessibilityRole="tab"
-              accessibilityLabel={tab.label}
-              accessibilityState={{ selected: isActive }}
-              style={[styles.filterTab, isActive && styles.filterTabActive]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <AppText
-                style={[
-                  styles.filterTabText,
-                  isActive && styles.filterTabTextActive,
+      {/* 3. Scrollable 4-Tab Bar (synced with Member Web TransactionHub) */}
+      <View style={styles.tabsOuter}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsRow}
+        >
+          {TRANSACTION_TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            const count = counts[tab.key];
+            const hasAttention = attention[tab.key] > 0;
+            return (
+              <Pressable
+                key={tab.key}
+                accessibilityRole="tab"
+                accessibilityLabel={`${tab.label}, ${count} giao dịch`}
+                accessibilityState={{ selected: isActive }}
+                onPress={() => setActiveTab(tab.key)}
+                style={({ pressed }) => [
+                  styles.tabChip,
+                  isActive && styles.tabChipActive,
+                  pressed && styles.pressed,
                 ]}
               >
-                {tab.label}
-              </AppText>
-              {showBadge && (
-                <View style={styles.tabBadge}>
-                  <AppText style={styles.tabBadgeText}>
-                    {actionNeededCount}
+                <AppText
+                  style={[
+                    styles.tabChipText,
+                    isActive && styles.tabChipTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </AppText>
+                <View
+                  style={[
+                    styles.tabCountBadge,
+                    isActive && styles.tabCountBadgeActive,
+                  ]}
+                >
+                  <AppText
+                    style={[
+                      styles.tabCountText,
+                      isActive && styles.tabCountTextActive,
+                    ]}
+                  >
+                    {count}
                   </AppText>
                 </View>
-              )}
-            </Pressable>
-          );
-        })}
+                {hasAttention && (
+                  <View
+                    style={[
+                      styles.tabAttentionDot,
+                      isActive && styles.tabAttentionDotActive,
+                    ]}
+                  />
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      {/* 5. Danh sách các cuộc trò chuyện (Chat List) */}
+      {/* 4. Transaction List */}
       <FlatList
         data={filteredItems}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={() => {
-              void conversationsQuery.refetch();
-              void exchangesQuery.refetch();
-            }}
+            onRefresh={handleRefreshAll}
             tintColor={stitchTokens.wineDark}
           />
         }
+        ListHeaderComponent={
+          <View style={styles.listHeaderStack}>
+            {attention.all > 0 && activeTab === "all" && !searchQuery && (
+              <View style={styles.attentionStrip}>
+                <Icon name="clock" size={16} color={stitchTokens.wine} />
+                <AppText style={styles.attentionText}>
+                  {attention.all} giao dịch đang chờ bạn xử lý
+                  {attentionBreakdown ? ` (${attentionBreakdown})` : ""}.
+                </AppText>
+              </View>
+            )}
+
+            {failedSources.length > 0 && (
+              <View style={styles.errorWrap}>
+                <Notice tone="error">
+                  Chưa cập nhật được mục {failedSources.join(", ")}. Dữ liệu đã
+                  tải vẫn được giữ nguyên.
+                </Notice>
+                <Button
+                  title="Tải lại"
+                  secondary
+                  onPress={handleRefreshAll}
+                />
+              </View>
+            )}
+          </View>
+        }
         ListEmptyComponent={
-          isLoading ? (
-            <StatePanel loading title="Đang tải danh sách cuộc trò chuyện…" />
+          isInitialLoading ? (
+            <View style={styles.centerWrap}>
+              <StatePanel loading title="Đang tải danh sách giao dịch…" />
+            </View>
           ) : (
-            <View style={styles.emptyContainer}>
+            <View style={styles.emptyCard}>
               <View style={styles.emptyIconCircle}>
-                <Icon name="message" size={32} color={stitchTokens.wineDark} />
+                <Icon
+                  name={
+                    activeTab === "exchange"
+                      ? "swap"
+                      : activeTab === "auction"
+                        ? "gavel"
+                        : "message"
+                  }
+                  size={28}
+                  color={stitchTokens.wine}
+                />
               </View>
               <AppText style={styles.emptyTitle}>
                 {searchQuery
-                  ? "Không tìm thấy cuộc trò chuyện phù hợp"
-                  : activeTab === "action_needed"
-                    ? "Không có đề xuất nào cần phản hồi"
+                  ? "Không tìm thấy giao dịch phù hợp"
+                  : activeTab === "buy"
+                    ? "Chưa có hội thoại mua ngay"
                     : activeTab === "exchange"
-                      ? "Chưa có đề nghị trao đổi sách nào"
-                      : "Chưa có cuộc trò chuyện nào"}
+                      ? "Chưa có giao dịch đổi sách"
+                      : activeTab === "auction"
+                        ? "Chưa có phiên đấu giá nào"
+                        : "Chưa có giao dịch nào"}
               </AppText>
               <AppText style={styles.emptySubtitle}>
                 {searchQuery
-                  ? "Hãy thử tìm kiếm với tên đối tác khác."
-                  : "Mở chi tiết một cuốn sách bất kỳ trên kệ và bấm 'Chat với người bán' hoặc 'Đổi sách' để bắt đầu thương lượng."}
+                  ? "Thử tìm lại với tên sách, tên đối tác hoặc mã phiếu khác."
+                  : activeTab === "auction"
+                    ? "Các phiên bạn đang trả giá hoặc mở bán sẽ xuất hiện tại đây cùng mức giá hiện tại."
+                    : "Mở một cuốn sách trên kệ để hỏi mua, gửi đề nghị đổi sách hoặc tham gia đấu giá."}
               </AppText>
               {!searchQuery && (
-                <View style={styles.emptyBtnWrapper}>
+                <View style={styles.emptyActionWrap}>
                   <Button
-                    title="Khám phá sách ngay"
-                    onPress={() => router.push("/")}
+                    title={
+                      activeTab === "auction"
+                        ? "Xem phiên đang mở"
+                        : "Khám phá kệ sách"
+                    }
+                    wine
+                    onPress={() =>
+                      router.push(activeTab === "auction" ? "/auctions" : "/search")
+                    }
                   />
                 </View>
               )}
@@ -806,41 +1266,108 @@ export function ChatInboxScreen() {
         renderItem={({ item }) => {
           if (item.type === "purchase") {
             return (
-              <ConversationInboxItem
+              <PurchaseTransactionCard
                 room={item.room}
                 currentUserId={currentUserId}
-                onPress={() => {
+                onPress={() =>
                   router.push({
                     pathname: "/conversation",
                     params: { id: item.room.id },
-                  });
-                }}
+                  })
+                }
+              />
+            );
+          }
+          if (item.type === "exchange") {
+            return (
+              <ExchangeTransactionCard
+                exchange={item.exchange}
+                currentUserId={currentUserId}
+                onPress={() =>
+                  router.push({
+                    pathname: "/exchange",
+                    params: { id: item.exchange.id },
+                  })
+                }
               />
             );
           }
           return (
-            <ExchangeInboxItem
-              exchange={item.exchange}
-              currentUserId={currentUserId}
-              onPress={() => {
+            <AuctionTransactionCard
+              item={item.item}
+              nowMs={auctionNowMs}
+              onPress={() =>
                 router.push({
-                  pathname: "/exchange",
-                  params: { id: item.exchange.id },
-                });
-              }}
+                  pathname: "/auction",
+                  params: { id: item.item.auction.id },
+                })
+              }
             />
           );
         }}
+        ListFooterComponent={
+          !isInitialLoading ? (
+            <View style={styles.shortcutsCard}>
+              <AppText style={styles.shortcutsTitle}>Quản lý chi tiết</AppText>
+              <View style={styles.shortcutsRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Mở đơn mua ngay"
+                  onPress={() => router.push("/orders")}
+                  style={({ pressed }) => [
+                    styles.shortcutTile,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Icon name="bag" size={18} color={stitchTokens.wine} />
+                  <AppText style={styles.shortcutLabel} numberOfLines={1}>
+                    Đơn mua
+                  </AppText>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Mở lịch sử đổi sách"
+                  onPress={() => router.push("/exchanges")}
+                  style={({ pressed }) => [
+                    styles.shortcutTile,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Icon name="swap" size={18} color={stitchTokens.wine} />
+                  <AppText style={styles.shortcutLabel} numberOfLines={1}>
+                    Đổi sách
+                  </AppText>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Mở phiên đấu giá của tôi"
+                  onPress={() => router.push("/my-auctions")}
+                  style={({ pressed }) => [
+                    styles.shortcutTile,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Icon name="gavel" size={18} color={stitchTokens.wine} />
+                  <AppText style={styles.shortcutLabel} numberOfLines={1}>
+                    Đấu giá
+                  </AppText>
+                </Pressable>
+              </View>
+            </View>
+          ) : null
+        }
       />
 
-      {/* 6. Thanh Điều Hướng Đáy Navbar (MemberNavigation 5 tabs) */}
+      {/* 5. Bottom Navigation Bar (no wrong tab highlighted on global Transaction Hub) */}
       <View
         style={[
           styles.footerContainer,
           { paddingBottom: Math.max(insets.bottom, 8) },
         ]}
       >
-        <MemberNavigation current="/account" />
+        <MemberNavigation />
       </View>
     </View>
   );
@@ -849,313 +1376,346 @@ export function ChatInboxScreen() {
 const styles = StyleSheet.create({
   screenRoot: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: stitchTokens.creamBg,
   },
-  subHeader: {
-    height: 48,
+  wineHeader: {
+    backgroundColor: stitchTokens.wineDark,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: space.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.rule,
+    paddingHorizontal: space.lg,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    gap: 12,
   },
-  backBtn: {
-    flexDirection: "row",
+  headerCircleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: stitchTokens.whiteAlpha14,
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    justifyContent: "center",
   },
-  backLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
+  headerCircleBtnActive: {
+    backgroundColor: stitchTokens.whiteAlpha25,
   },
-  subHeaderCenter: {
+  headerSpacer: {
+    width: 40,
+    height: 40,
+  },
+  headerTitleCol: {
     flex: 1,
-    alignItems: "center",
+    minWidth: 0,
   },
-  subHeaderTitle: {
-    fontSize: 15,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: "800",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.white,
+    lineHeight: 24,
   },
-  subHeaderSubtitle: {
-    fontSize: 11,
-    color: colors.muted,
+  headerSubtitle: {
+    fontSize: 12,
+    color: stitchTokens.gold,
+    fontWeight: "600",
+    marginTop: 1,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.78,
   },
-  footerContainer: {
-    backgroundColor: colorRoles.navigationBackground,
-    paddingTop: space.xs,
-    paddingHorizontal: space.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.rule,
+  searchWrap: {
+    paddingHorizontal: space.lg,
+    paddingTop: space.md,
   },
-  searchContainer: {
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.rule,
+  tabsOuter: {
+    paddingTop: space.md,
+    paddingBottom: space.xs,
   },
-  searchBar: {
+  tabsRow: {
+    paddingHorizontal: space.lg,
+    gap: 6,
+    alignItems: "center",
+    flexGrow: 1,
+  },
+  tabChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: stitchTokens.parchment,
+    minHeight: 38,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    height: 38,
-    gap: space.xs,
+    backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: colors.rule,
+    borderColor: stitchTokens.cardBorder,
+    gap: 5,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.ink,
-    paddingVertical: 0,
-  },
-  clearSearchBtn: {
-    padding: 4,
-  },
-  filterTabsContainer: {
-    flexDirection: "row",
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
-    backgroundColor: stitchTokens.parchment,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.rule,
-    gap: space.xs,
-  },
-  filterTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.rule,
-  },
-  filterTabActive: {
+  tabChipActive: {
     backgroundColor: stitchTokens.wineDark,
     borderColor: stitchTokens.wineDark,
   },
-  filterTabText: {
+  tabChipText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: colors.muted,
-  },
-  filterTabTextActive: {
-    color: stitchTokens.white,
+    lineHeight: 16,
     fontWeight: "700",
+    color: stitchTokens.deepCocoa,
+    includeFontPadding: false,
   },
-  tabBadge: {
-    backgroundColor: stitchTokens.orangeDeep,
-    borderRadius: 8,
+  tabChipTextActive: {
+    color: stitchTokens.white,
+  },
+  tabCountBadge: {
+    minWidth: 20,
+    height: 20,
     paddingHorizontal: 5,
-    paddingVertical: 1,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.canvasMuted,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  tabBadgeText: {
-    fontSize: 10,
+  tabCountBadgeActive: {
+    backgroundColor: stitchTokens.whiteAlpha20,
+  },
+  tabCountText: {
+    fontSize: 11,
+    lineHeight: 13,
     fontWeight: "700",
-    color: stitchTokens.white,
+    color: stitchTokens.deepCocoa,
+    textAlign: "center",
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
-  listContainer: {
-    paddingVertical: space.xs,
+  tabCountTextActive: {
+    color: stitchTokens.gold,
+  },
+  tabAttentionDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: stitchTokens.orangeDeep,
+  },
+  tabAttentionDotActive: {
+    backgroundColor: stitchTokens.gold,
+  },
+  listContent: {
+    paddingHorizontal: space.lg,
+    paddingTop: space.sm,
+    paddingBottom: space.xl,
+    gap: 12,
     flexGrow: 1,
   },
-  itemCard: {
+  listHeaderStack: {
+    gap: 10,
+  },
+  attentionStrip: {
     flexDirection: "row",
-    backgroundColor: colors.surface,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.rule,
-    gap: space.sm,
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  itemCardActionNeeded: {
+  attentionText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+    lineHeight: 19,
+  },
+  errorWrap: {
+    gap: 8,
+  },
+  txnCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 14,
+    gap: 12,
+  },
+  txnCardAttention: {
     backgroundColor: stitchTokens.warmIvory,
+    borderColor: stitchTokens.peachBorder,
   },
-  itemPressed: {
-    opacity: 0.88,
+  cardPressed: {
+    opacity: 0.9,
   },
-  avatarCol: {
+  cardMainRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  bookCoverFrame: {
+    width: 60,
+    height: 90,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.warmBorder,
     position: "relative",
   },
-  avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: stitchTokens.wineDark,
+  coverFallback: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: stitchTokens.parchment,
   },
-  avatarText: {
-    color: stitchTokens.white,
-    fontWeight: "800",
-    fontSize: 16,
-  },
-  unreadBadgeDot: {
+  coverCountChip: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    width: 11,
-    height: 11,
+    right: 4,
+    bottom: 4,
+    backgroundColor: stitchTokens.wineDark,
     borderRadius: 6,
-    backgroundColor: stitchTokens.orangeDeep,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
-  contentCol: {
-    flex: 1,
-    gap: 4,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  nameGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flex: 1,
-  },
-  partnerName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.ink,
-    maxWidth: 160,
-  },
-  roleTag: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: radius.pill,
-  },
-  roleTagSeller: {
-    backgroundColor: stitchTokens.roseWarmSurface,
-  },
-  roleTagBuyer: {
-    backgroundColor: stitchTokens.parchment,
-  },
-  roleTagText: {
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  roleTagTextSeller: {
-    color: stitchTokens.wineDark,
-  },
-  roleTagTextBuyer: {
-    color: colors.muted,
-  },
-  timeText: {
-    fontSize: 11,
-    color: colors.muted,
-  },
-  bookSnippetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: stitchTokens.parchment,
-    borderRadius: radius.small,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  bookMiniCover: {
-    width: 16,
-    height: 22,
-    borderRadius: radius.book,
-    overflow: "hidden",
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bookMiniTitle: {
-    flex: 1,
-    fontSize: 11,
-    color: colors.ink,
-    fontWeight: "600",
-  },
-  modePill: {
-    backgroundColor: colors.surface,
     paddingHorizontal: 5,
     paddingVertical: 1,
-    borderRadius: 6,
   },
-  modePillText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
+  coverCountText: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "800",
+    color: stitchTokens.gold,
+    includeFontPadding: false,
   },
-  snippetRow: {
+  cardBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
+  },
+  cardMetaRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
   },
-  snippetText: {
-    flex: 1,
+  categoryWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
+  },
+  categoryText: {
     fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+  },
+  timeText: {
+    fontSize: 11,
     color: colors.muted,
+    fontWeight: "500",
   },
-  snippetTextHighlight: {
-    color: stitchTokens.orangeDeep,
-    fontWeight: "600",
+  bookTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.ink,
+    lineHeight: 21,
   },
-  statusPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+  partnerLine: {
+    fontSize: 13,
+    color: colors.muted,
+    lineHeight: 18,
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.warmBorder,
+    gap: 10,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: radius.pill,
+    flexShrink: 1,
   },
-  statusActive: {
-    backgroundColor: stitchTokens.likeNewGreenBg,
+  statusBadgeText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    includeFontPadding: false,
   },
-  statusOrder: {
-    backgroundColor: stitchTokens.amberBg,
+  actionCueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    flexShrink: 0,
   },
-  statusClosed: {
-    backgroundColor: stitchTokens.canvasMuted,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  statusTextActive: {
-    color: stitchTokens.likeNewGreen,
-  },
-  statusTextOrder: {
-    color: stitchTokens.orangeDeep,
-  },
-  statusTextClosed: {
+  actionCueText: {
+    fontSize: 12,
+    fontWeight: "700",
     color: colors.muted,
   },
-  emptyContainer: {
+  actionCueTextUrgent: {
+    color: stitchTokens.wine,
+  },
+  shortcutsCard: {
+    marginTop: 6,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 14,
+    gap: 10,
+  },
+  shortcutsTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.deepCocoa,
+  },
+  shortcutsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  shortcutTile: {
     flex: 1,
+    minHeight: 54,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.warmBorder,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: space.xl * 2,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  shortcutLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.ink,
+  },
+  centerWrap: {
+    paddingVertical: space.section,
+  },
+  guestWrap: {
+    flex: 1,
+    justifyContent: "center",
     paddingHorizontal: space.lg,
-    gap: space.xs,
+  },
+  emptyCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    alignItems: "center",
+    paddingVertical: space.xxl,
+    paddingHorizontal: space.lg,
+    gap: 8,
   },
   emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: stitchTokens.parchment,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: space.xs,
+    marginBottom: 4,
   },
   emptyTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: colors.ink,
     textAlign: "center",
@@ -1164,9 +1724,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.muted,
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 20,
   },
-  emptyBtnWrapper: {
-    marginTop: space.sm,
+  emptyActionWrap: {
+    marginTop: 8,
+    width: "100%",
+  },
+  footerContainer: {
+    backgroundColor: colorRoles.navigationBackground,
+    paddingTop: space.xs,
+    paddingHorizontal: space.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.rule,
   },
 });

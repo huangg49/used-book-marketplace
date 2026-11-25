@@ -1,0 +1,38 @@
+.amount,
+.notes {
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.amount {
+  color: var(--shop-wine);
+  background: var(--shop-shelf);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .875rem;
+  margin-bottom: 12px;
+}
+
+.amount dd {
+  margin: 2px 0 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.notes {
+  display: grid;
+  gap: 8px;
+  font-size: .8125rem;
+  color: var(--shop-muted);
+}
+
+.notes dt {
+  color: var(--shop-ink);
+  font-weight: 700;
+}
+
+.notes dd {
+  margin: 2px 0 0;
+}

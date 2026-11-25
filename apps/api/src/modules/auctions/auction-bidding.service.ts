@@ -2509,6 +2509,10 @@ export class AuctionBiddingService {
       _id: `${a.contextId}:${a.listingId}`,
     });
     const point = await c.handover_points.findOne({ _id: a.pointId });
+    const seller = await c.users.findOne(
+      { _id: a.sellerId },
+      { projection: { displayName: 1 } },
+    );
     const phase = phaseOf(a, now);
     const sealedLive = phase !== 'Ended' && isSealed(a.auctionType);
     return {
@@ -2565,6 +2569,7 @@ export class AuctionBiddingService {
       startAt: a.startAt.toISOString(),
       endAt: a.endAt.toISOString(),
       pointName: point?.name ?? '',
+      sellerName: seller?.displayName?.trim() || 'Người bán',
       book: await this.books.book(a),
       demoOnly: true,
     };

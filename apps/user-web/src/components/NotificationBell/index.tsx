@@ -121,7 +121,8 @@ export function NotificationBell() {
 
   const inbox = useQuery({
     ...notificationPreviewQuery(auth.status === 'authenticated' ? auth.user.id : undefined),
-    refetchInterval: 30_000,
+    refetchInterval: 6_000,
+    refetchIntervalInBackground: false,
   });
   const unread = inbox.data?.unreadCount ?? 0;
 

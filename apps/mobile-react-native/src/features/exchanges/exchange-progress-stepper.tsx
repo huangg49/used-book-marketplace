@@ -229,7 +229,7 @@ export function getExchangeStageHero(
           ? "Bạn đã nhận · Chờ đối tác"
           : "Bạn đã gửi · Chờ đối tác",
         subtitle: isReceivedByMe
-          ? `Đang chờ ${partnerName} nhận sách để sang bước đồng kiểm 72h.`
+          ? `Bạn có 72 giờ kiểm tra từ lúc nhận. Đang chờ ${partnerName} nhận sách.`
           : `Theo dõi vận đơn bên dưới trong khi chờ ${partnerName} gửi sách.`,
         deadlineLabel: !isPartnerShipped ? "Hạn gửi" : undefined,
         deadlineIso: !isPartnerShipped ? exchange.shippingDeadline : null,
@@ -244,8 +244,8 @@ export function getExchangeStageHero(
         ? {
             badge: "Đã nghiệm thu",
             title: "Bạn đã xác nhận hài lòng",
-            subtitle: `Chờ ${partnerName} nghiệm thu hoặc hết 72h để tất toán tự động.`,
-            deadlineLabel: "Hạn tất toán",
+            subtitle: "Tiền được giữ đến khi hết hạn kiểm tra của cả hai. Hệ thống tất toán nếu không có tranh chấp.",
+            deadlineLabel: "Mốc hết hạn của cả hai",
             deadlineIso: exchange.inspectionDeadline,
             actionNeeded: false,
             tone: "success",

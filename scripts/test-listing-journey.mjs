@@ -11,7 +11,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
         "/api/v1/listings" &&
       r.request().method() === "POST",
   );
-  await click("+ Đăng Sách Mới Ngay");
+  await click("Đăng sách mới");
   const createdResponse = await created;
   assert.equal(
     createdResponse.ok(),
@@ -122,7 +122,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByRole("tab", { name: /^Ảnh bản sách, Đã điền đầy đủ/ })
     .waitFor();
   await click("Tiếp theo");
-  await p.getByRole("button", { name: /^Cả bán & đổi,/ }).click();
+  await p.getByRole("radio", { name: "Bán & đổi", exact: true }).click();
   await fill("Giá bán (đồng)", "10000");
   await fill("Giá trị đổi (đồng)", "1000000");
   await p
@@ -159,7 +159,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByText("Bản nháp đã lưu. Bạn có thể hoàn thiện sau.", { exact: true })
     .waitFor();
   await click("Về sách của tôi");
-  await click("Hoàn thiện");
+  await p.getByRole("button", { name: /^Hoàn thiện:/ }).click();
   await click("Tiếp theo");
   await click("Tiếp theo");
   assert.equal(

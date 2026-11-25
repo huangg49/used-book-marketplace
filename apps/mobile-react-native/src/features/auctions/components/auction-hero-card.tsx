@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import { AppText } from "../../../core/ui/text";
-import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { AppText, Icon, formatVnd, radius, space, stitchTokens } from "../../../core/ui";
 import { conditions } from "../../shelf/contracts";
 import { formatRemaining, isSealedFormat, minimumBidOf } from "../auctions-model";
 import type { PublicAuctionSummary } from "../contracts";
@@ -13,7 +12,6 @@ export interface AuctionHeroCardProps {
   readonly onOpenLive: () => void;
 }
 
-// The open auction that ends soonest, with its real server end time.
 export function AuctionHeroCard({
   auction,
   remainingMs,
@@ -23,6 +21,7 @@ export function AuctionHeroCard({
   const formatType = auction.auctionType ?? "English";
   const isDutch = formatType === "Dutch";
   const isSealed = isSealedFormat(auction);
+  const canQuickBid = !isDutch && !isSealed && auction.minBidders == null;
   const currentPrice = isDutch
     ? (auction.dutchPrice ?? auction.dutchTopPrice ?? auction.buyNowPrice ?? auction.startPrice)
     : isSealed
@@ -32,358 +31,266 @@ export function AuctionHeroCard({
   const authors = auction.book?.authors.join(", ");
 
   return (
-    <View style={styles.sectionContainer}>
-      <View style={styles.heroCard}>
-        {/* Top Banner Strip */}
-        <View style={styles.heroTopBanner}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Icon name="gavel" size={17} color={stitchTokens.gold} />
-            <AppText kind="bold" style={styles.heroTopBannerText}>
-              SẮP KẾT THÚC
-            </AppText>
+    <View style={styles.section}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Phiên sắp kết thúc: ${auction.title}`}
+        onPress={onOpenLive}
+        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      >
+        {/* Top Wine Header Strip */}
+        <View style={styles.topStrip}>
+          <View style={styles.stripLeft}>
+            <Icon name="gavel" size={15} color={stitchTokens.gold} />
+            <AppText kind="bold" style={styles.stripTitle}>Sắp kết thúc</AppText>
           </View>
-          <View style={styles.heroTimerBox}>
-            <View style={styles.livePulseDot} />
-            <AppText kind="bold" style={styles.heroTimerText}>
+          <View style={styles.timerPill}>
+            <View style={styles.liveDot} />
+            <AppText kind="bold" style={styles.timerText}>
               {formatRemaining(remainingMs)}
             </AppText>
           </View>
         </View>
 
-        {/* Showcase Container */}
-        <View style={styles.heroContent}>
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 14,
-              alignItems: "flex-start",
-            }}
-          >
-            {/* Book Cover */}
-            <View style={styles.heroCoverBox}>
+        {/* Main Body */}
+        <View style={styles.body}>
+          <View style={styles.row}>
+            <View style={styles.coverBox}>
               <AuctionCover
                 auctionId={auction.id}
                 mediaId={auction.book?.photos[0]?.id}
                 label={auction.title}
-                iconSize={32}
+                iconSize={28}
               />
-              {auction.book && (
-                <View style={styles.heroCoverTag}>
-                  <AppText kind="small" style={styles.heroCoverTagText}>
-                    {conditions[auction.book.condition]}
-                  </AppText>
-                </View>
-              )}
             </View>
 
-            {/* Info Column */}
-            <View
-              style={{
-                flex: 1,
-                minWidth: 0,
-                justifyContent: "space-between",
-                height: 144,
-              }}
-            >
-              <View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                    marginBottom: 2,
-                  }}
-                >
-                  <Icon name="pin" size={13} color={stitchTokens.goldBronze} />
-                  <AppText
-                    kind="small"
-                    style={styles.heroLocationText}
-                    numberOfLines={1}
-                  >
-                    {auction.pointName}
-                  </AppText>
-                </View>
-                <AppText kind="bold" style={styles.heroTitle} numberOfLines={2}>
-                  {auction.title}
+            <View style={styles.infoCol}>
+              <View style={styles.metaLine}>
+                <Icon name="pin" size={12} color={stitchTokens.wine} />
+                <AppText kind="small" style={styles.pointText} numberOfLines={1}>
+                  {auction.pointName}
                 </AppText>
-                {authors ? (
-                  <AppText
-                    kind="small"
-                    style={styles.heroAuthor}
-                    numberOfLines={1}
-                  >
-                    {authors}
-                  </AppText>
-                ) : null}
               </View>
 
-              {/* Price and Bidding Stats Box */}
-              <View style={styles.heroPriceStatsBox}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                  }}
-                >
-                  <AppText
-                    kind="small"
-                    style={{ fontSize: 11, color: stitchTokens.subtleGray }}
-                  >
-                    {isDutch
-                      ? "Giá đang giảm:"
-                      : isSealed
-                        ? "Giá khởi điểm (Kín):"
-                        : auction.currentPrice === null
-                          ? "Khởi điểm:"
-                          : "Giá cao nhất:"}
-                  </AppText>
-                  <AppText kind="bold" style={styles.heroPriceText}>
-                    {formatVnd(currentPrice)}
-                  </AppText>
-                </View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 3,
-                    }}
-                  >
-                    <Icon
-                      name={isSealed ? "lock" : "flame"}
-                      size={13}
-                      color={stitchTokens.flashRed}
-                    />
-                    <AppText
-                      kind="small"
-                      style={{
-                        fontSize: 11,
-                        color: stitchTokens.flashRed,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {auction.bidderCount} người trả giá
+              <AppText kind="bold" style={styles.title} numberOfLines={2}>
+                {auction.title}
+              </AppText>
+
+              {authors ? (
+                <AppText kind="small" style={styles.author} numberOfLines={1}>
+                  {authors}
+                </AppText>
+              ) : null}
+
+              <View style={styles.chipsRow}>
+                {auction.book ? (
+                  <View style={styles.metaChip}>
+                    <AppText style={styles.metaChipText}>
+                      {conditions[auction.book.condition]}
                     </AppText>
                   </View>
-                  <AppText
-                    kind="small"
-                    style={{ fontSize: 10, color: stitchTokens.subtleGray }}
-                  >
-                    {isDutch ? `Sàn: ${formatVnd(auction.startPrice)}` : `Bước: +${formatVnd(auction.step)}`}
+                ) : null}
+                <View style={styles.metaChip}>
+                  <AppText style={styles.metaChipText}>
+                    {isSealed ? "Giá kín" : `${auction.bidderCount} người trả giá`}
                   </AppText>
                 </View>
               </View>
             </View>
           </View>
 
-          {!isDutch && !isSealed && auction.buyNowPrice !== null && (
-            <AppText kind="small" style={styles.heroBuyNowText}>
-              Mua ngay:{" "}
-              <AppText kind="bold" style={styles.heroBuyNowText}>
-                {formatVnd(auction.buyNowPrice)}
-              </AppText>
-            </AppText>
-          )}
-
-          {/* Hero Action CTA Buttons */}
-          <View style={styles.heroActionsRow}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={isDutch || isSealed || auction.minBidders != null ? onOpenLive : onQuickBid}
-              style={({ pressed }) => [
-                styles.heroQuickBidBtn,
-                pressed && { opacity: 0.9 },
-              ]}
-            >
-              <Icon
-                name={isDutch ? "flame" : isSealed ? "lock" : "plus"}
-                size={16}
-                color={stitchTokens.wineDark}
-              />
-              <AppText kind="bold" style={styles.heroQuickBidBtnText}>
+          {/* Price Strip */}
+          <View style={styles.priceBox}>
+            <View style={styles.priceCol}>
+              <AppText kind="small" color={stitchTokens.brownMuted}>
                 {isDutch
-                  ? `Mua ${formatVnd(currentPrice)}`
+                  ? "Giá đang giảm"
                   : isSealed
-                    ? "Gửi giá kín"
-                    : `Trả ${formatVnd(nextBid)}`}
+                    ? "Giá khởi điểm"
+                    : auction.currentPrice === null
+                      ? "Giá khởi điểm"
+                      : "Giá hiện tại"}
               </AppText>
-            </Pressable>
+              <AppText kind="bold" style={styles.priceVal}>
+                {formatVnd(currentPrice)}
+              </AppText>
+            </View>
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={onOpenLive}
-              style={({ pressed }) => [
-                styles.heroLiveFloorBtn,
-                pressed && { opacity: 0.9 },
-              ]}
-            >
-              <AppText kind="bold" style={styles.heroLiveFloorBtnText}>
-                Vào Sàn Live
+            <View style={styles.priceRight}>
+              <AppText kind="small" color={stitchTokens.brownMuted}>
+                {isDutch
+                  ? `Sàn ${formatVnd(auction.startPrice)}`
+                  : !isSealed && auction.buyNowPrice !== null
+                    ? `Mua ngay ${formatVnd(auction.buyNowPrice)}`
+                    : `Bước +${formatVnd(auction.step)}`}
               </AppText>
-              <Icon name="arrow" size={16} color={stitchTokens.white} />
-            </Pressable>
+            </View>
+          </View>
+
+          {/* Action Row: distinct CTAs when quick-bid applies, single clean CTA otherwise */}
+          <View style={styles.actionsRow}>
+            {canQuickBid ? (
+              <>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onQuickBid();
+                  }}
+                  style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+                >
+                  <AppText kind="bold" style={styles.primaryBtnText}>
+                    Trả {formatVnd(nextBid)}
+                  </AppText>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onOpenLive}
+                  style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
+                >
+                  <AppText kind="bold" style={styles.secondaryBtnText}>
+                    Xem chi tiết
+                  </AppText>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onOpenLive}
+                style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+              >
+                <AppText kind="bold" style={styles.primaryBtnText}>
+                  {isDutch
+                    ? `Xem phiên giảm dần · ${formatVnd(currentPrice)}`
+                    : isSealed
+                      ? "Vào gửi giá kín"
+                      : "Xem phiên đấu giá"}
+                </AppText>
+                <Icon name="chevronRight" size={16} color={stitchTokens.gold} />
+              </Pressable>
+            )}
           </View>
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+  section: {
+    paddingHorizontal: space.lg,
+    marginTop: space.md,
   },
-  heroCard: {
+  card: {
     backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderColor: stitchTokens.cardBorder,
     overflow: "hidden",
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  heroTopBanner: {
+  topStrip: {
     backgroundColor: stitchTokens.wine,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  heroTopBannerText: {
-    fontSize: 13,
-    color: stitchTokens.gold,
-    letterSpacing: 0.5,
-  },
-  heroTimerBox: {
+  stripLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
+  stripTitle: { color: stitchTokens.warmIvory, fontSize: 13 },
+  timerPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: stitchTokens.blackAlpha25,
+    backgroundColor: stitchTokens.wineDark,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+  },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: stitchTokens.gold },
+  timerText: {
+    color: stitchTokens.gold,
+    fontSize: 12,
+    lineHeight: 16,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
+  },
+  body: { padding: 14, gap: 12 },
+  row: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
+  coverBox: {
+    width: 84,
+    height: 118,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    overflow: "hidden",
+  },
+  infoCol: { flex: 1, minWidth: 0, gap: 5 },
+  metaLine: { flexDirection: "row", alignItems: "center", gap: 4 },
+  pointText: { flex: 1, color: stitchTokens.brownMuted, fontSize: 12 },
+  title: { color: stitchTokens.wineDark, fontSize: 16, lineHeight: 22 },
+  author: { color: stitchTokens.brownMuted, fontSize: 13 },
+  chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 2 },
+  metaChip: {
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
   },
-  heroTimerText: {
+  metaChipText: {
+    color: stitchTokens.deepCocoa,
     fontSize: 12,
-    color: stitchTokens.gold,
-    fontFamily: "monospace",
+    lineHeight: 15,
+    fontWeight: "600",
+    includeFontPadding: false,
   },
-  livePulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: stitchTokens.flashRed,
-  },
-  heroContent: {
-    padding: 14,
-    gap: 12,
-  },
-  heroCoverBox: {
-    width: 108,
-    height: 144,
-    borderRadius: 8,
-    overflow: "hidden",
-    position: "relative",
+  priceBox: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 10,
     backgroundColor: stitchTokens.parchment,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  heroCoverTag: {
-    position: "absolute",
-    top: 6,
-    left: 6,
-    backgroundColor: stitchTokens.gold,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+  priceCol: { gap: 2 },
+  priceVal: {
+    color: stitchTokens.wine,
+    fontSize: 20,
+    lineHeight: 25,
+    fontVariant: ["tabular-nums"],
   },
-  heroCoverTagText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-    textTransform: "uppercase",
+  priceRight: { flexShrink: 1, alignItems: "flex-end" },
+  actionsRow: { flexDirection: "row", gap: 8 },
+  primaryBtn: {
+    flex: 1,
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: radius.control,
+    backgroundColor: stitchTokens.wine,
+    paddingHorizontal: 12,
   },
-  heroLocationText: {
-    fontSize: 11,
-    color: stitchTokens.subtleGray,
+  primaryBtnText: {
+    color: stitchTokens.gold,
+    fontSize: 14,
+    fontVariant: ["tabular-nums"],
   },
-  heroTitle: {
-    fontSize: 16,
-    color: stitchTokens.wineDark,
-    lineHeight: 21,
-  },
-  heroAuthor: {
-    fontSize: 12,
-    color: stitchTokens.subtleGray,
-    marginTop: 2,
-  },
-  heroPriceStatsBox: {
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderRadius: 8,
-    padding: 8,
-    gap: 3,
+  secondaryBtn: {
+    minHeight: 46,
+    paddingHorizontal: 14,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
-  },
-  heroPriceText: {
-    fontSize: 17,
-    color: stitchTokens.wine,
-  },
-  heroBuyNowText: {
-    fontSize: 11,
-    color: stitchTokens.wine,
-  },
-  heroActionsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 2,
-  },
-  heroQuickBidBtn: {
-    flex: 1,
-    flexDirection: "row",
+    backgroundColor: stitchTokens.whiteSurface,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    backgroundColor: stitchTokens.gold,
-    paddingVertical: 11,
-    borderRadius: 8,
-    shadowColor: stitchTokens.goldBronze,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  heroQuickBidBtnText: {
-    fontSize: 13,
-    color: stitchTokens.wineDark,
-  },
-  heroLiveFloorBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: stitchTokens.wine,
-    paddingVertical: 11,
-    borderRadius: 8,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  heroLiveFloorBtnText: {
-    fontSize: 13,
-    color: stitchTokens.white,
-  },
+  secondaryBtnText: { color: stitchTokens.wineDark, fontSize: 14 },
+  pressed: { opacity: 0.8 },
 });

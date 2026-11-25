@@ -128,7 +128,13 @@ try {
     const before = walletReads;
     const submit = async () => {
       await action.click();
-      await page.getByRole('dialog').getByRole('button', { name: 'Thanh toán', exact: true }).click();
+      const dialog = page.getByRole('dialog');
+      if (!baseline) {
+        await expect(dialog.getByText('Tổng thanh toán', { exact: true }).locator('..')).toContainText('50.000');
+        await expect(dialog.getByText('Tiền được giữ khi nào?', { exact: true })).toBeVisible();
+        if (mode === 'success') await dialog.screenshot({ path: path.join(out, `payment-review-${width}-${method}.png`) });
+      }
+      await dialog.getByRole('button', { name: 'Thanh toán', exact: true }).click();
     };
     await submit(); await expect.poll(() => commands.length).toBe(1);
     await page.waitForTimeout(100); assert.equal(walletReads, before, 'Pending payment must not refresh wallet'); release();

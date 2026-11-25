@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import {AddToCart} from '../cart/add-to-cart';
 import {
   StyleSheet,
   View,
@@ -61,7 +60,7 @@ export function BookScreen({ id }: { id: string }) {
     staleTime: 0,
     gcTime: 0,
     retry: false,
-    refetchInterval: active ? 30_000 : false,
+    refetchInterval: active ? 10_000 : false,
   });
 
   // Query my orders to check if user has an active unpaid order for this listing
@@ -232,7 +231,6 @@ export function BookScreen({ id }: { id: string }) {
           <View style={styles.framedContainer}>
             {/* Book Title, Authors & Unified Pricing Module */}
             <BookOverviewSection item={item} />
-            {!isOwner&&item.salePrice!==null&&item.purchaseAvailability.status==='Available'&&<AddToCart key={state.status==='authenticated'?state.user.id:'anonymous'} listingId={item.id} listingVersion={item.version}/>}
 
             {/* Condition Bento & Catalog Metadata */}
             <BookInspectionReport item={item} />

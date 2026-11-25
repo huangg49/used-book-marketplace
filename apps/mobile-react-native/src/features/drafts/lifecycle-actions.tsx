@@ -6,6 +6,7 @@ import { useSession } from "../../core/session/session-provider";
 import { Button, ConfirmDialog, Notice, space } from "../../core/ui";
 import { privateDraft, type Draft } from "./contracts";
 import { photoError } from "./draft-media";
+import { manageableListing } from "./listing-form";
 import {
   executeLifecycle,
   lifecycleIntent,
@@ -37,10 +38,7 @@ export function LifecycleActions({
     onPending(!!intent || busy);
     return () => onPending(false);
   }, [intent, busy, onPending]);
-  const eligible =
-    value.state.trade === "Available" &&
-    value.state.visibility !== "Removed" &&
-    !value.state.deletedAt;
+  const eligible = manageableListing(value);
   const active =
     state.status === "authenticated" && state.user.status === "ACTIVE";
   const label =

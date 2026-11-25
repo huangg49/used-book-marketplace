@@ -200,10 +200,10 @@ export function ExchangeEvidenceReview({
                   const uploaderInfo = (() => {
                     if (!parties) return null;
                     if (e.uploaderId === parties.initiatorId) {
-                      return { name: parties.initiatorName || "Trần Minh Thư", role: "Bên khởi tạo" };
+                      return { name: parties.initiatorName || "Bên khởi tạo", role: "Bên khởi tạo" };
                     }
                     if (e.uploaderId === parties.recipientId) {
-                      return { name: parties.recipientName || "Đặng Hoàng Nam", role: "Bên nhận đề xuất" };
+                      return { name: parties.recipientName || "Bên nhận đề xuất", role: "Bên nhận đề xuất" };
                     }
                     return null;
                   })();

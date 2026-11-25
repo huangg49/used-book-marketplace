@@ -66,6 +66,7 @@ export const purchaseConversationSchema = z.object({
         detail: z.string(),
       }),
       shippingFee: z.number().int(),
+      commissionBps: z.number().int().min(0).max(10000).optional(),
       expiresAt: z.string(),
     })
     .nullable(),

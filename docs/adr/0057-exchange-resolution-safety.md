@@ -61,3 +61,20 @@ Phán quyết cũ RefundBoth giữ chế độ replay. Ca một bên đã nhận
 hạn gửi đi qua ADR 0089, với quy tắc tiền, thời hạn và thẩm quyền riêng.
 Migration 0080 lưu loại phán quyết bồi thường trên phiếu. Dữ liệu từng xử lý chỉ
 điền từ biên nhận khớp phiếu và revision, giữ nguyên bút toán và thời điểm.
+
+## Chờ trả sách sau phán quyết toàn phần — 24/11/2026
+
+- Với phiếu đã gửi và xác nhận nhận đủ hai chiều, phán quyết toàn phần mở
+  quyết định trả sách theo cửa sổ kháng nghị 48 giờ và hạn bàn giao 72 giờ
+  của [ADR0089](0089-one-sided-exchange-return.md). Sách và tiền vẫn giữ.
+- Bên đang giữ sách của bên bị hại báo mã vận đơn chặng hoàn. Chủ sách xác nhận
+  khi nhận, hoặc Admin phụ trách xác minh bằng chứng, rồi có 48 giờ kiểm tra.
+  Trả thành công hoàn các khoản đang giữ và đưa sách đã xác minh trả về nháp.
+  Bài của sách vi phạm đóng sau khi quyết toán.
+- Quá hạn chưa bàn giao hoặc có sự cố chặng hoàn cần Admin đối chiếu bằng chứng
+  và ra quyết định bồi thường. Khi quyết định có hiệu lực và được quyết toán,
+  tiền chi theo phân bổ hiện hành. Sách chưa thu hồi không trở lại kệ.
+- `Tua hạn trả sách · Demo` dùng đúng lệnh tua hạn hiện có khi chế độ demo đã
+  bật và phiếu đủ điều kiện. Staff độc lập được phân công có thể tua hạn trả.
+  Tua hạn chỉ chỉnh mốc chờ, sau đó hồ sơ vẫn cần quy trình xác minh và chi tiền.
+- Luồng khấu trừ một phần, bác khiếu nại và biên nhận đã đóng giữ cơ chế hiện có.

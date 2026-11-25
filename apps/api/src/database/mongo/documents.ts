@@ -1588,6 +1588,7 @@ export interface MemberNotificationDoc {
     | 'AuctionOnHold'
     | 'AuctionPaymentExpired'
     | 'OrderBuyNowPaid'
+    | 'OrderSaleSettled'
     | 'AuctionPaid'
     | 'ExchangeProposed'
     | 'ExchangeAccepted'

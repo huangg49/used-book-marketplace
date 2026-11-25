@@ -3,7 +3,7 @@ import { Image, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
-import { AppText, Button, Icon, colors } from "../../core/ui";
+import { AppText, Button, Icon, IconButton, colors } from "../../core/ui";
 import { mediaRead, type Media } from "./contracts";
 import { signedMediaRemainingMs } from "@used-books/session-client";
 
@@ -13,12 +13,14 @@ export function DraftCoverPhoto({
   label = "Ảnh bìa",
   resizeMode = "cover",
   mediaStatus,
+  compact = false,
 }: {
   listingId: string;
   mediaId?: string | null;
   label?: string;
   resizeMode?: "cover" | "contain";
   mediaStatus?: Media["status"];
+  compact?: boolean;
 }) {
   const { client } = useSession();
   const foreground = useForeground();
@@ -67,6 +69,11 @@ export function DraftCoverPhoto({
     (!!failed && failed === preview.data?.url) ||
     (!!preview.data && !available)
   );
+  const retryPreview = () => {
+    setFailed(undefined);
+    setAttempt((value) => value + 1);
+    void preview.refetch();
+  };
   return (
     <View style={{ width: "100%", height: "100%" }}>
       {available && preview.data?.url && failed !== preview.data.url ? (
@@ -91,18 +98,18 @@ export function DraftCoverPhoto({
           Failed: "Ảnh chưa xử lý được",
         }[mediaStatus]}</AppText>
       ) : null}
-      {retry ? (
+      {retry && compact ? (
+        <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
+          <IconButton name="sync" label="Tải lại ảnh" disabled={preview.isFetching} onPress={retryPreview} />
+        </View>
+      ) : retry ? (
         <>
           <AppText kind="small">Chưa tải được ảnh xem trước.</AppText>
           <Button
             secondary
             title="Tải lại ảnh"
             busy={preview.isFetching}
-            onPress={() => {
-              setFailed(undefined);
-              setAttempt((value) => value + 1);
-              void preview.refetch();
-            }}
+            onPress={retryPreview}
           />
         </>
       ) : null}

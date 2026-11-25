@@ -1,5 +1,7 @@
 import {
   exchangeCommandIdentity,
+  exchangeFundingNotes,
+  exchangeServiceFeeText,
   pendingExchangeIntent,
   readExchange,
   sendExchangeCommand,
@@ -28,6 +30,7 @@ import {
   stitchTokens,
 } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
+import { TransactionAmount, TransactionNotes } from "../../core/ui/transaction-review";
 import type { Exchange } from "./contracts";
 import { exchangeSchema, formatCancelReason } from "./contracts";
 import { ExchangeReviewsCard } from "./exchange-reviews-card";
@@ -468,14 +471,20 @@ function ExchangeActionsContent({
   const partnerPickedUpAt = isInitiator ? exchange.recipientShippedAt : exchange.initiatorShippedAt;
   const myInspectionDeadline = isInitiator ? exchange.initiatorInspectionDeadline : exchange.recipientInspectionDeadline;
   const cutoff = myInspectionDeadline ? Date.parse(myInspectionDeadline) : Infinity;
-  const readInspectionOpen = useCallback(() => Date.now() < cutoff, [cutoff]);
+  const settlementCutoff = exchange.inspectionDeadline ? Date.parse(exchange.inspectionDeadline) : Infinity;
+  const readInspectionPhase = useCallback(() => {
+    const now = Date.now();
+    if (now >= settlementCutoff) return "settling";
+    return now >= cutoff ? "waiting-for-partner" : "open";
+  }, [cutoff, settlementCutoff]);
   const subscribeInspectionDeadline = useCallback((notify: () => void) => {
-    if (!Number.isFinite(cutoff)) return () => {};
+    if (!Number.isFinite(Math.min(cutoff, settlementCutoff))) return () => {};
     let timer: ReturnType<typeof setTimeout> | undefined;
     const schedule = () => {
       clearTimeout(timer);
-      const remaining = cutoff - Date.now();
-      if (remaining > 0) timer = setTimeout(schedule, Math.min(remaining, 2_147_483_647));
+      const now = Date.now();
+      const next = Math.min(cutoff > now ? cutoff : Infinity, settlementCutoff > now ? settlementCutoff : Infinity);
+      if (Number.isFinite(next)) timer = setTimeout(schedule, Math.min(next - now, 2_147_483_647));
       notify();
     };
     schedule();
@@ -486,8 +495,9 @@ function ExchangeActionsContent({
       listener.remove();
       clearTimeout(timer);
     };
-  }, [cutoff]);
-  const inspectionOpen = useSyncExternalStore(subscribeInspectionDeadline, readInspectionOpen, readInspectionOpen);
+  }, [cutoff, settlementCutoff]);
+  const inspectionPhase = useSyncExternalStore(subscribeInspectionDeadline, readInspectionPhase, readInspectionPhase);
+  const inspectionOpen = inspectionPhase === "open";
   const receiveAction = partnerPickedUpAt && !isReceivedByMe ? (
     <Button title="Xác nhận đã nhận sách" wine busy={isBusy} onPress={() => receiveMutation.mutate()} />
   ) : null;
@@ -833,7 +843,7 @@ function ExchangeActionsContent({
         </View>
       ) : null}
 
-      {exchange.status !== "Delivered" && (
+      {(exchange.status === "Preparing" || exchange.status === "InTransit") && (
         isInitiator
           ? exchange.initiatorInspectionDeadline
           : exchange.recipientInspectionDeadline
@@ -1053,11 +1063,12 @@ function ExchangeActionsContent({
                 </View>
               ) : (
                 <View style={styles.buttonGroup}>
+                  <TransactionAmount label="Số tiền Ví sẽ giữ" value={formatVnd(amountToPay)} />
                   {/* Clean Digital Receipt */}
                   <View style={styles.receiptBox}>
                     <View style={styles.receiptRow}>
                       <AppText style={styles.receiptLabel}>
-                        Cọc sách gửi (hoàn 100% khi xong)
+                        Cọc bảo chứng
                       </AppText>
                       <AppText style={styles.receiptVal}>
                         {formatVnd(baseDeposit)}
@@ -1073,15 +1084,8 @@ function ExchangeActionsContent({
                         </AppText>
                       </View>
                     ) : null}
+                    <AppText style={styles.receiptLabel}>{exchangeServiceFeeText}</AppText>
                     <View style={styles.receiptDivider} />
-                    <View style={styles.receiptRow}>
-                      <AppText style={styles.receiptTotalLabel}>
-                        Tổng cần nộp
-                      </AppText>
-                      <AppText style={styles.receiptTotalVal}>
-                        {formatVnd(amountToPay)}
-                      </AppText>
-                    </View>
                     <View style={styles.receiptRow}>
                       <AppText style={styles.receiptLabel}>
                         Số dư ví khả dụng
@@ -1100,6 +1104,7 @@ function ExchangeActionsContent({
                       </AppText>
                     </View>
                   </View>
+                  <TransactionNotes notes={exchangeFundingNotes} />
 
                   {hasInsufficientFunds && (
                     <Notice tone="error">
@@ -1266,6 +1271,9 @@ function ExchangeActionsContent({
 
               return (
                 <View style={styles.actionsBox}>
+                  <AppText kind="small" color={stitchTokens.subtleGray}>
+                    Tiền Ví đang giữ {formatVnd(amountToPay)}.
+                  </AppText>
                   {/* 2-side inspection confirmation pills */}
                   <View style={styles.twoSideGrid}>
                     <View
@@ -1344,9 +1352,12 @@ function ExchangeActionsContent({
                     </View>
                   </View>
 
-                  {commonDeadlineStr &&
-                    myDeadlineStr &&
-                    commonDeadlineStr !== myDeadlineStr && (
+                  {myDeadlineStr && (
+                    <AppText kind="small" color={stitchTokens.subtleGray}>
+                      Hạn báo sự cố của bạn {myDeadlineStr}
+                    </AppText>
+                  )}
+                  {commonDeadlineStr && (
                       <View style={styles.commonDeadlineTag}>
                         <Icon
                           name="clock"
@@ -1354,12 +1365,14 @@ function ExchangeActionsContent({
                           color={stitchTokens.subtleGray}
                         />
                         <AppText style={styles.commonDeadlineText}>
-                          Hạn tất toán chung: {commonDeadlineStr}
+                          {inspectionPhase === "settling"
+                            ? "Cả hai hạn đã qua. Đang chờ hệ thống tất toán về Ví."
+                            : `Dự kiến xử lý tiền sau ${commonDeadlineStr} nếu không có tranh chấp.`}
                         </AppText>
                       </View>
                     )}
 
-                  {isCompletedByMe ? (
+                  {isCompletedByMe && (
                     <View style={styles.successNote}>
                       <Icon
                         name="check"
@@ -1367,13 +1380,15 @@ function ExchangeActionsContent({
                         color={stitchTokens.likeNewGreen}
                       />
                       <AppText style={styles.successNoteText}>
-                        Bạn đã xác nhận sách đạt chuẩn. Đang chờ {partnerName}{" "}
-                        xác nhận (hoặc hết hạn 72 giờ) để hoàn tiền cọc về ví.
+                        {inspectionOpen
+                          ? "Bạn đã xác nhận kiểm tra. Bạn vẫn có thể báo sự cố trong hạn của mình."
+                          : "Bạn đã xác nhận kiểm tra. Hạn báo sự cố của bạn đã qua."}
                       </AppText>
                     </View>
-                  ) : !dockedMode ? (
+                  )}
+                  {!dockedMode && (
                     <View style={styles.buttonGroup}>
-                      {isReceivedByMe && inspectionOpen && (
+                      {!isCompletedByMe && isReceivedByMe && inspectionOpen && (
                         <Button
                           title="Xác nhận đã kiểm tra"
                           wine
@@ -1384,7 +1399,7 @@ function ExchangeActionsContent({
                       {!isReceivedByMe && receiveAction}
                       {disputeAction}
                     </View>
-                  ) : null}
+                  )}
                 </View>
               );
             })()}
@@ -1411,6 +1426,7 @@ function ExchangeActionsContent({
                     : 0;
               return (
                 <View style={styles.disputeRichBox}>
+                  <Notice tone="info">Tiền vẫn được giữ trong lúc xử lý sự cố. Chưa có ngày hoàn tiền.</Notice>
                   <View style={styles.disputeMiniTrack}>
                     {[
                       "1. Đã tiếp nhận",
@@ -1566,7 +1582,10 @@ function ExchangeActionsContent({
                         .trim()
                     : null;
 
-                  const decisionTitle = isCompInit
+                  const returned = exchange.returnResolution?.outcome === "Returned";
+                  const decisionTitle = returned
+                    ? "Đã xác minh trả sách"
+                    : isCompInit
                     ? "Phán quyết: Chấp thuận khiếu nại Bên khởi tạo"
                     : isCompRecip
                       ? "Phán quyết: Chấp thuận khiếu nại Bên đối tác"
@@ -1577,7 +1596,9 @@ function ExchangeActionsContent({
                     exchange.returnResolution?.compensation ??
                     0;
                   const decisionDesc =
-                    isCompInit || isCompRecip
+                    returned
+                      ? "Chủ sách đã nhận lại sách. Khoản cọc và tiền bù đã được hoàn theo kết quả hồ sơ."
+                      : isCompInit || isCompRecip
                       ? `Giao dịch đã hủy theo phán quyết bồi thường${compAmt > 0 ? ` (${formatVnd(compAmt)})` : ""}. Bên bị hại được hoàn ký quỹ + nhận bồi thường; phần dư (nếu có) đã hoàn lại ví.`
                       : "Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví của cả hai bên. Sách chưa gửi đã mở lại trên kệ.";
 
@@ -1638,7 +1659,7 @@ function ExchangeActionsContent({
                       Đơn trao đổi đã đóng (
                       {formatCancelReason(exchange.cancelReason)}).
                     </AppText>
-                    {exchange.cancelReason === "MutualAgreement" && (
+                    {isFundedByMe && ["MutualAgreement", "FundingExpired", "ShippingExpired"].includes(exchange.cancelReason ?? "") && (
                       <AppText
                         style={{
                           fontSize: 12.5,
@@ -1646,8 +1667,7 @@ function ExchangeActionsContent({
                           marginTop: 2,
                         }}
                       >
-                        Hai bên đã đồng thuận hủy trước khi gửi sách. Toàn bộ
-                        tiền cọc và tiền bù đã hoàn 100% về ví.
+                        Khoản bạn đã nộp đã được hoàn về Ví.
                       </AppText>
                     )}
                     {exchange.resolutionReason && (
@@ -1664,6 +1684,7 @@ function ExchangeActionsContent({
                   </View>
                 </View>
               )}
+              {isFundedByMe && <Button title="Xem lịch sử giao dịch Ví" secondary onPress={() => router.push({ pathname: "/wallet", params: { section: "history" } })} />}
             </View>
           )}
         </>
@@ -2010,7 +2031,7 @@ function ExchangeActionsContent({
     }
 
     if (exchange.status === "Delivered") {
-      if (isCompletedByMe) {
+      if (isCompletedByMe && !inspectionOpen) {
         return null;
       }
 
@@ -2047,7 +2068,7 @@ function ExchangeActionsContent({
                 Xác nhận đã nhận sách
               </AppText>
             </Pressable>
-          ) : isReceivedByMe && inspectionOpen ? (
+          ) : !isCompletedByMe && isReceivedByMe && inspectionOpen ? (
             <Pressable
               accessibilityRole="button"
               disabled={isBusy}
@@ -2203,7 +2224,7 @@ function ExchangeActionsContent({
       <ConfirmDialog
         visible={confirmCompleteOpen}
         title="Xác nhận nghiệm thu sách?"
-        message="Bạn có chắc chắn đã kiểm tra sách kỹ lưỡng và hài lòng? Sau khi xác nhận, bạn sẽ từ bỏ quyền khiếu nại. Khi đối tác cũng xác nhận, cọc và tiền bù sẽ được hoàn tất về ví của cả hai ngay lập tức."
+        message="Thao tác này ghi nhận bạn đã kiểm tra sách. Bạn vẫn có thể báo sự cố trong 72 giờ kể từ lúc nhận. Hệ thống xử lý tiền khi hết hạn kiểm tra của cả hai và không có tranh chấp."
         confirmLabel="Xác nhận nghiệm thu"
         onCancel={() => setConfirmCompleteOpen(false)}
         onConfirm={() => {
@@ -2488,6 +2509,7 @@ function ExchangeActionsContent({
 
               return (
                 <View style={[styles.fundingSummaryCard, { gap: 6 }]}>
+                  <AppText style={styles.fundingSummarySubLabel}>{exchangeServiceFeeText}</AppText>
                   <View style={styles.fundingSummaryRow}>
                     <AppText style={styles.fundingSummarySubLabel}>
                       Cọc của bạn (giá trị sách gửi):
@@ -3752,17 +3774,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: stitchTokens.borderWarm,
     marginVertical: 2,
-  },
-  receiptTotalLabel: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: stitchTokens.darkWood,
-  },
-  receiptTotalVal: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: stitchTokens.wine,
-    fontVariant: ["tabular-nums"],
   },
   receiptWalletVal: {
     fontSize: 13.5,

@@ -5,7 +5,8 @@ import {
   withdrawalLabels,
   type WalletHistoryFilters,
 } from "@used-books/session-client";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {
@@ -25,6 +26,7 @@ import {
   type WalletHistoryType,
 } from "../services/wallet";
 import { formatVnd } from "../lib/routes";
+import { SaleFeeBreakdown } from "../components/SaleFeeBreakdown";
 import styles from "./WalletPage.module.css";
 
 const dateFormat = new Intl.DateTimeFormat("vi-VN", {
@@ -36,6 +38,7 @@ const dateFormat = new Intl.DateTimeFormat("vi-VN", {
 interface WalletHistoryProps {
   ownerId: string;
   onOpenTopup?: () => void;
+  saleOrderId?: string;
 }
 
 const FILTER_TABS: { id: WalletHistoryType | ""; label: string }[] = [
@@ -78,10 +81,10 @@ function getTransactionVisuals(type: WalletHistoryType, _amount: number) {
   };
 }
 
-export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
-  const [type, setType] = useState<WalletHistoryType | "">("");
-  const [draft, setDraft] = useState(emptyWalletHistoryFilters);
-  const [filters, setFilters] = useState<WalletHistoryFilters>({});
+export function WalletHistory({ ownerId, onOpenTopup, saleOrderId }: WalletHistoryProps) {
+  const [type, setType] = useState<WalletHistoryType | "">(saleOrderId ? "OrderSettlement" : "");
+  const [draft, setDraft] = useState({ ...emptyWalletHistoryFilters, reference: saleOrderId ?? "" });
+  const [filters, setFilters] = useState<WalletHistoryFilters>(saleOrderId ? { reference: saleOrderId } : {});
   const [filterError, setFilterError] = useState<string>();
   const scopeFor = (kind: WalletHistoryType | "", selected: WalletHistoryFilters) =>
     JSON.stringify([ownerId, kind, selected.from, selected.to, selected.reference]);
@@ -105,8 +108,14 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
   const loadedPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, loadedPages);
   const historyAnchor = useId();
+  const { hash, key: navigationKey } = useLocation();
   const requestPageFocus = usePaginationFocus(safePage, scope, historyAnchor, history.isFetching, history.isError);
   const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  useEffect(() => {
+    if (!saleOrderId && hash !== "#lich-su-giao-dich") return;
+    const frame = window.requestAnimationFrame(() => document.getElementById(historyAnchor)?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [hash, historyAnchor, navigationKey, saleOrderId]);
 
   function applyFilters(next: WalletHistoryFilters) {
     requestGeneration.current += 1;
@@ -143,7 +152,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
   }
 
   return (
-    <div className={styles.historyContainer}>
+    <div className={styles.historyContainer} id="lich-su-giao-dich">
       <div className={styles.receiptSlip} role="region" aria-label="Lịch sử giao dịch">
         <div className={styles.receiptBody}>
           {/* History Header */}
@@ -308,7 +317,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
                     const displayCode = `${prefix}-${rawRef.slice(0, 6).toUpperCase()}`;
 
                     return (
-                      <li key={item.journalId} className={styles.receiptRow}>
+                      <li key={item.journalId} className={`${styles.receiptRow}${item.saleSettlement ? ` ${styles.receiptRowWithSale}` : ""}`}>
                         <div className={`${styles.receiptIconCircle} ${circleClass}`} aria-hidden="true">
                           <Icon size={18} />
                         </div>
@@ -343,6 +352,12 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
                             Số dư sau: {formatVnd(item.balanceAfter)}
                           </span>
                         </div>
+                        {item.saleSettlement && (
+                          <details className={styles.saleReceipt} open={(saleOrderId === item.orderId) || undefined}>
+                            <summary>Chi tiết quyết toán</summary>
+                            <SaleFeeBreakdown amounts={item.saleSettlement} settled />
+                          </details>
+                        )}
                       </li>
                     );
                   })}

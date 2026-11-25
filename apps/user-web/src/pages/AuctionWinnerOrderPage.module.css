@@ -159,3 +159,32 @@
   .progress li small { font-size: .6875rem; }
   .methodChoices button { flex-direction: column; gap: 4px; }
 }
+.checkoutReviewRows {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: .875rem;
+  color: var(--shop-muted);
+}
+
+.checkoutReviewRows > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.checkoutReviewRows dd {
+  margin: 0;
+  text-align: right;
+  color: var(--shop-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkoutReviewRows > [data-total] {
+  border-top: 1px solid var(--shop-line);
+  padding-top: 6px;
+  color: var(--shop-ink);
+  font-weight: 700;
+}

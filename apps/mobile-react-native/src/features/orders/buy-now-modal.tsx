@@ -11,6 +11,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   acknowledgedBuyNowOrder,
+  buyerSaleFeeText,
+  directOrderHoldNotes,
   forgetBuyNowOrder,
   pendingBuyNowOrder,
   pendingBuyNowOrderInput,
@@ -31,6 +33,7 @@ import {
   space,
   stitchTokens,
 } from "../../core/ui";
+import { TransactionNotes } from "../../core/ui/transaction-review";
 import type { Listing } from "../shelf/contracts";
 import { PublicPhoto } from "../shelf/public-photo";
 import { addressBook, addressReceipt } from "../addresses/contracts";
@@ -1120,7 +1123,7 @@ function BuyNowSession({
                     </AppText>
                   </View>
 
-                  {(quote?.amounts.shippingFee ?? 0) > 0 && (<View
+                  <View
                     style={{
                       flexDirection: "row",
                       justifyContent: "space-between",
@@ -1134,10 +1137,10 @@ function BuyNowSession({
                       {quoteLoading
                         ? "Đang tính phí..."
                         : quote
-                          ? formatVnd(quote.amounts.shippingFee)
+                          ? quote.amounts.shippingFee > 0 ? formatVnd(quote.amounts.shippingFee) : "Miễn phí"
                           : "Chưa có báo giá"}
                     </AppText>
-                  </View>)}
+                  </View>
 
                   <View
                     style={{
@@ -1173,6 +1176,7 @@ function BuyNowSession({
                           : "Chưa có báo giá"}
                     </AppText>
                   </View>
+                  {quote && <AppText kind="small" color={stitchTokens.subtleGray}>{buyerSaleFeeText(quote.amounts.commissionBps)}</AppText>}
                 </View>
 
                 <Notice tone="info">
@@ -1180,6 +1184,7 @@ function BuyNowSession({
                   để thanh toán qua Ví Lật Lại. Sau thanh toán, người bán chuẩn
                   bị bàn giao theo thời hạn tại đơn.
                 </Notice>
+                <TransactionNotes notes={directOrderHoldNotes("BuyNow")} />
 
                 {/* Order Action Button */}
                 <Button
@@ -1310,6 +1315,18 @@ function BuyNowSession({
                       VÍ LẬT LẠI (SỐ DƯ THANH TOÁN)
                     </AppText>
 
+                    {[
+                      ["Tiền sách", formatVnd(orderDetails.amounts.bookPrice)],
+                      ["Phí giao hàng", orderDetails.amounts.shippingFee > 0
+                        ? formatVnd(orderDetails.amounts.shippingFee)
+                        : "Miễn phí"],
+                    ].map(([label, value]) => (
+                      <View key={label} style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
+                        <AppText style={{ flex: 1 }} color={stitchTokens.subtleGray}>{label}</AppText>
+                        <AppText kind="bold">{value}</AppText>
+                      </View>
+                    ))}
+
                     <View
                       style={{
                         flexDirection: "row",
@@ -1351,6 +1368,10 @@ function BuyNowSession({
                         {formatVnd(orderDetails.amounts.buyerTotal)}
                       </AppText>
                     </View>
+                    <AppText kind="small" color={stitchTokens.subtleGray}>
+                      {buyerSaleFeeText(orderDetails.amounts.commissionBps)}
+                    </AppText>
+                    <TransactionNotes notes={directOrderHoldNotes(orderDetails.purchaseMode ?? (listing ? "BuyNow" : undefined))} />
                   </View>
 
                   {walletReady && !hasEnoughBalance && (

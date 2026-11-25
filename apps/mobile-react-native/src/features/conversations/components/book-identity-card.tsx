@@ -11,6 +11,7 @@ interface BookIdentityCardProps {
   listing?: Listing | null;
   room: PurchaseConversation;
   isExchange?: boolean;
+  compact?: boolean;
 }
 
 function formatVnd(amount: number | null | undefined): string {
@@ -22,6 +23,7 @@ export function BookIdentityCard({
   listing,
   room,
   isExchange = false,
+  compact = false,
 }: BookIdentityCardProps) {
   const router = useRouter();
   const title = listing?.bundle?.title || listing?.book.title || "Đang tải thông tin ấn bản sách…";
@@ -36,6 +38,49 @@ export function BookIdentityCard({
 
   const isOrderCreated = room.status === "OrderCreated";
   const isExpired = room.status === "Expired" || room.status === "Cancelled";
+  const priceText = formatVnd(listing?.salePrice ?? listing?.exchangeValue);
+
+  if (compact) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Xem chi tiết ấn bản ${title}`}
+        style={({ pressed }) => [styles.compactCard, pressed && styles.pressed]}
+        onPress={() => {
+          router.push({
+            pathname: "/book",
+            params: { id: room.listingId },
+          });
+        }}
+      >
+        <View style={styles.compactCover}>
+          {primaryPhoto && revisionId ? (
+            <PublicPhoto
+              listingId={room.listingId}
+              revisionId={revisionId}
+              mediaId={primaryPhoto.id}
+              label={title}
+              active
+              compact
+            />
+          ) : (
+            <View style={styles.coverFallback}>
+              <Icon name="book" size={16} color={stitchTokens.wineDark} />
+            </View>
+          )}
+        </View>
+        <View style={styles.compactInfo}>
+          <AppText numberOfLines={1} style={styles.compactTitle}>
+            {title}
+          </AppText>
+          <AppText numberOfLines={1} style={styles.compactSub}>
+            {priceText} · {statusText}
+          </AppText>
+        </View>
+        <Icon name="chevronRight" size={16} color={colors.muted} />
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
@@ -142,20 +187,57 @@ export function BookIdentityCard({
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: space.sm,
-    gap: space.md,
-    marginHorizontal: space.md,
+    borderColor: stitchTokens.cardBorder,
+    padding: 12,
+    gap: 12,
+    marginHorizontal: space.lg,
     marginTop: space.sm,
     marginBottom: space.xs,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+  },
+  compactCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 10,
+    marginHorizontal: space.lg,
+    marginTop: space.sm,
+    marginBottom: space.xs,
+  },
+  compactCover: {
+    width: 32,
+    height: 48,
+    borderRadius: 6,
+    overflow: "hidden",
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.warmBorder,
+  },
+  compactInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  compactTitle: {
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "700",
+    color: colors.ink,
+    includeFontPadding: false,
+  },
+  compactSub: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "600",
+    color: stitchTokens.wine,
+    includeFontPadding: false,
   },
   pressed: {
     opacity: 0.92,
@@ -224,7 +306,9 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
+    lineHeight: 15,
     fontWeight: "700",
+    includeFontPadding: false,
   },
   statusTextActive: {
     color: stitchTokens.likeNewGreen,

@@ -23,6 +23,7 @@ import {
   parseVNDate,
 } from './vnpay-sandbox.js';
 import { TransactionPolicy } from './transaction-policy.js';
+import { saleSettlementReceipts } from './sale-settlement.js';
 import { WalletClock } from './wallet-clock.js';
 import { expiredVNPayCandidates } from './wallet-expiry-candidates.js';
 
@@ -669,19 +670,27 @@ export class WalletService {
       const withdrawalIds = rows.flatMap(row => row.withdrawalId ? [row.withdrawalId] : []);
       const withdrawals = withdrawalIds.length ? await tx.c.withdrawals.find({_id:{$in:withdrawalIds},ownerId:actor._id}).toArray() : [];
       const withdrawalStates = new Map(withdrawals.map(row => [row._id,row.state]));
+      const settlements = await saleSettlementReceipts(tx, actor._id, rows.flatMap(row =>
+        row.type === 'OrderSettlement' && row.orderId ? [row.orderId] : [],
+      ));
       return {
-        items: rows.map((row) => ({
-          ...DEMO,
-          withdrawalState: row.withdrawalId ? withdrawalStates.get(row.withdrawalId) ?? null : null,
-          journalId: row._id,
-          topupId: row.topupId,
-          withdrawalId: row.withdrawalId,
-          orderId: row.orderId,
-          type: row.type,
-          amount: row.amount,
-          balanceAfter: row.balance,
-          postedAt: row.postedAt.toISOString(),
-        })),
+        items: rows.map((row) => {
+          const settlement = row.type === 'OrderSettlement' && row.orderId
+            ? settlements.get(row.orderId) : undefined;
+          return {
+            ...DEMO,
+            withdrawalState: row.withdrawalId ? withdrawalStates.get(row.withdrawalId) ?? null : null,
+            journalId: row._id,
+            topupId: row.topupId,
+            withdrawalId: row.withdrawalId,
+            orderId: row.orderId,
+            type: row.type,
+            amount: row.amount,
+            balanceAfter: row.balance,
+            postedAt: row.postedAt.toISOString(),
+            ...(settlement?.creditedAmount === row.amount ? { saleSettlement: settlement } : {}),
+          };
+        }),
         nextCursor: more ? rows.at(-1)!._id : null,
       };
     });

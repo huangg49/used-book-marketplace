@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -27,7 +27,6 @@ import {
   Sheet,
   TextField,
   colors,
-  radius,
   space,
   stitchTokens,
 } from "../../core/ui";
@@ -43,13 +42,25 @@ export const auctionFlagKey = (owner: string, auctionId: string) =>
 export function AuctionFlag({
   auction,
   owner,
+  externalVisible,
+  onExternalClose,
+  hideTrigger = false,
 }: {
   auction: { id: string; title: string };
   owner: string;
+  externalVisible?: boolean;
+  onExternalClose?: () => void;
+  hideTrigger?: boolean;
 }) {
   const { client } = useSession();
   const queryClient = useQueryClient();
-  const [visible, setVisible] = useState(false);
+  const [internalVisible, setInternalVisible] = useState(false);
+  const visible = externalVisible !== undefined ? externalVisible : internalVisible;
+  const close = () => {
+    if (onExternalClose) onExternalClose();
+    else setInternalVisible(false);
+  };
+
   const existing = useQuery({
     queryKey: auctionFlagKey(owner, auction.id),
     queryFn: () => client.request(auctionFlagCasesPath(auction.id), supportPageSchema),
@@ -63,7 +74,6 @@ export function AuctionFlag({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
-  // A lost response pins the body and Idempotency-Key; the retry resends them.
   const pending = pendingSupportIntent(client, scope);
   const chosen = auctionFlagCategories.find((c) => c.id === category) ?? null;
   const locked = busy || pending;
@@ -88,10 +98,9 @@ export function AuctionFlag({
       setCategory(null);
       setText("");
       setInvalid(false);
-      setVisible(false);
+      close();
       await queryClient.invalidateQueries({ queryKey: ["support"] });
     } catch (caught) {
-      // A duplicate means an open case already exists: show it on the screen.
       if (caught instanceof ApiError && caught.status === 409) void existing.refetch();
       setError(supportError(caught));
     } finally {
@@ -100,62 +109,45 @@ export function AuctionFlag({
   };
 
   return (
-    <View style={{ gap: space.xs }}>
+    <View style={styles.root}>
       {current ? (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "flex-start",
-            gap: 10,
-            padding: space.md,
-            borderRadius: radius.card * 1.5,
-            backgroundColor: stitchTokens.amberBg,
-            borderWidth: 1,
-            borderColor: stitchTokens.orangeBorderSoft,
-          }}
-        >
-          <Icon name="shield" size={17} color={colors.warning} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <AppText kind="bold" style={{ color: stitchTokens.wineDark, fontSize: 13 }}>
+        <View style={styles.openCaseBanner}>
+          <Icon name="shield" size={18} color={colors.warning} />
+          <View style={styles.openCaseText}>
+            <AppText kind="bold" style={styles.openCaseTitle}>
               {`Hồ sơ báo cáo #${current.id.slice(0, 8).toUpperCase()} (${supportStates[current.state]})`}
             </AppText>
-            <AppText kind="small" color={colors.ink} style={{ lineHeight: 17 }}>
-              Bạn đã báo cáo phiên này cho Admin. Admin trả lời qua thông báo và mục Yêu cầu hỗ trợ trên web Lật lại.
+            <AppText kind="small" color={colors.ink} style={styles.openCaseNote}>
+              Admin đã tiếp nhận và sẽ phản hồi qua thông báo và mục Yêu cầu hỗ trợ.
             </AppText>
           </View>
         </View>
-      ) : (
+      ) : !hideTrigger ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Báo cáo sự cố cho Admin"
           disabled={existing.isPending}
-          onPress={() => setVisible(true)}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: space.md,
-            paddingVertical: 11,
-            borderRadius: radius.card * 1.5,
-            backgroundColor: stitchTokens.parchment,
-            borderWidth: 1,
-            borderColor: stitchTokens.peachBorder,
-            opacity: existing.isPending ? 0.6 : pressed ? 0.8 : 1,
-          })}
+          onPress={() => setInternalVisible(true)}
+          style={({ pressed }) => [
+            styles.triggerRow,
+            existing.isPending && styles.triggerDisabled,
+            pressed && styles.pressed,
+          ]}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Icon name="shield" size={16} color={stitchTokens.wineDark} />
-            <AppText kind="bold" style={{ fontSize: 13, color: stitchTokens.wineDark }}>
+          <View style={styles.triggerLeft}>
+            <Icon name="shield" size={17} color={stitchTokens.wineDark} />
+            <AppText kind="bold" style={styles.triggerLabel}>
               Báo cáo sự cố cho Admin
             </AppText>
           </View>
           <Icon name="chevronRight" size={16} color={stitchTokens.subtleGray} />
         </Pressable>
-      )}
+      ) : null}
+
       <Sheet
         title="Báo cáo sự cố cho Admin"
-        visible={visible}
-        onClose={() => !busy && setVisible(false)}
+        visible={visible && !current}
+        onClose={() => !busy && close()}
         dismissible={!busy}
         footer={
           <Button
@@ -166,34 +158,21 @@ export function AuctionFlag({
           />
         }
       >
-        <View style={{ gap: space.lg }}>
-          <View
-            style={{
-              backgroundColor: stitchTokens.parchment,
-              padding: 12,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: stitchTokens.cardBorder,
-              gap: 2,
-            }}
-          >
-            <AppText kind="small" color={colors.muted}>
-              Phiên đang báo cáo:
-            </AppText>
-            <AppText kind="bold" numberOfLines={2} style={{ color: stitchTokens.wineDark }}>
-              {auction.title}
-            </AppText>
+        <View style={styles.sheetBody}>
+          <View style={styles.auctionBox}>
+            <AppText kind="small" color={colors.muted}>Phiên đang báo cáo</AppText>
+            <AppText kind="bold" numberOfLines={2} style={styles.auctionTitle}>{auction.title}</AppText>
           </View>
-          {pending && (
+
+          {pending ? (
             <Notice tone="warning">
-              Báo cáo trước chưa xác định được kết quả. Thử lại sẽ gửi đúng nội dung đó một lần nữa, không tạo hồ sơ trùng.
+              Báo cáo trước chưa xác định được kết quả. Thử lại sẽ gửi đúng nội dung đó, không tạo hồ sơ trùng.
             </Notice>
-          )}
-          <View style={{ gap: space.sm }}>
-            <AppText kind="label" color={colors.muted}>
-              BẠN GẶP VẤN ĐỀ GÌ?
-            </AppText>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+          ) : null}
+
+          <View style={styles.group}>
+            <AppText kind="label" color={stitchTokens.brownMuted}>Bạn gặp vấn đề gì?</AppText>
+            <View style={styles.chipWrap}>
               {auctionFlagCategories.map((c) => (
                 <Chip
                   key={c.id}
@@ -209,6 +188,7 @@ export function AuctionFlag({
               ))}
             </View>
           </View>
+
           <TextField
             label="Mô tả sự việc"
             multiline
@@ -219,33 +199,78 @@ export function AuctionFlag({
               setText(value);
               setInvalid(false);
             }}
-            hint={`${chosen?.hint ?? "Ghi mốc thời gian, số tiền hoặc thông tin giúp Admin đối chiếu."} Không gửi mật khẩu, OTP hoặc thông tin thẻ.`}
+            hint={`${chosen?.hint ?? "Ghi mốc thời gian, số tiền hoặc chi tiết giúp Admin đối chiếu."} Không gửi mật khẩu hoặc OTP.`}
             error={
               invalid && chosen && text.trim().length < AUCTION_FLAG_MIN_TEXT
-                ? `Mô tả ít nhất ${AUCTION_FLAG_MIN_TEXT} ký tự để Admin đối chiếu được.`
+                ? `Mô tả ít nhất ${AUCTION_FLAG_MIN_TEXT} ký tự để Admin đối chiếu.`
                 : undefined
             }
           />
-          <View
-            style={{
-              flexDirection: "row",
-              gap: space.sm,
-              alignItems: "flex-start",
-              backgroundColor: stitchTokens.roseWarmSurface,
-              padding: 10,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: stitchTokens.peachBorder,
-            }}
-          >
+
+          <View style={styles.disclaimerBox}>
             <Icon name="info" size={15} color={stitchTokens.wineDark} />
-            <AppText kind="small" color={colors.muted} style={{ flex: 1, lineHeight: 17 }}>
-              Báo cáo được gửi tới Admin, không tự dừng phiên hay hoàn tiền. Admin đối chiếu lượt giá, tiền cọc và khoản giữ rồi phản hồi qua thông báo. Mỗi phiên bạn có một hồ sơ đang mở.
+            <AppText kind="small" color={stitchTokens.brownMuted} style={styles.disclaimerText}>
+              Báo cáo gửi tới Admin để đối chiếu lượt giá và tiền giữ, không tự dừng phiên hay hoàn tiền.
             </AppText>
           </View>
-          {error && <Notice tone="error">{error}</Notice>}
+
+          {error ? <Notice tone="error">{error}</Notice> : null}
         </View>
       </Sheet>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { gap: space.xs },
+  openCaseBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: space.md,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.amberBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.orangeBorderSoft,
+  },
+  openCaseText: { flex: 1, gap: 2 },
+  openCaseTitle: { color: stitchTokens.wineDark, fontSize: 13 },
+  openCaseNote: { lineHeight: 18 },
+  triggerRow: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: space.md,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+  },
+  triggerDisabled: { opacity: 0.6 },
+  pressed: { opacity: 0.78 },
+  triggerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  triggerLabel: { fontSize: 14, color: stitchTokens.wineDark },
+  sheetBody: { gap: space.lg },
+  auctionBox: {
+    backgroundColor: stitchTokens.parchment,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    gap: 2,
+  },
+  auctionTitle: { color: stitchTokens.wineDark, fontSize: 15, lineHeight: 20 },
+  group: { gap: space.sm },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  disclaimerBox: {
+    flexDirection: "row",
+    gap: space.sm,
+    alignItems: "flex-start",
+    backgroundColor: stitchTokens.roseWarmSurface,
+    padding: 12,
+    borderRadius: 12,
+  },
+  disclaimerText: { flex: 1, lineHeight: 18 },
+});

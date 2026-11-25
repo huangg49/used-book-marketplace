@@ -33,6 +33,13 @@ describe("safe error presentation", () => {
       "retry",
     );
   });
+  it("maps ListingLimitReached 409 to quota guidance instead of generic conflict copy", () => {
+    const shown = presentError(
+      new ApiError(409, "ListingLimitReached", "raw server quota message"),
+    );
+    expect(shown.message).toContain("tối đa 5 bài");
+    expect(shown.recovery).toBe("none");
+  });
   it("retains only a bounded support identifier", () => {
     expect(
       presentError(new ApiError(500, "INTERNAL", "raw", "request-123"))

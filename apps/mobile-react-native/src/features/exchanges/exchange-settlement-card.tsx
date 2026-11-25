@@ -1,6 +1,7 @@
+import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { AppText, Icon, stitchTokens } from "../../core/ui";
+import { AppText, Button, Icon, stitchTokens } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
 
@@ -13,6 +14,7 @@ export function ExchangeSettlementCard({
   exchange,
   isInitiator,
 }: ExchangeSettlementCardProps) {
+  const router = useRouter();
   if (exchange.status !== "Completed") {
     return null;
   }
@@ -126,6 +128,7 @@ export function ExchangeSettlementCard({
           </View>
         </View>
       </View>
+      <Button title="Xem lịch sử giao dịch Ví" secondary onPress={() => router.push({ pathname: "/wallet", params: { section: "history" } })} />
     </View>
   );
 }

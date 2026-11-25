@@ -200,6 +200,7 @@ export const financeHoldHistoryKind = z.enum([
   "AuctionForfeit",
   "OrderRefund",
   "WithdrawalRefund",
+  "ExchangeCompensation",
 ]);
 
 export const financeHoldHistory = z.object({
@@ -208,6 +209,7 @@ export const financeHoldHistory = z.object({
   summary: z.object({
     totalRefunded: nonNegInt,
     totalForfeited: nonNegInt,
+    totalCompensated: nonNegInt.optional(),
     totalEvents: nonNegInt,
     byKind: z
       .array(
@@ -218,7 +220,7 @@ export const financeHoldHistory = z.object({
           amount: nonNegInt,
         }),
       )
-      .max(4),
+      .max(5),
   }),
   page: z.number().int().positive(),
   pageSize: z.literal(15),
@@ -229,7 +231,7 @@ export const financeHoldHistory = z.object({
         journalId: z.string(),
         kind: financeHoldHistoryKind,
         kindLabel: z.string(),
-        outcome: z.enum(["ReturnedToWallet", "Forfeited"]),
+        outcome: z.enum(["ReturnedToWallet", "Forfeited", "TransferredToCounterparty"]),
         holderId: z.string().nullable(),
         holderName: z.string(),
         holderEmail: z.string().nullable(),

@@ -691,7 +691,8 @@ function SupportDetail({
         ),
       enabled: !!owner,
       retry: false,
-      refetchInterval: 30_000,
+      refetchInterval: 6_000,
+      refetchIntervalInBackground: false,
     });
   const [value, setValue] = useState(""),
     [busy, setBusy] = useState(false),

@@ -43,6 +43,9 @@ RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và a
 
 ## Capabilities and Constraints
 
+- Trang chi tiết sách Member Web và React Native mở mua trực tiếp, chat hoặc
+  đề nghị đổi theo loại bài đăng. Nút thêm sách vào giỏ được ẩn theo quyết định
+  của nhóm. Thành viên vẫn mở được Giỏ sách từ Tài khoản để xử lý sách đã lưu.
 - Nhóm bỏ Forum/Cộng đồng sách ngày28/10/2026 theo [ADR0051](docs/adr/0051-remove-forum-from-project-scope.md).
   Không thiết kế/triển khai topic, bình luận hoặc kiểm duyệt Forum; chat giao dịch,
   wishlist/matching, thông báo và đánh giá vẫn theo SRS riêng.

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ApiError } from '@used-books/session-client'
+import { ApiError, buyerSaleFeeText } from '@used-books/session-client'
 import { ArrowLeft, ArrowUpRight, BookOpen, Check, CircleAlert, Clock3, Gavel, MapPin, PackageCheck, Wallet } from 'lucide-react'
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { AuctionPhoto } from '../components/AuctionGallery'
@@ -8,6 +8,7 @@ import { SupportLink } from '../features/support/SupportLink'
 import { formatRemaining, outcomeUnknown, useCountdown } from '../hooks/useAuctionClock'
 import { readAuctionNewest, useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
+import { useTransactionLive } from '../hooks/useTransactionLive'
 import { formatVnd, ROUTES } from '../lib/routes'
 import { getMyParticipation, getMyPointOrder, type PointOrder } from '../services/auctions'
 import { AuctionOrderPayment } from './AuctionOrderPayment'
@@ -46,7 +47,7 @@ function orderPresentation(order: PointOrder) {
         title: order.delivery?.demoOutForDeliveryAt ? 'Bưu tá đang đi giao sách cho bạn' : 'Sách đang trên đường đến bạn',
         note: 'Bạn sẽ xác nhận sau khi nhận sách để bắt đầu thời hạn kiểm tra.', deadline: order.delivery?.deliveryDeadline }
     case 'Inspection':
-      return { phase: 2, tone: 'action', actor: 'Đã nhận sách', title: 'Kiểm tra sách bạn đã nhận', note: 'Nếu sách khác biên bản, hãy báo trong thời gian kiểm tra. Nếu mọi thứ ổn, hệ thống sẽ tự hoàn tất đơn khi hết hạn.', deadline: order.inspectionDeadline }
+      return { phase: 2, tone: 'action', actor: 'Đã nhận sách', title: 'Kiểm tra sách bạn đã nhận', note: 'Tiền vẫn được giữ. Nếu sách khác biên bản, hãy báo trong hạn kiểm tra. Khi hết hạn và không có sự cố, hệ thống quyết toán cho người bán.', deadline: order.inspectionDeadline }
     case 'ResolutionPending': {
       const reasons = {
         ReportRejected: 'Bạn đã từ chối biên bản tại điểm.',
@@ -56,17 +57,17 @@ function orderPresentation(order: PointOrder) {
         DeliveryFailed: order.delivery?.deliveredAt ? 'Quản trị viên đang đối chiếu việc nhận sách.' : 'Hãng chưa giao được sách đến bạn.',
         ReturnOverdue: 'Đã hết thời hạn trả sách về điểm.',
       }
-      return { phase, tone: 'issue', actor: 'Đang chờ quản trị viên', title: 'Đơn đang được xem xét', note: `${order.resolution ? reasons[order.resolution.reason] : 'Hệ thống đã chuyển đơn cho quản trị viên.'} Tiền vẫn được giữ trong đơn trong lúc xử lý.` }
+      return { phase, tone: 'issue', actor: 'Đang chờ quản trị viên', title: 'Đơn đang được xem xét', note: `${order.resolution ? reasons[order.resolution.reason] : 'Hệ thống đã chuyển đơn cho quản trị viên.'} Tiền vẫn được giữ trong lúc xử lý. Chưa có ngày hoàn tiền.` }
     }
     case 'ReturnPending':
       return delivery && !order.collectedAt
         ? { phase, tone: 'issue', actor: 'Đang chờ hãng vận chuyển', title: 'Chờ hãng trả sách về điểm', note: 'Tiền được hoàn sau khi điểm nhận lại và đối chiếu sách.', deadline: order.returnDeadline }
         : { phase, tone: 'issue', actor: 'Bạn cần thao tác', title: 'Mang sách trả về điểm', note: `Mang sách về ${order.pointName} trong giờ mở cửa. Tiền được hoàn sau khi nhân viên nhận và đối chiếu sách.`, deadline: order.returnDeadline }
     case 'Completed':
-      return { phase: 2, tone: 'success', actor: 'Đã hoàn tất', title: 'Đơn đã hoàn tất', note: 'Bạn có thể xem lại thông tin đơn và đánh giá giao dịch.' }
+      return { phase: 2, tone: 'success', actor: 'Đã hoàn tất', title: 'Đơn đã hoàn tất', note: 'Tiền bán đã được chuyển vào Ví người bán.' }
     case 'Cancelled':
       return order.paidAt && order.refunded
-        ? { phase, tone: 'issue', actor: 'Đã hoàn tiền', title: 'Đơn đã đóng và tiền đã về ví', note: 'Bạn có thể đối chiếu giao dịch hoàn tiền trong ví.' }
+        ? { phase, tone: 'issue', actor: 'Đã hoàn tiền', title: 'Đơn đã đóng và tiền đã về Ví', note: `Đã hoàn ${formatVnd(order.amounts.buyerTotal)} về Ví của bạn.` }
         : { phase, tone: 'issue', actor: 'Đã hủy', title: 'Đơn đã bị hủy', note: 'Bạn có thể xem thông tin phiên và đối chiếu các khoản giữ trong ví.' }
     case 'PaymentExpired':
       return { phase: 0, tone: 'issue', actor: 'Đã quá hạn', title: 'Hết hạn thanh toán', note: 'Đơn này đã đóng. Bạn có thể kiểm tra các khoản giữ và hoàn trong ví.' }
@@ -103,13 +104,20 @@ function WinnerOrder({ id, ownerId }: { id: string; ownerId: string }) {
     retry: false,
   })
   useAuctionLive(id)
+  const orderKey = ['point-order', orderId, ownerId] as const
+  const orderLive = useTransactionLive('point-order', orderId, () => {
+    void queryClient.invalidateQueries({ queryKey: orderKey, exact: true })
+    void queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
+    void queryClient.invalidateQueries({ queryKey: ['wallet-summary'] })
+    void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+  })
   const order = useQuery({
-    queryKey: ['point-order', orderId, ownerId],
+    queryKey: orderKey,
     queryFn: () => getMyPointOrder(orderId!),
     enabled: !!orderId,
     retry: false,
     staleTime: 0,
-    refetchInterval: (query) => query.state.data && !terminal.has(query.state.data.state) ? 12_000 : false,
+    refetchInterval: (query) => query.state.data && !terminal.has(query.state.data.state) ? (orderLive ? 30_000 : 5_000) : false,
   })
   const current = order.data
   const step = current && orderPresentation(current)
@@ -186,13 +194,13 @@ function WinnerOrder({ id, ownerId }: { id: string; ownerId: string }) {
               {stale && <p role="alert" className={styles.warning}>Chưa cập nhật được đơn. Tải lại trước khi thao tác. <button type="button" onClick={() => void Promise.all([participation.refetch(), order.refetch()])}>Tải lại</button></p>}
               {actionable && <p role="status" className={styles.warning}>{expiredMessage}</p>}
               {current.state === 'AwaitingPayment' && (
-                <AuctionOrderPayment order={current} ownerId={ownerId} onChanged={refresh} paused={stale} />
+                <AuctionOrderPayment order={current} ownerId={ownerId} heldAmount={participation.data?.heldAmount} onChanged={refresh} paused={stale} />
               )}
               {!terminal.has(current.state) && current.state !== 'AwaitingPayment' && (
                 <PointOrderSteps order={current} onChanged={refresh} paused={stale || expired} />
               )}
               {current.state === 'Cancelled' && current.paidAt && current.refunded &&
-                <Link className={styles.textLink} to={ROUTES.wallet}>Đối chiếu trong ví <ArrowUpRight size={16} aria-hidden="true" /></Link>}
+                <Link className={styles.textLink} to={`${ROUTES.wallet}#lich-su-giao-dich`}>Xem lịch sử giao dịch Ví <ArrowUpRight size={16} aria-hidden="true" /></Link>}
               {['Inspection', 'Completed'].includes(current.state) && !stale && (
                 <div className={styles.review}><ReviewEntry type="PointOrder" id={current.id} version={current.version} /></div>
               )}
@@ -201,14 +209,16 @@ function WinnerOrder({ id, ownerId }: { id: string; ownerId: string }) {
               <h2 id="auction-order-summary">Thông tin đơn</h2>
               <dl>
                 <div><dt>Giá thắng</dt><dd>{formatVnd(current.amounts.bookPrice)}</dd></div>
-                {current.paidAt && current.fulfillmentMethod === 'CarrierOutbound' && <div><dt>Phí giao</dt><dd>{formatVnd(current.amounts.outboundFee)}</dd></div>}
+                {current.paidAt && <div><dt>Phí giao</dt><dd>{current.amounts.outboundFee > 0 ? formatVnd(current.amounts.outboundFee) : '0đ'}</dd></div>}
                 {current.paidAt && <div><dt>Tổng đã thanh toán</dt><dd>{formatVnd(current.amounts.buyerTotal)}</dd></div>}
+                {current.paidAt && !terminal.has(current.state) && <div><dt>Tiền đang giữ cho đơn</dt><dd>{formatVnd(current.amounts.buyerTotal)}</dd></div>}
                 <div><dt>Cách nhận</dt><dd>{!current.paidAt ? 'Chọn khi thanh toán' : current.fulfillmentMethod === 'CarrierOutbound' ? 'Giao tận nơi' : 'Nhận tại điểm'}</dd></div>
                 {terminal.has(current.state) && current.delivery?.trackingCode &&
                   <div><dt>Mã vận đơn</dt><dd><Link to={ROUTES.driver(current.delivery.trackingCode)}>{current.delivery.trackingCode}</Link></dd></div>}
                 {current.collectedAt && <div><dt>Đã nhận lúc</dt><dd>{stamp(current.collectedAt)}</dd></div>}
                 {current.closedAt && <div><dt>Đơn đóng lúc</dt><dd>{stamp(current.closedAt)}</dd></div>}
               </dl>
+              {current.paidAt && <p>{current.state === 'Cancelled' ? 'Đơn đã đóng. Không thu phí dịch vụ.' : buyerSaleFeeText(current.amounts.commissionBps)}</p>}
               {current.paidAt && current.state !== 'Fulfilling' && (
                 <details className={styles.report}><summary>Biên bản tại điểm</summary>
                   <p>Đã kiểm tra lúc {stamp(current.report.inspectedAt)}.</p>

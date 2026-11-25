@@ -3,7 +3,7 @@ import { createServerNow, serverClock, type ServerClock } from '@used-books/sess
 /**
  * Display clock only; new server data can start a new countdown after expiry.
  * Time comes from the shared server clock (round-trip corrected, monotonic);
- * before its first sample, from the offset of `serverTime`. Without
+ * before its first sample, by advancing the supplied `serverTime`. Without
  * `serverTime` it is a local countdown on the device date.
  */
 export function startServerCountdown(

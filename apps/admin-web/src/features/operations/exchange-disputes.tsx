@@ -34,6 +34,7 @@ import {
   PUBLIC_MEDIA_GC_MS,
   signedMediaStaleTime,
   exchangeReturnPhase,
+  isExchangeReturnOverdue,
   type CurrentUser,
   type DemoExchangeDeadline,
   type ExchangeReturnAction,
@@ -78,6 +79,7 @@ const normalizeSearch = (value: string) =>
     .trim();
 
 function disputeStatus(item: ExchangeDisputeItem) {
+  if (isExchangeReturnOverdue(item.returnResolution)) return "Quá hạn trả sách";
   return item.returnResolution
     ? exchangeReturnPhase[item.returnResolution.phase]
     : item.status === "ResolutionPending"
@@ -111,7 +113,8 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
         "/operations/exchanges/resolutions",
         exchangeDisputeResolutionsList,
       ),
-    refetchInterval: 30_000,
+    refetchInterval: 6_000,
+    refetchIntervalInBackground: false,
   });
   const rows = result.data;
   const [params, setParams] = useSearchParams();
@@ -599,6 +602,7 @@ function OperationsReturnActions({
   const due = (deadline?: string | null) =>
     !!deadline && Date.parse(deadline) <= now;
   const ready = r && due(r.appealDueAt) && !r.appeals.length;
+  const returnOverdue = isExchangeReturnOverdue(r, now);
   const actions: ExchangeReturnAction[] = [];
   if (verifying) actions.push("VerifyOutboundDelivery");
   if (item.canStartReturnResolution && (!r || r.phase === "NeedsReview"))
@@ -615,12 +619,7 @@ function OperationsReturnActions({
   ) {
     actions.push("Uphold", "SetAside");
   }
-  if (
-    r?.phase === "ReturnOrdered" &&
-    due(r.returnDueAt) &&
-    (ready || r.effectiveAt) &&
-    admin
-  )
+  if (admin && (returnOverdue || r?.phase === "ReturnIssue"))
     actions.push("OrderCompensation");
   if (r && ["ReturnInProgress", "ReturnIssue"].includes(r.phase) && admin) {
     actions.push("VerifyReturnDelivery");
@@ -666,6 +665,12 @@ function OperationsReturnActions({
       )}
       {(assigned || pending) && (
         <>
+          {returnOverdue && (
+            <Notice tone="info">
+              <strong>Quá hạn trả sách.</strong> Tiền vẫn được giữ. Admin phụ trách
+              đối chiếu bằng chứng để quyết định bồi thường.
+            </Notice>
+          )}
           {!privileged && (
             <Notice tone="info">
               Tổng khoản giữ vượt 300.000đ. Admin cần nhận phụ trách để ra quyết
@@ -714,7 +719,9 @@ function OperationsReturnActions({
                 submitLabel="Tua ngay"
                 confirmTitle="Xác nhận tua hạn demo?"
                 confirmBody={
-                  <p>Đóng thời hạn này để thử thao tác tiếp theo trên hồ sơ.</p>
+                  <p>{demo.deadline === "Return"
+                    ? "Chuyển hồ sơ sang Quá hạn trả sách. Sách và tiền vẫn được giữ để Admin xử lý tiếp."
+                    : "Đóng thời hạn này để thử thao tác tiếp theo trên hồ sơ."}</p>
                 }
                 build={() => ({
                   path: "/operations/exchanges/" + item.id + "/demo-advance",
@@ -734,7 +741,9 @@ function OperationsReturnActions({
                     );
                   return {
                     tone: "success",
-                    text: "Đã tua hạn demo. Xem thao tác tiếp theo trên hồ sơ.",
+                    text: demo.deadline === "Return"
+                      ? "Đã tua sang Quá hạn trả sách. Hồ sơ vẫn đang giữ tiền."
+                      : "Đã tua hạn demo. Xem thao tác tiếp theo trên hồ sơ.",
                     close: true,
                   };
                 }}
@@ -1174,7 +1183,7 @@ function InspectionDisputeActions({
       presets.push({ label: `50% (${money(half)}) · Giữ sách`, amount: half });
     }
     presets.push({
-      label: `Toàn phần (${money(baseComp.applied)}) · Hủy đơn`,
+      label: "Toàn phần · Yêu cầu trả sách",
       amount: baseComp.maxDamage,
     });
   }
@@ -1206,16 +1215,16 @@ function InspectionDisputeActions({
     CompensateRecipient: {
       label: compForRecipient.isPartial
         ? `1. Khấu trừ ${money(compForRecipient.applied)} cho ${recipientName} (Hai bên giữ sách)`
-        : `1. Bồi thường cho ${recipientName} (+${money(compForRecipient.ownerReceives)}) (Hủy đơn)`,
+        : `1. Yêu cầu trả sách cho ${recipientName}`,
       ruling: compForRecipient.isPartial
         ? `Xác định thiệt hại một phần trên sách do ${initiatorName} gửi (${money(compForRecipient.applied)}). Hai bên giữ sách đã nhận và hoàn tất trao đổi.`
-        : `Xác định sách do ${initiatorName} gửi không đạt thỏa thuận. Chấp nhận bồi thường toàn phần cho ${recipientName}.`,
+        : `Xác định sách do ${initiatorName} gửi không đạt thỏa thuận. Người giữ phải trả sách cho ${recipientName}.`,
       confirmTitle: compForRecipient.isPartial
         ? `Xác nhận khấu trừ ${money(compForRecipient.applied)} cho ${recipientName}?`
-        : `Xác nhận bồi thường cho ${recipientName}?`,
+        : `Xác nhận yêu cầu trả sách cho ${recipientName}?`,
       bookDisposition: compForRecipient.isPartial
         ? `Hai bên giữ sách đã nhận. Bên vi phạm (${initiatorName}) bồi thường thiệt hại ${money(compForRecipient.applied)} cho bên bị hại (${recipientName}) để bù đắp chênh lệch. Giao dịch đóng ở trạng thái Hoàn tất.`
-        : `Hủy giao dịch trao đổi. ${recipientName} giữ sách hỏng / không nhận sách. Bài đăng sách của ${initiatorName} bị đóng vĩnh viễn và ghi nhận vi phạm.`,
+        : `${initiatorName} phải gửi trả sách của ${recipientName}. Hai bài tiếp tục được giữ cho đến khi có kết quả trả sách hoặc quyết toán bồi thường.`,
       party1: {
         name: recipientName,
         role: compForRecipient.isPartial
@@ -1267,16 +1276,16 @@ function InspectionDisputeActions({
     CompensateInitiator: {
       label: compForInitiator.isPartial
         ? `3. Khấu trừ ${money(compForInitiator.applied)} cho ${initiatorName} (Hai bên giữ sách)`
-        : `3. Bồi thường cho ${initiatorName} (+${money(compForInitiator.ownerReceives)}) (Hủy đơn)`,
+        : `3. Yêu cầu trả sách cho ${initiatorName}`,
       ruling: compForInitiator.isPartial
         ? `Xác định thiệt hại một phần trên sách do ${recipientName} gửi (${money(compForInitiator.applied)}). Hai bên giữ sách đã nhận và hoàn tất trao đổi.`
-        : `Xác định sách do ${recipientName} gửi không đạt thỏa thuận. Chấp nhận bồi thường toàn phần cho ${initiatorName}.`,
+        : `Xác định sách do ${recipientName} gửi không đạt thỏa thuận. Người giữ phải trả sách cho ${initiatorName}.`,
       confirmTitle: compForInitiator.isPartial
         ? `Xác nhận khấu trừ ${money(compForInitiator.applied)} cho ${initiatorName}?`
-        : `Xác nhận bồi thường cho ${initiatorName}?`,
+        : `Xác nhận yêu cầu trả sách cho ${initiatorName}?`,
       bookDisposition: compForInitiator.isPartial
         ? `Hai bên giữ sách đã nhận. Bên vi phạm (${recipientName}) bồi thường thiệt hại ${money(compForInitiator.applied)} cho bên bị hại (${initiatorName}) để bù đắp chênh lệch. Giao dịch đóng ở trạng thái Hoàn tất.`
-        : `Hủy giao dịch trao đổi. ${initiatorName} giữ sách hỏng / không nhận sách. Bài đăng sách của ${recipientName} bị đóng vĩnh viễn và ghi nhận vi phạm.`,
+        : `${recipientName} phải gửi trả sách của ${initiatorName}. Hai bài tiếp tục được giữ cho đến khi có kết quả trả sách hoặc quyết toán bồi thường.`,
       party1: {
         name: initiatorName,
         role: compForInitiator.isPartial
@@ -1307,6 +1316,7 @@ function InspectionDisputeActions({
   const active = decisionMeta[decision];
   const currentComp =
     decision === "CompensateRecipient" ? compForRecipient : compForInitiator;
+  const startsReturn = isCompensate && !currentComp.isPartial;
 
   if (!bothReceived) {
     return (
@@ -1380,7 +1390,7 @@ function InspectionDisputeActions({
                     >
                       {currentComp.isPartial
                         ? "Khấu trừ từng phần · Hoàn tất trao đổi"
-                        : "Bồi thường toàn phần · Hủy & đóng bài đăng"}
+                        : "Toàn phần · Yêu cầu trả sách"}
                     </span>
                   </div>
 
@@ -1437,7 +1447,7 @@ function InspectionDisputeActions({
                     <p className={styles.damageHint}>
                       {currentComp.isPartial
                         ? `Khấu trừ ${money(parsedDamage)} dưới mức tối đa (${money(baseComp.maxDamage)}): hai bên giữ sách đã nhận, giao dịch đóng ở trạng thái Hoàn tất.`
-                        : `Mức tối đa (${money(baseComp.maxDamage)}): áp dụng bồi thường toàn phần (${money(currentComp.applied)}), hủy giao dịch và đóng bài đăng.`}
+                        : "Mức tối đa mở quy trình trả sách. Nếu quá hạn chưa trả, Admin có thể đối chiếu bằng chứng để quyết định bồi thường."}
                     </p>
                   )}
                 </div>
@@ -1461,6 +1471,9 @@ function InspectionDisputeActions({
                   </p>
                 </div>
 
+                {startsReturn ? (
+                  <p className={styles.muted}>Đang giữ {money(totalDeposit(item))} trong ký quỹ đến khi xử lý xong.</p>
+                ) : <>
                 <div className={styles.settlementHeader}>
                   <span>Dòng tiền sau phán quyết</span>
                   <span>Sổ cái</span>
@@ -1516,6 +1529,7 @@ function InspectionDisputeActions({
                 <div className={styles.settlementFooter}>
                   <span>{active.footerText}</span>
                 </div>
+                </>}
               </div>
 
               <label>
@@ -1541,7 +1555,9 @@ function InspectionDisputeActions({
               <p>
                 <strong>Phán quyết:</strong> {active.ruling}
               </p>
-              <div className={styles.settlementCard}>
+              {startsReturn ? (
+                <p>Hai bên có 48 giờ để kháng nghị. Tiền vẫn nằm trong ký quỹ trong thời gian trả sách.</p>
+              ) : <div className={styles.settlementCard}>
                 <div className={styles.settlementPartyBlock}>
                   <div className={styles.settlementPartyRow}>
                     <strong>{active.party1.name}</strong>
@@ -1577,7 +1593,7 @@ function InspectionDisputeActions({
                     {active.party2.detail}
                   </small>
                 </div>
-              </div>
+              </div>}
               <p>
                 <strong>Lý do ghi nhận:</strong> {note}
               </p>
@@ -1609,7 +1625,7 @@ function InspectionDisputeActions({
                   ? "Đã bác khiếu nại và hoàn tất trao đổi thành công. Tiền cọc đã được tất toán về ví."
                   : currentComp.isPartial
                     ? `Đã khấu trừ thiệt hại ${money(currentComp.applied)} và hoàn tất trao đổi thành công.`
-                    : "Đã ra phán quyết bồi thường toàn phần thành công. Tiền bồi thường đã được chuyển về ví.",
+                    : "Đã mở quy trình trả sách. Hai bên có thể xem thời hạn trong phiếu; tiền vẫn được giữ.",
               close: true,
             };
           }}
@@ -1684,7 +1700,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
       {outcome && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
           <Notice tone={outcome.tone}>{outcome.text}</Notice>
-          <div>
+          {item?.status !== "ResolutionPending" && <div>
             <Link
               to={{ pathname: queuePath, search }}
               style={{
@@ -1702,7 +1718,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
             >
               <ArrowLeft size={16} aria-hidden="true" /> Quay lại danh sách khiếu nại
             </Link>
-          </div>
+          </div>}
         </div>
       )}
       {result.isPending && <p role="status">Đang tải hồ sơ…</p>}
@@ -1826,9 +1842,9 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
                     userId={user.id}
                     parties={{
                       initiatorId: item.initiatorId,
-                      initiatorName: item.participants?.initiator?.displayName?.trim() || "Trần Minh Thư",
+                      initiatorName: item.participants?.initiator?.displayName?.trim(),
                       recipientId: item.recipientId,
-                      recipientName: item.participants?.recipient?.displayName?.trim() || "Đặng Hoàng Nam",
+                      recipientName: item.participants?.recipient?.displayName?.trim(),
                     }}
                     onAssignment={() => result.refetch()}
                   />
@@ -1846,11 +1862,9 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
             />
           )}
           {retained &&
-            (pending ||
-              (item?.status === "ResolutionPending" &&
-                (item.canStartReturnResolution ||
-                  (item.canVerifyOutboundDelivery &&
-                    user.roles.includes("ADMIN"))))) && (
+            (retained.returnResolution || retained.canStartReturnResolution ||
+              (retained.canVerifyOutboundDelivery && user.roles.includes("ADMIN"))) &&
+            (pending || item?.status === "ResolutionPending") && (
               <OperationsReturnActions
                 item={retained}
                 user={user}
@@ -2288,9 +2302,10 @@ function ReturnOverview({
   compensationAmount?: number | null;
 }) {
   const displayedComp = compensationAmount ?? r.compensation;
+  const returnOverdue = isExchangeReturnOverdue(r);
   return (
     <section className={styles.card} aria-label="Quyết định trả sách">
-      <h2>{exchangeReturnPhase[r.phase]}</h2>
+      <h2>{returnOverdue ? "Quá hạn trả sách" : exchangeReturnPhase[r.phase]}</h2>
       {r.note && <p className={styles.prose}>{r.note}</p>}
       <dl className={styles.facts}>
         {r.evidenceDueAt && r.phase === "Evidence" && (
@@ -2332,7 +2347,7 @@ function ReturnOverview({
           </div>
         )}
       </dl>
-      {r.returnDueAt && r.phase === "ReturnOrdered" && (
+      {r.returnDueAt && r.phase === "ReturnOrdered" && !returnOverdue && (
         <p className={styles.muted}>
           Nếu có kháng nghị, hạn tính lại khi Admin giữ quyết định.
         </p>

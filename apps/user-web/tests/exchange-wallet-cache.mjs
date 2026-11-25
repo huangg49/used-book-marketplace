@@ -144,7 +144,10 @@ try {
     }
     await action.click();
     const dialog = page.getByRole('dialog', { name: 'Đặt cọc mô phỏng', exact: true });
-    await expect(dialog.getByText(/100\.000/)).toBeVisible();
+    await expect(dialog.getByText('Số tiền sẽ giữ', { exact: true }).locator('..')).toContainText('50.000');
+    await expect(dialog.getByText('Ví mô phỏng khả dụng', { exact: true }).locator('..')).toContainText('100.000');
+    if (!baseline) await expect(dialog.getByText('Nếu đối tác quá hạn đặt cọc', { exact: true })).toBeVisible();
+    if (!baseline && mode === 'success') await dialog.screenshot({ path: path.join(out, `funding-review-${width}.png`) });
     const beforeCommand = walletReads;
     await dialog.getByRole('button', { name: 'Đặt cọc mô phỏng', exact: true }).click();
     await expect.poll(() => commands.length).toBe(1);

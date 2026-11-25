@@ -2,7 +2,6 @@ import { PhotoAutofillPanel } from "./photo-autofill-panel";
 import type { Media } from "./contracts";
 import { useEffect, useRef, useState } from "react";
 import {
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,10 +19,10 @@ import { useSession } from "../../core/session/session-provider";
 import { ApiError } from "../../core/api/session-client";
 import {
   AppText,
-  AppTextInput,
   Button,
   Icon,
   Notice,
+  SearchField,
   StatePanel,
   TextField,
   colors,
@@ -72,10 +71,12 @@ const books = z.object({
 });
 type OwnBook = z.infer<typeof ownBook>;
 
-export function useCatalogBook(id: string | null) {
-  const { client } = useSession();
-  return useQuery({
-    queryKey: ["listing-book", id],
+export function catalogBookQueryOptions(
+  client: ReturnType<typeof useSession>["client"],
+  id: string | null,
+) {
+  return {
+    queryKey: ["listing-book", id] as const,
     enabled: !!id,
     queryFn: async () => {
       try {
@@ -87,7 +88,12 @@ export function useCatalogBook(id: string | null) {
       }
     },
     staleTime: 60_000,
-  });
+  };
+}
+
+export function useCatalogBook(id: string | null) {
+  const { client } = useSession();
+  return useQuery(catalogBookQueryOptions(client, id));
 }
 
 export function BookIdentity({
@@ -282,8 +288,7 @@ export function CatalogPicker({
     cache = useQueryClient();
   const [entryMode, setEntryMode] = useState<"catalog" | "manual">("catalog");
   const [search, setSearch] = useState(""),
-    [term, setTerm] = useState(""),
-    [isFocused, setIsFocused] = useState(false);
+    [term, setTerm] = useState("");
   const [edit, setEdit] = useState<OwnBook | null>(null),
     [form, setForm] = useState(blank),
     [classification, setClassification] = useState<{
@@ -514,44 +519,13 @@ export function CatalogPicker({
                 Tìm cuốn sách trong thư viện
               </AppText>
 
-              {/* Big prominent search bar */}
-              <View
-                style={[styles.searchBar, isFocused && styles.searchBarFocused]}
-              >
-                <View style={styles.searchIconContainer}>
-                  <Icon
-                    name="search"
-                    size={22}
-                    color={
-                      isFocused ? stitchTokens.wine : stitchTokens.warmUmber
-                    }
-                  />
-                </View>
-                <AppTextInput
-                  placeholder="Nhập tên, tác giả hoặc ISBN..."
-                  placeholderTextColor={stitchTokens.softStone}
-                  value={search}
-                  onChangeText={setSearch}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  style={styles.searchInput}
-                  returnKeyType="search"
-                  autoCorrect={false}
-                />
-                {search.length > 0 ? (
-                  <Pressable
-                    onPress={() => setSearch("")}
-                    hitSlop={10}
-                    style={styles.searchClearBtn}
-                  >
-                    <Icon
-                      name="close"
-                      size={14}
-                      color={stitchTokens.warmUmber}
-                    />
-                  </Pressable>
-                ) : null}
-              </View>
+              {/* Clean native search field */}
+              <SearchField
+                label="Tìm cuốn sách trong thư viện"
+                placeholder="Nhập tên, tác giả hoặc ISBN..."
+                value={search}
+                onChangeText={setSearch}
+              />
 
               {term.trim().length >= 2 ? (
                 <>
@@ -650,48 +624,15 @@ export function CatalogPicker({
                   ) : null}
                 </>
               ) : (
-                <View style={{ gap: 4 }}>
-                  <AppText
-                    kind="small"
-                    color={stitchTokens.slateWarm}
-                    style={{ fontSize: 12 }}
-                  >
-                    Chọn đúng đầu sách để điền sẵn tên, tác giả và phân loại.
-                  </AppText>
-                  <Pressable
-                    onPress={() => setEntryMode("manual")}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
-                      marginTop: 4,
-                    }}
-                  >
-                    <AppText
-                      kind="small"
-                      color={stitchTokens.wine}
-                      style={{
-                        fontWeight: "700",
-                        textDecorationLine: "underline",
-                      }}
-                    >
-                      Không thấy sách? Tự nhập theo bìa →
-                    </AppText>
-                  </Pressable>
-                </View>
+                <AppText
+                  kind="small"
+                  color={stitchTokens.subtleGray}
+                  style={{ fontSize: 12, lineHeight: 18 }}
+                >
+                  Gõ ít nhất 2 ký tự để tìm đầu sách có sẵn, hoặc chuyển sang
+                  mục Tự nhập thông tin.
+                </AppText>
               )}
-
-              <AppText
-                style={{
-                  textAlign: "right",
-                  fontStyle: "italic",
-                  color: stitchTokens.wine,
-                  fontSize: 13,
-                  marginTop: space.xs,
-                }}
-              >
-                Mỗi cuốn sách, một câu chuyện.
-              </AppText>
             </View>
           ) : (
             /* Mode 2: Tự nhập thông tin */
@@ -1015,75 +956,39 @@ export function CatalogPicker({
 const styles = StyleSheet.create({
   entryChoiceRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderColor: stitchTokens.sandstone,
-    gap: 20,
-    marginBottom: 4,
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.warmBorder,
+    padding: 4,
+    gap: 4,
   },
   entryChoiceTab: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 2,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    minHeight: 38,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 9,
   },
   entryChoiceTabActive: {
-    borderBottomColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
   },
   entryChoiceText: {
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: "600",
     color: stitchTokens.warmUmber,
+    includeFontPadding: false,
   },
   entryChoiceTextActive: {
-    color: stitchTokens.wine,
-    fontWeight: "700",
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    minHeight: 56,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
-    borderRadius: 16,
-    backgroundColor: stitchTokens.offWhiteWarm,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 10 : 8,
-    shadowColor: stitchTokens.wine,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  searchBarFocused: {
-    borderColor: stitchTokens.wine,
-    backgroundColor: stitchTokens.white,
-    shadowOpacity: 0.1,
-    elevation: 2,
-  },
-  searchIconContainer: {
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: stitchTokens.darkWood,
-    paddingVertical: 0,
-    fontWeight: "500",
-  },
-  searchClearBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: stitchTokens.linenRose,
-    alignItems: "center",
-    justifyContent: "center",
+    color: stitchTokens.wineDark,
+    fontWeight: "800",
   },
   bookResultCard: {
     gap: space.sm,

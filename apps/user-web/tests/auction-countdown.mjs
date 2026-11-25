@@ -28,7 +28,9 @@ const auction = (i, scheduled = false) => ({
   state: 'Active', phase: scheduled ? 'Scheduled' : 'Live', startPrice: 50000,
   step: 10000, buyNowPrice: 200000, currentPrice: 70000, minimumBid: 80000,
   bidderCount: 2, startAt: iso(scheduled ? 2500 : -3600000),
-  endAt: iso(i === 1 ? 3601000 : i === 2 ? 2500 : 7200000 + i * 1000),
+  // Start half a second inside the expected display value so a measured RTT
+  // of a few milliseconds cannot move the first tick across a whole second.
+  endAt: iso(i === 1 ? 3601500 : i === 2 ? 2500 : 7200000 + i * 1000),
   pointName: 'Điểm QA', demoOnly: true,
   book: { revisionId: uuid(200 + i), authors: ['Tác giả QA'], condition: 'Good',
     pages: '', coverNote: '', notes: '', accessories: '', description: 'Dữ liệu giả', hasMissingPages: false, photos: [] },

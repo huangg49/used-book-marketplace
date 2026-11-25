@@ -1,5 +1,7 @@
 import {
   exchangeCommandIdentity,
+  exchangeServiceFeeText,
+  exchangeShippingCostText,
   pendingExchangeProposal,
   sendExchangeProposal,
 } from "@used-books/session-client";
@@ -483,7 +485,7 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
               </AppText>
               <AppText style={styles.composeDockAmount}>
                 {chosenMyListings.length > 0
-                  ? `Cọc dự kiến: ${formatVnd(totalMyValue + (diff > 0 ? diff : 0))}`
+                  ? `Dự kiến giữ từ Ví ${formatVnd(totalMyValue + Math.max(0, diff))}`
                   : "Chọn sách từ kệ bên trên"}
               </AppText>
             </View>
@@ -750,8 +752,11 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
                 lineHeight: 16,
               }}
             >
-              Gửi đề nghị chưa giữ sách hay trừ tiền ví. Tiền cọc được hoàn 100%
-              khi giao dịch hoàn tất.
+              {exchangeServiceFeeText} {exchangeShippingCostText}
+            </AppText>
+            <AppText kind="small" color={stitchTokens.subtleGray}>
+              Gửi đề nghị chưa giữ sách hay trừ tiền ví. Tiền cọc được hoàn khi
+              giao dịch hoàn tất bình thường.
             </AppText>
           </View>
         )}

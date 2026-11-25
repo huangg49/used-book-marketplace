@@ -26,6 +26,7 @@ export function Screen({
   scrollEventThrottle = 16,
   background,
   canvasColor,
+  headerExtendsToStatusBar = false,
 }: React.PropsWithChildren<{
   header?: React.ReactNode;
   footer?: React.ReactNode;
@@ -38,6 +39,7 @@ export function Screen({
   scrollEventThrottle?: number;
   background?: React.ReactNode;
   canvasColor?: string;
+  headerExtendsToStatusBar?: boolean;
 }>) {
   const inset = useSafeAreaInsets();
   const shelf = appearance === "shelf";
@@ -50,12 +52,13 @@ export function Screen({
       ? colorRoles.shelfCanvas
       : colors.paper);
   const navigationFooter = footerAppearance === "navigation";
+  const edgeToEdgeHeader = headerExtendsToStatusBar && !!header;
   return (
     <SafeAreaView
-      edges={home || detail ? ["bottom", "left", "right"] : undefined}
+      edges={home || detail || edgeToEdgeHeader ? ["bottom", "left", "right"] : undefined}
       style={{ flex: 1, backgroundColor: canvas }}
     >
-      <StatusBar style={home || shelf ? "light" : "dark"} />
+      <StatusBar style={home || shelf || edgeToEdgeHeader ? "light" : "dark"} />
       {background ? (
         <View
           pointerEvents="none"

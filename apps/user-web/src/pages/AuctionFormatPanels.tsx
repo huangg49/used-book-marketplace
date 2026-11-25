@@ -1,11 +1,12 @@
 // ADR 0076: action panels for Dutch and sealed-bid auctions. English auctions
 // keep BidPanel. The server stays authoritative for prices, funds and timing.
-import { createServerNow } from '@used-books/session-client'
+import { auctionRegistrationNotes, createServerNow } from '@used-books/session-client'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CalendarClock, CircleSlash, EyeOff, Minus, TrendingDown, Users, Wallet } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { TransactionAmount, TransactionNotes } from '../components/TransactionReview'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { commandOutcomeUnknown, formatRemaining, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
@@ -83,7 +84,9 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
   const count = auction.registeredCount ?? 0
   const registered = me?.registrationState === 'Registered'
   // ADR 0085: below the minimum, or a full auction until 72 h before it opens.
-  const withdrawable = canWithdrawRegistration(auction, me, createServerNow(serverTime)())
+  const serverNow = createServerNow(serverTime)
+  const now = serverNow()
+  const withdrawable = canWithdrawRegistration(auction, me, now)
   const fullUntil = count >= need && auction.fullWithdrawUntil
     ? new Date(auction.fullWithdrawUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
     : null
@@ -92,24 +95,52 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
   const [notice, setNotice] = useState<string | null>(null)
   const { busy, error, unknown, run } = useCommand(onChanged)
   const short = !registered && available !== null && deposit > available
+  const pct = Math.min(100, Math.round((Math.min(count, need) / Math.max(1, need)) * 100))
+  const metMin = count >= need
   return (
     <div className={styles.bidPanel}>
-      <div className={styles.notice}>
-        <strong><Users size={16} aria-hidden="true" /> {registered ? 'Bạn đã đăng ký phiên này' : 'Đăng ký để tham gia đấu giá'}</strong>
-        <p>
-          {auction.openMode ? openRuleText(auction) : `Phiên mở trả giá khi có ít nhất ${need} người đăng ký.`} Hiện có <b>{count}/{need}</b>.
+      <div className={styles.regBox}>
+        <div className={styles.regHeader}>
+          <strong className={styles.regTitle}>
+            <Users size={16} aria-hidden="true" />
+            <span>{registered ? 'Bạn đã đăng ký phiên này' : 'Đăng ký tham gia đấu giá'}</span>
+          </strong>
+          <span className={`${styles.regCount} ${metMin ? styles.regCountFull : ''}`}>
+            {count}/{need} người
+          </span>
+        </div>
+        <div
+          className={styles.regTrack}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={need}
+          aria-valuenow={Math.min(count, need)}
+          aria-label={`${count} trên ${need} người đã đăng ký`}
+        >
+          <span
+            className={`${styles.regFill} ${metMin ? styles.regFillFull : ''}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className={styles.regRule}>
+          {auction.openMode ? openRuleText(auction, now) : `Phiên mở trả giá khi có ít nhất ${need} người đăng ký.`}{' '}
           Phiên chỉ bán khi có ít nhất hai người trả giá.
         </p>
-        <progress max={need} value={Math.min(count, need)} aria-label={`${count} trên ${need} người đã đăng ký`} />
-        <p>
-          {registered
-            ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. ${withdrawable
-              ? fullUntil
-                ? `Phiên đã đủ người; bạn vẫn rút đăng ký và nhận lại tiền cọc được tới ${fullUntil} (72 giờ trước giờ mở).`
-                : 'Bạn có thể rút đăng ký và nhận lại tiền cọc khi phiên chưa đủ người.'
-              : 'Phiên đã đủ người nên tiền cọc được giữ đến khi phiên kết thúc.'}`
-            : `Tiền cọc ${formatVnd(deposit)} được giữ trong ví, hoàn lại khi bạn không thắng hoặc phiên không đủ người. Nếu thắng, tiền cọc tính vào giá phải trả; thắng mà không thanh toán đúng hạn thì không được hoàn.`}
-        </p>
+        <div className={styles.regDeposit}>
+          <div className={styles.regDepositRow}>
+            <span>{registered ? 'Tiền cọc đang giữ' : 'Tiền cọc tạm giữ'}</span>
+            <strong>{formatVnd(registered ? (me?.deposit ?? deposit) : deposit)}</strong>
+          </div>
+          <p className={styles.regDepositNote}>
+            {registered
+              ? withdrawable
+                ? fullUntil
+                  ? `Bạn vẫn có thể rút đăng ký và nhận lại cọc tới ${fullUntil} (72 giờ trước giờ mở).`
+                  : 'Bạn có thể rút đăng ký và nhận lại cọc khi phiên chưa đủ người.'
+                : 'Phiên đã đủ người nên tiền cọc được giữ đến khi phiên kết thúc.'
+              : 'Hoàn lại khi bạn không thắng hoặc phiên hủy; tính vào giá nếu thắng (không hoàn nếu quá hạn thanh toán).'}
+          </p>
+        </div>
       </div>
       {!registered && <Shortfall available={available} amount={deposit} />}
       {notice && <p className={styles.walletLine} role="status">{notice}</p>}
@@ -131,19 +162,22 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
       <ConfirmDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title={`Đặt cọc ${formatVnd(deposit)} để đăng ký?`}
-        description={`Ví giữ ${formatVnd(deposit)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${need} người (hoặc, khi đã đủ, tới 72 giờ trước giờ mở). Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc không được hoàn.`}
+        title="Đăng ký đấu giá"
         confirmText="Đặt cọc và đăng ký"
         isBusy={busy}
         onConfirm={() => void run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {
           setConfirming(false)
           setNotice(count + 1 >= need
-            ? auction.openMode === 'Scheduled' || (auction.openMode === 'ScheduledGrace' && Date.parse(openTimeOf(auction)) > Date.now())
+            ? auction.openMode === 'Scheduled' || (auction.openMode === 'ScheduledGrace' && Date.parse(openTimeOf(auction)) > serverNow())
               ? 'Đã đăng ký. Phiên đủ người và mở theo giờ đã hẹn.'
               : 'Đã đăng ký. Phiên đủ người và mở trả giá sau 10 phút (khung 23:00–07:00 thì lúc 07:00).'
             : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
         }).finally(() => setConfirming(false))}
-      />
+        stickyFooter
+      >
+        <TransactionAmount label="Cọc Ví sẽ giữ ngay" value={formatVnd(deposit)} />
+        <TransactionNotes notes={auctionRegistrationNotes(need)} />
+      </ConfirmDialog>
     </div>
   )
 }
@@ -192,19 +226,29 @@ export function SecondChancePanel({ auction, me, serverTime, onChanged }: PanelP
       <ConfirmDialog
         isOpen={confirming !== null}
         onClose={() => !busy && setConfirming(null)}
-        title={confirming === 'accept' ? `Mua với giá ${formatVnd(offer.price)}?` : 'Từ chối lời mời mua?'}
+        title={confirming === 'accept' ? 'Nhận lời mời mua' : 'Từ chối lời mời mua?'}
         description={confirming === 'accept'
-          ? `Ví giữ ${formatVnd(offer.price)} ngay và bạn thanh toán trong 24 giờ để nhận sách tại ${auction.pointName}. Không thanh toán đúng hạn thì lượt không thanh toán được ghi nhận.`
+          ? undefined
           : 'Phiên kết thúc và sách được trả lại người bán. Bạn không thể nhận lại lời mời này.'}
         confirmText={confirming === 'accept' ? 'Mua sách' : 'Không mua'}
         isBusy={busy}
+        confirmDisabled={deadline <= 0 || (confirming === 'accept' && short)}
         isDanger={confirming === 'decline'}
         onConfirm={() => void run(
           `second-chance:${confirming}:${version}`,
           (key) => confirming === 'accept' ? acceptSecondChance(auction.id, version, key) : declineSecondChance(auction.id, version, key),
           () => setConfirming(null),
         ).finally(() => setConfirming(null))}
-      />
+        stickyFooter
+      >
+        {confirming === 'accept' && <>
+          <TransactionAmount label="Số tiền Ví sẽ giữ ngay" value={formatVnd(offer.price)} />
+          <TransactionNotes notes={[
+            { label: 'Hạn thanh toán', detail: '24 giờ từ lúc nhận lời mời. Quá hạn sẽ bị ghi nhận vi phạm.' },
+            { label: 'Cách nhận', detail: `Nhận sách tại ${auction.pointName}.` },
+          ]} />
+        </>}
+      </ConfirmDialog>
     </div>
   )
 }
@@ -252,15 +296,21 @@ export function DutchPanel({ auction, me, serverTime, onChanged }: PanelProps) {
       <ConfirmDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title={`Mua với ${formatVnd(price)}?`}
-        description={`Nếu giá đã giảm khi lệnh tới máy chủ, bạn trả giá thấp hơn đó. Ví giữ số tiền này ngay; bạn thanh toán từ ví trong 24 giờ và tự nhận sách tại ${auction.pointName}. Không thể rút lại.`}
+        title="Chấp nhận giá đang giảm"
         confirmText="Chấp nhận giá"
         isBusy={busy}
         onConfirm={() => void run(`dutch:${price}`, (key) => acceptDutch(auction.id, price, key), () => {
           setConfirming(false)
           setNotice('Bạn đã thắng phiên. Hệ thống đang chốt đơn để bạn thanh toán từ ví.')
         }).finally(() => setConfirming(false))}
-      />
+        stickyFooter
+      >
+        <TransactionAmount label="Giá tối đa bạn chấp nhận" value={formatVnd(price)} />
+        <TransactionNotes notes={[
+          { label: 'Khi xác nhận', detail: 'Ví giữ giá tại thời điểm lệnh đến, kể cả khi giá vừa giảm. Lượt chấp nhận không thể rút lại.' },
+          { label: 'Thanh toán và nhận sách', detail: `Thanh toán trong 24 giờ và tự nhận tại ${auction.pointName}.` },
+        ]} />
+      </ConfirmDialog>
     </div>
   )
 }
@@ -330,14 +380,20 @@ export function SealedPanel({ auction, me, onChanged }: PanelProps) {
       <ConfirmDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title={`Gửi giá kín ${amount ? formatVnd(amount) : ''}?`}
-        description="Giá kín không thể rút hay hạ, chỉ có thể nâng. Ví giữ toàn bộ số tiền này đến khi phiên chốt; nếu thắng, bạn thanh toán từ ví trong 24 giờ."
+        title="Xác nhận giá kín"
         confirmText="Gửi giá kín"
         isBusy={busy}
         onConfirm={() => amount !== null && void run(`sealed:${amount}`, (key) => placeSealedBid(auction.id, amount, key), () => {
           setNotice(`Đã ghi nhận giá kín ${formatVnd(amount)}. Kết quả công bố khi phiên kết thúc.`)
         }).finally(() => setConfirming(false))}
-      />
+        stickyFooter
+      >
+        {amount !== null && <TransactionAmount label="Giá kín Ví sẽ giữ" value={formatVnd(amount)} />}
+        <TransactionNotes notes={[
+          { label: 'Khi gửi giá', detail: 'Ví giữ toàn bộ giá kín đến lúc chốt phiên. Giá kín chỉ có thể nâng.' },
+          { label: 'Nếu thắng', detail: 'Thanh toán từ Ví trong 24 giờ sau khi phiên kết thúc.' },
+        ]} />
+      </ConfirmDialog>
     </div>
   )
 }
@@ -355,7 +411,8 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
   const reached = count >= need
   const version = auction.version ?? 0
   const openTime = openTimeOf(auction)
-  const untilOpen = Date.parse(openTime) - createServerNow(serverTime)()
+  const now = createServerNow(serverTime)()
+  const untilOpen = Date.parse(openTime) - now
   const passed = untilOpen <= 0
   const frozen = untilOpen <= AUCTION_RESCHEDULE_FREEZE_MS
   // The dialog edits the open time and keeps the chosen length.
@@ -375,7 +432,7 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
     <div className={styles.bidPanel}>
       <div className={styles.notice}>
         <strong><Users size={16} aria-hidden="true" /> Đang chờ người đăng ký: {count}/{need}</strong>
-        <p>{openRuleText(auction)}</p>
+        <p>{openRuleText(auction, now)}</p>
         <progress max={need} value={Math.min(count, need)} aria-label={`${count} trên ${need} người đã đăng ký`} />
       </div>
       {notice && <p className={styles.walletLine} role="status">{notice}</p>}

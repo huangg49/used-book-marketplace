@@ -31,7 +31,7 @@ export function MemberNavigation({
   onSearchPress,
   onAuctionPress,
 }: {
-  current: MemberDestinationHref;
+  current?: MemberDestinationHref;
   onSearchPress?: () => void;
   onAuctionPress?: () => void;
 }) {

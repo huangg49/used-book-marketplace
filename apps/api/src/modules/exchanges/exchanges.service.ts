@@ -37,12 +37,13 @@ import { recordViolation } from '../auctions/member-violations.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import {
-  exchangeCompensationAmount,
   exchangeDisputeScope,
   exchangeMaxDamageDeduction,
   exchangeReturnChange,
+  exchangeSettlementScope,
   hasInspectionHandover,
   oneSidedReturn,
+  orderInspectionReturn,
   pendingOutboundDelivery,
   resolutionMessage,
   returnResolutionView,
@@ -230,7 +231,9 @@ export class ExchangesService {
     const deadlines = inspectionDeadlines(row);
     return {
       id: row._id,
-      ...(row.status === 'ResolutionPending' && oneSidedReturn(row, now) ? { canStartReturnResolution: true } : {}),
+      ...(row.status === 'ResolutionPending' && (oneSidedReturn(row, now) ||
+        row.returnResolution?.phase === 'NeedsReview' && exchangeSettlementScope(row))
+        ? { canStartReturnResolution: true } : {}),
       ...(pendingOutboundDelivery(row) ? { canVerifyOutboundDelivery: true } : {}),
       ...(row.outboundDeliveryVerification ? { outboundDeliveryVerification: {
         verifiedAt: row.outboundDeliveryVerification.verifiedAt.toISOString(),
@@ -1754,45 +1757,14 @@ export class ExchangesService {
         }
 
         const now = await tx.now();
+        const deadlines = inspectionDeadlines(exchange);
+        const deadline = isInitiator ? deadlines.initiator : deadlines.recipient;
+        if (deadline && now >= deadline) throw invalidState();
         const setFields: Record<string, unknown> = { updatedAt: now };
         if (isInitiator) {
           setFields.initiatorCompletedAt = now;
         } else {
           setFields.recipientCompletedAt = now;
-        }
-
-        const bothAcknowledged =
-          (isInitiator
-            ? exchange.recipientCompletedAt
-            : exchange.initiatorCompletedAt) != null;
-        // When both participants confirm inspection without dispute, mutual early settlement completes immediately.
-        const willBeBothCompleted = bothAcknowledged && !hasExchangeDispute(exchange);
-
-        if (willBeBothCompleted) {
-          setFields.status = 'Completed';
-          setFields.completedAt = now;
-
-          const updatedForSettlement: ExchangeDoc = {
-            ...exchange,
-            ...setFields,
-            status: 'Completed',
-            completedAt: now,
-          };
-          await this.ledger.settleExchange(tx, updatedForSettlement, now);
-
-          const initIds = this.getInitiatorListingIds(exchange);
-          const allIds = [...initIds, exchange.recipientListingId];
-          const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
-          for (const id of allIds) {
-            const listing = lockedMap.get(id)!;
-            await this.listings.project(
-              tx,
-              listing._id,
-              listing.version,
-              'Reserved',
-              'Exchanged',
-            );
-          }
         }
 
         const next = await tx.c.exchanges.findOneAndUpdate(
@@ -1805,28 +1777,6 @@ export class ExchangesService {
         );
         if (!next) throw conflict();
 
-        if (willBeBothCompleted) {
-          await notifyExchange(
-            tx,
-            next,
-            'ExchangeCompleted',
-            [next.initiatorId, next.recipientId],
-            now,
-          );
-        } else {
-          await notifyExchange(
-            tx,
-            next,
-            'ExchangeReceived',
-            [isInitiator ? next.recipientId : next.initiatorId],
-            now,
-            {
-              reason:
-                'Đối tác đã xác nhận nghiệm thu sách. Hãy kiểm tra và xác nhận để hoàn tất giao dịch sớm.',
-            },
-          );
-        }
-
         return {
           entityType: 'Exchange',
           entityId: next._id,
@@ -1834,7 +1784,7 @@ export class ExchangesService {
           version: next.revision,
           state: next.status as Wire['ExchangeStatus'],
           decidedAt: now,
-          event: willBeBothCompleted ? 'ExchangeCompleted' : 'ExchangeInspected',
+          event: 'ExchangeInspected',
           exchange: this.view(next),
         };
       },
@@ -2263,9 +2213,32 @@ export class ExchangesService {
               bothReceived &&
               requestedAmount !== undefined &&
               requestedAmount < maxDamage;
-            const appliedCompensation = isPartial
-              ? requestedAmount!
-              : exchangeCompensationAmount(scope);
+            if (!isPartial) {
+              next = await tx.c.exchanges.findOneAndUpdate(
+                { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
+                { $set: {
+                  resolutionDecision: body.decision,
+                  returnResolution: orderInspectionReturn(trimmedReason, actor._id, now),
+                  updatedAt: now,
+                }, $inc: { revision: 1 } },
+                { returnDocument: 'after' },
+              );
+              if (!next) throw conflict();
+              const message = 'Đã ra quyết định trả sách cho bên bị hại. Sách và tiền vẫn được giữ trong lúc chờ xử lý.';
+              await notifyExchange(tx, next, 'ExchangeDisputed', [next.initiatorId, next.recipientId], now, {
+                reason: message, resolutionUpdate: true,
+              });
+              await tx.c.exchange_messages.insertOne({
+                _id: randomUUID(), exchangeId: exchange._id, senderId: actor._id,
+                body: `${message}\nLý do: ${trimmedReason}`, sentAt: now,
+              });
+              return {
+                entityType: 'Exchange', entityId: next._id, initiatorListingId: next.initiatorListingId,
+                version: next.revision, state: next.status, decidedAt: now,
+                event: 'ExchangeReturnUpdated', reason: trimmedReason, exchange: this.view(next),
+              };
+            }
+            const appliedCompensation = requestedAmount!;
             const defaulterId = scope.holderId;
 
             const resolution: ExchangeReturnDoc = {
@@ -2288,74 +2261,26 @@ export class ExchangesService {
 
             const allIds = [...scope.ownerListingIds, ...scope.holderListingIds];
             const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
-            if (isPartial) {
-              for (const listingId of allIds) {
-                const listing = lockedMap.get(listingId);
-                if (listing && listing.trade === 'Reserved') {
-                  await this.listings.project(
-                    tx,
-                    listing._id,
-                    listing.version,
-                    'Reserved',
-                    'Exchanged',
-                  );
-                }
-              }
-            } else {
-              for (const listingId of scope.holderListingIds) {
-                const listing = lockedMap.get(listingId);
-                if (listing && listing.trade === 'Reserved') {
-                  await this.listings.project(
-                    tx,
-                    listing._id,
-                    listing.version,
-                    'Reserved',
-                    'ClosedUnavailable',
-                  );
-                }
-              }
-              for (const listingId of scope.ownerListingIds) {
-                const listing = lockedMap.get(listingId);
-                if (listing && listing.trade === 'Reserved') {
-                  await this.listings.project(
-                    tx,
-                    listing._id,
-                    listing.version,
-                    'Reserved',
-                    'Available',
-                  );
-                  await this.listings.requireRevision(tx, listing._id);
-                }
+            for (const listing of lockedMap.values()) {
+              if (listing.trade === 'Reserved') {
+                await this.listings.project(tx, listing._id, listing.version, 'Reserved', 'Exchanged');
               }
             }
 
             next = await tx.c.exchanges.findOneAndUpdate(
               { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
               {
-                $set: isPartial
-                  ? {
-                      status: 'Completed',
-                      completedAt: now,
-                      resolutionDecision: body.decision,
-                      resolutionCompensationAmount: appliedCompensation,
-                      resolutionReason: trimmedReason,
-                      resolvedBy: actor._id,
-                      resolvedAt: now,
-                      returnResolution: resolution,
-                      updatedAt: now,
-                    }
-                  : {
-                      status: 'Cancelled',
-                      cancelReason: 'DisputeResolvedRefund',
-                      resolutionDecision: body.decision,
-                      cancelledBy: 'Staff',
-                      cancelledAt: now,
-                      resolutionReason: trimmedReason,
-                      resolvedBy: actor._id,
-                      resolvedAt: now,
-                      returnResolution: resolution,
-                      updatedAt: now,
-                    },
+                $set: {
+                  status: 'Completed',
+                  completedAt: now,
+                  resolutionDecision: body.decision,
+                  resolutionCompensationAmount: appliedCompensation,
+                  resolutionReason: trimmedReason,
+                  resolvedBy: actor._id,
+                  resolvedAt: now,
+                  returnResolution: resolution,
+                  updatedAt: now,
+                },
                 $inc: { revision: 1 },
               },
               { returnDocument: 'after' },
@@ -2376,13 +2301,11 @@ export class ExchangesService {
             await notifyExchange(
               tx,
               next,
-              isPartial ? 'ExchangeCompleted' : 'ExchangeCancelled',
+              'ExchangeCompleted',
               [next.initiatorId, next.recipientId],
               now,
               {
-                reason: isPartial
-                  ? `Phán quyết của người phụ trách: Hoàn tất kèm khấu trừ thiệt hại ${amountLabel} cho ${targetLabel}. Lý do: ${trimmedReason}`
-                  : `Phán quyết của người phụ trách: Bồi thường ${amountLabel} cho ${targetLabel}. Lý do: ${trimmedReason}`,
+                reason: `Phán quyết của người phụ trách: Hoàn tất kèm khấu trừ thiệt hại ${amountLabel} cho ${targetLabel}. Lý do: ${trimmedReason}`,
               },
             );
 
@@ -2390,11 +2313,7 @@ export class ExchangesService {
               _id: randomUUID(),
               exchangeId: exchange._id,
               senderId: actor._id,
-              body: `[Phán quyết của người phụ trách]\nQuyết định: ${
-                isPartial
-                  ? `Hoàn tất kèm khấu trừ thiệt hại ${amountLabel} cho ${targetLabel}`
-                  : `Bồi thường toàn phần ${amountLabel} cho ${targetLabel}`
-              }\nLý do: ${trimmedReason}`,
+              body: `[Phán quyết của người phụ trách]\nQuyết định: Hoàn tất kèm khấu trừ thiệt hại ${amountLabel} cho ${targetLabel}\nLý do: ${trimmedReason}`,
               sentAt: now,
             });
           } else {
@@ -2472,9 +2391,10 @@ export class ExchangesService {
       const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
       if (assignment?.assigneeId !== actor._id) return view;
       const statements = await this.readDisputeStatements(tx, row);
-      const demoDeadline = actor.roles.some(({ role }) => role === 'ADMIN') &&
-        demoExchangeDeadlineEnabled(this.config, row)
+      const candidate = demoExchangeDeadlineEnabled(this.config, row)
         ? currentDemoDeadline(row, await tx.now(), true) : undefined;
+      const demoDeadline = candidate === 'Return' || actor.roles.some(({ role }) => role === 'ADMIN')
+        ? candidate : undefined;
       return { ...view, statements, ...(demoDeadline ? { demoDeadline } : {}) };
     });
   }
@@ -2515,7 +2435,8 @@ export class ExchangesService {
             : undefined;
           const resolution = verification ? undefined : await exchangeReturnChange(tx, row, actor, body, operations, now);
           const closing = resolution?.phase === 'Closed';
-          const scope = closing ? oneSidedReturn(row, now)! : undefined;
+          const scope = closing ? exchangeSettlementScope(row) : undefined;
+          if (closing && !scope) throw invalidState();
           if (scope && resolution) {
             const ownerSet = new Set(scope.ownerListingIds);
             const books = await this.lockAllListingsOrdered(tx, [
@@ -2524,7 +2445,8 @@ export class ExchangesService {
             ]);
             for (const listing of books.values()) {
               const isReturnedBook = ownerSet.has(listing._id);
-              const trade = isReturnedBook && resolution.outcome === 'Compensated' ? 'ClosedUnavailable' : 'Available';
+              const trade = (isReturnedBook ? resolution.outcome === 'Compensated' : scope.bothShipped)
+                ? 'ClosedUnavailable' : 'Available';
               await this.listings.project(tx, listing._id, listing.version, 'Reserved', trade);
               if (isReturnedBook && trade === 'Available') await this.listings.requireRevision(tx, listing._id);
             }
@@ -2548,7 +2470,7 @@ export class ExchangesService {
           if (!next) throw conflict();
           if (scope && resolution) {
             await this.ledger.settleExchangeReturn(tx, next, receiptId, now);
-            if (resolution.outcome === 'Compensated') {
+            if (resolution.outcome === 'Compensated' || scope.bothShipped) {
               await recordViolation(tx, {
                 userId: scope.holderId, kind: 'ExchangeReturnDefault',
                 sourceId: id, recordedAt: now, receiptId,
@@ -2602,9 +2524,11 @@ export class ExchangesService {
             this.participant(row, actor._id);
           } else {
             const assignment = await tx.c.exchange_evidence_assignments.findOne({ _id: id });
-            if (!actor.roles.some(({ role }) => role === 'ADMIN') || assignment?.assigneeId !== actor._id ||
+            const allowed = actor.roles.some(({ role }) => role === 'ADMIN' ||
+              (role === 'STAFF' && body.deadline === 'Return'));
+            if (!allowed || assignment?.assigneeId !== actor._id ||
               [row.initiatorId, row.recipientId].includes(actor._id))
-              throw new DomainError(403, 'FORBIDDEN', 'Chỉ Admin độc lập đang phụ trách mới được tua hạn hồ sơ demo.');
+              throw new DomainError(403, 'FORBIDDEN', 'Chỉ người phụ trách độc lập có quyền mới được tua hạn hồ sơ demo.');
           }
           return row;
         },

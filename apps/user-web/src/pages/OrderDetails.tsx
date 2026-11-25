@@ -5,8 +5,11 @@ import { ReviewEntry } from "../features/reviews/ReviewEntry";
 import {SupportLink} from '../features/support/SupportLink';
 import { BundleManifest } from "../components/BookBundle";
 import { ListingPhoto } from "../components/BookCard";
-import { ApiError, pendingOrderResponse } from "@used-books/session-client";
+import { ApiError, buyerSaleFeeText, directOrderHoldNotes, directSellerAmounts, pendingOrderResponse } from "@used-books/session-client";
+import { TransactionNotes } from "../components/TransactionReview";
+import { SaleFeeBreakdown } from "../components/SaleFeeBreakdown";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
@@ -15,7 +18,7 @@ import { session } from "../lib/session";
 import { buyNowError } from "../lib/buy-now-error";
 import { directDeliveryGuidance } from "../lib/direct-delivery-guidance";
 import { conditions } from "../lib/listing-labels";
-import { formatVnd } from "../lib/routes";
+import { formatVnd, ROUTES } from "../lib/routes";
 import { addressDetailLabel } from "../lib/address-detail-label";
 import { invalidateMemberWalletViews } from "../lib/wallet-cache";
 import { getPublicListing } from "../services/public-listings";
@@ -136,11 +139,17 @@ function AuthenticatedOrderDetails({
   embedded: boolean;
 }) {
   const cache = useQueryClient();
+  const orderKey = ["direct-order", ownerId, orderId] as const;
+  const live = useTransactionLive("order", orderId, () => {
+    for (const queryKey of [orderKey, ["order-shipment", ownerId, orderId], ["direct-orders", ownerId]]) {
+      void cache.invalidateQueries({ queryKey });
+    }
+  });
   const order = useQuery({
-    queryKey: ["direct-order", ownerId, orderId],
+    queryKey: orderKey,
     queryFn: () => getOrder(orderId),
     retry: false,
-    refetchInterval: query => query.state.data?.demoCompletionAt ? 1000 : 5000,
+    refetchInterval: query => query.state.data?.demoCompletionAt ? 1000 : live ? 30_000 : 5_000,
   });
   const shipment = useOrderShipment(orderId, order.data?.state === "Preparing");
 
@@ -252,6 +261,9 @@ function AuthenticatedOrderDetails({
   const awaitingPickup = o.state === "Preparing" && !!shipment.data;
   const currentStepIndex = getStepIndex(o.state, !!shipment.data);
   const stage = orderStage(o, awaitingPickup);
+  const sellerAmounts = o.role === "Seller" ? directSellerAmounts(o.amounts) : null;
+  const closedWithoutSale = o.state === "Cancelled" || o.state === "PaymentExpired";
+  const buyerRefund = o.role === "Buyer" ? o.refundedAmount ?? 0 : 0;
   async function startShippingDemo() {
     if (demoBusy || busy || pendingAction || inaccessible || (!o.demoCompletionEnabled && !demoAttempt.current)) return;
     const intent = demoAttempt.current ?? { key: crypto.randomUUID(), version: o.version };
@@ -393,15 +405,22 @@ function AuthenticatedOrderDetails({
                   <dt>Tiền sách</dt>
                   <dd>{formatVnd(o.amounts.bookPrice)}</dd>
                 </div>
-                {o.amounts.shippingFee > 0 && (<div className={styles.paymentRow}>
+                <div className={styles.paymentRow}>
                   <dt>Phí giao hàng</dt>
-                  <dd>{formatVnd(o.amounts.shippingFee)}</dd>
-                </div>)}
+                  <dd>{o.amounts.shippingFee > 0 ? formatVnd(o.amounts.shippingFee) : "Miễn phí"}</dd>
+                </div>
                 <div className={`${styles.paymentRow} ${styles.paymentTotalRow}`}>
                   <dt>Tổng thanh toán</dt>
                   <dd>{formatVnd(o.amounts.buyerTotal)}</dd>
                 </div>
               </dl>
+              {closedWithoutSale ? (
+                <p className={styles.escrowSubtitle}>Đơn đã đóng. Không thu phí dịch vụ.</p>
+              ) : sellerAmounts ? (
+                <SaleFeeBreakdown amounts={sellerAmounts} settled={o.state === "Completed"} />
+              ) : o.role === "Buyer" ? (
+                <p className={styles.escrowSubtitle}>{buyerSaleFeeText(o.amounts.commissionBps)}</p>
+              ) : null}
 
               {/* Thông báo ký quỹ bảo chứng an toàn */}
               <div className={styles.escrowNotice}>
@@ -411,8 +430,18 @@ function AuthenticatedOrderDetails({
                     <div>
                       <p className={styles.escrowTitle}>Đã thanh toán lúc {orderTime(o.paidAt)}</p>
                       <p className={styles.escrowSubtitle}>
-                        Tiền đang giữ cho đơn: <strong>{formatVnd(o.moneyHeld)}</strong>. Xem trạng thái đơn để đối chiếu kết quả xử lý.
+                        {o.state === "Completed" ? "Đã chuyển tiền bán vào Ví người bán."
+                          : o.state === "SettlementPending" ? "Đang xử lý hoàn tiền về Ví người mua."
+                            : closedWithoutSale ? "Đơn đã đóng."
+                              : <>Tiền đang giữ cho đơn <strong>{formatVnd(o.moneyHeld)}</strong>.</>}
                       </p>
+                      {o.state === "PendingSellerConfirmation" && o.sellerConfirmationDeadline && (
+                        <p className={styles.escrowSubtitle}>Chờ người bán xác nhận đến {orderTime(o.sellerConfirmationDeadline)}. Nếu hết hạn, hệ thống xử lý hoàn tiền.</p>
+                      )}
+                      {o.state === "ResolutionPending" && o.moneyHeld > 0 && <p className={styles.escrowSubtitle}>Tiền được giữ trong lúc xử lý sự cố. Chưa có ngày hoàn tiền.</p>}
+                      {buyerRefund > 0 && (
+                        <p className={styles.escrowSubtitle}>Đã hoàn <strong>{formatVnd(buyerRefund)}</strong> về Ví. <Link to={`${ROUTES.wallet}#lich-su-giao-dich`}>Xem lịch sử giao dịch Ví</Link></p>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -500,6 +529,7 @@ function AuthenticatedOrderDetails({
 
                   {o.role === "Buyer" ? (
                     <div className={styles.actionButtonGroup}>
+                      <TransactionNotes notes={directOrderHoldNotes(o.purchaseMode)} />
                       {(o.paymentEnabled || pendingAction === "pay") && (
                         <button
                           type="button"

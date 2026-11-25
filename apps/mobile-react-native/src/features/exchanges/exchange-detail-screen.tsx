@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { confirmExchangeRead, readExchange } from "@used-books/session-client";
 import {
   AppText,
@@ -22,6 +22,7 @@ import {
 } from "../../core/ui";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import { exchangeSchema } from "./contracts";
 import {
   ExchangeBookGroup,
@@ -58,6 +59,13 @@ export function ExchangeDetailScreen() {
   const foreground = useForeground();
   const { identity, ack } = useExchangeRecovery(id);
   const currentUserId = state.status === "authenticated" ? state.user.id : null;
+  const cache = useQueryClient();
+  const exchangeKey = ["exchange", id, identity] as const;
+  const live = useTransactionLive("exchange", id, foreground, () => {
+    for (const queryKey of [exchangeKey, ["exchange-messages", currentUserId, id], ["exchange-evidence", currentUserId, id]]) {
+      void cache.invalidateQueries({ queryKey });
+    }
+  });
 
   const [activePanel, setActivePanel] = useState<"proposal" | "chat">(
     initialTab,
@@ -68,10 +76,10 @@ export function ExchangeDetailScreen() {
   }>({ forLiveStep: "proposal", step: null });
 
   const exchangeQuery = useQuery({
-    queryKey: ["exchange", id, identity],
+    queryKey: exchangeKey,
     queryFn: () => readExchange(client, id, exchangeSchema),
     enabled: Boolean(id) && state.status === "authenticated" && foreground,
-    refetchInterval: 5000,
+    refetchInterval: live ? 30_000 : 5_000,
   });
 
   const exchange =

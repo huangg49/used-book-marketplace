@@ -106,13 +106,45 @@ an auction or a payment/acceptance window closes.
   REST response that carries a top-level `serverTime`. The request is timed and the
   stamp is placed at the round-trip midpoint; the shortest round trip wins, and a
   sample older than 2 min gives way to the next one.
-- Time advances on `performance.now()`, so changing the device date mid-countdown
-  has no effect. The device date is tracked beside it: if the two disagree by more
-  than 1 s (sleep paused the monotonic clock, or the date changed), the later
-  estimate is shown and the next response re-syncs.
-- `createServerNow(serverTime)` reads that clock and falls back to the offset of
-  `serverTime` only before the first timed response; cached data no longer adds its
-  age to a countdown. Without `serverTime` it stays a local device-date timer.
+- Time advances on `performance.now()`. As of 2026-11-24, disagreement with the
+  device date only permits a fresh response to replace the sample. A manual date
+  change leaves the countdown alone. If sleep pauses the monotonic clock, a new
+  timed REST response brings it current on return.
+- Before the first timed response, `createServerNow(serverTime)` advances the
+  snapshot's timestamp with monotonic elapsed time. Once synced, the shared
+  sample takes precedence over cached data. Without `serverTime` it uses the
+  device date for local timers.
 - Web `startServerCountdown`/`useCountdown`, the registration and schedule checks,
-  and RN auction, winner-step and home countdowns use it. Pushes do not feed it
-  (no round trip). At zero the web detail page shows "đang chốt kết quả" like RN.
+  and RN auction list, detail, winner-step and home countdowns use it. Detail on
+  web and RN also reads REST when the live socket connects or reconnects. On RN,
+  the list refreshes both open and scheduled listings at reconnect, and the
+  visible countdown resumes when the app returns to the foreground. The socket
+  watch acknowledgement updates auction state. At zero the detail shows
+  "đang chốt kết quả" while awaiting the server's final state.
+
+## Addendum 2026-11-24: two-member demo updates
+
+- Bid and auto-bid commands wake the affected auction after commit. A subscribed
+  detail page uses a 300 ms version check for changes from other processes
+  and the worker. The broad public list check still runs every 2 s. A failed
+  snapshot read remains eligible for the next pass.
+- Web and RN refresh the bidder's private standing as soon as the public price
+  or lifecycle changes. Wallet and notification refreshes still coalesce
+  during rapid bidding. Bid commands and access to private standing use REST.
+- Member Web joins the existing authenticated `/point-orders` channel for
+  the winner's order. Seller auction details on Web and RN also use it to
+  refresh their own intake and settlement preview. The point-order fallback
+  checks watched IDs every 400 ms.
+- Member Web and RN watch `/transactions` for exchange details and messages,
+  direct sale orders, purchase negotiation state and transaction lists. The
+  client sends `transaction:watch` with a resource kind (`exchange`, `order`,
+  `conversation` or `inbox`) and ID. The server
+  verifies the current Member session and participant or inbox owner, then
+  sends `transaction:changed` with only the resource reference. The client
+  re-reads the existing authorized REST views on a change or successful watch.
+  The server rechecks membership before every push.
+- Local commands wake the relevant watchers after a successful commit. A
+  400 ms version or message check covers watched resources from other processes.
+  Inbox watchers also check for new durable notifications. Reconnection and REST
+  fallback cover missed pushes. The live channels use the existing Mongo role
+  and schema.

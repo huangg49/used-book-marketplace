@@ -235,16 +235,16 @@ try {
   await p.getByRole("button", { name: /^Xem sách:/ }).first().waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 8);
   await fixture.setUserStatus(fixture.member.user.id, "ACTIVE");
-  await click("Xem thêm các tác phẩm gợi ý");
+  await p.clock.fastForward(30_001);
   await p
     .getByRole("button", { name: /^Xem sách:/ })
-    .first()
+    .nth(11)
     .waitFor();
   let offline = true;
   await p.route("**/api/v1/listings?*", (route) =>
     offline ? route.abort("failed") : route.continue(),
   );
-  await click("Xem thêm các tác phẩm gợi ý");
+  await p.clock.fastForward(30_001);
   const shelfError = p.getByText(/Chưa cập nhật được danh sách/);
   await shelfError.scrollIntoViewIfNeeded();
   await shelfError.waitFor();
@@ -370,7 +370,7 @@ try {
     .getByRole("button", { name: "Xóa bài đăng", exact: true })
     .click();
   await click("Thử lại yêu cầu này");
-  await p.getByRole("button", { name: "+ Đăng Sách Mới Ngay", exact: true }).waitFor();
+  await p.getByRole("button", { name: "Đăng sách mới", exact: true }).waitFor();
   assert.equal(
     await fixture.db.collection("mutation_receipts").countDocuments({
       listingId: ownerId,

@@ -1,14 +1,12 @@
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
-import { AppText } from "../../../core/ui/text";
-import { AppTextInput as TextInput, Button, Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { AppText, Button, Icon, TextField, formatVnd, radius, space, stitchTokens } from "../../../core/ui";
 import type { MyIntake } from "../contracts";
-import { withdrawable, EVIDENCE_MIN_LENGTH } from "../auctions-model";
+import { EVIDENCE_MIN_LENGTH, withdrawable } from "../auctions-model";
 
 export interface SendToAuctionActiveIntakesProps {
   readonly intakes: MyIntake[];
   readonly isLoading?: boolean;
   readonly onWithdraw: (intake: MyIntake) => void;
-  // ADR 0047: the seller publishes a Passed book now or at a later time.
   readonly onPublish: (intake: MyIntake) => void;
   readonly onOpenAuction: (auctionId: string) => void;
   readonly includeClosed?: boolean;
@@ -31,7 +29,7 @@ const intakeLabels: Record<MyIntake["state"], string> = {
   AwaitingDropoff: "Chờ bạn mang sách tới",
   Received: "Điểm đã nhận, chờ kiểm tra",
   NeedsEvidence: "Cần bổ sung bằng chứng",
-  Passed: "Đạt kiểm tra, sẵn sàng đăng phiên",
+  Passed: "Đạt kiểm tra, chờ người bán đăng phiên",
   Auctioning: "Đã tạo phiên đấu giá",
   Sold: "Người thắng đã thanh toán",
   ReclaimRequired: "Mời bạn tới nhận lại sách",
@@ -52,52 +50,27 @@ export function SendToAuctionActiveIntakes({
   evidenceError,
   disabled = false,
 }: SendToAuctionActiveIntakesProps) {
-  // Filter active intakes that are not completed/reclaimed
   const activeList = intakes.filter((i) => includeClosed || (i.state !== "Cancelled" && i.state !== "Reclaimed"));
 
   return (
-    <View style={styles.sectionContainer}>
-      {/* Header */}
-      <View style={styles.sectionHeaderRow}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Icon name="gavel" size={17} color={stitchTokens.wineDark} />
-          <AppText kind="bold" style={styles.sectionTitle}>
-            Sách đã gửi đấu giá
-          </AppText>
-        </View>
-        <View style={styles.countBadge}>
-          <AppText kind="small" style={styles.countBadgeText}>
-            {activeList.length} ấn bản lưu chuyển
-          </AppText>
-        </View>
-      </View>
-
-      {/* Loading state */}
-      {isLoading && (
-        <View style={styles.centerLoading}>
+    <View style={styles.root}>
+      {isLoading ? (
+        <View style={styles.centerBox}>
           <ActivityIndicator size="small" color={stitchTokens.wine} />
-          <AppText kind="small" style={{ color: stitchTokens.subtleGray, marginTop: 6 }}>
-            Đang tải danh sách hồ sơ...
-          </AppText>
+          <AppText kind="small" color={stitchTokens.brownMuted}>Đang tải danh sách hồ sơ…</AppText>
         </View>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && activeList.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Icon name="book" size={24} color={stitchTokens.subtleGray} />
-          <AppText kind="bold" style={styles.emptyTitle}>
-            Chưa có hồ sơ đấu giá
-          </AppText>
+      ) : activeList.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <View style={styles.emptyIcon}>
+            <Icon name="book" size={24} color={stitchTokens.wine} />
+          </View>
+          <AppText kind="bold" style={styles.emptyTitle}>Chưa có hồ sơ gửi sách nào</AppText>
           <AppText kind="small" style={styles.emptyDesc}>
-            Khi bạn gửi sách tới trạm tiếp nhận, trạng thái kiểm tra và phiên đấu giá sẽ hiển thị tại đây.
+            Khi bạn tạo đơn gửi sách tới điểm TP.HCM, tiến độ kiểm định và đăng phiên sẽ hiển thị tại đây.
           </AppText>
         </View>
-      )}
-
-      {/* Active Cards */}
-      {!isLoading && activeList.length > 0 && (
-        <View style={styles.cardsContainer}>
+      ) : (
+        <View style={styles.cards}>
           {activeList.map((item) => {
             const isWithdrawable = withdrawable(item.state);
             const isNeedsEvidence = item.state === "NeedsEvidence";
@@ -106,16 +79,14 @@ export function SendToAuctionActiveIntakes({
 
             return (
               <View key={item.id} style={styles.intakeCard}>
-                {/* 1. Status Bar */}
-                <View style={styles.cardHeaderRow}>
+                {/* 1. Status & Ref */}
+                <View style={styles.cardHeader}>
                   <View
                     style={[
                       styles.statusPill,
-                      item.state === "AwaitingDropoff" && styles.statusPillWarning,
-                      item.state === "NeedsEvidence" && styles.statusPillError,
-                      item.state === "Passed" && styles.statusPillSuccess,
-                      item.state === "Received" && styles.statusPillNeutral,
-                      item.state === "ReclaimRequired" && styles.statusPillNeutral,
+                      item.state === "AwaitingDropoff" && styles.pillWarn,
+                      item.state === "NeedsEvidence" && styles.pillError,
+                      item.state === "Passed" && styles.pillSuccess,
                     ]}
                   >
                     <Icon
@@ -131,168 +102,112 @@ export function SendToAuctionActiveIntakes({
                         item.state === "NeedsEvidence"
                           ? stitchTokens.flashRed
                           : item.state === "Passed"
-                            ? stitchTokens.verifiedGreen
+                            ? stitchTokens.likeNewGreen
                             : stitchTokens.wineDark
                       }
                     />
                     <AppText
-                      kind="small"
                       style={[
-                        styles.statusPillText,
-                        item.state === "NeedsEvidence" && { color: stitchTokens.flashRed },
-                        item.state === "Passed" && { color: stitchTokens.verifiedGreen },
+                        styles.statusText,
+                        item.state === "NeedsEvidence" && styles.statusTextError,
+                        item.state === "Passed" && styles.statusTextSuccess,
                       ]}
                     >
                       {intakeLabels[item.state]}
                     </AppText>
                   </View>
+                  <AppText kind="small" style={styles.refCode}>#{item.id.slice(0, 6).toUpperCase()}</AppText>
+                </View>
 
-                  <AppText kind="small" style={styles.refCodeText}>
-                    #{item.id.slice(0, 6).toUpperCase()}
+                {/* 2. Title & Pricing */}
+                <View style={styles.infoBlock}>
+                  <AppText kind="bold" style={styles.intakeTitle}>{item.title}</AppText>
+                  <AppText kind="small" color={stitchTokens.brownMuted} style={styles.metaText}>
+                    Khởi điểm {formatVnd(item.startPrice)} · Bước {formatVnd(item.step)}
                   </AppText>
-                </View>
-
-                {/* 2. Book Info */}
-                <View style={styles.bookInfoRow}>
-                  <View style={styles.bookThumbPlaceholder}>
-                    <Icon name="book" size={20} color={stitchTokens.wine} />
-                  </View>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <AppText kind="bold" numberOfLines={1} style={styles.intakeTitle}>
-                      {item.title}
-                    </AppText>
-                    <AppText kind="small" style={styles.intakeSub}>
-                      Khởi điểm: {formatVnd(item.startPrice)} • Bước: {formatVnd(item.step)}
-                    </AppText>
-
-                    {item.state === "AwaitingDropoff" && (
-                      <View style={styles.deadlineRow}>
-                        <Icon name="clock" size={12} color={stitchTokens.flashRed} />
-                        <AppText kind="small" style={styles.deadlineText}>
-                          Hạn chót mang sách: {formatDateTime(item.dropoffDeadline)}
-                        </AppText>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* 3. Inspection Examiner Note (if any) */}
-                {Boolean(item.inspectionNote) && (
-                  <View style={styles.examinerBox}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Icon name="info" size={13} color={stitchTokens.wineDark} />
-                      <AppText kind="bold" style={styles.examinerTitle}>
-                        Ghi chú kiểm tra tại điểm:
+                  {item.state === "AwaitingDropoff" ? (
+                    <View style={styles.deadlineRow}>
+                      <Icon name="clock" size={13} color={stitchTokens.flashRed} />
+                      <AppText kind="small" style={styles.deadlineText}>
+                        Mang sách tới điểm trước {formatDateTime(item.dropoffDeadline)}
                       </AppText>
                     </View>
-                    <AppText style={styles.examinerNoteText}>{item.inspectionNote}</AppText>
+                  ) : null}
+                </View>
+
+                {/* 3. Examiner Note */}
+                {Boolean(item.inspectionNote) ? (
+                  <View style={styles.noteBox}>
+                    <AppText kind="bold" style={styles.noteTitle}>Ghi chú kiểm tra tại điểm</AppText>
+                    <AppText kind="small" color={stitchTokens.deepCocoa} style={styles.noteBody}>
+                      {item.inspectionNote}
+                    </AppText>
                   </View>
-                )}
+                ) : null}
 
-                {/* 4. Evidence Input Area (for NeedsEvidence state) */}
-                {isNeedsEvidence && !item.evidenceSubmittedAt && (
-                  <View style={styles.evidenceInputSection}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                      <AppText kind="bold" style={{ fontSize: 12, color: stitchTokens.deepCocoa }}>
-                        Bằng chứng / Giải trình chi tiết
-                      </AppText>
-                      <AppText kind="small" style={{ color: stitchTokens.subtleGray }}>
-                        (Tối thiểu {EVIDENCE_MIN_LENGTH} ký tự)
-                      </AppText>
-                    </View>
-
-                    <TextInput
-                      value={currentEvidenceText}
-                      onChangeText={(text) => onChangeEvidenceText(item.id, text)}
-                      editable={!disabled}
-                      placeholder="Mô tả nguồn gốc, dấu riêng hoặc giấy tờ bạn có để đối chiếu..."
-                      placeholderTextColor={stitchTokens.subtleGray}
+                {/* 4. Evidence Submission */}
+                {isNeedsEvidence && !item.evidenceSubmittedAt ? (
+                  <View style={styles.evidenceBox}>
+                    <TextField
+                      label="Bằng chứng / Giải trình bổ sung"
                       multiline
-                      numberOfLines={3}
+                      value={currentEvidenceText}
+                      editable={!disabled}
                       maxLength={2000}
-                      style={[
-                        styles.evidenceInput,
-                        Boolean(currentError) && styles.evidenceInputError,
-                      ]}
+                      placeholder="Mô tả nguồn gốc, dấu riêng hoặc giấy tờ bạn có để đối chiếu…"
+                      onChangeText={(text) => onChangeEvidenceText(item.id, text)}
+                      hint={`Tối thiểu ${EVIDENCE_MIN_LENGTH} ký tự. Chỉ gửi được một lần duy nhất.`}
+                      error={currentError ?? undefined}
                     />
-
-                    {Boolean(currentError) && (
-                      <AppText kind="small" style={{ color: stitchTokens.flashRed, fontSize: 11 }}>
-                        {currentError}
-                      </AppText>
-                    )}
-
-                    <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 4 }}>
-                      <Pressable
-                        accessibilityRole="button"
-                        disabled={disabled}
-                        onPress={() => onSubmitEvidence(item, currentEvidenceText)}
-                        style={[styles.submitEvidenceBtn, disabled && { opacity: 0.6 }]}
-                      >
-                        <Icon name="check" size={14} color={stitchTokens.gold} />
-                        <AppText kind="bold" style={styles.submitEvidenceBtnText}>
-                          Gửi bằng chứng
-                        </AppText>
-                      </Pressable>
-                    </View>
+                    <Button
+                      wine
+                      title="Gửi bằng chứng"
+                      disabled={disabled}
+                      onPress={() => onSubmitEvidence(item, currentEvidenceText)}
+                    />
                   </View>
-                )}
+                ) : null}
 
-                {/* If evidence was already submitted */}
-                {isNeedsEvidence && Boolean(item.evidenceSubmittedAt) && (
-                  <View style={styles.evidenceSubmittedNote}>
-                    <Icon name="verified" size={14} color={stitchTokens.verifiedGreen} />
-                    <AppText kind="small" style={{ flex: 1, color: stitchTokens.deepCocoa }}>
-                      Đã gửi bằng chứng lúc {formatDateTime(item.evidenceSubmittedAt!)}. Nhân viên khác tại điểm đang thẩm định lại.
+                {isNeedsEvidence && Boolean(item.evidenceSubmittedAt) ? (
+                  <View style={styles.submittedBanner}>
+                    <Icon name="verified" size={15} color={stitchTokens.likeNewGreen} />
+                    <AppText kind="small" style={styles.submittedText}>
+                      Đã gửi bằng chứng lúc {formatDateTime(item.evidenceSubmittedAt!)}. Nhân viên tại điểm đang đối chiếu lại.
                     </AppText>
                   </View>
-                )}
+                ) : null}
 
-                {item.auctionId && (
-                  <Button
-                    wine
-                    secondary
-                    title="Xem phiên đấu giá"
-                    disabled={disabled}
-                    onPress={() => onOpenAuction(item.auctionId!)}
-                  />
-                )}
-                {/* 5. Publish (Passed) and Withdraw (Rút sách) */}
-                {isWithdrawable && (
-                  <View style={styles.cardActionsRow}>
-                    {item.state === "Passed" && (
-                      <Pressable
-                        accessibilityRole="button"
+                {/* 5. Actions with proper spacing and 48dp+ touch targets */}
+                {(item.auctionId || isWithdrawable) ? (
+                  <View style={styles.actionsCol}>
+                    {item.auctionId ? (
+                      <Button
+                        wine
+                        secondary
+                        title="Xem phiên đấu giá"
+                        disabled={disabled}
+                        onPress={() => onOpenAuction(item.auctionId!)}
+                      />
+                    ) : null}
+                    {isWithdrawable && item.state === "Passed" ? (
+                      <Button
+                        wine
+                        title="Đăng phiên"
                         disabled={disabled}
                         onPress={() => onPublish(item)}
-                        style={({ pressed }) => [
-                          styles.submitEvidenceBtn,
-                          pressed && { opacity: 0.8 },
-                          disabled && { opacity: 0.5 },
-                        ]}
-                      >
-                        <Icon name="gavel" size={14} color={stitchTokens.gold} />
-                        <AppText kind="bold" style={styles.submitEvidenceBtnText}>
-                          Đăng phiên
-                        </AppText>
-                      </Pressable>
-                    )}
-                    <Pressable
-                      accessibilityRole="button"
-                      disabled={disabled}
-                      onPress={() => onWithdraw(item)}
-                      style={({ pressed }) => [
-                        styles.withdrawBtn,
-                        pressed && { opacity: 0.8 },
-                        disabled && { opacity: 0.5 },
-                      ]}
-                    >
-                      <AppText kind="bold" style={styles.withdrawBtnText}>
-                        Rút sách khỏi đấu giá
-                      </AppText>
-                    </Pressable>
+                      />
+                    ) : null}
+                    {isWithdrawable ? (
+                      <Button
+                        destructive
+                        secondary
+                        title="Rút sách khỏi đấu giá"
+                        disabled={disabled}
+                        onPress={() => onWithdraw(item)}
+                      />
+                    ) : null}
                   </View>
-                )}
+                ) : null}
               </View>
             );
           })}
@@ -303,218 +218,103 @@ export function SendToAuctionActiveIntakes({
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    gap: 10,
-    paddingTop: 8,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: {
-    fontSize: 16,
-    color: stitchTokens.wineDark,
-  },
-  countBadge: {
-    backgroundColor: stitchTokens.roseWarmSurface,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-  },
-  countBadgeText: {
-    fontSize: 11,
-    color: stitchTokens.wineDark,
-    fontWeight: "700",
-  },
-  centerLoading: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  emptyContainer: {
+  root: { gap: space.md },
+  centerBox: { alignItems: "center", paddingVertical: space.section, gap: 8 },
+  emptyCard: {
     backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
-    padding: 20,
+    padding: space.xl,
     alignItems: "center",
-    gap: 6,
-  },
-  emptyTitle: {
-    fontSize: 14,
-    color: stitchTokens.deepCocoa,
-  },
-  emptyDesc: {
-    fontSize: 12,
-    color: stitchTokens.subtleGray,
-    textAlign: "center",
-    lineHeight: 17,
-  },
-  cardsContainer: {
-    gap: 12,
-  },
-  intakeCard: {
-    backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
-    padding: 14,
     gap: 10,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
   },
-  cardHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: stitchTokens.creamBg,
-  },
-  statusPillWarning: {
-    backgroundColor: stitchTokens.tagExchangeBg,
-  },
-  statusPillError: {
-    backgroundColor: stitchTokens.flashRedBg,
-  },
-  statusPillSuccess: {
-    backgroundColor: stitchTokens.likeNewGreenBg,
-  },
-  statusPillNeutral: {
-    backgroundColor: stitchTokens.creamBg,
-  },
-  statusPillText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  refCodeText: {
-    fontSize: 10,
-    color: stitchTokens.subtleGray,
-    fontWeight: "700",
-  },
-  bookInfoRow: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-  },
-  bookThumbPlaceholder: {
-    width: 44,
-    height: 56,
-    borderRadius: 6,
+  emptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: stitchTokens.roseWarmSurface,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
   },
-  intakeTitle: {
-    fontSize: 14,
-    color: stitchTokens.deepCocoa,
+  emptyTitle: { fontSize: 15, color: stitchTokens.wineDark, textAlign: "center" },
+  emptyDesc: { fontSize: 13, color: stitchTokens.brownMuted, textAlign: "center", lineHeight: 19 },
+
+  cards: { gap: space.md },
+  intakeCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: space.lg,
+    gap: space.md,
   },
-  intakeSub: {
-    fontSize: 12,
-    color: stitchTokens.subtleGray,
-  },
-  deadlineRow: {
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: 2,
+    justifyContent: "space-between",
+    gap: space.sm,
   },
-  deadlineText: {
-    fontSize: 11,
-    color: stitchTokens.flashRed,
-    fontWeight: "600",
-  },
-  examinerBox: {
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    padding: 10,
-    gap: 4,
-  },
-  examinerTitle: {
-    fontSize: 11,
-    color: stitchTokens.wineDark,
-  },
-  examinerNoteText: {
-    fontSize: 12,
-    color: stitchTokens.deepCocoa,
-    lineHeight: 17,
-  },
-  evidenceInputSection: {
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    padding: 10,
-    gap: 6,
-  },
-  evidenceInput: {
-    backgroundColor: stitchTokens.white,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    padding: 8,
-    fontSize: 12,
-    color: stitchTokens.deepCocoa,
-    textAlignVertical: "top",
-    minHeight: 64,
-  },
-  evidenceInputError: {
-    borderColor: stitchTokens.flashRed,
-  },
-  submitEvidenceBtn: {
+  statusPill: {
+    flexShrink: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: stitchTokens.wineDark,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: stitchTokens.parchment,
   },
-  submitEvidenceBtnText: {
+  pillWarn: { backgroundColor: stitchTokens.amberBg },
+  pillError: { backgroundColor: stitchTokens.flashRedBg },
+  pillSuccess: { backgroundColor: stitchTokens.likeNewGreenBg },
+  statusText: {
+    flexShrink: 1,
     fontSize: 12,
-    color: stitchTokens.white,
+    lineHeight: 16,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    includeFontPadding: false,
   },
-  evidenceSubmittedNote: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: stitchTokens.successLightBg,
-    borderRadius: 8,
-    padding: 8,
+  statusTextError: { color: stitchTokens.flashRed },
+  statusTextSuccess: { color: stitchTokens.likeNewGreen },
+  refCode: { color: stitchTokens.brownMuted, fontVariant: ["tabular-nums"], fontWeight: "600" },
+
+  infoBlock: { gap: 4 },
+  intakeTitle: { fontSize: 16, lineHeight: 22, color: stitchTokens.wineDark },
+  metaText: { fontVariant: ["tabular-nums"] },
+  deadlineRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  deadlineText: { color: stitchTokens.flashRed, fontWeight: "600" },
+
+  noteBox: {
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 12,
+    padding: 12,
+    gap: 4,
   },
-  cardActionsRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingTop: 6,
+  noteTitle: { fontSize: 12, color: stitchTokens.wineDark },
+  noteBody: { lineHeight: 18 },
+
+  evidenceBox: {
     borderTopWidth: 1,
-    borderTopColor: stitchTokens.cardBorder,
+    borderTopColor: stitchTokens.borderWarm,
+    paddingTop: space.md,
+    gap: space.sm,
   },
-  withdrawBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: stitchTokens.creamBg,
-    borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
+  submittedBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    borderRadius: 12,
+    padding: 12,
   },
-  withdrawBtnText: {
-    fontSize: 11,
-    color: stitchTokens.deepCocoa,
+  submittedText: { flex: 1, color: stitchTokens.deepCocoa, lineHeight: 18 },
+
+  actionsCol: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
+    paddingTop: space.md,
+    gap: space.sm,
   },
 });

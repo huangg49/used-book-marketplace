@@ -21,6 +21,7 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     '0087-exchange-legacy-funded-deposit-compat',
     '0088-exchange-dispute-compensation',
     '0089-restore-funded-exchange-terms',
+    '0090-sale-settlement-notification',
   );
   const client = await new MongoClient(testUrl(`local_demo_upgrade_${randomUUID().replaceAll('-', '')}_test`)).connect();
   const db = client.db();
@@ -32,7 +33,7 @@ it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting ap
     expect(await migrate(client, db)).toEqual([]);
     expect(await db.collection('_migrations').find({ _id: { $in: applied.map(m => m._id) } }).sort({ _id: 1 }).toArray()).toEqual(applied);
     expect(await db.collection('ledger_entries').find().sort({ _id: 1 }).toArray()).toEqual(entries);
-    for (const name of ['direct_orders', 'mutation_receipts', 'audit_events', 'local_demo_order_completions']) {
+    for (const name of ['direct_orders', 'mutation_receipts', 'audit_events', 'local_demo_order_completions', 'member_notifications']) {
       const [info] = await db.listCollections({ name }, { nameOnly: false }).toArray();
       if (!('options' in info) || !info.options) throw new Error('Expected collection metadata');
       expect(info.options.validator).toEqual(validatorOf(currentCollections().find(s => s.name === name)!));

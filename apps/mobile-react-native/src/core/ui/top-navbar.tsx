@@ -1,4 +1,5 @@
-import { type StyleProp, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
+import type { ReactNode } from "react";
+import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { WebBrandLogo } from "./brand-logo";
@@ -14,27 +15,25 @@ export interface TopNavbarProps {
   readonly onNotificationsPress?: () => void;
   readonly onMessagesPress?: () => void;
   readonly onLogoPress?: () => void;
-  readonly hasNotification?: boolean;
   readonly notificationCount?: number;
   readonly messageCount?: number;
   readonly subtitle?: string;
-  readonly style?: StyleProp<ViewStyle>;
+  readonly leading?: ReactNode;
+  readonly flushWithContent?: boolean;
 }
 
 /**
- * TopNavbar - Thanh điều hướng đỉnh đồng bộ phong cách rượu vang của Lật Lại
- * Bao gồm Logo cú Lật Lại, nhãn phụ (TP. HỒ CHÍ MINH) và 2 nút hành động:
- * Chuông thông báo (bên trái) + Tin nhắn (bên phải).
+ * Thanh trên của các tab thành viên. Trang chủ có thể thay logo bằng ô tìm sách.
  */
 export function TopNavbar({
   onNotificationsPress,
   onMessagesPress,
   onLogoPress,
-  hasNotification = true,
-  notificationCount,
+  notificationCount = 0,
   messageCount,
   subtitle = "TP. Hồ Chí Minh",
-  style,
+  leading,
+  flushWithContent = false,
 }: TopNavbarProps) {
   const insets = useSafeAreaInsets();
   const { width, fontScale } = useWindowDimensions();
@@ -46,8 +45,8 @@ export function TopNavbar({
     queryKey: ["purchase-conversations-inbox-count"],
     queryFn: () => getPurchaseConversations(client),
     enabled: Boolean(userId) && messageCount === undefined,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 4_000,
+    refetchInterval: 6_000,
   });
 
   const effectiveMessageCount =
@@ -93,61 +92,53 @@ export function TopNavbar({
     <View
       style={[
         styles.navbarRoot,
-        { paddingTop: Math.max(insets.top, 14), paddingBottom: 14 },
-        style,
+        flushWithContent && styles.flushWithContent,
+        { paddingTop: Math.max(insets.top, 14) },
       ]}
     >
       <View style={styles.navbarContent}>
-        {/* Brand Logo & Subtitle */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Về trang chủ Lật Lại"
-          onPress={handleLogoPress}
-          style={({ pressed }) => [
-            styles.brandGroup,
-            pressed && { opacity: 0.85 },
-          ]}
-        >
-          <WebBrandLogo scale={0.78} />
-          {subtitle && width >= 480 && fontScale < 1.3 ? (
-            <>
-              <View style={styles.divider} />
-              <AppText
-                kind="small"
-                style={{
-                  fontSize: 11,
-                  color: stitchTokens.gold,
-                  fontWeight: "600",
-                  letterSpacing: 0.8,
-                  textTransform: "uppercase",
-                }}
-              >
-                {subtitle}
-              </AppText>
-            </>
-          ) : null}
-        </Pressable>
+        <View style={styles.leading}>
+          {leading ?? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Về trang chủ Lật Lại"
+              onPress={handleLogoPress}
+              style={({ pressed }) => [
+                styles.brandGroup,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <WebBrandLogo scale={0.78} />
+              {subtitle && width >= 480 && fontScale < 1.3 ? (
+                <>
+                  <View style={styles.divider} />
+                  <AppText kind="small" style={styles.subtitle} numberOfLines={1}>
+                    {subtitle}
+                  </AppText>
+                </>
+              ) : null}
+            </Pressable>
+          )}
+        </View>
 
         {/* Right Action Icons: Bell & Message */}
         <View style={styles.rightActionsGroup}>
           {/* Nút Chuông Thông Báo */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Thông báo"
+            accessibilityLabel={notificationCount > 0 ? `Thông báo (${notificationCount} chưa đọc)` : "Thông báo"}
             onPress={handleNotificationsPress}
             style={({ pressed }) => [
               styles.iconButton,
               pressed && { opacity: 0.8 },
             ]}
           >
-            <Icon name="bell" size={19} color="#FFFFFF" />
-            {hasNotification ? (
-              <View style={styles.notificationDot}>
-                {notificationCount != null && notificationCount > 0 ? (
-                  <AppText kind="small" style={styles.badgeNumber}>
-                    {notificationCount > 9 ? "9+" : notificationCount}
-                  </AppText>
-                ) : null}
+            <Icon name="bell" size={20} color={stitchTokens.white} />
+            {notificationCount > 0 ? (
+              <View style={styles.countBadge} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                <AppText kind="small" style={styles.badgeNumber}>
+                  {notificationCount > 9 ? "9+" : notificationCount}
+                </AppText>
               </View>
             ) : null}
           </Pressable>
@@ -155,16 +146,16 @@ export function TopNavbar({
           {/* Nút Tin Nhắn */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Tin nhắn"
+            accessibilityLabel={effectiveMessageCount ? `Tin nhắn (${effectiveMessageCount} đề nghị cần phản hồi)` : "Tin nhắn"}
             onPress={handleMessagesPress}
             style={({ pressed }) => [
               styles.iconButton,
               pressed && { opacity: 0.8 },
             ]}
           >
-            <Icon name="message" size={18} color="#FFFFFF" />
+            <Icon name="message" size={20} color={stitchTokens.white} />
             {effectiveMessageCount != null && effectiveMessageCount > 0 ? (
-              <View style={styles.messageBadge}>
+              <View style={styles.countBadge} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
                 <AppText kind="small" style={styles.badgeNumber}>
                   {effectiveMessageCount > 9 ? "9+" : effectiveMessageCount}
                 </AppText>
@@ -181,6 +172,7 @@ const styles = StyleSheet.create({
   navbarRoot: {
     backgroundColor: stitchTokens.wine,
     paddingHorizontal: 16,
+    paddingBottom: 14,
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 18,
     shadowColor: "#000",
@@ -190,14 +182,24 @@ const styles = StyleSheet.create({
     elevation: 4,
     zIndex: 100,
   },
+  flushWithContent: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
   navbarContent: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 12,
+    minHeight: 48,
+  },
+  leading: {
+    flex: 1,
+    minWidth: 0,
   },
   brandGroup: {
     minHeight: 48,
-    flexShrink: 1,
+    alignSelf: "flex-start",
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -217,33 +219,32 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    backgroundColor: stitchTokens.whiteAlpha14,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
-  notificationDot: {
-    position: "absolute",
-    top: 7,
-    right: 7,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: stitchTokens.gold,
-    alignItems: "center",
-    justifyContent: "center",
+  subtitle: {
+    flexShrink: 1,
+    fontSize: 11,
+    color: stitchTokens.gold,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
-  messageBadge: {
+  countBadge: {
     position: "absolute",
     top: -2,
     right: -2,
     minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: stitchTokens.gold,
+    minHeight: 16,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.goldAccent,
+    borderWidth: 1,
+    borderColor: stitchTokens.wine,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 3,
+    paddingHorizontal: 4,
   },
   badgeNumber: {
     fontSize: 9,

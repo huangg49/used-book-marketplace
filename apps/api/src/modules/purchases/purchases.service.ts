@@ -82,6 +82,7 @@ export class PurchasesService {
           detail: destination.detail,
         },
         shippingFee: quote.shippingFee,
+        commissionBps: quote.commissionBps,
         expiresAt: quote.expiresAt.toISOString(),
       } : null,
       orderId: row.orderId,

@@ -1,34 +1,26 @@
 import React, { useState } from "react";
-import {
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, StatusBar, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, pendingSellerOrder } from "@used-books/session-client";
 import {
   AppText,
   Icon,
   StatePanel,
-  TopNavbar,
-  colorRoles,
-  colors,
-  radius,
   space,
   stitchTokens,
 } from "../../core/ui";
 import { useSession } from "../../core/session/session-provider";
+import { useForeground } from "../../core/hooks/use-foreground";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import { publicListing } from "../shelf/contracts";
-import {
-  getPurchaseConversation,
-} from "./purchase-conversation-service";
+import { getPurchaseConversation, sellerOrderPrice } from "./purchase-conversation-service";
 import { BookIdentityCard } from "./components/book-identity-card";
 import { BundleManifest } from "../bundles/bundle-manifest";
 import { AgreementSheetPanel } from "./components/agreement-sheet-panel";
 import { ChatMessagesPanel } from "./components/chat-messages-panel";
-import { MemberNavigation } from "../navigation/member-navigation";
+import { CreateOrderDialog } from "./components/create-order-dialog";
 
 interface ConversationScreenProps {
   id: string;
@@ -38,13 +30,25 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { client, state } = useSession();
+  const queryClient = useQueryClient();
   const [activePanel, setActivePanel] = useState<"sheet" | "chat">("sheet");
+  const [orderDialog, setOrderDialog] = useState<{
+    key: string;
+    afterCreate?: (price: number) => void;
+  }>();
+  const [confirmedOrder, setConfirmedOrder] = useState<string>();
+  const userId = state.status === "authenticated" ? state.user.id : undefined;
+  const foreground = useForeground();
+  const roomKey = ["purchase-conversation", id, userId] as const;
+  const live = useTransactionLive("conversation", id, foreground, () => {
+    void queryClient.invalidateQueries({ queryKey: roomKey, exact: true });
+  });
 
   const conversationQuery = useQuery({
-    queryKey: ["purchase-conversation", id],
+    queryKey: roomKey,
     queryFn: () => getPurchaseConversation(client, id),
-    enabled: Boolean(id) && state.status === "authenticated",
-    refetchInterval: 5000,
+    enabled: Boolean(id) && Boolean(userId),
+    refetchInterval: !foreground ? false : live ? 30_000 : 5_000,
   });
 
   const room = conversationQuery.data;
@@ -52,7 +56,10 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
   const listingQuery = useQuery({
     queryKey: ["public-listing", room?.listingId],
     queryFn: () =>
-      client.publicRequest(`/listings/${room!.listingId}?bundleSupport=whole-v1`, publicListing),
+      client.publicRequest(
+        `/listings/${room!.listingId}?bundleSupport=whole-v1`,
+        publicListing,
+      ),
     enabled: Boolean(room?.listingId),
   });
 
@@ -64,158 +71,181 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
         : room.buyer.displayName
       : "Đối tác";
 
+  const handleBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/chat-inbox");
+  };
+
   if (conversationQuery.isLoading) {
     return (
       <View style={styles.screenRoot}>
         <StatusBar barStyle="light-content" />
-        <TopNavbar
-          subtitle="HỘI THOẠI"
-          onNotificationsPress={() => router.push("/")}
-          onMessagesPress={() => router.push("/chat-inbox")}
-        />
-        <View style={styles.subHeader}>
+        <View
+          style={[
+            styles.wineHeader,
+            { paddingTop: Math.max(insets.top, 10) + 6 },
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Quay lại"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/chat-inbox");
-            }}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+            hitSlop={8}
+            onPress={handleBack}
+            style={({ pressed }) => [
+              styles.headerCircleBtn,
+              pressed && styles.pressed,
+            ]}
           >
-            <Icon name="back" size={18} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Quay lại</AppText>
+            <Icon name="back" size={19} color={stitchTokens.white} />
           </Pressable>
-          <AppText style={styles.subHeaderTitle}>Đang tải cuộc trò chuyện…</AppText>
-          <View style={{ width: 60 }} />
+          <View style={styles.headerTitleCol}>
+            <AppText style={styles.headerTitle}>Đang mở cuộc trao đổi</AppText>
+            <AppText style={styles.headerSubtitle}>Vui lòng chờ trong giây lát</AppText>
+          </View>
+          <View style={styles.headerSpacer} />
         </View>
-        <View style={{ flex: 1, justifyContent: "center" }}>
-          <StatePanel loading title="Đang mở cuộc trò chuyện & phiếu thỏa thuận…" />
-        </View>
-        <View
-          style={[
-            styles.footerContainer,
-            { paddingBottom: Math.max(insets.bottom, 8) },
-          ]}
-        >
-          <MemberNavigation current="/account" />
+        <View style={styles.centerWrap}>
+          <StatePanel
+            loading
+            title="Đang tải hội thoại và phiếu thỏa thuận…"
+          />
         </View>
       </View>
     );
   }
 
-  if (conversationQuery.isError || !room) {
+  if (
+    !room ||
+    !userId ||
+    (conversationQuery.error instanceof ApiError &&
+      [401, 403, 404].includes(conversationQuery.error.status))
+  ) {
     return (
       <View style={styles.screenRoot}>
         <StatusBar barStyle="light-content" />
-        <TopNavbar
-          subtitle="HỘI THOẠI"
-          onNotificationsPress={() => router.push("/")}
-          onMessagesPress={() => router.push("/chat-inbox")}
-        />
-        <View style={styles.subHeader}>
+        <View
+          style={[
+            styles.wineHeader,
+            { paddingTop: Math.max(insets.top, 10) + 6 },
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Quay lại"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/chat-inbox");
-            }}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+            hitSlop={8}
+            onPress={handleBack}
+            style={({ pressed }) => [
+              styles.headerCircleBtn,
+              pressed && styles.pressed,
+            ]}
           >
-            <Icon name="back" size={18} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Quay lại</AppText>
+            <Icon name="back" size={19} color={stitchTokens.white} />
           </Pressable>
-          <AppText style={styles.subHeaderTitle}>Lỗi kết nối</AppText>
-          <View style={{ width: 60 }} />
+          <View style={styles.headerTitleCol}>
+            <AppText style={styles.headerTitle}>Không mở được hội thoại</AppText>
+            <AppText style={styles.headerSubtitle}>Kiểm tra lại kết nối</AppText>
+          </View>
+          <View style={styles.headerSpacer} />
         </View>
-        <View style={{ flex: 1, justifyContent: "center" }}>
+        <View style={styles.centerWrap}>
           <StatePanel
             title="Không tìm thấy cuộc trao đổi"
             message="Cuộc trao đổi này không tồn tại hoặc bạn không có quyền truy cập."
             action={{
-              label: "Quay lại danh sách tin nhắn",
-              onPress: () => router.push("/chat-inbox"),
+              label: "Quay lại danh sách giao dịch",
+              onPress: () => router.replace("/chat-inbox"),
             }}
           />
-        </View>
-        <View
-          style={[
-            styles.footerContainer,
-            { paddingBottom: Math.max(insets.bottom, 8) },
-          ]}
-        >
-          <MemberNavigation current="/account" />
         </View>
       </View>
     );
   }
+
+  const seller = room.seller.id === userId;
+  const dialogKey = `${userId}:${room.id}`;
+  const canOpenOrder = seller && !room.orderId && confirmedOrder !== dialogKey &&
+    (Boolean(pendingSellerOrder(client, room.id)) ||
+      sellerOrderPrice(room, listingQuery.data?.revisionId) != null);
+  const refresh = () => {
+    void conversationQuery.refetch();
+    void listingQuery.refetch();
+  };
+  const openCreateOrder = canOpenOrder
+    ? (afterCreate?: (price: number) => void) => setOrderDialog({ key: dialogKey, afterCreate })
+    : undefined;
 
   return (
     <View style={styles.screenRoot}>
       <StatusBar barStyle="light-content" />
 
-      {/* 1. Header Đỉnh Đỏ Rượu Vang TopNavbar */}
-      <TopNavbar
-        subtitle={isExchange ? "TRAO ĐỔI SÁCH" : "THƯƠNG LƯỢNG MUA"}
-        onNotificationsPress={() => router.push("/")}
-        onMessagesPress={() => router.push("/chat-inbox")}
-      />
-
-      {/* 2. Subheader điều hướng Quay lại & Đối tác */}
-      <View style={styles.subHeader}>
+      {/* 1. Unified Deep-Wine Curved Header */}
+      <View
+        style={[
+          styles.wineHeader,
+          { paddingTop: Math.max(insets.top, 10) + 6 },
+        ]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Quay lại"
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace("/chat-inbox");
-          }}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+          hitSlop={8}
+          onPress={handleBack}
+          style={({ pressed }) => [
+            styles.headerCircleBtn,
+            pressed && styles.pressed,
+          ]}
         >
-          <Icon name="back" size={18} color={stitchTokens.wineDark} />
-          <AppText style={styles.backLabel}>Quay lại</AppText>
+          <Icon name="back" size={19} color={stitchTokens.white} />
         </Pressable>
 
-        <View style={styles.subHeaderCenter}>
-          <AppText numberOfLines={1} style={styles.subHeaderTitle}>
+        <View style={styles.headerTitleCol}>
+          <AppText numberOfLines={1} style={styles.headerTitle}>
             {isExchange ? "Trao đổi sách" : "Thương lượng mua"}
           </AppText>
-          <AppText numberOfLines={1} style={styles.subHeaderSubtitle}>
+          <AppText numberOfLines={1} style={styles.headerSubtitle}>
             Cùng {otherName}
           </AppText>
         </View>
 
-        <View style={{ width: 60 }} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Xem chi tiết bài đăng sách"
+          hitSlop={8}
+          onPress={() =>
+            router.push({
+              pathname: "/book",
+              params: { id: room.listingId },
+            })
+          }
+          style={({ pressed }) => [
+            styles.headerCircleBtn,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Icon name="book" size={18} color={stitchTokens.gold} />
+        </Pressable>
       </View>
 
-      {/* 2. Banner nhận diện ấn phẩm sách */}
-      <BookIdentityCard
-        listing={listingQuery.data}
-        room={room}
-        isExchange={isExchange}
-      />
-      <BundleManifest bundle={listingQuery.data?.bundle}/>
-
-      {/* 3. Thanh chuyển đổi 2 Panel (Segmented Tabs Bar) */}
+      {/* 2. Segmented Switcher: Phiếu thỏa thuận vs Hội thoại */}
       <View style={styles.segmentedTabBar} role="tablist">
         <Pressable
           accessibilityRole="tab"
           accessibilityLabel="Xem Phiếu thỏa thuận"
           accessibilityState={{ selected: activePanel === "sheet" }}
-          style={[
+          style={({ pressed }) => [
             styles.segmentTab,
             activePanel === "sheet" && styles.segmentTabActive,
+            pressed && styles.pressed,
           ]}
           onPress={() => setActivePanel("sheet")}
         >
           <Icon
             name="ticket"
-            size={16}
+            size={15}
             color={
               activePanel === "sheet"
-                ? stitchTokens.wineDark
-                : colors.muted
+                ? stitchTokens.white
+                : stitchTokens.deepCocoa
             }
           />
           <AppText
@@ -232,19 +262,20 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
           accessibilityRole="tab"
           accessibilityLabel="Xem Hội thoại chat"
           accessibilityState={{ selected: activePanel === "chat" }}
-          style={[
+          style={({ pressed }) => [
             styles.segmentTab,
             activePanel === "chat" && styles.segmentTabActive,
+            pressed && styles.pressed,
           ]}
           onPress={() => setActivePanel("chat")}
         >
           <Icon
             name="message"
-            size={16}
+            size={15}
             color={
               activePanel === "chat"
-                ? stitchTokens.wineDark
-                : colors.muted
+                ? stitchTokens.white
+                : stitchTokens.deepCocoa
             }
           />
           <AppText
@@ -255,43 +286,67 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
           >
             Hội thoại
           </AppText>
-          <View style={styles.liveIndicator} />
+          <View
+            style={[
+              styles.liveIndicator,
+              activePanel === "chat" && styles.liveIndicatorActive,
+            ]}
+          />
         </Pressable>
       </View>
 
-      {/* 4. Nội dung Panel hiển thị tương ứng */}
-      <View style={styles.bodyWrapper}>
+      {/* 3. Book Context Card (compact strip in Chat tab so messages get room) */}
+      <BookIdentityCard
+        listing={listingQuery.data}
+        room={room}
+        isExchange={isExchange}
+        compact={activePanel === "chat"}
+      />
+      {activePanel === "sheet" && (
+        <BundleManifest bundle={listingQuery.data?.bundle} />
+      )}
+
+      {/* 4. Focused Workspace Body (no bottom 5-tab bar blocking keyboard) */}
+      <View
+        style={[
+          styles.bodyWrapper,
+          { paddingBottom: Math.max(insets.bottom, 6) },
+        ]}
+      >
         {activePanel === "sheet" ? (
           <AgreementSheetPanel
             room={room}
             listing={listingQuery.data}
-            onRefresh={() => {
-              void conversationQuery.refetch();
-              void listingQuery.refetch();
-            }}
+            onRefresh={refresh}
+            onOpenCreateOrder={openCreateOrder}
           />
         ) : (
           <ChatMessagesPanel
             room={room}
             listing={listingQuery.data}
-            onRefresh={() => {
-              void conversationQuery.refetch();
-              void listingQuery.refetch();
-            }}
+            onRefresh={refresh}
             onRefreshEvents={() => void conversationQuery.refetch()}
+            onOpenCreateOrder={openCreateOrder}
           />
         )}
       </View>
-
-      {/* 6. Thanh Điều Hướng Đáy Navbar (MemberNavigation 5 tabs) */}
-      <View
-        style={[
-          styles.footerContainer,
-          { paddingBottom: Math.max(insets.bottom, 8) },
-        ]}
-      >
-        <MemberNavigation current="/account" />
-      </View>
+      {seller && orderDialog?.key === dialogKey ? (
+        <CreateOrderDialog
+          key={dialogKey}
+          visible
+          room={room}
+          listingRevision={listingQuery.data?.revisionId}
+          listingPrice={listingQuery.data?.salePrice ?? undefined}
+          onClose={() => setOrderDialog(undefined)}
+          onRefresh={refresh}
+          onCreated={(price) => {
+            setConfirmedOrder(dialogKey);
+            refresh();
+            void queryClient.invalidateQueries({ queryKey: ["orders"] });
+            orderDialog.afterCreate?.(price);
+          }}
+        />
+      ) : null}
     </View>
   );
 }
@@ -299,64 +354,67 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
 const styles = StyleSheet.create({
   screenRoot: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: stitchTokens.creamBg,
   },
-  subHeader: {
-    height: 48,
+  wineHeader: {
+    backgroundColor: stitchTokens.wineDark,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: space.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.rule,
+    paddingHorizontal: space.lg,
+    paddingBottom: 14,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    gap: 12,
   },
-  backBtn: {
-    flexDirection: "row",
+  headerCircleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: stitchTokens.whiteAlpha14,
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    justifyContent: "center",
   },
-  backLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
+  headerSpacer: {
+    width: 40,
+    height: 40,
   },
-  subHeaderCenter: {
+  headerTitleCol: {
     flex: 1,
-    alignItems: "center",
+    minWidth: 0,
   },
-  subHeaderTitle: {
-    fontSize: 15,
+  headerTitle: {
+    fontSize: 17,
+    lineHeight: 22,
     fontWeight: "800",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.white,
+    includeFontPadding: false,
   },
-  subHeaderSubtitle: {
-    fontSize: 11,
-    color: colors.muted,
+  headerSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: stitchTokens.gold,
+    fontWeight: "600",
+    marginTop: 2,
+    includeFontPadding: false,
+  },
+  centerWrap: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: space.lg,
   },
   pressed: {
-    opacity: 0.7,
-  },
-  footerContainer: {
-    backgroundColor: colorRoles.navigationBackground,
-    paddingTop: space.xs,
-    paddingHorizontal: space.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.rule,
+    opacity: 0.78,
   },
   segmentedTabBar: {
     flexDirection: "row",
-    backgroundColor: stitchTokens.parchment,
-    marginHorizontal: space.md,
-    marginTop: space.xs,
-    marginBottom: space.xs,
-    borderRadius: radius.card,
-    padding: 3,
+    backgroundColor: stitchTokens.whiteSurface,
+    marginHorizontal: space.lg,
+    marginTop: space.md,
+    borderRadius: 14,
+    padding: 4,
     borderWidth: 1,
-    borderColor: colors.rule,
+    borderColor: stitchTokens.cardBorder,
+    gap: 4,
   },
   segmentTab: {
     flex: 1,
@@ -364,31 +422,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 9,
-    borderRadius: radius.small,
+    minHeight: 38,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   segmentTabActive: {
-    backgroundColor: colors.surface,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: stitchTokens.wineDark,
   },
   segmentTabText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: colors.muted,
+    lineHeight: 17,
+    fontWeight: "700",
+    color: stitchTokens.deepCocoa,
+    includeFontPadding: false,
   },
   segmentTabTextActive: {
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.white,
   },
   liveIndicator: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: stitchTokens.verifiedGreen,
+  },
+  liveIndicatorActive: {
+    backgroundColor: stitchTokens.gold,
   },
   bodyWrapper: {
     flex: 1,

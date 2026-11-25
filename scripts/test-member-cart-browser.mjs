@@ -94,44 +94,18 @@ try {
     owner = f.buyer.user.id,
     token = f.buyer.accessToken;
   await nav(p, "/books/" + id);
-  await button(p, "Thêm vào giỏ sách").waitFor();
-  const adds = [];
-  let lost = true;
-  await p.route("**/me/cart/add", async (route) => {
-    const request = route.request();
-    adds.push({
-      key: request.headers()["idempotency-key"],
-      body: request.postData(),
+  await expect(p.getByRole("link", { name: "Mua ngay", exact: true })).toBeVisible();
+  await expect(p.getByText(/thêm vào giỏ/i)).toHaveCount(0);
+  // Seed previously saved books through the real API on the disposable QA DB.
+  for (const listingId of [id, second]) {
+    const cart = await f.api("/me/cart", token);
+    const listing = await f.api(`/listings/${listingId}`, null);
+    await f.api("/me/cart/add", token, {
+      expectedVersion: cart.version,
+      listingId,
+      expectedListingVersion: listing.version,
     });
-    const response = await route.fetch();
-    assert.equal(response.status(), 200);
-    if (lost) {
-      lost = false;
-      return route.fulfill({
-        status: 503,
-        json: { code: "UNAVAILABLE", message: "QA lost ACK" },
-      });
-    }
-    return route.fulfill({ response });
-  });
-  await button(p, "Thêm vào giỏ sách").click();
-  await button(p, "Xác minh thao tác giỏ trước").waitFor();
-  await openWebCart(p);
-  await expect(
-    p.getByRole("link", { name: "Mua bài đăng này", exact: true }),
-  ).toHaveCount(0);
-  await button(p, "Xác minh thao tác giỏ trước").click();
-  await p
-    .getByRole("link", { name: "Mua bài đăng này", exact: true })
-    .waitFor();
-  assert.equal(adds.length, 2);
-  assert.equal(adds[0].key, adds[1].key);
-  assert.equal(
-    adds[0].body === adds[1].body,
-    true,
-    "Exact original add intent",
-  );
-  await p.unroute("**/me/cart/add");
+  }
   assert.equal(
     await f.db
       .collection("exclusive_commitments")
@@ -142,11 +116,6 @@ try {
     await f.db.collection("direct_orders").countDocuments({ buyerId: owner }),
     0,
   );
-  await nav(p, "/books/" + second);
-  await button(p, "Thêm vào giỏ sách").click();
-  await p
-    .getByText("Đã cập nhật giỏ sách. Sách chưa được giữ chỗ.", { exact: true })
-    .waitFor();
   await openWebCart(p);
   await p.getByText(/Hiện có\s+2\s*\/\s*50 bài đăng trong giỏ/).waitFor();
   // Current price is read again, while original add price remains informational.
@@ -223,6 +192,7 @@ try {
   await nav(sellerPage, "/chat/" + roomId);
   await button(sellerPage, "Tạo đơn cho người mua này").click();
   const sellerDialog = sellerPage.getByRole("dialog", { name: "Tạo đơn cho người mua" });
+  await sellerDialog.getByRole("checkbox", { name: /đồng ý.*hoa hồng 5%/ }).check();
   await button(sellerDialog, "Tạo đơn cho người mua này").click();
   await sellerDialog.waitFor({ state: "hidden" });
   const updatedRoom = await f.api("/me/purchase-conversations/" + roomId, token);
@@ -238,6 +208,12 @@ try {
   const rn = await browser.newPage({ viewport: { width: 390, height: 1000 } });
   rn.setDefaultTimeout(12000);
   rn.on("pageerror", (e) => errors.push(e.message));
+  const rnCartBooks = rn.getByRole("button", { name: /^Xem bài đăng(?:\s|$)/ });
+  const rnCartBuy = rn.getByRole("button", { name: /^Mua bài đăng(?:\s|$)/ });
+  await rn.goto(rnOrigin + "/book?id=" + id);
+  await expect(button(rn, "Mua ngay cuốn sách này")).toBeVisible();
+  await expect(rn.getByText(/thêm vào giỏ/i)).toHaveCount(0);
+  await rn.screenshot({ path: path.join(artifacts, "rn-book-390.png"), fullPage: true });
   await rn.goto(rnOrigin + "/account");
   await rn
     .getByLabel("Email", { exact: true })
@@ -246,7 +222,12 @@ try {
   await rn.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await button(rn, "Đăng nhập").click();
   await button(rn, "Giỏ sách").click();
-  await rn.getByText(/2\/50 bài đăng trong giỏ/).waitFor();
+  await expect(rnCartBooks).toHaveCount(2);
+  await rnCartBooks.first().click();
+  await expect(button(rn, "Mua ngay cuốn sách này")).toBeVisible();
+  await expect(rn.getByText(/thêm vào giỏ/i)).toHaveCount(0);
+  await rn.goBack();
+  await expect(rnCartBooks).toHaveCount(2);
   const removes = [];
   let removalHandlers = 0;
   let dropRemove = true;
@@ -276,10 +257,10 @@ try {
       removalHandlers--;
     }
   });
-  await button(rn, "Xóa khỏi giỏ").first().click();
+  await rn.getByRole("button", { name: /^Xóa(?: .+)? khỏi giỏ$/ }).first().click();
   await button(rn, "Xác minh thao tác giỏ trước").waitFor();
   await expect(button(rn, "Xác minh thao tác giỏ trước")).toBeEnabled();
-  await button(rn, "Về Tài khoản").click();
+  await rn.getByRole("button", { name: /^(Quay lại|Về Tài khoản)$/i }).click();
   await button(rn, "Giỏ sách").click();
   await button(rn, "Xác minh thao tác giỏ trước").click();
   await expect(button(rn, "Xác minh thao tác giỏ trước")).toHaveCount(0);
@@ -288,7 +269,7 @@ try {
   assert.equal(removes[0].body === removes[1].body, true);
   await expect.poll(() => removalHandlers).toBe(0);
   await rn.unroute("**/me/cart/remove");
-  await rn.getByText(/1\/50 bài đăng trong giỏ/).waitFor();
+  await expect(rnCartBooks).toHaveCount(1);
   for (const width of [390, 320]) {
     await rn.setViewportSize({ width, height: 1000 });
     assert.equal(
@@ -301,7 +282,7 @@ try {
       path: path.join(artifacts, `rn-web-${width}.png`),
       fullPage: true,
     });
-    await button(rn, "Mua bài đăng này").scrollIntoViewIfNeeded();
+    await rnCartBuy.scrollIntoViewIfNeeded();
     await rn.screenshot({
       path: path.join(artifacts, `rn-web-${width}-actions.png`),
     });
@@ -315,7 +296,7 @@ try {
     )
       rnCreates.push(await response.json());
   });
-  await button(rn, "Mua bài đăng này").click();
+  await rnCartBuy.click();
   await button(rn, "Xác nhận đặt mua").click();
   await expect.poll(() => rnCreates.length).toBe(1);
   const rnOrder = await f.api("/me/orders/" + rnCreates[0].entityId, token);
@@ -335,7 +316,7 @@ try {
   );
   assert.equal(errors.length, 0, "No page errors: " + errors.join("; "));
   console.log(
-    "PASS: Member cart web/RN-web from real entry, persisted parity, add/remove lost ACK+Back/remount exact intent, current price/error recovery, quantity1/two rows→single chosen Order each client, no cart reservation, responsive320px. API/Mongo real, storage fake; native NOT RUN.",
+    "PASS: No Add to Cart on Member Web/Expo book detail. Previously saved cart items support read, price refresh, remove lost-ACK replay and single-item checkout across Web/Expo. Responsive to 320px. Real QA API/Mongo, fake storage. Native NOT RUN.",
   );
 } catch (error) {
   if (browser)

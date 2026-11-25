@@ -44,8 +44,8 @@ export function useNotifications(
       return client.request("/me/notifications?limit=20", memberNotificationPage);
     },
     enabled: Boolean(client && isAuthenticated),
-    staleTime: 15_000,
-    refetchInterval: isAuthenticated ? 30_000 : false,
+    staleTime: 4_000,
+    refetchInterval: isAuthenticated ? 6_000 : false,
   });
 }
 

@@ -26,6 +26,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { OperationsDashboardModule } from './modules/operations-dashboard/operations-dashboard.module.js';
 import { WorkInboxModule } from './modules/work-inbox/work-inbox.module.js';
 import { MemberProfileModule } from './modules/profile/member-profile.module.js';
+import { TransactionLiveModule } from './modules/transaction-live/transaction-live.module.js';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { MemberProfileModule } from './modules/profile/member-profile.module.js'
     OperationsDashboardModule,
     WorkInboxModule,
     MemberProfileModule,
+    TransactionLiveModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -25,6 +25,7 @@ import { HandoverPointsService } from './handover-points.service.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { PointCollectionService } from './point-collection.service.js';
 import { PointOrderCompletionService } from './point-order-completion.service.js';
+import { PointOrderLiveService } from './point-order-live.service.js';
 
 @Controller()
 export class AuctionsController {
@@ -37,13 +38,20 @@ export class AuctionsController {
     private readonly completion: PointOrderCompletionService,
     private readonly input: ContractInput,
     private readonly live: AuctionLiveService,
+    private readonly pointOrderLive: PointOrderLiveService,
     private readonly books: AuctionBookService,
   ) {}
 
   // Push committed auction changes to live watchers without waiting for the poll.
-  private async notify<T>(result: Promise<T>) {
+  private async notify<T>(result: Promise<T>, auctionId?: string) {
     const receipt = await result;
-    this.live.nudge();
+    this.live.nudge(auctionId);
+    return receipt;
+  }
+
+  private async notifyOrder<T>(orderId: string, result: Promise<T>) {
+    const receipt = await result;
+    this.pointOrderLive.nudge(orderId);
     return receipt;
   }
 
@@ -57,13 +65,17 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.collection.accept(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('AcceptPointOrderReport', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      commandResponse(
+        this.collection.accept(
+          commandContext(this.input, req, res),
+          orderId,
+          this.input.body('AcceptPointOrderReport', body),
+        ),
+        res,
       ),
-      res,
     );
   }
   @Post('point-orders/:orderId/reject-report')
@@ -76,13 +88,17 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.collection.reject(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('RejectPointOrderReport', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      commandResponse(
+        this.collection.reject(
+          commandContext(this.input, req, res),
+          orderId,
+          this.input.body('RejectPointOrderReport', body),
+        ),
+        res,
       ),
-      res,
     );
   }
   @Post('point-orders/:orderId/collection-code')
@@ -145,14 +161,18 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.notify(
-      commandResponse(
-        this.orders.pay(
-          commandContext(this.input, req, res),
-          this.input.uuid(id),
-          this.input.body('PayPointOrder', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      this.notify(
+        commandResponse(
+          this.orders.pay(
+            commandContext(this.input, req, res),
+            orderId,
+            this.input.body('PayPointOrder', body),
+          ),
+          res,
         ),
-        res,
       ),
     );
   }
@@ -167,13 +187,17 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.completion.claim(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('ClaimPointOrder', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      commandResponse(
+        this.completion.claim(
+          commandContext(this.input, req, res),
+          orderId,
+          this.input.body('ClaimPointOrder', body),
+        ),
+        res,
       ),
-      res,
     );
   }
 
@@ -357,10 +381,20 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.notify(commandResponse(this.collection.decideReceipt(
-      commandContext(this.input, req, res), this.input.uuid(id),
-      this.input.body('PointOrderReceiptDecision', body),
-    ), res));
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      this.notify(
+        commandResponse(
+          this.collection.decideReceipt(
+            commandContext(this.input, req, res),
+            orderId,
+            this.input.body('PointOrderReceiptDecision', body),
+          ),
+          res,
+        ),
+      ),
+    );
   }
 
   private demoDelivery(
@@ -370,15 +404,19 @@ export class AuctionsController {
     req: AuthenticatedRequest,
     res: Response,
   ) {
-    return this.notify(
-      commandResponse(
-        this.collection.advanceDemoDelivery(
-          commandContext(this.input, req, res),
-          this.input.uuid(id),
-          this.input.body('AuctionVersionCommand', body),
-          step,
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      this.notify(
+        commandResponse(
+          this.collection.advanceDemoDelivery(
+            commandContext(this.input, req, res),
+            orderId,
+            this.input.body('AuctionVersionCommand', body),
+            step,
+          ),
+          res,
         ),
-        res,
       ),
     );
   }
@@ -392,14 +430,18 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.notify(
-      commandResponse(
-        this.completion.demoAdvance(
-          commandContext(this.input, req, res),
-          this.input.uuid(id),
-          this.input.body('AuctionVersionCommand', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      this.notify(
+        commandResponse(
+          this.completion.demoAdvance(
+            commandContext(this.input, req, res),
+            orderId,
+            this.input.body('AuctionVersionCommand', body),
+          ),
+          res,
         ),
-        res,
       ),
     );
   }
@@ -431,15 +473,17 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
+    const auctionId = this.input.uuid(id);
     return this.notify(
       commandResponse(
         this.bidding.bid(
           commandContext(this.input, req, res),
-          this.input.uuid(id),
+          auctionId,
           this.input.body('PlaceAuctionBid', body),
         ),
         res,
       ),
+      auctionId,
     );
   }
   @Put('auctions/:auctionId/auto-bid')
@@ -451,15 +495,17 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
+    const auctionId = this.input.uuid(id);
     return this.notify(
       commandResponse(
         this.bidding.setAuto(
           commandContext(this.input, req, res),
-          this.input.uuid(id),
+          auctionId,
           this.input.body('SetAuctionAutoBid', body),
         ),
         res,
       ),
+      auctionId,
     );
   }
   @Post('auctions/:auctionId/auto-bid/disable')

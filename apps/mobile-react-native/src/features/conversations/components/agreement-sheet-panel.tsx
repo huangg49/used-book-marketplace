@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { buyerSaleFeeText } from "@used-books/session-client";
 import {
   Pressable,
   ScrollView,
@@ -28,24 +29,24 @@ import {
 } from "../contracts";
 import {
   changeConversationTerms,
-  createSellerOrder,
   formatDateTimeVi,
   purchaseChatGuidance,
 } from "../purchase-conversation-service";
 import { useSession } from "../../../core/session/session-provider";
-import { CreateOrderDialog } from "./create-order-dialog";
 
 interface AgreementSheetPanelProps {
   room: PurchaseConversation;
   listing?: Listing | null;
   onRefresh: () => void;
   onOpenAddressSelect?: () => void;
+  onOpenCreateOrder?: () => void;
 }
 
 export function AgreementSheetPanel({
   room,
   listing,
   onRefresh,
+  onOpenCreateOrder,
 }: AgreementSheetPanelProps) {
   const router = useRouter();
   const { client, state } = useSession();
@@ -58,7 +59,6 @@ export function AgreementSheetPanel({
   const [editingPrice, setEditingPrice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState<string>();
 
@@ -98,17 +98,6 @@ export function AgreementSheetPanel({
     } finally {
       setBusy(false);
     }
-  };
-
-  // Seller creates order
-  const handleConfirmCreateOrder = async (agreedPrice: number) => {
-    await createSellerOrder(client, {
-      conversationId: room.id,
-      expectedVersion: room.version,
-      agreedBookPrice: agreedPrice,
-    });
-    setOrderDialogOpen(false);
-    onRefresh();
   };
 
   // Buyer pays order directly
@@ -623,12 +612,13 @@ export function AgreementSheetPanel({
             <AppText style={styles.destAddress}>
               {room.quotePreview.destination.detail}
             </AppText>
-            {room.quotePreview.shippingFee > 0 && (<View style={styles.destFeeRow}>
+            <View style={styles.destFeeRow}>
               <AppText style={styles.destFeeLabel}>Cước giao nhận:</AppText>
               <AppText style={styles.destFeeValue}>
-                {formatVnd(room.quotePreview.shippingFee)}
+                {room.quotePreview.shippingFee > 0 ? formatVnd(room.quotePreview.shippingFee) : "Miễn phí"}
               </AppText>
-            </View>)}
+            </View>
+            {isBuyer && <AppText style={styles.destExpiry}>{buyerSaleFeeText(room.quotePreview.commissionBps)}</AppText>}
             <AppText style={styles.destExpiry}>
               Báo giá có hiệu lực đến:{" "}
               {formatDateTimeVi(room.quotePreview.expiresAt)}
@@ -756,7 +746,7 @@ export function AgreementSheetPanel({
             </>
           )}
         </View>
-      ) : isSeller && room.quotePreview ? (
+      ) : isSeller && onOpenCreateOrder ? (
         <View style={styles.actionCard}>
           <AppText style={styles.actionCardTitle}>Sẵn sàng tạo đơn</AppText>
           <AppText style={styles.actionCardDesc}>
@@ -766,19 +756,11 @@ export function AgreementSheetPanel({
           <View style={styles.createOrderBtn}>
             <Button
               title="Tạo đơn cho người mua này"
-              onPress={() => setOrderDialogOpen(true)}
+              onPress={() => onOpenCreateOrder()}
             />
           </View>
         </View>
       ) : null}
-
-      {/* Dialog tạo đơn dành cho Seller */}
-      <CreateOrderDialog
-        visible={orderDialogOpen}
-        onClose={() => setOrderDialogOpen(false)}
-        room={room}
-        onConfirm={handleConfirmCreateOrder}
-      />
     </ScrollView>
   );
 }

@@ -18,6 +18,7 @@ import { AuctionIntakesService } from './auction-intakes.service.js';
 import { AuctionLiveService } from './auction-live.service.js';
 import { PointCollectionService } from './point-collection.service.js';
 import { PointOrderCompletionService } from './point-order-completion.service.js';
+import { PointOrderLiveService } from './point-order-live.service.js';
 import { PointOrderResolutionService } from './point-order-resolution.service.js';
 
 // Point Staff steps need STAFF plus a current point assignment, checked in the
@@ -32,12 +33,20 @@ export class AuctionOperationsController {
     private readonly completion: PointOrderCompletionService,
     private readonly input: ContractInput,
     private readonly live: AuctionLiveService,
+    private readonly pointOrderLive: PointOrderLiveService,
   ) {}
 
   // Push committed auction changes to live watchers without waiting for the poll.
   private async notify<T>(result: Promise<T>) {
     const receipt = await result;
     this.live.nudge();
+    return receipt;
+  }
+
+  // Push committed point-order changes immediately to authenticated watchers.
+  private async notifyOrder<T>(orderId: string, result: Promise<T>) {
+    const receipt = await result;
+    this.pointOrderLive.nudge(orderId);
     return receipt;
   }
 
@@ -55,13 +64,17 @@ export class AuctionOperationsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.resolutions.resolve(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('ResolvePointOrder', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      commandResponse(
+        this.resolutions.resolve(
+          commandContext(this.input, req, res),
+          orderId,
+          this.input.body('ResolvePointOrder', body),
+        ),
+        res,
       ),
-      res,
     );
   }
 
@@ -79,13 +92,17 @@ export class AuctionOperationsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.collection.handover(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('HandOverPointOrder', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      commandResponse(
+        this.collection.handover(
+          commandContext(this.input, req, res),
+          orderId,
+          this.input.body('HandOverPointOrder', body),
+        ),
+        res,
       ),
-      res,
     );
   }
 
@@ -98,13 +115,17 @@ export class AuctionOperationsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.collection.dispatch(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('DispatchPointOrder', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      commandResponse(
+        this.collection.dispatch(
+          commandContext(this.input, req, res),
+          orderId,
+          this.input.body('DispatchPointOrder', body),
+        ),
+        res,
       ),
-      res,
     );
   }
   // ADR 0044: deliveries awaiting a simulated carrier outcome.
@@ -122,14 +143,18 @@ export class AuctionOperationsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.notify(
-        this.collection.recordDelivery(
-          commandContext(this.input, req, res),
-          this.input.body('SimulatedPointDeliveryEvent', body),
+    const event = this.input.body('SimulatedPointDeliveryEvent', body);
+    return this.notifyOrder(
+      event.orderId.toLowerCase(),
+      commandResponse(
+        this.notify(
+          this.collection.recordDelivery(
+            commandContext(this.input, req, res),
+            event,
+          ),
         ),
+        res,
       ),
-      res,
     );
   }
   @Post('point-orders/:orderId/receive-return')
@@ -141,13 +166,17 @@ export class AuctionOperationsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.completion.receiveReturn(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('ReceivePointOrderReturn', body),
+    const orderId = this.input.uuid(id);
+    return this.notifyOrder(
+      orderId,
+      commandResponse(
+        this.completion.receiveReturn(
+          commandContext(this.input, req, res),
+          orderId,
+          this.input.body('ReceivePointOrderReturn', body),
+        ),
+        res,
       ),
-      res,
     );
   }
 

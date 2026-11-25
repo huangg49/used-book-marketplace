@@ -76,13 +76,16 @@ describe("merged Exchange inspection semantics", () => {
     expect(html).toContain("200.000");
     expect(html).toContain("Đặt cọc mô phỏng");
   });
-  it("closes the viewer's claim when their deadline passes or after confirmation", () => {
+  it("keeps reporting open after both acknowledgements until the viewer deadline", () => {
     expect(render({})).toContain(">Báo sự cố</button>");
     const html = render({ viewerInspectionDeadline: "2020-01-01T00:00:00Z" });
     expect(html).toContain("Đã hết hạn kiểm tra của bạn.");
-    expect(html).toContain("Xác nhận đã kiểm tra");
+    expect(html).not.toContain(">Xác nhận đã kiểm tra</button>");
     expect(html).not.toContain(">Báo sự cố</button>");
-    expect(render({ viewerCompletedAt: base.createdAt })).not.toContain(">Báo sự cố</button>");
+    const acknowledged = render({ viewerCompletedAt: base.createdAt, partnerCompletedAt: base.createdAt });
+    expect(acknowledged).toContain(">Báo sự cố</button>");
+    expect(acknowledged).toContain("Dự kiến xử lý tiền sau");
+    expect(acknowledged).not.toContain(">Xác nhận đã kiểm tra</button>");
   });
 });
 

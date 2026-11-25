@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
+import { auctionCheckoutBalance, auctionOrderHoldNotes, auctionOrderHoldText, buyerSaleFeeText, formatSaleFeeRate } from '@used-books/session-client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, MapPin, Truck } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { TransactionAmount, TransactionNotes } from '../components/TransactionReview'
 import { PurchaseAddressFields, type PurchaseAddressForm } from '../components/PurchaseAddressFields'
 import { commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
@@ -18,10 +20,11 @@ import orderStyles from './AuctionWinnerOrderPage.module.css'
 const DELIVERY_SERVICE_AREA = 'HCM-DEMO-v1'
 
 export function AuctionOrderPayment({
-  order: o, ownerId, onChanged, paused,
+  order: o, ownerId, heldAmount, onChanged, paused,
 }: {
   order: PointOrder
   ownerId: string
+  heldAmount?: number
   onChanged: () => Promise<unknown>
   paused: boolean
 }) {
@@ -137,6 +140,14 @@ export function AuctionOrderPayment({
   }
 
   const total = deliver ? quote.data?.buyerTotal : o.amounts.bookPrice
+  const balance = total === undefined ? null : auctionCheckoutBalance(total, heldAmount)
+  const funds = heldAmount !== undefined && balance ? (
+    <>
+      <div><dt>Ví đang giữ cho phiên</dt><dd>{formatVnd(heldAmount)}</dd></div>
+      <div><dt>{balance.label}</dt><dd>{formatVnd(balance.amount)}</dd></div>
+    </>
+  ) : null
+  const feeText = buyerSaleFeeText(o.amounts.commissionBps)
   const choiceLocked = busy || unknown
   return (
     <div className={styles.bidPanel}>
@@ -218,23 +229,27 @@ export function AuctionOrderPayment({
           {quote.isError ? (
             <p role="alert" className={styles.fieldError}>{commandError(quote.error)}{' '}<button type="button" className={styles.secondaryBlock} disabled={quote.isFetching} onClick={() => void quote.refetch()}>Tải lại phí giao</button></p>
           ) : quote.data ? (
-            <>
-              <dl className={styles.deliveryTotals}>
-                <div><dt>Tiền sách</dt><dd>{formatVnd(o.amounts.bookPrice)}</dd></div>
-                <div><dt>Phí giao tận nơi</dt><dd>{quote.data.outboundFee > 0 ? formatVnd(quote.data.outboundFee) : 'Miễn phí'}</dd></div>
-                <div><dt>Tổng thanh toán</dt><dd>{formatVnd(quote.data.buyerTotal)}</dd></div>
-              </dl>
-              <p className={styles.fieldHint}>
-                {quote.data.outboundFee > 0 ? `Phí giao ${formatVnd(quote.data.outboundFee)} do điểm giao nhận thu. ` : 'Giao hàng miễn phí. '}
-                Sau khi bạn đồng ý biên bản, {o.pointName} giao sách cho hãng vận chuyển mô phỏng.
-              </p>
-            </>
+            <p className={styles.fieldHint}>
+              {quote.data.outboundFee > 0 && 'Điểm giao nhận thu phí giao tận nơi. '}
+              Sau khi bạn đồng ý biên bản, {o.pointName} giao sách cho hãng vận chuyển mô phỏng.
+            </p>
           ) : (
             <p className={styles.fieldHint} role="status">Đang tính phí giao tới địa chỉ này…</p>
           )}
         </div>
       ))}
       {error && <p role="alert" className={styles.fieldError}>{error}</p>}
+      <dl className={styles.deliveryTotals}>
+        <div><dt>Tiền sách</dt><dd>{formatVnd(o.amounts.bookPrice)}</dd></div>
+        <div><dt>{deliver ? 'Phí giao tận nơi' : 'Phí nhận tại điểm'}</dt><dd>{
+          deliver && (!delivery || quote.isError) ? 'Chưa có báo giá' : delivery?.fee ? formatVnd(delivery.fee) : 'Miễn phí'
+        }</dd></div>
+        {total !== undefined && (!deliver || !quote.isError) && (
+          <><div><dt>Tổng thanh toán</dt><dd>{formatVnd(total)}</dd></div>{funds}</>
+        )}
+      </dl>
+      <p className={styles.fieldHint}>{feeText}</p>
+      <p className={styles.fieldHint}>{auctionOrderHoldText}</p>
       <button
         type="button" className={styles.continue}
         disabled={busy || (!unknown && (paused || remaining === 0 || (deliver && (quote.isError || !quote.data))))}
@@ -242,18 +257,39 @@ export function AuctionOrderPayment({
       >
         {unknown ? 'Thử lại thanh toán' : total === undefined ? 'Thanh toán' : `Thanh toán ${formatVnd(total)}`} <ArrowRight size={16} aria-hidden="true" />
       </button>
-      <p className={styles.fieldHint}>Giá chốt {formatVnd(o.amounts.bookPrice)}. Không nhận thanh toán một phần.</p>
+      <p className={styles.fieldHint}>Vui lòng thanh toán toàn bộ đơn trong một lần.</p>
       <ConfirmDialog
         isOpen={confirming && !paused}
         onClose={() => !busy && setConfirming(false)}
-        title={`Thanh toán ${formatVnd(total ?? o.amounts.bookPrice)} từ ví?`}
-        description={delivery
-          ? `Giao tới ${selectedAddress?.recipientName ?? 'địa chỉ của bạn'}${selectedAddress?.phone ? ` · ${selectedAddress.phone}` : ''}: tiền sách ${formatVnd(o.amounts.bookPrice)}, phí giao ${delivery.fee > 0 ? formatVnd(delivery.fee) : 'miễn phí'}, tổng ${formatVnd(quote.data?.buyerTotal ?? o.amounts.bookPrice + delivery.fee)}. Tiền được giữ trong thời gian giao nhận và kiểm tra sách. Cách nhận sách được chốt khi thanh toán.`
-          : `Bạn tự nhận sách tại ${o.pointName}. Tiền được giữ trong thời gian giao nhận và kiểm tra sách. Cách nhận sách được chốt khi thanh toán.`}
+        title="Thanh toán từ Ví"
         confirmText="Thanh toán"
         onConfirm={() => void pay()}
         isBusy={busy}
-      />
+        confirmDisabled={deliver && (!delivery || quote.isError)}
+        stickyFooter
+      >
+        <TransactionAmount
+          label={balance?.label ?? 'Tổng thanh toán'}
+          value={total === undefined || (deliver && quote.isError) ? 'Chưa có báo giá' : formatVnd(balance?.amount ?? total)}
+        />
+        <dl className={orderStyles.checkoutReviewRows}>
+          <div><dt>Tiền sách</dt><dd>{formatVnd(o.amounts.bookPrice)}</dd></div>
+          <div><dt>Phí giao nhận</dt><dd>{deliver && (!delivery || quote.isError) ? 'Chưa có báo giá' : formatVnd(delivery?.fee ?? 0)}</dd></div>
+          {heldAmount !== undefined && <div><dt>Ví đang giữ cho phiên</dt><dd>{formatVnd(heldAmount)}</dd></div>}
+          {balance && total !== undefined && (!deliver || !quote.isError) && (
+            <div data-total><dt>Tổng thanh toán</dt><dd>{formatVnd(total)}</dd></div>
+          )}
+        </dl>
+        <p className={styles.fieldHint}>{o.amounts.commissionBps === 0
+          ? 'Đơn này miễn phí dịch vụ.'
+          : `Phí dịch vụ${o.amounts.commissionBps === undefined ? '' : ` ${formatSaleFeeRate(o.amounts.commissionBps)}`} do người bán chịu.`}</p>
+        <TransactionNotes notes={[
+          { label: 'Cách nhận', detail: deliver
+            ? `Giao tận nơi · ${selectedAddress?.recipientName ?? 'địa chỉ của bạn'}${selectedAddress?.phone ? ` · ${selectedAddress.phone}` : ''}. Chốt khi thanh toán.`
+            : `Tự nhận tại ${o.pointName}. Chốt khi thanh toán.` },
+          ...auctionOrderHoldNotes,
+        ]} />
+      </ConfirmDialog>
     </div>
   )
 }

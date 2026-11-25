@@ -1,22 +1,16 @@
 import { useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
-import { AppText } from "../../../core/ui/text";
-import { AppModal as Modal, Icon, stitchTokens } from "../../../core/ui";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AppText, Button, Icon, Sheet, radius, space, stitchTokens } from "../../../core/ui";
 import {
   AUCTION_CONDITIONS,
   AUCTION_ENDING,
   AUCTION_PRICE_RANGES,
+  DEFAULT_AUCTION_FILTERS,
+  activeFilterCount,
   type AuctionCondition,
   type AuctionEnding,
   type AuctionFilters,
   type AuctionPriceRange,
-  DEFAULT_AUCTION_FILTERS,
-  activeFilterCount,
 } from "../auctions-model";
 import { conditions as conditionLabels } from "../../shelf/contracts";
 
@@ -25,6 +19,7 @@ export interface AuctionFilterModalProps {
   readonly filters: AuctionFilters;
   readonly availablePoints: string[];
   readonly totalMatchesCount: number;
+  readonly countMatches?: (draft: AuctionFilters) => number;
   readonly onClose: () => void;
   readonly onApply: (nextFilters: AuctionFilters) => void;
 }
@@ -34,512 +29,283 @@ export function AuctionFilterModal({
   filters,
   availablePoints,
   totalMatchesCount,
+  countMatches,
   onClose,
   onApply,
 }: AuctionFilterModalProps) {
-  // Local state for the modal until user confirms "Áp dụng"
-  const [draftFilters, setDraftFilters] = useState<AuctionFilters>(filters);
+  const [draft, setDraft] = useState<AuctionFilters>(filters);
   const [prevVisible, setPrevVisible] = useState(false);
   if (visible && !prevVisible) {
     setPrevVisible(true);
-    setDraftFilters(filters);
+    setDraft(filters);
   } else if (!visible && prevVisible) {
     setPrevVisible(false);
   }
 
   const toggleCondition = (cond: AuctionCondition) => {
-    setDraftFilters((prev) => {
-      const exists = prev.conditions.includes(cond);
-      const nextConditions = exists
+    setDraft((prev) => ({
+      ...prev,
+      conditions: prev.conditions.includes(cond)
         ? prev.conditions.filter((c) => c !== cond)
-        : [...prev.conditions, cond];
-      return { ...prev, conditions: nextConditions };
-    });
-  };
-
-  const selectPrice = (key: AuctionPriceRange) => {
-    setDraftFilters((prev) => ({
-      ...prev,
-      price: prev.price === key ? "" : key,
-    }));
-  };
-
-  const selectEnding = (key: AuctionEnding) => {
-    setDraftFilters((prev) => ({
-      ...prev,
-      ending: prev.ending === key ? "" : key,
-    }));
-  };
-
-  const selectPoint = (pointName: string) => {
-    setDraftFilters((prev) => ({
-      ...prev,
-      point: prev.point === pointName ? "" : pointName,
+        : [...prev.conditions, cond],
     }));
   };
 
   const resetAll = () => {
-    setDraftFilters({
-      ...DEFAULT_AUCTION_FILTERS,
-      q: draftFilters.q, // keep existing search query
-    });
+    setDraft({ ...DEFAULT_AUCTION_FILTERS, q: draft.q });
   };
 
-  const handleApply = () => {
-    onApply(draftFilters);
-    onClose();
-  };
-
-  const activeCount = activeFilterCount(draftFilters);
+  const activeCount = activeFilterCount(draft);
+  const liveMatches = countMatches ? countMatches(draft) : totalMatchesCount;
 
   return (
-    <Modal
+    <Sheet
+      title={activeCount > 0 ? `Bộ lọc phiên (${activeCount})` : "Bộ lọc phiên đấu giá"}
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      onClose={onClose}
+      footer={
+        <View style={styles.footer}>
+          <Button
+            wine
+            title={`Áp dụng bộ lọc (${liveMatches} phiên)`}
+            onPress={() => {
+              onApply(draft);
+              onClose();
+            }}
+          />
+          {activeCount > 0 ? (
+            <Button wine secondary title="Đặt lại bộ lọc" onPress={resetAll} />
+          ) : null}
+        </View>
+      }
     >
-      <View style={styles.backdrop}>
-        <Pressable style={styles.dismissOverlay} onPress={onClose} />
-        <View style={styles.sheet}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Icon name="tune" size={18} color={stitchTokens.wineDark} />
-              <AppText kind="bold" style={styles.headerTitle}>
-                Bộ lọc phiên đấu giá
-              </AppText>
-              {activeCount > 0 && (
-                <View style={styles.badgeCount}>
-                  <AppText kind="small" style={styles.badgeCountText}>
-                    {activeCount}
-                  </AppText>
-                </View>
-              )}
-            </View>
-
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              {activeCount > 0 && (
-                <Pressable onPress={resetAll} hitSlop={8}>
-                  <AppText kind="small" style={styles.resetButtonText}>
-                    Đặt lại
+      <View style={styles.body}>
+        {/* 1. Book Condition */}
+        <View style={styles.section}>
+          <AppText kind="bold" style={styles.label}>Tình trạng sách</AppText>
+          <View style={styles.grid}>
+            {AUCTION_CONDITIONS.map((cond) => {
+              const selected = draft.conditions.includes(cond);
+              return (
+                <Pressable
+                  key={cond}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => toggleCondition(cond)}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    selected && styles.chipSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <AppText style={[styles.chipText, selected && styles.chipTextSelected]}>
+                    {conditionLabels[cond] ?? cond}
                   </AppText>
                 </Pressable>
-              )}
-              <Pressable onPress={onClose} hitSlop={8} style={styles.closeBtn}>
-                <Icon name="close" size={18} color={stitchTokens.subtleGray} />
-              </Pressable>
-            </View>
+              );
+            })}
           </View>
+        </View>
 
-          {/* Filter options body */}
-          <ScrollView
-            style={styles.bodyScroll}
-            contentContainerStyle={styles.bodyContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* 1. Tình trạng sách */}
-            <View style={styles.section}>
-              <AppText kind="bold" style={styles.sectionLabel}>
-                Tình trạng sách
-              </AppText>
-              <View style={styles.chipGrid}>
-                {AUCTION_CONDITIONS.map((cond) => {
-                  const selected = draftFilters.conditions.includes(cond);
-                  return (
-                    <Pressable
-                      key={cond}
-                      onPress={() => toggleCondition(cond)}
-                      style={[styles.chip, selected && styles.chipSelected]}
-                    >
-                      <AppText
-                        kind="small"
-                        style={[
-                          styles.chipText,
-                          selected && styles.chipTextSelected,
-                        ]}
-                      >
-                        {conditionLabels[cond] ?? cond}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
+        {/* 2. Current Price Range */}
+        <View style={styles.section}>
+          <AppText kind="bold" style={styles.label}>Mức giá hiện tại</AppText>
+          <View style={styles.grid}>
+            {(Object.keys(AUCTION_PRICE_RANGES) as AuctionPriceRange[]).map((key) => {
+              const selected = draft.price === key;
+              return (
+                <Pressable
+                  key={key}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => setDraft((prev) => ({ ...prev, price: prev.price === key ? "" : key }))}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    selected && styles.chipSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <AppText style={[styles.chipText, selected && styles.chipTextSelected]}>
+                    {AUCTION_PRICE_RANGES[key].label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
-            {/* 2. Mức giá hiện tại */}
-            <View style={styles.section}>
-              <AppText kind="bold" style={styles.sectionLabel}>
-                Mức giá hiện tại
-              </AppText>
-              <View style={styles.chipGrid}>
-                {(
-                  Object.keys(AUCTION_PRICE_RANGES) as AuctionPriceRange[]
-                ).map((key) => {
-                  const selected = draftFilters.price === key;
-                  return (
-                    <Pressable
-                      key={key}
-                      onPress={() => selectPrice(key)}
-                      style={[styles.chip, selected && styles.chipSelected]}
-                    >
-                      <AppText
-                        kind="small"
-                        style={[
-                          styles.chipText,
-                          selected && styles.chipTextSelected,
-                        ]}
-                      >
-                        {AUCTION_PRICE_RANGES[key].label}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
+        {/* 3. Ending Window */}
+        <View style={styles.section}>
+          <AppText kind="bold" style={styles.label}>Thời gian kết thúc</AppText>
+          <View style={styles.grid}>
+            {(Object.keys(AUCTION_ENDING) as AuctionEnding[]).map((key) => {
+              const selected = draft.ending === key;
+              return (
+                <Pressable
+                  key={key}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => setDraft((prev) => ({ ...prev, ending: prev.ending === key ? "" : key }))}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    selected && styles.chipSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <AppText style={[styles.chipText, selected && styles.chipTextSelected]}>
+                    {AUCTION_ENDING[key].label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
-            {/* 3. Thời gian kết thúc */}
-            <View style={styles.section}>
-              <AppText kind="bold" style={styles.sectionLabel}>
-                Thời gian kết thúc
-              </AppText>
-              <View style={styles.chipGrid}>
-                {(Object.keys(AUCTION_ENDING) as AuctionEnding[]).map(
-                  (key) => {
-                    const selected = draftFilters.ending === key;
-                    return (
-                      <Pressable
-                        key={key}
-                        onPress={() => selectEnding(key)}
-                        style={[styles.chip, selected && styles.chipSelected]}
-                      >
-                        <AppText
-                          kind="small"
-                          style={[
-                            styles.chipText,
-                            selected && styles.chipTextSelected,
-                          ]}
-                        >
-                          {AUCTION_ENDING[key].label}
-                        </AppText>
-                      </Pressable>
-                    );
-                  },
-                )}
-              </View>
-            </View>
-
-            {/* 4. Điểm nhận sách (ViaPoint) */}
-            {availablePoints.length > 0 && (
-              <View style={styles.section}>
-                <AppText kind="bold" style={styles.sectionLabel}>
-                  Điểm giao nhận TP.HCM
+        {/* 4. Handover Point */}
+        {availablePoints.length > 0 ? (
+          <View style={styles.section}>
+            <AppText kind="bold" style={styles.label}>Điểm giao nhận TP.HCM</AppText>
+            <View style={styles.grid}>
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: !draft.point }}
+                onPress={() => setDraft((prev) => ({ ...prev, point: "" }))}
+                style={({ pressed }) => [
+                  styles.chip,
+                  !draft.point && styles.chipSelected,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <AppText style={[styles.chipText, !draft.point && styles.chipTextSelected]}>
+                  Tất cả điểm
                 </AppText>
-                <View style={styles.chipGrid}>
+              </Pressable>
+              {availablePoints.map((pt) => {
+                const selected = draft.point === pt;
+                return (
                   <Pressable
-                    onPress={() => selectPoint("")}
-                    style={[
+                    key={pt}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    onPress={() => setDraft((prev) => ({ ...prev, point: prev.point === pt ? "" : pt }))}
+                    style={({ pressed }) => [
                       styles.chip,
-                      !draftFilters.point && styles.chipSelected,
+                      selected && styles.chipSelected,
+                      pressed && styles.pressed,
                     ]}
                   >
-                    <AppText
-                      kind="small"
-                      style={[
-                        styles.chipText,
-                        !draftFilters.point && styles.chipTextSelected,
-                      ]}
-                    >
-                      Tất cả điểm nhận
+                    <AppText style={[styles.chipText, selected && styles.chipTextSelected]}>
+                      {pt}
                     </AppText>
                   </Pressable>
-                  {availablePoints.map((pt) => {
-                    const selected = draftFilters.point === pt;
-                    return (
-                      <Pressable
-                        key={pt}
-                        onPress={() => selectPoint(pt)}
-                        style={[styles.chip, selected && styles.chipSelected]}
-                      >
-                        <AppText
-                          kind="small"
-                          style={[
-                            styles.chipText,
-                            selected && styles.chipTextSelected,
-                          ]}
-                        >
-                          {pt}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-
-            {/* 5. Tùy chọn đặc biệt */}
-            <View style={styles.section}>
-              <AppText kind="bold" style={styles.sectionLabel}>
-                Lựa chọn thêm
-              </AppText>
-              <View style={{ gap: 8 }}>
-                <Pressable
-                  onPress={() =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      buyNow: !prev.buyNow,
-                    }))
-                  }
-                  style={[
-                    styles.toggleRow,
-                    draftFilters.buyNow && styles.toggleRowSelected,
-                  ]}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Icon
-                      name="bolt"
-                      size={16}
-                      color={
-                        draftFilters.buyNow
-                          ? stitchTokens.wineDark
-                          : stitchTokens.subtleGray
-                      }
-                    />
-                    <AppText
-                      kind="small"
-                      style={[
-                        styles.toggleRowText,
-                        draftFilters.buyNow && styles.toggleRowTextSelected,
-                      ]}
-                    >
-                      {'Có giá "Mua ngay"'}
-                    </AppText>
-                  </View>
-                  <View
-                    style={[
-                      styles.checkbox,
-                      draftFilters.buyNow && styles.checkboxActive,
-                    ]}
-                  >
-                    {draftFilters.buyNow && (
-                      <Icon name="check" size={12} color={stitchTokens.whiteSurface} />
-                    )}
-                  </View>
-                </Pressable>
-
-                <Pressable
-                  onPress={() =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      noBids: !prev.noBids,
-                    }))
-                  }
-                  style={[
-                    styles.toggleRow,
-                    draftFilters.noBids && styles.toggleRowSelected,
-                  ]}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Icon
-                      name="gavel"
-                      size={16}
-                      color={
-                        draftFilters.noBids
-                          ? stitchTokens.wineDark
-                          : stitchTokens.subtleGray
-                      }
-                    />
-                    <AppText
-                      kind="small"
-                      style={[
-                        styles.toggleRowText,
-                        draftFilters.noBids && styles.toggleRowTextSelected,
-                      ]}
-                    >
-                      Chưa có lượt trả giá nào
-                    </AppText>
-                  </View>
-                  <View
-                    style={[
-                      styles.checkbox,
-                      draftFilters.noBids && styles.checkboxActive,
-                    ]}
-                  >
-                    {draftFilters.noBids && (
-                      <Icon name="check" size={12} color={stitchTokens.whiteSurface} />
-                    )}
-                  </View>
-                </Pressable>
-              </View>
+                );
+              })}
             </View>
-          </ScrollView>
+          </View>
+        ) : null}
 
-          {/* Footer CTA */}
-          <View style={styles.footer}>
+        {/* 5. Extra Toggles */}
+        <View style={styles.section}>
+          <AppText kind="bold" style={styles.label}>Lựa chọn thêm</AppText>
+          <View style={styles.toggles}>
             <Pressable
-              onPress={handleApply}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: draft.buyNow }}
+              onPress={() => setDraft((prev) => ({ ...prev, buyNow: !prev.buyNow }))}
               style={({ pressed }) => [
-                styles.applyButton,
-                pressed && { opacity: 0.9 },
+                styles.toggleRow,
+                draft.buyNow && styles.toggleRowSelected,
+                pressed && styles.pressed,
               ]}
             >
-              <AppText kind="bold" style={styles.applyButtonText}>
-                Áp dụng bộ lọc ({totalMatchesCount} phiên)
-              </AppText>
+              <View style={styles.toggleLeft}>
+                <Icon name="bolt" size={16} color={draft.buyNow ? stitchTokens.wine : stitchTokens.brownMuted} />
+                <AppText kind="bold" style={styles.toggleText}>Chỉ hiện phiên có Mua ngay</AppText>
+              </View>
+              <View style={[styles.checkBox, draft.buyNow && styles.checkBoxActive]}>
+                {draft.buyNow ? <Icon name="check" size={12} color={stitchTokens.gold} /> : null}
+              </View>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: draft.noBids }}
+              onPress={() => setDraft((prev) => ({ ...prev, noBids: !prev.noBids }))}
+              style={({ pressed }) => [
+                styles.toggleRow,
+                draft.noBids && styles.toggleRowSelected,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={styles.toggleLeft}>
+                <Icon name="gavel" size={16} color={draft.noBids ? stitchTokens.wine : stitchTokens.brownMuted} />
+                <AppText kind="bold" style={styles.toggleText}>Chưa có người trả giá</AppText>
+              </View>
+              <View style={[styles.checkBox, draft.noBids && styles.checkBoxActive]}>
+                {draft.noBids ? <Icon name="check" size={12} color={stitchTokens.gold} /> : null}
+              </View>
             </Pressable>
           </View>
         </View>
       </View>
-    </Modal>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: stitchTokens.blackAlpha45,
-    justifyContent: "flex-end",
-  },
-  dismissOverlay: {
-    flex: 1,
-  },
-  sheet: {
-    backgroundColor: stitchTokens.whiteSurface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "82%",
-    paddingBottom: 24,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.cardBorder,
-  },
-  headerTitle: {
-    fontSize: 16,
-    color: stitchTokens.wineDark,
-  },
-  badgeCount: {
-    backgroundColor: stitchTokens.wineDark,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  badgeCountText: {
-    color: stitchTokens.whiteSurface,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  resetButtonText: {
-    color: stitchTokens.wine,
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  bodyScroll: {
-    paddingHorizontal: 20,
-  },
-  bodyContent: {
-    paddingVertical: 16,
-    gap: 20,
-  },
-  section: {
-    gap: 10,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    color: stitchTokens.deepCocoa,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  chipGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
+  body: { gap: space.lg },
+  footer: { gap: space.sm },
+  section: { gap: space.sm },
+  label: { fontSize: 14, color: stitchTokens.wineDark },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
-  },
-  chipSelected: {
-    backgroundColor: stitchTokens.wineDark,
-    borderColor: stitchTokens.wineDark,
-  },
-  chipText: {
-    fontSize: 13,
-    color: stitchTokens.deepCocoa,
-  },
-  chipTextSelected: {
-    color: stitchTokens.whiteSurface,
-    fontWeight: "600",
-  },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    minHeight: 44,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
     backgroundColor: stitchTokens.parchment,
+    justifyContent: "center",
+  },
+  chipSelected: {
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.wine,
+  },
+  chipText: { fontSize: 13, color: stitchTokens.wineDark, fontWeight: "600" },
+  chipTextSelected: { color: stitchTokens.warmIvory },
+  toggles: { gap: 8 },
+  toggleRow: {
+    minHeight: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
+    backgroundColor: stitchTokens.parchment,
   },
   toggleRowSelected: {
+    borderColor: stitchTokens.wine,
     backgroundColor: stitchTokens.roseWarmSurface,
-    borderColor: stitchTokens.peachBorder,
   },
-  toggleRowText: {
-    fontSize: 13,
-    color: stitchTokens.deepCocoa,
-  },
-  toggleRowTextSelected: {
-    color: stitchTokens.wineDark,
-    fontWeight: "600",
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
+  toggleLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  toggleText: { fontSize: 14, color: stitchTokens.deepCocoa },
+  checkBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: stitchTokens.subtleGray,
+    borderColor: stitchTokens.peachBorder,
+    backgroundColor: stitchTokens.whiteSurface,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxActive: {
-    backgroundColor: stitchTokens.wineDark,
-    borderColor: stitchTokens.wineDark,
+  checkBoxActive: {
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.wine,
   },
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: stitchTokens.cardBorder,
-  },
-  applyButton: {
-    backgroundColor: stitchTokens.wineDark,
-    borderRadius: 10,
-    paddingVertical: 13,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  applyButtonText: {
-    color: stitchTokens.whiteSurface,
-    fontSize: 14,
-  },
+  pressed: { opacity: 0.78 },
 });

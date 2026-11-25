@@ -51,11 +51,12 @@ export function toContent(f: Form): Content {
         : null,
   };
 }
-export const editableListing = (d: Draft) =>
-  ["Draft", "Rejected"].includes(d.state.moderation) &&
+export const manageableListing = (d: Draft) =>
   d.state.visibility !== "Removed" &&
   d.state.trade === "Available" &&
   !d.state.deletedAt;
+export const editableListing = (d: Draft) =>
+  manageableListing(d) && ["Draft", "Rejected"].includes(d.state.moderation);
 const tradeLabel: Record<string, string> = {
   Reserved: "Đang giữ cho một đơn",
   Sold: "Đã bán",

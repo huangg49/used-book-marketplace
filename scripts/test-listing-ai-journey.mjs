@@ -487,7 +487,7 @@ try {
   await np.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await button(np, "Đăng nhập").click();
   await button(np, "Kệ sách của tôi").click();
-  await button(np, "+ Đăng Sách Mới Ngay").click();
+  await button(np, "Đăng sách mới").click();
   await np.getByText("Điền nhanh từ ảnh", { exact: true }).waitFor();
   const chooser = np.waitForEvent("filechooser");
   await button(np, "Thêm ảnh để đọc").click();
@@ -573,7 +573,7 @@ try {
   await np.getByText("Không thiếu trang", { exact: true }).click();
   await np.getByText("Không thiếu nội dung chính", { exact: true }).click();
   await button(np, "Tiếp theo").click();
-  await np.getByRole("button", { name: /^Bán trực tiếp/ }).click();
+  await np.getByRole("radio", { name: "Bán sách", exact: true }).click();
   await np.getByLabel("Giá bán (đồng)", { exact: true }).fill("125000");
   let releaseRnProof;
   const rnProof = fastPaths

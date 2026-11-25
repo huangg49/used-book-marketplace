@@ -58,14 +58,16 @@ export function AuctionListPage() {
     queryFn: () => listAuctions(),
     retry: false,
     staleTime: 0,
-    refetchInterval: live ? false : 30_000,
+    refetchInterval: live ? false : 10_000,
+    refetchIntervalInBackground: false,
   })
   // ADR 0047: scheduled auctions are shown apart and cannot be bid on yet.
   const upcoming = useQuery({
     queryKey: ['auctions', 'upcoming'],
     queryFn: () => listAuctions('upcoming'),
     retry: false,
-    refetchInterval: 60_000,
+    refetchInterval: 8_000,
+    refetchIntervalInBackground: false,
   })
 
   const update = (key: string, value: string) => {

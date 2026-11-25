@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import { Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, createServerNow } from "../../core/api/session-client";
+import { ApiError } from "../../core/api/session-client";
+import { auctionBidHoldNotes, auctionRegistrationNotes, auctionSellerAmounts, auctionSellerSaleLabels, serverClock, type TransactionNote } from "@used-books/session-client";
+import { TransactionAmount, TransactionNotes } from "../../core/ui/transaction-review";
+import { SaleFeeBreakdown } from "../../core/ui/sale-fee-breakdown";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import { readAuctionNewest, useAuctionLive } from "./use-auction-live";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
+import { useAuctionNow } from "./use-auction-now";
 import {
   CLOSING_POLL_MS,
   FALLBACK_POLL_MS,
@@ -15,9 +19,7 @@ import {
   isClosing,
 } from "./auction-live-model";
 import {
-  AppModal,
   AppText,
-  BackAction,
   Button,
   ConfirmDialog,
   Icon,
@@ -25,18 +27,23 @@ import {
   Screen,
   StatePanel,
   TextField,
+  WineHeader,
   colors,
   formatVnd,
-  layout,
   presentError,
   radius,
   space,
   stitchTokens,
 } from "../../core/ui";
-import { AuctionCover } from "./components/auction-cover";
+import {
+  AuctionBookCondition,
+  AuctionSessionOverview,
+  auctionHeaderSubtitle,
+} from "./components/auction-session-overview";
+import { ManualAuctionBidSheet } from "./components/manual-auction-bid-sheet";
+import { AutoBidSheet } from "./components/auto-bid-sheet";
 import { AuctionBidHistory } from "./components/auction-bid-history";
 import { DemoSkipButton } from "./components/demo-skip-button";
-import { conditions as conditionLabels } from "../shelf/contracts";
 import {
   AUCTION_MAX_PRICE,
   AUCTION_MIN_BIDDERS_FLOOR,
@@ -48,7 +55,7 @@ import {
   bidOptions,
   createAuctionCommand,
   formatRemaining,
-  waitingTime,
+  AUCTIONS_QUERY_KEY,
   isOpen,
   isScheduled,
   minimumBidOf,
@@ -96,20 +103,6 @@ const STATE_LABEL: Record<AuctionState, string> = {
   SecondChanceOffered: "Người thắng không thanh toán; đang mời người trả giá cao thứ hai",
 };
 
-const STATE_BADGE_LABEL: Partial<Record<AuctionState, string>> = {
-  SecondChanceOffered: "Cơ hội thứ hai",
-  PaymentExpired: "Quá hạn thanh toán",
-};
-// Same wording as user-web: only a won or bought auction has a final price.
-const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
-  BuyNowPending: "Giá mua ngay",
-  AwaitingWinnerPayment: "Giá chốt",
-  Sold: "Giá chốt",
-  PaymentExpired: "Giá thắng (chưa thanh toán)",
-  SecondChanceOffered: "Giá thắng (chưa thanh toán)",
-  OnHold: "Giá khi tạm dừng",
-  Cancelled: "Giá khi hủy",
-};
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const time = (iso: string) =>
   new Date(iso).toLocaleString("vi-VN", {
@@ -119,25 +112,7 @@ const time = (iso: string) =>
     month: "2-digit",
   });
 
-// Server clock (shared, round-trip corrected and monotonic), so a wrong or
-// changed device clock never shows a closed auction as open. Display only.
-function useServerNow(serverTime: string | undefined, ticking: boolean) {
-  const [now, setNow] = useState(() => (serverTime ? Date.parse(serverTime) : 0));
-  useEffect(() => {
-    if (!serverTime) return;
-    const serverNow = createServerNow(serverTime);
-    const tick = () => setNow(serverNow());
-    const first = setTimeout(tick, 0);
-    const timer = ticking ? setInterval(tick, 1000) : undefined;
-    return () => {
-      clearTimeout(first);
-      if (timer) clearInterval(timer);
-    };
-  }, [serverTime, ticking]);
-  return now;
-}
-
-export function AuctionScreen({ id }: { id: string }) {
+export function AuctionScreen({ id, openBidInitially = false }: { id: string; openBidInitially?: boolean }) {
   const { client, state } = useSession();
   const foreground = useForeground();
   const valid = UUID.test(id);
@@ -146,13 +121,10 @@ export function AuctionScreen({ id }: { id: string }) {
       ? state.user.id
       : null;
   const queryClient = useQueryClient();
-  // ADR 0031: pushes keep the screen live; REST polling is the backstop while
-  // they flow and the fallback (5 s) while the socket is down.
   const pushing = useAuctionLive(valid ? id : "", valid && foreground);
   const poll = pushing ? LIVE_BACKSTOP_MS : FALLBACK_POLL_MS;
   const detail = useQuery({
     ...auctionOptions(client, id),
-    // A REST read never steps back behind a newer push.
     queryFn: () => readAuctionNewest(client, queryClient, id),
     enabled: valid && foreground,
     retry: false,
@@ -162,8 +134,17 @@ export function AuctionScreen({ id }: { id: string }) {
   const me = useQuery({
     ...participationOptions(client, id, member ?? ""),
     enabled: valid && foreground && !!member,
-    retry: false,
-    refetchInterval: foreground && detail.data?.auction.state === "Active" ? poll : false,
+    retry: (failures, error) => failures === 0 && error instanceof ApiError &&
+      (error.status === 0 || error.status >= 500),
+    retryDelay: 200,
+    refetchInterval: (query) =>
+      !foreground
+        ? false
+        : query.state.data?.won && !query.state.data.orderId
+          ? 3000
+          : detail.data?.auction.state === "Active"
+            ? poll
+            : false,
   });
   const ownIntakes = useQuery({
     queryKey: ["my-auction-intakes", member, "auction", id],
@@ -171,10 +152,76 @@ export function AuctionScreen({ id }: { id: string }) {
     enabled: valid && foreground && !!member,
     retry: false,
     staleTime: 0,
+    refetchInterval: ({ state: qState }) => {
+      const status = qState.data?.items[0]?.sellerSale?.status;
+      return foreground && (status === "AwaitingPayment" || status === "PendingSettlement") ? 15_000 : false;
+    },
   });
-  const now = useServerNow(detail.data?.serverTime, foreground);
-  // Past the end on the server clock, the worker closes the auction within
-  // seconds: read again until the result shows instead of waiting for a poll.
+  const now = useAuctionNow(detail.data?.serverTime, foreground);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const requestedBid = useRef(openBidInitially);
+
+  const auction = detail.data?.auction;
+  const shownNow = now || (detail.data ? Date.parse(detail.data.serverTime) : 0);
+  const participationReady = !!member && !me.isPending && !me.isError && me.data !== undefined;
+  const ownershipReady = !!member && !!ownIntakes.data && !ownIntakes.isError;
+  const ownerIntake = ownIntakes.data?.items.find((item) => item.auctionId === id) ?? null;
+  const sellerView = !!ownerIntake;
+  const saleState = auction?.state;
+  const { refetch: refreshIntakes } = ownIntakes;
+  const sellerSale = ownerIntake?.sellerSale;
+  useTransactionLive("point-order", sellerSale?.orderId ?? "", foreground &&
+    (sellerSale?.status === "AwaitingPayment" || sellerSale?.status === "PendingSettlement"),
+    () => { void refreshIntakes(); },
+  );
+
+  useEffect(() => {
+    if (
+      foreground &&
+      sellerView &&
+      (saleState === "AwaitingWinnerPayment" || saleState === "BuyNowPending" || saleState === "Sold")
+    ) {
+      void refreshIntakes();
+    }
+  }, [foreground, sellerView, saleState, refreshIntakes]);
+
+  const open = !!auction && isOpen(auction, shownNow);
+  const scheduled = !!auction && isScheduled(auction, shownNow);
+  const canManual =
+    !!auction &&
+    participationReady &&
+    ownershipReady &&
+    !ownerIntake &&
+    !detail.error &&
+    canPlaceManualBid(auction, me.data ?? null, shownNow);
+  const leadingEnglishLive =
+    !!auction &&
+    participationReady &&
+    ownershipReady &&
+    !ownerIntake &&
+    !detail.error &&
+    open &&
+    (auction.auctionType ?? "English") === "English" &&
+    !!me.data?.leading &&
+    !me.data?.won;
+  const guestCanJoin =
+    !member &&
+    !!auction &&
+    !detail.error &&
+    (open || (scheduled && auction.minBidders != null));
+  const canReport = !!member && !!auction && !ownIntakes.isError && (!!ownerIntake || !!me.data);
+
+  useEffect(() => {
+    if (!canManual || !requestedBid.current) return;
+    const timer = setTimeout(() => {
+      requestedBid.current = false;
+      setManualOpen(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [canManual]);
+
   const closing = !!detail.data && !!now && isClosing(detail.data.auction, now);
   const { refetch: refetchDetail } = detail;
   const { refetch: refetchMe } = me;
@@ -186,56 +233,114 @@ export function AuctionScreen({ id }: { id: string }) {
     }, CLOSING_POLL_MS);
     return () => clearInterval(timer);
   }, [closing, foreground, member, refetchDetail, refetchMe]);
+
   const unavailable =
     !valid || (detail.error instanceof ApiError && detail.error.status === 404);
+
+  const minimum = auction ? minimumBidOf(auction) : null;
+  const stickyFooter = canManual ? (
+    <View style={styles.dock}>
+      <View style={styles.dockSummary}>
+        <AppText kind="small" color={stitchTokens.brownMuted}>Mức trả tối thiểu</AppText>
+        <AppText kind="bold" style={styles.dockPrice}>{minimum != null ? formatVnd(minimum) : "—"}</AppText>
+      </View>
+      <Button wine title="Trả giá" onPress={() => setManualOpen(true)} />
+    </View>
+  ) : leadingEnglishLive && auction ? (
+    <View style={styles.dockLeading}>
+      <View style={styles.dockLeadingInfo}>
+        <View style={styles.dockLeadingBadge}>
+          <Icon name="check" size={14} color={stitchTokens.likeNewGreen} />
+          <AppText kind="bold" style={styles.dockLeadingText}>Bạn đang dẫn giá</AppText>
+        </View>
+        <AppText kind="small" color={stitchTokens.brownMuted}>
+          {me.data?.mode === "Auto" && me.data.ownLevel != null
+            ? `Tự động tối đa ${formatVnd(me.data.ownLevel)}`
+            : `Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}`}
+        </AppText>
+      </View>
+      {autoFloor(auction, me.data ?? null) <= AUCTION_MAX_PRICE ? (
+        <Button
+          wine
+          secondary
+          title={me.data?.mode === "Auto" ? "Sửa tự động" : "Đặt tự động"}
+          onPress={() => setAutoOpen(true)}
+        />
+      ) : null}
+    </View>
+  ) : guestCanJoin ? (
+    <Button wine title="Đăng nhập để trả giá" onPress={() => router.push("/account")} />
+  ) : undefined;
+
   return (
     <Screen
-      appearance="browse"
+      appearance="paper"
+      canvasColor={stitchTokens.creamBg}
+      headerExtendsToStatusBar
+      footer={stickyFooter}
       header={
-        <View style={{ paddingHorizontal: space.xl, paddingVertical: space.xs, backgroundColor: colors.surface }}>
-          <BackAction
-            title="Quay lại"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/auctions");
-            }}
-          />
-        </View>
+        <WineHeader
+          title="Phiên đấu giá"
+          subtitle={auction ? auctionHeaderSubtitle(auction, open, scheduled, shownNow) : undefined}
+          onBack={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace("/auctions");
+          }}
+          rightIcon={canReport ? "shield" : undefined}
+          rightLabel="Báo cáo sự cố cho Admin"
+          onRightPress={canReport ? () => setReportOpen(true) : undefined}
+        />
       }
     >
       {unavailable ? (
         <StatePanel
+          wine
           title="Không tìm thấy phiên"
           message="Phiên đấu giá không còn ở đường dẫn này. Quay lại danh sách để chọn phiên khác."
           action={{ label: "Xem phiên đang mở", onPress: () => router.replace("/auctions") }}
         />
       ) : (
         <>
-          {detail.isPending && <StatePanel loading title="Đang tải phiên đấu giá" />}
+          {detail.isPending && <StatePanel wine loading title="Đang tải phiên đấu giá" />}
           {detail.error && (
-            <>
+            <View style={styles.stackSm}>
               <Notice tone="error">
                 {detail.data ? "Thông tin dưới đây chưa được cập nhật. " : ""}
                 {presentError(detail.error).message}
               </Notice>
-              <Button secondary title="Thử tải lại" busy={detail.isFetching} onPress={() => void detail.refetch()} />
-            </>
+              <Button wine secondary title="Thử tải lại" busy={detail.isFetching} onPress={() => void detail.refetch()} />
+            </View>
           )}
           {detail.data && (
             <AuctionBody
               data={detail.data}
-              now={now || Date.parse(detail.data.serverTime)}
+              now={shownNow}
+              pushing={pushing}
+              detailError={detail.isError}
+              meError={!!member && me.isError}
+              retryMe={() => void me.refetch()}
+              manualOpen={manualOpen}
+              closeManual={() => setManualOpen(false)}
+              autoOpen={autoOpen}
+              openAuto={() => setAutoOpen(true)}
+              closeAuto={() => setAutoOpen(false)}
+              reportOpen={reportOpen}
+              closeReport={() => setReportOpen(false)}
               me={me.data ?? null}
               meLoading={!!member && me.isPending}
               signedIn={!!member}
               memberId={member}
-              ownerIntake={ownIntakes.data?.items.find((item) => item.auctionId === id) ?? null}
+              ownerIntake={ownerIntake}
               ownerLoading={!!member && ownIntakes.isPending}
               ownerError={!!member && ownIntakes.isError}
               ownerKnown={ownIntakes.data !== undefined}
               retryOwner={() => void ownIntakes.refetch()}
               refresh={async () => {
-                await Promise.all([detail.refetch(), member ? me.refetch() : undefined, member ? ownIntakes.refetch() : undefined]);
+                await Promise.all([
+                  detail.refetch(),
+                  member ? me.refetch() : undefined,
+                  member ? ownIntakes.refetch() : undefined,
+                ]);
               }}
             />
           )}
@@ -245,177 +350,14 @@ export function AuctionScreen({ id }: { id: string }) {
   );
 }
 
-function DigitBlock({ value, highlight }: { value: number | string; highlight?: boolean }) {
-  const formatted = typeof value === "number" ? String(value).padStart(2, "0") : value;
+function canPlaceManualBid(auction: PublicAuctionSummary, me: Participation | null, now: number) {
   return (
-    <View
-      style={{
-        backgroundColor: highlight ? stitchTokens.goldAlpha20 : stitchTokens.whiteAlpha14,
-        borderWidth: 1,
-        borderColor: highlight ? stitchTokens.goldAccent : stitchTokens.whiteAlpha25,
-        borderRadius: 6,
-        minWidth: 28,
-        height: 26,
-        paddingHorizontal: 4,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <AppText
-        style={{
-          color: highlight ? stitchTokens.goldAccent : stitchTokens.white,
-          fontSize: 14,
-          fontWeight: "800",
-          fontVariant: ["tabular-nums"],
-          lineHeight: 18,
-          textAlign: "center",
-        }}
-      >
-        {formatted}
-      </AppText>
-    </View>
-  );
-}
-
-function TimeSeparator() {
-  return (
-    <AppText
-      style={{
-        color: stitchTokens.goldAccent,
-        fontSize: 14,
-        fontWeight: "800",
-        lineHeight: 18,
-        marginHorizontal: 1,
-      }}
-    >
-      :
-    </AppText>
-  );
-}
-
-function AuctionTimerCard({
-  auction,
-  scheduled,
-  open,
-  now,
-}: {
-  auction: PublicAuctionSummary;
-  scheduled: boolean;
-  open: boolean;
-  now: number;
-}) {
-  if (!scheduled && !open) {
-    const isOnHold = auction.state === "OnHold";
-    return (
-      <View
-        accessibilityRole="timer"
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: isOnHold ? stitchTokens.amberBg : stitchTokens.parchment,
-          borderWidth: 1.2,
-          borderColor: isOnHold ? stitchTokens.orangeBorderSoft : stitchTokens.cardBorder,
-          borderRadius: radius.card * 1.5,
-          paddingHorizontal: space.md,
-          paddingVertical: 10,
-        }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Icon name="clock" size={15} color={isOnHold ? colors.warning : stitchTokens.subtleGray} />
-          <AppText kind="bold" style={{ color: isOnHold ? colors.warning : stitchTokens.wineDark, fontSize: 13 }}>
-            {isOnHold ? "TẠM DỪNG XEM XÉT" : isClosing(auction, now) ? "ĐÃ HẾT GIỜ, ĐANG CHỐT KẾT QUẢ" : "PHIÊN ĐÃ KẾT THÚC"}
-          </AppText>
-        </View>
-        <AppText kind="small" color={colors.muted}>
-          {isOnHold && auction.holdExpiresAt ? `Hạn xử lý: ${time(auction.holdExpiresAt)}` : time(auction.endAt)}
-        </AppText>
-      </View>
-    );
-  }
-
-  const waiting = waitingTime(auction, now);
-  const targetTime = scheduled ? Date.parse(waiting.at) : Date.parse(auction.endAt);
-  const remainingMs = Math.max(0, targetTime - now);
-  const isUrgent = open && remainingMs > 0 && remainingMs <= 5 * 60 * 1000;
-  const isGraceDeadline = scheduled && waiting.label === "Hạn đăng ký";
-
-  const totalSec = Math.floor(remainingMs / 1000);
-  const days = Math.floor(totalSec / 86400);
-  const hours = Math.floor((totalSec % 86400) / 3600);
-  const minutes = Math.floor((totalSec % 3600) / 60);
-  const seconds = totalSec % 60;
-
-  return (
-    <View
-      accessibilityRole="timer"
-      accessibilityLiveRegion="polite"
-      accessibilityLabel={`Thời gian còn lại: ${days > 0 ? `${days} ngày ` : ""}${hours} giờ ${minutes} phút ${seconds} giây`}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: stitchTokens.scrimDark,
-        borderWidth: 1.5,
-        borderColor: isUrgent || isGraceDeadline ? stitchTokens.goldAccent : stitchTokens.peachBorder,
-        borderRadius: radius.card * 1.5,
-        paddingHorizontal: space.md,
-        paddingVertical: 10,
-        shadowColor: stitchTokens.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 5,
-        elevation: 3,
-      }}
-    >
-      {/* Left indicator */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-        <View
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: scheduled
-              ? stitchTokens.goldAccent
-              : isUrgent
-                ? stitchTokens.goldAccent
-                : stitchTokens.likeNewGreen,
-          }}
-        />
-        <Icon
-          name="clock"
-          size={15}
-          color={isUrgent || isGraceDeadline ? stitchTokens.goldAccent : stitchTokens.goldMedal}
-        />
-        <AppText
-          kind="bold"
-          style={{
-            color: stitchTokens.white,
-            fontSize: 13,
-            letterSpacing: 0.3,
-          }}
-        >
-          {isGraceDeadline ? "HẠN ĐĂNG KÝ" : scheduled ? "MỞ SAU" : isUrgent ? "SẮP KẾT THÚC" : "CÒN LẠI"}
-        </AppText>
-      </View>
-
-      {/* Right digital tiles */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-        {days > 0 ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-            <DigitBlock value={days} highlight={isUrgent || isGraceDeadline} />
-            <AppText style={{ color: stitchTokens.white, fontSize: 11, fontWeight: "700" }}>d</AppText>
-            <TimeSeparator />
-          </View>
-        ) : null}
-
-        <DigitBlock value={hours} highlight={isUrgent || isGraceDeadline} />
-        <TimeSeparator />
-        <DigitBlock value={minutes} highlight={isUrgent || isGraceDeadline} />
-        <TimeSeparator />
-        <DigitBlock value={seconds} highlight={isUrgent || isGraceDeadline} />
-      </View>
-    </View>
+    isOpen(auction, now) &&
+    (auction.auctionType ?? "English") === "English" &&
+    !me?.won &&
+    !me?.leading &&
+    !registrationBlocks(auction, me) &&
+    minimumBidOf(auction) <= AUCTION_MAX_PRICE
   );
 }
 
@@ -424,796 +366,191 @@ function AuctionBody({
   now,
   me,
   meLoading,
+  meError,
   signedIn,
   memberId,
   ownerIntake,
   ownerLoading,
   ownerError,
   ownerKnown,
+  detailError,
+  pushing,
+  manualOpen,
+  closeManual,
+  autoOpen,
+  openAuto,
+  closeAuto,
+  reportOpen,
+  closeReport,
   retryOwner,
+  retryMe,
   refresh,
 }: {
   data: PublicAuction;
   now: number;
   me: Participation | null;
   meLoading: boolean;
+  meError: boolean;
   signedIn: boolean;
   memberId: string | null;
   ownerIntake: MyIntake | null;
   ownerLoading: boolean;
   ownerError: boolean;
   ownerKnown: boolean;
+  detailError: boolean;
+  pushing: boolean;
+  manualOpen: boolean;
+  closeManual: () => void;
+  autoOpen: boolean;
+  openAuto: () => void;
+  closeAuto: () => void;
+  reportOpen: boolean;
+  closeReport: () => void;
   retryOwner: () => void;
+  retryMe: () => void;
   refresh: () => Promise<unknown>;
 }) {
   const { client } = useSession();
   const { auction, history, leaderAlias } = data;
   const open = isOpen(auction, now);
   const scheduled = isScheduled(auction, now);
-  const price = auction.currentPrice ?? auction.startPrice;
-  const photos = auction.book?.photos ?? [];
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
-  const [fullscreenVisible, setFullscreenVisible] = useState(false);
-  const buyNowTriggerRef = useRef<(() => void) | null>(null);
-  const selectedMediaId = photos[selectedPhotoIndex]?.id ?? photos[0]?.id;
-  const authors = auction.book?.authors.join(", ");
-  const waiting = waitingTime(auction, now);
-  const formatType = auction.auctionType ?? "English";
-  const isDutch = formatType === "Dutch";
-  const isSealed = isSealedFormat(auction);
-  const formatBadgeLabel =
-    formatType === "Dutch"
-      ? "Kiểu Hà Lan · Giá giảm dần"
-      : formatType === "SealedFirst"
-        ? "Đấu giá kín · Giá thứ nhất"
-        : formatType === "SealedSecond"
-          ? "Đấu giá kín · Giá thứ hai"
-          : "Đấu giá trả giá lên";
+  const offer = auction.state === "SecondChanceOffered" && me?.secondChance?.outcome === "Offered";
+  const registration = registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, now);
+  const memberActions = !ownerError && !detailError && !meLoading && !meError;
+  const bidding = !me?.won && (open || (scheduled && registration) || offer);
+  const report = !!memberId && !ownerError && (ownerIntake || me);
+  const sale = ownerIntake?.sellerSale;
+  const demo = signedIn && memberActions && (ownerIntake || me) && auction.version != null && (scheduled || open);
 
   return (
-    <View style={{ gap: space.lg }}>
-      {/* 1. Large Cover Gallery with Badges */}
-      <View style={{ gap: 8 }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Chạm để xem ảnh toàn màn hình"
-          onPress={() => setFullscreenVisible(true)}
-          style={{
-            marginHorizontal: -space.xl,
-            marginTop: -space.xl,
-            aspectRatio: 1,
-            maxHeight: 420,
-            overflow: "hidden",
-            backgroundColor: stitchTokens.parchment,
-            borderBottomWidth: 1,
-            borderBottomColor: stitchTokens.cardBorder,
-            position: "relative",
-          }}
-        >
-          <AuctionCover
-            auctionId={auction.id}
-            mediaId={selectedMediaId}
-            label={auction.title}
-            iconSize={48}
-            resizeMode="cover"
-          />
+    <View style={styles.body}>
+      <AuctionSessionOverview auction={auction} now={now} open={open} scheduled={scheduled} pushing={pushing} />
 
-          {/* Floating State Badge */}
-          <View
-            style={{
-              position: "absolute",
-              top: 12,
-              left: 12,
-              backgroundColor: open
-                ? stitchTokens.wineDark
-                : scheduled
-                  ? stitchTokens.wineAlpha85
-                  : auction.state === "SecondChanceOffered"
-                    ? stitchTokens.orangeBurned
-                    : auction.state === "PaymentExpired"
-                      ? stitchTokens.darkRed
-                      : stitchTokens.subtleGray,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              borderRadius: 6,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            {open && (
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: stitchTokens.likeNewGreen,
-                }}
-              />
-            )}
-            <AppText
-              kind="small"
-              style={{
-                color: stitchTokens.white,
-                fontWeight: "700",
-                fontSize: 11,
-              }}
-              numberOfLines={1}
-            >
-              {(STATE_BADGE_LABEL[auction.state] ?? STATE_LABEL[auction.state]).toUpperCase()}
-            </AppText>
-          </View>
-
-          {/* Fullscreen Pill Trigger */}
-          <View
-            style={{
-              position: "absolute",
-              bottom: 12,
-              right: 12,
-              backgroundColor: stitchTokens.modalScrimDark,
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 16,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            <Icon name="search" size={13} color={stitchTokens.white} />
-            <AppText kind="small" style={{ color: stitchTokens.white, fontSize: 11, fontWeight: "600" }}>
-              Toàn màn hình
-            </AppText>
-          </View>
-        </Pressable>
-
-        {/* Thumbnail Row if multiple photos */}
-        {photos.length > 1 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
-          >
-            {photos.map((photo, idx) => {
-              const active = idx === selectedPhotoIndex;
-              return (
-                <Pressable
-                  key={photo.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Xem ảnh ${idx + 1}`}
-                  onPress={() => setSelectedPhotoIndex(idx)}
-                  style={{
-                    width: 54,
-                    height: 54,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    borderWidth: 2,
-                    borderColor: active
-                      ? stitchTokens.wineDark
-                      : stitchTokens.cardBorder,
-                    opacity: active ? 1 : 0.65,
-                  }}
-                >
-                  <AuctionCover
-                    auctionId={auction.id}
-                    mediaId={photo.id}
-                    label={`${auction.title} - ảnh ${idx + 1}`}
-                    iconSize={16}
-                  />
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
-
-      {/* Fullscreen Modal Lightbox */}
-      <AppModal
-        visible={fullscreenVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setFullscreenVisible(false)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: stitchTokens.black,
-            justifyContent: "center",
-            alignItems: "center",
-            position: "relative",
-          }}
-        >
-          {/* Header with counter and close */}
-          <View
-            style={{
-              position: "absolute",
-              top: 50,
-              left: 16,
-              right: 16,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              zIndex: 10,
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: stitchTokens.whiteAlpha25,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 16,
-              }}
-            >
-              <AppText style={{ color: stitchTokens.white, fontSize: 13, fontWeight: "700" }}>
-                Ảnh {selectedPhotoIndex + 1} / {Math.max(1, photos.length)}
-              </AppText>
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Đóng xem toàn màn hình"
-              hitSlop={12}
-              onPress={() => setFullscreenVisible(false)}
-              style={({ pressed }) => [
-                {
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: stitchTokens.whiteAlpha25,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Icon name="close" size={20} color={stitchTokens.white} />
-            </Pressable>
-          </View>
-
-          {/* Fullscreen Image Preview */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đóng toàn màn hình"
-            style={{ width: "100%", height: "80%", justifyContent: "center", alignItems: "center" }}
-            onPress={() => setFullscreenVisible(false)}
-          >
-            <AuctionCover
-              auctionId={auction.id}
-              mediaId={selectedMediaId}
-              label={auction.title}
-              iconSize={64}
-              resizeMode="contain"
-            />
-          </Pressable>
-
-          {/* Bottom Thumbnails Navigator */}
-          {photos.length > 1 && (
-            <View
-              style={{
-                position: "absolute",
-                bottom: 36,
-                left: 0,
-                right: 0,
-                alignItems: "center",
-              }}
-            >
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 10, paddingHorizontal: 20 }}
-              >
-                {photos.map((photo, idx) => {
-                  const active = idx === selectedPhotoIndex;
-                  return (
-                    <Pressable
-                      key={photo.id}
-                      onPress={() => setSelectedPhotoIndex(idx)}
-                      style={{
-                        width: 52,
-                        height: 52,
-                        borderRadius: 6,
-                        overflow: "hidden",
-                        borderWidth: 2,
-                        borderColor: active ? stitchTokens.goldAccent : stitchTokens.whiteAlpha40,
-                        opacity: active ? 1 : 0.6,
-                      }}
-                    >
-                      <AuctionCover
-                        auctionId={auction.id}
-                        mediaId={photo.id}
-                        label={`${auction.title} - ảnh ${idx + 1}`}
-                        iconSize={16}
-                      />
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      </AppModal>
-
-      {/* 2. Dedicated Countdown Card (Khung riêng đếm ngược từng giây đặt trên tên sách) */}
-      <AuctionTimerCard
-        auction={auction}
-        scheduled={scheduled}
-        open={open}
-        now={now}
-      />
-
-      {/* Warning Notice for Special Auction States */}
-      {auction.state === "SecondChanceOffered" && (
-        <Notice tone="warning">
-          Người thắng không thanh toán; đang mời người trả giá cao thứ hai.
-        </Notice>
-      )}
-      {auction.state === "PaymentExpired" && (
-        <Notice tone="warning">
-          Người thắng không thanh toán đúng hạn.
-        </Notice>
-      )}
-
-      {/* 3. Title & Author & Condition & Format Pills */}
-      <View style={{ gap: space.xs }}>
-        <AppText kind="bookTitle" color={colors.ink} accessibilityRole="header">
-          {auction.title}
-        </AppText>
-        {authors ? (
-          <AppText kind="reading" color={colors.muted}>
-            Tác giả: <AppText kind="bold" color={colors.ink}>{authors}</AppText>
-          </AppText>
-        ) : null}
-
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
-          {auction.book?.condition && (
-            <View
-              style={{
-                backgroundColor: stitchTokens.roseWarmSurface,
-                borderWidth: 1,
-                borderColor: stitchTokens.peachBorder,
-                borderRadius: 6,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-              }}
-            >
-              <AppText kind="small" style={{ color: stitchTokens.wineDark, fontWeight: "600" }}>
-                Tình trạng: {conditionLabels[auction.book.condition] ?? auction.book.condition}
-              </AppText>
-            </View>
-          )}
-
-          <View
-            style={{
-              backgroundColor: stitchTokens.goldLight,
-              borderWidth: 1,
-              borderColor: stitchTokens.goldBorder,
-              borderRadius: 6,
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Icon name={isSealed ? "lock" : isDutch ? "flame" : "gavel"} size={12} color={stitchTokens.wineDark} />
-            <AppText kind="small" style={{ color: stitchTokens.wineDark, fontWeight: "700" }}>
-              {formatBadgeLabel}
-            </AppText>
-          </View>
-
-          {auction.buyNowPrice !== null && !isDutch && !isSealed && (
-            <View
-              style={{
-                backgroundColor: stitchTokens.parchment,
-                borderWidth: 1,
-                borderColor: stitchTokens.peachBorder,
-                borderRadius: 6,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <Icon name="bolt" size={12} color={stitchTokens.crimsonBolt} />
-              <AppText kind="small" style={{ color: stitchTokens.wineDark, fontWeight: "600" }}>
-                {auction.buyNowMode === "Instant" ? "Mua ngay: Kết thúc ngay" : "Mua ngay: Chờ thách đấu"}
-              </AppText>
-            </View>
-          )}
-
-          <View
-            style={{
-              backgroundColor: stitchTokens.parchment,
-              borderWidth: 1,
-              borderColor: stitchTokens.cardBorder,
-              borderRadius: 6,
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Icon name="pin" size={12} color={stitchTokens.wineDark} />
-            <AppText kind="small" style={{ color: stitchTokens.deepCocoa }}>
-              {auction.pointName}
-            </AppText>
-          </View>
-        </View>
-
-        {/* ADR 0078: the seller and members who registered or bid flag a problem to Admin.
-            Placed right under book identity so title, author and reporting stay together. */}
-        {memberId && !ownerError && (ownerIntake || me) ? (
-          <View style={{ marginTop: 4 }}>
-            <AuctionFlag auction={auction} owner={memberId} />
-          </View>
-        ) : null}
-      </View>
-
-      {/* 4. Price & Bid Stats Card (3D Red Ombre) */}
-      <View
-        style={{
-          borderRadius: radius.card * 2,
-          overflow: "hidden",
-          borderTopWidth: 1.5,
-          borderTopColor: stitchTokens.cardBorderHighlightTop,
-          borderLeftWidth: 1.2,
-          borderLeftColor: stitchTokens.cardBorderHighlightLeft,
-          borderRightWidth: 1.2,
-          borderRightColor: stitchTokens.cardBorderShadowRight,
-          borderBottomWidth: 3.5,
-          borderBottomColor: stitchTokens.cardBorderShadowBottom,
-          shadowColor: stitchTokens.shadowDeepCrimson,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.35,
-          shadowRadius: 12,
-          elevation: 6,
-          position: "relative",
-        }}
-      >
-        {/* SVG Red Ombre 3D Background */}
-        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-          <Defs>
-            <LinearGradient id="redOmbre3D" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor={stitchTokens.ombreStop0} />
-              <Stop offset="30%" stopColor={stitchTokens.ombreStop30} />
-              <Stop offset="70%" stopColor={stitchTokens.ombreStop70} />
-              <Stop offset="100%" stopColor={stitchTokens.ombreStop100} />
-            </LinearGradient>
-            <LinearGradient id="specularGlow" x1="0%" y1="0%" x2="0%" y2="100%">
-              <Stop offset="0%" stopColor={stitchTokens.white} stopOpacity={0.18} />
-              <Stop offset="45%" stopColor={stitchTokens.white} stopOpacity={0.03} />
-              <Stop offset="100%" stopColor={stitchTokens.white} stopOpacity={0} />
-            </LinearGradient>
-          </Defs>
-          <Rect width="100%" height="100%" fill="url(#redOmbre3D)" />
-          <Rect width="100%" height="65%" fill="url(#specularGlow)" />
-        </Svg>
-
-        {/* Top Tier: Price & Format / Buy Now 3D Action */}
-        <View style={{ padding: space.lg, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <AppText
-              kind="small"
-              style={{
-                color: stitchTokens.whitePinkText,
-                fontWeight: "700",
-                fontSize: 12,
-                letterSpacing: 0.4,
-                textTransform: "uppercase",
-              }}
-            >
-              {isDutch
-                ? open && auction.dutchPrice != null
-                  ? "Giá Hà Lan hiện tại"
-                  : scheduled
-                    ? "Giá mở đầu (Hà Lan)"
-                    : CLOSED_PRICE[auction.state] ?? "Giá cuối"
-                : isSealed
-                  ? open || scheduled
-                    ? "Giá khởi điểm (Đấu giá kín)"
-                    : CLOSED_PRICE[auction.state] ?? "Giá chốt"
-                  : auction.currentPrice === null
-                    ? "Giá khởi điểm"
-                    : open
-                      ? "Giá hiện tại"
-                      : CLOSED_PRICE[auction.state] ?? "Giá cuối"}
-            </AppText>
-            <AppText
-              kind="bookPrice"
-              style={{
-                color: stitchTokens.goldAccent,
-                fontSize: 32,
-                fontWeight: "900",
-                letterSpacing: 0.5,
-                marginVertical: 4,
-                textShadowColor: stitchTokens.textShadowDeep,
-                textShadowOffset: { width: 0, height: 2 },
-                textShadowRadius: 4,
-              }}
-              selectable
-              accessibilityLiveRegion="polite"
-            >
-              {formatVnd(
-                isDutch
-                  ? open && auction.dutchPrice != null
-                    ? auction.dutchPrice
-                    : scheduled
-                      ? (auction.dutchTopPrice ?? auction.buyNowPrice ?? price)
-                      : price
-                  : isSealed && (open || scheduled)
-                    ? auction.startPrice
-                    : price,
-              )}
-            </AppText>
-            {isDutch && (open || scheduled) ? (
-              <AppText kind="small" style={{ color: stitchTokens.whitePinkTextMuted, fontSize: 11 }}>
-                {`Giá sàn: ${formatVnd(auction.startPrice)} · Giảm -${formatVnd(auction.step)}`}
-              </AppText>
-            ) : isSealed && (open || scheduled) ? (
-              <AppText kind="small" style={{ color: stitchTokens.whitePinkTextMuted, fontSize: 11 }}>
-                Ẩn giá & người dẫn cho tới khi kết thúc
-              </AppText>
-            ) : null}
-          </View>
-
-          {!isDutch && !isSealed && auction.buyNowPrice !== null && open ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Mua ngay với giá ${formatVnd(auction.buyNowPrice)}`}
-              disabled={Boolean(ownerIntake) || me?.won}
-              onPress={() => {
-                if (!signedIn) {
-                  router.push("/account");
-                  return;
-                }
-                buyNowTriggerRef.current?.();
-              }}
-              style={({ pressed }) => [
-                {
-                  backgroundColor: stitchTokens.goldAccent,
-                  borderTopWidth: 1.5,
-                  borderTopColor: stitchTokens.goldLight,
-                  borderLeftWidth: 1.2,
-                  borderLeftColor: stitchTokens.goldLight,
-                  borderRightWidth: 1.5,
-                  borderRightColor: stitchTokens.goldCardBorderBottom,
-                  borderBottomWidth: pressed ? 1.5 : 4.5,
-                  borderBottomColor: stitchTokens.goldDark,
-                  borderRadius: 14,
-                  paddingHorizontal: 13,
-                  paddingVertical: 8,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transform: [{ translateY: pressed ? 2.5 : 0 }],
-                  opacity: ownerIntake || me?.won ? 0.65 : 1,
-                  shadowColor: stitchTokens.black,
-                  shadowOffset: { width: 0, height: pressed ? 1 : 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 5,
-                  elevation: pressed ? 2 : 5,
-                },
-              ]}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                  backgroundColor: stitchTokens.crimsonBolt,
-                  paddingHorizontal: 8,
-                  paddingVertical: 2.5,
-                  borderRadius: 8,
-                  marginBottom: 3,
-                }}
-              >
-                <Icon name="bolt" size={12} color={stitchTokens.goldAccent} />
-                <AppText
-                  kind="small"
-                  style={{
-                    color: stitchTokens.white,
-                    fontWeight: "900",
-                    fontSize: 10,
-                    letterSpacing: 0.4,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  MUA NGAY
-                </AppText>
-              </View>
-              <AppText
-                kind="bold"
-                style={{
-                  color: stitchTokens.wineDark,
-                  fontSize: 15,
-                  fontWeight: "900",
-                }}
-              >
-                {formatVnd(auction.buyNowPrice)}
-              </AppText>
-            </Pressable>
-          ) : isDutch && (open || scheduled) ? (
-            <View
-              style={{
-                backgroundColor: stitchTokens.goldLight,
-                borderWidth: 1.5,
-                borderColor: stitchTokens.goldCardBorder,
-                borderBottomWidth: 3.5,
-                borderBottomColor: stitchTokens.goldCardBorderBottom,
-                borderRadius: 12,
-                paddingHorizontal: 11,
-                paddingVertical: 7,
-                alignItems: "flex-end",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Icon name="flame" size={13} color={stitchTokens.crimsonBolt} />
-                <AppText kind="small" style={{ color: stitchTokens.crimsonBolt, fontWeight: "800", fontSize: 11 }}>
-                  KIỂU HÀ LAN
-                </AppText>
-              </View>
-              <AppText kind="bold" style={{ color: stitchTokens.crimsonDeepText, fontSize: 12, fontWeight: "800" }}>
-                Chốt ngay khi bấm
-              </AppText>
-            </View>
-          ) : isSealed && (open || scheduled) ? (
-            <View
-              style={{
-                backgroundColor: stitchTokens.goldLight,
-                borderWidth: 1.5,
-                borderColor: stitchTokens.goldCardBorder,
-                borderBottomWidth: 3.5,
-                borderBottomColor: stitchTokens.goldCardBorderBottom,
-                borderRadius: 12,
-                paddingHorizontal: 11,
-                paddingVertical: 7,
-                alignItems: "flex-end",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Icon name="lock" size={13} color={stitchTokens.crimsonBolt} />
-                <AppText kind="small" style={{ color: stitchTokens.crimsonBolt, fontWeight: "800", fontSize: 11 }}>
-                  GIÁ KÍN
-                </AppText>
-              </View>
-              <AppText kind="bold" style={{ color: stitchTokens.crimsonDeepText, fontSize: 12, fontWeight: "800" }}>
-                {formatType === "SealedSecond" ? "Trả mức cao #2" : "Trả đúng giá đặt"}
-              </AppText>
-            </View>
-          ) : null}
-        </View>
-
-        {/* Bottom Tier: Stats Bar */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: space.lg,
-            paddingVertical: 10,
-            backgroundColor: stitchTokens.scrimDarkCrimson,
-            borderTopWidth: 1,
-            borderTopColor: stitchTokens.whiteAlpha15,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Icon
-              name={scheduled && auction.minBidders != null ? "person" : "gavel"}
-              size={14}
-              color={stitchTokens.goldAccent}
-            />
-            <AppText kind="small" style={{ color: stitchTokens.whitePinkTextMuted, fontWeight: "600", fontSize: 12 }}>
-              {scheduled && auction.minBidders != null
-                ? `Đăng ký: ${auction.registeredCount ?? 0}/${auction.minBidders} người`
-                : `${auction.bidderCount} người trả giá${auction.minBidders != null ? ` · ${auction.registeredCount ?? 0} đã ĐK` : ""}`}
-            </AppText>
-          </View>
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Icon name="clock" size={14} color={stitchTokens.goldAccent} />
-            <AppText kind="small" style={{ color: stitchTokens.whitePinkTextMuted, fontWeight: "600", fontSize: 12 }}>
-              {scheduled ? `${waiting.label}: ${time(waiting.at)}` : `Kết thúc: ${time(auction.endAt)}`}
-            </AppText>
-          </View>
-        </View>
-      </View>
       {open && auction.buyNowAt ? (
         <Notice tone="warning">
-          {`Đã có người chọn mua ngay. Còn ${formatRemaining(Date.parse(auction.endAt) - now)} để trả cao hơn; hết giờ, người dẫn đầu thắng phiên.`}
+          {`Đã có người chọn mua ngay. Còn ${formatRemaining(Date.parse(auction.endAt) - now)} để trả cao hơn.`}
         </Notice>
       ) : null}
-      {ownerError && (
-        <StatePanel title="Chưa kiểm tra được vai trò của bạn" message="Tải lại trước khi thực hiện thao tác trong phiên." action={{ label: "Thử lại kiểm tra vai trò", onPress: retryOwner }} />
-      )}
-      {/* Keep frozen command state mounted, with every control hidden during
-          ownership recovery, including keyboard/accessibility interaction. */}
-      <View style={ownerError ? { display: "none" } : undefined}>
-      {ownerLoading ? (
-        <StatePanel loading title="Đang kiểm tra vai trò của bạn trong phiên" />
-      ) : signedIn && !ownerKnown ? null : ownerIntake && waitingForRegistrants(auction, now) ? (
-        <WaitingSellerBlock auction={auction} now={now} refresh={refresh} />
-      ) : ownerIntake ? (
-        <View style={{ gap: space.sm }}>
-          <Notice>
-            <AppText kind="bold">Đây là phiên của bạn</AppText>{"\n"}
-            {closeReasonText(auction)
-              ? closeReasonText(auction)
-              : auction.minBidders != null && open
-              ? "Phiên đã mở nên bạn không đóng được nữa. Cần hỗ trợ, hãy dùng Báo cáo sự cố cho Admin."
-              : scheduled
-              ? `Phiên hẹn mở lúc ${time(auction.startAt)}. Bạn có thể đổi thời gian trong Phiên của tôi khi chưa có lượt trả giá.`
-              : open && auction.bidderCount === 0
-                ? "Chưa có lượt trả giá. Bạn có thể đổi thời gian trong Phiên của tôi. Người bán không tham gia trả giá."
-                : `${STATE_LABEL[auction.state]}. Người bán theo dõi kết quả và không tham gia trả giá.`}
-          </Notice>
-          <Button wine secondary title="Xem hồ sơ gửi sách" onPress={() => router.push({ pathname: "/send-to-auction", params: { intakeId: ownerIntake.id } })} />
-          <Button wine secondary title="Phiên của tôi" onPress={() => router.push("/my-auctions")} />
-        </View>
-      ) : signedIn && auction.state === "SecondChanceOffered" && me?.secondChance?.outcome === "Offered" ? (
-        // ADR 0086: the runner-up answers the one offer.
-        <BidPanel auction={auction} me={me} now={now} refresh={refresh} paused={ownerError} />
+
+      {report && memberId ? (
+        <AuctionFlag
+          auction={auction}
+          owner={memberId}
+          hideTrigger
+          externalVisible={reportOpen}
+          onExternalClose={closeReport}
+        />
+      ) : null}
+
+      {ownerError ? (
+        <StatePanel
+          wine
+          title="Chưa kiểm tra được vai trò của bạn"
+          message="Tải lại để xem các thao tác dành cho bạn."
+          action={{ label: "Thử lại kiểm tra vai trò", onPress: retryOwner }}
+        />
+      ) : ownerLoading ? (
+        <StatePanel wine loading title="Đang kiểm tra vai trò của bạn trong phiên" />
+      ) : signedIn && !ownerKnown ? null : ownerIntake ? (
+        waitingForRegistrants(auction, now) ? (
+          <WaitingSellerBlock auction={auction} now={now} refresh={refresh} />
+        ) : (
+          <View style={styles.sellerCard}>
+            <View style={styles.sellerCardHeader}>
+              <View style={styles.sellerIcon}>
+                <Icon name="gavel" size={17} color={stitchTokens.wineDark} />
+              </View>
+              <View style={styles.flexOne}>
+                <AppText kind="bold" style={styles.cardTitle}>Đây là phiên của bạn</AppText>
+                <AppText kind="small" color={colors.muted} style={styles.helper}>
+                  {closeReasonText(auction) ??
+                    (scheduled
+                      ? `Hẹn mở lúc ${time(auction.startAt)}. Bạn có thể đổi giờ trong Phiên của tôi khi chưa có lượt trả giá.`
+                      : `${STATE_LABEL[auction.state]}. Theo dõi diễn biến và kết quả ngay tại đây.`)}
+                </AppText>
+              </View>
+            </View>
+
+            {sale ? (
+              <View style={styles.sellerSection}>
+                <AppText kind="bold" color={stitchTokens.wine}>{auctionSellerSaleLabels[sale.status]}</AppText>
+                {sale.status !== "Closed" ? (
+                  <SaleFeeBreakdown amounts={auctionSellerAmounts(sale)} settled={sale.status === "Settled"} />
+                ) : null}
+                {sale.status === "Settled" ? (
+                  <Button
+                    wine
+                    secondary
+                    title="Đối chiếu tiền bán trong ví"
+                    onPress={() => router.push({ pathname: "/wallet", params: { sale: sale.orderId } })}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+
+            <View style={styles.sellerActions}>
+              <Button
+                wine
+                secondary
+                title="Xem hồ sơ gửi sách"
+                onPress={() => router.push({ pathname: "/send-to-auction", params: { intakeId: ownerIntake.id } })}
+              />
+              <Button wine secondary title="Phiên của tôi" onPress={() => router.push("/my-auctions")} />
+            </View>
+          </View>
+        )
+      ) : meError ? (
+        <StatePanel
+          wine
+          title="Chưa tải được lượt trả giá của bạn"
+          message="Tải lại để kiểm tra vị trí và thao tác của bạn trong phiên."
+          action={{ label: "Thử tải lại", onPress: retryMe }}
+        />
       ) : me?.won ? (
-        me.orderId ? (
-          <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} paused={ownerError} />
-        ) : (
-          <Notice tone="success">Đơn nhận sách đang được tạo. Trang sẽ tự cập nhật.</Notice>
-        )
-      ) : open && auction.state === "Active" ? (
-        signedIn ? (
-          meLoading ? (
-            <StatePanel loading title="Đang tải lượt trả giá của bạn" />
+        <View style={styles.stackMd}>
+          <Notice tone="success">{me.boughtNow ? "Bạn đã mua ngay cuốn sách này." : "Bạn đã thắng phiên đấu giá."}</Notice>
+          {me.orderId ? (
+            <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} heldAmount={me.heldAmount} paused={ownerError} />
           ) : (
-            <BidPanel
-              auction={auction}
-              me={me}
-              now={now}
-              refresh={refresh}
-              paused={ownerError}
-              onRegisterBuyNow={(fn) => {
-                buyNowTriggerRef.current = fn;
-              }}
-            />
-          )
-        ) : (
-          <Button title="Đăng nhập để trả giá" onPress={() => router.push("/account")} />
-        )
-      ) : scheduled && signedIn && !meLoading && auction.state === "Active" && (registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, now)) ? (
+            <Notice>Đơn nhận sách đang được tạo. Trang sẽ tự cập nhật.</Notice>
+          )}
+        </View>
+      ) : bidding ? (
+        !signedIn ? null : meLoading ? (
+          <StatePanel wine loading title="Đang tải lượt trả giá của bạn" />
+        ) : null
+      ) : scheduled ? (
+        <Notice>{auction.openMode ? openRuleText(auction, now) : `Phiên hẹn mở lúc ${time(auction.startAt)}.`}</Notice>
+      ) : (
+        <Notice>
+          {auction.state === "OnHold"
+            ? `Quản trị viên đang xem xét phiên này. ${auction.holdExpiresAt ? `Hạn xử lý ${time(auction.holdExpiresAt)}. ` : ""}Nếu phiên tiếp tục, hệ thống sẽ cộng lại thời gian tạm dừng.`
+            : isClosing(auction, now)
+              ? "Máy chủ đang chốt kết quả phiên."
+              : closeReasonText(auction) ?? STATE_LABEL[auction.state]}
+        </Notice>
+      )}
+
+      {signedIn && memberId && ownerKnown && !ownerIntake ? (
         <BidPanel
+          key={memberId}
           auction={auction}
           me={me}
           now={now}
           refresh={refresh}
-          paused={ownerError}
-          onRegisterBuyNow={(fn) => {
-            buyNowTriggerRef.current = fn;
-          }}
+          active={bidding && !meLoading}
+          paused={!memberActions}
+          manualOpen={manualOpen}
+          closeManual={closeManual}
+          autoOpen={autoOpen}
+          openAuto={openAuto}
+          closeAuto={closeAuto}
         />
-      ) : scheduled ? (
-        <Notice>
-          {`Phiên chưa mở. ${auction.openMode ? `${openRuleText(auction, now)} ` : `Người bán hẹn mở lúc ${time(auction.startAt)}; `}khi phiên mở bạn có thể trả giá${auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ""}.`}
-        </Notice>
-      ) : (
-        <Notice>
-          {auction.state === "OnHold"
-            ? `Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.${auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${time(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ""}`
-            : auction.state === "SecondChanceOffered"
-              ? "Người thắng không thanh toán; đang mời người trả giá cao thứ hai."
-              : closeReasonText(auction) ?? "Phiên không còn nhận trả giá."}
-        </Notice>
-      )}
-      </View>
-      {signedIn && !ownerError && (ownerIntake || me) && auction.version != null && (scheduled || open) && (
-        <DemoSkipButton
-          label={scheduled ? "Mở phiên ngay · Demo" : "Kết thúc phiên ngay · Demo"}
-          note={
-            scheduled
-              ? "Bỏ qua giờ hẹn mở và điều kiện số người đăng ký để mở phiên đấu giá ngay (chế độ demo)."
-              : "Chốt phiên ngay; hệ thống chọn người thắng và tạo đơn như khi hết giờ."
-          }
-          run={(key) => advanceDemoAuction(client, auction.id, auction.version!, key)}
-          onDone={refresh}
-        />
-      )}
+      ) : null}
+
+      {/* Book condition placed BEFORE bid history so buyers inspect book flaws before bidding */}
+      <AuctionBookCondition book={auction.book} />
+
       <AuctionBidHistory
         sealedLive={isSealedFormat(auction) && (open || scheduled)}
         history={history}
@@ -1222,6 +559,19 @@ function AuctionBody({
         myAlias={me?.alias ?? null}
         startPrice={auction.startPrice}
       />
+
+      {demo && auction.version != null ? (
+        <DemoSkipButton
+          label={scheduled ? "Mở phiên ngay · Demo" : "Kết thúc phiên ngay · Demo"}
+          note={
+            scheduled
+              ? "Bỏ qua giờ hẹn và số người đăng ký trong phiên demo."
+              : "Chốt phiên và tạo đơn như khi hết giờ."
+          }
+          run={(key) => advanceDemoAuction(client, auction.id, auction.version!, key)}
+          onDone={refresh}
+        />
+      ) : null}
     </View>
   );
 }
@@ -1231,16 +581,25 @@ function BidPanel({
   me,
   now,
   refresh,
+  active,
   paused,
-  onRegisterBuyNow,
+  manualOpen,
+  closeManual,
+  autoOpen,
+  openAuto,
+  closeAuto,
 }: {
   auction: PublicAuctionSummary;
   me: Participation | null;
-  // Server-corrected clock from the screen (render stays pure).
   now: number;
   refresh: () => Promise<unknown>;
+  active: boolean;
   paused: boolean;
-  onRegisterBuyNow?: (fn: () => void) => void;
+  manualOpen: boolean;
+  closeManual: () => void;
+  autoOpen: boolean;
+  openAuto: () => void;
+  closeAuto: () => void;
 }) {
   const { client, state } = useSession();
   const queryClient = useQueryClient();
@@ -1249,10 +608,10 @@ function BidPanel({
   const floor = autoFloor(auction, me);
   const [manual, setManual] = useState<string | null>(null);
   const [auto, setAuto] = useState("");
-  const [autoExpanded, setAutoExpanded] = useState(false);
-  const [confirming, setConfirming] = useState<{ kind: AuctionCommandKind; amount: number } | null>(null);
+  const [confirming, setConfirming] = useState<{ kind: Exclude<AuctionCommandKind, "Manual">; amount: number } | null>(null);
   const [pending, setPending] = useState<AuctionCommand | null>(null);
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [noticePrice, setNoticePrice] = useState<number | null>(null);
@@ -1275,47 +634,25 @@ function BidPanel({
     }, 7000);
     return () => clearTimeout(timer);
   }, [notice]);
-  const manualAmount = manual === null ? minimum : Number(manual.replace(/\D/g, "")) || null;
-  const manualError = manual === null ? null : amountError(manualAmount, minimum, auction.startPrice, auction.step);
-  const locked = busy || !!pending;
+
+  const locked = paused || busy || !!pending;
   const capped = minimum > AUCTION_MAX_PRICE;
   const wallet = useQuery({
     queryKey: ["wallet"],
     queryFn: () => client.request("/me/wallet", walletSummary),
-    enabled: state.status === "authenticated",
+    enabled: state.status === "authenticated" && active && !paused,
     retry: false,
   });
-  // ADR 0075: the amount already held for this auction counts toward a raise.
   const heldHere = me?.heldAmount ?? 0;
-  // A rival's bid arrives by push/polling and releases this hold; re-read the wallet
-  // so the available amount does not stay at the value cached while leading.
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: ["wallet"] });
   }, [heldHere, queryClient]);
   const available = wallet.data ? wallet.data.available + heldHere : null;
   const price = auction.currentPrice ?? auction.startPrice;
 
-  useEffect(() => {
-    if (!onRegisterBuyNow) return;
-    onRegisterBuyNow(() => {
-      if (locked || auction.buyNowPrice === null) return;
-      if (registrationBlocks(auction, me)) {
-        setError("Bạn cần đặt cọc đăng ký tham gia phiên và chờ đủ người trước khi mua ngay.");
-        return;
-      }
-      if (instantNeedsRival(auction, me)) {
-        setError("Mua ngay kết thúc phiên ngay, nên chỉ dùng được khi đã có người khác trả giá.");
-        return;
-      }
-      if (fundsShortfall(auction.buyNowPrice, available) > 0) {
-        setError(fundsHint(auction.buyNowPrice, available));
-        return;
-      }
-      setConfirming({ kind: "BuyNow", amount: auction.buyNowPrice });
-    });
-  }, [onRegisterBuyNow, locked, auction, me, available]);
-
   const run = async (command: AuctionCommand) => {
+    if (sending.current || paused) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -1325,82 +662,160 @@ function BidPanel({
       setPending(null);
       setManual(null);
       setAuto("");
-      setAutoExpanded(false);
+      closeAuto();
       setNotice(receiptMessage(command.kind, command.amount, receipt, !!me?.leading, auction?.buyNowMode ?? "Challenge"));
       setNoticePrice(receipt.currentPrice);
+      if (command.kind === "Manual") closeManual();
     } catch (caught) {
-      // An unknown outcome keeps the frozen request for "Thử lại".
-      setPending(outcomeUnknown(caught) ? command : null);
+      const uncertainResponse =
+        outcomeUnknown(caught) ||
+        (caught instanceof ApiError && [401, 403, 408, 429].includes(caught.status));
+      setPending(uncertainResponse ? command : null);
       setError(auctionErrorText(caught));
     } finally {
+      sending.current = false;
       setBusy(false);
       setConfirming(null);
-      if (state.status === "authenticated")
+      if (state.status === "authenticated") {
         void queryClient.invalidateQueries({ queryKey: participationKey(auction.id, state.user.id) });
-      // ADR 0075: bids move wallet holds.
+      }
       void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      void queryClient.invalidateQueries({ queryKey: AUCTIONS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["my-auctions"] });
       void refresh();
     }
   };
-  const copy = confirming && dialogCopy(confirming.kind, confirming.amount, auction, !!me?.leading);
+
+  const copy = confirming && dialogCopy(confirming.kind, auction, !!me?.leading);
   const english = (auction.auctionType ?? "English") === "English";
+  const registering = registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, now);
+  const buyNowPrice = english && isOpen(auction, now) && !registering ? auction.buyNowPrice : null;
+  const rivalRequired = instantNeedsRival(auction, me);
+  const offerDeadline = me?.secondChance?.deadline;
+  const offerExpired = !!offerDeadline && Date.parse(offerDeadline) <= now;
+  const manualBlocked = paused
+    ? "Chưa xác minh được trạng thái hiện tại. Hãy tải lại phiên."
+    : canPlaceManualBid(auction, me, now)
+      ? null
+      : "Phiên hoặc vị trí của bạn đã thay đổi. Hiện không thể gửi lượt mới.";
+
+  const submit = (kind: AuctionCommandKind, amount: number) => {
+    if (locked) return;
+    const decisionNow = serverClock.now() ?? now;
+    const isBid =
+      kind === "Manual" ||
+      kind === "Auto" ||
+      kind === "BuyNow" ||
+      kind === "Disable" ||
+      kind === "DutchAccept" ||
+      kind === "Sealed";
+    const secondChance = kind === "SecondChanceAccept" || kind === "SecondChanceDecline";
+    const problem =
+      secondChance && (!offerDeadline || Date.parse(offerDeadline) <= decisionNow)
+        ? "Đã hết hạn xác nhận cơ hội mua sách."
+        : !active || (isBid && !isOpen(auction, decisionNow))
+          ? "Phiên đã đổi trạng thái. Vui lòng cập nhật trước khi tiếp tục."
+          : kind === "Manual"
+            ? canPlaceManualBid(auction, me, decisionNow)
+              ? amountError(amount, minimum, auction.startPrice, auction.step)
+              : "Bạn hiện không thể gửi lượt trả giá mới."
+            : kind === "Auto"
+              ? amountError(amount, floor, auction.startPrice, auction.step)
+              : kind === "BuyNow" && (buyNowPrice !== amount || rivalRequired)
+                ? "Điều kiện Mua ngay đã thay đổi. Vui lòng cập nhật phiên."
+                : null;
+    const short =
+      kind !== "Disable" &&
+      kind !== "Withdraw" &&
+      kind !== "SecondChanceDecline" &&
+      fundsShortfall(amount, available)
+        ? fundsHint(amount, available)
+        : null;
+    if (problem || short) {
+      setError(problem ?? short);
+      setConfirming(null);
+      void refresh();
+      return;
+    }
+    void run(createAuctionCommand(auction.id, kind, amount, Crypto.randomUUID(), auction.version ?? 0));
+  };
+
+  if ((!active || paused) && !manualOpen && !autoOpen && !pending) return null;
+
   const staleNotice =
     (noticePrice !== null && noticePrice !== price) ||
-    (standing !== "lead" && notice !== null && notice.includes("dẫn"));
+    (notice !== null && notice.includes("Bạn đang dẫn giá"));
+
+  const showSecondaryOptions =
+    active &&
+    !paused &&
+    !pending &&
+    !registering &&
+    english &&
+    isOpen(auction, now) &&
+    (floor <= AUCTION_MAX_PRICE || buyNowPrice != null);
+
   return (
-    <View style={{ gap: space.lg }}>
-      {standing && (
+    <View style={styles.stackMd}>
+      {active && !paused && standing ? (
         <View
           accessibilityLiveRegion="polite"
-          style={{
-            flexDirection: "row",
-            alignItems: "flex-start",
-            gap: 10,
-            padding: space.md,
-            borderRadius: radius.card * 1.5,
-            borderWidth: 1.5,
-            borderColor: standing === "lead" ? stitchTokens.greenBorderSoft : stitchTokens.orangeBorderSoft,
-            backgroundColor: standing === "lead" ? stitchTokens.likeNewGreenBg : stitchTokens.amberBg,
-          }}
+          style={[
+            styles.standingCard,
+            standing === "lead" ? styles.standingLead : styles.standingOutbid,
+          ]}
         >
-          <Icon
-            name={standing === "lead" ? "check" : "flame"}
-            size={18}
-            color={standing === "lead" ? colors.success : colors.warning}
-          />
-          <View style={{ flex: 1, gap: 2 }}>
-            <AppText kind="bold" color={standing === "lead" ? colors.success : colors.warning}>
-              {standing === "lead" ? "Bạn đang dẫn giá" : standing === "tied" ? "Bạn trả bằng người dẫn giá" : "Bạn đã bị vượt giá"}
+          <View style={[styles.standingIcon, standing === "lead" ? styles.standingIconLead : styles.standingIconOutbid]}>
+            <Icon
+              name={standing === "lead" ? "check" : "flame"}
+              size={16}
+              color={standing === "lead" ? stitchTokens.likeNewGreen : colors.warning}
+            />
+          </View>
+          <View style={styles.flexOne}>
+            <AppText
+              kind="bold"
+              color={standing === "lead" ? stitchTokens.likeNewGreen : colors.warning}
+              style={styles.standingTitle}
+            >
+              {standing === "lead"
+                ? "Bạn đang dẫn giá"
+                : standing === "tied"
+                  ? "Bạn trả bằng người dẫn giá"
+                  : "Bạn đã bị vượt giá"}
             </AppText>
-            <AppText kind="small" color={colors.ink}>
+            <AppText kind="small" color={colors.ink} style={styles.helper}>
               {standing === "tied"
-                ? `Một người khác đã cam kết ${formatVnd(price)} trước bạn. Khi hai mức bằng nhau, người đặt trước dẫn giá. Trả từ ${formatVnd(minimum)} để vượt lên.`
+                ? `Một người khác đã cam kết ${formatVnd(price)} trước bạn. Trả từ ${formatVnd(minimum)} để vượt lên.`
                 : me?.mode === "Auto" && me.ownLevel !== null
-                  ? `Mức tự động tối đa của bạn: ${formatVnd(me.ownLevel)} (chỉ bạn thấy).${heldHere > 0 ? ` · Ví đang giữ ${formatVnd(heldHere)}.` : ""}`
+                  ? `Mức tự động tối đa: ${formatVnd(me.ownLevel)} (chỉ bạn thấy).${heldHere > 0 ? ` Ví đang giữ ${formatVnd(heldHere)}.` : ""}`
                   : me?.ownLevel != null
-                    ? `Lượt trả gần nhất của bạn: ${formatVnd(me.ownLevel)}.${heldHere > 0 ? ` · Ví đang giữ ${formatVnd(heldHere)}.` : ""}`
+                    ? `Lượt trả gần nhất: ${formatVnd(me.ownLevel)}.${heldHere > 0 ? ` Ví đang giữ ${formatVnd(heldHere)}.` : ""}`
                     : ""}
             </AppText>
           </View>
         </View>
-      )}
-      {notice && !staleNotice && <Notice tone="success">{notice}</Notice>}
-      {error && <Notice tone="error">{error}</Notice>}
+      ) : null}
+
+      {active && notice && !staleNotice ? <Notice tone="success">{notice}</Notice> : null}
+      {error && !manualOpen && !autoOpen ? <Notice tone="error">{error}</Notice> : null}
+
       {pending ? (
-        <View style={{ gap: space.sm }}>
-          <Button title="Thử lại thao tác vừa rồi" busy={busy} onPress={() => void run(pending)} />
-          <Button secondary title="Cập nhật trạng thái phiên" disabled={busy} onPress={() => void refresh()} />
+        <View style={styles.stackSm}>
+          <Button wine title="Thử lại thao tác vừa rồi" disabled={paused} busy={busy} onPress={() => void run(pending)} />
+          <Button wine secondary title="Cập nhật trạng thái phiên" disabled={busy} onPress={() => void refresh()} />
         </View>
-      ) : auction.state === "SecondChanceOffered" && me?.secondChance?.outcome === "Offered" ? (
+      ) : !active || paused ? null : auction.state === "SecondChanceOffered" && me?.secondChance?.outcome === "Offered" ? (
         <SecondChanceBlock
           offer={me.secondChance}
           available={available}
-          locked={locked}
+          locked={locked || offerExpired}
+          expired={offerExpired}
           pointName={auction.pointName}
           onAccept={() => setConfirming({ kind: "SecondChanceAccept", amount: me.secondChance!.price })}
           onDecline={() => setConfirming({ kind: "SecondChanceDecline", amount: me.secondChance!.price })}
         />
-      ) : registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, now) ? (
+      ) : registering ? (
         <RegisterBlock
           auction={auction}
           me={me}
@@ -1427,262 +842,155 @@ function BidPanel({
           locked={locked}
           onSubmit={(amount) => setConfirming({ kind: "Sealed", amount })}
         />
-      ) : standing === "lead" ? (
-        <View
-          style={{
-            padding: space.md,
-            borderRadius: radius.card * 1.5,
-            backgroundColor: stitchTokens.whiteSurface,
-            borderWidth: 1,
-            borderColor: stitchTokens.peachBorder,
-          }}
-        >
-          <AppText color={colors.muted}>
-            Bạn không cần trả thêm. Muốn giữ vị trí khi có người trả cao hơn, hãy đặt hoặc nâng mức tự động bên dưới.
-          </AppText>
-        </View>
       ) : capped ? (
-        <View
-          style={{
-            padding: space.md,
-            borderRadius: radius.card * 1.5,
-            backgroundColor: stitchTokens.whiteSurface,
-            borderWidth: 1,
-            borderColor: stitchTokens.cardBorder,
-          }}
-        >
-          <AppText color={colors.muted}>Giá đã chạm mức tối đa hệ thống hỗ trợ.</AppText>
-        </View>
-      ) : (
-        /* Card 1: Khung Trả giá trực tiếp (Direct Bidding Card) */
-        <View
-          style={{
-            gap: space.md,
-            padding: space.lg,
-            borderRadius: radius.card * 2,
-            backgroundColor: stitchTokens.whiteSurface,
-            borderWidth: 1.5,
-            borderColor: stitchTokens.peachBorder,
-            shadowColor: stitchTokens.black,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 6,
-            elevation: 2,
-          }}
-        >
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Icon name="gavel" size={17} color={stitchTokens.wineDark} />
-              <AppText kind="bold" style={{ fontSize: 16, color: stitchTokens.wineDark }}>
-                Đặt mức trả giá
-              </AppText>
-            </View>
-            <View
-              style={{
-                backgroundColor: stitchTokens.parchment,
-                borderWidth: 1,
-                borderColor: stitchTokens.cardBorder,
-                borderRadius: 6,
-                paddingHorizontal: 7,
-                paddingVertical: 2,
+        <Notice>Giá đã chạm mức tối đa hệ thống hỗ trợ.</Notice>
+      ) : null}
+
+      {/* Clean Action Card for Auto-Bid (opens Sheet) + Buy Now */}
+      {showSecondaryOptions ? (
+        <View style={styles.optionsCard}>
+          {floor <= AUCTION_MAX_PRICE ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đặt giá tự động"
+              disabled={locked}
+              onPress={() => {
+                setAutoError(null);
+                openAuto();
               }}
+              style={({ pressed }) => [styles.optionRow, pressed && styles.pressed]}
             >
-              <AppText kind="small" style={{ color: stitchTokens.subtleGray, fontSize: 11 }}>
-                Bước: +{formatVnd(auction.step)}
-              </AppText>
-            </View>
-          </View>
-
-          <View style={{ gap: space.xs }}>
-            <AppText kind="small" color={colors.muted} style={{ fontWeight: "600" }}>
-              Chọn nhanh mức trả:
-            </AppText>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-              {bidOptions(minimum, auction.step).map((value) => {
-                const isSelected = manualAmount === value;
-                return (
-                  <Pressable
-                    key={value}
-                    disabled={locked}
-                    onPress={() => setManual(String(value))}
-                    style={({ pressed }) => [
-                      {
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: radius.pill,
-                        borderWidth: 1.5,
-                        borderColor: isSelected ? stitchTokens.wineDark : stitchTokens.peachBorder,
-                        backgroundColor: isSelected ? stitchTokens.wineDark : stitchTokens.parchment,
-                        opacity: locked ? 0.6 : pressed ? 0.8 : 1,
-                      },
-                    ]}
-                  >
-                    <AppText
-                      kind="bold"
-                      style={{
-                        color: isSelected ? stitchTokens.white : stitchTokens.wineDark,
-                        fontSize: 14,
-                      }}
-                    >
-                      {formatVnd(value)}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          <TextField
-            label="Số tiền trả lượt này"
-            keyboardType="number-pad"
-            value={manual ?? String(minimum)}
-            editable={!locked}
-            onChangeText={(text) => setManual(text.replace(/\D/g, ""))}
-            hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimum)}. ${heldHere > 0 ? `Ví đang giữ ${formatVnd(heldHere)} cho phiên này; bị vượt giá thì tiền về lại ví. ` : "Khi dẫn giá, ví giữ đúng mức bạn cam kết. "}${fundsHint(manualAmount, available) ?? ""}`.trim()}
-            error={manualError ?? (fundsShortfall(manualAmount, available) ? (fundsHint(manualAmount, available) ?? undefined) : undefined)}
-          />
-
-          <Button
-            wine
-            title={manualAmount ? `Tiếp tục trả ${formatVnd(manualAmount)}` : "Tiếp tục"}
-            disabled={locked || !!manualError || !manualAmount || fundsShortfall(manualAmount, available) > 0}
-            onPress={() => manualAmount && setConfirming({ kind: "Manual", amount: manualAmount })}
-          />
-        </View>
-      )}
-      {/* Card 2: Khung Đặt giá tự động (Collapsible Auto-bid Card) */}
-      {!pending && !registrationBlocks(auction, me) && english && floor <= AUCTION_MAX_PRICE && (
-        <View
-          style={{
-            borderRadius: radius.card * 1.5,
-            borderWidth: 1.5,
-            borderColor: stitchTokens.wineDark,
-            backgroundColor: stitchTokens.wineDark,
-            overflow: "hidden",
-          }}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={autoExpanded ? "Thu gọn đặt giá tự động" : "Mở rộng đặt giá tự động"}
-            accessibilityState={{ expanded: autoExpanded }}
-            onPress={() => setAutoExpanded(!autoExpanded)}
-            style={({ pressed }) => [
-              layout.row,
-              {
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: space.md,
-                backgroundColor: stitchTokens.wineDark,
-                opacity: pressed ? 0.75 : 1,
-              },
-            ]}
-          >
-            <View style={{ gap: 2, flex: 1, paddingRight: space.sm }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Icon name="tune" size={16} color={stitchTokens.whiteSurface} />
-                <AppText kind="bold" style={{ color: stitchTokens.whiteSurface }}>
-                  {me?.mode === "Auto" ? "Nâng mức tự động" : "Đặt giá tự động"}
-                </AppText>
-                {me?.mode === "Auto" && (
-                  <View style={{ backgroundColor: stitchTokens.goldAccent, paddingVertical: 2, paddingHorizontal: 6, borderRadius: radius.small }}>
-                    <AppText kind="small" style={{ fontSize: 11, color: stitchTokens.wineDark, fontWeight: "700" }}>
-                      Đang bật
-                    </AppText>
-                  </View>
-                )}
+              <View style={styles.optionIcon}>
+                <Icon name="bolt" size={17} color={stitchTokens.wine} />
               </View>
-              {!autoExpanded && (
-                <AppText kind="small" style={{ color: stitchTokens.whiteAlpha85 }} numberOfLines={1}>
-                  {me?.mode === "Auto" && me.ownLevel !== null
-                    ? `Mức trần: ${formatVnd(me.ownLevel)} · Chạm để nâng`
-                    : `Hệ thống tự trả theo bước giá, tối thiểu ${formatVnd(floor)}`}
+              <View style={styles.flexOne}>
+                <AppText kind="bold" style={styles.optionTitle}>Đặt giá tự động</AppText>
+                <AppText kind="small" color={stitchTokens.brownMuted}>
+                  {me?.mode === "Auto" && me.ownLevel != null
+                    ? `Đang bật · Tối đa ${formatVnd(me.ownLevel)}`
+                    : "Hệ thống tự nâng giá thay bạn trong hạn mức"}
                 </AppText>
-              )}
-            </View>
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: stitchTokens.whiteAlpha25,
-                borderWidth: 1,
-                borderColor: stitchTokens.whiteAlpha40,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icon
-                name={autoExpanded ? "chevronUp" : "chevronDown"}
-                size={16}
-                color={stitchTokens.whiteSurface}
-              />
-            </View>
-          </Pressable>
+              </View>
+              <Icon name="chevronRight" size={18} color={stitchTokens.wine} />
+            </Pressable>
+          ) : null}
 
-          {autoExpanded && (
-            <View style={{ gap: space.sm, padding: space.md, backgroundColor: stitchTokens.goldLight, borderTopWidth: 1, borderTopColor: stitchTokens.wineLight }}>
-              <AppText kind="small" color={colors.muted} style={{ lineHeight: 18 }}>
-                Khi có người trả cao hơn, hệ thống tự trả hơn họ một bước giá, không vượt mức tối đa bạn chọn. Chỉ bạn
-                thấy mức này và chỉ có thể nâng lên.
-              </AppText>
-              <TextField
-                label="Mức tối đa"
-                keyboardType="number-pad"
-                value={auto}
-                editable={!locked}
-                placeholder={String(floor)}
-                onChangeText={(text) => {
-                  setAuto(text.replace(/\D/g, ""));
-                  setAutoError(null);
-                }}
-                hint={`Tối thiểu ${formatVnd(floor)}`}
-                error={autoError ?? undefined}
-              />
+          {buyNowPrice != null ? (
+            <View style={[styles.buyNowSection, floor <= AUCTION_MAX_PRICE && styles.sectionBorderTop]}>
+              <View style={styles.buyNowHeader}>
+                <View style={styles.flexOne}>
+                  <AppText kind="bold" style={styles.optionTitle}>Mua ngay</AppText>
+                  <AppText kind="small" color={stitchTokens.brownMuted}>
+                    {auction.buyNowMode === "Instant"
+                      ? "Chốt ngay lập tức khi đủ điều kiện"
+                      : "Dẫn đầu ở giá mua ngay, mở cửa sổ thử thách"}
+                  </AppText>
+                </View>
+                <AppText kind="bold" style={styles.buyNowPrice}>{formatVnd(buyNowPrice)}</AppText>
+              </View>
               <Button
                 wine
-                title={me?.mode === "Auto" ? "Nâng mức tự động" : "Đặt giá tự động"}
-                disabled={locked}
-                onPress={() => {
-                  const amount = Number(auto) || null;
-                  const problem =
-                    amountError(amount, floor, auction.startPrice, auction.step) ??
-                    (fundsShortfall(amount, available) ? fundsHint(amount, available) : null);
-                  if (problem) setAutoError(problem);
-                  else setConfirming({ kind: "Auto", amount: amount! });
-                }}
+                secondary
+                title={`Mua ngay · ${formatVnd(buyNowPrice)}`}
+                disabled={locked || rivalRequired || fundsShortfall(buyNowPrice, available) > 0}
+                onPress={() => setConfirming({ kind: "BuyNow", amount: buyNowPrice })}
               />
-              {me?.mode === "Auto" && (
-                <Button secondary title="Tắt đặt giá tự động" disabled={locked} onPress={() => setConfirming({ kind: "Disable", amount: 0 })} />
-              )}
+              {rivalRequired ? (
+                <AppText kind="small" color={stitchTokens.brownMuted}>
+                  Cần có người khác trả giá trước khi mua ngay.
+                </AppText>
+              ) : fundsShortfall(buyNowPrice, available) ? (
+                <AppText kind="small" color={colors.error}>
+                  {fundsHint(buyNowPrice, available)}
+                </AppText>
+              ) : null}
             </View>
-          )}
+          ) : null}
         </View>
-      )}
+      ) : null}
+
+      <ManualAuctionBidSheet
+        auction={auction}
+        visible={manualOpen}
+        onClose={closeManual}
+        onChange={(value) => {
+          setManual(value);
+          setError(null);
+        }}
+        onSubmit={(amount) => (pending?.kind === "Manual" ? void run(pending) : submit("Manual", amount))}
+        manual={manual}
+        available={available}
+        heldHere={heldHere}
+        busy={busy}
+        blocked={
+          manualBlocked ??
+          (pending && pending.kind !== "Manual" ? "Hãy xác minh kết quả thao tác trước." : null)
+        }
+        pendingAmount={!paused && pending?.kind === "Manual" ? pending.amount : null}
+        error={error}
+      />
+
+      <AutoBidSheet
+        auction={auction}
+        visible={autoOpen && active && !paused}
+        onClose={closeAuto}
+        floor={floor}
+        currentAutoMax={me?.mode === "Auto" ? me.ownLevel : null}
+        value={auto}
+        onChange={(val) => {
+          setAuto(val);
+          setAutoError(null);
+        }}
+        available={available}
+        heldHere={heldHere}
+        locked={locked}
+        error={autoError}
+        onSubmit={(amount) => {
+          closeAuto();
+          setConfirming({ kind: "Auto", amount });
+        }}
+        onDisable={() => {
+          closeAuto();
+          setConfirming({ kind: "Disable", amount: 0 });
+        }}
+      />
+
       <ConfirmDialog
-        visible={!!copy && !paused}
+        visible={!!copy && active && !paused}
         title={copy?.title ?? ""}
-        message={copy?.message ?? ""}
+        message={copy?.message}
         confirmLabel={copy?.confirm ?? ""}
         busy={busy}
         onCancel={() => !busy && setConfirming(null)}
-        onConfirm={() =>
-          confirming &&
-          void run(createAuctionCommand(auction.id, confirming.kind, confirming.amount, Crypto.randomUUID(), auction.version ?? 0))
-        }
-      />
+        onConfirm={() => {
+          if (confirming) submit(confirming.kind, confirming.amount);
+        }}
+      >
+        {confirming && copy?.amountLabel && (
+          <View style={{ gap: space.md }}>
+            <TransactionAmount label={copy.amountLabel} value={formatVnd(confirming.amount)} />
+            {copy.notes && <TransactionNotes notes={copy.notes} />}
+          </View>
+        )}
+      </ConfirmDialog>
     </View>
   );
 }
 
-function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuctionSummary, leading: boolean) {
-  const pay = `Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và tự nhận sách tại ${auction.pointName}. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`;
+function dialogCopy(kind: Exclude<AuctionCommandKind, "Manual">, auction: PublicAuctionSummary, leading: boolean): {
+  title: string; confirm: string; message?: string; amountLabel?: string; notes?: TransactionNote[];
+} {
+  const pay = { label: "Nếu thắng", detail: `Thanh toán trong 24 giờ sau khi phiên kết thúc. Chọn nhận tại ${auction.pointName} hoặc giao tận nơi.` };
+  const hold = auctionBidHoldNotes(auction.depositAmount != null);
   switch (kind) {
-    case "Manual":
-      return { title: `Trả ${formatVnd(amount)}?`, message: `Lượt trả giá không thể rút lại. ${pay}`, confirm: "Xác nhận trả giá" };
     case "Auto":
       return {
-        title: `Đặt giá tự động tối đa ${formatVnd(amount)}?`,
-        message: `Hệ thống chỉ trả vừa đủ để bạn dẫn: cao hơn người khác một bước ${formatVnd(auction.step)}, không vượt mức này. ${pay}`,
+        title: "Đặt giá tự động",
+        amountLabel: "Mức tối đa",
+        notes: [
+          { label: "Cách trả tự động", detail: `Hệ thống trả hơn đối thủ một bước ${formatVnd(auction.step)} trong mức tối đa này.` },
+          ...hold, pay,
+        ],
         confirm: "Đặt giá tự động",
       };
     case "Disable":
@@ -1693,14 +1001,19 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
       };
     case "Register":
       return {
-        title: `Đặt cọc ${formatVnd(amount)} để đăng ký?`,
-        message: `Ví giữ ${formatVnd(amount)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người (hoặc, khi đã đủ, tới 72 giờ trước giờ mở). Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc không được hoàn.`,
+        title: "Đăng ký đấu giá",
+        amountLabel: "Cọc Ví sẽ giữ ngay",
+        notes: auctionRegistrationNotes(auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR),
         confirm: "Đặt cọc và đăng ký",
       };
     case "SecondChanceAccept":
       return {
-        title: `Mua với giá ${formatVnd(amount)}?`,
-        message: `Ví giữ ${formatVnd(amount)} ngay và bạn thanh toán trong 24 giờ để nhận sách tại ${auction.pointName}. Không thanh toán đúng hạn thì lượt không thanh toán được ghi nhận.`,
+        title: "Nhận lời mời mua",
+        amountLabel: "Số tiền Ví sẽ giữ ngay",
+        notes: [
+          { label: "Hạn thanh toán", detail: "24 giờ từ lúc nhận lời mời." },
+          { label: "Cách nhận", detail: `Nhận sách tại ${auction.pointName}.` },
+        ],
         confirm: "Mua sách",
       };
     case "SecondChanceDecline":
@@ -1717,33 +1030,45 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
       };
     case "DutchAccept":
       return {
-        title: `Mua với ${formatVnd(amount)}?`,
-        message: `Nếu giá đã giảm khi lệnh tới máy chủ, bạn trả giá thấp hơn đó. Ví giữ số tiền này ngay; phiên kết thúc và bạn thanh toán từ ví trong 24 giờ, rồi tự nhận sách tại ${auction.pointName}. Không thể rút lại.`,
+        title: "Chấp nhận giá đang giảm",
+        amountLabel: "Giá tối đa bạn chấp nhận",
+        notes: [
+          { label: "Khi xác nhận", detail: "Ví giữ giá tại thời điểm lệnh đến, kể cả khi giá vừa giảm. Lượt chấp nhận không thể rút lại." },
+          { label: "Hạn thanh toán", detail: "24 giờ sau khi phiên kết thúc." },
+        ],
         confirm: "Chấp nhận giá",
       };
     case "Sealed":
       return {
-        title: `Gửi giá kín ${formatVnd(amount)}?`,
-        message: `Giá kín không thể rút hay hạ, chỉ có thể nâng. Ví giữ toàn bộ số tiền này đến khi phiên chốt; nếu không thắng, tiền về lại ví. ${pay}`,
+        title: "Xác nhận giá kín",
+        amountLabel: "Giá kín Ví sẽ giữ",
+        notes: [
+          { label: "Khi gửi giá", detail: "Ví giữ toàn bộ giá kín đến lúc chốt phiên. Giá kín chỉ có thể nâng." },
+          { label: "Nếu không thắng", detail: "Tiền về lại Ví khi phiên chốt." },
+          pay,
+        ],
         confirm: "Gửi giá kín",
       };
     case "BuyNow":
       return {
-        title: `Mua ngay với ${formatVnd(amount)}?`,
-        message:
-          auction.buyNowMode === "Instant"
-            ? `Bạn cam kết mua với giá này, thắng luôn và phiên kết thúc ngay lập tức. Ví giữ số tiền này ngay; bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`
-            : `Bạn cam kết mua với giá này và ${leading ? "giữ vị trí dẫn đầu; giá hiện tại tăng lên giá mua ngay" : "dẫn đầu"}. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
+        title: "Xác nhận mua ngay",
+        amountLabel: "Giá mua ngay",
+        notes: [
+          { label: "Kết quả", detail: auction.buyNowMode === "Instant"
+            ? "Bạn thắng ngay và phiên kết thúc. Ví giữ tiền ngay. Lượt mua không thể rút lại."
+            : `Bạn ${leading ? "giữ vị trí dẫn đầu ở giá mua ngay" : "dẫn đầu ở giá mua ngay"}. Bạn thắng nếu không ai trả cao hơn trong ${buyNowWindow(leading)}.` },
+          pay,
+        ],
         confirm: "Mua ngay",
       };
   }
 }
 
-// ADR 0086: the runner-up's one offer after the winner did not pay.
 function SecondChanceBlock({
   offer,
   available,
   locked,
+  expired,
   pointName,
   onAccept,
   onDecline,
@@ -1751,71 +1076,40 @@ function SecondChanceBlock({
   offer: NonNullable<Participation["secondChance"]>;
   available: number | null;
   locked: boolean;
+  expired: boolean;
   pointName: string;
   onAccept: () => void;
   onDecline: () => void;
 }) {
   const short = fundsShortfall(offer.price, available);
-  const until = new Date(offer.deadline).toLocaleString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-  });
+  const until = time(offer.deadline);
   return (
-    <View
-      style={{
-        gap: space.md,
-        padding: space.lg,
-        borderRadius: radius.card * 2,
-        backgroundColor: stitchTokens.whiteSurface,
-        borderWidth: 1.5,
-        borderColor: stitchTokens.goldBorder,
-        shadowColor: stitchTokens.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <View
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 17,
-            backgroundColor: stitchTokens.goldLight,
-            borderWidth: 1,
-            borderColor: stitchTokens.goldBorder,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+    <View style={styles.flatCard}>
+      <View style={styles.cardHeaderRow}>
+        <View style={styles.cardHeaderIcon}>
           <Icon name="verified" size={18} color={stitchTokens.wineDark} />
         </View>
-        <View style={{ flex: 1 }}>
-          <AppText kind="bold" style={{ fontSize: 16, color: stitchTokens.wineDark }}>
-            Bạn được mời mua sách này
-          </AppText>
-          <AppText kind="small" color={colors.muted}>
-            {`Cơ hội thứ hai · Hạn xác nhận: ${until}`}
-          </AppText>
+        <View style={styles.flexOne}>
+          <AppText kind="bold" style={styles.cardTitle}>Bạn được mời mua sách này</AppText>
+          <AppText kind="small" color={colors.muted}>{`Cơ hội thứ hai · Hạn xác nhận ${until}`}</AppText>
         </View>
       </View>
 
-      <AppText kind="small" color={colors.ink} style={{ lineHeight: 18 }}>
-        {`Người thắng không thanh toán đúng hạn. Bạn có thể mua với giá trả cao nhất của bạn, ${formatVnd(offer.price)}, nếu nhận trước ${until}. Khi nhận, ví giữ số tiền này và bạn thanh toán trong 24 giờ để nhận sách tại ${pointName}. Không nhận thì không có khoản nào bị trừ.`}
+      <AppText kind="small" color={colors.ink} style={styles.helper}>
+        {`Người thắng không thanh toán đúng hạn. Bạn có thể mua với mức cao nhất đã trả (${formatVnd(offer.price)}) trước ${until} để nhận sách tại ${pointName}.`}
       </AppText>
 
-      {short > 0 && <Notice tone="error">{fundsHint(offer.price, available)}</Notice>}
+      {short > 0 ? <Notice tone="error">{fundsHint(offer.price, available)}</Notice> : null}
+      {expired ? <Notice tone="warning">Đã hết hạn xác nhận cơ hội mua sách.</Notice> : null}
 
-      <Button wine title={`Mua với giá ${formatVnd(offer.price)}`} disabled={locked || short > 0} onPress={onAccept} />
-      <Button secondary title="Không mua" disabled={locked} onPress={onDecline} />
+      <View style={styles.stackSm}>
+        <Button wine title={`Mua với giá ${formatVnd(offer.price)}`} disabled={locked || short > 0} onPress={onAccept} />
+        <Button wine secondary title="Không mua" disabled={locked} onPress={onDecline} />
+      </View>
     </View>
   );
 }
 
-// ADR 0077: register with a refundable deposit; bidding opens at minBidders.
 function RegisterBlock({
   auction,
   me,
@@ -1840,206 +1134,88 @@ function RegisterBlock({
   const short = registered ? 0 : fundsShortfall(deposit, available);
   const progressPct = Math.min(100, Math.round((count / Math.max(1, need)) * 100));
   const enough = count >= need;
-  // ADR 0085: below the minimum, or a full auction until 72 h before it opens.
   const withdrawable = canWithdrawRegistration(auction, me, now);
-  const fullUntil =
-    count >= need && auction.fullWithdrawUntil
-      ? new Date(auction.fullWithdrawUntil).toLocaleString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          day: "2-digit",
-          month: "2-digit",
-        })
-      : null;
-  return (
-    <View
-      style={{
-        gap: space.md,
-        padding: space.lg,
-        borderRadius: radius.card * 2,
-        backgroundColor: stitchTokens.whiteSurface,
-        borderWidth: 1.5,
-        borderColor: registered ? stitchTokens.greenBorderSoft : stitchTokens.goldBorder,
-        shadowColor: stitchTokens.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
-      }}
-    >
-      {/* Header Row */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
-          <View
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              backgroundColor: registered ? stitchTokens.likeNewGreenBg : stitchTokens.goldLight,
-              borderWidth: 1,
-              borderColor: registered ? stitchTokens.greenBorderSoft : stitchTokens.goldBorder,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon
-              name={registered ? "verified" : "shield"}
-              size={18}
-              color={registered ? stitchTokens.likeNewGreen : stitchTokens.wineDark}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <AppText kind="bold" style={{ fontSize: 16, color: stitchTokens.wineDark }}>
-              {registered ? "Bạn đã đăng ký phiên này" : "Đăng ký tham gia đấu giá"}
-            </AppText>
-            <AppText kind="small" color={colors.muted}>
-              {registered
-                ? "Đã giữ tiền cọc hợp lệ trong ví"
-                : `Đặt cọc ${auction.startPrice > 0 ? Math.round((deposit / auction.startPrice) * 100) : 10}% trước khi vào sàn trả giá`}
-            </AppText>
-          </View>
-        </View>
+  const fullUntil = count >= need && auction.fullWithdrawUntil ? time(auction.fullWithdrawUntil) : null;
+  const depositPct = auction.startPrice > 0 ? Math.round((deposit / auction.startPrice) * 100) : 10;
 
-        <View
-          style={{
-            backgroundColor: registered ? stitchTokens.likeNewGreenBg : stitchTokens.goldLight,
-            borderWidth: 1,
-            borderColor: registered ? stitchTokens.greenBorderSoft : stitchTokens.goldBorder,
-            borderRadius: radius.pill,
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-          }}
-        >
-          <AppText
-            kind="small"
-            style={{
-              fontSize: 11,
-              fontWeight: "800",
-              color: registered ? stitchTokens.likeNewGreen : stitchTokens.wineDark,
-            }}
-          >
-            {registered
-              ? "ĐÃ ĐĂNG KÝ"
-              : `CỌC ${auction.startPrice > 0 ? Math.round((deposit / auction.startPrice) * 100) : 10}%`}
+  return (
+    <View style={[styles.flatCard, registered && styles.flatCardRegistered]}>
+      <View style={styles.cardHeaderRow}>
+        <View style={[styles.cardHeaderIcon, registered && styles.cardHeaderIconGreen]}>
+          <Icon
+            name={registered ? "verified" : "shield"}
+            size={18}
+            color={registered ? stitchTokens.likeNewGreen : stitchTokens.wineDark}
+          />
+        </View>
+        <View style={styles.flexOne}>
+          <AppText kind="bold" style={styles.cardTitle}>
+            {registered ? "Bạn đã đăng ký phiên này" : "Đăng ký tham gia đấu giá"}
+          </AppText>
+          <AppText kind="small" color={colors.muted}>
+            {registered ? "Tiền cọc đã được giữ hợp lệ trong ví" : `Đặt cọc ${depositPct}% để vào sàn trả giá`}
+          </AppText>
+        </View>
+        <View style={[styles.pillBadge, registered && styles.pillBadgeGreen]}>
+          <AppText style={[styles.pillBadgeText, registered && styles.pillBadgeTextGreen]}>
+            {registered ? "Đã đăng ký" : `Cọc ${depositPct}%`}
           </AppText>
         </View>
       </View>
 
-      {/* Progress Bar Section */}
-      <View
-        style={{
-          backgroundColor: stitchTokens.parchment,
-          borderRadius: 12,
-          padding: 12,
-          borderWidth: 1,
-          borderColor: stitchTokens.cardBorder,
-          gap: 8,
-        }}
-      >
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <AppText kind="small" style={{ color: stitchTokens.deepCocoa, fontWeight: "700" }}>
-            Tiến độ người đăng ký mở phiên
-          </AppText>
-          <AppText
-            kind="bold"
-            style={{
-              fontSize: 13,
-              color: enough ? stitchTokens.likeNewGreen : stitchTokens.wineDark,
-            }}
-          >
-            {`${count} / ${need} người`}
+      {/* Progress */}
+      <View style={styles.sectionDividerBlock}>
+        <View style={styles.rowBetween}>
+          <AppText kind="small" style={styles.metricTitle}>Tiến độ đăng ký mở phiên</AppText>
+          <AppText kind="bold" style={[styles.metricCount, enough && styles.metricCountGreen]}>
+            {`${count}/${need} người`}
           </AppText>
         </View>
-
         <View
           accessibilityRole="progressbar"
           accessibilityValue={{ min: 0, max: need, now: count }}
-          style={{
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: stitchTokens.sandWarm,
-            overflow: "hidden",
-          }}
+          style={styles.progressTrack}
         >
-          <View
-            style={{
-              width: `${progressPct}%`,
-              height: "100%",
-              borderRadius: 4,
-              backgroundColor: enough ? stitchTokens.likeNewGreen : stitchTokens.wineDark,
-            }}
-          />
+          <View style={[styles.progressFill, { width: `${progressPct}%` }, enough && styles.progressFillGreen]} />
         </View>
-
-        <AppText kind="small" color={colors.muted} style={{ lineHeight: 17 }}>
-          {`${auction.openMode ? openRuleText(auction, now) : `Phiên mở trả giá khi có ít nhất ${need} người đăng ký.`} Phiên chỉ bán khi có ít nhất hai người trả giá.`}
+        <AppText kind="small" color={colors.muted} style={styles.helper}>
+          {auction.openMode ? openRuleText(auction, now) : `Phiên mở trả giá khi đủ ${need} người đăng ký.`}
         </AppText>
       </View>
 
-      {/* Deposit & Wallet 2-Column Summary */}
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: stitchTokens.roseWarmSurface,
-            borderWidth: 1,
-            borderColor: stitchTokens.peachBorder,
-            borderRadius: 10,
-            padding: 10,
-            gap: 2,
-          }}
-        >
-          <AppText kind="small" color={colors.muted} style={{ fontSize: 11 }}>
+      {/* Clean Key-Value Money Strip (flat, no nested boxes) */}
+      <View style={styles.sectionDividerBlock}>
+        <View style={styles.rowBetween}>
+          <AppText kind="small" color={stitchTokens.brownMuted}>
             {registered ? "Tiền cọc đang giữ" : "Mức tiền cọc"}
           </AppText>
-          <AppText kind="bold" style={{ fontSize: 16, color: stitchTokens.wineDark }}>
+          <AppText kind="bold" style={styles.moneyWine}>
             {formatVnd(registered ? (me?.deposit ?? deposit) : deposit)}
           </AppText>
-          <AppText kind="small" style={{ fontSize: 10, color: stitchTokens.subtleGray }}>
-            Hoàn 100% nếu không thắng
-          </AppText>
         </View>
-
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: stitchTokens.parchment,
-            borderWidth: 1,
-            borderColor: stitchTokens.cardBorder,
-            borderRadius: 10,
-            padding: 10,
-            gap: 2,
-          }}
-        >
-          <AppText kind="small" color={colors.muted} style={{ fontSize: 11 }}>
-            Số dư ví khả dụng
-          </AppText>
-          <AppText kind="bold" style={{ fontSize: 16, color: stitchTokens.deepCocoa }}>
+        <View style={styles.rowBetween}>
+          <AppText kind="small" color={stitchTokens.brownMuted}>Số dư ví khả dụng</AppText>
+          <AppText kind="bold" style={styles.moneyInk}>
             {available !== null ? formatVnd(available) : "—"}
           </AppText>
-          <AppText kind="small" style={{ fontSize: 10, color: stitchTokens.subtleGray }}>
-            {registered ? "Cọc tính vào giá khi thắng" : "Giữ cọc ngay khi đăng ký"}
-          </AppText>
         </View>
+        <AppText kind="small" color={colors.muted} style={styles.helper}>
+          {registered
+            ? withdrawable
+              ? fullUntil
+                ? `Bạn có thể rút đăng ký tới ${fullUntil} (72 giờ trước giờ mở).`
+                : "Bạn có thể rút đăng ký khi phiên chưa đủ người."
+              : "Phiên đã đủ người nên tiền cọc được giữ đến khi phiên kết thúc."
+            : "Hoàn 100% nếu không thắng hoặc phiên không đủ người; tính vào giá nếu thắng."}
+        </AppText>
       </View>
 
-      <AppText kind="small" color={colors.muted} style={{ lineHeight: 17 }}>
-        {registered
-          ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. ${withdrawable
-            ? fullUntil
-              ? `Phiên đã đủ người; bạn vẫn rút đăng ký được tới ${fullUntil} (72 giờ trước giờ mở).`
-              : "Bạn có thể rút đăng ký khi phiên chưa đủ người."
-            : "Phiên đã đủ người nên tiền cọc được giữ đến khi phiên kết thúc."}`
-          : `Tiền cọc ${formatVnd(deposit)} được hoàn khi bạn không thắng hoặc phiên không đủ người. Nếu thắng, tiền cọc tính vào giá; thắng mà không thanh toán đúng hạn thì không được hoàn.`}
-      </AppText>
-
-      {short > 0 && (
-        <Notice tone="error">{fundsHint(deposit, available)}</Notice>
-      )}
+      {short > 0 ? <Notice tone="error">{fundsHint(deposit, available)}</Notice> : null}
 
       {registered ? (
         withdrawable ? (
           <Button
+            wine
             secondary
             title="Rút đăng ký và nhận lại tiền cọc"
             disabled={locked}
@@ -2058,7 +1234,6 @@ function RegisterBlock({
   );
 }
 
-// ADR 0076: the descending price; refetches when it drops.
 function DutchBlock({
   auction,
   now,
@@ -2077,24 +1252,14 @@ function DutchBlock({
   const price = auction.dutchPrice ?? null;
   useEffect(() => {
     if (!auction.dutchNextDropAt) return;
-    const wait = Math.max(0, Date.parse(auction.dutchNextDropAt) - Date.now()) + 250;
+    const wait = Math.max(0, Date.parse(auction.dutchNextDropAt) - (serverClock.now() ?? now)) + 250;
     const timer = setTimeout(() => void refresh(), wait);
     return () => clearTimeout(timer);
-  }, [auction.dutchNextDropAt, refresh]);
+  }, [auction.dutchNextDropAt, now, refresh]);
 
   if (price === null) {
     return (
-      <View
-        style={{
-          padding: space.md,
-          borderRadius: radius.card * 1.5,
-          backgroundColor: stitchTokens.parchment,
-          borderWidth: 1,
-          borderColor: stitchTokens.cardBorder,
-        }}
-      >
-        <AppText color={colors.muted}>Giá kiểu Hà Lan sẽ xuất hiện ngay khi phiên mở.</AppText>
-      </View>
+      <Notice>Giá giảm dần kiểu Hà Lan sẽ xuất hiện ngay khi phiên mở.</Notice>
     );
   }
 
@@ -2104,108 +1269,48 @@ function DutchBlock({
   const nextDropSec = Math.ceil(nextDropMs / 1000);
 
   return (
-    <View
-      style={{
-        gap: space.md,
-        padding: space.lg,
-        borderRadius: radius.card * 2,
-        backgroundColor: stitchTokens.whiteSurface,
-        borderWidth: 1.5,
-        borderColor: stitchTokens.goldBorder,
-        shadowColor: stitchTokens.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
-      }}
-    >
-      {/* Header */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Icon name="flame" size={18} color={stitchTokens.wineDark} />
-          <AppText kind="bold" style={{ fontSize: 16, color: stitchTokens.wineDark }}>
-            Đấu giá kiểu Hà Lan
-          </AppText>
+    <View style={styles.flatCard}>
+      <View style={styles.cardHeaderRow}>
+        <View style={styles.cardHeaderIcon}>
+          <Icon name="flame" size={17} color={stitchTokens.wineDark} />
         </View>
-        <View
-          style={{
-            backgroundColor: stitchTokens.goldLight,
-            borderWidth: 1,
-            borderColor: stitchTokens.goldBorder,
-            borderRadius: radius.pill,
-            paddingHorizontal: 9,
-            paddingVertical: 3,
-          }}
-        >
-          <AppText kind="small" style={{ color: stitchTokens.wineDark, fontWeight: "800", fontSize: 11 }}>
-            {auction.dutchNextDropAt ? `Giảm sau ${nextDropSec}s` : "Đã ở giá sàn"}
+        <View style={styles.flexOne}>
+          <AppText kind="bold" style={styles.cardTitle}>Đấu giá giảm dần</AppText>
+          <AppText kind="small" color={colors.muted}>Người đầu tiên chấp nhận sẽ thắng ngay</AppText>
+        </View>
+        <View style={styles.pillBadge}>
+          <AppText style={styles.pillBadgeText}>
+            {auction.dutchNextDropAt ? `Giảm sau ${nextDropSec}s` : "Ở giá sàn"}
           </AppText>
         </View>
       </View>
 
-      {/* 3-Step Price Ladder Strip */}
-      <View
-        style={{
-          flexDirection: "row",
-          backgroundColor: stitchTokens.parchment,
-          borderRadius: 12,
-          borderWidth: 1,
-          borderColor: stitchTokens.cardBorder,
-          padding: 10,
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <View style={{ alignItems: "flex-start" }}>
-          <AppText kind="small" color={colors.muted} style={{ fontSize: 10 }}>
-            Giá mở đầu
-          </AppText>
-          <AppText kind="bold" style={{ fontSize: 13, color: stitchTokens.subtleGray }}>
-            {formatVnd(topPrice)}
-          </AppText>
+      <View style={styles.sectionDividerBlock}>
+        <View style={styles.dutchStrip}>
+          <View style={styles.dutchCol}>
+            <AppText kind="small" color={stitchTokens.brownMuted}>Mở đầu</AppText>
+            <AppText kind="bold" style={styles.dutchMutedVal}>{formatVnd(topPrice)}</AppText>
+          </View>
+          <Icon name="arrow" size={14} color={stitchTokens.brownMuted} />
+          <View style={styles.dutchColCenter}>
+            <AppText kind="small" style={styles.dutchNowLabel}>Hiện tại</AppText>
+            <AppText kind="bold" style={styles.dutchNowVal}>{formatVnd(price)}</AppText>
+          </View>
+          <Icon name="arrow" size={14} color={stitchTokens.brownMuted} />
+          <View style={styles.dutchColEnd}>
+            <AppText kind="small" color={stitchTokens.brownMuted}>Giá sàn</AppText>
+            <AppText kind="bold" style={styles.dutchFloorVal}>{formatVnd(auction.startPrice)}</AppText>
+          </View>
         </View>
 
-        <Icon name="arrow" size={14} color={stitchTokens.goldBronze} />
-
-        <View
-          style={{
-            alignItems: "center",
-            backgroundColor: stitchTokens.roseWarmSurface,
-            borderWidth: 1,
-            borderColor: stitchTokens.peachBorder,
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-          }}
-        >
-          <AppText kind="small" style={{ fontSize: 10, color: stitchTokens.wineDark, fontWeight: "700" }}>
-            Giá hiện tại
-          </AppText>
-          <AppText kind="bold" style={{ fontSize: 16, color: stitchTokens.wineDark }}>
-            {formatVnd(price)}
-          </AppText>
-        </View>
-
-        <Icon name="arrow" size={14} color={stitchTokens.goldBronze} />
-
-        <View style={{ alignItems: "flex-end" }}>
-          <AppText kind="small" color={colors.muted} style={{ fontSize: 10 }}>
-            Giá sàn
-          </AppText>
-          <AppText kind="bold" style={{ fontSize: 13, color: stitchTokens.deepCocoa }}>
-            {formatVnd(auction.startPrice)}
-          </AppText>
-        </View>
+        <AppText kind="small" color={colors.muted} style={styles.helper}>
+          {auction.dutchNextDropAt
+            ? `Giảm ${formatVnd(auction.step)} lúc ${time(auction.dutchNextDropAt)}, xuống tối đa ${formatVnd(auction.startPrice)}.`
+            : `Đã chạm giá sàn ${formatVnd(auction.startPrice)}.`}
+        </AppText>
       </View>
 
-      <AppText kind="small" color={colors.muted} style={{ lineHeight: 18 }}>
-        {auction.dutchNextDropAt
-          ? `Giảm ${formatVnd(auction.step)} lúc ${time(auction.dutchNextDropAt)}, xuống tối đa giá sàn ${formatVnd(auction.startPrice)}.`
-          : `Đã ở giá sàn ${formatVnd(auction.startPrice)}.`}{" "}
-        Người đầu tiên chấp nhận thắng ngay và phiên kết thúc.
-      </AppText>
-
-      {short > 0 && <Notice tone="error">{fundsHint(price, available)}</Notice>}
+      {short > 0 ? <Notice tone="error">{fundsHint(price, available)}</Notice> : null}
 
       <Button
         wine
@@ -2217,7 +1322,6 @@ function DutchBlock({
   );
 }
 
-// ADR 0076: one hidden bid, raise only; the whole bid is held until the close.
 function SealedBlock({
   auction,
   me,
@@ -2241,159 +1345,320 @@ function SealedBlock({
     (fundsShortfall(amount, available) ? fundsHint(amount, available) : null);
 
   return (
-    <View
-      style={{
-        gap: space.md,
-        padding: space.lg,
-        borderRadius: radius.card * 2,
-        backgroundColor: stitchTokens.whiteSurface,
-        borderWidth: 1.5,
-        borderColor: stitchTokens.peachBorder,
-        shadowColor: stitchTokens.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
-      }}
-    >
-      {/* Header */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 7, flex: 1 }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: stitchTokens.goldLight,
-              borderWidth: 1,
-              borderColor: stitchTokens.goldBorder,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon name="lock" size={16} color={stitchTokens.wineDark} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <AppText kind="bold" style={{ fontSize: 16, color: stitchTokens.wineDark }}>
-              Đấu giá kín · {second ? "giá thứ hai" : "giá thứ nhất"}
-            </AppText>
-            <AppText kind="small" color={colors.muted}>
-              {second ? "Thắng giá cao nhất, trả mức cao thứ hai" : "Thắng giá cao nhất, trả đúng giá đã gửi"}
-            </AppText>
-          </View>
+    <View style={styles.flatCard}>
+      <View style={styles.cardHeaderRow}>
+        <View style={styles.cardHeaderIcon}>
+          <Icon name="lock" size={17} color={stitchTokens.wineDark} />
         </View>
-
-        <View
-          style={{
-            backgroundColor: stitchTokens.parchment,
-            borderWidth: 1,
-            borderColor: stitchTokens.cardBorder,
-            borderRadius: 6,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-          }}
-        >
-          <AppText kind="small" style={{ color: stitchTokens.wineDark, fontWeight: "700", fontSize: 11 }}>
-            Bước: +{formatVnd(auction.step)}
+        <View style={styles.flexOne}>
+          <AppText kind="bold" style={styles.cardTitle}>
+            Đấu giá kín · {second ? "giá thứ hai" : "giá thứ nhất"}
+          </AppText>
+          <AppText kind="small" color={colors.muted}>
+            {second ? "Giá cao nhất thắng, trả bằng mức cao thứ hai" : "Giá cao nhất thắng và trả đúng mức đã gửi"}
           </AppText>
         </View>
       </View>
 
-      <AppText kind="small" color={colors.muted} style={{ lineHeight: 18 }}>
-        Không ai thấy giá của người khác cho tới khi phiên kết thúc. Giá cao nhất thắng
-        {second ? " nhưng chỉ trả bằng giá cao thứ hai (hoặc giá khởi điểm nếu chỉ một người)." : " và trả đúng giá mình gửi."}
-        {" "}Ví giữ toàn bộ giá kín; nếu không thắng, tiền về lại ví khi phiên chốt.
-      </AppText>
-
-      {/* Current Own Sealed Bid Box */}
-      {own !== null && (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            backgroundColor: stitchTokens.goldLight,
-            borderWidth: 1.5,
-            borderColor: stitchTokens.goldBorder,
-            borderRadius: 12,
-            padding: 12,
-          }}
-        >
-          <View style={{ gap: 2 }}>
-            <AppText kind="small" style={{ color: stitchTokens.wineDark, fontWeight: "700" }}>
-              Giá kín hiện tại của bạn (chỉ bạn thấy)
-            </AppText>
-            <AppText kind="small" color={colors.muted} style={{ fontSize: 11 }}>
-              {me?.heldAmount ? `Ví đang giữ ${formatVnd(me.heldAmount)} · Chỉ có thể nâng lên` : "Chỉ có thể nâng lên"}
-            </AppText>
+      {own !== null ? (
+        <View style={styles.sectionDividerBlock}>
+          <View style={styles.rowBetween}>
+            <AppText kind="small" color={stitchTokens.brownMuted}>Giá kín hiện tại của bạn</AppText>
+            <AppText kind="bold" style={styles.moneyWine}>{formatVnd(own)}</AppText>
           </View>
-          <AppText kind="bold" style={{ fontSize: 18, color: stitchTokens.wineDark }}>
-            {formatVnd(own)}
+          <AppText kind="small" color={colors.muted}>
+            {me?.heldAmount ? `Ví đang giữ ${formatVnd(me.heldAmount)} · Chỉ có thể nâng lên.` : "Chỉ bạn thấy · Chỉ có thể nâng lên."}
           </AppText>
         </View>
-      )}
+      ) : null}
 
-      {/* Quick Picks */}
-      <View style={{ gap: space.xs }}>
-        <AppText kind="small" color={colors.muted} style={{ fontWeight: "600" }}>
-          Chọn nhanh mức giá kín:
-        </AppText>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+      <View style={styles.sectionDividerBlock}>
+        <AppText kind="small" style={styles.metricTitle}>Chọn nhanh mức giá kín</AppText>
+        <View style={styles.quickGrid}>
           {bidOptions(floor, auction.step).map((value) => {
             const isSelected = amount === value;
             return (
               <Pressable
                 key={value}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected, disabled: locked }}
                 disabled={locked}
                 onPress={() => setText(String(value))}
                 style={({ pressed }) => [
-                  {
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: radius.pill,
-                    borderWidth: 1.5,
-                    borderColor: isSelected ? stitchTokens.wineDark : stitchTokens.peachBorder,
-                    backgroundColor: isSelected ? stitchTokens.wineDark : stitchTokens.parchment,
-                    opacity: locked ? 0.6 : pressed ? 0.8 : 1,
-                  },
+                  styles.quickOption,
+                  isSelected && styles.quickOptionSelected,
+                  pressed && styles.pressed,
                 ]}
               >
-                <AppText
-                  kind="bold"
-                  style={{
-                    color: isSelected ? stitchTokens.white : stitchTokens.wineDark,
-                    fontSize: 14,
-                  }}
-                >
+                <AppText kind="bold" style={[styles.quickOptionText, isSelected && styles.quickOptionTextSelected]}>
                   {formatVnd(value)}
                 </AppText>
               </Pressable>
             );
           })}
         </View>
-      </View>
 
-      <TextField
-        label={own === null ? "Giá kín của bạn" : "Nâng giá kín lên"}
-        keyboardType="number-pad"
-        value={text}
-        editable={!locked}
-        onChangeText={(t) => setText(t.replace(/\D/g, ""))}
-        hint={`Tối thiểu ${formatVnd(floor)}, bước ${formatVnd(auction.step)}. ${fundsHint(amount, available) ?? ""}`.trim()}
-        error={error ?? undefined}
-      />
-      <Button
-        wine
-        title={
-          amount
-            ? own === null
-              ? `Gửi giá kín ${formatVnd(amount)}`
-              : `Nâng giá kín lên ${formatVnd(amount)}`
-            : "Gửi giá kín"
-        }
-        disabled={locked || !!error || !amount}
-        onPress={() => amount && onSubmit(amount)}
-      />
+        <TextField
+          label={own === null ? "Giá kín của bạn" : "Nâng giá kín lên"}
+          keyboardType="number-pad"
+          value={text}
+          editable={!locked}
+          onChangeText={(t) => setText(t.replace(/\D/g, ""))}
+          hint={`${amount ? `${formatVnd(amount)} · ` : ""}Tối thiểu ${formatVnd(floor)}, bước ${formatVnd(auction.step)}.`}
+          error={error ?? undefined}
+        />
+
+        <Button
+          wine
+          title={
+            amount
+              ? own === null
+                ? `Gửi giá kín ${formatVnd(amount)}`
+                : `Nâng giá kín lên ${formatVnd(amount)}`
+              : "Gửi giá kín"
+          }
+          disabled={locked || !!error || !amount}
+          onPress={() => amount && onSubmit(amount)}
+        />
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  body: { gap: space.md },
+  stackSm: { gap: space.sm },
+  stackMd: { gap: space.md },
+  flexOne: { flex: 1, minWidth: 0, gap: 2 },
+  pressed: { opacity: 0.78 },
+
+  dock: { gap: space.sm },
+  dockSummary: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dockPrice: { color: stitchTokens.wine, fontSize: 16, fontVariant: ["tabular-nums"] },
+  dockLeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.md,
+  },
+  dockLeadingInfo: { flex: 1, minWidth: 0, gap: 2 },
+  dockLeadingBadge: { flexDirection: "row", alignItems: "center", gap: 5 },
+  dockLeadingText: { color: stitchTokens.likeNewGreen, fontSize: 14 },
+
+  sellerCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: space.lg,
+    gap: space.md,
+  },
+  sellerCardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  sellerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sellerSection: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
+    paddingTop: space.md,
+    gap: space.sm,
+  },
+  sellerActions: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
+    paddingTop: space.md,
+    gap: space.sm,
+  },
+
+  standingCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: space.md,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  standingLead: {
+    borderColor: stitchTokens.greenBorderSoft,
+    backgroundColor: stitchTokens.likeNewGreenBg,
+  },
+  standingOutbid: {
+    borderColor: stitchTokens.orangeBorderSoft,
+    backgroundColor: stitchTokens.amberBg,
+  },
+  standingIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  standingIconLead: { backgroundColor: stitchTokens.whiteSurface },
+  standingIconOutbid: { backgroundColor: stitchTokens.whiteSurface },
+  standingTitle: { fontSize: 15 },
+
+  optionsCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    overflow: "hidden",
+  },
+  optionRow: {
+    minHeight: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: space.md,
+    paddingVertical: 12,
+  },
+  optionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  optionTitle: { color: stitchTokens.wineDark, fontSize: 15 },
+  sectionBorderTop: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
+  },
+  buyNowSection: {
+    padding: space.md,
+    gap: space.sm,
+  },
+  buyNowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.sm,
+  },
+  buyNowPrice: {
+    color: stitchTokens.wine,
+    fontSize: 16,
+    fontVariant: ["tabular-nums"],
+  },
+
+  flatCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: space.lg,
+    gap: space.md,
+  },
+  flatCardRegistered: {
+    borderColor: stitchTokens.greenBorderSoft,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cardHeaderIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardHeaderIconGreen: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+  },
+  cardTitle: { color: stitchTokens.wineDark, fontSize: 16 },
+  pillBadge: {
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  pillBadgeGreen: { backgroundColor: stitchTokens.likeNewGreenBg },
+  pillBadgeText: {
+    color: stitchTokens.wineDark,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    includeFontPadding: false,
+  },
+  pillBadgeTextGreen: { color: stitchTokens.likeNewGreen },
+
+  sectionDividerBlock: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
+    paddingTop: space.md,
+    gap: space.sm,
+  },
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  metricTitle: { color: stitchTokens.deepCocoa, fontWeight: "700" },
+  metricCount: { color: stitchTokens.wineDark, fontSize: 14, fontVariant: ["tabular-nums"] },
+  metricCountGreen: { color: stitchTokens.likeNewGreen },
+  progressTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: stitchTokens.parchment,
+    overflow: "hidden",
+  },
+  progressFill: { height: "100%", borderRadius: 4, backgroundColor: stitchTokens.wine },
+  progressFillGreen: { backgroundColor: stitchTokens.likeNewGreen },
+  moneyWine: { color: stitchTokens.wine, fontSize: 15, fontVariant: ["tabular-nums"] },
+  moneyInk: { color: stitchTokens.deepCocoa, fontSize: 15, fontVariant: ["tabular-nums"] },
+  helper: { lineHeight: 19 },
+
+  dutchStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  dutchCol: { alignItems: "flex-start", gap: 2 },
+  dutchColCenter: {
+    alignItems: "center",
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 2,
+  },
+  dutchColEnd: { alignItems: "flex-end", gap: 2 },
+  dutchMutedVal: { color: stitchTokens.brownMuted, fontSize: 13, fontVariant: ["tabular-nums"] },
+  dutchNowLabel: { color: stitchTokens.wine, fontWeight: "700", fontSize: 12 },
+  dutchNowVal: { color: stitchTokens.wineDark, fontSize: 16, fontVariant: ["tabular-nums"] },
+  dutchFloorVal: { color: stitchTokens.deepCocoa, fontSize: 13, fontVariant: ["tabular-nums"] },
+
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  quickOption: {
+    minHeight: 48,
+    flexBasis: "30%",
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: space.sm,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    backgroundColor: stitchTokens.parchment,
+  },
+  quickOptionSelected: {
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.wine,
+  },
+  quickOptionText: { color: stitchTokens.wineDark, fontSize: 13, fontVariant: ["tabular-nums"] },
+  quickOptionTextSelected: { color: stitchTokens.warmIvory },
+});

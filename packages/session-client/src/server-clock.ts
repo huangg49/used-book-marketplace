@@ -9,10 +9,9 @@
 //   SAMPLE_MAX_AGE_MS is replaced by the next one.
 // - Time then advances on the monotonic clock (`performance.now()`), which a
 //   user or NTP changing the device date cannot move.
-// - The device date is tracked beside it. If the two disagree by more than
-//   JUMP_MS, the device slept (some monotonic clocks pause) or its date was
-//   changed; the later estimate is shown, so a deadline reads as passed early
-//   rather than late, and the next response re-syncs.
+// - Disagreement with the device date can mean sleep or a clock change.
+//   It lets the next timed response replace the sample, without changing
+//   the displayed time before a fresh server response arrives.
 
 export const SAMPLE_MAX_AGE_MS = 120_000;
 export const JUMP_MS = 1_000;
@@ -59,9 +58,7 @@ export class ServerClock {
   now(): number | null {
     const sample = this.best;
     if (!sample) return null;
-    const mono = sample.server + (this.monotonic() - sample.mono);
-    const wall = sample.server + (this.wall() - sample.wall);
-    return Math.abs(mono - wall) > JUMP_MS ? Math.max(mono, wall) : mono;
+    return sample.server + (this.monotonic() - sample.mono);
   }
 
   /** For tests. */
@@ -82,8 +79,7 @@ export const serverClock = new ServerClock();
 /**
  * A server-time reader for data stamped with `serverTime`.
  * - Synced clock: the shared, round-trip-corrected clock.
- * - Not synced yet (no timed response in this app run): the offset of
- *   `serverTime` against the device date, fixed once now.
+ * - Not synced yet: advance the data's `serverTime` by monotonic elapsed time.
  * - No `serverTime`: the device date (local cooldowns, not server deadlines).
  */
 export function createServerNow(
@@ -92,6 +88,7 @@ export function createServerNow(
 ): () => number {
   if (!serverTime) return () => Date.now();
   const parsed = Date.parse(serverTime);
-  const offset = Number.isFinite(parsed) ? parsed - Date.now() : 0;
-  return () => clock.now() ?? Date.now() + offset;
+  const startedAt = clock.mark();
+  const startingTime = Number.isFinite(parsed) ? parsed : Date.now();
+  return () => clock.now() ?? startingTime + (clock.mark() - startedAt);
 }

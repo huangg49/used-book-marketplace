@@ -5,13 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
-  AppText,
   Button,
   Chip,
   Notice,
   Screen,
   StatePanel,
-  colors,
   presentError,
   space,
 } from "../../core/ui";
@@ -31,8 +29,8 @@ import { HomeShortcuts } from "./home-components/home-shortcuts";
 import { HomeFlashDeals } from "./home-components/home-flash-deals";
 import { HomeCategoryTabs } from "./home-components/home-category-tabs";
 import { HomeVouchersModal } from "./home-components/home-vouchers-modal";
-import { HomeInspectionModal } from "./home-components/home-inspection-modal";
 import { HomeNotificationsModal } from "./home-components/home-notifications-modal";
+import { HomeShelfFooter } from "./home-components/home-shelf-footer";
 import { usePublicAuctions } from "../auctions/auctions-model";
 import { useNotifications } from "../notifications/notifications-model";
 
@@ -46,7 +44,6 @@ export function ShelfScreen() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [applied, setApplied] = useState(initialFilters);
   const [vouchersOpen, setVouchersOpen] = useState(false);
-  const [inspectionOpen, setInspectionOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [cursors, setCursors] = useState<string[]>([""]);
@@ -69,9 +66,9 @@ export function ShelfScreen() {
         publicPage,
       ),
     enabled: active,
-    staleTime: 30_000,
+    staleTime: 8_000,
     gcTime: 300_000,
-    refetchInterval: active ? 30_000 : false,
+    refetchInterval: active ? 10_000 : false,
     retry: false,
   });
 
@@ -93,6 +90,7 @@ export function ShelfScreen() {
     Number(!!(applied.minSalePrice || applied.maxSalePrice)) +
     Number(!!(applied.minExchangeValue || applied.maxExchangeValue));
   const hasCriteria = !!applied.q || filterCount > 0;
+  const nextCursor = result.error ? undefined : result.data?.nextCursor;
 
   const handleOpenAuction = (id: string) => {
     router.push({ pathname: "./auction", params: { id } });
@@ -106,9 +104,6 @@ export function ShelfScreen() {
         <HomeHeader
           search={search}
           onSearchPress={() => router.navigate("/search")}
-          onSearchChange={setSearch}
-          onSubmitSearch={() => apply({ ...applied, q: search })}
-          onInspectionPress={() => setInspectionOpen(true)}
           onOpenNotifications={() => setNotificationsOpen(true)}
           onMessagesPress={() => router.push("/chat-inbox")}
           notificationCount={notificationCount}
@@ -183,6 +178,7 @@ export function ShelfScreen() {
             <Button
               title={cursor ? "Tải lại từ trang đầu" : "Thử lại"}
               secondary
+              wine
               busy={result.isFetching}
               onPress={() => {
                 if (cursor) setCursors([""]);
@@ -243,64 +239,24 @@ export function ShelfScreen() {
           />
         </View>
 
-        <View style={{ paddingHorizontal: 12, gap: space.md }}>
-          {(cursors.length > 1 || (result.data?.nextCursor && !result.error)) && (
-            <View
-              style={{ flexDirection: "row", flexWrap: "wrap", gap: space.md }}
-            >
-              {cursors.length > 1 && (
-                <Button
-                  title="Trang trước"
-                  secondary
-                  disabled={result.isFetching}
-                  onPress={() => {
-                    setCursors((previous) => previous.slice(0, -1));
-                    scroll.current?.scrollTo({ y: 0, animated: false });
-                  }}
-                />
-              )}
-              {result.data?.nextCursor && !result.error && (
-                <Button
-                  title="Trang tiếp"
-                  busy={result.isFetching}
-                  onPress={() => {
-                    setCursors((previous) => [
-                      ...previous,
-                      result.data!.nextCursor!,
-                    ]);
-                    scroll.current?.scrollTo({ y: 0, animated: false });
-                  }}
-                />
-              )}
-            </View>
-          )}
-
-          {!result.isPending && !result.error && (
-            <Button
-              title="Xem thêm các tác phẩm gợi ý"
-              secondary
-              busy={result.isFetching}
-              onPress={() => void result.refetch()}
-            />
-          )}
-
-          <AppText kind="small" color={colors.muted}>
-            Ảnh và tình trạng do người đăng cung cấp. Xem chi tiết sách trước khi
-            quyết định. Mở chi tiết để xem thao tác hiện được hỗ trợ và nơi theo dõi giao dịch.
-          </AppText>
-        </View>
+        <HomeShelfFooter
+          page={cursors.length}
+          fetching={result.isFetching}
+          onPrevious={cursors.length > 1 ? () => {
+            setCursors((previous) => previous.slice(0, -1));
+            scroll.current?.scrollTo({ y: 0, animated: false });
+          } : undefined}
+          onNext={nextCursor ? () => {
+            setCursors((previous) => [...previous, nextCursor]);
+            scroll.current?.scrollTo({ y: 0, animated: false });
+          } : undefined}
+        />
       </View>
 
       {/* Interactive Voucher Modal */}
       <HomeVouchersModal
         visible={vouchersOpen}
         onClose={() => setVouchersOpen(false)}
-      />
-
-      {/* Interactive 24h Inspection Modal */}
-      <HomeInspectionModal
-        visible={inspectionOpen}
-        onClose={() => setInspectionOpen(false)}
       />
 
       {/* Interactive Notifications Modal */}

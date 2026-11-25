@@ -27,25 +27,34 @@ let browser;
 const checks = [];
 try {
   browser = await chromium.launch();
-  for (const width of [390, 1440]) for (const mode of ['pay', 'rejected', 'lost-ack', 'cancel', 'completed-buyer', 'completed-seller']) {
+  const modes = ['pay', 'rejected', 'lost-ack', 'cancel', 'completed-buyer', 'completed-seller'];
+  if (!baseline) modes.push('refunded');
+  for (const width of [390, 1440]) for (const mode of modes) {
     const completedCase = mode.startsWith('completed-'), role = mode === 'completed-seller' ? 'Seller' : 'Buyer';
+    const refunded = mode === 'refunded';
     const actor = { ...(role === 'Seller' ? seller : buyer), email: 'reader@example.test', status: 'ACTIVE', roles: ['MEMBER'] };
-    const initial = mode === 'completed-buyer' ? 50000 : 100000;
-    const final = mode === 'cancel' || mode === 'completed-buyer' ? initial : mode === 'completed-seller' ? 145000 : 50000;
+    const initial = mode === 'completed-buyer' || refunded ? 50000 : 100000;
+    const final = refunded ? 100000 : mode === 'cancel' || mode === 'completed-buyer' ? initial : mode === 'completed-seller' ? 145000 : 50000;
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
     await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage();
     await page.clock.setFixedTime(new Date(now));
     let changed = false, walletReads = 0, release, terminalReads = 0;
+    const startsPaid = completedCase || refunded;
+    const closesOrder = refunded || mode === 'cancel';
+    const initialState = refunded ? 'PendingSellerConfirmation' : completedCase ? 'Inspection' : 'AwaitingPayment';
+    const nextState = completedCase ? 'Completed' : closesOrder ? 'Cancelled' : 'PendingSellerConfirmation';
+    const heldForOrder = () => (changed ? nextState === 'PendingSellerConfirmation' : startsPaid) ? 50000 : 0;
     const commands = [], errors = [], external = [];
     page.on('pageerror', error => errors.push(error.message));
     const order = () => ({ id: id(3), role, version: changed ? 2 : 1, conversationId: room.id, purchaseMode: 'Negotiated',
-      state: changed ? completedCase ? 'Completed' : mode === 'cancel' ? 'Cancelled' : 'PendingSellerConfirmation' : completedCase ? 'Inspection' : 'AwaitingPayment',
-      paymentDeadline: future, paymentEnabled: !changed && !completedCase, canCancel: !changed && !completedCase,
+      state: changed ? nextState : initialState,
+      paymentDeadline: future, paymentEnabled: !changed && !startsPaid, canCancel: !changed && !startsPaid,
       amounts: { bookPrice: 50000, shippingFee: 0, buyerTotal: 50000 }, serverTime: now, createdAt: now,
-      paidAt: completedCase || (changed && mode !== 'cancel') ? now : null,
-      moneyHeld: mode === 'cancel' || (completedCase && changed) ? 0 : completedCase || changed ? 50000 : 0,
-      sellerAcceptanceEnabled: false, canReject: false, sellerConfirmationDeadline: null, shipmentRegistrationEnabled: false,
+      paidAt: startsPaid || (changed && !closesOrder) ? now : null,
+      moneyHeld: heldForOrder(),
+      refundedAmount: refunded && changed ? 50000 : 0,
+      sellerAcceptanceEnabled: false, canReject: false, sellerConfirmationDeadline: refunded ? future : null, shipmentRegistrationEnabled: false,
       deliveredAt: completedCase ? now : null, inspectionDeadline: completedCase ? future : null,
       carrierReview: null, deliveryReview: null, preparation: null,
       ownAddress: { recipientName: 'Người nhận QA', phone: '0900000000', localityCode: 'DEMO-A', detail: 'Địa chỉ QA' }, shippingAddress: null,
@@ -71,7 +80,7 @@ try {
         if (p === '/api/v1/me/wallet') {
           walletReads++;
           const available = changed ? final : initial;
-          const held = mode === 'completed-buyer' ? changed ? 0 : 50000 : !completedCase && changed && mode !== 'cancel' ? 50000 : 0;
+          const held = role === 'Buyer' ? heldForOrder() : 0;
           return route.fulfill({ json: { demoOnly: true, label: 'Mô phỏng đồ án', currency: 'VND', available,
             transactionHeld: held, withdrawalHeld: 0, total: available + held, serverTime: now,
             topupEnabled: true, paymentsEnabled: true, withdrawalsEnabled: false, vnpayEnabled: true } });
@@ -112,7 +121,19 @@ try {
     const region = page.getByRole('region', { name: 'Chi tiết đơn hàng', exact: true });
     await expect(region).toBeVisible();
     const before = walletReads;
-    if (completedCase) {
+    if (refunded) {
+      await expect(region.getByText(/Ví đã giữ 50.000.*Nếu hết hạn/)).toBeVisible();
+      changed = true;
+      await expect(region.getByText(/Đã hoàn 50.000.*về Ví/)).toBeVisible({ timeout: 12_000 });
+      await region.getByRole('link', { name: 'Xem lịch sử giao dịch Ví' }).click();
+      await expect(page).toHaveURL(origin + '/wallet#lich-su-giao-dich');
+      await expect(page.getByRole('heading', { name: 'Lịch sử giao dịch' })).toBeFocused();
+      await expect(balance).toContainText(money(final));
+      assert.deepEqual(errors, []); assert.deepEqual(external, []);
+      checks.push({ width, mode, role, commands: commands.length, walletReads, pageErrors: 0 });
+      await context.close();
+      continue;
+    } else if (completedCase) {
       changed = true;
       await expect(region.getByText('Đơn hàng đã hoàn tất thành công', { exact: true })).toBeVisible({ timeout: 8000 });
       assert.equal(commands.length, 0, 'A worker state observation submits no command');

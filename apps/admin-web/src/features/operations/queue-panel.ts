@@ -34,4 +34,4 @@ export function useQueuePanel() {
 }
 export type QueuePanel = ReturnType<typeof useQueuePanel>;
 export const refetchWhileClosed = (panel: QueuePanel) =>
-  panel.open ? false : 30_000;
+  panel.open ? false : 5_000;

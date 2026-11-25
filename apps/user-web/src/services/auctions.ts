@@ -1,3 +1,4 @@
+import { auctionSellerSaleSchema } from '@used-books/session-client'
 import { z } from 'zod'
 import type { components } from '@used-books/api-contract'
 import { session } from '../lib/session'
@@ -41,7 +42,7 @@ export const auctionSummarySchema = z.object({
   id: z.string().uuid(), listingId: z.string().uuid(), title: z.string(), state: auctionState,
   startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(),
   currentPrice: money.nullable(), minimumBid: money.nullable(), bidderCount: z.number().int(),
-  startAt: z.string(), endAt: z.string(), pointName: z.string(), demoOnly: z.literal(true),
+  startAt: z.string(), endAt: z.string(), pointName: z.string(), sellerName: z.string().optional(), demoOnly: z.literal(true),
   // ADR 0043: when Buy Now opened the 60-second window (endAt already shortened).
   buyNowAt: z.string().nullish(),
   // ADR 0074: absent on older servers means Challenge.
@@ -139,7 +140,7 @@ const pointOrderSchema = z.object({
   id: z.string().uuid(), auctionId: z.string().uuid().nullable(), title: z.string(), pointName: z.string(),
   role: z.enum(['Buyer', 'Seller']),
   state: z.enum(['AwaitingPayment', 'Fulfilling', 'ReadyForCollection', 'InTransit', 'Inspection', 'ResolutionPending', 'ReturnPending', 'Completed', 'Cancelled', 'PaymentExpired']),
-  version: z.number().int(), amounts: z.object({ bookPrice: money, outboundFee: z.number().int().default(0), buyerTotal: money }),
+  version: z.number().int(), amounts: z.object({ bookPrice: money, outboundFee: z.number().int().default(0), buyerTotal: money, commissionBps: z.number().int().min(0).max(10000).optional() }),
   // ADR 0044: older servers had pickup only; only the buyer receives the address.
   fulfillmentMethod: z.enum(['SelfCollect', 'CarrierOutbound']).default('SelfCollect'),
   delivery: deliverySchema.nullable().default(null),
@@ -249,13 +250,13 @@ export function waitingForRegistrants(a: AuctionSummary) {
 }
 const at = (iso: string) => new Date(iso).toLocaleString('vi-VN', { weekday: 'short', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 /** ADR 0079: one sentence on when a waiting auction opens or is cancelled. */
-export function openRuleText(a: AuctionSummary) {
+export function openRuleText(a: AuctionSummary, now: number) {
   const need = a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR
   if (a.openMode === 'ScheduledGrace' && a.opensAt) {
     const reached = (a.registeredCount ?? 0) >= need
     if (reached) return `Phiên đã đủ ${need} người đăng ký và mở lúc ${at(a.startAt)}.`
     // ADR 0085: reached after the open time, it opens after a short notice.
-    return Date.parse(a.opensAt) > Date.now()
+    return Date.parse(a.opensAt) > now
       ? `Phiên mở lúc ${at(a.opensAt)} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(a.startAt)} và mở 10 phút sau khi đủ (đủ trong khung 23:00–07:00 thì mở lúc 07:00); hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
       : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở 10 phút sau khi đủ (đủ trong khung 23:00–07:00 thì mở lúc 07:00); tới ${at(a.startAt)} vẫn chưa đủ thì bị hủy và hoàn cọc.`
   }
@@ -389,6 +390,7 @@ export function bidOptions(minimum: number, step: number, count = 3) {
 // is theirs (public reads never expose the seller).
 const intakeState = z.enum(['AwaitingDropoff', 'Received', 'NeedsEvidence', 'Passed', 'Auctioning', 'ReclaimRequired', 'Reclaimed', 'Cancelled', 'Sold'])
 const myIntakeSchema = z.object({
+  sellerSale: auctionSellerSaleSchema.optional(),
   id: z.string().uuid(), auctionId: z.string().uuid().nullable(), state: intakeState, version: z.number().int(),
   listingId: z.string().uuid(), title: z.string(), pointId: z.string().uuid(),
   startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(), protectiveValue: money,

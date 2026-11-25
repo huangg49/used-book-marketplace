@@ -133,11 +133,17 @@ function RecentBookRow({ item }: { item: any }) {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 8,
           }}
         >
           <AppText
             kind="bold"
-            style={{ fontSize: 14, color: stitchTokens.wineDark }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: 14,
+              color: stitchTokens.wineDark,
+            }}
             numberOfLines={1}
           >
             {bookTitle}
@@ -146,6 +152,7 @@ function RecentBookRow({ item }: { item: any }) {
             style={[
               styles.miniStatusBadge,
               {
+                flexShrink: 0,
                 backgroundColor: isApproved
                   ? stitchTokens.likeNewGreenBg
                   : isPending
@@ -158,7 +165,9 @@ function RecentBookRow({ item }: { item: any }) {
               kind="small"
               style={{
                 fontSize: 9,
+                lineHeight: 13,
                 fontWeight: "700",
+                includeFontPadding: false,
                 color: isApproved
                   ? stitchTokens.likeNewGreen
                   : isPending
@@ -305,19 +314,17 @@ export function AccountScreen() {
     <Screen
       key={`${fontScale}:${presentationVersion}`}
       appearance="home"
+      header={
+        <TopNavbar
+          notificationCount={notificationCount}
+          onNotificationsPress={() => setNotificationsOpen(true)}
+          onMessagesPress={() => router.push("/chat-inbox")}
+        />
+      }
       footer={<MemberNavigation current="/account" />}
       footerAppearance="navigation"
     >
-      {/* Top Navbar */}
-      <TopNavbar
-        notificationCount={notificationCount}
-        hasNotification={notificationCount > 0}
-        onNotificationsPress={() => setNotificationsOpen(true)}
-        onMessagesPress={() => router.push("/chat-inbox")}
-        style={{ marginBottom: 4 }}
-      />
-
-      <View style={{ paddingHorizontal: 16, paddingBottom: 32, gap: 18 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 32, gap: 18 }}>
         {profile.isPending ? (
           <StatePanel loading title="Đang tải hồ sơ bạn đọc…" />
         ) : null}
@@ -409,9 +416,9 @@ export function AccountScreen() {
                   </AppText>
 
                   <View style={styles.roleBadgePill}>
-                    <Icon name="star" size={11} color={stitchTokens.goldDark} filled />
+                    <Icon name="verified" size={11} color={stitchTokens.goldDark} />
                     <AppText kind="small" style={styles.roleBadgeText}>
-                      {roleLabels[profile.data.roles[0]] || "Độc giả uy tín"} ★ 4.9
+                      {roleLabels[profile.data.roles[0]] || "Thành viên Lật Lại"}
                     </AppText>
                   </View>
 
@@ -421,7 +428,7 @@ export function AccountScreen() {
                 </Pressable>
               </View>
 
-              {/* Quick Action Pills Row */}
+              {/* Quick Action Row — 4 equal-width tiles on 1 row */}
               <View style={styles.quickActionsRow}>
                 <Pressable
                   accessibilityRole="button"
@@ -432,8 +439,12 @@ export function AccountScreen() {
                     (pressed || isLocked) && { opacity: isLocked ? 0.5 : 0.8 },
                   ]}
                 >
-                  <Icon name="plus" size={13} color={stitchTokens.white} strokeWidth={2.4} />
-                  <AppText kind="bold" style={{ fontSize: 12, color: stitchTokens.white }}>
+                  <Icon name="plus" size={15} color={stitchTokens.gold} strokeWidth={2.4} />
+                  <AppText
+                    kind="bold"
+                    numberOfLines={1}
+                    style={styles.quickCtaTextPrimary}
+                  >
                     Đăng sách
                   </AppText>
                 </Pressable>
@@ -446,8 +457,12 @@ export function AccountScreen() {
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  <Icon name="wallet" size={13} color={stitchTokens.wine} />
-                  <AppText kind="bold" style={{ fontSize: 12, color: stitchTokens.wine }}>
+                  <Icon name="wallet" size={15} color={stitchTokens.wine} />
+                  <AppText
+                    kind="bold"
+                    numberOfLines={1}
+                    style={styles.quickCtaTextSecondary}
+                  >
                     Nạp ví
                   </AppText>
                 </Pressable>
@@ -460,8 +475,12 @@ export function AccountScreen() {
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  <Icon name="bag" size={13} color={stitchTokens.wine} />
-                  <AppText kind="bold" style={{ fontSize: 12, color: stitchTokens.wine }}>
+                  <Icon name="bag" size={15} color={stitchTokens.wine} />
+                  <AppText
+                    kind="bold"
+                    numberOfLines={1}
+                    style={styles.quickCtaTextSecondary}
+                  >
                     Giỏ sách
                   </AppText>
                 </Pressable>
@@ -474,8 +493,12 @@ export function AccountScreen() {
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  <Icon name="person" size={13} color={stitchTokens.wine} />
-                  <AppText kind="bold" style={{ fontSize: 12, color: stitchTokens.wine }}>
+                  <Icon name="person" size={15} color={stitchTokens.wine} />
+                  <AppText
+                    kind="bold"
+                    numberOfLines={1}
+                    style={styles.quickCtaTextSecondary}
+                  >
                     Hồ sơ
                   </AppText>
                 </Pressable>
@@ -654,7 +677,9 @@ export function AccountScreen() {
                 {/* Cột 1: Đang diễn ra */}
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => router.push("./my-auctions")}
+                  onPress={() =>
+                    router.push({ pathname: "./my-auctions", params: { view: "active" } })
+                  }
                   style={styles.auctionStatBox}
                 >
                   <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 11 }}>
@@ -668,7 +693,9 @@ export function AccountScreen() {
                 {/* Cột 2: Cần thanh toán */}
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => router.push("./my-auctions")}
+                  onPress={() =>
+                    router.push({ pathname: "./my-auctions", params: { view: "payment" } })
+                  }
                   style={[
                     styles.auctionStatBox,
                     needsPaymentAuctionsCount > 0 && { backgroundColor: stitchTokens.amberWarmBg },
@@ -1239,28 +1266,43 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 4,
-    flexWrap: "wrap",
+    marginTop: 6,
   },
   quickCtaBtnPrimary: {
-    flexDirection: "row",
+    flex: 1,
+    minHeight: 52,
     alignItems: "center",
-    gap: 5,
-    backgroundColor: stitchTokens.wine,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: stitchTokens.wineDark,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   quickCtaBtnSecondary: {
-    flexDirection: "row",
+    flex: 1,
+    minHeight: 52,
     alignItems: "center",
-    gap: 5,
+    justifyContent: "center",
+    gap: 4,
     backgroundColor: stitchTokens.pillWarmBg,
     borderWidth: 1,
     borderColor: stitchTokens.borderWarmLight,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  quickCtaTextPrimary: {
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: stitchTokens.white,
+    includeFontPadding: false,
+  },
+  quickCtaTextSecondary: {
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: stitchTokens.wineDark,
+    includeFontPadding: false,
   },
 
   // Stats Grid 2x2 (Section 2)

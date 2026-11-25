@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
 import { useSession } from "../core/session/session-provider";
-import { Screen, StatePanel } from "../core/ui";
+import { Screen, StatePanel, stitchTokens } from "../core/ui";
 import { SendToAuctionScreen } from "../features/auctions/send-to-auction-screen";
 
 export default function SendToAuctionRoute() {
@@ -8,8 +8,9 @@ export default function SendToAuctionRoute() {
   if (state.status === "anonymous") return <Redirect href="./account" />;
   if (state.status !== "authenticated")
     return (
-      <Screen>
+      <Screen canvasColor={stitchTokens.creamBg}>
         <StatePanel
+          wine
           loading={state.status === "loading"}
           title={state.status === "loading" ? "Đang khôi phục phiên" : "Chưa kết nối được"}
           message={state.status === "unavailable" ? state.message : undefined}

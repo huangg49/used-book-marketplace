@@ -106,7 +106,7 @@ function CartContent({ owner }: { owner: string }) {
           <div>
             <h1 className={styles.pageTitle}>Giỏ sách</h1>
             <p className={styles.pageSubtitle}>
-              Mỗi cuốn sách cũ là độc bản từ kệ của người bán. Bạn có thể lưu lại và tiến hành mua trực tiếp từng cuốn.
+              Xem lại sách trong giỏ và mua từng bài đăng còn bán.
             </p>
           </div>
 
@@ -198,7 +198,7 @@ function CartContent({ owner }: { owner: string }) {
             </div>
             <h2 className={styles.emptyTitle}>Giỏ sách đang trống</h2>
             <p className={styles.emptySubtitle}>
-              Bạn chưa thêm cuốn sách nào vào giỏ. Hãy dạo kệ sách Lật Lại để tìm những ấn bản hay và độc đáo.
+              Mở một bài đăng bán trên kệ sách và chọn Mua ngay.
             </p>
             <Link to="/books" className={styles.primaryButton}>
               <span>Khám phá kệ sách ngay</span>

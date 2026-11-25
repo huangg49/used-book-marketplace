@@ -57,6 +57,8 @@ export function WalletPage() {
       ? rawId
       : undefined;
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
+  const sale = params.get("sale");
+  const saleOrderId = sale && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(sale) ? sale.toLowerCase() : undefined;
 
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [checkoutId, setCheckoutId] = useState<string>();
@@ -751,7 +753,9 @@ export function WalletPage() {
             =================================================================== */}
         <main className={styles.rightCol}>
           <WalletHistory
+            key={`${ownerId}:${saleOrderId ?? ''}`}
             ownerId={ownerId}
+            saleOrderId={saleOrderId}
             onOpenTopup={() => setDialog("topup")}
           />
           <WalletWithdrawals key={ownerId} ownerId={ownerId} available={availableVal} enabled={!!summary.data?.withdrawalsEnabled && !summary.isError} open={dialog === 'withdrawal'} onClose={() => setDialog(null)} onResume={() => setDialog("withdrawal")} />

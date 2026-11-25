@@ -93,7 +93,7 @@ export async function notifyExchange(
 
       case 'ExchangeCompleted':
         title = 'Giao dịch trao đổi sách đã hoàn tất!';
-        body = `Cả 2 bên đã nhận sách và xác nhận đã nhận hàng cuốn ${ctx.initTitle} và ${ctx.recTitle}. Toàn bộ tiền cọc bảo chứng đã được tất toán về ví của bạn.`;
+        body = `Giao dịch đổi ${ctx.initTitle} và ${ctx.recTitle} đã được tất toán. Hãy mở phiếu trao đổi để kiểm tra các khoản đã ghi vào Ví.`;
         break;
 
       case 'ExchangeRejected':

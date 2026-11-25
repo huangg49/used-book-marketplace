@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../../core/session/session-provider";
@@ -37,10 +37,6 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
     return keyRef.current.key;
   };
 
-  const settle = () => {
-    keyRef.current = null;
-  };
-
   const skip = async () => {
     const signature = pendingSignature ?? `${label}:${note ?? ""}`;
     setPendingSignature(signature);
@@ -48,7 +44,7 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
     setError(null);
     try {
       await run(keyFor(signature));
-      settle();
+      keyRef.current = null;
       setPendingSignature(null);
       await onDone();
     } catch (caught) {
@@ -59,91 +55,30 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
   };
 
   return (
-    <View
-      style={{
-        gap: space.xs,
-        padding: space.md,
-        borderRadius: radius.card,
-        backgroundColor: stitchTokens.roseWarmSurface,
-        borderWidth: 1.5,
-        borderStyle: "dashed",
-        borderColor: stitchTokens.wine,
-      }}
-    >
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 2,
-        }}
-      >
-        <AppText
-          kind="bold"
-          color={stitchTokens.wineDark}
-          style={{ fontSize: 13 }}
-        >
-          Công cụ hỗ trợ trình diễn
-        </AppText>
-        <View
-          style={{
-            backgroundColor: stitchTokens.wine,
-            paddingHorizontal: 6,
-            paddingVertical: 2,
-            borderRadius: radius.small,
-          }}
-        >
-          <AppText
-            kind="small"
-            color={colors.surface}
-            style={{ fontSize: 9, fontWeight: "700", letterSpacing: 0.5 }}
-          >
-            DEMO SKIP
-          </AppText>
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <AppText kind="bold" style={styles.title}>Công cụ hỗ trợ trình diễn</AppText>
+        <View style={styles.badge}>
+          <AppText style={styles.badgeText}>DEMO</AppText>
         </View>
       </View>
 
-      <TouchableOpacity
-        activeOpacity={0.8}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
         onPress={() => void skip()}
-        style={{
-          minHeight: 44,
-          paddingHorizontal: space.md,
-          paddingVertical: space.sm,
-          borderRadius: radius.control,
-          backgroundColor: stitchTokens.wine,
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "row",
-          gap: 8,
-          shadowColor: stitchTokens.wine,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 3,
-          elevation: 2,
-        }}
+        style={({ pressed }) => [styles.action, busy && styles.disabled, pressed && styles.pressed]}
       >
-        {busy ? (
-          <ActivityIndicator size="small" color={colors.surface} />
-        ) : null}
-        <AppText
-          kind="bold"
-          color={colors.surface}
-          style={{ fontSize: 14 }}
-        >
+        {busy ? <ActivityIndicator size="small" color={stitchTokens.gold} /> : null}
+        <AppText kind="bold" style={styles.actionText}>
           {busy ? "Đang bỏ qua chờ…" : label}
         </AppText>
-      </TouchableOpacity>
+      </Pressable>
 
       {note && !error ? (
-        <AppText
-          kind="small"
-          color={stitchTokens.wineDark}
-          style={{ fontSize: 11, lineHeight: 15, opacity: 0.85 }}
-        >
-          {note}
-        </AppText>
+        <AppText kind="small" color={colors.muted} style={styles.note}>{note}</AppText>
       ) : null}
 
       {error ? <Notice tone="error">{error}</Notice> : null}
@@ -151,3 +86,50 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
   );
 }
 
+const styles = StyleSheet.create({
+  card: {
+    gap: space.sm,
+    padding: space.md,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: stitchTokens.peachBorder,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.sm,
+  },
+  title: { color: stitchTokens.wineDark, fontSize: 13 },
+  badge: {
+    backgroundColor: stitchTokens.wineDark,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  badgeText: {
+    color: stitchTokens.gold,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    includeFontPadding: false,
+  },
+  action: {
+    minHeight: 46,
+    paddingHorizontal: space.md,
+    paddingVertical: 10,
+    borderRadius: radius.control,
+    backgroundColor: stitchTokens.wine,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  actionText: { color: stitchTokens.gold, fontSize: 14 },
+  note: { fontSize: 12, lineHeight: 17 },
+  disabled: { opacity: 0.6 },
+  pressed: { opacity: 0.8 },
+});

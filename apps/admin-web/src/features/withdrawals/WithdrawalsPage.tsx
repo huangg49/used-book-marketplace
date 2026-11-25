@@ -89,6 +89,8 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
         withdrawalPageSchema,
       ),
     getNextPageParam: (p) => p.nextCursor ?? undefined,
+    refetchInterval: selected ? false : 6_000,
+    refetchIntervalInBackground: false,
   });
   const rows = query.data?.pages.flatMap((p) => p.items) ?? [];
   const denied =
@@ -312,7 +314,7 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
       ["Requested", "Approved", "Processing", "FailedVerified"].includes(
         q.state.data?.state ?? "",
       )
-        ? 10000
+        ? 5_000
         : false,
   });
   const [action, setAction] = useState<Action>();

@@ -27,6 +27,7 @@ const HISTORY_KIND_STYLE: Record<FinanceHoldHistoryKind, string> = {
   AuctionForfeit: styles.kindWithdrawal,
   OrderRefund: styles.kindPointOrder,
   WithdrawalRefund: styles.kindExchange,
+  ExchangeCompensation: styles.kindExchange,
 };
 
 const STATUS_VI: Record<string, string> = {
@@ -157,7 +158,7 @@ export function HoldsExplorer({ user }: { user: CurrentUser }) {
               ? "Liệt kê trực tiếp mọi tài khoản hold còn số dư lớn hơn 0đ trên sổ cái (cọc trao đổi, cọc đấu giá, đơn mua và lệnh rút chờ duyệt)."
               : tab === "locks"
                 ? "Lịch sử mọi lần hệ thống tạm giữ / khóa tiền cọc từ ví người dùng (đặt cọc đấu giá, cọc trao đổi, thanh toán đơn mua và yêu cầu rút tiền)."
-                : "Lịch sử các khoản cọc đấu giá đã trả về ví người dùng, tiền hoàn đơn/trao đổi và cọc bị tịch thu ghi nhận trên sổ cái bất biến."}
+                : "Tra cứu hoàn tiền, tịch thu cọc và tiền chuyển qua đối tác để xử lý tranh chấp đổi sách."}
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -752,7 +753,7 @@ export function HoldsExplorer({ user }: { user: CurrentUser }) {
           {historyData && (
             <>
               <div
-                className={styles.holdFilterGrid5}
+                className={styles.holdFilterGrid}
                 role="group"
                 aria-label="Lọc theo loại lịch sử hoàn cọc"
               >
@@ -773,7 +774,7 @@ export function HoldsExplorer({ user }: { user: CurrentUser }) {
                   <div className={styles.holdCardAmount}>
                     {formatVnd(
                       historyData.summary.totalRefunded +
-                        historyData.summary.totalForfeited,
+                        historyData.summary.totalForfeited + (historyData.summary.totalCompensated ?? 0),
                     )}
                   </div>
                 </button>
@@ -907,7 +908,9 @@ export function HoldsExplorer({ user }: { user: CurrentUser }) {
                   </thead>
                   <tbody>
                     {historyData.items.map((item) => {
-                      const returned = item.outcome === "ReturnedToWallet";
+                      const forfeited = item.outcome === "Forfeited";
+                      const outcomeLabel = forfeited ? "Đã tịch thu"
+                        : item.outcome === "TransferredToCounterparty" ? "Đã chuyển qua đối tác" : "Đã trả về ví";
                       return (
                         <tr key={item.journalId}>
                           <td>
@@ -951,12 +954,10 @@ export function HoldsExplorer({ user }: { user: CurrentUser }) {
                           <td style={{ textAlign: "left" }}>
                             <span
                               className={`${styles.outcomePill} ${
-                                returned
-                                  ? styles.outcomeReturned
-                                  : styles.outcomeForfeited
+                                forfeited ? styles.outcomeForfeited : styles.outcomeReturned
                               }`}
                             >
-                              {returned ? "Đã trả về ví" : "Đã tịch thu"}
+                              {outcomeLabel}
                             </span>
                             <span className={styles.outcomeDetail}>
                               {item.detail}
@@ -965,12 +966,10 @@ export function HoldsExplorer({ user }: { user: CurrentUser }) {
                           <td>
                             <strong
                               className={
-                                returned
-                                  ? styles.positiveAmt
-                                  : styles.negativeAmt
+                                forfeited ? styles.negativeAmt : styles.positiveAmt
                               }
                             >
-                              {returned ? "+" : "-"}
+                              {forfeited ? "-" : "+"}
                               {formatVnd(item.amount)}
                             </strong>
                           </td>

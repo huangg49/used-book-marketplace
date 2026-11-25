@@ -184,7 +184,8 @@ export function exchangeSettlementScope(row: ExchangeDoc) {
       row.resolutionDecision === 'CompensateInitiator' ||
       (row.resolutionDecision !== 'CompensateRecipient' &&
         !isRecipientComplainant);
-    return exchangeDisputeScope(row, victimIsInitiator);
+    const scope = exchangeDisputeScope(row, victimIsInitiator);
+    return { ...scope, listingId: scope.ownerListingIds[0]! };
   }
   return null;
 }
@@ -324,6 +325,10 @@ function issue(
   };
 }
 
+export function orderInspectionReturn(note: string, actorId: string, now: Date) {
+  return issue(emptyResolution(), 'ReturnOrdered', note, actorId, now);
+}
+
 export async function exchangeReturnChange(
   tx: Tx,
   row: ExchangeDoc,
@@ -333,10 +338,10 @@ export async function exchangeReturnChange(
   now: Date,
 ): Promise<ExchangeReturnDoc> {
   if (body.action === 'VerifyOutboundDelivery') throw invalidState();
-  const scope = oneSidedReturn(row, now);
+  const scope = oneSidedReturn(row, now) ?? exchangeSettlementScope(row);
   requireState(
     Boolean(scope),
-    'Luồng này xử lý một cuốn đã được bên nhận xác nhận và một cuốn đã quá hạn gửi.',
+    'Hồ sơ chưa có quyết định trả sách có thể xử lý.',
   );
   const { ownerId, holderId } = scope!;
   const { action, evidenceId } = body;
@@ -436,11 +441,8 @@ export async function exchangeReturnChange(
       );
       if (!body.trackingCode?.trim() || body.trackingCode.trim().length < 5)
         throw invalidField('/trackingCode', 'Nhập mã vận đơn hoàn.');
-      if (
-        body.trackingCode.trim() ===
-        (row.initiatorShipment?.trackingCode ??
-          row.recipientShipment?.trackingCode)
-      )
+      if ([row.initiatorShipment?.trackingCode, row.recipientShipment?.trackingCode]
+        .includes(body.trackingCode.trim()))
         throw invalidField(
           '/trackingCode',
           'Dùng mã vận đơn mới cho chặng hoàn.',

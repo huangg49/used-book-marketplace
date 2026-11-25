@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { exchangeServiceFeeText } from "@used-books/session-client";
 import { CheckCircle2, Wallet, BookCheck, ArrowRight } from 'lucide-react';
 import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
 import { ROUTES, formatVnd } from '../../../lib/routes';
@@ -91,9 +92,10 @@ export function SettlementCard({ detail }: SettlementCardProps) {
                 </div>
             </div>
 
+            <p>{exchangeServiceFeeText}</p>
             <div className={styles.actions}>
-                <Link to={ROUTES.account} className={styles.btnWallet}>
-                    <Wallet size={16} /> Kiểm tra số dư Tài khoản
+                <Link to={`${ROUTES.wallet}#lich-su-giao-dich`} className={styles.btnWallet}>
+                    <Wallet size={16} /> Xem lịch sử giao dịch Ví
                 </Link>
                 <Link to={ROUTES.search} className={styles.btnExplore}>
                     Khám phá sách khác <ArrowRight size={16} />

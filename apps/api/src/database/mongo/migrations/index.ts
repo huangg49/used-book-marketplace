@@ -24,6 +24,7 @@ import { createExchangeProportionalDepositsMigration, withProportionalExchangeDe
 import { createLegacyFundedExchangeDepositCompatMigration, withLegacyFundedExchangeDepositCompat } from './0087-exchange-legacy-funded-deposit-compat.js';
 import { createExchangeDisputeCompensationMigration, withExchangeDisputeCompensation } from './0088-exchange-dispute-compensation.js';
 import { restoreFundedExchangeTermsMigration } from './0089-restore-funded-exchange-terms.js';
+import { createSaleSettlementNotificationMigration, withSaleSettlementNotification } from './0090-sale-settlement-notification.js';
 import { onlinePriceCatalogRevisionMigration, withOnlinePriceCatalogRevision } from './0076-online-price-catalog-revision.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
@@ -589,7 +590,7 @@ export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals(
   onlinePriceSpecs.some(({ name }) => name === spec.name) ? withOnlinePriceCatalogRevision(spec) : spec,
 ).map(withExchangeReturnResolution).map(withExchangeOutboundDeliveryVerification).map(withExchangeDemoArchive).map(withExchangeInspectionVerdict).map(withProportionalExchangeDeposits).map(withLegacyFundedExchangeDepositCompat).map(withExchangeDisputeCompensation).map((spec) =>
   spec.name === 'point_orders' ? demoPointOrderSettlementMigration.definition.collections[0] : spec,
-).map(withDirectOrderDeliveryJourney).concat(directDeliveryJourneySpec, directOrderIssueEvidenceSpec);
+).map(withDirectOrderDeliveryJourney).map(withSaleSettlementNotification).concat(directDeliveryJourneySpec, directOrderIssueEvidenceSpec);
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -709,3 +710,6 @@ const exchangeLegacyDepositCompatMigration = createLegacyFundedExchangeDepositCo
 migrations.push(exchangeLegacyDepositCompatMigration);
 migrations.push(createExchangeDisputeCompensationMigration(exchangeLegacyDepositCompatMigration.definition.collections[0]));
 migrations.push(restoreFundedExchangeTermsMigration);
+migrations.push(createSaleSettlementNotificationMigration(
+  auctionDepositShareMigration.definition.collections.find(spec => spec.name === 'member_notifications')!,
+));

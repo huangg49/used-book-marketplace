@@ -1,17 +1,19 @@
-import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
-import { AppText, Icon, stitchTokens } from "../../core/ui";
+import { AppText, Icon, colors, radius, stitchTokens } from "../../core/ui";
 
 export type StepState = "done" | "missing" | "review";
 
 const shortLabels = [
-  "1. Thông tin",
-  "2. Ảnh sách",
-  "3. Tình trạng",
-  "4. Bán/Đổi",
-  "5. Kiểm tra",
+  "Thông tin",
+  "Ảnh sách",
+  "Tình trạng",
+  "Bán/Đổi",
+  "Kiểm tra",
 ];
+
+function stripNumberPrefix(text: string): string {
+  return text.replace(/^\d+\.\s*/, "");
+}
 
 export function StepNav({
   labels,
@@ -28,75 +30,48 @@ export function StepNav({
   disabled: boolean;
   onSelect: (step: number) => void;
 }) {
-  const [layout, setLayout] = useState<{ width: number; height: number } | null>(null);
   const completedCount = states.filter((s) => s === "done").length;
   const totalCount = labels.length;
-  const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const allDone = completedCount === totalCount && totalCount > 0;
 
   return (
-    <View style={styles.container} onLayout={(e) => setLayout(e.nativeEvent.layout)}>
-      {/* SVG Red Ombre 3D Background */}
-      <Svg
-        style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
-        width={layout ? layout.width : "100%"}
-        height={layout ? layout.height : "100%"}
-        viewBox={layout ? `0 0 ${layout.width} ${layout.height}` : undefined}
-        preserveAspectRatio="none"
-      >
-        <Defs>
-          <LinearGradient id="stepNavOmbre" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={stitchTokens.ombreStop0} />
-            <Stop offset="30%" stopColor={stitchTokens.ombreStop30} />
-            <Stop offset="70%" stopColor={stitchTokens.ombreStop70} />
-            <Stop offset="100%" stopColor={stitchTokens.ombreStop100} />
-          </LinearGradient>
-          <LinearGradient id="stepNavSpecular" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={stitchTokens.white} stopOpacity={0.16} />
-            <Stop offset="45%" stopColor={stitchTokens.white} stopOpacity={0.03} />
-            <Stop offset="100%" stopColor={stitchTokens.white} stopOpacity={0} />
-          </LinearGradient>
-        </Defs>
-        <Rect
-          width={layout ? layout.width : "100%"}
-          height={layout ? layout.height : "100%"}
-          fill="url(#stepNavOmbre)"
-        />
-        <Rect
-          width={layout ? layout.width : "100%"}
-          height={layout ? layout.height * 0.6 : "60%"}
-          fill="url(#stepNavSpecular)"
-        />
-      </Svg>
-
-      {/* Thanh tiến trình tính theo fill của 5 tab */}
-      <View style={styles.progressSection}>
-        <View style={styles.progressHeader}>
-          <AppText kind="small" style={styles.progressTitle}>
-            Tiến độ hoàn thành
+    <View style={styles.container}>
+      {/* Compact Header Row: Current Step + Completion Counter */}
+      <View style={styles.topRow}>
+        <AppText numberOfLines={1} style={styles.stepHeading}>
+          Bước {current + 1}/{totalCount} · {labels[current]}
+        </AppText>
+        <View style={[styles.countPill, allDone && styles.countPillDone]}>
+          <AppText
+            style={[styles.countText, allDone && styles.countTextDone]}
+          >
+            {completedCount}/{totalCount} xong
           </AppText>
-          <View style={styles.progressStatsWrapper}>
-            <AppText kind="small" style={styles.progressStats}>
-              {`${completedCount}/${totalCount} bước (${Math.round(progressPercent)}%)`}
-            </AppText>
-          </View>
-        </View>
-
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressBar,
-              {
-                width: `${progressPercent}%`,
-                backgroundColor:
-                  completedCount === totalCount
-                    ? stitchTokens.verifiedGreen
-                    : stitchTokens.goldAccent,
-              },
-            ]}
-          />
         </View>
       </View>
 
+      {/* Clean 5-Segment Progress Bar */}
+      <View style={styles.segmentsRow}>
+        {labels.map((label, index) => {
+          const isDone = states[index] === "done";
+          const isSelected = index === current;
+          return (
+            <View
+              key={`seg-${label}`}
+              style={[
+                styles.segment,
+                isDone
+                  ? styles.segmentDone
+                  : isSelected
+                    ? styles.segmentCurrent
+                    : styles.segmentPending,
+              ]}
+            />
+          );
+        })}
+      </View>
+
+      {/* 5 Numbered Native Step Tabs (no scary X marks) */}
       <View style={styles.stepsRow}>
         {labels.map((label, index) => {
           const isSelected = index === current;
@@ -104,88 +79,65 @@ export function StepNav({
           const statusText = isDone
             ? "Đã điền đầy đủ"
             : "Chưa điền thành công";
-
-          const displayLabel = short[index] ?? label;
+          const displayLabel = stripNumberPrefix(short[index] ?? label);
 
           return (
-            <View key={label} style={styles.stepColumn}>
-              {/* Connecting line segments */}
-              <View style={styles.nodeWrapper}>
-                {index > 0 && (
-                  <View
-                    style={[
-                      styles.connectingLine,
-                      styles.connectingLineLeft,
-                      (states[index - 1] === "done" || index <= current) &&
-                        (states[index - 1] === "done"
-                          ? styles.connectingLineDone
-                          : styles.connectingLineActive),
-                    ]}
-                  />
-                )}
-                {index < labels.length - 1 && (
-                  <View
-                    style={[
-                      styles.connectingLine,
-                      styles.connectingLineRight,
-                      (isDone || index < current) &&
-                        (isDone
-                          ? styles.connectingLineDone
-                          : styles.connectingLineActive),
-                    ]}
-                  />
-                )}
-
-                {/* Circle Button with Green Check or Red X */}
-                <Pressable
-                  accessibilityRole="tab"
-                  accessibilityLabel={`${label}, ${statusText}${isSelected ? ", đang chọn" : ""}`}
-                  accessibilityState={{ selected: isSelected, disabled }}
-                  disabled={disabled}
-                  onPress={() => onSelect(index)}
-                  hitSlop={8}
-                  style={({ pressed }) => [
-                    styles.circle,
-                    isDone ? styles.circleDone : styles.circleMissing,
-                    isSelected && styles.circleSelected,
-                    (pressed || disabled) && { opacity: disabled ? 0.6 : 0.85 },
-                  ]}
-                >
-                  {isDone ? (
-                    <Icon name="check" size={13} color={stitchTokens.white} strokeWidth={2.5} />
-                  ) : (
-                    <Icon
-                      name="close"
-                      size={12}
-                      color={isSelected ? stitchTokens.goldLight : stitchTokens.whitePinkText}
-                      strokeWidth={2.5}
-                    />
-                  )}
-                </Pressable>
-              </View>
-
-              {/* Step Label beneath circle */}
-              <Pressable
-                disabled={disabled}
-                onPress={() => onSelect(index)}
-                hitSlop={4}
-                style={{ width: "100%", alignItems: "center" }}
+            <Pressable
+              key={label}
+              accessibilityRole="tab"
+              accessibilityLabel={`${label}, ${statusText}${isSelected ? ", đang chọn" : ""}`}
+              accessibilityState={{ selected: isSelected, disabled }}
+              disabled={disabled}
+              onPress={() => onSelect(index)}
+              hitSlop={4}
+              style={({ pressed }) => [
+                styles.stepItem,
+                disabled && styles.dimmed,
+                pressed && !disabled && styles.pressed,
+              ]}
+            >
+              <View
+                style={[
+                  styles.circle,
+                  isDone
+                    ? styles.circleDone
+                    : isSelected
+                      ? styles.circleSelected
+                      : styles.circlePending,
+                ]}
               >
-                <AppText
-                  style={[
-                    styles.label,
-                    isSelected
-                      ? styles.labelSelected
-                      : isDone
-                        ? styles.labelDone
-                        : styles.labelDefault,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {displayLabel}
-                </AppText>
-              </Pressable>
-            </View>
+                {isDone ? (
+                  <Icon
+                    name="check"
+                    size={13}
+                    color={stitchTokens.white}
+                    strokeWidth={2.5}
+                  />
+                ) : (
+                  <AppText
+                    style={[
+                      styles.circleNumber,
+                      isSelected && styles.circleNumberSelected,
+                    ]}
+                  >
+                    {index + 1}
+                  </AppText>
+                )}
+              </View>
+              <AppText
+                numberOfLines={1}
+                style={[
+                  styles.label,
+                  isSelected
+                    ? styles.labelSelected
+                    : isDone
+                      ? styles.labelDone
+                      : styles.labelPending,
+                ]}
+              >
+                {displayLabel}
+              </AppText>
+            </Pressable>
           );
         })}
       </View>
@@ -195,145 +147,133 @@ export function StepNav({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderBottomWidth: 3.5,
-    borderColor: stitchTokens.peachBorderAlpha40,
-    borderBottomColor: stitchTokens.cardBorderShadowBottom,
-    backgroundColor: stitchTokens.ombreStop70,
-    paddingTop: 14,
-    paddingBottom: 16,
-    paddingHorizontal: 12,
-    position: "relative",
-    overflow: "hidden",
-    shadowColor: stitchTokens.shadowDeepCrimson,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  progressSection: {
-    width: "100%",
-    marginBottom: 12,
-  },
-  progressHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  progressTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: stitchTokens.whitePinkText,
-    letterSpacing: 0.2,
-  },
-  progressStatsWrapper: {
-    backgroundColor: stitchTokens.whiteAlpha14,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: stitchTokens.whiteAlpha25,
+    borderColor: stitchTokens.cardBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 10,
   },
-  progressStats: {
-    fontSize: 11,
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  stepHeading: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "800",
-    color: stitchTokens.goldAccent,
+    color: stitchTokens.wineDark,
+    includeFontPadding: false,
   },
-  progressTrack: {
-    width: "100%",
-    height: 6,
-    backgroundColor: stitchTokens.blackAlpha45,
-    borderRadius: 3,
-    overflow: "hidden",
+  countPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.warmBorder,
   },
-  progressBar: {
-    height: "100%",
-    borderRadius: 3,
+  countPillDone: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    borderColor: stitchTokens.mintGreen,
+  },
+  countText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700",
+    color: stitchTokens.deepCocoa,
+    includeFontPadding: false,
+  },
+  countTextDone: {
+    color: stitchTokens.likeNewGreen,
+  },
+  segmentsRow: {
+    flexDirection: "row",
+    gap: 5,
+  },
+  segment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+  },
+  segmentDone: {
+    backgroundColor: stitchTokens.verifiedGreen,
+  },
+  segmentCurrent: {
+    backgroundColor: stitchTokens.wine,
+  },
+  segmentPending: {
+    backgroundColor: stitchTokens.warmBorder,
   },
   stepsRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    width: "100%",
+    gap: 2,
   },
-  stepColumn: {
+  stepItem: {
     flex: 1,
     alignItems: "center",
-  },
-  nodeWrapper: {
-    width: "100%",
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    marginBottom: 6,
-  },
-  connectingLine: {
-    position: "absolute",
-    top: 15,
-    height: 2.5,
-    backgroundColor: stitchTokens.whiteAlpha25,
-    zIndex: 1,
-  },
-  connectingLineLeft: {
-    left: 0,
-    right: "50%",
-    marginRight: 16,
-  },
-  connectingLineRight: {
-    left: "50%",
-    right: 0,
-    marginLeft: 16,
-  },
-  connectingLineDone: {
-    backgroundColor: stitchTokens.verifiedGreen,
-  },
-  connectingLineActive: {
-    backgroundColor: stitchTokens.goldAccent,
+    gap: 5,
   },
   circle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 2,
     borderWidth: 1.5,
   },
   circleDone: {
     backgroundColor: stitchTokens.verifiedGreen,
     borderColor: stitchTokens.verifiedGreen,
   },
-  circleMissing: {
-    backgroundColor: stitchTokens.wineDark,
-    borderColor: stitchTokens.peachBorderAlpha40,
-  },
   circleSelected: {
-    borderWidth: 2.5,
-    borderColor: stitchTokens.goldAccent,
-    backgroundColor: stitchTokens.wineDeep,
-    shadowColor: stitchTokens.goldAccent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: stitchTokens.wineDark,
+    borderColor: stitchTokens.wineDark,
+  },
+  circlePending: {
+    backgroundColor: stitchTokens.parchment,
+    borderColor: stitchTokens.warmBorder,
+  },
+  circleNumber: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "800",
+    color: colors.muted,
+    textAlign: "center",
+    textAlignVertical: "center",
+    includeFontPadding: false,
+  },
+  circleNumberSelected: {
+    color: stitchTokens.gold,
   },
   label: {
     fontSize: 10.5,
+    lineHeight: 14,
     textAlign: "center",
+    includeFontPadding: false,
   },
   labelSelected: {
-    color: stitchTokens.white,
+    color: stitchTokens.wineDark,
     fontWeight: "800",
   },
   labelDone: {
-    color: stitchTokens.goldLight,
+    color: stitchTokens.likeNewGreen,
     fontWeight: "700",
   },
-  labelDefault: {
-    color: stitchTokens.whitePinkText,
-    fontWeight: "500",
+  labelPending: {
+    color: colors.muted,
+    fontWeight: "600",
+  },
+  dimmed: {
+    opacity: 0.55,
+  },
+  pressed: {
+    opacity: 0.78,
   },
 });

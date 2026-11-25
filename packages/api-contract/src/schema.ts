@@ -3944,7 +3944,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Participant acknowledgement only; it never waives either 72-hour inspection window. Settlement requires both deadlines elapsed and no dispute. */
+        /** @description Records an inspection acknowledgement within the participant's 72-hour window. Even after both acknowledgements, each participant may report an issue within their own window. Automatic settlement requires both deadlines to have elapsed with no dispute. */
         post: operations["completeExchange"];
         delete?: never;
         options?: never;
@@ -4278,7 +4278,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Close the current simulated dispute window as the assigned independent Admin. Decisions, review of appeals, evidence and settlement remain separate commands. */
+        /** @description Close the current simulated dispute window as the assigned independent Admin. Assigned independent Staff may also advance the return deadline of an effective return order. Decisions, review of appeals, evidence and settlement remain separate commands. */
         post: operations["advanceOperationsDemoExchangeDeadline"];
         delete?: never;
         options?: never;
@@ -4314,7 +4314,7 @@ export interface paths {
         put?: never;
         /**
          * resolveExchangeDispute
-         * @description An active, independent STAFF or ADMIN assigned to the case may resolve a funded inspection dispute once both shipments and receipts are recorded. CompleteExchange settles the original agreement. CompensateInitiator or CompensateRecipient settles compensation immediately on one-book-per-side exchanges. RefundBoth is available only to replay an existing receipt. Out-of-scope or unassigned new decisions return 409 InvalidState. Replays require the original key and body and current role, session and participant independence, without repeating any financial effects.
+         * @description An active, independent STAFF or ADMIN assigned to the case may resolve a funded inspection dispute once both shipments and receipts are recorded. CompleteExchange settles the original agreement. A partial damage deduction settles the exchange with both parties keeping the received books. A full verdict orders return of the affected party's books and keeps funds and listings held until a substantiated return or compensation outcome. RefundBoth is available only to replay an existing receipt. Out-of-scope or unassigned new decisions return 409 InvalidState. Replays require the original key and body and current role, session and participant independence, without repeating any financial effects.
          */
         post: operations["resolveExchangeDispute"];
         delete?: never;
@@ -5749,7 +5749,7 @@ export interface components {
             width: number;
             height: number;
         };
-        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only their payment deadline, never participant identities. InNegotiation is retained for legacy conversation reservations. No new checkout or conversation can start until Available. Never serialize a private listing then filter on the client. */
+        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Active direct-sale Orders hide the listing from the public shelf. Direct detail reads show AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only their payment deadline, never participant identities. InNegotiation is retained for legacy conversation reservations. No new checkout or conversation can start until Available. Never serialize a private listing then filter on the client. */
         PublicListing: {
             /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
             bundle?: components["schemas"]["BookBundle"] | null;
@@ -5863,14 +5863,14 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionResumed" | "AuctionSecondChanceOffered" | "AuctionDepositShareReceived" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
+            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionResumed" | "AuctionSecondChanceOffered" | "AuctionDepositShareReceived" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "OrderSaleSettled" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
             targetType: "Auction" | "Exchange" | "Order" | "SupportCase" | "TransactionReview" | "Withdrawal";
             /**
              * Format: uuid
-             * @description Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
+             * @description For OrderSaleSettled, identifies the order used to open the seller's wallet receipt.
              */
             targetId: string;
             /** Format: date-time */
@@ -5985,6 +5985,8 @@ export interface components {
             destination: components["schemas"]["OrderContact"];
             /** @description Zero for new quotes under the free shipping policy; historical snapshots retain their fee. */
             shippingFee: number;
+            /** @description Seller commission rate of this quote in basis points. */
+            commissionBps?: number;
             /** Format: date-time */
             expiresAt: string;
         };
@@ -6987,7 +6989,17 @@ export interface components {
             /** Format: uuid */
             nextCursor: string | null;
         };
+        /** @description Breakdown of the seller's posted sale credit. Auction delivery is excluded from the seller's proceeds. Historical direct sales may include shipping reimbursement. */
+        SaleSettlementReceipt: {
+            bookPrice: number;
+            commissionBps: number;
+            commission: number;
+            shippingReimbursement: number;
+            creditedAmount: number;
+        };
         WalletHistoryItem: {
+            /** @description Present only on the seller's posted sale settlement with matching order and credit. Exchange entries are excluded. */
+            saleSettlement?: components["schemas"]["SaleSettlementReceipt"];
             withdrawalState?: components["schemas"]["WithdrawalState"] | null;
             /** Format: uuid */
             withdrawalId?: string | null;
@@ -7857,7 +7869,21 @@ export interface components {
         HandoverPointList: {
             items: components["schemas"]["HandoverPoint"][];
         };
+        AuctionSellerSale: {
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            status: "AwaitingPayment" | "PendingSettlement" | "Settled" | "Closed";
+            amounts: {
+                bookPrice: number;
+                commissionBps: number;
+                commission: number;
+                sellerProceedsOnCompletion: number;
+            };
+        };
         AuctionIntake: {
+            /** @description Available to the seller in the exact auction intake lookup when the auction has an order. */
+            sellerSale?: components["schemas"]["AuctionSellerSale"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -8056,6 +8082,8 @@ export interface components {
             /** Format: date-time */
             endAt: string;
             pointName: string;
+            /** @description Public display name of the seller who submitted this auction book; never includes sellerId or contact info. */
+            sellerName?: string;
             /** @description Approved, inspected intake revision. Null when no longer eligible for public book/media reads. Optional for compatibility with older clients; never includes seller identity or inspection notes. */
             book?: components["schemas"]["PublicAuctionBook"] | null;
             /** @constant */
@@ -8429,7 +8457,7 @@ export interface components {
             }[];
         };
         /** @enum {string} */
-        FinanceHoldHistoryKind: "AuctionRelease" | "AuctionForfeit" | "OrderRefund" | "WithdrawalRefund";
+        FinanceHoldHistoryKind: "AuctionRelease" | "AuctionForfeit" | "OrderRefund" | "WithdrawalRefund" | "ExchangeCompensation";
         FinanceHoldHistory: {
             /** Format: date-time */
             serverTime: string;
@@ -8438,6 +8466,8 @@ export interface components {
             summary: {
                 totalRefunded: number;
                 totalForfeited: number;
+                /** @description Amount transferred to the counterparty under exchange verdicts, including adjusted difference payments. */
+                totalCompensated?: number;
                 totalEvents: number;
                 byKind: {
                     kind: components["schemas"]["FinanceHoldHistoryKind"];
@@ -8455,7 +8485,7 @@ export interface components {
                 kind: components["schemas"]["FinanceHoldHistoryKind"];
                 kindLabel: string;
                 /** @enum {string} */
-                outcome: "ReturnedToWallet" | "Forfeited";
+                outcome: "ReturnedToWallet" | "Forfeited" | "TransferredToCounterparty";
                 holderId: string | null;
                 holderName: string;
                 holderEmail: string | null;
@@ -11780,6 +11810,7 @@ export interface operations {
             400: components["responses"]["ListingError"];
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
@@ -11810,6 +11841,7 @@ export interface operations {
             400: components["responses"]["ListingError"];
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
@@ -11849,7 +11881,7 @@ export interface operations {
     getFinanceHoldHistory: {
         parameters: {
             query?: {
-                kind?: "All" | "AuctionRelease" | "AuctionForfeit" | "OrderRefund" | "WithdrawalRefund";
+                kind?: "All" | "AuctionRelease" | "AuctionForfeit" | "OrderRefund" | "WithdrawalRefund" | "ExchangeCompensation";
                 q?: string;
                 page?: number;
             };
@@ -11859,7 +11891,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Summary and paginated deposit release/refund/forfeit ledger events. */
+            /** @description Summary and paginated release, refund, forfeit and exchange compensation ledger events. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
@@ -11964,6 +11996,7 @@ export interface operations {
             400: components["responses"]["ListingError"];
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];

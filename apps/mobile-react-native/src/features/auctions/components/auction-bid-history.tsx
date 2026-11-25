@@ -1,6 +1,6 @@
-import { memo } from "react";
-import { ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
-import { AppText, Icon, formatVnd, radius, space, stitchTokens } from "../../../core/ui";
+import { memo, useState } from "react";
+import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { AppText, Icon, Sheet, formatVnd, radius, space, stitchTokens } from "../../../core/ui";
 import type { AuctionState, PublicAuction } from "../contracts";
 
 const leaderStatus: Partial<Record<AuctionState, string>> = {
@@ -20,6 +20,74 @@ const bidTime = new Intl.DateTimeFormat("vi-VN", {
   month: "2-digit",
 });
 
+const PREVIEW_LIMIT = 5;
+
+function HistoryRow({
+  event,
+  mine,
+  leading,
+  status,
+  stackAmount,
+  isLast,
+}: {
+  event: PublicAuction["history"][number];
+  mine: boolean;
+  leading: boolean;
+  status?: string;
+  stackAmount: boolean;
+  isLast: boolean;
+}) {
+  const name = mine ? "Bạn" : `Người trả giá #${event.bidderAlias}`;
+  const timestamp = bidTime.format(new Date(event.at));
+  const amount = formatVnd(event.price);
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={[mine ? `Bạn, số ${event.bidderAlias}` : name, timestamp, amount, status].filter(Boolean).join(", ")}
+      style={[
+        styles.row,
+        leading && styles.leaderRow,
+        stackAmount && styles.stackedRow,
+        isLast && styles.lastRow,
+      ]}
+    >
+      <View style={[styles.bidder, stackAmount && styles.stackedBidder]}>
+        <View style={[styles.alias, mine && styles.myAlias]}>
+          <AppText
+            kind="label"
+            color={mine ? stitchTokens.goldLight : stitchTokens.wine}
+            style={styles.aliasText}
+          >
+            #{event.bidderAlias}
+          </AppText>
+        </View>
+        <View style={styles.identity}>
+          <View style={styles.nameLine}>
+            <AppText kind="bold" color={stitchTokens.darkWood} style={styles.bidderName}>
+              {name}
+            </AppText>
+            {status ? (
+              <View style={styles.leaderBadge}>
+                <AppText style={styles.leaderBadgeText}>{status}</AppText>
+              </View>
+            ) : null}
+          </View>
+          <AppText kind="small" color={stitchTokens.brownMuted} style={styles.timeText}>
+            {timestamp}
+          </AppText>
+        </View>
+      </View>
+
+      <View style={[styles.amount, stackAmount && styles.stackedAmount]}>
+        <AppText kind="bold" color={leading ? stitchTokens.wine : stitchTokens.darkWood} style={styles.price}>
+          {amount}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 export const AuctionBidHistory = memo(function AuctionBidHistory({
   sealedLive,
   history,
@@ -35,92 +103,97 @@ export const AuctionBidHistory = memo(function AuctionBidHistory({
   myAlias: number | null;
   startPrice: number;
 }) {
-  const { width, height, fontScale } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   const stackAmount = width / fontScale < 300;
+  const [allOpen, setAllOpen] = useState(false);
+  const preview = history.slice(0, PREVIEW_LIMIT);
+  const hasMore = history.length > PREVIEW_LIMIT;
 
   return (
     <View style={styles.section}>
-      <AppText kind="bookHeading" accessibilityRole="header" color={stitchTokens.darkWood}>
-        Diễn biến giá
-      </AppText>
+      <View style={styles.header}>
+        <AppText kind="bold" accessibilityRole="header" style={styles.heading}>
+          Diễn biến giá
+        </AppText>
+        {!sealedLive && history.length > 0 ? (
+          <View style={styles.countPill}>
+            <AppText style={styles.countPillText}>{history.length} lượt</AppText>
+          </View>
+        ) : null}
+      </View>
 
       {sealedLive ? (
         <View style={styles.sealedNotice}>
           <Icon name="lock" size={16} color={stitchTokens.wine} />
           <AppText kind="small" color={stitchTokens.brownMuted} style={styles.identity}>
-            Phiên đấu giá kín bảo mật các lượt trả giá cho tới khi phiên kết thúc.
-            {" "}Giá khởi điểm {formatVnd(startPrice)}.
+            Phiên đấu giá kín bảo mật các lượt trả giá cho tới khi phiên kết thúc. Giá khởi điểm {formatVnd(startPrice)}.
           </AppText>
         </View>
       ) : history.length === 0 ? (
-        <AppText kind="small" color={stitchTokens.brownMuted}>
+        <AppText kind="small" color={stitchTokens.brownMuted} style={styles.emptyText}>
           Chưa có lượt trả giá nào. Giá khởi điểm là {formatVnd(startPrice)}.
         </AppText>
       ) : (
-        <ScrollView
-          nestedScrollEnabled
-          alwaysBounceVertical={false}
-          persistentScrollbar
-          style={[styles.list, { maxHeight: Math.min(350, Math.max(200, height * 0.48)) }]}
-          contentContainerStyle={styles.listContent}
-          accessibilityLabel="Các lần giá thay đổi, mới nhất trước"
-        >
+        <View style={styles.list} accessibilityLabel="Các lần giá thay đổi, mới nhất trước">
+          {preview.map((event, index) => {
+            const mine = event.bidderAlias === myAlias;
+            const leading = index === 0 && event.bidderAlias === leaderAlias;
+            const status = leading ? leaderStatus[state] : undefined;
+            return (
+              <HistoryRow
+                key={`${event.at}:${event.bidderAlias}:${event.price}`}
+                event={event}
+                mine={mine}
+                leading={leading}
+                status={status}
+                stackAmount={stackAmount}
+                isLast={index === preview.length - 1}
+              />
+            );
+          })}
+          {hasMore ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setAllOpen(true)}
+              style={({ pressed }) => [styles.moreBtn, pressed && styles.pressed]}
+            >
+              <AppText kind="bold" style={styles.moreBtnText}>
+                Xem tất cả {history.length} lượt trả giá
+              </AppText>
+              <Icon name="chevronRight" size={16} color={stitchTokens.wine} />
+            </Pressable>
+          ) : null}
+        </View>
+      )}
+
+      <AppText kind="small" color={stitchTokens.brownMuted} style={styles.footnote}>
+        Người trả giá hiển thị ẩn danh; mức tự động luôn được giữ kín. Phiên đang chạy mô phỏng tại TP.HCM.
+      </AppText>
+
+      <Sheet
+        visible={allOpen}
+        onClose={() => setAllOpen(false)}
+        title={`Diễn biến giá (${history.length} lượt)`}
+      >
+        <View style={styles.sheetList}>
           {history.map((event, index) => {
             const mine = event.bidderAlias === myAlias;
             const leading = index === 0 && event.bidderAlias === leaderAlias;
             const status = leading ? leaderStatus[state] : undefined;
-            const name = mine ? "Bạn" : `Người trả giá #${event.bidderAlias}`;
-            const timestamp = bidTime.format(new Date(event.at));
-            const amount = formatVnd(event.price);
-
             return (
-              <View
-                key={`${event.at}:${event.bidderAlias}:${event.price}`}
-                accessible
-                accessibilityLabel={[mine ? `Bạn, số ${event.bidderAlias}` : name, timestamp, amount, status].filter(Boolean).join(", ")}
-                style={[
-                  styles.row,
-                  leading && styles.leaderRow,
-                  stackAmount && styles.stackedRow,
-                ]}
-              >
-                <View style={[styles.bidder, stackAmount && styles.stackedBidder]}>
-                  <View style={[styles.alias, mine && styles.myAlias]}>
-                    <AppText kind="label" color={mine ? stitchTokens.goldLight : stitchTokens.wine} style={styles.aliasText}>
-                      #{event.bidderAlias}
-                    </AppText>
-                  </View>
-                  <View style={styles.identity}>
-                    <AppText kind="bold" color={stitchTokens.darkWood}>{name}</AppText>
-                    <AppText kind="small" color={stitchTokens.brownMuted}>{timestamp}</AppText>
-                  </View>
-                </View>
-
-                <View style={[styles.amount, stackAmount && styles.stackedAmount]}>
-                  <AppText kind="bold" color={stitchTokens.darkWood} style={styles.price}>
-                    {amount}
-                  </AppText>
-                  {status && (
-                    <AppText kind="small" color={stitchTokens.wine} style={styles.price}>
-                      {status}
-                    </AppText>
-                  )}
-                </View>
-              </View>
+              <HistoryRow
+                key={`full:${event.at}:${event.bidderAlias}:${event.price}`}
+                event={event}
+                mine={mine}
+                leading={leading}
+                status={status}
+                stackAmount={stackAmount}
+                isLast={index === history.length - 1}
+              />
             );
           })}
-        </ScrollView>
-      )}
-
-      <View style={styles.notes}>
-        <AppText kind="small" color={stitchTokens.brownMuted}>
-          Người trả giá được hiển thị bằng số thứ tự ẩn danh. Mức đặt giá tự động
-          của mỗi người không bao giờ được công khai.
-        </AppText>
-        <AppText kind="small" color={stitchTokens.brownMuted}>
-          Điểm giao nhận và phiên đấu giá đang chạy ở chế độ mô phỏng tại TP.HCM.
-        </AppText>
-      </View>
+        </View>
+      </Sheet>
     </View>
   );
 });
@@ -129,29 +202,63 @@ const styles = StyleSheet.create({
   section: {
     gap: space.md,
     padding: space.lg,
-    borderRadius: radius.card * 2,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
-    backgroundColor: stitchTokens.parchment,
+    backgroundColor: stitchTokens.whiteSurface,
   },
-  list: { flexGrow: 0 },
-  listContent: { paddingEnd: space.xs },
-  row: {
-    minHeight: 60,
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.sm,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.sm,
-    borderStartWidth: 3,
-    borderStartColor: "transparent",
+  },
+  heading: {
+    color: stitchTokens.wineDark,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  countPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: stitchTokens.parchment,
+  },
+  countPillText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+    includeFontPadding: false,
+  },
+  emptyText: {
+    lineHeight: 20,
+  },
+  list: {
+    gap: 2,
+  },
+  sheetList: {
+    gap: 2,
+  },
+  row: {
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
     borderBottomWidth: 1,
     borderBottomColor: stitchTokens.borderWarm,
   },
+  lastRow: {
+    borderBottomWidth: 0,
+  },
   leaderRow: {
-    backgroundColor: stitchTokens.biscuit,
-    borderStartColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderBottomWidth: 0,
+    marginBottom: 4,
   },
   stackedRow: { flexDirection: "column", alignItems: "stretch" },
   bidder: {
@@ -162,32 +269,75 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   stackedBidder: { flex: 0 },
-  identity: { flex: 1, gap: space.xs },
+  identity: { flex: 1, minWidth: 0, gap: 2 },
+  nameLine: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 },
+  bidderName: { fontSize: 14, lineHeight: 19 },
+  timeText: { fontSize: 12, lineHeight: 16 },
+  leaderBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.wine,
+  },
+  leaderBadgeText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700",
+    color: stitchTokens.warmIvory,
+    includeFontPadding: false,
+  },
   alias: {
     minWidth: 34,
     minHeight: 34,
-    paddingHorizontal: space.xs,
+    paddingHorizontal: 6,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radius.pill,
-    backgroundColor: stitchTokens.biscuit,
+    borderRadius: 17,
+    backgroundColor: stitchTokens.parchment,
   },
   myAlias: { backgroundColor: stitchTokens.wine },
-  aliasText: { fontVariant: ["tabular-nums"] },
-  amount: { alignItems: "flex-end", maxWidth: "48%", gap: space.xs },
+  aliasText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
+  },
+  amount: { alignItems: "flex-end", maxWidth: "46%" },
   stackedAmount: { maxWidth: "100%" },
-  price: { textAlign: "right", fontVariant: ["tabular-nums"] },
+  price: {
+    fontSize: 15,
+    lineHeight: 20,
+    textAlign: "right",
+    fontVariant: ["tabular-nums"],
+  },
+  moreBtn: {
+    marginTop: space.xs,
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.parchment,
+    paddingHorizontal: space.md,
+  },
+  moreBtnText: {
+    color: stitchTokens.wine,
+    fontSize: 13,
+  },
+  pressed: { opacity: 0.78 },
   sealedNotice: {
     flexDirection: "row",
     alignItems: "center",
     gap: space.sm,
     padding: space.md,
-    borderRadius: radius.control,
-    backgroundColor: stitchTokens.biscuit,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.parchment,
   },
-  notes: {
-    gap: space.sm,
-    paddingTop: space.md,
+  footnote: {
+    fontSize: 12,
+    lineHeight: 18,
+    paddingTop: space.sm,
     borderTopWidth: 1,
     borderTopColor: stitchTokens.borderWarm,
   },

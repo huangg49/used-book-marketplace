@@ -29,6 +29,14 @@ import {
   waitingForRegistrants,
   pointReopensAt,
   ceilSlot,
+  AUCTION_MIN_DURATION_S,
+  AUCTION_MAX_DURATION_S,
+  AUCTION_MIN_LEAD_MS,
+  AUCTION_OPEN_CEILING_MS,
+  scheduleDays,
+  splitDuration,
+  composeDurationSeconds,
+  validateCustomSchedule,
 } from "./auctions-model";
 import type { Participation, PublicAuctionSummary } from "./contracts";
 
@@ -436,5 +444,80 @@ describe("point hours and ceilSlot", () => {
     expect(ceilSlot(100)).toBe(slot);
     expect(ceilSlot(slot)).toBe(slot);
     expect(ceilSlot(slot + 1)).toBe(slot * 2);
+  });
+
+  it("scheduleDays spans every calendar day through the 30-day ceiling", () => {
+    const now = new Date(2026, 10, 25, 12, 15, 0).getTime();
+    const days = scheduleDays(now, now + AUCTION_OPEN_CEILING_MS);
+    expect(days.length).toBe(31);
+    expect(days[0].weekdayLabel).toBe("Hôm nay");
+    expect(days[1].weekdayLabel).toBe("Ngày mai");
+    expect(days[0].dayNumber).toBe("25");
+  });
+
+  it("splitDuration and composeDurationSeconds round-trip custom days/hours/minutes", () => {
+    const sec = composeDurationSeconds(2, 5, 30);
+    expect(sec).toBe(2 * 86_400 + 5 * 3_600 + 30 * 60);
+    expect(splitDuration(sec)).toEqual({ days: 2, hours: 5, minutes: 30 });
+  });
+
+  it("validateCustomSchedule enforces start lead, ceiling, and 1h-7d duration", () => {
+    const now = Date.UTC(2026, 10, 25, 5, 0, 0);
+    const ceiling = now + AUCTION_OPEN_CEILING_MS;
+    expect(
+      validateCustomSchedule({
+        live: false,
+        timed: true,
+        startAtMs: now + AUCTION_MIN_LEAD_MS - 1_000,
+        durationSeconds: AUCTION_MIN_DURATION_S,
+        now,
+        ceiling,
+        isLifecycle: true,
+      }),
+    ).toContain("5 phút");
+    expect(
+      validateCustomSchedule({
+        live: false,
+        timed: true,
+        startAtMs: ceiling + 60_000,
+        durationSeconds: AUCTION_MIN_DURATION_S,
+        now,
+        ceiling,
+        isLifecycle: true,
+      }),
+    ).toContain("30 ngày");
+    expect(
+      validateCustomSchedule({
+        live: false,
+        timed: true,
+        startAtMs: now + 3_600_000,
+        durationSeconds: AUCTION_MIN_DURATION_S - 60,
+        now,
+        ceiling,
+        isLifecycle: true,
+      }),
+    ).toContain("1 giờ đến 7 ngày");
+    expect(
+      validateCustomSchedule({
+        live: false,
+        timed: true,
+        startAtMs: now + 3_600_000,
+        durationSeconds: AUCTION_MAX_DURATION_S + 60,
+        now,
+        ceiling,
+        isLifecycle: true,
+      }),
+    ).toContain("1 giờ đến 7 ngày");
+    expect(
+      validateCustomSchedule({
+        live: false,
+        timed: true,
+        startAtMs: now + 15 * 60_000,
+        durationSeconds: 5_400,
+        now,
+        ceiling,
+        isLifecycle: true,
+      }),
+    ).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import { CheckCircle2, ChevronDown, Clock } from "lucide-react";
 import type { ReactNode } from "react";
+import { formatVnd } from "../../../lib/routes";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { ExchangeBookList } from "../ExchangeSteps/ExchangeHistory";
 import styles from "./ExchangeInspection.module.css";
@@ -33,9 +34,9 @@ export function ExchangeInspection({ detail, expired, awaitingResult, children }
           </h3>
         </div>
         <div className={styles.body}>
-          {expired ? (
+          {expired ? !awaitingResult && (
             <p className={styles.status} role="status">
-              {awaitingResult ? "Đã hết hạn kiểm tra. Đang chờ kết quả." : "Đã hết hạn kiểm tra của bạn."}
+              Đã hết hạn kiểm tra của bạn.
             </p>
           ) : checked ? (
             <p className={styles.status} role="status">
@@ -53,10 +54,10 @@ export function ExchangeInspection({ detail, expired, awaitingResult, children }
             <p className={styles.intro}>Đối chiếu sách với tình trạng đã ghi nhận trong phiếu.</p>
           )}
           {children}
-          <p className={styles.note}>
-            {checked && !detail.partnerCompletedAt
-              ? "Đang chờ đối tác kiểm tra trong 72 giờ và xác nhận. Khi cả hai cùng xác nhận nghiệm thu, cọc và tiền bù sẽ được hoàn tất về ví ngay."
-              : "Mỗi bên có 72 giờ từ lúc nhận sách. Khi cả hai cùng xác nhận nghiệm thu, cọc và tiền bù sẽ được hoàn tất về ví ngay lập tức."}
+          <p className={styles.note} role={awaitingResult ? "status" : undefined}>
+            {awaitingResult
+              ? "Cả hai hạn đã qua. Đang chờ hệ thống tất toán về Ví."
+              : <>Mỗi bên có 72 giờ từ lúc nhận sách và vẫn có thể báo sự cố trong hạn riêng. Ví đang giữ {detail.viewerFundingAmount == null ? "khoản đã nộp" : <strong>{formatVnd(detail.viewerFundingAmount)}</strong>}.{detail.inspectionDeadline && <> Dự kiến xử lý tiền sau <InspectionTime value={detail.inspectionDeadline} /> nếu không có tranh chấp.</>}</>}
           </p>
           {(receivedAt || detail.partnerInspectionDeadline) && (
             <details className={styles.times}>
