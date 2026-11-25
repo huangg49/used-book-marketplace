@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { randomUUID } from "expo-crypto";
 import { buyerSaleFeeText } from "@used-books/session-client";
 import {
   Pressable,
@@ -7,13 +8,13 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AppText,
+  AppTextInput,
   Button,
   Icon,
   Notice,
-  TextField,
   colors,
   radius,
   space,
@@ -21,6 +22,8 @@ import {
 } from "../../../core/ui";
 import { formatVnd } from "../../../core/ui/format";
 import type { Listing } from "../../shelf/contracts";
+import { addressBook } from "../../addresses/contracts";
+import { orderDetailsSchema, quoteSchema } from "../../orders/contracts";
 import {
   orderReceiptSchema,
   type PurchaseConversation,
@@ -28,6 +31,7 @@ import {
   type TermsResponseBody,
 } from "../contracts";
 import {
+  attachConversationQuote,
   changeConversationTerms,
   formatDateTimeVi,
   purchaseChatGuidance,
@@ -61,11 +65,73 @@ export function AgreementSheetPanel({
   const [error, setError] = useState<string>();
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState<string>();
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [quoteBusy, setQuoteBusy] = useState(false);
+  const [quoteError, setQuoteError] = useState<string>();
 
   const terms = room.terms;
   const proposal = terms?.pendingProposal;
   const mode = terms?.mode ?? "Negotiation";
   const isExchange = mode === "Exchange";
+
+  const addressesQuery = useQuery({
+    queryKey: ["member-addresses", currentUserId],
+    queryFn: () => client.request("/me/addresses", addressBook),
+    enabled: Boolean(currentUserId) && isBuyer && !isExchange && !room.orderId && room.status === "Active",
+    staleTime: 10_000,
+  });
+
+  const addresses = addressesQuery.data?.items ?? [];
+  const effectiveAddressId =
+    selectedAddressId ||
+    addresses.find((a) => a.isDefault)?.id ||
+    addresses[0]?.id ||
+    "";
+
+  const [renderNow] = useState(() => Date.now());
+  const quoteExpired = Boolean(
+    room.quotePreview && Date.parse(room.quotePreview.expiresAt) <= renderNow,
+  );
+
+  const handleAttachQuote = async () => {
+    if (!listing || !effectiveAddressId || quoteBusy || isLocked) return;
+    setQuoteBusy(true);
+    setQuoteError(undefined);
+    try {
+      const quote = await client.request(
+        `/listings/${room.listingId}/quotes`,
+        quoteSchema,
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": randomUUID() },
+          body: JSON.stringify({
+            destinationAddressId: effectiveAddressId,
+            expectedListingVersion: listing.version,
+            expectedListingRevisionId: listing.revisionId,
+          }),
+        },
+      );
+      await attachConversationQuote(
+        client,
+        room.id,
+        {
+          expectedVersion: room.version,
+          quoteId: quote.id,
+          expectedQuoteVersion: quote.version,
+          expectedListingVersion: quote.listingVersion,
+          expectedListingRevisionId: quote.listingRevisionId,
+        },
+        randomUUID(),
+      );
+      onRefresh();
+    } catch (e: any) {
+      setQuoteError(
+        e?.message ?? "Chưa gửi được địa chỉ và báo giá giao hàng. Vui lòng thử lại.",
+      );
+    } finally {
+      setQuoteBusy(false);
+    }
+  };
 
   const isLocked =
     terms?.locked ||
@@ -106,15 +172,25 @@ export function AgreementSheetPanel({
     setPayBusy(true);
     setPayError(undefined);
     try {
+      const currentOrder = await client.request(
+        `/me/orders/${room.orderId}`,
+        orderDetailsSchema,
+      );
+      if (currentOrder.state !== "AwaitingPayment") {
+        setPayError("Đơn hàng này không còn ở trạng thái chờ thanh toán.");
+        onRefresh();
+        return;
+      }
       await client.request(
         `/orders/${room.orderId}/pay`,
         orderReceiptSchema,
         {
           method: "POST",
-          headers: { "Idempotency-Key": crypto.randomUUID() },
-          body: JSON.stringify({ expectedVersion: 1 }),
+          headers: { "Idempotency-Key": randomUUID() },
+          body: JSON.stringify({ expectedVersion: currentOrder.version }),
         },
       );
+      void queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
       void queryClient.invalidateQueries({ queryKey: ["wallet"] });
       onRefresh();
@@ -139,7 +215,12 @@ export function AgreementSheetPanel({
       {/* 1. HÌNH THỨC GIAO DỊCH */}
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
-          <AppText style={styles.cardTitle}>Hình thức giao dịch</AppText>
+          <View style={styles.rowAlign}>
+            <View style={styles.sectionIconBox}>
+              <Icon name="swap" size={15} color={stitchTokens.wine} />
+            </View>
+            <AppText style={styles.cardTitle}>Hình thức giao dịch</AppText>
+          </View>
           {!isSeller && (
             <View style={styles.modeTag}>
               <AppText style={styles.modeTagText}>
@@ -280,6 +361,7 @@ export function AgreementSheetPanel({
             <View style={styles.proposalActionRow}>
               <View style={styles.proposalAcceptBtn}>
                 <Button
+                  wine
                   title={
                     proposal.kind === "Price"
                       ? "Chấp nhận giá"
@@ -297,6 +379,7 @@ export function AgreementSheetPanel({
               </View>
               <View style={styles.proposalDeclineBtn}>
                 <Button
+                  wine
                   secondary
                   title="Từ chối"
                   onPress={() =>
@@ -386,7 +469,11 @@ export function AgreementSheetPanel({
                       onPress={() =>
                         router.push({
                           pathname: "/exchange-compose",
-                          params: { book: room.listingId },
+                          params: {
+                            book: room.listingId,
+                            conversationId: room.id,
+                            expectedConversationVersion: String(room.version),
+                          },
                         })
                       }
                     />
@@ -404,6 +491,7 @@ export function AgreementSheetPanel({
                 </AppText>
 
                 <Button
+                  wine
                   title="Mở chi tiết phiếu trao đổi"
                   onPress={() =>
                     router.push({
@@ -465,12 +553,17 @@ export function AgreementSheetPanel({
 
                 {!terms?.activeExchangeId && !isLocked && (
                   <Button
+                    wine
                     secondary
                     title="+ Tạo đề nghị đổi sách mới"
                     onPress={() =>
                       router.push({
                         pathname: "/exchange-compose",
-                        params: { book: room.listingId },
+                        params: {
+                          book: room.listingId,
+                          conversationId: room.id,
+                          expectedConversationVersion: String(room.version),
+                        },
                       })
                     }
                   />
@@ -481,36 +574,42 @@ export function AgreementSheetPanel({
         </View>
       ) : (
         <View style={styles.card}>
-          <AppText style={styles.cardTitle}>Giá sách giao dịch</AppText>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.rowAlign}>
+              <View style={styles.sectionIconBox}>
+                <Icon name="tag" size={15} color={stitchTokens.wine} />
+              </View>
+              <AppText style={styles.cardTitle}>Giá sách giao dịch</AppText>
+            </View>
+            <View style={styles.freeShipPill}>
+              <AppText style={styles.freeShipPillText}>Miễn phí ship</AppText>
+            </View>
+          </View>
 
-          <View style={styles.priceRowContainer}>
+          <View style={styles.priceHeroBanner}>
             <View style={styles.priceCol}>
-              <AppText style={styles.priceLabel}>Giá niêm yết</AppText>
-              <AppText style={styles.priceOriginal}>
+              <AppText style={styles.priceHeroLabel}>Giá niêm yết</AppText>
+              <AppText style={styles.priceHeroOriginal}>
                 {formatVnd(listing?.salePrice ?? 0)}
               </AppText>
             </View>
 
-            <View style={styles.priceColDivider} />
+            <View style={styles.priceHeroDivider} />
 
             <View style={styles.priceCol}>
-              <AppText style={styles.priceLabel}>Giá đã thống nhất</AppText>
+              <AppText style={styles.priceHeroLabel}>Giá đã thống nhất</AppText>
               <AppText
                 style={[
-                  styles.priceAgreed,
-                  terms?.agreedPrice != null && styles.priceAgreedDone,
+                  styles.priceHeroAgreed,
+                  terms?.agreedPrice != null && styles.priceHeroAgreedDone,
                 ]}
               >
                 {terms?.agreedPrice != null
                   ? formatVnd(terms.agreedPrice)
-                  : "Chưa thống nhất"}
+                  : "Chưa chốt"}
               </AppText>
             </View>
           </View>
-
-          <AppText style={styles.priceFootnote}>
-            * Giao hàng miễn phí.
-          </AppText>
 
           {/* Form / Nút đề nghị giá mới */}
           {!isLocked && !proposal && (
@@ -535,42 +634,96 @@ export function AgreementSheetPanel({
                 <View style={styles.offerForm}>
                   <AppText style={styles.offerLabel}>
                     {terms?.agreedPrice != null
-                      ? "Nhập giá sách đề xuất mới (₫)"
-                      : "Đề xuất giá sách thương lượng (₫)"}
+                      ? "Đề xuất lại mức giá mới"
+                      : "Đề xuất giá thương lượng"}
                   </AppText>
-                  <View style={styles.offerInputRow}>
-                    <TextField
-                      value={proposedPrice}
-                      onChangeText={(t) =>
-                        setProposedPrice(t.replace(/[^0-9]/g, ""))
-                      }
-                      placeholder="Ví dụ: 80000"
-                      keyboardType="numeric"
-                      editable={!busy}
-                      style={styles.offerInput}
-                    />
-                    <View style={styles.offerSubmitBtn}>
-                      <Button
-                        title={busy ? "…" : "Gửi giá"}
-                        disabled={busy || !proposedPrice}
-                        onPress={() => {
-                          const val = Number(proposedPrice);
-                          if (
-                            !Number.isInteger(val) ||
-                            val < 10000 ||
-                            val > 1000000
-                          ) {
-                            setError("Giá đề xuất phải từ 10.000 ₫ đến 1.000.000 ₫.");
-                            return;
-                          }
-                          void handleTermsCommand({
-                            expectedVersion: room.version,
-                            kind: "Price",
-                            amount: val,
-                          });
-                        }}
-                      />
+
+                  {listing?.salePrice != null && listing.salePrice >= 20000 && (
+                    <View style={styles.quickPriceRow}>
+                      {[0.85, 0.9, 0.95, 1].map((ratio) => {
+                        const preset = Math.max(
+                          10000,
+                          Math.round((listing.salePrice! * ratio) / 1000) * 1000,
+                        );
+                        const activePreset = proposedPrice === String(preset);
+                        return (
+                          <Pressable
+                            key={ratio}
+                            accessibilityRole="button"
+                            disabled={busy}
+                            onPress={() => setProposedPrice(String(preset))}
+                            style={({ pressed }) => [
+                              styles.quickPricePill,
+                              activePreset && styles.quickPricePillActive,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <AppText
+                              style={[
+                                styles.quickPriceText,
+                                activePreset && styles.quickPriceTextActive,
+                              ]}
+                            >
+                              {formatVnd(preset)}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
                     </View>
+                  )}
+
+                  <View style={styles.offerInputRow}>
+                    <View style={styles.offerInputBox}>
+                      <AppTextInput
+                        value={proposedPrice}
+                        onChangeText={(t) =>
+                          setProposedPrice(t.replace(/[^0-9]/g, ""))
+                        }
+                        placeholder="Nhập giá (VD: 100000)"
+                        placeholderTextColor={colors.muted}
+                        keyboardType="numeric"
+                        editable={!busy}
+                        style={styles.offerTextInput}
+                      />
+                      <AppText style={styles.offerCurrency}>₫</AppText>
+                    </View>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Gửi đề xuất giá"
+                      disabled={busy || !proposedPrice}
+                      onPress={() => {
+                        const val = Number(proposedPrice);
+                        if (
+                          !Number.isInteger(val) ||
+                          val < 10000 ||
+                          val > 1000000
+                        ) {
+                          setError("Giá đề xuất phải từ 10.000 ₫ đến 1.000.000 ₫.");
+                          return;
+                        }
+                        void handleTermsCommand({
+                          expectedVersion: room.version,
+                          kind: "Price",
+                          amount: val,
+                        });
+                      }}
+                      style={({ pressed }) => [
+                        styles.offerSendBtn,
+                        (busy || !proposedPrice) && styles.offerSendBtnDisabled,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <AppText
+                        numberOfLines={1}
+                        style={[
+                          styles.offerSendBtnText,
+                          (busy || !proposedPrice) && styles.offerSendBtnTextDisabled,
+                        ]}
+                      >
+                        {busy ? "Đang gửi…" : "Gửi giá"}
+                      </AppText>
+                    </Pressable>
                   </View>
 
                   {editingPrice && terms?.agreedPrice != null && (
@@ -600,7 +753,9 @@ export function AgreementSheetPanel({
             </View>
             <View style={styles.verifiedTag}>
               <Icon name="check" size={13} color={stitchTokens.verifiedGreen} />
-              <AppText style={styles.verifiedTagText}>Đã có báo giá</AppText>
+              <AppText style={styles.verifiedTagText}>
+                {quoteExpired ? "Báo giá hết hạn" : "Đã có báo giá"}
+              </AppText>
             </View>
           </View>
 
@@ -624,19 +779,112 @@ export function AgreementSheetPanel({
               {formatDateTimeVi(room.quotePreview.expiresAt)}
             </AppText>
           </View>
+
+          {isBuyer && quoteExpired && !room.orderId && !isLocked && (
+            <View style={{ marginTop: space.sm, gap: space.xs }}>
+              {quoteError ? <Notice tone="error">{quoteError}</Notice> : null}
+              <Button
+                wine
+                secondary
+                title={quoteBusy ? "Đang cập nhật…" : "Lấy lại báo giá giao hàng"}
+                disabled={quoteBusy || !effectiveAddressId || !listing}
+                busy={quoteBusy}
+                onPress={() => void handleAttachQuote()}
+              />
+            </View>
+          )}
         </View>
-      ) : isBuyer ? (
-        <View style={styles.cardNotice}>
-          <View style={styles.rowAlign}>
-            <Icon name="truck" size={16} color={stitchTokens.wineDark} />
-            <AppText style={styles.cardNoticeTitle}>
-              Chưa gửi thông tin nhận sách
-            </AppText>
+      ) : isBuyer && !isExchange && !room.orderId ? (
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.rowAlign}>
+              <View style={styles.sectionIconBox}>
+                <Icon name="pin" size={15} color={stitchTokens.wine} />
+              </View>
+              <AppText style={styles.cardTitle}>
+                Địa chỉ nhận sách & báo giá
+              </AppText>
+            </View>
           </View>
           <AppText style={styles.cardNoticeDesc}>
-            Sau khi hai bên thống nhất giá hoặc tình trạng sách, hãy gửi địa chỉ
-            và nhận báo giá giao hàng để người bán tạo đơn cho bạn.
+            Chọn địa chỉ nhận sách để lấy cước vận chuyển và gửi cho người bán tạo đơn hàng.
           </AppText>
+          {quoteError ? <Notice tone="error">{quoteError}</Notice> : null}
+          {addresses.length > 0 ? (
+            <View style={styles.addressList}>
+              {addresses.map((addr) => {
+                const activeAddr = addr.id === effectiveAddressId;
+                return (
+                  <Pressable
+                    key={addr.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: activeAddr }}
+                    onPress={() => setSelectedAddressId(addr.id)}
+                    style={({ pressed }) => [
+                      styles.addressOption,
+                      activeAddr && styles.addressOptionActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.radioCircle,
+                        activeAddr && styles.radioCircleActive,
+                      ]}
+                    >
+                      {activeAddr && (
+                        <Icon name="check" size={11} color={stitchTokens.gold} />
+                      )}
+                    </View>
+                    <View style={styles.addressOptionBody}>
+                      <View style={styles.addressNameRow}>
+                        <AppText
+                          numberOfLines={1}
+                          style={[
+                            styles.addressName,
+                            activeAddr && styles.addressNameActive,
+                          ]}
+                        >
+                          {addr.recipientName}
+                        </AppText>
+                        <AppText style={styles.addressPhone}>
+                          · {addr.phone}
+                        </AppText>
+                        {addr.isDefault && (
+                          <View style={styles.defaultBadge}>
+                            <AppText style={styles.defaultBadgeText}>
+                              Mặc định
+                            </AppText>
+                          </View>
+                        )}
+                      </View>
+                      <AppText numberOfLines={2} style={styles.addressDetail}>
+                        {addr.detail}
+                      </AppText>
+                    </View>
+                  </Pressable>
+                );
+              })}
+              <View style={{ marginTop: 4 }}>
+                <Button
+                  wine
+                  title={quoteBusy ? "Đang lấy báo giá…" : "Gửi địa chỉ & lấy báo giá ship"}
+                  disabled={quoteBusy || !effectiveAddressId || !listing || isLocked}
+                  busy={quoteBusy}
+                  onPress={() => void handleAttachQuote()}
+                />
+              </View>
+            </View>
+          ) : (
+            <View style={{ marginTop: 4 }}>
+              <Button
+                wine
+                secondary
+                title="Thêm địa chỉ nhận sách"
+                onPress={() => router.push("/addresses")}
+              />
+            </View>
+          )}
         </View>
       ) : null}
 
@@ -715,6 +963,7 @@ export function AgreementSheetPanel({
               <View style={styles.orderActionRow}>
                 <View style={styles.payBtn}>
                   <Button
+                    wine
                     title={payBusy ? "Đang thanh toán…" : "Thanh toán ngay qua Ví"}
                     onPress={() => void handlePayOrder()}
                     disabled={payBusy}
@@ -723,9 +972,15 @@ export function AgreementSheetPanel({
                 </View>
                 <View style={styles.viewOrderBtn}>
                   <Button
+                    wine
                     secondary
                     title="Xem đơn hàng"
-                    onPress={() => router.push("/orders")}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/orders",
+                        params: { orderId: room.orderId! },
+                      })
+                    }
                   />
                 </View>
               </View>
@@ -738,9 +993,15 @@ export function AgreementSheetPanel({
               </AppText>
               <View style={{ marginTop: space.sm }}>
                 <Button
+                  wine
                   secondary
                   title="Quản lý đơn hàng"
-                  onPress={() => router.push("/orders")}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/orders",
+                      params: { orderId: room.orderId! },
+                    })
+                  }
                 />
               </View>
             </>
@@ -755,6 +1016,7 @@ export function AgreementSheetPanel({
           </AppText>
           <View style={styles.createOrderBtn}>
             <Button
+              wine
               title="Tạo đơn cho người mua này"
               onPress={() => onOpenCreateOrder()}
             />
@@ -768,51 +1030,76 @@ export function AgreementSheetPanel({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: stitchTokens.parchment,
+    backgroundColor: stitchTokens.creamBg,
   },
   contentContainer: {
     padding: space.md,
-    gap: space.md,
+    gap: 14,
     paddingBottom: space.xl * 2,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: space.md,
-    gap: space.sm,
+    borderColor: stitchTokens.cardBorder,
+    padding: 16,
+    gap: 12,
+    shadowColor: stitchTokens.wineDark,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   cardHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: space.xs,
   },
   rowAlign: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
+  },
+  sectionIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: stitchTokens.wineAlpha08,
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: colors.ink,
+    color: stitchTokens.wineDark,
   },
   modeTag: {
-    backgroundColor: stitchTokens.parchment,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    backgroundColor: stitchTokens.wineAlpha08,
+    paddingHorizontal: 11,
+    paddingVertical: 4,
     borderRadius: radius.pill,
   },
   modeTagText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
     color: stitchTokens.wineDark,
+  },
+  freeShipPill: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+  },
+  freeShipPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.likeNewGreen,
   },
   modeSwitchRow: {
     flexDirection: "row",
     gap: space.sm,
-    marginTop: 4,
+    marginTop: 2,
   },
   modeOption: {
     flex: 1,
@@ -820,15 +1107,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 8,
-    borderRadius: radius.small,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.rule,
-    backgroundColor: stitchTokens.parchment,
+    borderColor: stitchTokens.cardBorder,
+    backgroundColor: stitchTokens.creamBg,
   },
   modeOptionActive: {
-    borderColor: stitchTokens.wineDark,
+    borderColor: stitchTokens.wine,
     backgroundColor: stitchTokens.roseWarmSurface,
   },
   modeOptionText: {
@@ -844,24 +1131,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 8,
-    borderRadius: radius.small,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.rule,
-    marginTop: 4,
+    borderColor: stitchTokens.peachBorder,
+    backgroundColor: stitchTokens.roseWarmSurface,
   },
   requestExchangeText: {
-    fontSize: 12,
+    fontSize: 13,
     color: stitchTokens.wineDark,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   proposalCard: {
     backgroundColor: stitchTokens.warmIvory,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: stitchTokens.wineDark,
-    padding: space.md,
+    borderColor: stitchTokens.wine,
+    padding: 16,
     gap: space.xs,
+    shadowColor: stitchTokens.wineDark,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   proposalHeader: {
     flexDirection: "row",
@@ -880,7 +1172,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   proposalHighlight: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
     color: stitchTokens.wineDark,
   },
@@ -914,85 +1206,148 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
     fontWeight: "600",
   },
-  priceRowContainer: {
+  priceHeroBanner: {
     flexDirection: "row",
-    backgroundColor: stitchTokens.parchment,
-    borderRadius: radius.small,
-    padding: space.md,
+    backgroundColor: stitchTokens.wine,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: "center",
-    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAlpha40,
   },
   priceCol: {
     flex: 1,
     alignItems: "center",
     gap: 4,
   },
-  priceColDivider: {
+  priceHeroDivider: {
     width: 1,
     height: 36,
-    backgroundColor: colors.rule,
+    backgroundColor: stitchTokens.whiteAlpha20,
   },
-  priceLabel: {
-    fontSize: 12,
-    color: colors.muted,
+  priceHeroLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: stitchTokens.gold,
+    opacity: 0.9,
   },
-  priceOriginal: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.ink,
+  priceHeroOriginal: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: stitchTokens.white,
   },
-  priceAgreed: {
+  priceHeroAgreed: {
     fontSize: 15,
     fontWeight: "600",
-    color: colors.muted,
+    color: stitchTokens.whiteAlpha70,
   },
-  priceAgreedDone: {
+  priceHeroAgreedDone: {
+    fontSize: 17,
     fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  priceFootnote: {
-    fontSize: 11,
-    color: colors.muted,
-    fontStyle: "italic",
+    color: stitchTokens.gold,
   },
   editPriceBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: stitchTokens.wineDark,
-    borderRadius: radius.small,
-    marginTop: 4,
+    borderColor: stitchTokens.wine,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.roseWarmSurface,
   },
   editPriceText: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: stitchTokens.wineDark,
   },
   offerForm: {
-    gap: space.xs,
-    marginTop: space.xs,
-    paddingTop: space.xs,
+    gap: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: colors.rule,
+    borderTopColor: stitchTokens.creamBg,
   },
   offerLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  quickPriceRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  quickPricePill: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+  },
+  quickPricePillActive: {
+    backgroundColor: stitchTokens.wineAlpha08,
+    borderColor: stitchTokens.wine,
+  },
+  quickPriceText: {
     fontSize: 12,
     fontWeight: "600",
     color: colors.ink,
   },
+  quickPriceTextActive: {
+    color: stitchTokens.wineDark,
+    fontWeight: "700",
+  },
   offerInputRow: {
     flexDirection: "row",
-    gap: space.sm,
+    gap: 8,
     alignItems: "center",
   },
-  offerInput: {
+  offerInputBox: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: stitchTokens.cardBorder,
+    backgroundColor: stitchTokens.creamBg,
+    paddingHorizontal: 12,
   },
-  offerSubmitBtn: {
-    width: 90,
+  offerTextInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    paddingVertical: 0,
+  },
+  offerCurrency: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.muted,
+    marginLeft: 4,
+  },
+  offerSendBtn: {
+    height: 46,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.wine,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  offerSendBtnDisabled: {
+    backgroundColor: stitchTokens.cardBorder,
+  },
+  offerSendBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: stitchTokens.gold,
+  },
+  offerSendBtnTextDisabled: {
+    color: colors.muted,
   },
   cancelOfferBtn: {
     paddingVertical: 4,
@@ -1008,31 +1363,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     backgroundColor: stitchTokens.likeNewGreenBg,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: radius.pill,
   },
   verifiedTagText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "700",
     color: stitchTokens.likeNewGreen,
   },
   destBox: {
-    backgroundColor: stitchTokens.parchment,
-    borderRadius: radius.small,
-    padding: space.sm,
+    backgroundColor: stitchTokens.creamBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 12,
     gap: 4,
-    marginTop: 4,
   },
   destName: {
     fontSize: 13,
     fontWeight: "700",
-    color: colors.ink,
+    color: stitchTokens.wineDark,
   },
   destAddress: {
     fontSize: 12,
     color: colors.muted,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   destFeeRow: {
     flexDirection: "row",
@@ -1054,23 +1410,80 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 2,
   },
-  cardNotice: {
-    backgroundColor: stitchTokens.parchment,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.rule,
-    padding: space.md,
-    gap: space.xs,
+  addressList: {
+    gap: 8,
   },
-  cardNoticeTitle: {
+  addressOption: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    backgroundColor: stitchTokens.creamBg,
+  },
+  addressOptionActive: {
+    borderWidth: 1.5,
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  radioCircleActive: {
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.wine,
+  },
+  addressOptionBody: {
+    flex: 1,
+    gap: 3,
+  },
+  addressNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  addressName: {
     fontSize: 13,
     fontWeight: "700",
     color: colors.ink,
   },
-  cardNoticeDesc: {
+  addressNameActive: {
+    color: stitchTokens.wineDark,
+  },
+  addressPhone: {
+    fontSize: 12,
+    color: colors.muted,
+  },
+  defaultBadge: {
+    backgroundColor: stitchTokens.wineAlpha08,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: radius.pill,
+  },
+  defaultBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  addressDetail: {
     fontSize: 12,
     color: colors.muted,
     lineHeight: 17,
+  },
+  cardNoticeDesc: {
+    fontSize: 12,
+    color: colors.muted,
+    lineHeight: 18,
   },
   stepperRow: {
     flexDirection: "row",
@@ -1083,18 +1496,22 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   stepCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: stitchTokens.canvasMuted,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
   stepCircleCurrent: {
-    backgroundColor: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.wine,
+    borderColor: stitchTokens.wine,
   },
   stepCircleCompleted: {
     backgroundColor: stitchTokens.verifiedGreen,
+    borderColor: stitchTokens.verifiedGreen,
   },
   stepNumber: {
     fontSize: 11,
@@ -1102,7 +1519,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   stepNumberCurrent: {
-    color: stitchTokens.white,
+    color: stitchTokens.gold,
   },
   stepLabel: {
     fontSize: 11,
@@ -1110,37 +1527,36 @@ const styles = StyleSheet.create({
   },
   stepLabelActive: {
     fontWeight: "700",
-    color: colors.ink,
+    color: stitchTokens.wineDark,
   },
   stepLine: {
     flex: 1,
     height: 2,
-    backgroundColor: colors.rule,
+    backgroundColor: stitchTokens.cardBorder,
     marginBottom: 16,
   },
   guidanceBox: {
-    backgroundColor: stitchTokens.parchment,
-    borderRadius: radius.small,
-    padding: space.sm,
+    backgroundColor: stitchTokens.creamBg,
+    borderRadius: 12,
+    padding: 12,
     gap: 4,
-    marginTop: 4,
   },
   guidanceTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: colors.ink,
+    color: stitchTokens.wineDark,
   },
   guidanceDesc: {
     fontSize: 12,
     color: colors.muted,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   orderCreatedCard: {
     backgroundColor: stitchTokens.warmIvory,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: stitchTokens.amberBg,
-    padding: space.md,
+    borderColor: stitchTokens.goldBorder,
+    padding: 16,
     gap: space.xs,
   },
   orderHeaderRow: {
@@ -1149,7 +1565,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   orderCreatedTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
     color: stitchTokens.wineDark,
   },
@@ -1171,27 +1587,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: space.md,
+    borderColor: stitchTokens.wine,
+    padding: 16,
     gap: space.xs,
   },
   actionCardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: colors.ink,
+    color: stitchTokens.wineDark,
   },
   actionCardDesc: {
     fontSize: 12,
     color: colors.muted,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   createOrderBtn: {
     marginTop: space.xs,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.8,
   },
 });

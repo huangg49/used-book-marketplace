@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import * as Crypto from "expo-crypto";
 import {
   StyleSheet,
   View,
@@ -6,7 +7,13 @@ import {
   type NativeSyntheticEvent,
 } from "react-native";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  accountErrorMessage,
+  cartSchema,
+  changeCart,
+  readCart,
+} from "@used-books/session-client";
 import { ApiError } from "../../core/api/session-client";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
@@ -32,8 +39,11 @@ import { BuyNowModal } from "../orders/buy-now-modal";
 import { ordersPageSchema } from "../orders/contracts";
 import { startPurchaseConversation } from "../conversations/purchase-conversation-service";
 
+const memberCartSchema = cartSchema(publicListing);
+
 export function BookScreen({ id }: { id: string }) {
   const { client, state } = useSession();
+  const queryClient = useQueryClient();
   const active = useForeground();
 
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
@@ -95,6 +105,49 @@ export function BookScreen({ id }: { id: string }) {
 
   const [chatOpening, setChatOpening] = useState(false);
   const [chatError, setChatError] = useState<string>();
+  const [cartBusy, setCartBusy] = useState(false);
+
+  const cartQuery = useQuery({
+    queryKey: ["member-cart", state.status === "authenticated" ? state.user.id : "guest"],
+    queryFn: () => readCart(client, memberCartSchema),
+    enabled: active && state.status === "authenticated",
+    staleTime: 10_000,
+  });
+
+  const inCart = Boolean(
+    cartQuery.data?.items?.some((entry) => entry.listingId === id),
+  );
+
+  const handleAddToCart = async () => {
+    if (state.status !== "authenticated") {
+      router.push({
+        pathname: "/account",
+        params: { returnBook: id },
+      });
+      return;
+    }
+    if (inCart) {
+      router.push("/cart");
+      return;
+    }
+    if (!item || cartBusy) return;
+    setCartBusy(true);
+    setChatError(undefined);
+    try {
+      await changeCart(
+        client,
+        { action: "add", listingId: id, listingVersion: item.version },
+        () => Crypto.randomUUID(),
+      );
+      await queryClient.invalidateQueries({
+        queryKey: ["member-cart", state.user.id],
+      });
+    } catch (e: unknown) {
+      setChatError(accountErrorMessage(e));
+    } finally {
+      setCartBusy(false);
+    }
+  };
 
   const handleOpenChat = async () => {
     if (state.status !== "authenticated") {
@@ -113,7 +166,7 @@ export function BookScreen({ id }: { id: string }) {
         client,
         id,
         item.version,
-        crypto.randomUUID(),
+        Crypto.randomUUID(),
         intent,
       );
       router.push({
@@ -188,6 +241,9 @@ export function BookScreen({ id }: { id: string }) {
             onChatPress={handleOpenChat}
             onExchangePress={handleOpenExchange}
             onBuyPress={handleOpenBuy}
+            onAddToCartPress={() => void handleAddToCart()}
+            cartBusy={cartBusy}
+            inCart={inCart}
             isOwner={isOwner}
             hasActiveOrder={Boolean(activeOrder)}
             activeOrderState={activeOrder?.state}

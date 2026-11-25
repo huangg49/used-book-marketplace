@@ -47,6 +47,7 @@ import {
 import { DemoSkipButton } from "./components/demo-skip-button";
 import { WinnerPaymentReview, type WinnerPaymentReviewProps } from "./components/winner-payment-review";
 import { readPointOrderNewest, usePointOrderLive } from "./use-point-order-live";
+import { walletSummary } from "../wallet/contracts";
 import { addressBook, addressReceipt, directory } from "../addresses/contracts";
 import { deliveryQuote, type CodeIssued, type PointOrder } from "./contracts";
 
@@ -781,10 +782,21 @@ function Payment({
     staleTime: 0,
   });
 
+  const wallet = useQuery({
+    queryKey: ["wallet"],
+    queryFn: () => client.request("/me/wallet", walletSummary),
+    staleTime: 5_000,
+  });
+
   const total = deliver ? quote.data?.buyerTotal : order.amounts.bookPrice;
   const balance = total === undefined || (deliver && quote.isError)
     ? null
     : auctionCheckoutBalance(total, heldAmount);
+  const needFromWallet = balance?.label === "Cần trừ thêm từ ví" ? balance.amount : (total ?? 0) - (heldAmount ?? 0);
+  const walletShortfall =
+    wallet.data && needFromWallet > wallet.data.available
+      ? needFromWallet - wallet.data.available
+      : 0;
   const missingQuoteLabel = !chosen
     ? "Chọn địa chỉ"
     : quote.isFetching
@@ -1390,6 +1402,19 @@ function Payment({
       </View>
 
       {/* 3. Nút bấm Thanh toán */}
+      {walletShortfall > 0 && (
+        <View style={{ gap: space.xs }}>
+          <Notice tone="error">
+            Ví khả dụng còn thiếu {formatVnd(walletShortfall)} để hoàn tất thanh toán.
+          </Notice>
+          <Button
+            wine
+            secondary
+            title="Nạp tiền vào ví"
+            onPress={() => router.push("/wallet")}
+          />
+        </View>
+      )}
       <Button
         wine
         title={
@@ -1397,7 +1422,7 @@ function Payment({
             ? "Thanh toán từ Ví Lật Lại"
             : `Thanh toán ${formatVnd(total)} từ Ví Lật Lại`
         }
-        disabled={locked || remaining === 0 || (deliver && !quote.data)}
+        disabled={locked || remaining === 0 || (deliver && !quote.data) || walletShortfall > 0}
         onPress={() =>
           deliver && quote.data
             ? onPay({

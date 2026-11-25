@@ -39,7 +39,7 @@ import {
   type PurchaseConversation,
   type PurchaseMessage,
 } from "../contracts";
-import { orderReceiptSchema } from "../../orders/contracts";
+import { orderDetailsSchema, orderReceiptSchema } from "../../orders/contracts";
 import type { Listing } from "../../shelf/contracts";
 
 function getListingPrice(l?: Listing | null): number {
@@ -162,12 +162,22 @@ export function ChatMessagesPanel({
     setTermsBusy(true);
     setTermsActionError(null);
     try {
+      const currentOrder = await client.request(
+        `/me/orders/${room.orderId}`,
+        orderDetailsSchema,
+      );
+      if (currentOrder.state !== "AwaitingPayment") {
+        setTermsActionError("Đơn hàng này không còn ở trạng thái chờ thanh toán.");
+        if (onRefreshRef.current) onRefreshRef.current();
+        return;
+      }
       await client.request(`/orders/${room.orderId}/pay`, orderReceiptSchema, {
         method: "POST",
-        headers: { "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ expectedVersion: 1 }),
+        headers: { "Idempotency-Key": randomUUID() },
+        body: JSON.stringify({ expectedVersion: currentOrder.version }),
       });
       sendAutoChatMessage("Tôi đã hoàn tất thanh toán đơn hàng qua Ví!");
+      void queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
       void queryClient.invalidateQueries({ queryKey: ["wallet"] });
       if (onRefreshRef.current) onRefreshRef.current();
@@ -279,7 +289,7 @@ export function ChatMessagesPanel({
     setSending(true);
     setSendError(undefined);
 
-    const messageId = crypto.randomUUID();
+    const messageId = randomUUID();
     const payload = {
       messageId,
       conversationId: room.id,

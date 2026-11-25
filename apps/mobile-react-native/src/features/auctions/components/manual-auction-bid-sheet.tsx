@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import {
   AppText, Button, Notice, Sheet, TextField, formatVnd, radius, space, stitchTokens,
 } from "../../../core/ui";
@@ -24,8 +25,9 @@ export function ManualAuctionBidSheet({
 }) {
   const minimum = minimumBidOf(auction);
   const amount = manual === null ? minimum : Number(manual) || null;
+  const shortfall = fundsShortfall(amount, available);
   const validation = amountError(amount, minimum, auction.startPrice, auction.step) ??
-    (fundsShortfall(amount, available) ? fundsHint(amount, available) : null);
+    (shortfall ? fundsHint(amount, available) : null);
   const validAmount = !validation && amount != null ? amount : null;
   const submitAmount = pendingAmount ?? (blocked ? null : validAmount);
 
@@ -36,14 +38,27 @@ export function ManualAuctionBidSheet({
       onClose={onClose}
       dismissible={!busy}
       footer={
-        <Button
-          wine
-          title={busy ? "Đang gửi…" : pendingAmount != null ? "Thử lại lượt trả giá" :
-            submitAmount == null ? "Xác nhận trả giá" : `Xác nhận trả ${formatVnd(submitAmount)}`}
-          busy={busy}
-          disabled={busy || submitAmount == null}
-          onPress={() => { if (submitAmount != null) onSubmit(submitAmount); }}
-        />
+        <View style={{ gap: space.xs }}>
+          {shortfall > 0 && !busy ? (
+            <Button
+              wine
+              secondary
+              title="Nạp tiền vào ví"
+              onPress={() => {
+                onClose();
+                router.push("/wallet");
+              }}
+            />
+          ) : null}
+          <Button
+            wine
+            title={busy ? "Đang gửi…" : pendingAmount != null ? "Thử lại lượt trả giá" :
+              submitAmount == null ? "Xác nhận trả giá" : `Xác nhận trả ${formatVnd(submitAmount)}`}
+            busy={busy}
+            disabled={busy || submitAmount == null}
+            onPress={() => { if (submitAmount != null) onSubmit(submitAmount); }}
+          />
+        </View>
       }
     >
       <View style={styles.summary}>

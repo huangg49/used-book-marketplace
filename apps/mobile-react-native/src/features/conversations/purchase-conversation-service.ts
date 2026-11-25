@@ -11,6 +11,17 @@ import {
   type TermsResponseBody,
 } from "./contracts";
 
+function createUuid(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export const statusLabels: Record<string, string> = {
   Active: "Đang thương lượng",
   Expired: "Đã hết hạn",
@@ -50,7 +61,7 @@ export function startPurchaseConversation(
   client: SessionClient,
   listingId: string,
   expectedVersion: number,
-  key: string = crypto.randomUUID(),
+  key: string = createUuid(),
   intent?: "Negotiation" | "Exchange",
 ) {
   return client.request(
@@ -96,10 +107,33 @@ export function changeConversationTerms(
   client: SessionClient,
   id: string,
   body: TermsProposalBody | TermsResponseBody,
-  key: string = crypto.randomUUID(),
+  key: string = createUuid(),
 ) {
   return client.request(
     `/me/purchase-conversations/${id}/terms${"proposalId" in body ? "/respond" : ""}`,
+    receiptSchema,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export function attachConversationQuote(
+  client: SessionClient,
+  id: string,
+  body: {
+    expectedVersion: number;
+    quoteId: string;
+    expectedQuoteVersion: number;
+    expectedListingVersion: number;
+    expectedListingRevisionId: string;
+  },
+  key: string = createUuid(),
+) {
+  return client.request(
+    `/me/purchase-conversations/${id}/quote`,
     receiptSchema,
     {
       method: "POST",

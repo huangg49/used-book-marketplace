@@ -18,11 +18,13 @@ import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
+  AppModal,
   AppText,
   Button,
   ConfirmDialog,
   Notice,
   StatePanel,
+  TextField,
   WineHeader,
   colors,
   formatVnd,
@@ -38,11 +40,63 @@ import { BundleManifest } from "../bundles/bundle-manifest";
 import { OrderShipping } from "./order-shipping";
 import { SaleFeeBreakdown } from "../../core/ui/sale-fee-breakdown";
 
+const deliveryJourneyActionSchema = z.enum([
+  "Pickup",
+  "OutForDelivery",
+  "Deliver",
+  "Acknowledge",
+  "ReportNonReceipt",
+  "ReportCondition",
+  "SkipInspection",
+]);
+type DeliveryJourneyAction = z.infer<typeof deliveryJourneyActionSchema>;
+
+const DELIVERY_JOURNEY_LABELS: Record<DeliveryJourneyAction, string> = {
+  Pickup: "Mô phỏng: ĐVVC đã lấy hàng",
+  OutForDelivery: "Mô phỏng: Đang giao hàng",
+  Deliver: "Mô phỏng: Đã giao tới nơi",
+  Acknowledge: "Xác nhận đã nhận sách",
+  ReportNonReceipt: "Báo chưa nhận được sách",
+  ReportCondition: "Báo sách không đúng mô tả",
+  SkipInspection: "Mô phỏng: Hoàn tất nghiệm thu ngay",
+};
+
+const orderConversationReceiptSchema = z.object({
+  entityId: z.string().uuid(),
+});
+
+const orderActionReceiptSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  state: z.string(),
+});
+
 const details = orderDetailsSchema
   .extend(orderResponseStateSchema.shape)
   .extend({
     canCancel: z.boolean(),
+    canRequestRefund: z.boolean().optional().default(false),
     canConfirmReceipt: z.boolean().optional().default(false),
+    canReportNonReceipt: z.boolean().optional().default(false),
+    conversationId: z.string().uuid().nullish(),
+    demoCompletionEnabled: z.boolean().optional().default(false),
+    demoCompletionAt: z.iso.datetime().nullish(),
+    deliveryJourney: z
+      .object({
+        trackingCode: z.string().nullable(),
+        pickedUpAt: z.iso.datetime().nullable(),
+        outForDeliveryAt: z.iso.datetime().nullable(),
+        acknowledgedAt: z.iso.datetime().nullable(),
+        issue: z
+          .object({
+            kind: z.enum(["ReportNonReceipt", "ReportCondition"]),
+            openedAt: z.iso.datetime(),
+            supportCaseId: z.string().uuid(),
+          })
+          .nullable(),
+        actions: z.array(deliveryJourneyActionSchema),
+      })
+      .nullish(),
     moneyHeld: z.number().int(),
     refundedAmount: z.number().int().nonnegative().optional(),
     inspectionDeadline: z.iso.datetime().nullish(),
@@ -105,7 +159,12 @@ export function OrderFocusScreen({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [paying, setPaying] = useState(false);
-  const [confirming, setConfirming] = useState<Action | null>(null);
+  const [confirming, setConfirming] = useState<Action | "cancel-paid" | null>(null);
+  const [reportModal, setReportModal] = useState<
+    null | { kind: "non-receipt" | "ReportNonReceipt" | "ReportCondition" }
+  >(null);
+  const [reportText, setReportText] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
 
   const pending = pendingOrderResponse(client, id);
   const inaccessible =
@@ -123,19 +182,144 @@ export function OrderFocusScreen({
     }
   }
 
-  async function act(action: Action) {
+  async function act(action: Action | "cancel-paid") {
     if (busy || !order) return;
     setBusy(true);
     setError("");
     try {
-      await sendOrderResponse(client, id, action, order.version, () =>
-        Crypto.randomUUID(),
-      );
+      if (action === "cancel-paid") {
+        await client.request(
+          `/orders/${encodeURIComponent(id)}/cancel-paid`,
+          orderActionReceiptSchema,
+          {
+            method: "POST",
+            headers: { "Idempotency-Key": Crypto.randomUUID() },
+            body: JSON.stringify({ expectedVersion: order.version }),
+          },
+        );
+      } else {
+        await sendOrderResponse(client, id, action, order.version, () =>
+          Crypto.randomUUID(),
+        );
+      }
     } catch (e) {
       setError(presentError(e).message);
     } finally {
       setBusy(false);
       setConfirming(null);
+      void changed();
+    }
+  }
+
+  async function openOrderChat() {
+    if (chatBusy || !order) return;
+    if (order.conversationId) {
+      router.push({ pathname: "/conversation", params: { id: order.conversationId } });
+      return;
+    }
+    setChatBusy(true);
+    setError("");
+    try {
+      const receipt = await client.request(
+        `/orders/${encodeURIComponent(id)}/conversation`,
+        orderConversationReceiptSchema,
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": Crypto.randomUUID() },
+          body: JSON.stringify({}),
+        },
+      );
+      router.push({ pathname: "/conversation", params: { id: receipt.entityId } });
+    } catch (e) {
+      setError(presentError(e).message);
+    } finally {
+      setChatBusy(false);
+    }
+  }
+
+  async function triggerDemoCompletion() {
+    if (busy || !order) return;
+    setBusy(true);
+    setError("");
+    try {
+      await client.request(
+        `/orders/${encodeURIComponent(id)}/demo-completion`,
+        orderActionReceiptSchema,
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": Crypto.randomUUID() },
+          body: JSON.stringify({ expectedVersion: order.version }),
+        },
+      );
+    } catch (e) {
+      setError(presentError(e).message);
+    } finally {
+      setBusy(false);
+      void changed();
+    }
+  }
+
+  async function advanceJourney(action: DeliveryJourneyAction, description?: string) {
+    if (busy || !order) return;
+    setBusy(true);
+    setError("");
+    try {
+      await client.request(
+        `/orders/${encodeURIComponent(id)}/delivery-journey`,
+        orderActionReceiptSchema,
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": Crypto.randomUUID() },
+          body: JSON.stringify({
+            expectedVersion: order.version,
+            action,
+            ...(description ? { description } : {}),
+          }),
+        },
+      );
+      setReportModal(null);
+      setReportText("");
+    } catch (e) {
+      setError(presentError(e).message);
+    } finally {
+      setBusy(false);
+      void changed();
+    }
+  }
+
+  async function submitNonReceipt() {
+    if (busy || !order || !reportModal) return;
+    const text = reportText.trim();
+    const minLen = reportModal.kind === "non-receipt" ? 20 : 10;
+    if (text.length < minLen) {
+      setError(`Vui lòng mô tả chi tiết ít nhất ${minLen} ký tự.`);
+      return;
+    }
+    if (reportModal.kind !== "non-receipt") {
+      await advanceJourney(reportModal.kind, text);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await client.request(
+        `/orders/${encodeURIComponent(id)}/non-receipt`,
+        orderActionReceiptSchema,
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": Crypto.randomUUID() },
+          body: JSON.stringify({
+            expectedVersion: order.version,
+            description: text,
+          }),
+        },
+      );
+      setReportModal(null);
+      setReportText("");
+    } catch (e) {
+      setError(presentError(e).message);
+    } finally {
+      setBusy(false);
       void changed();
     }
   }
@@ -391,6 +575,27 @@ export function OrderFocusScreen({
                         onPress={() => setConfirming("cancel")}
                       />
                     )}
+                    {order.canRequestRefund && (
+                      <Button
+                        wine
+                        secondary
+                        busy={busy}
+                        title="Hủy đơn & hoàn tiền"
+                        onPress={() => setConfirming("cancel-paid")}
+                      />
+                    )}
+                    {order.canReportNonReceipt && (
+                      <Button
+                        wine
+                        secondary
+                        busy={busy}
+                        title="Báo chưa nhận được sách"
+                        onPress={() => {
+                          setReportText("");
+                          setReportModal({ kind: "non-receipt" });
+                        }}
+                      />
+                    )}
                   </>
                 )
               )}
@@ -403,6 +608,63 @@ export function OrderFocusScreen({
                   onPress={() => setConfirming("confirm-receipt")}
                 />
               )}
+
+              {order.demoCompletionEnabled && (
+                <Button
+                  wine
+                  secondary
+                  busy={busy}
+                  title="Mô phỏng hoàn tất giao hàng (Demo)"
+                  onPress={() => void triggerDemoCompletion()}
+                />
+              )}
+              {order.demoCompletionAt && (
+                <Notice>
+                  Đang tự động mô phỏng hoàn tất giao hàng lúc{" "}
+                  {new Date(order.demoCompletionAt).toLocaleTimeString("vi-VN")}.
+                </Notice>
+              )}
+
+              {order.deliveryJourney && order.deliveryJourney.actions.length > 0 && (
+                <View style={{ gap: space.xs }}>
+                  {order.deliveryJourney.actions.map((action) => (
+                    <Button
+                      key={action}
+                      wine
+                      secondary={action !== "Acknowledge"}
+                      busy={busy}
+                      title={DELIVERY_JOURNEY_LABELS[action]}
+                      onPress={() => {
+                        if (action === "ReportNonReceipt" || action === "ReportCondition") {
+                          setReportText("");
+                          setReportModal({ kind: action });
+                        } else {
+                          void advanceJourney(action);
+                        }
+                      }}
+                    />
+                  ))}
+                </View>
+              )}
+
+              <Button
+                wine
+                secondary
+                busy={chatBusy}
+                title={order.role === "Buyer" ? "Nhắn tin với người bán" : "Nhắn tin với người mua"}
+                onPress={() => void openOrderChat()}
+              />
+              <Button
+                wine
+                secondary
+                title="Gửi hỗ trợ / khiếu nại đơn hàng"
+                onPress={() =>
+                  router.push({
+                    pathname: "/support",
+                    params: { targetType: "DirectOrder", targetId: id },
+                  })
+                }
+              />
             </View>
 
             {["Inspection", "Completed"].includes(order.state) && (
@@ -418,20 +680,79 @@ export function OrderFocusScreen({
 
       <ConfirmDialog
         visible={!!confirming}
-        title={confirming ? labels[confirming] + "?" : ""}
+        title={
+          confirming === "cancel-paid"
+            ? "Hủy đơn & yêu cầu hoàn tiền?"
+            : confirming
+              ? labels[confirming] + "?"
+              : ""
+        }
         message={
-          confirming === "confirm-receipt"
-            ? "Xác nhận bạn đã nhận sách. Mở 72 giờ kiểm tra và đánh giá riêng tư; tiền vẫn giữ, không giải ngân."
-            : confirming === "accept"
-              ? "Bạn nhận chuẩn bị sách cho đơn đã được người mua thanh toán."
-              : confirming === "reject"
-                ? "Từ chối chuyển đơn sang xử lý hoàn tiền theo quy trình."
-                : "Hủy giữ sách của đơn chưa thanh toán."
+          confirming === "cancel-paid"
+            ? "Người bán chưa xác nhận đơn. Hủy đơn sẽ chuyển sang hoàn tiền về Ví của bạn."
+            : confirming === "confirm-receipt"
+              ? "Xác nhận bạn đã nhận sách. Mở 72 giờ kiểm tra và đánh giá riêng tư; tiền vẫn giữ, không giải ngân."
+              : confirming === "accept"
+                ? "Bạn nhận chuẩn bị sách cho đơn đã được người mua thanh toán."
+                : confirming === "reject"
+                  ? "Từ chối chuyển đơn sang xử lý hoàn tiền theo quy trình."
+                  : "Hủy giữ sách của đơn chưa thanh toán."
         }
         confirmLabel="Ghi quyết định"
         onConfirm={() => confirming && void act(confirming)}
         onCancel={() => !busy && setConfirming(null)}
       />
+
+      <AppModal
+        visible={!!reportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !busy && setReportModal(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: stitchTokens.blackAlpha45,
+            justifyContent: "center",
+            padding: space.lg,
+          }}
+        >
+          <View style={styles.card}>
+            <AppText style={styles.cardHeading}>
+              {reportModal?.kind === "ReportCondition"
+                ? "Báo sách không đúng mô tả"
+                : "Báo chưa nhận được sách"}
+            </AppText>
+            <TextField
+              label="Mô tả sự việc"
+              value={reportText}
+              onChangeText={setReportText}
+              placeholder="Nêu rõ tình trạng giao nhận hoặc vấn đề gặp phải..."
+              multiline
+            />
+            {Boolean(error) && <Notice tone="error">{error}</Notice>}
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  wine
+                  secondary
+                  title="Đóng"
+                  disabled={busy}
+                  onPress={() => setReportModal(null)}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button
+                  wine
+                  title="Gửi báo cáo"
+                  busy={busy}
+                  onPress={() => void submitNonReceipt()}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </AppModal>
 
       {paying && order && (
         <BuyNowModal

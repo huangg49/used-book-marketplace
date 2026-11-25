@@ -163,7 +163,11 @@ function InventoryBookRow({
 
 export function ExchangeComposeScreen() {
   const { identity } = useExchangeRecovery();
-  const params = useLocalSearchParams<{ book?: string }>();
+  const params = useLocalSearchParams<{
+    book?: string;
+    conversationId?: string;
+    expectedConversationVersion?: string;
+  }>();
   return (
     <ExchangeComposeContent
       key={identity + ":" + params.book}
@@ -172,8 +176,22 @@ export function ExchangeComposeScreen() {
   );
 }
 function ExchangeComposeContent({ identity }: { identity: string }) {
-  const params = useLocalSearchParams<{ book?: string }>();
+  const params = useLocalSearchParams<{
+    book?: string;
+    conversationId?: string;
+    expectedConversationVersion?: string;
+  }>();
   const targetListingId = typeof params.book === "string" ? params.book : "";
+  const conversationId =
+    typeof params.conversationId === "string" && params.conversationId.length > 0
+      ? params.conversationId
+      : undefined;
+  const expectedConversationVersion =
+    typeof params.expectedConversationVersion === "string" &&
+    Number.isInteger(Number(params.expectedConversationVersion)) &&
+    Number(params.expectedConversationVersion) > 0
+      ? Number(params.expectedConversationVersion)
+      : undefined;
   const insets = useSafeAreaInsets();
 
   const { client, state } = useSession();
@@ -195,9 +213,15 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
   const toggleSelectBook = (id: string) => {
-    setSelectedMyListingIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
+    setSelectedMyListingIds((prev) => {
+      if (prev.includes(id)) return prev.filter((item) => item !== id);
+      if (prev.length >= 5) {
+        setErrorNotice("Bạn chỉ có thể chọn tối đa 5 cuốn sách trong một đề nghị trao đổi.");
+        return prev;
+      }
+      setErrorNotice(null);
+      return [...prev, id];
+    });
   };
 
   // 1. Fetch Target Book (Sách đối tác muốn đổi)
@@ -309,6 +333,9 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
           recipientListingId: targetBook!.id,
           ...(effectiveAddressId
             ? { deliveryAddressId: effectiveAddressId }
+            : {}),
+          ...(conversationId && expectedConversationVersion
+            ? { conversationId, expectedConversationVersion }
             : {}),
         },
         () => Crypto.randomUUID(),

@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import {
   AppText, Button, Icon, Notice, Sheet, TextField, formatVnd, radius, space, stitchTokens,
 } from "../../../core/ui";
@@ -35,11 +36,12 @@ export function AutoBidSheet({
   onDisable: () => void;
 }) {
   const amount = Number(value) || null;
+  const shortfall = fundsShortfall(amount, available);
   const validation =
     error ??
     (value.length > 0
       ? amountError(amount, floor, auction.startPrice, auction.step) ??
-        (fundsShortfall(amount, available) ? fundsHint(amount, available) : null)
+        (shortfall ? fundsHint(amount, available) : null)
       : null);
 
   return (
@@ -50,6 +52,17 @@ export function AutoBidSheet({
       dismissible={!locked}
       footer={
         <View style={styles.footer}>
+          {shortfall > 0 && !locked ? (
+            <Button
+              wine
+              secondary
+              title="Nạp tiền vào ví"
+              onPress={() => {
+                onClose();
+                router.push("/wallet");
+              }}
+            />
+          ) : null}
           <Button
             wine
             title={currentAutoMax != null ? "Nâng mức tự động" : "Đặt giá tự động"}
