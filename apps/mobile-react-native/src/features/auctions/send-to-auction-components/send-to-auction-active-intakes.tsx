@@ -133,6 +133,22 @@ export function SendToAuctionActiveIntakes({
                       </AppText>
                     </View>
                   ) : null}
+                  {item.state === "NeedsEvidence" && item.evidenceDeadline ? (
+                    <View style={styles.deadlineRow}>
+                      <Icon name="clock" size={13} color={stitchTokens.flashRed} />
+                      <AppText kind="small" style={styles.deadlineText}>
+                        Hạn bổ sung bằng chứng: {formatDateTime(item.evidenceDeadline)}
+                      </AppText>
+                    </View>
+                  ) : null}
+                  {item.state === "ReclaimRequired" && item.reclaimReason ? (
+                    <View style={styles.noteBox}>
+                      <AppText kind="bold" style={styles.noteTitle}>Lý do nhận lại sách</AppText>
+                      <AppText kind="small" color={stitchTokens.deepCocoa} style={styles.noteBody}>
+                        {item.reclaimReason}
+                      </AppText>
+                    </View>
+                  ) : null}
                 </View>
 
                 {/* 3. Examiner Note */}

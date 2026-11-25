@@ -1,5 +1,22 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { BackHandler, Image, StyleSheet, View } from "react-native";
+import {
+  BackHandler,
+  Image,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  type TextInputProps,
+  View,
+} from "react-native";
+import Svg, {
+  Circle,
+  Defs,
+  LinearGradient,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+} from "react-native-svg";
 import { router, Stack, useFocusEffect } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
@@ -24,21 +41,185 @@ import {
 import { useSession } from "../../core/session/session-provider";
 import {
   AppText,
-  BackAction,
-  Button,
   ConfirmDialog,
-  TextField as Field,
+  Icon,
   Notice,
   Screen,
   StatePanel,
   colors,
+  radius,
   space,
+  stitchTokens,
 } from "../../core/ui";
 import { photoBytes } from "../drafts/photo-bytes";
 type Draft = components["schemas"]["UpdateMemberProfile"];
 const key = () => Crypto.randomUUID();
 const goAccount = () =>
   router.canGoBack() ? router.back() : router.replace("/account");
+
+function WineField({
+  label,
+  required,
+  error,
+  hint,
+  ...props
+}: TextInputProps & {
+  label: string;
+  required?: boolean;
+  error?: string;
+  hint?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.wineFieldWrap}>
+      <AppText kind="bold" style={styles.wineFieldLabel}>
+        {label}
+        {required ? " *" : ""}
+      </AppText>
+      <TextInput
+        {...props}
+        placeholderTextColor="rgba(255, 223, 151, 0.45)"
+        selectionColor={stitchTokens.gold}
+        onFocus={(e) => {
+          setFocused(true);
+          props.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          props.onBlur?.(e);
+        }}
+        style={[
+          styles.wineInput,
+          focused && styles.wineInputFocused,
+          error && styles.wineInputError,
+          props.editable === false && styles.wineInputDisabled,
+        ]}
+      />
+      {error ? (
+        <AppText kind="small" style={styles.wineFieldError}>
+          {error}
+        </AppText>
+      ) : hint ? (
+        <AppText kind="small" style={styles.wineFieldHint}>
+          {hint}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function ProfileBackdrop() {
+  return (
+    <Svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 400 860"
+      preserveAspectRatio="xMidYMin slice"
+    >
+      <Defs>
+        <LinearGradient id="paperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <Stop offset="0%" stopColor="#FBF7F0" />
+          <Stop offset="52%" stopColor="#F6EFE3" />
+          <Stop offset="100%" stopColor="#EFE5D5" />
+        </LinearGradient>
+        <LinearGradient id="wineArchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor="#6E0505" />
+          <Stop offset="55%" stopColor="#5C0202" />
+          <Stop offset="100%" stopColor="#3B0000" />
+        </LinearGradient>
+        <RadialGradient id="goldGlowTop" cx="85%" cy="10%" r="45%">
+          <Stop offset="0%" stopColor="#FFDF97" stopOpacity="0.34" />
+          <Stop offset="60%" stopColor="#F4CB67" stopOpacity="0.08" />
+          <Stop offset="100%" stopColor="#5C0202" stopOpacity="0" />
+        </RadialGradient>
+        <RadialGradient id="warmHaloBottom" cx="15%" cy="88%" r="46%">
+          <Stop offset="0%" stopColor="#F4CB67" stopOpacity="0.22" />
+          <Stop offset="65%" stopColor="#FFDF97" stopOpacity="0.08" />
+          <Stop offset="100%" stopColor="#EFE5D5" stopOpacity="0" />
+        </RadialGradient>
+        <RadialGradient id="wineTintBottom" cx="92%" cy="74%" r="40%">
+          <Stop offset="0%" stopColor="#5C0202" stopOpacity="0.07" />
+          <Stop offset="100%" stopColor="#EFE5D5" stopOpacity="0" />
+        </RadialGradient>
+      </Defs>
+
+      {/* Warm fine-paper canvas */}
+      <Rect x="0" y="0" width="400" height="860" fill="url(#paperGrad)" />
+
+      {/* Subtle bottom warm halos */}
+      <Rect x="0" y="0" width="400" height="860" fill="url(#warmHaloBottom)" />
+      <Rect x="0" y="0" width="400" height="860" fill="url(#wineTintBottom)" />
+
+      {/* Sweeping curved wine header backdrop */}
+      <Path
+        d="M0 0 H400 V158 Q200 202 0 158 Z"
+        fill="url(#wineArchGrad)"
+      />
+      <Path
+        d="M0 0 H400 V158 Q200 202 0 158 Z"
+        fill="url(#goldGlowTop)"
+      />
+
+      {/* Delicate golden filigree arcs on the wine header */}
+      <Circle
+        cx="358"
+        cy="34"
+        r="86"
+        fill="none"
+        stroke="#FFDF97"
+        strokeOpacity="0.18"
+        strokeWidth="1.2"
+      />
+      <Circle
+        cx="358"
+        cy="34"
+        r="58"
+        fill="none"
+        stroke="#FFDF97"
+        strokeOpacity="0.14"
+        strokeWidth="1"
+      />
+      <Circle
+        cx="34"
+        cy="132"
+        r="64"
+        fill="none"
+        stroke="#FFDF97"
+        strokeOpacity="0.12"
+        strokeWidth="1"
+      />
+
+      {/* Subtle gold accent border along the curved bottom edge */}
+      <Path
+        d="M0 158 Q200 202 400 158"
+        fill="none"
+        stroke="#FFDF97"
+        strokeOpacity="0.45"
+        strokeWidth="1.5"
+      />
+
+      {/* Decorative watermark rings on lower parchment */}
+      <Circle
+        cx="38"
+        cy="780"
+        r="110"
+        fill="none"
+        stroke="#5C0202"
+        strokeOpacity="0.05"
+        strokeWidth="1"
+      />
+      <Circle
+        cx="38"
+        cy="780"
+        r="76"
+        fill="none"
+        stroke="#B08D2F"
+        strokeOpacity="0.1"
+        strokeWidth="1"
+      />
+    </Svg>
+  );
+}
 
 export function ProfileScreen({ ownerId }: { ownerId: string }) {
   const { client } = useSession(),
@@ -77,6 +258,7 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
     [code, setCode] = useState("");
   const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const [emailError, setEmailError] = useState("");
+  const [activeTab, setActiveTab] = useState<"info" | "email">("info");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [leaveOpen, setLeaveOpen] = useState(false);
   const draft =
@@ -316,15 +498,72 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
       await refresh();
     }, true);
   }
+  const hasPendingEmailFlow = Boolean(
+    profile.data?.pendingEmailChange || pendingEmail || pendingConfirm,
+  );
+  const saveDisabled =
+    busy ||
+    needsRead ||
+    pendingEmail ||
+    pendingConfirm ||
+    pendingPhoto ||
+    pendingDiscard ||
+    (!dirty && !pendingSave);
+  const resetDisabled =
+    busy ||
+    needsRead ||
+    pendingSave ||
+    pendingEmail ||
+    pendingConfirm ||
+    pendingPhoto;
+  const emailReqDisabled =
+    busy ||
+    needsRead ||
+    dirty ||
+    pendingSave ||
+    pendingConfirm ||
+    pendingPhoto;
+  const emailConfirmDisabled =
+    busy ||
+    needsRead ||
+    dirty ||
+    pendingSave ||
+    pendingEmail ||
+    pendingPhoto;
+
   return (
-    <Screen>
+    <Screen background={<ProfileBackdrop />} canvasColor={stitchTokens.creamBg}>
       <Stack.Screen options={{ gestureEnabled: !dirty || pendingSave }} />
-      <BackAction title="Về tài khoản" onPress={leave} />
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Về tài khoản"
+          onPress={leave}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+        >
+          <Icon name="back" size={18} color={stitchTokens.white} />
+          <AppText kind="bold" style={styles.backBtnText}>
+            Về tài khoản
+          </AppText>
+        </Pressable>
+        {profile.data && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tải bản mới"
+            disabled={locked}
+            onPress={() => void perform(refresh)}
+            style={({ pressed }) => [
+              styles.refreshIconBtn,
+              pressed && styles.pressed,
+              locked && styles.disabledChip,
+            ]}
+          >
+            <Icon name="sync" size={16} color={stitchTokens.gold} />
+          </Pressable>
+        )}
+      </View>
+
       <View style={styles.content}>
-        <AppText kind="heading" accessibilityRole="header">
-          Hồ sơ của tôi
-        </AppText>
-        <AppText>Tên, ảnh đại diện và thông tin liên hệ tại Lật lại.</AppText>
         {profile.isPending && <StatePanel loading title="Đang tải hồ sơ…" />}
         {(!profile.data || !draft) && profile.error && (
           <StatePanel
@@ -348,6 +587,7 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
             }}
           />
         )}
+
         {profile.data && draft && (
           <>
             {pendingSave && (
@@ -356,235 +596,414 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
                 đó.
               </Notice>
             )}
-            <View style={styles.avatarRow}>
-              {avatar.data && failedAvatar !== avatar.data.url ? (
-                <Image
-                  source={{ uri: avatar.data.url }}
-                  style={styles.avatar}
-                  accessibilityLabel="Ảnh đại diện của bạn"
-                  onError={() => setFailedAvatar(avatar.data!.url)}
-                />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <AppText kind="heading">
-                    {Array.from(draft.displayName.trim())[0] || "L"}
-                  </AppText>
-                </View>
-              )}
-              <View style={styles.avatarActions}>
-                <Button
-                  secondary
-                  title={
+
+            {/* Compact Wine & Gold Identity Card */}
+            <View style={styles.heroCard}>
+              <View style={styles.heroRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
                     pendingPhoto ? "Thử lại ảnh đang tải" : "Chọn ảnh đại diện"
                   }
                   disabled={locked && !pendingPhoto}
-                  busy={busy}
                   onPress={() => void photo()}
-                />
-                {draft.avatarId && (
-                  <Button
-                    secondary
-                    title="Bỏ ảnh đại diện"
-                    disabled={
-                      busy ||
-                      needsRead ||
-                      pendingSave ||
-                      pendingEmail ||
-                      pendingConfirm ||
-                      pendingPhoto
-                    }
-                    onPress={() => void removeAvatar()}
-                  />
-                )}
-                {(avatar.error || failedAvatar === avatar.data?.url) && (
-                  <Button
-                    secondary
-                    title="Tải lại ảnh đại diện"
-                    onPress={() => {
-                      setFailedAvatar(null);
-                      void avatar.refetch();
-                    }}
-                  />
-                )}
+                  style={({ pressed }) => [
+                    styles.avatarPressable,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  {avatar.data && failedAvatar !== avatar.data.url ? (
+                    <Image
+                      source={{ uri: avatar.data.url }}
+                      style={styles.avatar}
+                      accessibilityLabel="Ảnh đại diện của bạn"
+                      onError={() => setFailedAvatar(avatar.data!.url)}
+                    />
+                  ) : (
+                    <View style={styles.avatarFallback}>
+                      <AppText kind="heading" style={styles.avatarInitial}>
+                        {Array.from(draft.displayName.trim())[0]?.toUpperCase() ||
+                          "L"}
+                      </AppText>
+                    </View>
+                  )}
+                  <View style={styles.cameraBadge}>
+                    <Icon name="camera" size={12} color={stitchTokens.white} />
+                  </View>
+                </Pressable>
+
+                <View style={styles.heroInfo}>
+                  <AppText
+                    kind="card"
+                    numberOfLines={1}
+                    style={styles.heroName}
+                  >
+                    {draft.displayName.trim() || "Bạn đọc Lật lại"}
+                  </AppText>
+                  <AppText
+                    kind="small"
+                    numberOfLines={1}
+                    style={styles.heroEmail}
+                  >
+                    {profile.data.email}
+                  </AppText>
+
+                  <View style={styles.heroActions}>
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={locked && !pendingPhoto}
+                      onPress={() => void photo()}
+                      style={({ pressed }) => [
+                        styles.heroPillBtn,
+                        pressed && styles.pressed,
+                        locked && !pendingPhoto && styles.disabledChip,
+                      ]}
+                    >
+                      <Icon
+                        name="camera"
+                        size={12}
+                        color={stitchTokens.wine}
+                      />
+                      <AppText kind="small" style={styles.heroPillText}>
+                        {pendingPhoto ? "Thử lại ảnh" : "Đổi ảnh"}
+                      </AppText>
+                    </Pressable>
+
+                    {draft.avatarId && (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={resetDisabled}
+                        onPress={() => void removeAvatar()}
+                        style={({ pressed }) => [
+                          styles.heroPillGhost,
+                          pressed && styles.pressed,
+                          resetDisabled && styles.disabledChip,
+                        ]}
+                      >
+                        <Icon
+                          name="trash"
+                          size={12}
+                          color={colors.error}
+                        />
+                        <AppText kind="small" style={styles.heroPillGhostText}>
+                          Bỏ ảnh
+                        </AppText>
+                      </Pressable>
+                    )}
+
+                    {(avatar.error || failedAvatar === avatar.data?.url) && (
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => {
+                          setFailedAvatar(null);
+                          void avatar.refetch();
+                        }}
+                        style={({ pressed }) => [
+                          styles.heroPillGhost,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <AppText kind="small" style={styles.heroPillGhostText}>
+                          Tải lại ảnh
+                        </AppText>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
               </View>
             </View>
-            <AppText kind="small">
-              Ảnh JPEG, PNG hoặc WebP không quá 2 MB. Chỉ đổi ảnh đại diện sau
-              khi lưu hồ sơ.
-            </AppText>
-            <Field
-              label="Tên hiển thị"
-              error={fieldErrors.name}
-              required
-              value={draft.displayName}
-              maxLength={80}
-              editable={!locked}
-              autoComplete="name"
-              onChangeText={(value) =>
-                setDraft({ ...draft, displayName: value })
-              }
-            />
-            <Field
-              label="Số điện thoại liên hệ"
-              error={fieldErrors.phone}
-              hint="Không bắt buộc. Không thay số điện thoại hoặc địa chỉ trên đơn đã tạo."
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              value={draft.contactPhone ?? ""}
-              maxLength={20}
-              editable={!locked}
-              onChangeText={(value) =>
-                setDraft({ ...draft, contactPhone: value || null })
-              }
-            />
-            <Button
-              title={pendingSave ? "Xác minh lần lưu trước" : "Lưu hồ sơ"}
-              busy={busy}
-              disabled={
-                needsRead ||
-                pendingEmail ||
-                pendingConfirm ||
-                pendingPhoto ||
-                pendingDiscard ||
-                (!dirty && !pendingSave)
-              }
-              onPress={() => void save()}
-            />
-            <Button
-              secondary
-              title={
-                pendingDiscard
-                  ? "Xác minh bỏ ảnh đang chờ"
-                  : "Khôi phục bản đang xem"
-              }
-              disabled={
-                busy ||
-                needsRead ||
-                pendingSave ||
-                pendingEmail ||
-                pendingConfirm ||
-                pendingPhoto
-              }
-              onPress={() => void resetDraft()}
-            />
-            <Button
-              secondary
-              title="Tải bản mới"
-              disabled={locked}
-              onPress={() => void perform(refresh)}
-            />
-            <View style={styles.emailSection}>
-              <AppText kind="title" accessibilityRole="header">
-                Email đăng nhập
-              </AppText>
-              <AppText selectable>{profile.data.email}</AppText>
-              <AppText>
-                Email mới chỉ thay địa chỉ hiện tại sau khi xác minh mã 6 số.
-              </AppText>
-              {dirty && (
-                <Notice>Lưu hoặc bỏ thay đổi hồ sơ trước khi đổi email.</Notice>
-              )}
-              {pendingEmail && (
-                <Notice>
-                  {needsPassword
-                    ? "Nhập lại mật khẩu hiện tại để tiếp tục. Email mới và yêu cầu đang chờ được giữ nguyên."
-                    : "Yêu cầu gửi mã trước chưa rõ kết quả. Thử lại sẽ xác minh đúng yêu cầu đó."}
-                </Notice>
-              )}
-              {emailError && !needsPassword && (
-                <Notice tone="error">{emailError}</Notice>
-              )}
-              <Field
-                label="Email mới"
-                value={
-                  pendingEmail
-                    ? (pendingEmailChangeTarget(client) ?? email)
-                    : email
-                }
-                maxLength={254}
-                editable={!locked}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                onChangeText={setEmail}
-              />
-              <Field
-                label="Mật khẩu hiện tại"
-                error={needsPassword ? emailError : undefined}
-                hint={
-                  needsPassword
-                    ? "Nhập lại mật khẩu để tiếp tục đúng yêu cầu đổi email trước."
-                    : undefined
-                }
-                value={password}
-                maxLength={128}
-                editable={!locked || (needsPassword && !busy && !needsRead)}
-                secureTextEntry
-                autoComplete="current-password"
-                onChangeText={setPassword}
-              />
-              <Button
-                secondary
-                title={
-                  pendingEmail
-                    ? "Xác minh yêu cầu gửi mã"
-                    : "Gửi mã đến email mới"
-                }
-                busy={busy}
-                disabled={
-                  needsRead ||
-                  dirty ||
-                  pendingSave ||
-                  pendingConfirm ||
-                  pendingPhoto
-                }
-                onPress={() => void requestEmail()}
-              />
-              {(profile.data.pendingEmailChange || pendingConfirm) && (
-                <>
-                  <AppText>
-                    Mã gửi đến {profile.data.pendingEmailChange?.email}. Hết hạn
-                    lúc{" "}
-                    {profile.data.pendingEmailChange
-                      ? new Date(
-                          profile.data.pendingEmailChange.expiresAt,
-                        ).toLocaleTimeString("vi-VN")
-                      : "chưa cập nhật"}
-                    . Có thể yêu cầu mã mới sau 60 giây.
-                  </AppText>
-                  <Field
-                    label="Mã xác nhận"
-                    value={code}
-                    maxLength={6}
-                    editable={!locked}
-                    keyboardType="number-pad"
-                    autoComplete="one-time-code"
-                    onChangeText={setCode}
-                  />
-                  {pendingConfirm && (
-                    <Notice>
-                      Chưa rõ kết quả xác minh trước. Thử lại cùng mã đã gửi.
-                    </Notice>
-                  )}
-                  <Button
-                    title={
-                      pendingConfirm
-                        ? "Xác minh kết quả trước"
-                        : "Xác minh và đổi email"
-                    }
-                    busy={busy}
-                    disabled={
-                      needsRead ||
-                      dirty ||
-                      pendingSave ||
-                      pendingEmail ||
-                      pendingPhoto
-                    }
-                    onPress={() => void confirmEmail()}
-                  />
-                </>
-              )}
+
+            {/* 2-Tab Segmented Switcher */}
+            <View style={styles.tabBar} accessibilityRole="tablist">
+              <Pressable
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === "info" }}
+                onPress={() => setActiveTab("info")}
+                style={[
+                  styles.tabItem,
+                  activeTab === "info" && styles.tabItemActive,
+                ]}
+              >
+                <Icon
+                  name="person"
+                  size={15}
+                  color={
+                    activeTab === "info" ? stitchTokens.white : colors.muted
+                  }
+                />
+                <AppText
+                  kind="small"
+                  style={[
+                    styles.tabLabel,
+                    activeTab === "info" && styles.tabLabelActive,
+                  ]}
+                >
+                  Thông tin
+                </AppText>
+                {dirty && <View style={styles.tabDot} />}
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === "email" }}
+                onPress={() => setActiveTab("email")}
+                style={[
+                  styles.tabItem,
+                  activeTab === "email" && styles.tabItemActive,
+                ]}
+              >
+                <Icon
+                  name="mail"
+                  size={15}
+                  color={
+                    activeTab === "email" ? stitchTokens.white : colors.muted
+                  }
+                />
+                <AppText
+                  kind="small"
+                  style={[
+                    styles.tabLabel,
+                    activeTab === "email" && styles.tabLabelActive,
+                  ]}
+                >
+                  Email đăng nhập
+                </AppText>
+                {hasPendingEmailFlow && <View style={styles.tabDot} />}
+              </Pressable>
             </View>
+
+            {/* Tab 1: Personal Information */}
+            {activeTab === "info" ? (
+              <View style={styles.card}>
+                <WineField
+                  label="Tên hiển thị"
+                  error={fieldErrors.name}
+                  required
+                  value={draft.displayName}
+                  maxLength={80}
+                  editable={!locked}
+                  autoComplete="name"
+                  onChangeText={(value) =>
+                    setDraft({ ...draft, displayName: value })
+                  }
+                />
+                <WineField
+                  label="Số điện thoại liên hệ"
+                  error={fieldErrors.phone}
+                  hint="Không bắt buộc · Không ảnh hưởng đơn hàng đã tạo."
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  value={draft.contactPhone ?? ""}
+                  maxLength={20}
+                  editable={!locked}
+                  onChangeText={(value) =>
+                    setDraft({ ...draft, contactPhone: value || null })
+                  }
+                />
+
+                <AppText kind="small" style={styles.subtleHint}>
+                  Ảnh đại diện hỗ trợ JPEG, PNG, WebP (tối đa 2 MB) và áp dụng
+                  khi bấm Lưu thay đổi.
+                </AppText>
+
+                <View style={styles.actionStack}>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={saveDisabled}
+                    onPress={() => void save()}
+                    style={({ pressed }) => [
+                      styles.primaryCta,
+                      saveDisabled && styles.primaryCtaDisabled,
+                      pressed && !saveDisabled && styles.pressed,
+                    ]}
+                  >
+                    <AppText
+                      kind="bold"
+                      style={[
+                        styles.primaryCtaText,
+                        saveDisabled && styles.primaryCtaTextDisabled,
+                      ]}
+                    >
+                      {busy
+                        ? "Đang lưu…"
+                        : pendingSave
+                          ? "Xác minh lần lưu trước"
+                          : "Lưu thay đổi"}
+                    </AppText>
+                  </Pressable>
+
+                  {(dirty || pendingDiscard) && (
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={resetDisabled}
+                      onPress={() => void resetDraft()}
+                      style={({ pressed }) => [
+                        styles.ghostCta,
+                        resetDisabled && styles.disabledChip,
+                        pressed && !resetDisabled && styles.pressed,
+                      ]}
+                    >
+                      <AppText kind="small" style={styles.ghostCtaText}>
+                        {pendingDiscard
+                          ? "Xác minh bỏ ảnh đang chờ"
+                          : "Khôi phục bản đang xem"}
+                      </AppText>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            ) : (
+              /* Tab 2: Email & Security */
+              <View style={styles.card}>
+                <View style={styles.currentEmailBox}>
+                  <View style={styles.currentEmailRow}>
+                    <Icon
+                      name="verified"
+                      size={16}
+                      color={stitchTokens.gold}
+                    />
+                    <AppText
+                      kind="bold"
+                      selectable
+                      style={styles.currentEmailValue}
+                    >
+                      {profile.data.email}
+                    </AppText>
+                  </View>
+                  <AppText kind="small" style={styles.currentEmailHint}>
+                    Email mới chỉ thay địa chỉ hiện tại sau khi xác minh mã 6
+                    số.
+                  </AppText>
+                </View>
+
+                {dirty && (
+                  <Notice>
+                    Lưu hoặc bỏ thay đổi ở mục Thông tin trước khi đổi email.
+                  </Notice>
+                )}
+                {pendingEmail && (
+                  <Notice>
+                    {needsPassword
+                      ? "Nhập lại mật khẩu hiện tại để tiếp tục. Email mới và yêu cầu đang chờ được giữ nguyên."
+                      : "Yêu cầu gửi mã trước chưa rõ kết quả. Thử lại sẽ xác minh đúng yêu cầu đó."}
+                  </Notice>
+                )}
+                {emailError && !needsPassword && (
+                  <Notice tone="error">{emailError}</Notice>
+                )}
+
+                <WineField
+                  label="Email mới"
+                  value={
+                    pendingEmail
+                      ? (pendingEmailChangeTarget(client) ?? email)
+                      : email
+                  }
+                  maxLength={254}
+                  editable={!locked}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  onChangeText={setEmail}
+                />
+                <WineField
+                  label="Mật khẩu hiện tại"
+                  error={needsPassword ? emailError : undefined}
+                  hint={
+                    needsPassword
+                      ? "Nhập lại mật khẩu để tiếp tục đúng yêu cầu đổi email trước."
+                      : undefined
+                  }
+                  value={password}
+                  maxLength={128}
+                  editable={!locked || (needsPassword && !busy && !needsRead)}
+                  secureTextEntry
+                  autoComplete="current-password"
+                  onChangeText={setPassword}
+                />
+
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={emailReqDisabled}
+                  onPress={() => void requestEmail()}
+                  style={({ pressed }) => [
+                    styles.primaryCta,
+                    emailReqDisabled && styles.primaryCtaDisabled,
+                    pressed && !emailReqDisabled && styles.pressed,
+                  ]}
+                >
+                  <AppText
+                    kind="bold"
+                    style={[
+                      styles.primaryCtaText,
+                      emailReqDisabled && styles.primaryCtaTextDisabled,
+                    ]}
+                  >
+                    {busy
+                      ? "Đang gửi…"
+                      : pendingEmail
+                        ? "Xác minh yêu cầu gửi mã"
+                        : "Gửi mã đến email mới"}
+                  </AppText>
+                </Pressable>
+
+                {(profile.data.pendingEmailChange || pendingConfirm) && (
+                  <View style={styles.verifyBox}>
+                    <AppText kind="small" style={styles.verifyText}>
+                      Mã xác nhận đã gửi đến{" "}
+                      <AppText kind="bold" style={styles.verifyEmailHighlight}>
+                        {profile.data.pendingEmailChange?.email}
+                      </AppText>
+                      . Hết hạn lúc{" "}
+                      {profile.data.pendingEmailChange
+                        ? new Date(
+                            profile.data.pendingEmailChange.expiresAt,
+                          ).toLocaleTimeString("vi-VN")
+                        : "chưa cập nhật"}
+                      . Có thể yêu cầu mã mới sau 60 giây.
+                    </AppText>
+                    <WineField
+                      label="Mã xác nhận 6 số"
+                      value={code}
+                      maxLength={6}
+                      editable={!locked}
+                      keyboardType="number-pad"
+                      autoComplete="one-time-code"
+                      onChangeText={setCode}
+                    />
+                    {pendingConfirm && (
+                      <Notice>
+                        Chưa rõ kết quả xác minh trước. Thử lại cùng mã đã gửi.
+                      </Notice>
+                    )}
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={emailConfirmDisabled}
+                      onPress={() => void confirmEmail()}
+                      style={({ pressed }) => [
+                        styles.primaryCta,
+                        emailConfirmDisabled && styles.primaryCtaDisabled,
+                        pressed && !emailConfirmDisabled && styles.pressed,
+                      ]}
+                    >
+                      <AppText
+                        kind="bold"
+                        style={[
+                          styles.primaryCtaText,
+                          emailConfirmDisabled && styles.primaryCtaTextDisabled,
+                        ]}
+                      >
+                        {busy
+                          ? "Đang xác minh…"
+                          : pendingConfirm
+                            ? "Xác minh kết quả trước"
+                            : "Xác minh và đổi email"}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            )}
           </>
         )}
       </View>
@@ -602,29 +1021,306 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
     </Screen>
   );
 }
+
 const styles = StyleSheet.create({
-  content: { gap: space.md },
-  avatarRow: {
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.md,
-    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: space.sm,
+    paddingVertical: 4,
   },
-  avatar: { width: 80, height: 80, borderRadius: 40 },
-  avatarFallback: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.surface,
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+    paddingRight: 12,
+  },
+  backBtnText: {
+    color: stitchTokens.white,
+  },
+  refreshIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAlpha40,
+    backgroundColor: stitchTokens.whiteAlpha14,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarActions: { flexGrow: 1, gap: space.sm },
-  emailSection: {
+  disabledChip: {
+    opacity: 0.45,
+  },
+  pressed: {
+    opacity: 0.82,
+  },
+  content: {
     gap: space.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.rule,
-    paddingTop: space.lg,
-    marginTop: space.sm,
+    paddingBottom: space.xxl,
+  },
+  heroCard: {
+    borderRadius: 18,
+    backgroundColor: stitchTokens.whiteSurface,
+    padding: space.lg,
+    borderWidth: 1,
+    borderColor: stitchTokens.gold,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+  },
+  avatarPressable: {
+    position: "relative",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2.5,
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.goldVeryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  avatar: {
+    width: 67,
+    height: 67,
+    borderRadius: 33.5,
+  },
+  avatarFallback: {
+    width: 67,
+    height: 67,
+    borderRadius: 33.5,
+    backgroundColor: stitchTokens.goldVeryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInitial: {
+    color: stitchTokens.wine,
+    fontSize: 26,
+  },
+  cameraBadge: {
+    position: "absolute",
+    right: -3,
+    bottom: -3,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.wine,
+    borderWidth: 2,
+    borderColor: stitchTokens.whiteSurface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  heroName: {
+    color: colors.ink,
+    fontSize: 19,
+  },
+  heroEmail: {
+    color: colors.muted,
+  },
+  heroActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+  },
+  heroPillBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    backgroundColor: stitchTokens.wineAlpha08,
+    borderWidth: 1,
+    borderColor: stitchTokens.wineAlpha20,
+  },
+  heroPillText: {
+    color: stitchTokens.wine,
+    fontWeight: "700",
+  },
+  heroPillGhost: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    backgroundColor: stitchTokens.flashRedBg,
+  },
+  heroPillGhostText: {
+    color: colors.error,
+    fontWeight: "600",
+  },
+  tabBar: {
+    flexDirection: "row",
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    gap: 4,
+  },
+  tabItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 9,
+  },
+  tabItemActive: {
+    backgroundColor: stitchTokens.wine,
+  },
+  tabLabel: {
+    color: colors.muted,
+    fontWeight: "700",
+  },
+  tabLabelActive: {
+    color: stitchTokens.white,
+  },
+  tabDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: stitchTokens.goldAccent,
+  },
+  card: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAlpha40,
+    backgroundColor: stitchTokens.wine,
+    padding: space.lg,
+    gap: space.md,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  wineFieldWrap: {
+    gap: 6,
+  },
+  wineFieldLabel: {
+    color: stitchTokens.gold,
+    fontSize: 14,
+  },
+  wineInput: {
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAlpha40,
+    backgroundColor: "rgba(38, 0, 0, 0.36)",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    color: stitchTokens.goldLight,
+    fontSize: 15,
+    fontFamily: "BeRegular",
+  },
+  wineInputFocused: {
+    borderColor: stitchTokens.gold,
+    borderWidth: 1.5,
+    backgroundColor: "rgba(38, 0, 0, 0.5)",
+  },
+  wineInputError: {
+    borderColor: "#FF9B9B",
+  },
+  wineInputDisabled: {
+    opacity: 0.65,
+  },
+  wineFieldHint: {
+    color: "rgba(255, 223, 151, 0.78)",
+  },
+  wineFieldError: {
+    color: "#FFD1D1",
+  },
+  subtleHint: {
+    color: "rgba(255, 223, 151, 0.75)",
+  },
+  actionStack: {
+    gap: space.sm,
+    marginTop: space.xs,
+  },
+  primaryCta: {
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: space.lg,
+  },
+  primaryCtaDisabled: {
+    backgroundColor: stitchTokens.goldAlpha20,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAlpha40,
+  },
+  primaryCtaText: {
+    color: stitchTokens.wineDark,
+  },
+  primaryCtaTextDisabled: {
+    color: "rgba(255, 223, 151, 0.65)",
+  },
+  ghostCta: {
+    minHeight: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAlpha40,
+    backgroundColor: stitchTokens.whiteAlpha14,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: space.md,
+  },
+  ghostCtaText: {
+    color: stitchTokens.gold,
+    fontWeight: "700",
+  },
+  currentEmailBox: {
+    padding: space.md,
+    borderRadius: 12,
+    backgroundColor: "rgba(38, 0, 0, 0.36)",
+    borderWidth: 1,
+    borderColor: stitchTokens.goldAlpha40,
+    gap: 4,
+  },
+  currentEmailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  currentEmailValue: {
+    color: stitchTokens.gold,
+    flexShrink: 1,
+  },
+  currentEmailHint: {
+    color: "rgba(255, 223, 151, 0.78)",
+  },
+  verifyBox: {
+    padding: space.md,
+    borderRadius: 12,
+    backgroundColor: "rgba(38, 0, 0, 0.42)",
+    borderWidth: 1,
+    borderColor: stitchTokens.gold,
+    gap: space.md,
+    marginTop: space.xs,
+  },
+  verifyText: {
+    color: stitchTokens.goldLight,
+  },
+  verifyEmailHighlight: {
+    color: stitchTokens.gold,
   },
 });

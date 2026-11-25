@@ -1099,7 +1099,12 @@ function SecondChanceBlock({
         {`Người thắng không thanh toán đúng hạn. Bạn có thể mua với mức cao nhất đã trả (${formatVnd(offer.price)}) trước ${until} để nhận sách tại ${pointName}.`}
       </AppText>
 
-      {short > 0 ? <Notice tone="error">{fundsHint(offer.price, available)}</Notice> : null}
+      {short > 0 ? (
+        <View style={{ gap: space.xs }}>
+          <Notice tone="error">{fundsHint(offer.price, available)}</Notice>
+          <Button wine secondary title="Nạp tiền vào ví" onPress={() => router.push("/wallet")} />
+        </View>
+      ) : null}
       {expired ? <Notice tone="warning">Đã hết hạn xác nhận cơ hội mua sách.</Notice> : null}
 
       <View style={styles.stackSm}>
@@ -1210,7 +1215,12 @@ function RegisterBlock({
         </AppText>
       </View>
 
-      {short > 0 ? <Notice tone="error">{fundsHint(deposit, available)}</Notice> : null}
+      {short > 0 ? (
+        <View style={{ gap: space.xs }}>
+          <Notice tone="error">{fundsHint(deposit, available)}</Notice>
+          <Button wine secondary title="Nạp tiền vào ví" onPress={() => router.push("/wallet")} />
+        </View>
+      ) : null}
 
       {registered ? (
         withdrawable ? (
@@ -1310,7 +1320,12 @@ function DutchBlock({
         </AppText>
       </View>
 
-      {short > 0 ? <Notice tone="error">{fundsHint(price, available)}</Notice> : null}
+      {short > 0 ? (
+        <View style={{ gap: space.xs }}>
+          <Notice tone="error">{fundsHint(price, available)}</Notice>
+          <Button wine secondary title="Nạp tiền vào ví" onPress={() => router.push("/wallet")} />
+        </View>
+      ) : null}
 
       <Button
         wine

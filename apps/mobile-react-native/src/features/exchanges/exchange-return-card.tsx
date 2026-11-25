@@ -128,8 +128,8 @@ export function ExchangeReturnAndDemoCard({
       setError(`Vui lòng nhập ${config.fieldLabel?.toLowerCase() ?? "nội dung"} ít nhất 5 ký tự.`);
       return;
     }
-    if (config.field === "trackingCode" && value.trim().length < 3) {
-      setError("Vui lòng nhập mã vận đơn hợp lệ (tối thiểu 3 ký tự).");
+    if (config.field === "trackingCode" && value.trim().length < 5) {
+      setError("Vui lòng nhập mã vận đơn hợp lệ (tối thiểu 5 ký tự).");
       return;
     }
     setBusy(true);

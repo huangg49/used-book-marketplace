@@ -8,6 +8,9 @@ interface BookBottomBarProps {
   onChatPress: () => void;
   onExchangePress: () => void;
   onBuyPress: () => void;
+  onAddToCartPress?: () => void;
+  cartBusy?: boolean;
+  inCart?: boolean;
   isOwner: boolean;
   hasActiveOrder?: boolean;
   activeOrderState?: string;
@@ -23,6 +26,9 @@ export function BookBottomBar({
   onChatPress,
   onExchangePress,
   onBuyPress,
+  onAddToCartPress,
+  cartBusy,
+  inCart,
   isOwner,
   hasActiveOrder,
   activeOrderState,
@@ -49,7 +55,12 @@ export function BookBottomBar({
         <AppText numberOfLines={1} style={styles.priceLabel}>
           {priceLabel}
         </AppText>
-        <AppText numberOfLines={1} style={styles.priceValue}>
+        <AppText
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.78}
+          style={styles.priceValue}
+        >
           {formatVnd(displayPrice)}
         </AppText>
       </View>
@@ -63,6 +74,26 @@ export function BookBottomBar({
             onPress={onChatPress}
           >
             <Icon name="message" size={18} color={stitchTokens.wineDark} />
+          </Pressable>
+        )}
+
+        {canBuy && onAddToCartPress && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={inCart ? "Đã có trong giỏ sách" : "Thêm vào giỏ sách"}
+            disabled={cartBusy}
+            style={({ pressed }) => [
+              styles.chatBtn,
+              inCart && { borderColor: stitchTokens.wineDark, backgroundColor: stitchTokens.roseWarmSurface },
+              (pressed || cartBusy) && styles.pressed,
+            ]}
+            onPress={onAddToCartPress}
+          >
+            <Icon
+              name={inCart ? "check" : "bag"}
+              size={18}
+              color={inCart ? stitchTokens.verifiedGreen : stitchTokens.wineDark}
+            />
           </Pressable>
         )}
 
@@ -125,11 +156,12 @@ export function BookBottomBar({
 
 const styles = StyleSheet.create({
   container: {
-    height: 72,
+    height: 70,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: space.md,
+    paddingHorizontal: 12,
+    gap: 8,
     backgroundColor: stitchTokens.roseWarmSurface,
     borderTopWidth: 1.5,
     borderTopColor: stitchTokens.peachBorder,
@@ -142,17 +174,17 @@ const styles = StyleSheet.create({
   priceColumn: {
     justifyContent: "center",
     gap: 1,
-    flexShrink: 0,
-    marginRight: 6,
+    flex: 1,
+    minWidth: 0,
   },
   priceLabel: {
     fontSize: 10,
     fontWeight: "700",
     color: stitchTokens.wineMid,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   priceValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
     color: stitchTokens.wineDark,
   },
@@ -160,12 +192,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    flexShrink: 1,
-    gap: 6,
+    flexShrink: 0,
+    gap: 5,
   },
   chatBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 38,
     borderRadius: 10,
     backgroundColor: stitchTokens.terracottaSoft,
     borderWidth: 1,
@@ -175,8 +207,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   exchangeBtn: {
-    height: 40,
-    paddingHorizontal: 12,
+    height: 38,
+    paddingHorizontal: 10,
     borderRadius: 10,
     backgroundColor: stitchTokens.terracottaSoft,
     borderWidth: 1,
@@ -186,13 +218,13 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   exchangeBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
     color: stitchTokens.wineDark,
   },
   buyBtn: {
-    height: 40,
-    paddingHorizontal: 16,
+    height: 38,
+    paddingHorizontal: 13,
     borderRadius: 10,
     backgroundColor: stitchTokens.wineDark,
     alignItems: "center",
