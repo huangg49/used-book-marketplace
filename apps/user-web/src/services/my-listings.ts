@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { components } from "@used-books/api-contract";
 import { session } from "./api";
 import { bundleSchema } from "../lib/book-bundle";
 import { createListingActions } from "../lib/listing-actions";
@@ -12,6 +13,15 @@ const mediaReadSchema = z.object({
   width: z.number().int(),
   height: z.number().int(),
 });
+
+type TradeStatus = components["schemas"]["TradeStatus"];
+const tradeStatusSchema = z.enum({
+  Available: "Available",
+  Reserved: "Reserved",
+  Sold: "Sold",
+  Exchanged: "Exchanged",
+  ClosedUnavailable: "ClosedUnavailable",
+} satisfies { [Status in TradeStatus]: Status });
 
 export const myListingSchema = z
   .object({
@@ -32,7 +42,7 @@ export const myListingSchema = z
     state: z.object({
       moderation: z.enum(["Draft", "PendingReview", "Approved", "Rejected"]),
       visibility: z.enum(["Visible", "Hidden", "Removed"]),
-      trade: z.enum(["Available", "Reserved", "Exchanged", "Sold"]),
+      trade: tradeStatusSchema,
     }),
     currentRevision: z
       .object({

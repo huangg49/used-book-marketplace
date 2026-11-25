@@ -22,6 +22,8 @@ export function editApprovedBlock(item: EditableListing): string | null {
   if (visibility === "Removed") return "Bài đã bị gỡ nên không thể sửa.";
   if (trade === "Reserved")
     return "Sách đang có giao dịch, chưa sửa được lúc này.";
+  if (trade === "ClosedUnavailable")
+    return "Bài đăng đã đóng nên không thể sửa.";
   if (trade !== "Available")
     return "Sách đã hoàn tất giao dịch nên không thể sửa.";
   if (moderation === "PendingReview")
@@ -42,6 +44,8 @@ export function editListingBlock(item: EditableListing): string | null {
   if (visibility === "Removed") return "Bài đã bị gỡ nên không thể sửa.";
   if (trade === "Reserved")
     return "Sách đang có giao dịch, chưa sửa được lúc này.";
+  if (trade === "ClosedUnavailable")
+    return "Bài đăng đã đóng nên không thể sửa.";
   if (trade !== "Available")
     return "Sách đã hoàn tất giao dịch nên không thể sửa.";
   if (moderation === "PendingReview")
@@ -96,6 +100,8 @@ export function archiveListingBlock(item: EditableListing): string | null {
     return "Bài đã bị gỡ nên không thể xóa.";
   if (item.state.trade === "Reserved")
     return "Sách đang có giao dịch, chưa thể xóa lúc này.";
+  if (item.state.trade === "ClosedUnavailable")
+    return "Bài đăng đã đóng nên không thể xóa.";
   if (item.state.trade !== "Available")
     return "Sách đã hoàn tất giao dịch nên không thể xóa.";
   return null;

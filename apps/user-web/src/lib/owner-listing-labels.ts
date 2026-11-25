@@ -16,10 +16,14 @@ export const tradeLabels = {
   Reserved: "Đang giữ",
   Sold: "Đã bán",
   Exchanged: "Đã đổi",
-};
+  ClosedUnavailable: "Đã đóng",
+} satisfies Record<MyListing["state"]["trade"], string>;
 export function isPublicOwnerListing(item: MyListing) {
+  const { moderation, visibility, trade } = item.state;
   return (
-    item.state.moderation === "Approved" && item.state.visibility === "Visible"
+    moderation === "Approved" &&
+    visibility === "Visible" &&
+    (trade === "Available" || trade === "Reserved")
   );
 }
 

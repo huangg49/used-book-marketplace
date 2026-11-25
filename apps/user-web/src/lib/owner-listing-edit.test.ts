@@ -65,6 +65,14 @@ describe("editApprovedBlock", () => {
     expect(canEditApproved(item({ trade: "Sold" }))).toBe(false);
     expect(canEditApproved(item({ trade: "Exchanged" }))).toBe(false);
   });
+  it("explains why a closed listing cannot be edited or archived", () => {
+    const closed = item({ trade: "ClosedUnavailable" });
+    expect(editApprovedBlock(closed)).toMatch(/đã đóng/);
+    expect(editListingBlock(closed)).toMatch(/đã đóng/);
+    expect(archiveListingBlock(closed)).toMatch(/đã đóng/);
+    expect(canToggleVisibility(closed)).toBe(false);
+    expect(canArchiveListing(closed)).toBe(false);
+  });
   it("blocks pending, draft and rejected", () => {
     expect(editApprovedBlock(item({ moderation: "PendingReview" }))).toMatch(
       /chờ duyệt/,

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, ArrowRight, ArrowUpRight, Edit, Eye, ImageOff } from "lucide-react";
 import { myListingsQuery, myListingPhotoQuery } from "../../../lib/owner-listing-queries";
+import { tradeLabels } from "../../../lib/owner-listing-labels";
+import { canEditListing } from "../../../lib/owner-listing-edit";
 import { useNearViewport } from "../../../hooks/useNearViewport";
 import { ROUTES, formatVnd } from "../../../lib/routes";
 import { DashboardSectionHeading } from "./DashboardSectionHeading";
@@ -158,6 +160,13 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
             const content = item.currentRevision.content;
             const book = (item.currentRevision as any).book;
             const firstMediaId = content?.mediaIds?.[0];
+            const trade = item.state.trade;
+            const statusLabel =
+              trade !== "Available"
+                ? tradeLabels[trade]
+                : item.state.moderation === "Approved"
+                  ? "Đang mở bán"
+                  : item.state.moderation;
             const modeText =
               content?.mode === "Sale"
                 ? "Bán trực tiếp"
@@ -225,13 +234,13 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
                   <span className="inline-flex items-center gap-1 text-[11px] font-label-sm text-primary uppercase font-semibold">
                     <span
                       className={`w-1.5 h-1.5 rounded-full inline-block ${
-                        item.state.trade === "Available" ? "bg-primary" : "bg-outline"
+                        trade === "Available" ? "bg-primary" : "bg-outline"
                       }`}
                     />
-                    {item.state.moderation === "Approved" ? "Đang mở bán" : item.state.moderation}
+                    {statusLabel}
                   </span>
 
-                  <div className="flex items-center gap-1">
+                  {canEditListing(item) && (
                     <Link
                       to={`${ROUTES.myBooks}?edit=${item.id}`}
                       className="px-2.5 py-1 rounded bg-surface-container-high text-primary font-label-md text-xs hover:bg-surface-dim transition-colors flex items-center gap-1 font-medium"
@@ -239,7 +248,7 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
                       <Edit size={12} />
                       Chỉnh sửa
                     </Link>
-                  </div>
+                  )}
                 </div>
               </div>
             );

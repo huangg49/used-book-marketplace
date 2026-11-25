@@ -62,8 +62,19 @@ describe("account overview and full shelf isolation", () => {
       ).toBe(false);
     },
   );
+  it.each(["Sold", "Exchanged", "ClosedUnavailable"] as const)(
+    "never links an approved %s listing to public detail",
+    (trade) => {
+      expect(
+        isPublicOwnerListing({
+          state: { moderation: "Approved", visibility: "Visible", trade },
+        } as MyListing),
+      ).toBe(false);
+    },
+  );
   it("preserves independent trade and moderation labels", () => {
-    expect(new Set(Object.values(tradeLabels)).size).toBe(4);
+    expect(tradeLabels.ClosedUnavailable).toBe("Đã đóng");
+    expect(new Set(Object.values(tradeLabels)).size).toBe(5);
     expect(moderationLabels.Draft).not.toBe(moderationLabels.PendingReview);
     expect(
       isPublicOwnerListing({

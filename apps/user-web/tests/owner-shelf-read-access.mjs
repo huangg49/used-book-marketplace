@@ -8,7 +8,7 @@ const baseline=process.env.OWNER_SHELF_BASELINE==='1',port=baseline?4261:4262,or
 const server=await preview({configFile:false,root:path.join(root,'apps/user-web'),build:{outDir:path.resolve(root,process.env.OWNER_SHELF_BUILD??'apps/user-web/dist')},preview:{host:'127.0.0.1',port,strictPort:true}});
 const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 const user={id:id(1),displayName:'Bạn đọc QA',email:'reader@example.test',roles:['MEMBER'],status:'ACTIVE'};
-const row=n=>({id:id(n),version:1,channel:'Marketplace',catalogStatus:'Confirmed',state:{moderation:'Approved',visibility:'Visible',trade:'Available'},currentRevision:{id:id(n+1000),content:{title:'Sách chủ kệ QA '+n,author:'Tác giả QA',mode:'Sale',condition:'Good',salePrice:50000,exchangeValue:null,mediaIds:[]}}});
+const row=n=>({id:id(n),version:1,channel:'Marketplace',catalogStatus:'Confirmed',state:{moderation:'Approved',visibility:'Visible',trade:n===101&&!baseline?'ClosedUnavailable':'Available'},currentRevision:{id:id(n+1000),content:{title:'Sách chủ kệ QA '+n,author:'Tác giả QA',mode:'Sale',condition:'Good',salePrice:50000,exchangeValue:null,mediaIds:[]}}});
 const checks=[];let browser;
 try{
  browser=await chromium.launch();
@@ -34,6 +34,17 @@ try{
   await page.waitForFunction(()=>!document.querySelector('[data-paper-storm]'),undefined,{timeout:15000});
   if(mode!=='initial-cursor'){
    await expect(cards).toHaveCount(2);if(mode==='cached-cursor'){await pager.getByRole('button',{name:'Đến trang tiếp theo',exact:true}).click();await expect(cards).toHaveCount(1);}
+   if(!baseline&&mode==='cached-root'&&failure===503){
+    const closed=cards.filter({hasText:'Sách chủ kệ QA 101'});
+    await expect(closed.getByText('Đã đóng',{exact:true})).toBeVisible();
+    await expect(closed.getByText('Chưa công khai',{exact:true})).toBeVisible();
+    await expect(closed.getByRole('link')).toHaveCount(0);
+    await page.getByRole('button',{name:'Lưới (Grid)',exact:true}).click();
+    await expect(closed.getByText('Đã đóng',{exact:true})).toBeVisible();
+    await expect(closed.getByRole('link')).toHaveCount(0);
+    await expect(cards.filter({hasText:'Sách chủ kệ QA 100'}).getByRole('heading').getByRole('link')).toBeVisible();
+    await page.getByRole('button',{name:'Danh sách',exact:true}).click();
+   }
    status=failure;await page.clock.setFixedTime(new Date(Date.now()+20000));await page.evaluate(()=>window.dispatchEvent(new Event('visibilitychange')));
   }
   await expect(results.getByRole('alert')).toBeVisible();await expect(cards).toHaveCount(0);
