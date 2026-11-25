@@ -43,6 +43,7 @@ import { dateText, money } from "../../core/format";
 import { errorText } from "../../core/errors";
 import { canReview, session } from "../../core/session";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { PaperSelect } from "../../core/PaperSelect";
 import { EmptyArt } from "../../core/EmptyArt";
 import { ListFeedback } from "../../core/list-feedback";
 import { useListMotion } from "../../core/task-motion";
@@ -775,30 +776,25 @@ function OperationsReturnActions({
           {!demo &&
             ((!verifying && actions.length > 0) ||
               (pending && selected !== "VerifyOutboundDelivery")) && (
-              <label>
-                Thao tác với hồ sơ
-                <select
-                  value={selected ?? ""}
-                  disabled={pending}
-                  onChange={(e) => {
-                    const value = actions.find(
-                      (action) => action === e.target.value,
-                    );
-                    setSelected(value);
-                    setNote("");
-                    setEvidenceId("");
-                  }}
-                >
-                  <option value="">Chọn thao tác</option>
-                  {(pending && selected ? [selected] : actions).map(
-                    (action) => (
-                      <option key={action} value={action}>
-                        {actionText[action]?.label}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </label>
+              <PaperSelect
+                label="Thao tác với hồ sơ"
+                placeholder="Chọn thao tác"
+                value={selected ?? ""}
+                disabled={pending}
+                options={(pending && selected ? [selected] : actions).map(
+                  (action) => ({
+                    value: action,
+                    label: actionText[action]?.label ?? action,
+                    hint: actionText[action]?.effect,
+                  }),
+                )}
+                onChange={(nextValue) => {
+                  const value = actions.find((action) => action === nextValue);
+                  setSelected(value);
+                  setNote("");
+                  setEvidenceId("");
+                }}
+              />
             )}
           {active && (pending || actions.includes(selected!)) && (
             <ActionPanel
@@ -809,48 +805,58 @@ function OperationsReturnActions({
               fields={(locked) =>
                 assigned &&
                 selected !== "Settle" && (
-                  <>
-                    <label>
-                      {selected === "VerifyOutboundDelivery"
-                        ? "Căn cứ xác minh bàn giao"
-                        : "Căn cứ hoặc yêu cầu gửi hai bên"}
+                  <div className={styles.decisionFields}>
+                    <label className={styles.fieldGroup}>
+                      <span className={styles.fieldLabelRow}>
+                        <span>
+                          {selected === "VerifyOutboundDelivery"
+                            ? "Căn cứ xác minh bàn giao"
+                            : "Căn cứ hoặc yêu cầu gửi hai bên"}
+                        </span>
+                        <span
+                          className={
+                            note.trim().length >= 5
+                              ? styles.charCountOk
+                              : styles.charCount
+                          }
+                        >
+                          {note.trim().length}/5+ ký tự
+                        </span>
+                      </span>
                       <textarea
                         value={note}
                         disabled={locked}
                         minLength={5}
                         maxLength={500}
+                        rows={3}
+                        placeholder="Nhập căn cứ đối chiếu hoặc yêu cầu cụ thể gửi tới hai bên..."
                         onChange={(e) => setNote(e.target.value)}
                       />
                     </label>
                     {useEvidence && (
-                      <label>
-                        Tệp bằng chứng đã đối chiếu
-                        <select
+                      <div className={styles.fieldGroup}>
+                        <PaperSelect
+                          label="Tệp bằng chứng đã đối chiếu"
+                          placeholder="Chọn tệp trong hồ sơ"
                           value={evidenceId}
                           disabled={locked || evidence.isError}
-                          onChange={(e) => setEvidenceId(e.target.value)}
-                        >
-                          <option value="">Chọn tệp trong hồ sơ</option>
-                          {evidence.data?.items
-                            .filter((item) => item.status === "Ready")
-                            .map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.fileName}
-                              </option>
-                            ))}
-                        </select>
+                          emptyText="Chưa có tệp tải xong trong hồ sơ."
+                          options={(evidence.data?.items ?? [])
+                            .filter((entry) => entry.status === "Ready")
+                            .map((entry) => ({
+                              value: entry.id,
+                              label: entry.fileName,
+                            }))}
+                          onChange={(nextId) => setEvidenceId(nextId)}
+                        />
                         {evidence.isError && (
-                          <span role="alert">
+                          <span className={styles.fieldAlert} role="alert">
                             Chưa tải được tệp. Hãy tải lại hồ sơ.
                           </span>
                         )}
-                        {evidence.isSuccess &&
-                          !evidence.data.items.some(
-                            (entry) => entry.status === "Ready",
-                          ) && <span>Chưa có tệp tải xong trong hồ sơ.</span>}
-                      </label>
+                      </div>
                     )}
-                  </>
+                  </div>
                 )
               }
               dirty={note.length > 0 || evidenceId !== ""}
@@ -1224,7 +1230,7 @@ function InspectionDisputeActions({
         : `Xác nhận yêu cầu trả sách cho ${recipientName}?`,
       bookDisposition: compForRecipient.isPartial
         ? `Hai bên giữ sách đã nhận. Bên vi phạm (${initiatorName}) bồi thường thiệt hại ${money(compForRecipient.applied)} cho bên bị hại (${recipientName}) để bù đắp chênh lệch. Giao dịch đóng ở trạng thái Hoàn tất.`
-        : `${initiatorName} phải gửi trả sách của ${recipientName}. Hai bài tiếp tục được giữ cho đến khi có kết quả trả sách hoặc quyết toán bồi thường.`,
+        : `${initiatorName} phải gửi trả sách của ${recipientName} (luồng trả sách 1 chiều về bên bị hại). Khi trả sách nguyên vẹn, ${initiatorName} vẫn được hoàn đủ 100% tiền đã khóa; chỉ khấu trừ bồi thường nếu không trả hoặc sách hư hại.`,
       party1: {
         name: recipientName,
         role: compForRecipient.isPartial
@@ -1285,7 +1291,7 @@ function InspectionDisputeActions({
         : `Xác nhận yêu cầu trả sách cho ${initiatorName}?`,
       bookDisposition: compForInitiator.isPartial
         ? `Hai bên giữ sách đã nhận. Bên vi phạm (${recipientName}) bồi thường thiệt hại ${money(compForInitiator.applied)} cho bên bị hại (${initiatorName}) để bù đắp chênh lệch. Giao dịch đóng ở trạng thái Hoàn tất.`
-        : `${recipientName} phải gửi trả sách của ${initiatorName}. Hai bài tiếp tục được giữ cho đến khi có kết quả trả sách hoặc quyết toán bồi thường.`,
+        : `${recipientName} phải gửi trả sách của ${initiatorName} (luồng trả sách 1 chiều về bên bị hại). Khi trả sách nguyên vẹn, ${recipientName} vẫn được hoàn đủ 100% tiền đã khóa; chỉ khấu trừ bồi thường nếu không trả hoặc sách hư hại.`,
       party1: {
         name: initiatorName,
         role: compForInitiator.isPartial
@@ -1358,27 +1364,32 @@ function InspectionDisputeActions({
           title={active.label}
           intro={active.ruling}
           fields={(locked) => (
-            <>
-              <label>
-                Phương án phán quyết
-                <select
-                  value={decision}
-                  disabled={locked}
-                  onChange={(e) =>
-                    setDecision(e.target.value as ResolutionDecision)
-                  }
-                >
-                  <option value="CompensateRecipient">
-                    {decisionMeta.CompensateRecipient.label}
-                  </option>
-                  <option value="CompleteExchange">
-                    {decisionMeta.CompleteExchange.label}
-                  </option>
-                  <option value="CompensateInitiator">
-                    {decisionMeta.CompensateInitiator.label}
-                  </option>
-                </select>
-              </label>
+            <div className={styles.decisionFields}>
+              <PaperSelect
+                label="Phương án phán quyết"
+                value={decision}
+                disabled={locked}
+                options={[
+                  {
+                    value: "CompensateRecipient",
+                    label: decisionMeta.CompensateRecipient.label,
+                    hint: decisionMeta.CompensateRecipient.ruling,
+                  },
+                  {
+                    value: "CompleteExchange",
+                    label: decisionMeta.CompleteExchange.label,
+                    hint: decisionMeta.CompleteExchange.ruling,
+                  },
+                  {
+                    value: "CompensateInitiator",
+                    label: decisionMeta.CompensateInitiator.label,
+                    hint: decisionMeta.CompensateInitiator.ruling,
+                  },
+                ]}
+                onChange={(nextValue) =>
+                  setDecision(nextValue as ResolutionDecision)
+                }
+              />
 
               {bothReceived && isCompensate && baseComp.maxDamage > 0 && (
                 <div className={styles.damageBox}>
@@ -1426,114 +1437,128 @@ function InspectionDisputeActions({
                   <div className={styles.damageInputRow}>
                     <label>
                       Số tiền khấu trừ (tối đa {money(baseComp.maxDamage)})
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        max={baseComp.maxDamage}
-                        step={1000}
-                        disabled={locked}
-                        value={damageInput}
-                        onChange={(e) => setDamageInput(e.target.value)}
-                      />
+                      <div className={styles.currencyInputWrap}>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={baseComp.maxDamage}
+                          step={1000}
+                          disabled={locked}
+                          value={damageInput}
+                          onChange={(e) => setDamageInput(e.target.value)}
+                        />
+                        <span className={styles.currencySuffix} aria-hidden="true">
+                          đ
+                        </span>
+                      </div>
                     </label>
                   </div>
 
                   {!damageValid ? (
-                    <p className={styles.damageHint} role="alert">
+                    <p className={styles.damageHintAlert} role="alert">
                       Nhập số tiền nguyên từ 1đ đến {money(baseComp.maxDamage)}.
                     </p>
                   ) : (
                     <p className={styles.damageHint}>
                       {currentComp.isPartial
                         ? `Khấu trừ ${money(parsedDamage)} dưới mức tối đa (${money(baseComp.maxDamage)}): hai bên giữ sách đã nhận, giao dịch đóng ở trạng thái Hoàn tất.`
-                        : "Mức tối đa mở quy trình trả sách. Nếu quá hạn chưa trả, Admin có thể đối chiếu bằng chứng để quyết định bồi thường."}
+                        : "Mức tối đa mở quy trình trả sách 1 chiều về cho bên bị hại (chỉ nên dùng khi sách lỗi nặng / không thể đọc; bên trả lại sách nguyên vẹn vẫn được hoàn đủ 100% tiền đã khóa). Nếu sách chỉ lỗi nhẹ và vẫn đọc tốt, hãy chọn mức khấu trừ nhỏ hơn để hai bên giữ sách."}
                     </p>
                   )}
                 </div>
               )}
 
-              <div className={styles.settlementCard}>
-                <div style={{
-                  padding: "0.75rem 0.95rem",
-                  marginBottom: "0.85rem",
-                  borderRadius: "8px",
-                  background: "#fdfbf7",
-                  border: "1px solid #d9cbbd",
-                  fontSize: "0.875rem",
-                  lineHeight: "1.5"
-                }}>
-                  <div style={{ fontWeight: 700, color: "var(--shop-wine)", display: "flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.3rem" }}>
-                    <BookOpen size={16} aria-hidden="true" /> Xử lý sách vật lý
-                  </div>
-                  <p style={{ margin: 0, color: "var(--shop-ink)" }}>
-                    {active.bookDisposition}
-                  </p>
+              <div className={styles.bookDispositionBox}>
+                <div className={styles.bookDispositionHead}>
+                  <BookOpen size={15} aria-hidden="true" />
+                  <span>Xử lý sách vật lý</span>
                 </div>
-
-                {startsReturn ? (
-                  <p className={styles.muted}>Đang giữ {money(totalDeposit(item))} trong ký quỹ đến khi xử lý xong.</p>
-                ) : <>
-                <div className={styles.settlementHeader}>
-                  <span>Dòng tiền sau phán quyết</span>
-                  <span>Sổ cái</span>
-                </div>
-                <div className={styles.settlementPartyBlock}>
-                  <div className={styles.settlementPartyRow}>
-                    <div className={styles.settlementPartyName}>
-                      <span>{active.party1.name}</span>
-                      <span className={styles.settlementPartyRole}>
-                        ({active.party1.role})
-                      </span>
-                    </div>
-                    <div
-                      className={
-                        active.party1.isPositive
-                          ? styles.settlementAmountPositive
-                          : styles.settlementAmountNegative
-                      }
-                    >
-                      {active.party1.amount}
-                    </div>
-                  </div>
-                  <div className={styles.settlementPartyDetail}>
-                    {active.party1.detail}
-                  </div>
-                </div>
-
-                <hr className={styles.settlementDivider} />
-
-                <div className={styles.settlementPartyBlock}>
-                  <div className={styles.settlementPartyRow}>
-                    <div className={styles.settlementPartyName}>
-                      <span>{active.party2.name}</span>
-                      <span className={styles.settlementPartyRole}>
-                        ({active.party2.role})
-                      </span>
-                    </div>
-                    <div
-                      className={
-                        active.party2.isPositive
-                          ? styles.settlementAmountPositive
-                          : styles.settlementAmountNeutral
-                      }
-                    >
-                      {active.party2.amount}
-                    </div>
-                  </div>
-                  <div className={styles.settlementPartyDetail}>
-                    {active.party2.detail}
-                  </div>
-                </div>
-
-                <div className={styles.settlementFooter}>
-                  <span>{active.footerText}</span>
-                </div>
-                </>}
+                <p className={styles.bookDispositionText}>
+                  {active.bookDisposition}
+                </p>
               </div>
 
-              <label>
-                Lý do phán quyết
+              {startsReturn ? (
+                <div className={styles.escrowHoldBanner}>
+                  <Wallet size={15} aria-hidden="true" />
+                  <span>
+                    Đang giữ <strong>{money(totalDeposit(item))}</strong> trong ký quỹ đến khi xử lý xong.
+                  </span>
+                </div>
+              ) : (
+                <div className={styles.settlementCard}>
+                  <div className={styles.settlementHeader}>
+                    <span>Dòng tiền sau phán quyết</span>
+                    <span>Sổ cái</span>
+                  </div>
+                  <div className={styles.settlementPartyBlock}>
+                    <div className={styles.settlementPartyRow}>
+                      <div className={styles.settlementPartyName}>
+                        <span>{active.party1.name}</span>
+                        <span className={styles.settlementPartyRole}>
+                          ({active.party1.role})
+                        </span>
+                      </div>
+                      <div
+                        className={
+                          active.party1.isPositive
+                            ? styles.settlementAmountPositive
+                            : styles.settlementAmountNegative
+                        }
+                      >
+                        {active.party1.amount}
+                      </div>
+                    </div>
+                    <div className={styles.settlementPartyDetail}>
+                      {active.party1.detail}
+                    </div>
+                  </div>
+
+                  <hr className={styles.settlementDivider} />
+
+                  <div className={styles.settlementPartyBlock}>
+                    <div className={styles.settlementPartyRow}>
+                      <div className={styles.settlementPartyName}>
+                        <span>{active.party2.name}</span>
+                        <span className={styles.settlementPartyRole}>
+                          ({active.party2.role})
+                        </span>
+                      </div>
+                      <div
+                        className={
+                          active.party2.isPositive
+                            ? styles.settlementAmountPositive
+                            : styles.settlementAmountNeutral
+                        }
+                      >
+                        {active.party2.amount}
+                      </div>
+                    </div>
+                    <div className={styles.settlementPartyDetail}>
+                      {active.party2.detail}
+                    </div>
+                  </div>
+
+                  <div className={styles.settlementFooter}>
+                    <span>{active.footerText}</span>
+                  </div>
+                </div>
+              )}
+
+              <label className={styles.fieldGroup}>
+                <span className={styles.fieldLabelRow}>
+                  <span>Lý do phán quyết</span>
+                  <span
+                    className={
+                      note.trim().length >= 10
+                        ? styles.charCountOk
+                        : styles.charCount
+                    }
+                  >
+                    {note.trim().length}/10+ ký tự
+                  </span>
+                </span>
                 <textarea
                   value={note}
                   disabled={locked}
@@ -1544,7 +1569,7 @@ function InspectionDisputeActions({
                   onChange={(e) => setNote(e.target.value)}
                 />
               </label>
-            </>
+            </div>
           )}
           dirty={note.trim().length > 0}
           validate={() => note.trim().length >= 10 && damageValid}
@@ -1662,7 +1687,8 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
         "/operations/exchanges/" + id + "/dispute",
         exchangeDisputeResolution,
       ),
-    refetchInterval: 15000,
+    refetchInterval: 6_000,
+    refetchIntervalInBackground: false,
   });
   const item =
     !result.isError && result.data?.id === id ? result.data : undefined;

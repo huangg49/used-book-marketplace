@@ -17516,6 +17516,8 @@ components:
             - AuctionPaid
             - OrderBuyNowPaid
             - OrderSaleSettled
+            - OrderCreatedAwaitingPayment
+            - PurchaseQuoteReady
             - ExchangeProposed
             - ExchangeAccepted
             - ExchangeFunded
@@ -17530,7 +17532,7 @@ components:
             - ReviewModerated
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction, Exchange, Order, SupportCase, TransactionReview, Withdrawal] }
+        targetType: { type: string, enum: [Auction, Exchange, Order, PurchaseConversation, SupportCase, TransactionReview, Withdrawal] }
         targetId:
           type: string
           format: uuid

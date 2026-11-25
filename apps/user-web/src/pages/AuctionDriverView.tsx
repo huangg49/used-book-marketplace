@@ -117,7 +117,7 @@ function AuctionDriverSession({
   const tracking = useQuery({
     queryKey: ['point-order-delivery-tracking', ownerId, code],
     queryFn: () => getPointDeliveryTracking(code),
-    enabled: !!ownerId,
+    enabled: !!ownerId && !!code,
     staleTime: 0,
     refetchInterval: (query) => query.state.data?.status === 'InTransit' ? 10_000 : false,
   })
@@ -201,12 +201,13 @@ function AuctionDriverSession({
 
   return (
     <DriverWorkspace
-      subtitle={demoDriver ? 'Mô phỏng bưu tá · Đấu giá' : shipment?.viewer === 'Operator' ? 'Điều phối bưu tá · Đấu giá' : 'Theo dõi vận đơn'}
+      mode="auction"
+      subtitle={demoDriver ? 'Mô phỏng bưu tá · Đấu giá' : shipment?.viewer === 'Operator' ? 'Điều phối bưu tá · Đấu giá' : 'Theo dõi vận đơn · Đấu giá'}
       trackingCode={code}
       searchLocked={busy || !!pending || !!demoPending}
-      refresh={ownerId ? { loading: tracking.isFetching, disabled: busy, run: () => void tracking.refetch() } : undefined}
+      refresh={ownerId && code ? { loading: tracking.isFetching, disabled: busy, run: () => void tracking.refetch() } : undefined}
       onSearch={(value) => {
-          if (value.toUpperCase() === code) { if (ownerId) void tracking.refetch() }
+          if (value.toUpperCase() === code) { if (ownerId && code) void tracking.refetch() }
           else onSearch(value)
       }}
     >
@@ -214,8 +215,13 @@ function AuctionDriverSession({
           <section className={styles.auctionShipment}>
             <h2>Đăng nhập để xem vận đơn</h2>
             <p>Vận đơn đấu giá chỉ hiển thị cho người nhận hoặc người vận hành mô phỏng được cấp quyền.</p>
-            <Link className={styles.auctionAction} to={`${ROUTES.login}?returnUrl=${encodeURIComponent(ROUTES.driver(code, demoMode))}`}>Đăng nhập</Link>
+            <Link className={styles.auctionAction} to={`${ROUTES.login}?returnUrl=${encodeURIComponent(code ? ROUTES.driver(code, demoMode) : '/driver?kind=auction')}`}>Đăng nhập</Link>
           </section>
+        ) : !code ? (
+          <div className={styles.emptyBox}>
+            <p className={styles.emptyTitle}>Tra cứu vận đơn đấu giá</p>
+            <p className={styles.emptyDesc}>Nhập mã vận đơn đấu giá (dạng LL-...) vào ô tìm kiếm phía trên hoặc mở trực tiếp từ trang đơn thắng đấu giá.</p>
+          </div>
         ) : tracking.isError ? (
           <section className={styles.auctionShipment} role="alert">
             <h2>{tracking.error instanceof ApiError && [403, 404].includes(tracking.error.status)

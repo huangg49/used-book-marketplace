@@ -332,22 +332,20 @@ export function ChatMessagesPanel({
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
     >
-      {/* 1. Header đối tác */}
-      <View style={styles.partnerHeader}>
-        <View style={styles.avatarCircle}>
-          <AppText style={styles.avatarText}>
-            {other.displayName.slice(0, 1).toUpperCase()}
-          </AppText>
-        </View>
-
-        <View style={styles.partnerInfo}>
-          <AppText numberOfLines={1} style={styles.partnerName}>
+      {/* 1. Thanh ngữ cảnh đối tác (gọn nhẹ, không tạo tầng header nặng) */}
+      <View style={styles.partnerStrip}>
+        <View style={styles.partnerStripLeft}>
+          <View style={styles.avatarDot}>
+            <AppText style={styles.avatarDotText}>
+              {other.displayName.slice(0, 1).toUpperCase()}
+            </AppText>
+          </View>
+          <AppText numberOfLines={1} style={styles.partnerStripName}>
             {other.displayName}
           </AppText>
-          <AppText numberOfLines={1} style={styles.partnerRole}>
-            {isBuyer
-              ? "Người bán · Bạn đang hỏi mua"
-              : "Người mua · Bạn đang bán sách"}
+          <AppText style={styles.partnerStripSep}>·</AppText>
+          <AppText numberOfLines={1} style={styles.partnerStripRole}>
+            {isBuyer ? "Người bán" : "Người mua"}
           </AppText>
         </View>
 
@@ -374,27 +372,29 @@ export function ChatMessagesPanel({
 
       {/* 1.1 Thông báo lỗi nếu có */}
       {termsActionError && (
-        <View style={{ marginHorizontal: space.md, marginTop: space.xs }}>
+        <View style={{ marginHorizontal: space.lg, marginBottom: space.xs }}>
           <Notice tone="error">{termsActionError}</Notice>
         </View>
       )}
 
-      {/* 1.2 Banner Thỏa thuận giá ghim trực tiếp trên Chat */}
+      {/* 1.2 Thanh hành động thỏa thuận ghim gọn trên Chat */}
       {room.terms?.pendingProposal && room.terms.pendingProposal.kind === "Price" ? (
         <View style={styles.pinnedBanner}>
           {room.terms.pendingProposal.proposedById !== currentUserId ? (
-            <View style={styles.pendingProposalBox}>
-              <View style={styles.proposalHeaderRow}>
-                <Icon name="tag" size={16} color={stitchTokens.wineDark} />
-                <AppText style={styles.proposalTitle}>
-                  {other.displayName} đề xuất đổi giá thành{" "}
-                  <AppText style={styles.priceHighlight}>
-                    {(room.terms.pendingProposal.amount ?? 0).toLocaleString("vi-VN")} ₫
+            <View style={[styles.pinnedCard, styles.pinnedCardWine]}>
+              <View style={styles.pinnedTopRow}>
+                <View style={styles.pinnedBadgeWine}>
+                  <Icon name="tag" size={12} color={stitchTokens.wineDark} />
+                  <AppText style={styles.pinnedBadgeTextWine}>
+                    Đề nghị giá mới
                   </AppText>
+                </View>
+                <AppText style={styles.pinnedPrice}>
+                  {(room.terms.pendingProposal.amount ?? 0).toLocaleString("vi-VN")} ₫
                 </AppText>
               </View>
-              <AppText style={styles.proposalDesc}>
-                Bạn có đồng ý chốt mức giá này để tiến hành tạo đơn hàng và thanh toán không?
+              <AppText style={styles.pinnedSub}>
+                {other.displayName} đề xuất chốt mức giá này. Bạn có đồng ý không?
               </AppText>
               <View style={styles.proposalActionRow}>
                 <View style={{ flex: 1 }}>
@@ -407,7 +407,7 @@ export function ChatMessagesPanel({
                     }
                   />
                 </View>
-                <View style={{ flex: 1.2 }}>
+                <View style={{ flex: 1.25 }}>
                   <Button
                     title="Đồng ý giá này"
                     wine
@@ -420,86 +420,97 @@ export function ChatMessagesPanel({
               </View>
             </View>
           ) : (
-            <View style={styles.myPendingProposalBox}>
-              <Icon name="clock" size={16} color={stitchTokens.wineDark} />
-              <AppText style={styles.myPendingProposalText}>
-                Bạn đã đề xuất đổi giá thành{" "}
+            <View style={[styles.pinnedSlimCard, styles.pinnedCardAmber]}>
+              <Icon name="clock" size={15} color={stitchTokens.orangeDeep} />
+              <AppText style={styles.pinnedSlimText}>
+                Bạn đã đề xuất{" "}
                 <AppText style={styles.priceHighlight}>
                   {(room.terms.pendingProposal.amount ?? 0).toLocaleString("vi-VN")} ₫
                 </AppText>
-                . Đang chờ {other.displayName} xác nhận…
+                {" · "}Đang chờ {other.displayName} phản hồi.
               </AppText>
             </View>
           )}
         </View>
       ) : room.orderId ? (
         <View style={styles.pinnedBanner}>
-          <View style={styles.orderReadyBox}>
-            <View style={styles.orderReadyRow}>
-              <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
-              <AppText style={styles.orderReadyTitle}>
-                Đơn hàng #{room.orderId.slice(0, 8)} đã được tạo
-                {room.terms?.agreedPrice ? ` (${room.terms.agreedPrice.toLocaleString("vi-VN")} ₫)` : ""}
-              </AppText>
-            </View>
-            {isBuyer ? (
-              <View style={{ marginTop: 6 }}>
-                <AppText style={styles.orderReadySub}>
-                  Hãy bấm thanh toán ngay bằng số dư ví để người bán bắt đầu giao sách.
-                </AppText>
-                <View style={{ marginTop: 8 }}>
-                  <Button
-                    title="Thanh toán đơn hàng ngay (Ví)"
-                    wine
-                    busy={termsBusy}
-                    onPress={handlePayOrder}
-                  />
+          <View style={[styles.pinnedCard, styles.pinnedCardGreen]}>
+            <View style={styles.pinnedCompactRow}>
+              <View style={styles.pinnedCompactInfo}>
+                <View style={styles.pinnedInlineHeader}>
+                  <Icon name="check" size={13} color={stitchTokens.likeNewGreen} />
+                  <AppText numberOfLines={1} style={styles.pinnedTitleGreen}>
+                    Đơn #{room.orderId.slice(0, 8).toUpperCase()}
+                    {room.terms?.agreedPrice
+                      ? ` · ${room.terms.agreedPrice.toLocaleString("vi-VN")} ₫`
+                      : ""}
+                  </AppText>
                 </View>
+                <AppText style={styles.pinnedSub}>
+                  {isBuyer
+                    ? "Thanh toán qua Ví để người bán bắt đầu giao sách."
+                    : "Đang chờ người mua thanh toán để kích hoạt giao nhận."}
+                </AppText>
               </View>
-            ) : (
-              <AppText style={styles.orderReadySub}>
-                Đang chờ người mua thanh toán từ số dư ví để kích hoạt đóng gói và vận chuyển.
-              </AppText>
-            )}
+              {isBuyer ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Thanh toán đơn hàng ngay"
+                  disabled={termsBusy}
+                  onPress={handlePayOrder}
+                  style={({ pressed }) => [
+                    styles.compactWineCta,
+                    (pressed || termsBusy) && styles.compactCtaPressed,
+                  ]}
+                >
+                  <AppText style={styles.compactWineCtaText}>
+                    {termsBusy ? "Đang xử lý…" : "Thanh toán"}
+                  </AppText>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         </View>
       ) : room.terms?.agreedPrice ? (
         <View style={styles.pinnedBanner}>
-          <View style={styles.agreedPriceBox}>
-            <View style={styles.agreedHeaderRow}>
-              <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
-              <AppText style={styles.agreedTitle}>
-                Hai bên đã chốt giá:{" "}
-                <AppText style={styles.priceHighlight}>
-                  {room.terms.agreedPrice.toLocaleString("vi-VN")} ₫
+          <View style={[styles.pinnedCard, styles.pinnedCardGreen]}>
+            <View style={styles.pinnedCompactRow}>
+              <View style={styles.pinnedCompactInfo}>
+                <View style={styles.pinnedInlineHeader}>
+                  <Icon name="check" size={13} color={stitchTokens.likeNewGreen} />
+                  <AppText numberOfLines={1} style={styles.pinnedTitleGreen}>
+                    Đã chốt giá {room.terms.agreedPrice.toLocaleString("vi-VN")} ₫
+                  </AppText>
+                </View>
+                <AppText style={styles.pinnedSub}>
+                  {onOpenCreateOrder
+                    ? "Sẵn sàng tạo đơn giữ sách để người mua thanh toán."
+                    : isBuyer
+                      ? "Đang chờ người bán tạo đơn hàng cho bạn."
+                      : "Chờ người mua gửi địa chỉ & báo giá vận chuyển."}
                 </AppText>
-              </AppText>
-            </View>
-            {onOpenCreateOrder ? (
-              <View style={{ marginTop: 6 }}>
-                <AppText style={styles.agreedSub}>
-                  Người mua đã đồng ý mức giá này. Hãy bấm tạo đơn hàng giữ sách để người mua tiến hành thanh toán.
-                </AppText>
-                <View style={{ marginTop: 8 }}>
-                  <Button
-                    title="Tạo đơn hàng giữ sách ngay"
-                    wine
-                    busy={termsBusy}
-                    onPress={() => onOpenCreateOrder((price) => {
+              </View>
+              {onOpenCreateOrder ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Tạo đơn hàng giữ sách ngay"
+                  disabled={termsBusy}
+                  onPress={() =>
+                    onOpenCreateOrder((price) => {
                       sendAutoChatMessage(
                         `Đơn hàng đã được tạo theo giá chốt ${price.toLocaleString("vi-VN")} ₫. Bạn có thể bấm thanh toán ngay!`,
                       );
-                    })}
-                  />
-                </View>
-              </View>
-            ) : (
-              <AppText style={styles.agreedSub}>
-                {isBuyer
-                  ? "Đang chờ người bán tạo đơn hàng để bạn tiến hành thanh toán."
-                  : "Cần có báo giá giao nhận còn hiệu lực trước khi tạo đơn."}
-              </AppText>
-            )}
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.compactWineCta,
+                    (pressed || termsBusy) && styles.compactCtaPressed,
+                  ]}
+                >
+                  <AppText style={styles.compactWineCtaText}>Tạo đơn ngay</AppText>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         </View>
       ) : null}
@@ -514,13 +525,13 @@ export function ChatMessagesPanel({
             onPress={() => setExpandedEvents((prev) => !prev)}
           >
             <View style={styles.eventsHeaderLeft}>
-              <Icon name="tag" size={14} color={stitchTokens.wineDark} />
+              <Icon name="tag" size={13} color={stitchTokens.wineDark} />
               <AppText style={styles.eventsHeaderTitle}>
                 Lịch sử thỏa thuận ({events.length})
               </AppText>
             </View>
             <Icon
-              name="chevronDown"
+              name={expandedEvents ? "chevronUp" : "chevronDown"}
               size={14}
               color={colors.muted}
             />
@@ -560,7 +571,7 @@ export function ChatMessagesPanel({
               <View style={styles.emptyIconCircle}>
                 <Icon
                   name="message"
-                  size={30}
+                  size={22}
                   color={stitchTokens.wineDark}
                 />
               </View>
@@ -572,7 +583,9 @@ export function ChatMessagesPanel({
               <AppText style={styles.emptySubtitle}>
                 {isExpired
                   ? "Lịch sử hội thoại được lưu lại tại đây."
-                  : "Bạn có thể hỏi về tình trạng sách, ảnh thật hoặc giá trước khi gửi thông tin nhận sách."}
+                  : isBuyer
+                    ? "Bạn có thể hỏi về tình trạng sách, ảnh thật hoặc thương lượng giá với người bán."
+                    : "Trao đổi thêm về tình trạng sách, đóng gói hoặc thời gian giao nhận với người mua."}
               </AppText>
 
               {!isExpired && !inputBody && (
@@ -584,11 +597,11 @@ export function ChatMessagesPanel({
                     setInputBody(
                       isBuyer
                         ? "Chào bạn, sách còn không và tình trạng hiện tại thế nào?"
-                        : "Chào bạn, bạn muốn hỏi thêm điều gì về cuốn sách này?",
+                        : "Chào bạn, sách mình sẵn sàng đóng gói. Bạn cần hỏi thêm gì không?",
                     );
                   }}
                 >
-                  <Icon name="star" size={14} color={stitchTokens.wineDark} />
+                  <Icon name="star" size={13} color={stitchTokens.wineDark} />
                   <AppText style={styles.suggestionText}>
                     Soạn lời chào mở đầu
                   </AppText>
@@ -803,48 +816,62 @@ export function ChatMessagesPanel({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: stitchTokens.parchment,
+    backgroundColor: stitchTokens.creamBg,
   },
-  partnerHeader: {
+  partnerStrip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: space.sm,
+    justifyContent: "space-between",
+    paddingHorizontal: space.lg,
+    paddingTop: 6,
+    paddingBottom: 6,
+    gap: 8,
   },
-  avatarCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  partnerStripLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+    minWidth: 0,
+  },
+  avatarDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: stitchTokens.wineDark,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: {
+  avatarDotText: {
     color: stitchTokens.white,
     fontWeight: "700",
-    fontSize: 15,
+    fontSize: 11,
+    includeFontPadding: false,
   },
-  partnerInfo: {
-    flex: 1,
-  },
-  partnerName: {
-    fontSize: 14,
+  partnerStripName: {
+    fontSize: 12,
     fontWeight: "700",
     color: colors.ink,
+    includeFontPadding: false,
   },
-  partnerRole: {
-    fontSize: 11,
+  partnerStripSep: {
+    fontSize: 12,
     color: colors.muted,
+    includeFontPadding: false,
+  },
+  partnerStripRole: {
+    fontSize: 12,
+    color: colors.muted,
+    flexShrink: 1,
+    includeFontPadding: false,
   },
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: stitchTokens.parchment,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: radius.pill,
@@ -867,15 +894,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.muted,
     fontWeight: "600",
+    includeFontPadding: false,
   },
   eventsAccordion: {
-    backgroundColor: stitchTokens.warmIvory,
-    marginHorizontal: space.md,
-    marginTop: space.sm,
-    borderRadius: radius.small,
+    backgroundColor: stitchTokens.whiteSurface,
+    marginHorizontal: space.lg,
+    marginTop: 6,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.rule,
-    padding: space.sm,
+    borderColor: stitchTokens.cardBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     gap: 4,
   },
   eventsHeader: {
@@ -914,7 +943,8 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   messagesList: {
-    padding: space.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
     gap: space.sm,
     flexGrow: 1,
   },
@@ -934,19 +964,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: space.xl,
-    paddingHorizontal: space.lg,
-    gap: space.xs,
+    paddingHorizontal: space.md,
+    gap: 6,
   },
   emptyIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.surface,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: stitchTokens.cardBorder,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: space.xs,
+    marginBottom: 4,
   },
   emptyTitle: {
     fontSize: 15,
@@ -958,24 +988,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.muted,
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 19,
+    maxWidth: 290,
   },
   suggestionBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: colors.surface,
+    backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: colors.rule,
+    borderColor: stitchTokens.warmBorder,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.pill,
-    marginTop: space.sm,
+    marginTop: 8,
   },
   suggestionText: {
     fontSize: 12,
     fontWeight: "700",
     color: stitchTokens.wineDark,
+    includeFontPadding: false,
   },
   bubbleWrapper: {
     flexDirection: "row",
@@ -989,20 +1021,20 @@ const styles = StyleSheet.create({
   },
   bubble: {
     maxWidth: "80%",
-    borderRadius: radius.card,
+    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 9,
     gap: 3,
   },
   bubbleOwn: {
     backgroundColor: stitchTokens.wineDark,
-    borderBottomRightRadius: 2,
+    borderBottomRightRadius: 4,
   },
   bubbleOther: {
-    backgroundColor: colors.surface,
+    backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderBottomLeftRadius: 2,
+    borderColor: stitchTokens.cardBorder,
+    borderBottomLeftRadius: 4,
   },
   bubbleText: {
     fontSize: 14,
@@ -1021,41 +1053,43 @@ const styles = StyleSheet.create({
     color: stitchTokens.roseParchment,
   },
   composerWrapper: {
-    backgroundColor: colors.surface,
+    backgroundColor: stitchTokens.whiteSurface,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    padding: space.sm,
-    gap: space.xs,
+    borderTopColor: stitchTokens.cardBorder,
+    paddingHorizontal: space.lg,
+    paddingTop: 8,
+    paddingBottom: 8,
+    gap: 8,
   },
   composerRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: space.sm,
+    gap: 8,
   },
   textInput: {
     flex: 1,
-    backgroundColor: stitchTokens.parchment,
-    borderRadius: radius.sheet,
-    paddingHorizontal: 16,
+    backgroundColor: stitchTokens.creamBg,
+    borderRadius: 20,
+    paddingHorizontal: 15,
     paddingTop: 10,
     paddingBottom: 10,
     fontSize: 14,
     color: colors.ink,
     maxHeight: 100,
     borderWidth: 1,
-    borderColor: colors.rule,
+    borderColor: stitchTokens.cardBorder,
   },
   sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: stitchTokens.wineDark,
     alignItems: "center",
     justifyContent: "center",
   },
   sendBtnDisabled: {
     backgroundColor: colors.muted,
-    opacity: 0.5,
+    opacity: 0.45,
   },
   closedBar: {
     flexDirection: "row",
@@ -1068,119 +1102,137 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.muted,
   },
-  /* Pinned Terms Banner */
+  /* Pinned Terms Banner — Editorial Parchment + Left Accent */
   pinnedBanner: {
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
+    paddingHorizontal: space.lg,
+    paddingTop: 2,
+    paddingBottom: 2,
   },
-  pendingProposalBox: {
+  pinnedCard: {
     backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.wineDark,
-    padding: space.sm,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderLeftWidth: 3.5,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     gap: 8,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  proposalHeaderRow: {
+  pinnedSlimCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderLeftWidth: 3.5,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
-  proposalTitle: {
-    fontSize: 13,
+  pinnedCardWine: {
+    borderLeftColor: stitchTokens.wineDark,
+  },
+  pinnedCardGreen: {
+    borderLeftColor: stitchTokens.verifiedGreen,
+  },
+  pinnedCardAmber: {
+    borderLeftColor: stitchTokens.orangeDeep,
+  },
+  pinnedTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  pinnedBadgeWine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+  },
+  pinnedBadgeTextWine: {
+    fontSize: 11,
     fontWeight: "700",
     color: stitchTokens.wineDark,
+    includeFontPadding: false,
+  },
+  pinnedPrice: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+    includeFontPadding: false,
+  },
+  pinnedCompactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  pinnedCompactInfo: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  pinnedInlineHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  pinnedTitleGreen: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.deepCocoa,
+    flexShrink: 1,
+    includeFontPadding: false,
+  },
+  pinnedSub: {
+    fontSize: 12,
+    color: colors.muted,
+    lineHeight: 16,
+  },
+  pinnedSlimText: {
+    fontSize: 12,
+    color: stitchTokens.deepCocoa,
+    flex: 1,
+    lineHeight: 17,
   },
   priceHighlight: {
     fontWeight: "800",
     color: stitchTokens.wineDark,
   },
-  proposalDesc: {
-    fontSize: 11,
-    color: stitchTokens.darkWood,
-    lineHeight: 16,
+  compactWineCta: {
+    backgroundColor: stitchTokens.wineDark,
+    borderRadius: 10,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  compactCtaPressed: {
+    opacity: 0.85,
+  },
+  compactWineCtaText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.white,
+    includeFontPadding: false,
   },
   proposalActionRow: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 2,
-  },
-  myPendingProposalBox: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
-    backgroundColor: stitchTokens.amberBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    padding: space.sm,
-  },
-  myPendingProposalText: {
-    fontSize: 12,
-    color: stitchTokens.wineDark,
-    flex: 1,
-    lineHeight: 16,
-  },
-  orderReadyBox: {
-    backgroundColor: stitchTokens.likeNewGreenBg,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.likeNewGreen,
-    padding: space.sm,
-    gap: 4,
-  },
-  orderReadyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  orderReadyTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: stitchTokens.likeNewGreen,
-    flex: 1,
-  },
-  orderReadySub: {
-    fontSize: 11,
-    color: stitchTokens.darkWood,
-    lineHeight: 16,
-  },
-  agreedPriceBox: {
-    backgroundColor: stitchTokens.likeNewGreenBg,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.likeNewGreen,
-    padding: space.sm,
-    gap: 4,
-  },
-  agreedHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  agreedTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: stitchTokens.likeNewGreen,
-    flex: 1,
-  },
-  agreedSub: {
-    fontSize: 11,
-    color: stitchTokens.darkWood,
-    lineHeight: 16,
+    marginTop: 2,
   },
   /* Quick Offer Bar */
   quickBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: 4,
   },
   makeOfferBtn: {
     flexDirection: "row",
@@ -1188,15 +1240,16 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 5,
     paddingHorizontal: 10,
-    borderRadius: 10,
+    borderRadius: radius.pill,
     backgroundColor: stitchTokens.creamBg,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderColor: stitchTokens.warmBorder,
   },
   makeOfferBtnText: {
     fontSize: 12,
     fontWeight: "700",
     color: stitchTokens.wineDark,
+    includeFontPadding: false,
   },
   referencePriceText: {
     fontSize: 11,

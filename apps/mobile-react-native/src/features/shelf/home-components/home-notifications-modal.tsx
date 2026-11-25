@@ -63,6 +63,9 @@ export function HomeNotificationsModal({
         if (item.kind === "OrderSaleSettled") router.push({ pathname: "/wallet", params: { sale: item.targetId } });
         else router.push({ pathname: "/orders", params: { orderId: item.targetId } });
         break;
+      case "PurchaseConversation":
+        router.push({ pathname: "/conversation", params: { id: item.targetId } });
+        break;
       case "Auction":
         router.push({ pathname: "/auction", params: { id: item.targetId } });
         break;

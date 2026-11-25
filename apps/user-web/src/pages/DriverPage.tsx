@@ -68,19 +68,22 @@ interface RecentOrderSummary {
   bothDelivered: boolean;
 }
 
+const API_BASE = (import.meta.env['VITE_API_BASE_URL'] ?? '/api/v1').replace(/\/$/, '');
+
 export function DriverPage() {
   const [params, setParams] = useSearchParams();
   const code = params.get('trackingCode')?.trim() ?? '';
-  if (params.get('kind') === 'direct') {
+  const kind = params.get('kind');
+  if (kind === 'direct') {
     return <DirectDriverView key={code} code={code.toUpperCase()}
       onSearch={(trackingCode) => setParams({ kind: 'direct', trackingCode })} />;
   }
-  const exchangeLookup = params.has('exchangeId') || params.get('kind') === 'exchange';
-  if (!exchangeLookup && /^LL-[A-Z0-9]{8,32}$/i.test(code)) {
+  const exchangeLookup = params.has('exchangeId') || kind === 'exchange';
+  if (kind === 'auction' || (!exchangeLookup && /^LL-[A-Z0-9]{8,32}$/i.test(code))) {
     const normalized = code.toUpperCase();
     const demoMode = params.get('demo') === '1';
     return <AuctionDriverView key={`${normalized}:${demoMode}`} code={normalized} demoMode={demoMode}
-      onSearch={(trackingCode) => setParams({ trackingCode })} />;
+      onSearch={(trackingCode) => setParams(trackingCode ? { kind: 'auction', trackingCode } : { kind: 'auction' })} />;
   }
   return <ExchangeDriverView />;
 }
@@ -115,7 +118,7 @@ function ExchangeDriverView() {
 
   const fetchRecentOrders = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/shipments/carrier/orders/recent');
+      const res = await fetch(`${API_BASE}/shipments/carrier/orders/recent`);
       if (res.ok) {
         const data = (await res.json()) as RecentOrderSummary[];
         setRecentOrders(data || []);
@@ -134,7 +137,7 @@ function ExchangeDriverView() {
         if (exchangeId) params.set('exchangeId', exchangeId);
         if (leg) params.set('leg', leg);
 
-        const url = `/api/v1/shipments/carrier/orders/active${params.toString() ? `?${params.toString()}` : ''}`;
+        const url = `${API_BASE}/shipments/carrier/orders/active${params.toString() ? `?${params.toString()}` : ''}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as ShipmentOrderData | null;
@@ -165,7 +168,7 @@ function ExchangeDriverView() {
 
   const handleSearch = (trackingCode: string) => {
     if (trackingCode === requestedCode) void fetchActiveOrder(requestedCode, requestedExchange, requestedLeg);
-    else setSearchParams({ trackingCode });
+    else setSearchParams(trackingCode ? { kind: 'exchange', trackingCode } : { kind: 'exchange' });
   };
 
   const handleSelectRecent = (summary: RecentOrderSummary) => {
@@ -219,7 +222,7 @@ function ExchangeDriverView() {
       await new Promise((r) => setTimeout(r, 550));
 
       // Gọi API auto-simulate để server MongoDB cập nhật cả 2 kiện sang Delivered + kích hoạt 72h kiểm định
-      const res = await fetch(`/api/v1/shipments/carrier/orders/${order.exchangeId}/auto-simulate`, {
+      const res = await fetch(`${API_BASE}/shipments/carrier/orders/${order.exchangeId}/auto-simulate`, {
         method: 'POST',
       });
       if (!res.ok) throw new Error(`Lỗi tự động giao (${res.status})`);
@@ -252,7 +255,7 @@ function ExchangeDriverView() {
     if (!order) return;
     setSubmitting(true);
     try {
-      const res = await fetch('/api/v1/webhooks/carrier', {
+      const res = await fetch(`${API_BASE}/webhooks/carrier`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -312,7 +315,7 @@ function ExchangeDriverView() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/v1/webhooks/carrier', {
+      const res = await fetch(`${API_BASE}/webhooks/carrier`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -334,6 +337,7 @@ function ExchangeDriverView() {
 
   return (
     <DriverWorkspace
+      mode="exchange"
       subtitle="Bưu tá: Lê Hoàng Nam (#DX-5571)"
       trackingCode={searchParams.get('trackingCode') ?? ''}
       searchLocked={loading || submitting}
@@ -609,7 +613,7 @@ function ExchangeDriverView() {
             <p style={{ fontSize: 36, margin: '0 0 10px' }}>📦</p>
             <p className={styles.emptyTitle}>Chưa có đơn hàng nào cần giao</p>
             <p className={styles.emptyDesc}>
-              Mở phiếu trao đổi của An và Bình, đặt cọc rồi lưu mã vận đơn của mỗi bên.
+              Mở phiếu trao đổi đã đặt cọc và lưu mã vận đơn của mỗi bên để bưu tá bắt đầu giao nhận.
             </p>
           </div>
         )}

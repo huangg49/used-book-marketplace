@@ -85,7 +85,7 @@ function BookRowItem({
             mediaId={book.mediaIds[0]}
             label={`Bìa ${book.book.title}`}
             active
-            compact
+            thumbnail
           />
         ) : (
           <View style={styles.coverFallback}>
@@ -256,52 +256,10 @@ export function ExchangeProposalCard({
         </View>
       ) : null}
 
-      {/* Unified Tactile Trade Matchup Ticket */}
-      <View style={styles.card}>
-        {/* Outgoing Side */}
-        <View style={styles.sideSection}>
-          <View style={styles.sideHeaderRow}>
-            <View style={[styles.directionBadge, styles.directionBadgeOutgoing]}>
-              <AppText
-                style={[
-                  styles.directionBadgeText,
-                  styles.directionBadgeTextOutgoing,
-                ]}
-              >
-                BẠN ĐƯA ({myBooks.length})
-              </AppText>
-            </View>
-            <AppText style={styles.sideTotalText}>
-              {formatVnd(myBooksTotal)}
-            </AppText>
-          </View>
-          {myBooks.length === 0 ? (
-            <AppText style={styles.emptyText}>Chưa có bản chụp sách.</AppText>
-          ) : (
-            <View style={styles.bookList}>
-              {myBooks.map((book, idx) => (
-                <BookRowItem
-                  key={book.listingId}
-                  book={book}
-                  exchangeId={exchange.id}
-                  hasTopDivider={idx > 0}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Centered Swap Bridge */}
-        <View style={styles.swapBridge}>
-          <View style={styles.swapBridgeLine} />
-          <View style={styles.swapBridgeCircle}>
-            <Icon name="swap" size={15} color={stitchTokens.wine} />
-          </View>
-          <View style={styles.swapBridgeLine} />
-        </View>
-
-        {/* Incoming Side */}
-        <View style={styles.sideSection}>
+      {/* Unified Tactile Trade Matchup Ticket — Clear 2-Zone Editorial Split */}
+      <View style={styles.matchupCard}>
+        {/* Incoming Side FIRST (what you receive is what you evaluate!) */}
+        <View style={[styles.sidePanel, styles.sidePanelIncoming]}>
           <View style={styles.sideHeaderRow}>
             <View style={styles.sideIncomingLabelGroup}>
               <View
@@ -313,7 +271,7 @@ export function ExchangeProposalCard({
                     styles.directionBadgeTextIncoming,
                   ]}
                 >
-                  BẠN NHẬN ({partnerBooks.length})
+                  SÁCH BẠN NHẬN ({partnerBooks.length})
                 </AppText>
               </View>
               <AppText style={styles.partnerMiniName} numberOfLines={1}>
@@ -339,57 +297,89 @@ export function ExchangeProposalCard({
             </View>
           )}
         </View>
+
+        {/* Centered Swap Bridge with Live Diff Pill */}
+        <View style={styles.swapBridge}>
+          <View style={styles.swapBridgeLine} />
+          <View style={styles.swapBridgePill}>
+            <Icon name="swap" size={13} color={stitchTokens.wine} />
+            <AppText style={styles.swapBridgePillText}>
+              {exchange.diffAmount === 0
+                ? "Đổi ngang giá"
+                : isPayer
+                  ? `Bạn bù ${formatVnd(exchange.diffAmount)}`
+                  : partnerPays
+                    ? `Nhận bù +${formatVnd(exchange.diffAmount)}`
+                    : `Chênh ${formatVnd(exchange.diffAmount)}`}
+            </AppText>
+          </View>
+          <View style={styles.swapBridgeLine} />
+        </View>
+
+        {/* Outgoing Side */}
+        <View style={[styles.sidePanel, styles.sidePanelOutgoing]}>
+          <View style={styles.sideHeaderRow}>
+            <View style={[styles.directionBadge, styles.directionBadgeOutgoing]}>
+              <AppText
+                style={[
+                  styles.directionBadgeText,
+                  styles.directionBadgeTextOutgoing,
+                ]}
+              >
+                SÁCH BẠN GỬI ({myBooks.length})
+              </AppText>
+            </View>
+            <AppText style={styles.sideTotalText}>
+              {formatVnd(myBooksTotal)}
+            </AppText>
+          </View>
+          {myBooks.length === 0 ? (
+            <AppText style={styles.emptyText}>Chưa có bản chụp sách.</AppText>
+          ) : (
+            <View style={styles.bookList}>
+              {myBooks.map((book, idx) => (
+                <BookRowItem
+                  key={book.listingId}
+                  book={book}
+                  exchangeId={exchange.id}
+                  hasTopDivider={idx > 0}
+                />
+              ))}
+            </View>
+          )}
+        </View>
       </View>
 
-      {/* Clean Digital Receipt Card: Deposit & Diff Terms */}
+      {/* Clean Compact Digital Receipt Card: Deposit & Diff Terms */}
       <View style={styles.card}>
         <View style={styles.financeHeader}>
           <View style={styles.financeIconPill}>
             <Icon name="shield" size={14} color={stitchTokens.wine} />
           </View>
-          <AppText style={styles.financeTitle}>Cam kết cọc & tiền bù</AppText>
+          <AppText style={styles.financeTitle}>Cọc bảo chứng & chênh lệch</AppText>
         </View>
 
         <View style={styles.financeRows}>
           <View style={styles.financeRow}>
-            <View style={styles.financeLabelCol}>
-              <AppText style={styles.financeLabel}>Cọc sách bạn gửi</AppText>
-              <AppText style={styles.financeHint}>
-                Hoàn 100% về ví khi trao đổi hoàn tất
-              </AppText>
-            </View>
+            <AppText style={styles.financeLabel}>Cọc sách bạn gửi (hoàn 100%)</AppText>
             <AppText style={styles.financeValue}>{formatVnd(myDeposit)}</AppText>
           </View>
 
           <View style={[styles.financeRow, styles.financeRowBorder]}>
-            <View style={styles.financeLabelCol}>
-              <AppText style={styles.financeLabel}>Cọc của {partnerName}</AppText>
-              <AppText style={styles.financeHint}>
-                Lật Lại khóa bảo chứng trên sổ cái
-              </AppText>
-            </View>
+            <AppText style={styles.financeLabel}>Cọc của {partnerName}</AppText>
             <AppText style={styles.financeValue}>
               {formatVnd(partnerDeposit)}
             </AppText>
           </View>
 
           <View style={[styles.financeRow, styles.financeRowBorder]}>
-            <View style={styles.financeLabelCol}>
-              <AppText style={styles.financeLabel}>
-                {isPayer
-                  ? "Tiền bù bạn trả"
-                  : partnerPays
-                    ? "Tiền bù bạn nhận"
-                    : "Chênh lệch giá trị"}
-              </AppText>
-              <AppText style={styles.financeHint}>
-                {isPayer
-                  ? "Kết chuyển cho đối tác khi xong"
-                  : partnerPays
-                    ? "Cộng thẳng vào ví bạn khi xong"
-                    : "Trao đổi ngang giá"}
-              </AppText>
-            </View>
+            <AppText style={styles.financeLabel}>
+              {isPayer
+                ? "Tiền bù bạn trả"
+                : partnerPays
+                  ? "Tiền bù bạn nhận"
+                  : "Chênh lệch giá trị"}
+            </AppText>
             <AppText
               style={[
                 styles.financeValue,
@@ -399,7 +389,7 @@ export function ExchangeProposalCard({
             >
               {exchange.diffAmount > 0
                 ? `${partnerPays ? "+" : isPayer ? "-" : ""}${formatVnd(exchange.diffAmount)}`
-                : "0 đ"}
+                : "Ngang giá"}
             </AppText>
           </View>
         </View>
@@ -623,24 +613,56 @@ const styles = StyleSheet.create({
     color: stitchTokens.darkWood,
     fontVariant: ["tabular-nums"],
   },
+  matchupCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 12,
+    gap: 10,
+  },
+  sidePanel: {
+    backgroundColor: stitchTokens.creamBg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderLeftWidth: 3.5,
+    padding: 12,
+    gap: 10,
+  },
+  sidePanelIncoming: {
+    borderLeftColor: stitchTokens.verifiedGreen,
+  },
+  sidePanelOutgoing: {
+    borderLeftColor: stitchTokens.wineDark,
+  },
   swapBridge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginVertical: 2,
+    gap: 8,
+    marginVertical: 0,
   },
   swapBridgeLine: {
     flex: 1,
     height: 1,
-    backgroundColor: stitchTokens.surfaceSoft,
+    backgroundColor: stitchTokens.cardBorder,
   },
-  swapBridgeCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: stitchTokens.roseParchment,
+  swapBridgePill: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: stitchTokens.roseParchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.warmBorder,
+  },
+  swapBridgePillText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+    includeFontPadding: false,
   },
   groupHeader: {
     flexDirection: "row",

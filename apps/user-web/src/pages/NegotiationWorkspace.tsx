@@ -200,6 +200,7 @@ export function NegotiationWorkspace({
   } | null>(null);
   const [uncertain, setUncertain] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
+  const [viewedStepIndex, setViewedStepIndex] = useState<number | null>(null);
 
   const [addressDialogOpen, setAddressDialogOpen] = useState(() =>
     buyNowEntry && room.buyer.id === userId && room.status === "Active" &&
@@ -736,6 +737,14 @@ export function NegotiationWorkspace({
     ? directDeliveryGuidance(orderData)
     : null;
 
+  const selectedStepIndex =
+    viewedStepIndex !== null && viewedStepIndex < activeStepIndex
+      ? viewedStepIndex
+      : activeStepIndex;
+  const isViewingHistory = selectedStepIndex !== activeStepIndex;
+  const selectedStepMeta = NEGOTIATION_STEPS[selectedStepIndex];
+  const currentStepMeta = NEGOTIATION_STEPS[activeStepIndex];
+
   return (
     <div id={exchangeSheetId} tabIndex={-1} data-transaction-page
       role={orderData ? "region" : undefined}
@@ -767,39 +776,205 @@ export function NegotiationWorkspace({
         </div>
       )}
 
-      {/* 5-Step Horizontal Pill Bar (Matching ExchangeSteps) */}
+      {/* 5-Step Horizontal Pill Bar (Clickable for past & current steps, matching ExchangeSteps) */}
       <nav className={stepStyles.steps} aria-label="Các bước mua sách">
         <ol>
           {NEGOTIATION_STEPS.map(({ id, label }, index) => {
             const isCurrent = index === activeStepIndex;
             const isCompleted = index < activeStepIndex;
+            const isSelected = index === selectedStepIndex;
+            const canSelect = index <= activeStepIndex;
             return (
               <li
                 key={id}
                 data-current={isCurrent || undefined}
-                data-selected={isCurrent || undefined}
+                data-selected={isSelected || undefined}
                 data-completed={isCompleted || undefined}
               >
-                <span
-                  className={stepStyles.step}
-                  aria-current={isCurrent ? "step" : undefined}
-                >
-                  <span className={stepStyles.marker} aria-hidden="true">
-                    {isCompleted ? (
-                      <Check size={14} strokeWidth={2.8} aria-hidden="true" />
-                    ) : (
-                      index + 1
-                    )}
+                {canSelect ? (
+                  <button
+                    type="button"
+                    className={stepStyles.step}
+                    aria-current={isCurrent ? "step" : undefined}
+                    aria-pressed={isSelected}
+                    onClick={() =>
+                      setViewedStepIndex(index === activeStepIndex ? null : index)
+                    }
+                  >
+                    <span className={stepStyles.marker} aria-hidden="true">
+                      {isCompleted ? (
+                        <Check size={14} strokeWidth={2.8} aria-hidden="true" />
+                      ) : (
+                        index + 1
+                      )}
+                    </span>
+                    <span className={stepStyles.label}>{label}</span>
+                  </button>
+                ) : (
+                  <span className={stepStyles.step}>
+                    <span className={stepStyles.marker} aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <span className={stepStyles.label}>{label}</span>
                   </span>
-                  <span className={stepStyles.label}>{label}</span>
-                </span>
+                )}
               </li>
             );
           })}
         </ol>
       </nav>
 
-      {/* 2-Column Workspace (Matching ExchangeDetailPage) */}
+      {/* Past-Step History Inspection Banner & Summary */}
+      {isViewingHistory && selectedStepMeta ? (
+        <section
+          className={stepStyles.history}
+          aria-label={`Lịch sử bước ${selectedStepMeta.label}`}
+        >
+          <div className={stepStyles.historyHeader}>
+            <div className={stepStyles.historyHeadingGroup}>
+              <span className={stepStyles.archiveBadge}>
+                Đang xem lại lịch sử · Bước {selectedStepIndex + 1}/5
+              </span>
+              <h2 className={stepStyles.historyTitle}>
+                {selectedStepMeta.label}
+              </h2>
+              <p className={stepStyles.historyNote}>
+                Dữ liệu đã ghi nhận ở bước này. Trở về bước hiện tại để tiếp tục
+                thao tác.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={stepStyles.backButton}
+              onClick={() => setViewedStepIndex(null)}
+            >
+              <span>
+                Quay lại Bước {activeStepIndex + 1} · {currentStepMeta?.label}
+              </span>
+              <ArrowUpRight size={15} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className={styles.historyDetailCard}>
+            {selectedStepIndex === 0 && (
+              <dl className={styles.historyKvList}>
+                <div>
+                  <dt>Sách giao dịch</dt>
+                  <dd>
+                    {orderData
+                      ? orderData.item.bundle?.title || orderData.item.metadata.title
+                      : book?.bundle?.title || book?.book.title || "Sách"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Giá chốt</dt>
+                  <dd>{formatVnd(effectiveBookPrice)}</dd>
+                </div>
+                {book?.salePrice != null && (
+                  <div>
+                    <dt>Giá niêm yết gốc</dt>
+                    <dd>{formatVnd(book.salePrice)}</dd>
+                  </div>
+                )}
+                {orderData && (
+                  <div>
+                    <dt>Mã đơn hàng</dt>
+                    <dd>#{orderData.id.slice(0, 8).toUpperCase()}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+            {selectedStepIndex === 1 && (
+              <dl className={styles.historyKvList}>
+                <div>
+                  <dt>Trạng thái thanh toán</dt>
+                  <dd>
+                    {orderData?.paidAt
+                      ? `Đã thanh toán lúc ${orderTime(orderData.paidAt)}`
+                      : "Chưa thanh toán"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Tổng người mua thanh toán</dt>
+                  <dd>{formatVnd(buyerTotal)}</dd>
+                </div>
+                <div>
+                  <dt>Tiền sách · Phí giao nhận</dt>
+                  <dd>
+                    {formatVnd(effectiveBookPrice)} ·{" "}
+                    {shippingFee > 0 ? formatVnd(shippingFee) : "Miễn phí"}
+                  </dd>
+                </div>
+                {orderData && (
+                  <div>
+                    <dt>Tiền đang giữ trong ký quỹ</dt>
+                    <dd>{formatVnd(orderData.moneyHeld)}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+            {selectedStepIndex === 2 && (
+              <dl className={styles.historyKvList}>
+                <div>
+                  <dt>Mã vận đơn</dt>
+                  <dd>
+                    {orderData?.deliveryJourney?.trackingCode ??
+                      shipment.data?.trackingCode ??
+                      "Chưa đăng ký"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Người nhận sách</dt>
+                  <dd>
+                    {shippingAddress
+                      ? `${shippingAddress.recipientName} · ${shippingAddress.phone} — ${addressDetailLabel(shippingAddress.detail)}`
+                      : "Chưa có"}
+                  </dd>
+                </div>
+                {orderData?.deliveryJourney?.pickedUpAt && (
+                  <div>
+                    <dt>Đơn vị vận chuyển đã lấy kiện</dt>
+                    <dd>{orderTime(orderData.deliveryJourney.pickedUpAt)}</dd>
+                  </div>
+                )}
+                {orderData?.deliveredAt && (
+                  <div>
+                    <dt>Giao thành công</dt>
+                    <dd>{orderTime(orderData.deliveredAt)}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+            {selectedStepIndex === 3 && (
+              <dl className={styles.historyKvList}>
+                <div>
+                  <dt>Mốc bắt đầu kiểm tra</dt>
+                  <dd>
+                    {orderData?.deliveredAt
+                      ? orderTime(orderData.deliveredAt)
+                      : "Chưa ghi nhận"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Hạn kiểm tra 72 giờ</dt>
+                  <dd>
+                    {orderData?.inspectionDeadline
+                      ? orderTime(orderData.inspectionDeadline)
+                      : "Chưa mở"}
+                  </dd>
+                </div>
+                {orderData?.deliveryJourney?.acknowledgedAt && (
+                  <div>
+                    <dt>Người mua xác nhận nhận sách</dt>
+                    <dd>{orderTime(orderData.deliveryJourney.acknowledgedAt)}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+          </div>
+        </section>
+      ) : (
+      /* 2-Column Workspace (Matching ExchangeDetailPage) */
       <div className={`${exchangeStyles.proposalWorkspace} ${styles.negotiationGrid}`}>
         {/* RIGHT COLUMN TOP: ACTION BOX */}
         <div className={exchangeStyles.proposalControls}>
@@ -993,22 +1168,21 @@ export function NegotiationWorkspace({
                 )}
 
                 {/* BƯỚC 3: CHUẨN BỊ SÁCH (Preparing) */}
+                {orderData.state === "Preparing" && orderData.preparation && (
+                  <div className={styles.deadlineBadge} style={{ marginBottom: 10 }}>
+                    <Clock size={15} aria-hidden="true" />
+                    <span>
+                      Hạn bàn giao vận chuyển:{" "}
+                      <strong>{orderTime(orderData.preparation.pickupDeadline)}</strong>
+                    </span>
+                  </div>
+                )}
                 {orderData.deliveryJourney &&
                   (["Preparing", "InTransit", "Inspection"].includes(orderData.state) || !!orderData.deliveryJourney.issue) && (
                     <DirectDeliveryJourney key={orderData.id} order={orderData} onChanged={() => order.refetch()} />
                   )}
                 {orderData.state === "Preparing" && (!orderData.deliveryJourney || (seller && !orderData.deliveryJourney.trackingCode)) && (
                   <div style={{ display: "grid", gap: 10 }}>
-                    {orderData.preparation && (
-                      <div className={styles.deadlineBadge} style={{ marginBottom: 4 }}>
-                        <Clock size={16} aria-hidden="true" />
-                        <span>
-                          Hạn bàn giao vận chuyển:{" "}
-                          <strong>{orderTime(orderData.preparation.pickupDeadline)}</strong>
-                        </span>
-                      </div>
-                    )}
-
                     {seller ? (
                       shipment.data ? (
                         <div className={styles.procedureNoticeSuccess}>
@@ -1760,10 +1934,12 @@ export function NegotiationWorkspace({
             )}
               </>
             )}
-          </div>
-
-          <div className={exchangeStyles.proposalContact}>
-            <SupportLink type="Listing" id={room.listingId} />
+            <div className={styles.actionCardFooter}>
+              <SupportLink
+                type={orderData ? "DirectOrder" : "Listing"}
+                id={orderData ? orderData.id : room.listingId}
+              />
+            </div>
           </div>
         </div>
 
@@ -1777,7 +1953,7 @@ export function NegotiationWorkspace({
               {orderData ? "Phiếu đặt mua sách" : "Phiếu thương lượng mua sách"}
             </h2>
 
-            {/* Card 1: Book Card */}
+            {/* Card 1: Book Card (Portrait 3:4 uncropped cover + clean metadata) */}
             <div
               className={exchangeStyles.proposalBooks}
               data-receive={isBuyer ? "true" : undefined}
@@ -1790,23 +1966,15 @@ export function NegotiationWorkspace({
                 )}
                 {isBuyer ? "Sách bạn nhận" : "Sách bạn gửi"}
               </h3>
-              <div className={exchangeStyles.proposalBook}>
-                <div aria-hidden="true" data-conversation-cover>
-                  <div>
-                    {book ? (
-                      <ListingPhoto book={book} eager fallbackCover />
-                    ) : (
-                      <div
-                        style={{
-                          width: 90,
-                          height: 120,
-                          background: "#efe6d5",
-                        }}
-                      />
-                    )}
-                  </div>
+              <div className={styles.buyNowBookRow}>
+                <div className={styles.buyNowBookCover} aria-hidden="true" data-conversation-cover>
+                  {book ? (
+                    <ListingPhoto book={book} eager fallbackCover />
+                  ) : (
+                    <div className={styles.buyNowBookCoverPlaceholder} />
+                  )}
                 </div>
-                <div>
+                <div className={styles.buyNowBookMeta}>
                   <h4 className={exchangeStyles.proposalBookTitle}>
                     {orderData
                       ? orderData.item.bundle?.title || orderData.item.metadata.title
@@ -1832,45 +2000,45 @@ export function NegotiationWorkspace({
                       )}
                     </span>
                   )}
-                  <details>
-                    <summary>Tình trạng sách</summary>
-                    <p>
-                      {conditionLabel ? `Tình trạng: ${conditionLabel}. ` : ""}
-                      {(orderData ? orderData.item.description : book?.description) || "Chưa có mô tả chi tiết."}
-                    </p>
-                    <p>
-                      Bìa &amp; gáy: {(orderData ? orderData.item.coverNote : book?.coverNote) || "Chưa có dữ liệu"}
-                      {" · Số trang: "}
-                      {(orderData ? orderData.item.pages : book?.pages) || "Chưa có dữ liệu"}
-                    </p>
-                  </details>
                 </div>
+              </div>
+              <div className={styles.buyNowBookCondition}>
+                <TransactionDisclosure title="Tình trạng sách">
+                  <p>
+                    {conditionLabel ? `Tình trạng: ${conditionLabel}. ` : ""}
+                    {(orderData ? orderData.item.description : book?.description) || "Chưa có mô tả chi tiết."}
+                  </p>
+                  <p>
+                    Bìa &amp; gáy: {(orderData ? orderData.item.coverNote : book?.coverNote) || "Chưa có dữ liệu"}
+                    {" · Số trang: "}
+                    {(orderData ? orderData.item.pages : book?.pages) || "Chưa có dữ liệu"}
+                  </p>
+                </TransactionDisclosure>
               </div>
               <BundleManifest bundle={orderData ? orderData.item.bundle : book?.bundle} />
             </div>
 
-            {/* Card 2: Delivery & Listing Info Card */}
-            <div className={exchangeStyles.proposalBooks}>
+            {/* Card 2: Delivery & Listing Info Card (Dedicated clean layout, no CSS summary conflict) */}
+            <div className={`${exchangeStyles.proposalBooks} ${styles.deliveryInfoCard}`}>
               <h3>
                 <MapPin size={18} aria-hidden="true" />
-                Địa chỉ & Giao nhận
+                Địa chỉ &amp; Giao nhận
               </h3>
-              <div
-                className={exchangeStyles.proposalBook}
-                style={{ paddingBlock: 12 }}
-              >
-                <div style={{ display: "none" }} aria-hidden="true" />
-                <div style={{ gridColumn: "1 / -1", gap: 6 }}>
-                  {isExchange ? (
-                    <>
-                      <strong>Trao đổi sách hai chiều</strong>
-                      <span>
-                        Hai bên tự chọn địa chỉ giao nhận hoặc điểm hẹn khi gửi
-                        và chấp nhận đề nghị đổi sách.
+              <div className={styles.deliveryInfoBody}>
+                {isExchange ? (
+                  <div className={styles.addressBlock}>
+                    <strong>Trao đổi sách hai chiều</strong>
+                    <span>
+                      Hai bên tự chọn địa chỉ giao nhận hoặc điểm hẹn khi gửi
+                      và chấp nhận đề nghị đổi sách.
+                    </span>
+                  </div>
+                ) : orderData ? (
+                  <>
+                    <div className={styles.addressBlock}>
+                      <span className={styles.addressRoleLabel}>
+                        Người nhận sách
                       </span>
-                    </>
-                  ) : orderData ? (
-                    <>
                       <strong>
                         {shippingAddress?.recipientName} ·{" "}
                         {shippingAddress?.phone}
@@ -1878,51 +2046,64 @@ export function NegotiationWorkspace({
                       <span>
                         {addressDetailLabel(shippingAddress?.detail || "")}
                       </span>
-                      {seller && orderData.shippingAddress && (
-                        <TransactionDisclosure title="Nơi gửi sách">
-                          <p>{orderData.ownAddress.recipientName} · {orderData.ownAddress.phone}</p>
-                          <p>{addressDetailLabel(orderData.ownAddress.detail)}</p>
+                    </div>
+                    {seller && orderData.shippingAddress && (
+                      <div className={styles.inlineDisclosureWrap}>
+                        <TransactionDisclosure title="Nơi gửi sách (Shipper tới lấy)">
+                          <p className={styles.disclosureLineStrong}>
+                            {orderData.ownAddress.recipientName} ·{" "}
+                            {orderData.ownAddress.phone}
+                          </p>
+                          <p className={styles.disclosureLine}>
+                            {addressDetailLabel(orderData.ownAddress.detail)}
+                          </p>
                         </TransactionDisclosure>
-                      )}
-                      <span style={{ color: "#156633", fontWeight: 600 }}>
+                      </div>
+                    )}
+                    <div className={styles.orderMetaRow}>
+                      <span className={styles.orderIdPill}>
                         {orderData.state === "AwaitingPayment"
-                          ? "Đơn hàng đã được tạo. Chờ thanh toán."
+                          ? "Chờ thanh toán"
                           : `Đơn hàng #${orderData.id.slice(0, 8).toUpperCase()}`}
                       </span>
-                    </>
-                  ) : room.quotePreview ? (
-                    <>
+                      <span className={styles.orderAreaText}>
+                        Khu vực:{" "}
+                        {book?.fulfillment?.name ?? "TP.HCM · Giao trực tiếp"}
+                      </span>
+                    </div>
+                  </>
+                ) : room.quotePreview ? (
+                  <>
+                    <div className={styles.addressBlock}>
+                      <span className={styles.addressRoleLabel}>
+                        Người nhận sách
+                      </span>
                       <strong>
                         {room.quotePreview.destination.recipientName} ·{" "}
                         {room.quotePreview.destination.phone}
                       </strong>
                       <span>{room.quotePreview.destination.detail}</span>
-                      <span style={{ color: "#156633", fontWeight: 600 }}>
+                      <span className={styles.orderIdPill}>
                         Đã có báo giá vận chuyển hiệu lực
                       </span>
                       {isBuyer && !room.terms?.locked && !frozen && (
                         <button
                           type="button"
                           onClick={openAddress}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            padding: 0,
-                            color: "var(--shop-wine)",
-                            textDecoration: "underline",
-                            cursor: "pointer",
-                            fontSize: "0.85rem",
-                            fontWeight: 600,
-                            textAlign: "left",
-                            marginTop: 4,
-                          }}
+                          className={styles.inlineLinkBtn}
                         >
                           Thay đổi địa chỉ nhận sách
                         </button>
                       )}
-                    </>
-                  ) : (
-                    <>
+                    </div>
+                    <span className={styles.orderAreaText}>
+                      Khu vực:{" "}
+                      {book?.fulfillment?.name ?? "TP.HCM · Giao trực tiếp"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.addressBlock}>
                       <strong>Chưa đính kèm địa chỉ nhận sách</strong>
                       <span>
                         {isBuyer
@@ -1933,51 +2114,37 @@ export function NegotiationWorkspace({
                         <button
                           type="button"
                           onClick={openAddress}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            padding: 0,
-                            color: "var(--shop-wine)",
-                            textDecoration: "underline",
-                            cursor: "pointer",
-                            fontSize: "0.85rem",
-                            fontWeight: 600,
-                            textAlign: "left",
-                            marginTop: 4,
-                          }}
+                          className={styles.inlineLinkBtn}
                         >
                           Chọn địa chỉ nhận sách ngay
                         </button>
                       )}
-                    </>
-                  )}
-                  <span style={{ marginTop: 4 }}>
-                    Khu vực:{" "}
-                    {book?.fulfillment?.name ?? "TP.HCM · Giao trực tiếp"}
-                  </span>
+                    </div>
+                    <span className={styles.orderAreaText}>
+                      Khu vực:{" "}
+                      {book?.fulfillment?.name ?? "TP.HCM · Giao trực tiếp"}
+                    </span>
+                  </>
+                )}
+
+                <div className={styles.deliveryLinksRow}>
                   <Link
                     to={`/books/${room.listingId}`}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 5,
-                      marginTop: 6,
-                      color: "var(--shop-wine)",
-                      fontWeight: 650,
-                      fontSize: "0.85rem",
-                    }}
+                    className={styles.originalListingLink}
                   >
                     <span>Xem bài đăng gốc</span>
                     <ExternalLink size={13} aria-hidden="true" />
                   </Link>
-                  <details>
-                    <summary>Quy trình bảo chứng Lật Lại</summary>
-                    <p>
-                      Sau khi hai bên thống nhất giá và người bán tạo đơn, tiền
-                      thanh toán được giữ an toàn trong Quỹ bảo chứng và chỉ
-                      giải ngân sau 72h kiểm tra sách.
+                </div>
+
+                <div className={styles.inlineDisclosureWrap}>
+                  <TransactionDisclosure title="Quy trình bảo chứng Lật Lại">
+                    <p className={styles.disclosureLine}>
+                      Sau khi hai bên thống nhất giá và tạo đơn, tiền thanh toán
+                      được giữ an toàn trong Quỹ bảo chứng và chỉ giải ngân sau
+                      72 giờ kiểm tra sách.
                     </p>
-                  </details>
+                  </TransactionDisclosure>
                 </div>
               </div>
             </div>
@@ -2033,24 +2200,27 @@ export function NegotiationWorkspace({
               ) : isBuyer ? (
                 <p className={exchangeStyles.proposalAmountNote}>{buyerSaleFeeText(orderData?.amounts.commissionBps ?? room.quotePreview?.commissionBps)}</p>
               ) : null}
-              <p className={exchangeStyles.proposalAmountNote}>
-                <Clock
-                  size={13}
-                  style={{ verticalAlign: "-2px", marginRight: 4 }}
-                  aria-hidden="true"
-                />
-                {orderData
-                  ? orderData.paidAt
-                    ? saleClosed ? "Đơn đã đóng." : orderData.state === "Completed" ? "Đã quyết toán." : `Đã thanh toán lúc ${orderTime(orderData.paidAt)}. Tiền đang giữ ${formatVnd(orderData.moneyHeld)}.`
-                    : `Chưa trừ tiền từ ví. Cần thanh toán trước ${orderTime(orderData.paymentDeadline)} để giữ sách.`
-                  : quoteCurrent
-                    ? "Đã có địa chỉ nhận sách. Chờ người bán tạo đơn."
-                    : "Chưa giữ sách hay trừ tiền."}
+              <p className={styles.paymentFooterNote}>
+                <Clock size={14} aria-hidden="true" />
+                <span>
+                  {orderData
+                    ? orderData.paidAt
+                      ? saleClosed
+                        ? "Đơn đã đóng."
+                        : orderData.state === "Completed"
+                          ? "Đã quyết toán."
+                          : `Đã thanh toán lúc ${orderTime(orderData.paidAt)}. Tiền đang giữ ${formatVnd(orderData.moneyHeld)}.`
+                      : `Chưa trừ tiền từ ví. Cần thanh toán trước ${orderTime(orderData.paymentDeadline)} để giữ sách.`
+                    : quoteCurrent
+                      ? "Đã có địa chỉ nhận sách. Chờ người bán tạo đơn."
+                      : "Chưa giữ sách hay trừ tiền."}
+                </span>
               </p>
             </section>
           )}
         </div>
       </div>
+      )}
 
       {/* Modal gửi / thay đổi địa chỉ nhận sách ngay trên trang thương lượng */}
       <PurchaseDialog

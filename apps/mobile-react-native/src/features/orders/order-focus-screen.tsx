@@ -22,6 +22,7 @@ import {
   AppText,
   Button,
   ConfirmDialog,
+  Icon,
   Notice,
   StatePanel,
   TextField,
@@ -38,6 +39,12 @@ import { BuyNowModal } from "./buy-now-modal";
 import { bundleSchema } from "../bundles/book-bundle";
 import { BundleManifest } from "../bundles/bundle-manifest";
 import { OrderShipping } from "./order-shipping";
+import {
+  OrderProgressStepper,
+  getCurrentOrderStep,
+  hasOrderStepFacts,
+  type OrderStepId,
+} from "./order-progress-stepper";
 import { SaleFeeBreakdown } from "../../core/ui/sale-fee-breakdown";
 
 const deliveryJourneyActionSchema = z.enum([
@@ -99,6 +106,8 @@ const details = orderDetailsSchema
       .nullish(),
     moneyHeld: z.number().int(),
     refundedAmount: z.number().int().nonnegative().optional(),
+    paidAt: z.iso.datetime().nullish(),
+    deliveredAt: z.iso.datetime().nullish(),
     inspectionDeadline: z.iso.datetime().nullish(),
     item: z.object({
       bundle: bundleSchema.nullable().optional(),
@@ -158,6 +167,8 @@ export function OrderFocusScreen({
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [viewedHistoryStep, setViewedHistoryStep] =
+    useState<OrderStepId | null>(null);
   const [paying, setPaying] = useState(false);
   const [confirming, setConfirming] = useState<Action | "cancel-paid" | null>(null);
   const [reportModal, setReportModal] = useState<
@@ -376,307 +387,653 @@ export function OrderFocusScreen({
           />
         )}
 
-        {order && (
-          <>
-            {/* 1. Book & Order Identity Card */}
-            <View style={styles.card}>
-              <View style={styles.badgesRow}>
-                <View style={styles.rolePill}>
-                  <AppText style={styles.rolePillText}>
-                    {order.role === "Buyer"
-                      ? "Bạn là người mua"
-                      : "Bạn là người bán"}
-                  </AppText>
-                </View>
-                <View style={styles.statePill}>
-                  <AppText style={styles.statePillText}>
-                    {stateConfig?.label ?? order.state}
-                  </AppText>
-                </View>
-              </View>
+        {order && (() => {
+          const liveStep = getCurrentOrderStep(order.state);
+          const selectedStep: OrderStepId =
+            viewedHistoryStep &&
+            viewedHistoryStep !== liveStep &&
+            hasOrderStepFacts(viewedHistoryStep, order)
+              ? viewedHistoryStep
+              : liveStep;
+          const isViewingHistory = selectedStep !== liveStep;
+          const journey = order.deliveryJourney;
+          const deliveryMilestones = journey
+            ? [
+                {
+                  label: "Đã đăng ký vận đơn",
+                  detail: journey.trackingCode ?? null,
+                  done: Boolean(journey.trackingCode),
+                },
+                {
+                  label: "Đơn vị vận chuyển đã lấy kiện",
+                  detail: journey.pickedUpAt
+                    ? new Date(journey.pickedUpAt).toLocaleString("vi-VN")
+                    : null,
+                  done: Boolean(journey.pickedUpAt),
+                },
+                {
+                  label: "Đang giao tới người mua",
+                  detail: journey.outForDeliveryAt
+                    ? new Date(journey.outForDeliveryAt).toLocaleString("vi-VN")
+                    : null,
+                  done: Boolean(journey.outForDeliveryAt),
+                },
+                {
+                  label: "Giao hàng thành công",
+                  detail: order.deliveredAt
+                    ? new Date(order.deliveredAt).toLocaleString("vi-VN")
+                    : null,
+                  done: Boolean(order.deliveredAt),
+                },
+              ]
+            : [];
 
-              <AppText style={styles.bookTitle}>
-                {order.item.bundle?.title || order.item.metadata.title}
-              </AppText>
-
-              <BundleManifest bundle={order.item.bundle} />
-
-              {Boolean(order.item.description) && (
-                <AppText style={styles.descriptionText}>
-                  {order.item.description}
-                </AppText>
-              )}
-
-              {order.state === "AwaitingPayment" && (
-                <View style={styles.deadlineBox}>
-                  <AppText style={styles.deadlineText}>
-                    Hạn thanh toán:{" "}
-                    {new Date(order.paymentDeadline).toLocaleString("vi-VN")}
-                  </AppText>
-                </View>
-              )}
-
-              {order.sellerConfirmationDeadline &&
-                order.state === "PendingSellerConfirmation" && (
-                  <View style={styles.deadlineBox}>
-                    <AppText style={styles.deadlineText}>
-                      Hạn người bán trả lời:{" "}
-                      {new Date(
-                        order.sellerConfirmationDeadline,
-                      ).toLocaleString("vi-VN")}
-                    </AppText>
-                  </View>
-                )}
-            </View>
-
-            {/* 2. Payment & Escrow Breakdown Card */}
-            <View style={styles.card}>
-              <AppText style={styles.cardHeading}>
-                Thanh toán & Ký quỹ
-              </AppText>
-              <View style={styles.kvRow}>
-                <AppText style={styles.kvLabel}>Giá sách</AppText>
-                <AppText style={styles.kvValue}>
-                  {formatVnd(order.amounts.bookPrice)}
-                </AppText>
-              </View>
-              <View style={styles.kvRow}>
-                <AppText style={styles.kvLabel}>Phí giao nhận</AppText>
-                <AppText style={styles.kvValue}>
-                  {order.amounts.shippingFee > 0 ? formatVnd(order.amounts.shippingFee) : "Miễn phí"}
-                </AppText>
-              </View>
-              <View style={[styles.kvRow, styles.kvTotalRow]}>
-                <AppText style={styles.kvTotalLabel}>
-                  Tổng người mua thanh toán
-                </AppText>
-                <AppText style={styles.kvTotalValue}>
-                  {formatVnd(order.amounts.buyerTotal)}
-                </AppText>
-              </View>
-              {order.moneyHeld > 0 && <View style={styles.kvRow}>
-                <AppText style={styles.kvLabel}>Tiền đang giữ</AppText>
-                <AppText style={styles.kvHeldValue}>
-                  {formatVnd(order.moneyHeld)}
-                </AppText>
-              </View>}
-              {closedWithoutSale ? (
-                <AppText kind="small" color={colors.muted}>Đơn đã đóng. Không thu phí dịch vụ.</AppText>
-              ) : order.role === "Buyer" ? (
-                <AppText kind="small" color={colors.muted}>{buyerSaleFeeText(order.amounts.commissionBps)}</AppText>
-              ) : sellerAmounts ? (
-                <SaleFeeBreakdown amounts={sellerAmounts} settled={order.state === "Completed"} />
-              ) : null}
-              {order.state === "Completed" && order.role === "Buyer" && (
-                <AppText kind="small" color={colors.muted}>Đã chuyển tiền bán vào Ví người bán.</AppText>
-              )}
-              {order.state === "SettlementPending" && (
-                <AppText kind="small" color={colors.muted}>Đang xử lý hoàn tiền về Ví người mua.</AppText>
-              )}
-              {order.state === "ResolutionPending" && order.moneyHeld > 0 && (
-                <AppText kind="small" color={colors.muted}>Tiền được giữ trong lúc xử lý sự cố. Chưa có ngày hoàn tiền.</AppText>
-              )}
-              {order.state === "Inspection" && order.inspectionDeadline && (
-                <AppText kind="small" color={colors.muted}>
-                  Hạn kiểm tra sách {new Date(order.inspectionDeadline).toLocaleString("vi-VN")}. Theo dõi kết quả xử lý tại đơn này.
-                </AppText>
-              )}
-              {buyerRefund > 0 && (
-                <>
-                  <AppText kind="small" color={colors.muted}>Đã hoàn {formatVnd(buyerRefund)} về Ví.</AppText>
-                  <Button secondary title="Xem lịch sử giao dịch Ví" onPress={() => router.push({ pathname: "/wallet", params: { section: "history" } })} />
-                </>
-              )}
-              {order.role === "Seller" && order.state === "Completed" && (
-                <Button secondary title="Đối chiếu tiền bán trong ví" onPress={() => router.push({ pathname: "/wallet", params: { sale: order.id } })} />
-              )}
-            </View>
-
-            {/* 3. Preparation & Shipping */}
-            {order.state === "Preparing" && order.preparation && (
-              <Notice>
-                {order.role === "Seller"
-                  ? "Bạn cần chuẩn bị sách. "
-                  : "Người bán đang chuẩn bị sách. "}
-                Hạn bàn giao:{" "}
-                {new Date(order.preparation.pickupDeadline).toLocaleString(
-                  "vi-VN",
-                )}
-                .{" "}
-                {order.role === "Seller"
-                  ? "Chọn ảnh đóng gói bên dưới, rồi đăng ký mã vận đơn mô phỏng. Sau đó chờ xác nhận bàn giao vận chuyển."
-                  : "Tiền đang được giữ trong giao dịch. Theo dõi cập nhật tại đơn này; chưa cần xác nhận đã nhận sách."}
-              </Notice>
-            )}
-
-            {order.preparation && (
-              <View style={styles.card}>
-                <OrderShipping
-                  key={`${ownerId}:${id}`}
-                  order={order}
-                  ownerId={ownerId}
-                  foreground={foreground}
-                  readFailed={!!result.error}
-                  readAt={result.dataUpdatedAt}
-                  onChange={changed}
-                />
-              </View>
-            )}
-
-            {Boolean(error) && <Notice tone="error">{error}</Notice>}
-
-            {/* 4. Order Actions */}
-            <View style={styles.actionStack}>
-              {pending ? (
-                <>
-                  <Notice tone="warning">
-                    Chưa xác minh xong quyết định trước. Thử lại giữ nguyên yêu
-                    cầu để tránh ghi trùng.
-                  </Notice>
-                  <Button
-                    wine
-                    busy={busy}
-                    title={`Thử lại: ${labels[pending]}`}
-                    onPress={() => void act(pending)}
-                  />
-                </>
-              ) : (
-                !result.error && (
-                  <>
-                    {order.paymentEnabled && (
-                      <Button
-                        wine
-                        title="Tiếp tục thanh toán"
-                        onPress={() => setPaying(true)}
-                      />
-                    )}
-                    {order.sellerAcceptanceEnabled && (
-                      <Button
-                        wine
-                        busy={busy}
-                        title={labels.accept}
-                        onPress={() => setConfirming("accept")}
-                      />
-                    )}
-                    {order.canReject && (
-                      <Button
-                        wine
-                        secondary
-                        busy={busy}
-                        title={labels.reject}
-                        onPress={() => setConfirming("reject")}
-                      />
-                    )}
-                    {order.canCancel && (
-                      <Button
-                        wine
-                        secondary
-                        busy={busy}
-                        title={labels.cancel}
-                        onPress={() => setConfirming("cancel")}
-                      />
-                    )}
-                    {order.canRequestRefund && (
-                      <Button
-                        wine
-                        secondary
-                        busy={busy}
-                        title="Hủy đơn & hoàn tiền"
-                        onPress={() => setConfirming("cancel-paid")}
-                      />
-                    )}
-                    {order.canReportNonReceipt && (
-                      <Button
-                        wine
-                        secondary
-                        busy={busy}
-                        title="Báo chưa nhận được sách"
-                        onPress={() => {
-                          setReportText("");
-                          setReportModal({ kind: "non-receipt" });
-                        }}
-                      />
-                    )}
-                  </>
-                )
-              )}
-
-              {order.canConfirmReceipt && (
-                <Button
-                  wine
-                  title="Tôi đã nhận được sách"
-                  busy={busy}
-                  onPress={() => setConfirming("confirm-receipt")}
-                />
-              )}
-
-              {order.demoCompletionEnabled && (
-                <Button
-                  wine
-                  secondary
-                  busy={busy}
-                  title="Mô phỏng hoàn tất giao hàng (Demo)"
-                  onPress={() => void triggerDemoCompletion()}
-                />
-              )}
-              {order.demoCompletionAt && (
-                <Notice>
-                  Đang tự động mô phỏng hoàn tất giao hàng lúc{" "}
-                  {new Date(order.demoCompletionAt).toLocaleTimeString("vi-VN")}.
-                </Notice>
-              )}
-
-              {order.deliveryJourney && order.deliveryJourney.actions.length > 0 && (
-                <View style={{ gap: space.xs }}>
-                  {order.deliveryJourney.actions.map((action) => (
-                    <Button
-                      key={action}
-                      wine
-                      secondary={action !== "Acknowledge"}
-                      busy={busy}
-                      title={DELIVERY_JOURNEY_LABELS[action]}
-                      onPress={() => {
-                        if (action === "ReportNonReceipt" || action === "ReportCondition") {
-                          setReportText("");
-                          setReportModal({ kind: action });
-                        } else {
-                          void advanceJourney(action);
-                        }
-                      }}
-                    />
-                  ))}
-                </View>
-              )}
-
-              <Button
-                wine
-                secondary
-                busy={chatBusy}
-                title={order.role === "Buyer" ? "Nhắn tin với người bán" : "Nhắn tin với người mua"}
-                onPress={() => void openOrderChat()}
-              />
-              <Button
-                wine
-                secondary
-                title="Gửi hỗ trợ / khiếu nại đơn hàng"
-                onPress={() =>
-                  router.push({
-                    pathname: "/support",
-                    params: { targetType: "DirectOrder", targetId: id },
-                  })
+          return (
+            <>
+              {/* 0. 5-Step Progress Card + Vertical History Bottom Sheet */}
+              <OrderProgressStepper
+                order={order}
+                selectedStep={selectedStep}
+                onSelectStep={(step) =>
+                  setViewedHistoryStep(step === liveStep ? null : step)
                 }
+                bottomInset={Math.max(insets.bottom, 16)}
               />
-            </View>
 
-            {["Inspection", "Completed"].includes(order.state) && (
-              <ReviewEntry
-                type="DirectOrder"
-                id={id}
-                version={order.version}
-              />
-            )}
-          </>
-        )}
+              {isViewingHistory ? (
+                <View style={styles.card}>
+                  <AppText style={styles.cardHeading}>
+                    {selectedStep === "proposal"
+                      ? "Thông tin đơn đã chốt"
+                      : selectedStep === "payment"
+                        ? "Lịch sử thanh toán & ký quỹ"
+                        : selectedStep === "handover"
+                          ? "Lịch sử đóng gói & giao nhận"
+                          : "Lịch sử kiểm tra sách 72 giờ"}
+                  </AppText>
+                  {selectedStep === "proposal" && (
+                    <>
+                      <View style={styles.kvRow}>
+                        <AppText style={styles.kvLabel}>Sách giao dịch</AppText>
+                        <AppText style={styles.kvValue} numberOfLines={2}>
+                          {order.item.bundle?.title || order.item.metadata.title}
+                        </AppText>
+                      </View>
+                      <View style={styles.kvRow}>
+                        <AppText style={styles.kvLabel}>Vai trò của bạn</AppText>
+                        <AppText style={styles.kvValue}>
+                          {order.role === "Buyer" ? "Người mua" : "Người bán"}
+                        </AppText>
+                      </View>
+                      <View style={styles.kvRow}>
+                        <AppText style={styles.kvLabel}>Giá sách chốt</AppText>
+                        <AppText style={styles.kvValue}>
+                          {formatVnd(order.amounts.bookPrice)}
+                        </AppText>
+                      </View>
+                    </>
+                  )}
+                  {selectedStep === "payment" && (
+                    <>
+                      <View style={styles.kvRow}>
+                        <AppText style={styles.kvLabel}>Tổng thanh toán</AppText>
+                        <AppText style={styles.kvTotalValue}>
+                          {formatVnd(order.amounts.buyerTotal)}
+                        </AppText>
+                      </View>
+                      <View style={styles.kvRow}>
+                        <AppText style={styles.kvLabel}>Giá sách</AppText>
+                        <AppText style={styles.kvValue}>
+                          {formatVnd(order.amounts.bookPrice)}
+                        </AppText>
+                      </View>
+                      <View style={styles.kvRow}>
+                        <AppText style={styles.kvLabel}>Phí giao nhận</AppText>
+                        <AppText style={styles.kvValue}>
+                          {order.amounts.shippingFee > 0
+                            ? formatVnd(order.amounts.shippingFee)
+                            : "Miễn phí"}
+                        </AppText>
+                      </View>
+                      <View style={styles.kvRow}>
+                        <AppText style={styles.kvLabel}>Quỹ bảo chứng</AppText>
+                        <AppText style={styles.kvHeldValue}>
+                          {formatVnd(order.moneyHeld)}
+                        </AppText>
+                      </View>
+                    </>
+                  )}
+                  {selectedStep === "handover" && (
+                    <>
+                      {journey?.trackingCode ? (
+                        <View style={styles.kvRow}>
+                          <AppText style={styles.kvLabel}>Mã vận đơn</AppText>
+                          <AppText style={styles.kvValue}>
+                            {journey.trackingCode}
+                          </AppText>
+                        </View>
+                      ) : null}
+                      {order.shippingAddress ? (
+                        <View style={styles.addressSummaryBox}>
+                          <AppText style={styles.addressLabelText}>
+                            Địa chỉ nhận sách
+                          </AppText>
+                          <AppText style={styles.addressMainText}>
+                            {order.shippingAddress.recipientName} ·{" "}
+                            {order.shippingAddress.phone}
+                          </AppText>
+                          <AppText style={styles.addressDetailText}>
+                            {order.shippingAddress.detail}
+                          </AppText>
+                        </View>
+                      ) : null}
+                      {journey?.pickedUpAt ? (
+                        <View style={styles.kvRow}>
+                          <AppText style={styles.kvLabel}>Đã lấy kiện</AppText>
+                          <AppText style={styles.kvValue}>
+                            {new Date(journey.pickedUpAt).toLocaleString("vi-VN")}
+                          </AppText>
+                        </View>
+                      ) : null}
+                      {order.deliveredAt ? (
+                        <View style={styles.kvRow}>
+                          <AppText style={styles.kvLabel}>Giao thành công</AppText>
+                          <AppText style={styles.kvValue}>
+                            {new Date(order.deliveredAt).toLocaleString("vi-VN")}
+                          </AppText>
+                        </View>
+                      ) : null}
+                    </>
+                  )}
+                  {selectedStep === "inspection" && (
+                    <>
+                      {order.deliveredAt ? (
+                        <View style={styles.kvRow}>
+                          <AppText style={styles.kvLabel}>Mốc giao hàng</AppText>
+                          <AppText style={styles.kvValue}>
+                            {new Date(order.deliveredAt).toLocaleString("vi-VN")}
+                          </AppText>
+                        </View>
+                      ) : null}
+                      {order.inspectionDeadline ? (
+                        <View style={styles.kvRow}>
+                          <AppText style={styles.kvLabel}>Hạn kiểm tra 72h</AppText>
+                          <AppText style={styles.kvValue}>
+                            {new Date(order.inspectionDeadline).toLocaleString("vi-VN")}
+                          </AppText>
+                        </View>
+                      ) : null}
+                      {journey?.acknowledgedAt ? (
+                        <View style={styles.kvRow}>
+                          <AppText style={styles.kvLabel}>Xác nhận nhận sách</AppText>
+                          <AppText style={styles.kvValue}>
+                            {new Date(journey.acknowledgedAt).toLocaleString("vi-VN")}
+                          </AppText>
+                        </View>
+                      ) : null}
+                    </>
+                  )}
+                </View>
+              ) : (
+                <>
+                  {/* 1. Delivery Journey Timeline + Driver Simulator / Primary Journey Actions */}
+                  {journey &&
+                    (["Preparing", "InTransit", "Inspection"].includes(
+                      order.state,
+                    ) ||
+                      Boolean(journey.issue)) && (
+                      <View style={styles.journeyCard}>
+                        <View style={styles.journeyHeaderRow}>
+                          <View style={styles.journeyIconCircle}>
+                            <Icon
+                              name="truck"
+                              size={16}
+                              color={stitchTokens.wine}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <AppText style={styles.cardHeading}>
+                              Hành trình giao nhận
+                            </AppText>
+                            {journey.trackingCode ? (
+                              <AppText style={styles.trackingSubText}>
+                                Mã vận đơn: {journey.trackingCode}
+                              </AppText>
+                            ) : (
+                              <AppText style={styles.trackingSubText}>
+                                Đang chờ người bán đăng ký mã vận đơn
+                              </AppText>
+                            )}
+                          </View>
+                        </View>
+
+                        <View style={styles.milestoneList}>
+                          {deliveryMilestones.map((m, idx) => {
+                            const isLast = idx === deliveryMilestones.length - 1;
+                            return (
+                              <View key={m.label} style={styles.milestoneRow}>
+                                <View style={styles.milestoneTrack}>
+                                  <View
+                                    style={[
+                                      styles.milestoneDot,
+                                      m.done && styles.milestoneDotDone,
+                                    ]}
+                                  >
+                                    {m.done ? (
+                                      <Icon
+                                        name="check"
+                                        size={10}
+                                        color={stitchTokens.white}
+                                      />
+                                    ) : null}
+                                  </View>
+                                  {!isLast ? (
+                                    <View
+                                      style={[
+                                        styles.milestoneLine,
+                                        m.done && styles.milestoneLineDone,
+                                      ]}
+                                    />
+                                  ) : null}
+                                </View>
+                                <View style={styles.milestoneBody}>
+                                  <AppText
+                                    style={[
+                                      styles.milestoneLabel,
+                                      m.done && styles.milestoneLabelDone,
+                                    ]}
+                                  >
+                                    {m.label}
+                                  </AppText>
+                                  {m.detail ? (
+                                    <AppText style={styles.milestoneDetail}>
+                                      {m.detail}
+                                    </AppText>
+                                  ) : null}
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+
+                        {(() => {
+                          const driverActions = journey.actions.filter(
+                            (a) =>
+                              a === "Pickup" ||
+                              a === "OutForDelivery" ||
+                              a === "Deliver",
+                          );
+                          const memberActions = journey.actions.filter(
+                            (a) =>
+                              a !== "Pickup" &&
+                              a !== "OutForDelivery" &&
+                              a !== "Deliver",
+                          );
+                          const hasDriverActions = driverActions.length > 0;
+                          return (
+                            <View style={styles.journeyActionsWrap}>
+                              {journey.trackingCode &&
+                                (hasDriverActions ||
+                                  ["Preparing", "InTransit"].includes(
+                                    order.state,
+                                  )) && (
+                                  <Button
+                                    wine
+                                    secondary={!hasDriverActions}
+                                    title={
+                                      hasDriverActions
+                                        ? "Mở Driver Simulator · Demo"
+                                        : "Theo dõi vận đơn"
+                                    }
+                                    onPress={() =>
+                                      router.push({
+                                        pathname: "/driver",
+                                        params: {
+                                          kind: "direct",
+                                          trackingCode: journey.trackingCode!,
+                                        },
+                                      })
+                                    }
+                                  />
+                                )}
+                              {memberActions.map((action) => (
+                                <Button
+                                  key={action}
+                                  wine
+                                  secondary={action !== "Acknowledge"}
+                                  busy={busy}
+                                  title={DELIVERY_JOURNEY_LABELS[action]}
+                                  onPress={() => {
+                                    if (
+                                      action === "ReportNonReceipt" ||
+                                      action === "ReportCondition"
+                                    ) {
+                                      setReportText("");
+                                      setReportModal({ kind: action });
+                                    } else {
+                                      void advanceJourney(action);
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </View>
+                          );
+                        })()}
+                      </View>
+                    )}
+
+                  {/* 2. Seller Packaging & Shipment Registration Card (when Preparing / needed) */}
+                  {order.preparation &&
+                    (order.role === "Seller" || !journey?.trackingCode) && (
+                      <View style={styles.card}>
+                        <OrderShipping
+                          key={`${ownerId}:${id}`}
+                          order={order}
+                          ownerId={ownerId}
+                          foreground={foreground}
+                          readFailed={!!result.error}
+                          readAt={result.dataUpdatedAt}
+                          onChange={changed}
+                        />
+                      </View>
+                    )}
+
+                  {Boolean(error) && <Notice tone="error">{error}</Notice>}
+
+                  {/* 3. Book & Address Identity Card */}
+                  <View style={styles.card}>
+                    <View style={styles.badgesRow}>
+                      <View style={styles.rolePill}>
+                        <AppText style={styles.rolePillText}>
+                          {order.role === "Buyer"
+                            ? "Bạn là người mua"
+                            : "Bạn là người bán"}
+                        </AppText>
+                      </View>
+                      <View style={styles.statePill}>
+                        <AppText style={styles.statePillText}>
+                          {stateConfig?.label ?? order.state}
+                        </AppText>
+                      </View>
+                    </View>
+
+                    <View style={styles.bookIdentityRow}>
+                      <View style={styles.bookIconTile}>
+                        <Icon name="book" size={22} color={stitchTokens.wine} />
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <AppText style={styles.bookTitle}>
+                          {order.item.bundle?.title || order.item.metadata.title}
+                        </AppText>
+                        <AppText style={styles.bookPriceTag}>
+                          {formatVnd(order.amounts.bookPrice)}
+                        </AppText>
+                      </View>
+                    </View>
+
+                    <BundleManifest bundle={order.item.bundle} />
+
+                    {Boolean(order.item.description) && (
+                      <AppText style={styles.descriptionText}>
+                        {order.item.description}
+                      </AppText>
+                    )}
+
+                    {order.shippingAddress ? (
+                      <View style={styles.addressSummaryBox}>
+                        <AppText style={styles.addressLabelText}>
+                          Địa chỉ nhận sách
+                        </AppText>
+                        <AppText style={styles.addressMainText}>
+                          {order.shippingAddress.recipientName} ·{" "}
+                          {order.shippingAddress.phone}
+                        </AppText>
+                        <AppText style={styles.addressDetailText}>
+                          {order.shippingAddress.detail}
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* 4. Payment & Escrow Breakdown Card */}
+                  <View style={styles.card}>
+                    <AppText style={styles.cardHeading}>
+                      Thanh toán & Ký quỹ
+                    </AppText>
+                    <View style={styles.kvRow}>
+                      <AppText style={styles.kvLabel}>Giá sách</AppText>
+                      <AppText style={styles.kvValue}>
+                        {formatVnd(order.amounts.bookPrice)}
+                      </AppText>
+                    </View>
+                    <View style={styles.kvRow}>
+                      <AppText style={styles.kvLabel}>Phí giao nhận</AppText>
+                      <AppText style={styles.kvValue}>
+                        {order.amounts.shippingFee > 0
+                          ? formatVnd(order.amounts.shippingFee)
+                          : "Miễn phí"}
+                      </AppText>
+                    </View>
+                    <View style={[styles.kvRow, styles.kvTotalRow]}>
+                      <AppText style={styles.kvTotalLabel}>
+                        Tổng người mua thanh toán
+                      </AppText>
+                      <AppText style={styles.kvTotalValue}>
+                        {formatVnd(order.amounts.buyerTotal)}
+                      </AppText>
+                    </View>
+                    {order.moneyHeld > 0 && (
+                      <View style={styles.kvRow}>
+                        <AppText style={styles.kvLabel}>Tiền đang giữ</AppText>
+                        <AppText style={styles.kvHeldValue}>
+                          {formatVnd(order.moneyHeld)}
+                        </AppText>
+                      </View>
+                    )}
+                    {closedWithoutSale ? (
+                      <AppText kind="small" color={colors.muted}>
+                        Đơn đã đóng. Không thu phí dịch vụ.
+                      </AppText>
+                    ) : order.role === "Buyer" ? (
+                      <AppText kind="small" color={colors.muted}>
+                        {buyerSaleFeeText(order.amounts.commissionBps)}
+                      </AppText>
+                    ) : sellerAmounts ? (
+                      <SaleFeeBreakdown
+                        amounts={sellerAmounts}
+                        settled={order.state === "Completed"}
+                      />
+                    ) : null}
+                    {order.state === "Completed" && order.role === "Buyer" && (
+                      <AppText kind="small" color={colors.muted}>
+                        Đã chuyển tiền bán vào Ví người bán.
+                      </AppText>
+                    )}
+                    {order.state === "SettlementPending" && (
+                      <AppText kind="small" color={colors.muted}>
+                        Đang xử lý hoàn tiền về Ví người mua.
+                      </AppText>
+                    )}
+                    {order.state === "ResolutionPending" &&
+                      order.moneyHeld > 0 && (
+                        <AppText kind="small" color={colors.muted}>
+                          Tiền được giữ trong lúc xử lý sự cố. Chưa có ngày hoàn
+                          tiền.
+                        </AppText>
+                      )}
+                    {buyerRefund > 0 && (
+                      <>
+                        <AppText kind="small" color={colors.muted}>
+                          Đã hoàn {formatVnd(buyerRefund)} về Ví.
+                        </AppText>
+                        <Button
+                          wine
+                          secondary
+                          title="Xem lịch sử giao dịch Ví"
+                          onPress={() =>
+                            router.push({
+                              pathname: "/wallet",
+                              params: { section: "history" },
+                            })
+                          }
+                        />
+                      </>
+                    )}
+                    {order.role === "Seller" && order.state === "Completed" && (
+                      <Button
+                        wine
+                        secondary
+                        title="Đối chiếu tiền bán trong ví"
+                        onPress={() =>
+                          router.push({
+                            pathname: "/wallet",
+                            params: { sale: order.id },
+                          })
+                        }
+                      />
+                    )}
+                  </View>
+
+                  {/* 5. Order Actions */}
+                  <View style={styles.actionStack}>
+                    {pending ? (
+                      <>
+                        <Notice tone="warning">
+                          Chưa xác minh xong quyết định trước. Thử lại giữ nguyên
+                          yêu cầu để tránh ghi trùng.
+                        </Notice>
+                        <Button
+                          wine
+                          busy={busy}
+                          title={`Thử lại: ${labels[pending]}`}
+                          onPress={() => void act(pending)}
+                        />
+                      </>
+                    ) : (
+                      !result.error && (
+                        <>
+                          {order.paymentEnabled && (
+                            <Button
+                              wine
+                              title="Tiếp tục thanh toán"
+                              onPress={() => setPaying(true)}
+                            />
+                          )}
+                          {order.sellerAcceptanceEnabled && (
+                            <Button
+                              wine
+                              busy={busy}
+                              title={labels.accept}
+                              onPress={() => setConfirming("accept")}
+                            />
+                          )}
+                          {order.canReject && (
+                            <Button
+                              wine
+                              secondary
+                              busy={busy}
+                              title={labels.reject}
+                              onPress={() => setConfirming("reject")}
+                            />
+                          )}
+                          {order.canCancel && (
+                            <Button
+                              wine
+                              secondary
+                              busy={busy}
+                              title={labels.cancel}
+                              onPress={() => setConfirming("cancel")}
+                            />
+                          )}
+                          {order.canRequestRefund && (
+                            <Button
+                              wine
+                              secondary
+                              busy={busy}
+                              title="Hủy đơn & hoàn tiền"
+                              onPress={() => setConfirming("cancel-paid")}
+                            />
+                          )}
+                          {order.canReportNonReceipt && (
+                            <Button
+                              wine
+                              secondary
+                              busy={busy}
+                              title="Báo chưa nhận được sách"
+                              onPress={() => {
+                                setReportText("");
+                                setReportModal({ kind: "non-receipt" });
+                              }}
+                            />
+                          )}
+                        </>
+                      )
+                    )}
+
+                    {order.canConfirmReceipt && (
+                      <Button
+                        wine
+                        title="Tôi đã nhận được sách"
+                        busy={busy}
+                        onPress={() => setConfirming("confirm-receipt")}
+                      />
+                    )}
+
+                    {order.demoCompletionEnabled && (
+                      <Button
+                        wine
+                        secondary
+                        busy={busy}
+                        title="Mô phỏng hoàn tất giao hàng (Demo)"
+                        onPress={() => void triggerDemoCompletion()}
+                      />
+                    )}
+                    {order.demoCompletionAt && (
+                      <Notice>
+                        Đang tự động mô phỏng hoàn tất giao hàng lúc{" "}
+                        {new Date(order.demoCompletionAt).toLocaleTimeString(
+                          "vi-VN",
+                        )}
+                        .
+                      </Notice>
+                    )}
+
+                    <Button
+                      wine
+                      secondary
+                      busy={chatBusy}
+                      title={
+                        order.role === "Buyer"
+                          ? "Nhắn tin với người bán"
+                          : "Nhắn tin với người mua"
+                      }
+                      onPress={() => void openOrderChat()}
+                    />
+                    <Button
+                      wine
+                      secondary
+                      title="Gửi hỗ trợ / khiếu nại đơn hàng"
+                      onPress={() =>
+                        router.push({
+                          pathname: "/support",
+                          params: { targetType: "DirectOrder", targetId: id },
+                        })
+                      }
+                    />
+                  </View>
+
+                  {["Inspection", "Completed"].includes(order.state) && (
+                    <ReviewEntry
+                      type="DirectOrder"
+                      id={id}
+                      version={order.version}
+                    />
+                  )}
+                </>
+              )}
+            </>
+          );
+        })()}
       </ScrollView>
 
       <ConfirmDialog
@@ -901,5 +1258,140 @@ const styles = StyleSheet.create({
   },
   actionStack: {
     gap: 10,
+  },
+  journeyCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    padding: 16,
+    gap: 12,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  journeyHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  journeyIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: stitchTokens.roseParchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trackingSubText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+    marginTop: 1,
+  },
+  milestoneList: {
+    gap: 0,
+  },
+  milestoneRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  milestoneTrack: {
+    width: 18,
+    alignItems: "center",
+  },
+  milestoneDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: stitchTokens.creamParchment,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.borderWarm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  milestoneDotDone: {
+    backgroundColor: stitchTokens.likeNewGreen,
+    borderColor: stitchTokens.likeNewGreen,
+  },
+  milestoneLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 14,
+    backgroundColor: stitchTokens.cardBorder,
+    marginVertical: 2,
+  },
+  milestoneLineDone: {
+    backgroundColor: stitchTokens.likeNewGreen,
+  },
+  milestoneBody: {
+    flex: 1,
+    paddingBottom: 10,
+    gap: 1,
+  },
+  milestoneLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: stitchTokens.subtleGray,
+  },
+  milestoneLabelDone: {
+    color: stitchTokens.darkWood,
+    fontWeight: "700",
+  },
+  milestoneDetail: {
+    fontSize: 11.5,
+    color: stitchTokens.subtleGray,
+  },
+  journeyActionsWrap: {
+    gap: 8,
+    paddingTop: 4,
+  },
+  bookIdentityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  bookIconTile: {
+    width: 48,
+    height: 60,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.roseParchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bookPriceTag: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+  },
+  addressSummaryBox: {
+    padding: 11,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    gap: 2,
+  },
+  addressLabelText: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    color: stitchTokens.subtleGray,
+  },
+  addressMainText: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+  },
+  addressDetailText: {
+    fontSize: 12.5,
+    color: stitchTokens.deepCocoa,
+    lineHeight: 18,
   },
 });

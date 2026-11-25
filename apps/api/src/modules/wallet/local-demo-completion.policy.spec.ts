@@ -19,4 +19,9 @@ describe('single local demo completion switch', () => {
   it('ignores the former ID setting while the switch is off', () => {
     expect(make({ LOCAL_DEMO_COMPLETION_ENABLED: 'false', LOCAL_DEMO_DIRECT_ORDER_IDS: '00000000-0000-4000-8000-000000000001' }).enabled()).toBe(false);
   });
+  it('allows remote Atlas demo only when DEMO_ALLOW_REMOTE_HOST=true in development/test', () => {
+    expect(make({ MONGODB_URL: 'mongodb+srv://user:pass@cluster.mongodb.net/latlai', DEMO_ALLOW_REMOTE_HOST: 'true' }).enabled()).toBe(true);
+    expect(make({ NODE_ENV: 'production', MONGODB_URL: 'mongodb+srv://user:pass@cluster.mongodb.net/latlai', DEMO_ALLOW_REMOTE_HOST: 'true' }).enabled()).toBe(false);
+    expect(make({ PAYMENT_SIMULATOR_SECRET: '', MONGODB_URL: 'mongodb+srv://user:pass@cluster.mongodb.net/latlai', DEMO_ALLOW_REMOTE_HOST: 'true' }).enabled()).toBe(false);
+  });
 });

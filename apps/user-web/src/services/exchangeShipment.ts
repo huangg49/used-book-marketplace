@@ -217,12 +217,14 @@ export async function getCarrierTrackingStatus(
     }
 }
 
+const API_BASE = (import.meta.env['VITE_API_BASE_URL'] ?? '/api/v1').replace(/\/$/, '');
+
 export async function simulateCarrierWebhook(
     trackingCode: string,
     status: 'READY_TO_PICK' | 'PICKING' | 'IN_TRANSIT' | 'DELIVERED',
     description?: string
 ) {
-    const res = await fetch('/api/v1/webhooks/carrier', {
+    const res = await fetch(`${API_BASE}/webhooks/carrier`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trackingCode, status, description })

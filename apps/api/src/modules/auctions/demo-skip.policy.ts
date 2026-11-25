@@ -19,9 +19,11 @@ export class DemoSkipPolicy {
     )
       return false;
     try {
-      return ['localhost', '127.0.0.1', '[::1]'].includes(
-        new URL(this.config.getOrThrow<string>('MONGODB_URL')).hostname,
-      );
+      const parsed = new URL(this.config.getOrThrow<string>('MONGODB_URL'));
+      if (this.config.get<string>('DEMO_ALLOW_REMOTE_HOST') === 'true') {
+        return ['mongodb:', 'mongodb+srv:'].includes(parsed.protocol);
+      }
+      return ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
     } catch {
       return false;
     }

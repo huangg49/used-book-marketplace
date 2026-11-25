@@ -422,6 +422,10 @@ function ExchangeDetailContent({
   const outgoingCaseBook = detail.giveBooks.find((book) => book.id === caseBookId);
   const caseBook = outgoingCaseBook ?? detail.receiveBooks.find((book) => book.id === caseBookId);
   const returnResolution = detail.revision ? detail.returnResolution : undefined;
+  const shouldExpandEvidence =
+    !returnResolution ||
+    returnResolution.phase === "Evidence" ||
+    returnResolution.phase === "ReturnIssue";
   const evidence = detail.rawStatus === "ResolutionPending" && (
     <ExchangeEvidencePanel
       key={"evidence:" + detail.viewer.id + ":" + detail.id}
@@ -429,53 +433,40 @@ function ExchangeDetailContent({
       revision={detail.revision!}
       userId={detail.viewer.id}
       compact={Boolean(returnResolution)}
+      collapsible={Boolean(returnResolution)}
+      defaultExpanded={shouldExpandEvidence}
     />
   );
   const isDispute = detail.status === "RESOLUTION_PENDING";
-  const disputePhase = returnResolution?.phase;
-  const disputeStageIndex =
-    disputePhase && ["ReturnOrdered", "ReturnInProgress", "ReturnIssue", "CheckingReturn", "CompensationOrdered", "Closed"].includes(disputePhase)
-      ? 2
-      : disputePhase === "Evidence" || Boolean(detail.outboundDeliveryVerification)
-        ? 1
-        : 0;
+  const showOuterDisputeHeader = isDispute && !returnResolution;
   const actionSection = (
     <section
       id="exchange-actions"
-      className={isDispute ? `${styles.actionSection} ${styles.disputeDossier}` : styles.actionSection}
+      className={
+        showOuterDisputeHeader
+          ? `${styles.actionSection} ${styles.disputeDossier}`
+          : styles.actionSection
+      }
       aria-label={isDispute ? "Hồ sơ tranh chấp" : "Hành động của bạn"}
       tabIndex={-1}
     >
-      {isDispute && (
+      {showOuterDisputeHeader && (
         <header className={styles.disputeDossierHeader}>
           <div className={styles.disputeDossierTitleRow}>
             <ShieldAlert size={18} aria-hidden="true" />
-            <h2>Hồ sơ tranh chấp · Đang khóa tiền ký quỹ an toàn</h2>
+            <h2>Hồ sơ tranh chấp · Đang chờ Admin tiếp nhận</h2>
           </div>
-          <ol className={styles.disputeStages} aria-label="Tiến độ xử lý tranh chấp">
-            {["1. Đã ghi nhận sự cố", "2. Bổ sung bằng chứng", "3. Đối chiếu & Phán quyết"].map(
-              (label, idx) => (
-                <li
-                  key={label}
-                  data-state={
-                    idx < disputeStageIndex
-                      ? "done"
-                      : idx === disputeStageIndex
-                        ? "current"
-                        : "upcoming"
-                  }
-                >
-                  {label}
-                </li>
-              ),
-            )}
-          </ol>
           {disputeUploadNotice && (
             <p className={styles.disputeUploadNotice} role="status">
               {disputeUploadNotice}
             </p>
           )}
         </header>
+      )}
+      {isDispute && returnResolution && disputeUploadNotice && (
+        <p className={styles.disputeUploadNotice} role="status">
+          {disputeUploadNotice}
+        </p>
       )}
       {(!detail.returnResolution || recoveringAction) && (
         <ActionCard

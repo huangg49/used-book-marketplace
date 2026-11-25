@@ -12,7 +12,12 @@ export function demoExchangeDeadlineEnabled(config: ConfigService, row: Exchange
     config.get<string>('DEMO_EXCHANGE_DEADLINES_ENABLED') !== 'true' || row.demoArchivedAt) return false;
 
   const mongo = URL.parse(config.get<string>('MONGODB_URL', ''));
-  if (mongo?.protocol !== 'mongodb:' || !['localhost', '127.0.0.1', '[::1]'].includes(mongo.hostname)) return false;
+  const allowRemoteDemo = config.get<string>('DEMO_ALLOW_REMOTE_HOST') === 'true';
+  if (allowRemoteDemo) {
+    if (!mongo || !['mongodb:', 'mongodb+srv:'].includes(mongo.protocol)) return false;
+  } else if (mongo?.protocol !== 'mongodb:' || !['localhost', '127.0.0.1', '[::1]'].includes(mongo.hostname)) {
+    return false;
+  }
 
   const ids = config.get<string>('DEMO_EXCHANGE_MEMBER_IDS', '').split(',').map(id => id.trim()).filter(Boolean);
   return row.initiatorId !== row.recipientId &&

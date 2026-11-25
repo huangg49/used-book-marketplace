@@ -83,10 +83,15 @@ export class CarrierService {
   ) {
     const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1', '10.0.2.2', '::ffff:10.0.2.2'];
     if (!this.config || !['development', 'test'].includes(this.config.get('NODE_ENV', 'development')) ||
-      !this.config.get('PAYMENT_SIMULATOR_SECRET') ||
-      !loopback.includes(remoteAddress ?? '') ||
-      forwardedFor?.split(',').some(address => !loopback.includes(address.trim()))) throw notFound();
+      !this.config.get('PAYMENT_SIMULATOR_SECRET')) throw notFound();
+    const allowRemoteDemo = this.config.get<string>('DEMO_ALLOW_REMOTE_HOST') === 'true';
     const mongo = new URL(this.config.getOrThrow<string>('MONGODB_URL'));
+    if (allowRemoteDemo) {
+      if (!['mongodb:', 'mongodb+srv:'].includes(mongo.protocol)) throw notFound();
+      return;
+    }
+    if (!loopback.includes(remoteAddress ?? '') ||
+      forwardedFor?.split(',').some(address => !loopback.includes(address.trim()))) throw notFound();
     if (mongo.protocol !== 'mongodb:' || !['127.0.0.1', 'localhost', '[::1]'].includes(mongo.hostname))
       throw notFound();
     for (const source of browserSources) {

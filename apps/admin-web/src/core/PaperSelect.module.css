@@ -6,8 +6,9 @@
   font-size: 13px;
 }
 .select > span {
-  color: var(--shop-muted);
-  font-size: 12px;
+  color: var(--shop-ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
 }
 .select > button {
   display: flex;
@@ -17,25 +18,46 @@
   min-height: 44px;
   width: 100%;
   padding: 10px 13px;
-  border: 1px solid var(--shop-line);
-  border-radius: 3px;
-  background: var(--shop-paper);
+  border: 1px solid var(--shop-control, var(--shop-line));
+  border-radius: 10px;
+  background: #ffffff;
   color: var(--shop-ink);
   font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.4;
   text-align: left;
   cursor: pointer;
   transition:
     border-color 140ms ease-out,
+    box-shadow 140ms ease-out,
     background-color 140ms ease-out;
 }
-.select > button:hover,
+.select > button:hover:not(:disabled),
 .select > button[aria-expanded="true"] {
-  border-color: var(--shop-control);
+  border-color: var(--shop-wine);
+  background: var(--shop-paper);
+}
+.select > button:focus-visible,
+.select > button[aria-expanded="true"] {
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 1px var(--shop-wine);
+  outline: none;
+}
+.select > button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
   background: var(--shop-shelf);
 }
-.select > button:focus-visible {
-  outline: 2px solid var(--shop-wine);
-  outline-offset: 3px;
+.triggerValue {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.placeholder {
+  flex: 1;
+  min-width: 0;
+  color: var(--shop-muted);
 }
 .select > button > svg {
   flex-shrink: 0;
@@ -51,7 +73,7 @@
   top: calc(100% + 7px);
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 40;
   min-width: 100%;
   max-height: min(380px, 60dvh);
   overflow: auto;
@@ -60,11 +82,11 @@
   padding: 6px;
   list-style: none;
   border: 1px solid var(--shop-line);
-  border-top: 2px solid var(--shop-wine);
-  border-radius: 3px;
+  border-top: 2.5px solid var(--shop-wine);
+  border-radius: 10px;
   background: var(--shop-paper);
   color: var(--shop-ink);
-  box-shadow: 0 12px 25px color-mix(in srgb, var(--shop-ink) 14%, transparent);
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--shop-ink) 14%, transparent);
   opacity: 0;
   transform: translateY(-4px);
   transition:
@@ -88,26 +110,51 @@
 .select li {
   min-height: 44px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px;
-  border-radius: 2px;
+  padding: 9px 11px;
+  border-radius: 7px;
   cursor: pointer;
   transition:
     background-color 100ms ease-out,
     color 100ms ease-out;
+}
+.select li + li {
+  margin-top: 2px;
 }
 .select li[data-active="true"] {
   color: var(--shop-wine);
   background: var(--shop-shelf);
 }
 .select li[aria-selected="true"] {
-  font-weight: 600;
   color: var(--shop-wine);
+  background: color-mix(in srgb, var(--shop-wine) 7%, var(--shop-paper));
+}
+.optionCopy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.optionLabel {
+  font-weight: 650;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+.optionHint {
+  font-size: 0.765rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--shop-muted);
+}
+.empty {
+  cursor: default;
+  color: var(--shop-muted);
+  justify-content: center;
 }
 .select li > svg {
   flex-shrink: 0;
+  margin-top: 2px;
 }
 @starting-style {
   .select ul[data-open="true"] {

@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, Clock3, PackageCheck, Truck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, Clock3, PackageCheck, Truck } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -91,7 +91,7 @@ export function DirectDeliveryJourney({ order, onChanged }: { order: DirectOrder
         <>
           <DirectDeliveryTimeline order={order} />
           {tracking.trackingCode && <Link className={canDrive ? styles.primary : styles.link} to={directDriverUrl(tracking.trackingCode)}>
-            {canDrive ? "Mở Driver Simulator · Demo" : "Theo dõi vận đơn"} <ArrowUpRight size={16} aria-hidden="true" />
+            {canDrive ? "Mở Driver Simulator · Demo" : "Theo dõi vận đơn"} <ArrowRight size={16} aria-hidden="true" />
           </Link>}
         </>
       )}

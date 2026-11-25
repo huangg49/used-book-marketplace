@@ -30,6 +30,8 @@ export const notificationSchema = z.object({
     'AuctionPaid',
     'OrderBuyNowPaid',
     'OrderSaleSettled',
+    'OrderCreatedAwaitingPayment',
+    'PurchaseQuoteReady',
     'ExchangeProposed',
     'ExchangeAccepted',
     'ExchangeFunded',
@@ -45,7 +47,7 @@ export const notificationSchema = z.object({
   ]),
   title: z.string(),
   body: z.string(),
-  targetType: z.enum(['Auction', 'Exchange', 'Order', 'SupportCase', 'TransactionReview', 'Withdrawal']),
+  targetType: z.enum(['Auction', 'Exchange', 'Order', 'PurchaseConversation', 'SupportCase', 'TransactionReview', 'Withdrawal']),
   targetId: z.string().uuid(),
   createdAt: z.string(),
   readAt: z.string().nullable(),
@@ -79,6 +81,7 @@ export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetI
     case 'SupportCase':return `/support/${n.targetId}`;
     case 'TransactionReview':return `/reviews?reviewId=${encodeURIComponent(n.targetId)}`;
     case 'Order':return n.kind === 'OrderSaleSettled' ? `/wallet?sale=${n.targetId}#lich-su-giao-dich` : `/orders/${n.targetId}`;
+    case 'PurchaseConversation':return `/chat/${n.targetId}`;
     case 'Exchange': {
       const path = `/exchange/${n.targetId}`;
       if (n.kind === 'ExchangeShipped') return `${path}#${exchangeHandoverAnchor.incoming}`;

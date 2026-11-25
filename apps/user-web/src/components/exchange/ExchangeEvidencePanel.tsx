@@ -1,4 +1,4 @@
-import { Paperclip, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Paperclip, Upload } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -24,12 +24,17 @@ export function ExchangeEvidencePanel({
   revision,
   userId,
   compact = false,
+  collapsible = false,
+  defaultExpanded = true,
 }: {
   id: string;
   revision: number;
   userId: string;
   compact?: boolean;
+  collapsible?: boolean;
+  defaultExpanded?: boolean;
 }) {
+  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -154,17 +159,66 @@ export function ExchangeEvidencePanel({
     }
   }
 
-  return (
-    <section aria-label="Bằng chứng sự cố" className={ui.panelCard} data-compact={compact || undefined}>
-      {/* Header gọn gàng tối đa */}
-      <div className={ui.panelHeader}>
-        <div className={ui.panelHeaderLeft}>
-          <h3 className={ui.title}><Paperclip size={18} aria-hidden="true" /> Bằng chứng sự cố</h3>
-          <p className={ui.subtitle}>Hình ảnh kiện sách, biên nhận hoặc video ngắn để làm căn cứ đối soát.</p>
-        </div>
-      </div>
+  const itemsCount = list.data?.items.length ?? 0;
+  const isExpanded =
+    !collapsible ||
+    Boolean(file || pending || busy || error || message || resumeId || download) ||
+    (userExpanded ?? defaultExpanded);
 
-      {/* Upload & Preview Area */}
+  return (
+    <section
+      aria-label="Bằng chứng sự cố"
+      className={ui.panelCard}
+      data-compact={compact || undefined}
+      data-collapsed={collapsible && !isExpanded ? "true" : undefined}
+    >
+      {/* Header gọn gàng, hỗ trợ thu gọn khi đã có phán quyết */}
+      {collapsible ? (
+        <button
+          type="button"
+          className={ui.collapseHeaderBtn}
+          aria-expanded={isExpanded}
+          onClick={() => setUserExpanded(!isExpanded)}
+        >
+          <span className={ui.panelHeaderLeft}>
+            <span className={ui.title}>
+              <Paperclip size={17} aria-hidden="true" /> Bằng chứng sự cố
+            </span>
+            <span className={ui.subtitle}>
+              {isExpanded
+                ? "Ảnh kiện sách, biên nhận hoặc video ngắn để đối soát."
+                : itemsCount > 0
+                  ? `Đã gửi ${itemsCount} tệp · Nhấn để xem hoặc bổ sung`
+                  : "Chưa có tệp · Nhấn để tải ảnh/video đối chiếu"}
+            </span>
+          </span>
+          <span className={ui.collapseRight}>
+            <span className={ui.countPill}>{itemsCount}/10</span>
+            {isExpanded ? (
+              <ChevronUp size={17} aria-hidden="true" />
+            ) : (
+              <ChevronDown size={17} aria-hidden="true" />
+            )}
+          </span>
+        </button>
+      ) : (
+        <div className={ui.panelHeader}>
+          <div className={ui.panelHeaderLeft}>
+            <h3 className={ui.title}>
+              <Paperclip size={18} aria-hidden="true" /> Bằng chứng sự cố
+            </h3>
+            <p className={ui.subtitle}>
+              Hình ảnh kiện sách, biên nhận hoặc video ngắn để làm căn cứ đối
+              soát.
+            </p>
+          </div>
+          <span className={ui.countPill}>{itemsCount}/10</span>
+        </div>
+      )}
+
+      {isExpanded && (
+        <>
+          {/* Upload & Preview Area */}
       <div className={ui.uploadArea}>
         {!file && !pending ? (
           <label className={ui.dropzone}>
@@ -321,6 +375,8 @@ export function ExchangeEvidencePanel({
           </ul>
         )}
       </div>
+        </>
+      )}
     </section>
   );
 }

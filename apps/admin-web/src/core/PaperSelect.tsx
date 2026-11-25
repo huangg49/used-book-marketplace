@@ -3,6 +3,11 @@ import { Check, ChevronDown } from "lucide-react";
 import styles from "./PaperSelect.module.css";
 
 type Choice = readonly [value: string, label: string];
+export type SelectOption = {
+  value: string;
+  label: string;
+  hint?: string;
+};
 const fold = (s: string) =>
   s
     .normalize("NFD")
@@ -15,13 +20,23 @@ export function PaperSelect({
   label,
   value,
   choices,
+  options,
+  placeholder = "Chọn",
+  disabled = false,
+  emptyText = "Không có lựa chọn khả dụng.",
   onChange,
 }: {
   label: string;
   value: string;
-  choices: readonly Choice[];
+  choices?: readonly Choice[];
+  options?: readonly SelectOption[];
+  placeholder?: string;
+  disabled?: boolean;
+  emptyText?: string;
   onChange: (value: string) => void;
 }) {
+  const items: readonly SelectOption[] =
+    options ?? (choices ?? []).map(([v, l]) => ({ value: v, label: l }));
   const id = useId(),
     root = useRef<HTMLDivElement>(null),
     trigger = useRef<HTMLButtonElement>(null);
@@ -29,14 +44,14 @@ export function PaperSelect({
     [active, setActive] = useState(0),
     [above, setAbove] = useState(false);
   const search = useRef({ text: "", at: 0 });
-  const selected = Math.max(
-    0,
-    choices.findIndex((choice) => choice[0] === value),
-  );
+  const selectedIndex = items.findIndex((item) => item.value === value);
+  const selected = selectedIndex >= 0 ? selectedIndex : 0;
+  const selectedItem = selectedIndex >= 0 ? items[selectedIndex] : undefined;
+  const isOpen = open && !disabled;
   function show(index = selected) {
-    if (!choices.length) return;
+    if (disabled || !items.length) return;
     const rect = trigger.current?.getBoundingClientRect();
-    const height = Math.min(choices.length * 44 + 16, 380);
+    const height = Math.min(items.length * 52 + 16, 380);
     setAbove(
       !!rect &&
         window.innerHeight - rect.bottom < height + 12 &&
@@ -47,11 +62,11 @@ export function PaperSelect({
     setOpen(true);
   }
   function choose(index: number) {
-    if (choices[index]) onChange(choices[index][0]);
+    if (items[index]) onChange(items[index].value);
     setOpen(false);
   }
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     const outside = (e: PointerEvent) => {
       if (!root.current?.contains(e.target as Node)) setOpen(false);
     };
@@ -69,16 +84,16 @@ export function PaperSelect({
       window.removeEventListener("blur", hide);
       window.removeEventListener("resize", hide);
     };
-  }, [open]);
+  }, [isOpen]);
   useEffect(() => {
-    if (open)
+    if (isOpen)
       root.current
         ?.querySelector<HTMLElement>(`[data-option-index="${active}"]`)
         ?.scrollIntoView({ block: "nearest" });
-  }, [active, open]);
+  }, [active, isOpen]);
   function keyDown(e: KeyboardEvent<HTMLButtonElement>) {
-    if (e.ctrlKey || e.metaKey || e.nativeEvent.isComposing) return;
-    if (e.key === "Escape" && open) {
+    if (disabled || e.ctrlKey || e.metaKey || e.nativeEvent.isComposing) return;
+    if (e.key === "Escape" && isOpen) {
       e.preventDefault();
       e.stopPropagation();
       setOpen(false);
@@ -88,25 +103,25 @@ export function PaperSelect({
       setOpen(false);
       return;
     }
-    if (e.key === "ArrowUp" && e.altKey && open) {
+    if (e.key === "ArrowUp" && e.altKey && isOpen) {
       e.preventDefault();
       choose(active);
       return;
     }
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      if (open) choose(active);
+      if (isOpen) choose(active);
       else show();
       return;
     }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
-      if (!open) show();
+      if (!isOpen) show();
       else
         setActive((n) =>
           Math.max(
             0,
-            Math.min(choices.length - 1, n + (e.key === "ArrowDown" ? 1 : -1)),
+            Math.min(items.length - 1, n + (e.key === "ArrowDown" ? 1 : -1)),
           ),
         );
       return;
@@ -114,8 +129,8 @@ export function PaperSelect({
     if (["Home", "End", "PageUp", "PageDown"].includes(e.key)) {
       e.preventDefault();
       const index =
-        e.key === "Home" || e.key === "PageUp" ? 0 : choices.length - 1;
-      if (open) setActive(index);
+        e.key === "Home" || e.key === "PageUp" ? 0 : items.length - 1;
+      if (isOpen) setActive(index);
       else show(index);
       return;
     }
@@ -127,11 +142,11 @@ export function PaperSelect({
       const repeated =
         !!previous && Array.from(previous).every((c) => c === letter);
       const text = repeated ? letter : previous + letter;
-      const start = repeated ? (open ? active : selected) + 1 : 0;
-      const index = choices
-        .map((_, offset) => (start + offset) % choices.length)
-        .find((n) => fold(choices[n][1]).startsWith(text));
-      if (!open) show(index ?? selected);
+      const start = repeated ? (isOpen ? active : selected) + 1 : 0;
+      const index = items
+        .map((_, offset) => (start + offset) % items.length)
+        .find((n) => fold(items[n].label).startsWith(text));
+      if (!isOpen) show(index ?? selected);
       else if (index !== undefined) setActive(index);
       search.current = { text, at: now };
     }
@@ -143,54 +158,66 @@ export function PaperSelect({
         ref={trigger}
         type="button"
         role="combobox"
-        disabled={!choices.length}
+        disabled={disabled || !items.length}
         aria-labelledby={`${id}-label`}
         aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={open ? `${id}-list` : undefined}
-        aria-activedescendant={open ? `${id}-${active}` : undefined}
-        onClick={() => (open ? setOpen(false) : show())}
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? `${id}-list` : undefined}
+        aria-activedescendant={isOpen ? `${id}-${active}` : undefined}
+        onClick={() => (isOpen ? setOpen(false) : show())}
         onKeyDown={keyDown}
         onBlur={(e) => {
           if (e.relatedTarget && !root.current?.contains(e.relatedTarget))
             setOpen(false);
         }}
       >
-        <span>{choices[selected]?.[1] ?? "Chọn"}</span>
+        <span className={selectedItem ? styles.triggerValue : styles.placeholder}>
+          {selectedItem ? selectedItem.label : placeholder}
+        </span>
         <ChevronDown size={15} aria-hidden="true" />
       </button>
       <ul
         id={`${id}-list`}
         role="listbox"
         aria-labelledby={`${id}-label`}
-        aria-hidden={!open}
-        inert={!open}
-        data-open={open}
+        aria-hidden={!isOpen}
+        inert={!isOpen}
+        data-open={isOpen}
         data-side={above ? "top" : "bottom"}
       >
-        {choices.map(([key, text], index) => (
-          <li
-            key={key}
-            id={`${id}-${index}`}
-            role="option"
-            aria-selected={key === value}
-            data-active={active === index}
-            data-option-index={index}
-            onPointerMove={(e) => {
-              if (e.pointerType === "mouse") setActive(index);
-            }}
-            onPointerDown={(e) => {
-              if (e.pointerType === "mouse") e.preventDefault();
-            }}
-            onClick={() => {
-              choose(index);
-              trigger.current?.focus();
-            }}
-          >
-            <span>{text}</span>
-            {key === value && <Check size={16} aria-hidden="true" />}
+        {items.length === 0 ? (
+          <li className={styles.empty} role="presentation">
+            {emptyText}
           </li>
-        ))}
+        ) : (
+          items.map((item, index) => (
+            <li
+              key={item.value}
+              id={`${id}-${index}`}
+              role="option"
+              aria-selected={item.value === value}
+              data-value={item.value}
+              data-active={active === index}
+              data-option-index={index}
+              onPointerMove={(e) => {
+                if (e.pointerType === "mouse") setActive(index);
+              }}
+              onPointerDown={(e) => {
+                if (e.pointerType === "mouse") e.preventDefault();
+              }}
+              onClick={() => {
+                choose(index);
+                trigger.current?.focus();
+              }}
+            >
+              <span className={styles.optionCopy}>
+                <span className={styles.optionLabel}>{item.label}</span>
+                {item.hint && <small className={styles.optionHint}>{item.hint}</small>}
+              </span>
+              {item.value === value && <Check size={16} aria-hidden="true" />}
+            </li>
+          ))
+        )}
       </ul>
     </div>
   );

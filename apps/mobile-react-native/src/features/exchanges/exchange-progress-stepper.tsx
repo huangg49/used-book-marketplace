@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { isExchangeReturnOverdue } from "@used-books/session-client";
 import { AppModal, AppText, Icon, stitchTokens } from "../../core/ui";
 import type { Exchange, ExchangeStatus } from "./contracts";
 
@@ -261,15 +262,204 @@ export function getExchangeStageHero(
             tone: "wine",
           };
     }
-    case "ResolutionPending":
-      return {
-        badge: "Đang tranh chấp",
-        title: "Hồ sơ đang được thẩm định",
-        subtitle:
-          "Tiền cọc và tiền bù được giữ an toàn trên sổ cái cho tới khi có phán quyết.",
-        actionNeeded: false,
-        tone: "danger",
-      };
+    case "ResolutionPending": {
+      const r = exchange.returnResolution;
+      if (!r) {
+        return {
+          badge: "Chờ thẩm định",
+          title: "Hồ sơ tranh chấp đang chờ Admin",
+          subtitle:
+            "Bạn có thể bổ sung ảnh hoặc video mở hộp bên dưới. Tiền ký quỹ đang được giữ an toàn.",
+          actionNeeded: false,
+          tone: "danger",
+        };
+      }
+      const now = Date.now();
+      const isOwner = Boolean(currentUserId && r.ownerId === currentUserId);
+      const isOpen = (iso: string | null) =>
+        Boolean(iso && Date.parse(iso) > now);
+      const isExpired = (iso: string | null) =>
+        Boolean(iso && Date.parse(iso) <= now);
+      const overdue = isExchangeReturnOverdue(r, now);
+      const hasAppeals = r.appeals.length > 0;
+      const offerAppeal =
+        (r.phase === "ReturnOrdered" || r.phase === "CompensationOrdered") &&
+        !r.effectiveAt &&
+        isOpen(r.appealDueAt);
+
+      switch (r.phase) {
+        case "Evidence": {
+          const canSubmit = !r.evidenceDueAt || isOpen(r.evidenceDueAt);
+          return {
+            badge: canSubmit ? "Đến lượt bạn · Bổ sung" : "Hết hạn bổ sung",
+            title: canSubmit
+              ? "Admin yêu cầu giải trình & bằng chứng"
+              : "Đang chờ Admin thẩm định",
+            subtitle: canSubmit
+              ? "Gửi giải trình và tải thêm ảnh/video trước hạn để Admin đưa ra phán quyết."
+              : "Đã hết hạn bổ sung tài liệu. Admin đang đối chiếu hồ sơ của hai bên.",
+            deadlineLabel: r.evidenceDueAt ? "Hạn bổ sung" : undefined,
+            deadlineIso: r.evidenceDueAt,
+            actionNeeded: canSubmit,
+            tone: canSubmit ? "wine" : "danger",
+          };
+        }
+        case "ReturnOrdered": {
+          if (overdue) {
+            return {
+              badge: "Quá hạn trả sách",
+              title: "Đã quá hạn gửi trả sách",
+              subtitle:
+                "Tiền ký quỹ vẫn đang được giữ. Admin phụ trách sẽ đối chiếu hồ sơ để xử lý tiếp.",
+              actionNeeded: false,
+              tone: "danger",
+            };
+          }
+          const canDispatch =
+            !isOwner &&
+            isOpen(r.returnDueAt) &&
+            Boolean(r.effectiveAt || (isExpired(r.appealDueAt) && !hasAppeals));
+          if (canDispatch) {
+            return {
+              badge: "Đến lượt bạn · Gửi trả sách",
+              title: "Gửi trả sách & nhập mã vận đơn",
+              subtitle:
+                "Gửi sách về địa chỉ chủ sách bên dưới rồi nhập mã vận đơn hoàn trước hạn.",
+              deadlineLabel: "Hạn gửi hoàn",
+              deadlineIso: r.returnDueAt,
+              actionNeeded: true,
+              tone: "wine",
+            };
+          }
+          if (!r.effectiveAt && hasAppeals) {
+            return {
+              badge: "Chờ xét kháng nghị",
+              title: "Đã có kháng nghị · Chờ Admin",
+              subtitle:
+                "Quyết định trả sách tạm dừng hiệu lực trong lúc Admin xem xét kháng nghị.",
+              actionNeeded: false,
+              tone: "danger",
+            };
+          }
+          if (offerAppeal) {
+            return {
+              badge: "Đã có quyết định trả sách",
+              title: isOwner
+                ? "Chờ hết hạn kháng nghị để nhận hoàn"
+                : "Xem quyết định trả sách từ Admin",
+              subtitle: isOwner
+                ? `Nếu ${partnerName} không kháng nghị trước hạn, họ sẽ gửi trả sách cho bạn.`
+                : "Bạn có thể gửi kháng nghị trước hạn nếu chưa đồng ý với phán quyết này.",
+              deadlineLabel: "Hạn kháng nghị",
+              deadlineIso: r.appealDueAt,
+              actionNeeded: false,
+              tone: "wine",
+            };
+          }
+          return {
+            badge: "Chờ gửi trả sách",
+            title: `Đang chờ ${partnerName} gửi trả sách`,
+            subtitle:
+              "Quyết định trả sách đã có hiệu lực. Hệ thống sẽ báo ngay khi đối tác cập nhật mã vận đơn hoàn.",
+            deadlineLabel: r.returnDueAt ? "Hạn gửi hoàn" : undefined,
+            deadlineIso: r.returnDueAt,
+            actionNeeded: false,
+            tone: "wine",
+          };
+        }
+        case "ReturnInProgress":
+          return isOwner
+            ? {
+                badge: "Đến lượt bạn · Nhận sách hoàn",
+                title: "Sách hoàn đang trên đường về bạn",
+                subtitle: r.trackingCode
+                  ? `Mã vận đơn hoàn: ${r.trackingCode}. Xác nhận khi đã nhận kiện sách hoặc báo vấn đề.`
+                  : "Xác nhận khi đã nhận kiện sách hoàn hoặc báo vấn đề nếu có sai lệch.",
+                actionNeeded: true,
+                tone: "wine",
+              }
+            : {
+                badge: "Đang hoàn sách",
+                title: `Đã gửi trả sách cho ${partnerName}`,
+                subtitle: r.trackingCode
+                  ? `Mã vận đơn hoàn: ${r.trackingCode}. Đang chờ ${partnerName} xác nhận đã nhận.`
+                  : `Đang chờ ${partnerName} xác nhận đã nhận lại sách hoàn.`,
+                actionNeeded: false,
+                tone: "wine",
+              };
+        case "CheckingReturn":
+          return isOwner
+            ? {
+                badge: "Kiểm tra sách hoàn · 48h",
+                title: "Kiểm tra tình trạng sách hoàn",
+                subtitle:
+                  "Nếu sách nguyên vẹn, hệ thống sẽ tự tất toán sau hạn 48h. Nếu hư hại hoặc sai sách, bấm Báo vấn đề ngay.",
+                deadlineLabel: "Hạn kiểm tra",
+                deadlineIso: r.checkDueAt,
+                actionNeeded: true,
+                tone: "wine",
+              }
+            : {
+                badge: "Đối tác đang kiểm tra",
+                title: `${partnerName} đã nhận lại sách hoàn`,
+                subtitle:
+                  "Đang trong 48 giờ đối chiếu tình trạng sách trước khi hệ thống hoàn cọc về ví.",
+                deadlineLabel: "Hạn kiểm tra",
+                deadlineIso: r.checkDueAt,
+                actionNeeded: false,
+                tone: "wine",
+              };
+        case "ReturnIssue":
+          return {
+            badge: "Sự cố khi trả sách",
+            title: "Admin đang xử lý sự cố hoàn sách",
+            subtitle:
+              "Tiền ký quỹ tiếp tục được giữ an toàn. Bạn có thể bổ sung thêm ảnh hoặc video bằng chứng bên dưới.",
+            actionNeeded: false,
+            tone: "danger",
+          };
+        case "CompensationOrdered":
+          return {
+            badge:
+              hasAppeals && !r.effectiveAt
+                ? "Chờ xét kháng nghị"
+                : "Quyết định bồi thường",
+            title:
+              r.compensation > 0
+                ? `Quyết định bồi hoàn ${r.compensation.toLocaleString("vi-VN")} đ`
+                : "Đã có quyết định bồi thường",
+            subtitle:
+              hasAppeals && !r.effectiveAt
+                ? "Đã ghi nhận kháng nghị. Đang chờ Admin xem xét lại trước khi tất toán."
+                : offerAppeal
+                  ? "Bạn có thể gửi kháng nghị trước hạn nếu chưa đồng ý với mức bồi hoàn."
+                  : "Quyết định bồi thường đang chờ hoàn tất tất toán về ví.",
+            deadlineLabel: offerAppeal ? "Hạn kháng nghị" : undefined,
+            deadlineIso: offerAppeal ? r.appealDueAt : null,
+            actionNeeded: false,
+            tone: "wine",
+          };
+        case "NeedsReview":
+          return {
+            badge: "Đang xem xét lại",
+            title: "Admin đang rà soát lại hồ sơ",
+            subtitle:
+              "Hồ sơ đã được chuyển về bước thẩm định lại. Tiền ký quỹ vẫn giữ an toàn trên sổ cái.",
+            actionNeeded: false,
+            tone: "danger",
+          };
+        case "Closed":
+        default:
+          return {
+            badge: "Đã xử lý xong",
+            title: "Hồ sơ tranh chấp đã khép lại",
+            subtitle:
+              "Các khoản tiền cọc và bồi hoàn đã được xử lý theo phán quyết của Admin.",
+            actionNeeded: false,
+            tone: "success",
+          };
+      }
+    }
     case "Completed":
       return {
         badge: "Hoàn tất",

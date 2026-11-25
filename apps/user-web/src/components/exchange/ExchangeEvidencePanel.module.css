@@ -2,10 +2,64 @@
   background: #ffffff;
   border: 1px solid var(--shop-line, #ebd9c8);
   border-radius: 14px;
-  padding: clamp(1.2rem, 3vw, 1.6rem);
-  margin-top: 1rem;
+  padding: clamp(1rem, 2.2vw, 1.35rem);
+  margin-top: 0;
   color: var(--shop-ink, #281914);
   box-shadow: 0 4px 18px rgba(40, 25, 20, 0.04);
+}
+
+.panelCard[data-collapsed="true"] {
+  padding: 0.8rem 1rem;
+  box-shadow: none;
+  background: var(--shop-paper, #fbf7f0);
+}
+
+.collapseHeaderBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.panelCard:not([data-collapsed="true"]) .collapseHeaderBtn {
+  border-bottom: 1px solid var(--shop-line, #ebd9c8);
+  padding-bottom: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.collapseHeaderBtn:focus-visible {
+  outline: 2px solid var(--shop-wine, #5c0202);
+  outline-offset: 0;
+  border-radius: 8px;
+}
+
+.collapseRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--shop-wine, #5c0202);
+  flex-shrink: 0;
+}
+
+.countPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--shop-shelf, #f4eddf);
+  border: 1px solid var(--shop-line, #ebd9c8);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--shop-wine, #5c0202);
+  font-variant-numeric: tabular-nums;
 }
 
 .panelHeader {

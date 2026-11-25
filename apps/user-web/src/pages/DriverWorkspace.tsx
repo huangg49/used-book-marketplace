@@ -4,9 +4,18 @@ import { Link } from 'react-router-dom'
 import { DriverTrackingSearch } from './DriverTrackingSearch'
 import styles from './DriverPage.module.css'
 
+export type DriverMode = 'exchange' | 'direct' | 'auction'
+
+const DRIVER_MODES: Array<{ id: DriverMode; label: string; to: string }> = [
+  { id: 'exchange', label: 'Trao đổi', to: '/driver?kind=exchange' },
+  { id: 'direct', label: 'Mua ngay', to: '/driver?kind=direct' },
+  { id: 'auction', label: 'Đấu giá', to: '/driver?kind=auction' },
+]
+
 export function DriverWorkspace({
-  subtitle, trackingCode, searchLocked, onSearch, refresh, back, children,
+  mode, subtitle, trackingCode, searchLocked, onSearch, refresh, back, children,
 }: {
+  mode?: DriverMode
   subtitle: string
   trackingCode: string
   searchLocked: boolean
@@ -28,6 +37,20 @@ export function DriverWorkspace({
             <RefreshCw size={15} aria-hidden="true" /> {refresh.loading ? 'Đang tải…' : 'Làm mới'}
           </button>}
         </header>
+        {mode && (
+          <nav className={styles.modeTabs} aria-label="Loại vận đơn">
+            {DRIVER_MODES.map((item) => (
+              <Link
+                key={item.id}
+                to={item.to}
+                aria-current={mode === item.id ? 'page' : undefined}
+                className={`${styles.modeTab} ${mode === item.id ? styles.modeTabActive : ''}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
         <DriverTrackingSearch key={trackingCode} initialCode={trackingCode} disabled={searchLocked} onSearch={onSearch} />
         {children}
         <Link to={back?.to ?? "/"} className={styles.backHomeLink}>← {back?.label ?? "Quay lại Trang chủ Lật Lại"}</Link>

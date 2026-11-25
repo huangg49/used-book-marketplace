@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Image, Linking, Pressable, StyleSheet, View } from "react-native";
+import { Image, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
+import * as ImagePicker from "expo-image-picker";
 import { File } from "expo-file-system";
 import {
   exchangeEvidenceListSchema,
@@ -38,61 +39,69 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+async function pickEvidenceAssetWeb(): Promise<PickedEvidenceAsset | null> {
+  if (typeof document === "undefined") return null;
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/webp,application/pdf,video/mp4";
+    input.onchange = () => {
+      const f = input.files?.[0];
+      if (!f) {
+        resolve(null);
+        return;
+      }
+      resolve({
+        uri: URL.createObjectURL(f),
+        name: f.name,
+        mimeType: (f.type || "image/jpeg") as EvidenceInput["mimeType"],
+        size: f.size,
+        file: f,
+      });
+    };
+    input.oncancel = () => resolve(null);
+    input.click();
+  });
+}
+
 async function pickEvidenceAsset(): Promise<PickedEvidenceAsset | null> {
-  try {
-    const DocumentPicker = await import("expo-document-picker");
-    const result = await DocumentPicker.getDocumentAsync({
-      type: [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "application/pdf",
-        "video/mp4",
-      ],
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    if (result.canceled || !result.assets?.[0]) return null;
-    const asset = result.assets[0];
-    return {
-      uri: asset.uri,
-      name: asset.name,
-      mimeType: (asset.mimeType || "image/jpeg") as EvidenceInput["mimeType"],
-      size: asset.size ?? 0,
-      file: asset.file,
-    };
-  } catch {
-    const ImagePicker = await import("expo-image-picker");
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
-      allowsEditing: false,
-      quality: 1,
-    });
-    if (res.canceled || !res.assets?.[0]) return null;
-    const a = res.assets[0];
-    return {
-      uri: a.uri,
-      name:
-        a.fileName || (a.type === "video" ? "evidence.mp4" : "evidence.jpg"),
-      mimeType: (a.mimeType ||
-        (a.type === "video"
-          ? "video/mp4"
-          : "image/jpeg")) as EvidenceInput["mimeType"],
-      size: a.fileSize || 0,
-      file: (a as { file?: globalThis.File }).file,
-    };
+  if (Platform.OS === "web") {
+    return pickEvidenceAssetWeb();
   }
+  const res = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ["images", "videos"],
+    allowsEditing: false,
+    quality: 1,
+  });
+  if (res.canceled || !res.assets?.[0]) return null;
+  const a = res.assets[0];
+  return {
+    uri: a.uri,
+    name:
+      a.fileName || (a.type === "video" ? "evidence.mp4" : "evidence.jpg"),
+    mimeType: (a.mimeType ||
+      (a.type === "video"
+        ? "video/mp4"
+        : "image/jpeg")) as EvidenceInput["mimeType"],
+    size: a.fileSize || 0,
+    file: (a as { file?: globalThis.File }).file,
+  };
 }
 
 export function ExchangeEvidenceCard({
   id,
   revision,
+  collapsible = false,
+  defaultExpanded = true,
 }: {
   id: string;
   revision: number;
+  collapsible?: boolean;
+  defaultExpanded?: boolean;
 }) {
   const { client, state } = useSession();
   const userId = state.status === "authenticated" ? state.user.id : "";
+  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
   const [selectedAsset, setSelectedAsset] =
     useState<PickedEvidenceAsset | null>(null);
   const [busy, setBusy] = useState(false);
@@ -231,39 +240,77 @@ export function ExchangeEvidenceCard({
 
   const itemsCount = list.data?.items.length ?? 0;
   const isImagePreview = Boolean(selectedAsset?.mimeType.startsWith("image/"));
+  const isExpanded =
+    !collapsible ||
+    Boolean(pending || selectedAsset || error || message || resumeId) ||
+    (userExpanded ?? defaultExpanded);
 
-  return (
-    <View style={styles.card} accessibilityLabel="Bằng chứng sự cố">
-      {/* 1. Card Header */}
-      <View style={styles.headerRow}>
-        <View style={styles.headerTitleGroup}>
-          <View style={styles.headerIconBox}>
-            <Icon name="shield" size={18} color={stitchTokens.wineDark} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <AppText kind="bold" style={styles.titleText}>
-              Bằng chứng sự cố
-            </AppText>
-            <AppText kind="small" color={colors.muted}>
-              Đối chiếu ảnh chụp &amp; video mở hộp khi phân xử
-            </AppText>
-          </View>
+  const headerContent = (
+    <>
+      <View style={styles.headerTitleGroup}>
+        <View style={styles.headerIconBox}>
+          <Icon name="shield" size={18} color={stitchTokens.wineDark} />
         </View>
-        <View style={styles.countBadge}>
-          <AppText kind="small" style={styles.countBadgeText}>
-            {`${itemsCount}/10 tệp`}
+        <View style={{ flex: 1 }}>
+          <AppText kind="bold" style={styles.titleText}>
+            Bằng chứng sự cố
+          </AppText>
+          <AppText kind="small" color={colors.muted}>
+            {collapsible && !isExpanded
+              ? itemsCount > 0
+                ? `Đã gửi ${itemsCount} tệp · Chạm để xem hoặc bổ sung`
+                : "Chưa có tệp · Chạm để tải ảnh/video đối chiếu"
+              : "Đối chiếu ảnh chụp & video mở hộp khi phân xử"}
           </AppText>
         </View>
       </View>
-
-      {/* 2. Guidelines Banner */}
-      <View style={styles.guidelineBox}>
-        <AppText kind="small" style={styles.guidelineText}>
-          Báo sự cố đã tiếp nhận; tải tệp lỗi không làm mất báo cáo. Tiền tiếp
-          tục được giữ an toàn. Ảnh tối đa 10 MB, PDF 20 MB, MP4 100 MB (tối đa
-          10 tệp mỗi bên).
-        </AppText>
+      <View style={styles.headerRightGroup}>
+        <View style={styles.countBadge}>
+          <AppText kind="small" style={styles.countBadgeText}>
+            {`${itemsCount}/10`}
+          </AppText>
+        </View>
+        {collapsible ? (
+          <Icon
+            name={isExpanded ? "chevronUp" : "chevronDown"}
+            size={16}
+            color={stitchTokens.wineDark}
+          />
+        ) : null}
       </View>
+    </>
+  );
+
+  return (
+    <View style={styles.card} accessibilityLabel="Bằng chứng sự cố">
+      {/* 1. Card Header (expandable toggle when collapsible) */}
+      {collapsible ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            isExpanded ? "Thu gọn bằng chứng sự cố" : "Mở bằng chứng sự cố"
+          }
+          onPress={() => setUserExpanded(!isExpanded)}
+          style={({ pressed }) => [
+            styles.headerRow,
+            pressed && { opacity: 0.78 },
+          ]}
+        >
+          {headerContent}
+        </Pressable>
+      ) : (
+        <View style={styles.headerRow}>{headerContent}</View>
+      )}
+
+      {isExpanded ? (
+        <>
+          {/* 2. Guidelines Banner */}
+          <View style={styles.guidelineBox}>
+            <AppText kind="small" style={styles.guidelineText}>
+              Hỗ trợ JPG, PNG, WebP (≤ 10 MB), PDF (≤ 20 MB), MP4 (≤ 100 MB),
+              tối đa 10 tệp mỗi bên. Tải lỗi không làm mất hồ sơ khiếu nại.
+            </AppText>
+          </View>
 
       {/* 3. Upload & Visual Preview Area */}
       {!selectedAsset && !pending ? (
@@ -457,16 +504,18 @@ export function ExchangeEvidenceCard({
 
                   {isReady ? (
                     <Button
+                      wine
                       secondary
-                      title={"Tải tệp " + e.fileName}
+                      title={"Xem tệp · " + e.fileName}
                       onPress={() => void read(e.id)}
                     />
                   ) : (
                     e.uploaderId === userId && (
                       <Button
+                        wine
                         secondary
                         disabled={!!pending || busy}
-                        title={"Gửi tiếp " + e.fileName}
+                        title={"Gửi tiếp · " + e.fileName}
                         onPress={() => {
                           setResumeId(e.id);
                           setSelectedAsset(null);
@@ -480,6 +529,8 @@ export function ExchangeEvidenceCard({
           </View>
         )}
       </View>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -521,8 +572,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   titleText: {
-    fontSize: 16,
+    fontSize: 15.5,
     color: stitchTokens.wineDark,
+  },
+  headerRightGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   countBadge: {
     backgroundColor: stitchTokens.parchment,

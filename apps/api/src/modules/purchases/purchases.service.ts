@@ -187,6 +187,21 @@ export class PurchasesService {
           { returnDocument: 'after' },
         );
         if (!updated) throw conflict();
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: row.sellerId,
+          kind: 'PurchaseQuoteReady',
+          title: 'Có người muốn mua sách của bạn',
+          body:
+            body.acceptedListedPrice !== undefined
+              ? `${actor.displayName} đã đồng ý giá niêm yết và gửi địa chỉ nhận sách. Mở phiếu thỏa thuận để tạo đơn.`
+              : `${actor.displayName} đã gửi địa chỉ nhận sách kèm báo giá giao hàng. Mở phiếu thỏa thuận để kiểm tra và tạo đơn.`,
+          targetType: 'PurchaseConversation',
+          targetId: updated._id,
+          dedupeKey: `purchase-quote-ready:${updated._id}:${quote._id}`,
+          createdAt: now,
+          readAt: null,
+        });
         return { entityType: 'PurchaseConversation' as const, entityId: updated._id, listingId: updated.listingId, version: updated.version, state: updated.status, expiresAt: updated.expiresAt, decidedAt: now, event: 'PurchaseConversationQuoteAttached' };
       },
     });

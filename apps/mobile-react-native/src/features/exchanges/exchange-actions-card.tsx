@@ -569,20 +569,7 @@ function ExchangeActionsContent({
         return;
       }
     } catch {
-      try {
-        const DocumentPicker = await import("expo-document-picker");
-        const res = await DocumentPicker.getDocumentAsync({
-          type: ["image/jpeg", "image/png", "image/webp"],
-          copyToCacheDirectory: true,
-        });
-        if (!res.canceled && res.assets?.[0]) {
-          const asset = res.assets[0];
-          setPackagingPhoto(asset.uri);
-          setPackagingPhotoName(asset.name || "anh-sach-chua-dong-hop.jpg");
-        }
-      } catch {
-        setShipFormError("Không mở được bộ chọn ảnh trên thiết bị.");
-      }
+      setShipFormError("Không mở được bộ chọn ảnh trên thiết bị.");
     }
   };
 
@@ -606,20 +593,7 @@ function ExchangeActionsContent({
         return;
       }
     } catch {
-      try {
-        const DocumentPicker = await import("expo-document-picker");
-        const res = await DocumentPicker.getDocumentAsync({
-          type: ["video/mp4", "video/webm"],
-          copyToCacheDirectory: true,
-        });
-        if (!res.canceled && res.assets?.[0]) {
-          const asset = res.assets[0];
-          setPackagingVideo(asset.uri);
-          setPackagingVideoName(asset.name || "video-dong-goi-niem-phong.mp4");
-        }
-      } catch {
-        setShipFormError("Không mở được bộ chọn video trên thiết bị.");
-      }
+      setShipFormError("Không mở được bộ chọn video trên thiết bị.");
     }
   };
 
@@ -827,7 +801,7 @@ function ExchangeActionsContent({
         : exchange.status === "Delivered"
           ? "Đồng kiểm sách 72 giờ"
           : exchange.status === "ResolutionPending"
-            ? "Hồ sơ tranh chấp"
+            ? "Thông tin sự cố & Ký quỹ"
             : exchange.status === "Completed"
               ? "Đánh giá & Ghi nhận"
               : "Trạng thái giao dịch";
@@ -837,7 +811,13 @@ function ExchangeActionsContent({
       {!isHandoverWorkspace ? (
         <View style={styles.titleRow}>
           <View style={styles.titleIconPill}>
-            <Icon name="verified" size={14} color={stitchTokens.wine} />
+            <Icon
+              name={
+                exchange.status === "ResolutionPending" ? "shield" : "verified"
+              }
+              size={14}
+              color={stitchTokens.wine}
+            />
           </View>
           <AppText style={styles.title}>{sectionTitle}</AppText>
         </View>
@@ -1404,66 +1384,51 @@ function ExchangeActionsContent({
               );
             })()}
 
-          {/* State: RESOLUTION_PENDING */}
+          {/* State: RESOLUTION_PENDING (Tier 3: Compact Dispute Reference & Escrow) */}
           {exchange.status === "ResolutionPending" &&
             (() => {
               const parsed = parseDisputeReason(exchange.disputeReason || "");
-              const phase = exchange.returnResolution?.phase;
-              const stageIdx =
-                phase &&
-                [
-                  "ReturnOrdered",
-                  "ReturnInProgress",
-                  "ReturnIssue",
-                  "CheckingReturn",
-                  "CompensationOrdered",
-                  "Closed",
-                ].includes(phase)
-                  ? 2
-                  : phase === "Evidence" ||
-                      Boolean(exchange.outboundDeliveryVerification)
-                    ? 1
-                    : 0;
+              const myDeposit = isInitiator
+                ? exchange.initiatorDeposit
+                : exchange.recipientDeposit;
+              const partnerDeposit = isInitiator
+                ? exchange.recipientDeposit
+                : exchange.initiatorDeposit;
+              const reportedByMe =
+                Boolean(exchange.disputedBy && currentUserId) &&
+                exchange.disputedBy === currentUserId;
+              const disputedAtText = exchange.disputedAt
+                ? new Date(exchange.disputedAt).toLocaleString("vi-VN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    day: "2-digit",
+                    month: "2-digit",
+                  })
+                : null;
               return (
                 <View style={styles.disputeRichBox}>
-                  <Notice tone="info">Tiền vẫn được giữ trong lúc xử lý sự cố. Chưa có ngày hoàn tiền.</Notice>
-                  <View style={styles.disputeMiniTrack}>
-                    {[
-                      "1. Đã tiếp nhận",
-                      "2. Bằng chứng",
-                      "3. Phán quyết",
-                    ].map((stageLabel, idx) => (
-                      <View
-                        key={stageLabel}
-                        style={[
-                          styles.disputeMiniPill,
-                          idx === stageIdx && styles.disputeMiniPillActive,
-                          idx < stageIdx && styles.disputeMiniPillDone,
-                        ]}
-                      >
-                        <AppText
-                          style={[
-                            styles.disputeMiniText,
-                            idx === stageIdx && styles.disputeMiniTextActive,
-                            idx < stageIdx && styles.disputeMiniTextDone,
-                          ]}
-                        >
-                          {stageLabel}
-                        </AppText>
-                      </View>
-                    ))}
-                  </View>
-
-                  <View style={styles.disputeCategoryTag}>
-                    <AppText style={styles.disputeCategoryText}>
-                      {parsed.category}
-                    </AppText>
+                  <View style={styles.disputeMetaRow}>
+                    <View style={styles.disputeCategoryTag}>
+                      <AppText style={styles.disputeCategoryText}>
+                        {parsed.category}
+                      </AppText>
+                    </View>
+                    {exchange.disputedBy || disputedAtText ? (
+                      <AppText style={styles.disputeMetaText}>
+                        {exchange.disputedBy
+                          ? reportedByMe
+                            ? "Bạn báo sự cố"
+                            : `${partnerName} báo sự cố`
+                          : "Đã tiếp nhận"}
+                        {disputedAtText ? ` · ${disputedAtText}` : ""}
+                      </AppText>
+                    ) : null}
                   </View>
 
                   {parsed.detailText ? (
                     <View style={styles.disputeDetailBlock}>
                       <AppText style={styles.disputeDetailLabel}>
-                        Nội dung phản ánh
+                        Nội dung phản ánh ban đầu
                       </AppText>
                       <AppText style={styles.disputeDetailText}>
                         {parsed.detailText}
@@ -1471,22 +1436,47 @@ function ExchangeActionsContent({
                     </View>
                   ) : null}
 
-                  <AppText style={styles.hintText}>
-                    Tệp bằng chứng được quản lý ở mục Bằng chứng sự cố bên dưới.
-                  </AppText>
+                  <View style={styles.disputeEscrowBox}>
+                    <View style={styles.disputeEscrowRow}>
+                      <AppText style={styles.disputeEscrowLabel}>
+                        Cọc của bạn
+                      </AppText>
+                      <AppText style={styles.disputeEscrowValue}>
+                        {formatVnd(myDeposit)}
+                      </AppText>
+                    </View>
+                    <View style={styles.disputeEscrowRow}>
+                      <AppText style={styles.disputeEscrowLabel}>
+                        Cọc của {partnerName}
+                      </AppText>
+                      <AppText style={styles.disputeEscrowValue}>
+                        {formatVnd(partnerDeposit)}
+                      </AppText>
+                    </View>
+                    {exchange.diffAmount > 0 ? (
+                      <View style={styles.disputeEscrowRow}>
+                        <AppText style={styles.disputeEscrowLabel}>
+                          Tiền bù chênh lệch
+                        </AppText>
+                        <AppText style={styles.disputeEscrowValue}>
+                          {formatVnd(exchange.diffAmount)}
+                        </AppText>
+                      </View>
+                    ) : null}
+                    <View style={styles.disputeEscrowDivider} />
+                    <View style={styles.disputeEscrowFoot}>
+                      <Icon name="lock" size={13} color={stitchTokens.wine} />
+                      <AppText style={styles.disputeEscrowNote}>
+                        Tự động tất toán 72h đã tạm dừng. Toàn bộ ký quỹ được
+                        giữ an toàn trên sổ cái cho tới khi hoàn tất phán quyết.
+                      </AppText>
+                    </View>
+                  </View>
+
                   {!dockedMode &&
                     !exchange.returnResolution &&
                     !exchange.outboundDeliveryVerification &&
                     receiveAction}
-
-                  <View style={styles.ledgerNoticeCallout}>
-                    <Icon name="shield" size={14} color={stitchTokens.wine} />
-                    <AppText style={styles.disputeHint}>
-                      Tự động tất toán 72h đã tạm dừng. Tiền cọc và tiền bù được
-                      khóa an toàn trên Ledger cho đến khi Quản trị viên thẩm
-                      định xong.
-                    </AppText>
-                  </View>
                 </View>
               );
             })()}
@@ -2398,10 +2388,10 @@ function ExchangeActionsContent({
                   }}
                 />
               </View>
-              <AppText>
+              <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 12.5, lineHeight: 18 }}>
                 Báo sự cố trước để ghi nhận đúng hạn. Sau đó bổ sung tệp ở mục
                 Bằng chứng sự cố. Video mở hộp không bắt buộc.
-              </AppText>{" "}
+              </AppText>
               {disputeError ? (
                 <View style={styles.errorAlertBox}>
                   <Icon name="info" size={14} color={stitchTokens.flashRed} />
@@ -2968,6 +2958,7 @@ function ExchangeActionsContent({
             {counterModalOpen && (
               <ExchangeCounterForm
                 key={currentUserId + ":" + exchange.revision}
+                exchangeId={exchange.id}
                 isInitiator={isInitiator}
                 currentIds={
                   isInitiator
@@ -2975,6 +2966,14 @@ function ExchangeActionsContent({
                         exchange.initiatorListingId!,
                       ])
                     : [exchange.recipientListingId]
+                }
+                partnerName={partnerName}
+                partnerBooks={
+                  exchange.agreement
+                    ? isInitiator
+                      ? [exchange.agreement.recipientBook]
+                      : exchange.agreement.initiatorBooks
+                    : []
                 }
                 partnerValue={
                   isInitiator
@@ -4952,14 +4951,21 @@ const styles = StyleSheet.create({
     color: stitchTokens.flashRed,
     flex: 1,
   },
-  /* Dispute Rich Box for ResolutionPending */
+  /* Dispute Rich Box for ResolutionPending (Tier 3 Reference & Escrow) */
   disputeRichBox: {
-    padding: space.md,
-    borderRadius: 14,
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
     gap: 10,
+  },
+  disputeMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  disputeMetaText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: stitchTokens.subtleGray,
   },
   disputeHeaderRow: {
     flexDirection: "row",
@@ -4987,35 +4993,74 @@ const styles = StyleSheet.create({
   },
   disputeCategoryTag: {
     alignSelf: "flex-start",
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 999,
     backgroundColor: stitchTokens.flashRedBg,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderColor: stitchTokens.redBorderSoft,
   },
   disputeCategoryText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "700",
     color: stitchTokens.crimson,
   },
   disputeDetailBlock: {
-    backgroundColor: stitchTokens.whiteSurface,
-    padding: 8,
-    borderRadius: 8,
+    backgroundColor: stitchTokens.parchment,
+    padding: 10,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    gap: 2,
+    borderColor: stitchTokens.cardBorder,
+    gap: 3,
   },
   disputeDetailLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.subtleGray,
   },
   disputeDetailText: {
-    fontSize: 12,
+    fontSize: 13,
     color: stitchTokens.darkWood,
-    lineHeight: 16,
+    lineHeight: 19,
+  },
+  disputeEscrowBox: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.warmIvory,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    gap: 7,
+  },
+  disputeEscrowRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  disputeEscrowLabel: {
+    fontSize: 12.5,
+    color: stitchTokens.subtleGray,
+  },
+  disputeEscrowValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+  },
+  disputeEscrowDivider: {
+    height: 1,
+    backgroundColor: stitchTokens.cardBorder,
+    marginVertical: 2,
+  },
+  disputeEscrowFoot: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+  },
+  disputeEscrowNote: {
+    flex: 1,
+    fontSize: 12,
+    color: stitchTokens.deepCocoa,
+    lineHeight: 17,
   },
   disputeEvidencePillsRow: {
     flexDirection: "row",

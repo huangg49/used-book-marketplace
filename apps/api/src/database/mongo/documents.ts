@@ -1589,6 +1589,8 @@ export interface MemberNotificationDoc {
     | 'AuctionPaymentExpired'
     | 'OrderBuyNowPaid'
     | 'OrderSaleSettled'
+    | 'OrderCreatedAwaitingPayment'
+    | 'PurchaseQuoteReady'
     | 'AuctionPaid'
     | 'ExchangeProposed'
     | 'ExchangeAccepted'
@@ -1604,7 +1606,7 @@ export interface MemberNotificationDoc {
     | 'ReviewModerated';
   title: string;
   body: string;
-  targetType: 'Withdrawal' | 'Auction' | 'Exchange' | 'Order' | 'SupportCase' | 'TransactionReview';
+  targetType: 'Withdrawal' | 'Auction' | 'Exchange' | 'Order' | 'PurchaseConversation' | 'SupportCase' | 'TransactionReview';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;

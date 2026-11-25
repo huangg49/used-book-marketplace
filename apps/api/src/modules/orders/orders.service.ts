@@ -449,6 +449,18 @@ export class OrdersService {
               },
             );
             if (selected.matchedCount !== 1) throw conflict();
+            await tx.c.member_notifications.insertOne({
+              _id: randomUUID(),
+              userId: o.buyerId,
+              kind: 'OrderCreatedAwaitingPayment',
+              title: 'Người bán đã tạo đơn — chờ thanh toán',
+              body: `Đơn hàng #${o._id.slice(0, 8).toUpperCase()} đã được tạo với tổng ${amounts.buyerTotal.toLocaleString('vi-VN')} đ. Thanh toán trước hạn để giữ sách.`,
+              targetType: 'Order',
+              targetId: o._id,
+              dedupeKey: `order-created-awaiting-payment:${o._id}:${o.buyerId}`,
+              createdAt: now,
+              readAt: null,
+            });
           }
           const listing =
             l.trade === 'Available'
@@ -1143,17 +1155,18 @@ export class OrdersService {
       (delivered?.source === 'BuyerReceived' ? delivered.occurredAt : null);
     const issue = events.find((entry) => entry.action === 'ReportNonReceipt' || entry.action === 'ReportCondition');
     const actions: JourneyAction[] = [];
-    const demo = buyer && this.localDemo.deliveryJourneyEnabled() && !order.demoCompletionPolicy;
-    if (demo && shipment && !pickup && order.state === 'Preparing' && order.preparation && now < order.preparation.pickupDeadline) {
+    const demoCarrier = this.localDemo.deliveryJourneyEnabled() && !order.demoCompletionPolicy;
+    const demoBuyer = buyer && demoCarrier;
+    if (demoCarrier && shipment && !pickup && order.state === 'Preparing' && order.preparation && now < order.preparation.pickupDeadline) {
       actions.push('Pickup');
     }
-    if (demo && pickup?.deliveryDeadline && order.state === 'InTransit' && now < pickup.deliveryDeadline) {
+    if (demoCarrier && pickup?.deliveryDeadline && order.state === 'InTransit' && now < pickup.deliveryDeadline) {
       actions.push(going ? 'Deliver' : 'OutForDelivery');
     }
     if (buyer && !issue && order.state === 'Inspection' && order.inspectionDeadline && now < order.inspectionDeadline) {
       if (acknowledgement) {
         actions.push('ReportCondition');
-        if (demo && event('Deliver')) actions.push('SkipInspection');
+        if (demoBuyer && event('Deliver')) actions.push('SkipInspection');
       } else {
         actions.push('Acknowledge', 'ReportNonReceipt');
       }
@@ -1172,19 +1185,24 @@ export class OrdersService {
 
   advanceDeliveryJourney(context: CommandContext, id: string, body: Wire['AdvanceDirectOrderDeliveryJourney']) {
     const reporting = body.action === 'ReportNonReceipt' || body.action === 'ReportCondition';
+    const carrierStep =
+      body.action === 'Pickup' ||
+      body.action === 'OutForDelivery' ||
+      body.action === 'Deliver';
+    const buyerOnly = !carrierStep;
     const description = body.description?.trim();
     if (reporting ? !description || description.length < 10 : body.description !== undefined)
       throw new DomainError(422, 'VALIDATION_ERROR', 'Hãy nhập mô tả từ 10 ký tự khi báo sự cố.');
 
     return this.commands.runOrder(context, 'advanceDirectOrderDeliveryJourney', id, body, {
       discover: async (tx) => {
-        const o = await this.own(tx, id, context.auth.user.id, true);
+        const o = await this.own(tx, id, context.auth.user.id, buyerOnly);
         return [o.buyerId, o.sellerId];
       },
       authorize: async (tx, actor) => {
         member(actor, true);
-        const o = await this.own(tx, id, actor._id, true);
-        if (!listedBySeller(o.context?.agreement?.snapshot)) throw notFound();
+        const o = await this.own(tx, id, actor._id, buyerOnly);
+        if (o.demoCompletionPolicy) throw invalidState('Đơn đang dùng chế độ hoàn tất nhanh demo.');
         if (!reporting && body.action !== 'Acknowledge') this.localDemo.assertDeliveryJourneyEnabled();
         await this.decision(tx, context.auth);
       },
@@ -1195,7 +1213,7 @@ export class OrdersService {
         await this.ledger.lockOrder(tx, o.buyerId, id, false);
         if ((await this.ledger.orderFunds(tx, id)).held !== o.quote.buyerTotal) throw invalidState();
         const now = await this.decision(tx, context.auth);
-        const journey = await this.deliveryJourney(tx, o, now, true);
+        const journey = await this.deliveryJourney(tx, o, now, o.buyerId === actor._id);
         const action = body.action;
         if (!journey.actions.includes(action)) throw invalidState('Mốc này chưa sẵn sàng. Hãy tải lại tiến độ đơn.');
         const supportCaseId = reporting ? randomUUID() : null;
@@ -1293,6 +1311,7 @@ export class OrdersService {
         const { o, commitment } = await this.locked(tx, id);
         if (o.version !== body.expectedVersion) throw conflict();
         if (listedBySeller(o.context?.agreement?.snapshot) ||
+          !!(await tx.c.direct_order_journey_events.findOne({ orderId: id })) ||
           o.state !== 'Preparing' || o.version !== 3 || !o.preparation || commitment.status !== 'Active' ||
           o.preparation.pickupReview || await tx.c.carrier_pickup_reviews.findOne({ orderId: id }) ||
           await tx.c.order_delivery_reviews.findOne({ orderId: id }) || await tx.c.order_non_receipt_reports.findOne({ orderId: id }) ||
@@ -1546,7 +1565,7 @@ export class OrdersService {
       const shipment = await tx.c.direct_shipments.findOne({ trackingCode: code });
       if (!shipment) throw notFound();
       const order = await this.own(tx, shipment.orderId, actor._id);
-      if (!listedBySeller(order.context?.agreement?.snapshot)) throw notFound();
+      if (order.demoCompletionPolicy) throw notFound();
       return order._id;
     });
     return this.read(auth, id);
@@ -1592,7 +1611,7 @@ export class OrdersService {
         });
         return {
           id: o._id,
-          ...(agreement.listedPurchaseBySeller ? {
+          ...(!o.demoCompletionPolicy ? {
             deliveryJourney: await this.deliveryJourney(tx, o, now, role === 'Buyer' && actor.status === 'ACTIVE'),
           } : {}),
           deliveryReview: delivery
@@ -1629,7 +1648,8 @@ export class OrdersService {
           canConfirmReceipt: actor.status === 'ACTIVE' && role === 'Buyer' && o.state === 'InTransit' && !!pickup?.deliveryDeadline && now < pickup.deliveryDeadline && !carrierReview && !delivery && funds.held === o.quote.buyerTotal,
           demoCompletionEnabled: !agreement.listedPurchaseBySeller && role === 'Seller' && actor.status === 'ACTIVE' && this.localDemo.allows(id) && o.state === 'Preparing' &&
             !!(await tx.c.direct_shipments.findOne({ orderId: o._id, carrier: 'LatLaiSimulator' })) &&
-            !(await tx.c.local_demo_order_completions.findOne({ _id: o._id })),
+            !(await tx.c.local_demo_order_completions.findOne({ _id: o._id })) &&
+            !(await tx.c.direct_order_journey_events.findOne({ orderId: o._id })),
           demoCompletionAt: (await tx.c.local_demo_order_completions.findOne({ _id: o._id, status: 'Pending' }))?.dueAt.toISOString() ?? null,
 
           carrierReview: carrierReview

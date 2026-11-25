@@ -419,41 +419,71 @@ export function ExchangeDetailScreen() {
                     />
                   ) : null}
 
-                  {actionsBody}
-
-                  {exchange.status === "Proposed" ? (
-                    <ExchangeProposalCard
-                      exchange={exchange}
-                      isInitiator={isInitiator}
-                    />
-                  ) : null}
-
-                  {exchange.status === "Delivered" &&
-                  receiveBooks.length > 0 ? (
-                    <ExchangeBookGroup
-                      title="Sách bạn đã nhận"
-                      subtitle={`Đối chiếu tình trạng gốc từ ${partnerName}`}
-                      books={receiveBooks}
-                      exchangeId={exchange.id}
-                      incoming
-                    />
-                  ) : null}
-
                   {exchange.status === "ResolutionPending" ? (
-                    <ExchangeEvidenceCard
-                      key={identity + ":" + id}
-                      id={id}
-                      revision={exchange.revision}
-                    />
-                  ) : null}
+                    <>
+                      {/* Tier 1: Decision & Action Hub right under Stage Hero */}
+                      <ExchangeReturnAndDemoCard
+                        exchange={exchange}
+                        userId={currentUserId ?? ""}
+                        onReload={reload}
+                        section="resolution"
+                      />
 
-                  <ExchangeReturnAndDemoCard
-                    exchange={exchange}
-                    userId={currentUserId ?? ""}
-                    onReload={reload}
-                  />
+                      {/* Tier 2: Smart Collapsible Evidence Card */}
+                      <ExchangeEvidenceCard
+                        key={identity + ":" + id}
+                        id={id}
+                        revision={exchange.revision}
+                        collapsible
+                        defaultExpanded={
+                          !exchange.returnResolution ||
+                          exchange.returnResolution.phase === "Evidence" ||
+                          exchange.returnResolution.phase === "ReturnIssue"
+                        }
+                      />
 
-                  <ExchangeSafetyTips />
+                      {/* Tier 3: Compact Dispute Reference & Escrow Summary */}
+                      {actionsBody}
+
+                      {/* Utility Footer: Demo Time-Advance (when enabled) */}
+                      <ExchangeReturnAndDemoCard
+                        exchange={exchange}
+                        userId={currentUserId ?? ""}
+                        onReload={reload}
+                        section="demo"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      {actionsBody}
+
+                      {exchange.status === "Proposed" ? (
+                        <ExchangeProposalCard
+                          exchange={exchange}
+                          isInitiator={isInitiator}
+                        />
+                      ) : null}
+
+                      {exchange.status === "Delivered" &&
+                      receiveBooks.length > 0 ? (
+                        <ExchangeBookGroup
+                          title="Sách bạn đã nhận"
+                          subtitle={`Đối chiếu tình trạng gốc từ ${partnerName}`}
+                          books={receiveBooks}
+                          exchangeId={exchange.id}
+                          incoming
+                        />
+                      ) : null}
+
+                      <ExchangeReturnAndDemoCard
+                        exchange={exchange}
+                        userId={currentUserId ?? ""}
+                        onReload={reload}
+                      />
+
+                      <ExchangeSafetyTips />
+                    </>
+                  )}
                 </View>
               )}
             </ScrollView>

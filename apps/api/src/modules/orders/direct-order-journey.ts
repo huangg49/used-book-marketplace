@@ -10,9 +10,7 @@ export const journeyEventId = (orderId: string, action: DirectOrderJourneyEventD
 
 export async function assertInspectionWasSkipped(tx: Tx, order: DirectOrderDoc, receiptId: string, now: Date) {
   const skipped = await tx.c.direct_order_journey_events.findOne({ _id: journeyEventId(order._id, 'SkipInspection') });
-  const context = await tx.c.workflow_contexts.findOne({ orderId: order._id });
-  const agreement = context ? await tx.c.agreement_snapshots.findOne({ _id: context._id }) : null;
-  if (!listedBySeller(agreement?.snapshot) || order.state !== 'Inspection' ||
+  if (order.demoCompletionPolicy || order.state !== 'Inspection' ||
     !order.inspectionDeadline || now >= order.inspectionDeadline ||
     skipped?.receiptId !== receiptId || skipped.actorId !== order.buyerId ||
     skipped.occurredAt.getTime() !== now.getTime() ||

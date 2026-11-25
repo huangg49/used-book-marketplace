@@ -395,9 +395,9 @@
 
 .detailGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   align-items: start;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .column {
@@ -407,8 +407,6 @@
 }
 
 .stickyColumn {
-  position: sticky;
-  top: 1rem;
   align-self: start;
 }
 
@@ -524,26 +522,147 @@
 }
 
 .damageInputRow label {
+  display: grid;
+  gap: 0.35rem;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--shop-ink);
 }
 
-.damageInputRow input {
-  width: 100%;
+.currencyInputWrap {
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--shop-control, var(--shop-line));
+  background: #ffffff;
+  overflow: hidden;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.currencyInputWrap:focus-within {
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 1px var(--shop-wine);
+}
+
+.currencyInputWrap input {
+  flex: 1;
+  min-width: 0;
   min-height: 40px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--shop-control);
-  background: var(--shop-paper);
-  font-size: 0.875rem;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--shop-ink);
   font-variant-numeric: tabular-nums;
+  outline: none;
+  box-shadow: none;
+}
+
+.currencySuffix {
+  padding: 0 12px 0 4px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--shop-muted);
 }
 
 .damageHint {
-  font-size: 0.75rem;
+  font-size: 0.775rem;
   line-height: 1.45;
   color: var(--shop-muted);
+}
+
+.damageHintAlert {
+  font-size: 0.775rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--shop-error, #991b1b);
+}
+
+.decisionFields {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.fieldLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+}
+
+.charCount {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.charCountOk {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #065f46;
+  font-variant-numeric: tabular-nums;
+}
+
+.fieldAlert {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--shop-error, #991b1b);
+}
+
+.bookDispositionBox {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: #fdfbf7;
+  border: 1px solid var(--shop-line);
+}
+
+.bookDispositionHead {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.825rem;
+  font-weight: 750;
+  color: var(--shop-wine);
+}
+
+.bookDispositionText {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--shop-ink);
+}
+
+.escrowHoldBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: 10px;
+  background: var(--shop-shelf);
+  border: 1px solid var(--shop-line);
+  font-size: 0.835rem;
+  color: var(--shop-ink);
+}
+
+.escrowHoldBanner svg {
+  flex: none;
+  color: var(--shop-wine);
 }
 
 .disputedBooksList {
@@ -931,17 +1050,32 @@
 /* Action Area */
 .nextStep {
   border-top: 3.5px solid var(--shop-wine);
+  display: grid;
+  gap: 1rem;
 }
 
-.nextStep :is(textarea, select) {
+.nextStep textarea {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  border: 1px solid var(--shop-line);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border: 1px solid var(--shop-control, var(--shop-line));
+  border-radius: 10px;
+  padding: 10px 12px;
   font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
   background: #ffffff;
+  color: var(--shop-ink);
+  resize: vertical;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.nextStep textarea:focus {
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 1px var(--shop-wine);
+  outline: none;
 }
 
 .nextStep > label,
@@ -1254,10 +1388,9 @@
 
 /* Settlement card in right column */
 .settlementCard {
-  margin-top: 0.75rem;
   background: var(--shop-paper);
   border: 1px solid var(--shop-line);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
 }
 

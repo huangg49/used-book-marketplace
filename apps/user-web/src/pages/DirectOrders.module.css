@@ -2030,3 +2030,272 @@
     gap: 14px !important;
 }
 
+/* BuyNow refactored cards: portrait uncropped book cover, clean address & inline clock footer */
+.buyNowBookRow {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    padding-top: 8px;
+}
+
+.buyNowBookCover {
+    width: 78px;
+    aspect-ratio: 3 / 4;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--shop-shelf, #f4eddf);
+    border: 1px solid var(--shop-line);
+    box-shadow: 0 3px 8px rgba(40, 25, 20, 0.12);
+}
+
+.buyNowBookCover > div,
+.buyNowBookCover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.buyNowBookCoverPlaceholder {
+    width: 100%;
+    height: 100%;
+    background: #efe6d5;
+}
+
+.buyNowBookMeta {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    align-content: start;
+}
+
+.buyNowBookCondition {
+    margin-top: 10px;
+}
+
+.buyNowBookCondition details {
+    margin-top: 0;
+}
+
+.buyNowBookCondition details > summary {
+    min-height: 40px;
+    padding: 8px 0;
+}
+
+.buyNowBookCondition p {
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+    color: var(--shop-muted);
+    line-height: 1.5;
+}
+
+.deliveryInfoCard {
+    padding-bottom: 12px !important;
+}
+
+.deliveryInfoBody {
+    display: grid;
+    gap: 10px;
+    padding-top: 8px;
+}
+
+.addressBlock {
+    display: grid;
+    gap: 3px;
+}
+
+.addressRoleLabel {
+    font-size: 0.72rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--shop-muted);
+}
+
+.addressBlock strong {
+    font-size: 0.94rem;
+    color: var(--shop-ink);
+}
+
+.addressBlock span:not(.addressRoleLabel):not(.orderIdPill) {
+    font-size: 0.86rem;
+    color: var(--shop-muted);
+    line-height: 1.45;
+}
+
+.inlineDisclosureWrap details {
+    margin-top: 0;
+    border-top: 1px solid var(--shop-line);
+}
+
+.inlineDisclosureWrap details > summary {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 42px;
+    padding: 8px 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--shop-wine);
+    list-style: none;
+}
+
+.inlineDisclosureWrap details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.inlineDisclosureWrap details > div {
+    padding: 2px 0 10px;
+    display: grid;
+    gap: 3px;
+}
+
+.disclosureLineStrong {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--shop-ink);
+}
+
+.disclosureLine {
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--shop-muted);
+    line-height: 1.5;
+}
+
+.orderMetaRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--shop-line);
+}
+
+.orderIdPill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #eaf8ed;
+    border: 1px solid #c5e6cc;
+    color: #156633;
+    font-size: 0.78rem;
+    font-weight: 700;
+    width: fit-content;
+}
+
+.orderAreaText {
+    font-size: 0.82rem;
+    color: var(--shop-muted);
+}
+
+.deliveryLinksRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.originalListingLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--shop-wine);
+    font-weight: 650;
+    font-size: 0.84rem;
+    text-decoration: none;
+}
+
+.originalListingLink:hover {
+    text-decoration: underline;
+}
+
+.inlineLinkBtn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--shop-wine);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.84rem;
+    font-weight: 650;
+    text-align: left;
+    margin-top: 4px;
+    width: fit-content;
+}
+
+.actionCardFooter {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--shop-line);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.actionCardFooter a {
+    font-size: 0.82rem;
+    color: var(--shop-muted);
+}
+
+.paymentFooterNote {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 10px 0 0;
+    padding-top: 8px;
+    border-top: 1px dashed var(--shop-line);
+    color: var(--shop-muted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.paymentFooterNote svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--shop-wine);
+}
+
+.historyDetailCard {
+    padding: 18px 20px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid var(--shop-line);
+}
+
+.historyKvList {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px 20px;
+    margin: 0;
+}
+
+.historyKvList > div {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--shop-paper, #fbf7f0);
+    border: 1px solid var(--shop-line);
+}
+
+.historyKvList dt {
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--shop-muted);
+}
+
+.historyKvList dd {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--shop-ink);
+    line-height: 1.45;
+}
+

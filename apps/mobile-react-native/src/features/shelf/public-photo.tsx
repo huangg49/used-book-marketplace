@@ -30,6 +30,7 @@ export function PublicPhoto({
   onOpen,
   expanded = false,
   compact = false,
+  thumbnail = false,
   shelf = false,
   rail = false,
   result = false,
@@ -45,6 +46,7 @@ export function PublicPhoto({
   onOpen?: () => void;
   expanded?: boolean;
   compact?: boolean;
+  thumbnail?: boolean;
   shelf?: boolean;
   rail?: boolean;
   result?: boolean;
@@ -104,36 +106,48 @@ export function PublicPhoto({
       cachePolicy="memory"
       loading={active && photo.isPending}
       fadeIn
+      thumbnail={thumbnail}
       onError={() => setFailed(requestKey)}
       onLoad={() => setFailed(undefined)}
       style={{
         width: "100%",
-        height: result
-          ? undefined
-          : expanded
-            ? 420
-            : rail
-              ? metrics.shelfCover
-              : shelf
-                ? 180
-                : compact
-                  ? undefined
-                  : large
-                    ? 286
-                    : 210,
-        ...(compact || shelf || rail || result
+        height: thumbnail
+          ? "100%"
+          : result
+            ? undefined
+            : expanded
+              ? 420
+              : rail
+                ? metrics.shelfCover
+                : shelf
+                  ? 180
+                  : compact
+                    ? undefined
+                    : large
+                      ? 286
+                      : 210,
+        ...(thumbnail
           ? {
-              ...((compact && !shelf && !rail) || result
-                ? { aspectRatio: 2 / 3 }
-                : {}),
-              backgroundColor:
-                rail || shelf || result ? colors.surface : colors.paper,
-              borderRadius: radius.book,
+              backgroundColor: colors.paper,
+              borderRadius: 0,
+              borderWidth: 0,
             }
-          : {}),
+          : compact || shelf || rail || result
+            ? {
+                ...((compact && !shelf && !rail) || result
+                  ? { aspectRatio: 2 / 3 }
+                  : {}),
+                backgroundColor:
+                  rail || shelf || result ? colors.surface : colors.paper,
+                borderRadius: radius.book,
+              }
+            : {}),
       }}
     />
   );
+  if (thumbnail) {
+    return <View style={{ width: "100%", height: "100%" }}>{cover}</View>;
+  }
   return (
     <View style={{ width: "100%", gap: space.sm }}>
       {onOpen ? (

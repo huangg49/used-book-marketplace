@@ -10,8 +10,9 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { AppTextInput as TextInput } from '../../core/ui';
+import { DirectOrderDriverScreen } from './direct-order-driver-screen';
 
 export interface ShipmentOrderData {
   exchangeId: string;
@@ -37,6 +38,14 @@ export interface ShipmentOrderData {
 }
 
 export function DriverScreen() {
+  const params = useLocalSearchParams<{ kind?: string; trackingCode?: string }>();
+  if (params.kind === 'direct' && params.trackingCode) {
+    return <DirectOrderDriverScreen trackingCode={params.trackingCode} />;
+  }
+  return <ExchangeCarrierDriverScreen />;
+}
+
+function ExchangeCarrierDriverScreen() {
   const defaultApiUrl =
     process.env.EXPO_PUBLIC_API_BASE_URL ||
     (Platform.OS === 'android' ? 'http://10.0.2.2:3000/api/v1' : 'http://localhost:3000/api/v1');

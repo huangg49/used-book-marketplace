@@ -231,12 +231,14 @@ try {
   await page.getByRole('button', { name: 'Nhận phụ trách bằng chứng' }).click();
   await page.getByRole('button', { name: 'Xác minh đã giao sách', exact: true }).click();
   await page.getByRole('textbox', { name: 'Căn cứ xác minh bàn giao' }).fill('Đã đối chiếu đúng kiện và người nhận.');
-  await page.getByLabel('Tệp bằng chứng đã đối chiếu').selectOption(evidenceId);
+  await page.getByRole('combobox', { name: /Tệp bằng chứng đã đối chiếu/ }).click();
+  await page.locator(`[role="option"][data-value="${evidenceId}"]`).click();
   await page.getByRole('button', { name: 'Xác minh đã giao sách', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận', exact: true }).click();
   await expect(page.getByText('Admin đã xác minh giao đến', { exact: true })).toBeVisible();
   await expect(page.getByText(/Đã xác minh giao sách\. Có thể yêu cầu/)).toBeVisible();
-  await page.getByLabel('Thao tác với hồ sơ').selectOption('RequestEvidence');
+  await page.getByRole('combobox', { name: /Thao tác với hồ sơ/ }).click();
+  await page.locator('[role="option"][data-value="RequestEvidence"]').click();
   await page.getByRole('textbox', { name: 'Căn cứ hoặc yêu cầu gửi hai bên' }).fill('Vui lòng bổ sung bằng chứng đã nhận hoặc đã gửi sách.');
   await page.getByRole('button', { name: 'Yêu cầu bổ sung bằng chứng', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận', exact: true }).click();
@@ -260,11 +262,12 @@ try {
     diffPayerId: item.initiatorId,
     initiatorListingIds: item.agreement.initiatorBooks.map(book => book.listingId) };
   await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
-  const verdict = page.getByLabel('Phương án phán quyết');
-  await expect(verdict.locator('option[value="CompensateRecipient"]')).toHaveJSProperty("disabled", false);
-  await expect(verdict.locator('option[value="CompensateInitiator"]')).toHaveJSProperty("disabled", false);
-  await verdict.selectOption('CompensateRecipient');
-  await expect(verdict).toHaveValue('CompensateRecipient');
+  const verdict = page.getByRole('combobox', { name: /Phương án phán quyết/ });
+  await verdict.click();
+  await expect(page.locator('[role="option"][data-value="CompensateRecipient"]')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('[role="option"][data-value="CompensateInitiator"]')).not.toHaveAttribute('aria-disabled', 'true');
+  await page.locator('[role="option"][data-value="CompensateRecipient"]').click();
+  await expect(verdict).toContainText(/Bình QA/);
   const preview = page.getByRole('region', { name: 'Phán quyết khiếu nại kiểm tra sách' });
   await preview.getByRole('button', { name: /Cuốn 1:.*100[.]000/ }).click();
   await expect(preview.getByText('Khấu trừ từng phần · Hoàn tất trao đổi')).toBeVisible();
@@ -298,7 +301,9 @@ try {
   await expect(page.getByText('Quá hạn trả sách.', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Quá hạn trả sách', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Tua hạn trả sách · Demo' })).toHaveCount(0);
-  await expect(page.getByLabel('Thao tác với hồ sơ').locator('option[value="OrderCompensation"]')).toHaveCount(1);
+  await page.getByRole('combobox', { name: /Thao tác với hồ sơ/ }).click();
+  await expect(page.locator('[role="option"][data-value="OrderCompensation"]')).toHaveCount(1);
+  await page.keyboard.press('Escape');
   await page.screenshot({ path: path.join(artifacts, 'return-overdue-320.png'), fullPage: true });
   assert.deepEqual(errors, []);
   console.log('PASS: held queue, read-only out-of-scope case, assignment, return evidence request, same key/body after lost ACK, error/retry/empty, inspection compensation eligibility, 1440/390/320 + 130% text. UI HTTP fixtures.');

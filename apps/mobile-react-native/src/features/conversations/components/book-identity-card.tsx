@@ -61,7 +61,7 @@ export function BookIdentityCard({
               mediaId={primaryPhoto.id}
               label={title}
               active
-              compact
+              thumbnail
             />
           ) : (
             <View style={styles.coverFallback}>
@@ -73,9 +73,15 @@ export function BookIdentityCard({
           <AppText numberOfLines={1} style={styles.compactTitle}>
             {title}
           </AppText>
-          <AppText numberOfLines={1} style={styles.compactSub}>
-            {priceText} · {statusText}
-          </AppText>
+          <View style={styles.compactMetaRow}>
+            <AppText numberOfLines={1} style={styles.compactPrice}>
+              {priceText}
+            </AppText>
+            <AppText style={styles.compactDot}>·</AppText>
+            <AppText numberOfLines={1} style={styles.compactStatus}>
+              {statusText}
+            </AppText>
+          </View>
         </View>
         <Icon name="chevronRight" size={16} color={colors.muted} />
       </Pressable>
@@ -103,7 +109,7 @@ export function BookIdentityCard({
             mediaId={primaryPhoto.id}
             label={title}
             active={true}
-            compact
+            thumbnail
           />
         ) : (
           <View style={styles.coverFallback}>
@@ -209,11 +215,11 @@ const styles = StyleSheet.create({
     gap: 10,
     marginHorizontal: space.lg,
     marginTop: space.sm,
-    marginBottom: space.xs,
+    marginBottom: 4,
   },
   compactCover: {
-    width: 32,
-    height: 48,
+    width: 34,
+    height: 46,
     borderRadius: 6,
     overflow: "hidden",
     backgroundColor: stitchTokens.parchment,
@@ -232,11 +238,29 @@ const styles = StyleSheet.create({
     color: colors.ink,
     includeFontPadding: false,
   },
-  compactSub: {
+  compactMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  compactPrice: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    includeFontPadding: false,
+  },
+  compactDot: {
+    fontSize: 11,
+    color: colors.muted,
+    includeFontPadding: false,
+  },
+  compactStatus: {
     fontSize: 11,
     lineHeight: 15,
     fontWeight: "600",
-    color: stitchTokens.wine,
+    color: colors.muted,
+    flexShrink: 1,
     includeFontPadding: false,
   },
   pressed: {

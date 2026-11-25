@@ -60,17 +60,20 @@ export function getNotificationMeta(n: MemberNotification): NotificationMeta {
     titleLower.includes("trả giá") ||
     titleLower.includes("vượt giá");
 
-  // 1. Order (Đơn hàng / Mua ngay)
+  // 1. Order / Purchase Request (Đơn hàng / Mua ngay / Yêu cầu tạo đơn)
   if (
     n.targetType === "Order" ||
+    n.targetType === "PurchaseConversation" ||
     n.kind.startsWith("Order") ||
+    n.kind.startsWith("Purchase") ||
     titleLower.includes("đơn") ||
     titleLower.includes("mua ngay")
   ) {
-    const isSeller = titleLower.includes("chuẩn bị gửi") || bodyLower.includes("bàn giao");
+    const isPurchaseReq = n.targetType === "PurchaseConversation" || n.kind === "PurchaseQuoteReady";
+    const isSeller = isPurchaseReq || titleLower.includes("chuẩn bị gửi") || bodyLower.includes("bàn giao");
     return {
       category: "order",
-      label: isSeller ? "Đơn bán" : "Đơn mua",
+      label: isPurchaseReq ? "Yêu cầu mua" : isSeller ? "Đơn bán" : "Đơn mua",
       pillBg: "bg-emerald-50",
       pillBorder: "border-emerald-200",
       pillText: "text-emerald-800",
@@ -78,9 +81,13 @@ export function getNotificationMeta(n: MemberNotification): NotificationMeta {
       iconContainerBg: "bg-emerald-100 text-emerald-800 border-emerald-200",
       iconColor: "text-emerald-800",
       heroBannerBg: "bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 text-emerald-50",
-      heroBannerTag: "ĐƠN HÀNG",
-      heroBannerTitle: isSeller ? "ĐƠN BÁN · CẦN CHUẨN BỊ GỬI" : "CẬP NHẬT ĐƠN HÀNG",
-      actionLabel: "Mở chi tiết đơn hàng",
+      heroBannerTag: isPurchaseReq ? "YÊU CẦU MUA SÁCH" : "ĐƠN HÀNG",
+      heroBannerTitle: isPurchaseReq
+        ? "NGƯỜI MUA ĐÃ GỬI ĐỊA CHỈ · CHỜ TẠO ĐƠN"
+        : isSeller
+          ? "ĐƠN BÁN · CẦN CHUẨN BỊ GỬI"
+          : "CẬP NHẬT ĐƠN HÀNG",
+      actionLabel: isPurchaseReq ? "Mở phiếu thỏa thuận tạo đơn" : "Mở chi tiết đơn hàng",
       actionBtnClass: "bg-emerald-800 hover:bg-emerald-900 text-white shadow-sm",
     };
   }

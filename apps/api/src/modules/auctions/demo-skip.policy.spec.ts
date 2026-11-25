@@ -36,4 +36,10 @@ describe('local demo skip gate', () => {
     expect(make(value).enabled()).toBe(false);
     expect(() => make(value).assertEnabled()).toThrow(DomainError);
   });
+
+  it('allows remote Atlas demo only when DEMO_ALLOW_REMOTE_HOST=true in development/test', () => {
+    expect(make({ MONGODB_URL: 'mongodb+srv://user:pass@cluster.mongodb.net/latlai', DEMO_ALLOW_REMOTE_HOST: 'true' }).enabled()).toBe(true);
+    expect(make({ NODE_ENV: 'production', MONGODB_URL: 'mongodb+srv://user:pass@cluster.mongodb.net/latlai', DEMO_ALLOW_REMOTE_HOST: 'true' }).enabled()).toBe(false);
+    expect(make({ PAYMENT_SIMULATOR_SECRET: '', MONGODB_URL: 'mongodb+srv://user:pass@cluster.mongodb.net/latlai', DEMO_ALLOW_REMOTE_HOST: 'true' }).enabled()).toBe(false);
+  });
 });

@@ -25,6 +25,7 @@ export function BookCover({
   onLoad,
   loading = false,
   fadeIn = false,
+  thumbnail = false,
 }: {
   source?: ImageSource | number;
   label: string;
@@ -35,6 +36,7 @@ export function BookCover({
   onLoad?: () => void;
   loading?: boolean;
   fadeIn?: boolean;
+  thumbnail?: boolean;
 }) {
   const key = typeof source === "number" ? String(source) : source?.uri;
   return (
@@ -46,11 +48,12 @@ export function BookCover({
           label={label}
           cachePolicy={cachePolicy}
           fadeIn={fadeIn}
+          thumbnail={thumbnail}
           onError={onError}
           onLoad={onLoad}
         />
       ) : (
-        <CoverPlaceholder label={label} loading={loading} />
+        <CoverPlaceholder label={label} loading={loading} thumbnail={thumbnail} />
       )}
     </View>
   );
@@ -60,16 +63,36 @@ function CoverPlaceholder({
   label,
   loading = false,
   failed = false,
+  thumbnail = false,
 }: {
   label: string;
   loading?: boolean;
   failed?: boolean;
+  thumbnail?: boolean;
 }) {
   const message = loading
     ? "Đang tải ảnh…"
     : failed
       ? "Ảnh chưa tải được."
       : "Chưa có ảnh bìa";
+  if (thumbnail) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          width: "100%",
+          height: "100%",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        accessible
+        accessibilityLabel={`${label}. ${message}`}
+        pointerEvents="none"
+      >
+        <Icon name="book" size={16} color={colors.muted} />
+      </View>
+    );
+  }
   return (
     <View
       style={layout.placeholder}
@@ -95,6 +118,7 @@ function SourceCover({
   label,
   cachePolicy,
   fadeIn,
+  thumbnail = false,
   onError,
   onLoad,
 }: {
@@ -102,6 +126,7 @@ function SourceCover({
   label: string;
   cachePolicy?: "none" | "disk" | "memory" | "memory-disk";
   fadeIn: boolean;
+  thumbnail?: boolean;
   onError?: () => void;
   onLoad?: () => void;
 }) {
@@ -134,10 +159,12 @@ function SourceCover({
     }
     return () => opacity.stopAnimation();
   }, [fadeIn, loaded, reducedMotion, opacity]);
-  if (failed) return <CoverPlaceholder label={label} failed />;
+  if (failed) return <CoverPlaceholder label={label} failed thumbnail={thumbnail} />;
   return (
     <View style={{ width: "100%", height: "100%" }}>
-      {fadeIn && !loaded && <CoverPlaceholder label={label} loading />}
+      {fadeIn && !loaded && (
+        <CoverPlaceholder label={label} loading thumbnail={thumbnail} />
+      )}
       <Animated.View
         style={{ position: "absolute", width: "100%", height: "100%", opacity }}
       >
@@ -145,7 +172,7 @@ function SourceCover({
           source={source}
           accessible={!fadeIn || loaded}
           accessibilityLabel={label}
-          contentFit="contain"
+          contentFit={thumbnail ? "cover" : "contain"}
           cachePolicy={cachePolicy}
           transition={0}
           style={{ width: "100%", height: "100%" }}

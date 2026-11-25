@@ -157,9 +157,7 @@ export async function checkOrder(tx: Tx, orderId: string) {
     )
       fail('Missing commitment receipt/audit/outbox');
   }
-  const journey = listedBySeller
-    ? await tx.c.direct_order_journey_events.find({ orderId: o._id }).toArray()
-    : [];
+  const journey = await tx.c.direct_order_journey_events.find({ orderId: o._id }).toArray();
   await checkOrderJourney(tx, o, c!, journey);
   await checkOrderFunding(tx, o, c!, calculated!.buyerTotal, buyNow, journey);
   await checkOrderPreparation(tx, o, c!, buyNow, journey);
@@ -602,6 +600,7 @@ async function checkOrderJourney(
   events: DirectOrderJourneyEventDoc[],
 ) {
   if (!events.length) return;
+  if (o.demoCompletionPolicy) fail('Cannot mix demo completion and delivery journey');
   const getEvent = (action: DirectOrderJourneyEventDoc['action']) => events.find((event) => event.action === action);
   const pickup = await tx.c.carrier_pickup_events.findOne({ orderId: o._id, outcome: 'Applied' });
   const delivery = await tx.c.direct_delivery_events.findOne({ orderId: o._id });
@@ -633,8 +632,12 @@ async function checkOrderJourney(
       Acknowledge: ['Inspection', 5], ReportNonReceipt: ['ResolutionPending', 6],
       ReportCondition: ['ResolutionPending', 6], SkipInspection: ['Completed', 6],
     }[step.action];
-    if (step._id !== journeyEventId(o._id, step.action) || step.actorId !== o.buyerId ||
-      !x || x.r.operation !== 'advanceDirectOrderDeliveryJourney' || x.r.actorId !== o.buyerId ||
+    const carrierStep = ['Pickup', 'OutForDelivery', 'Deliver'].includes(step.action);
+    const validActor = carrierStep
+      ? step.actorId === o.buyerId || step.actorId === o.sellerId
+      : step.actorId === o.buyerId;
+    if (step._id !== journeyEventId(o._id, step.action) || !validActor ||
+      !x || x.r.operation !== 'advanceDirectOrderDeliveryJourney' || x.r.actorId !== step.actorId ||
       x.r.systemActor !== null || x.r.contextId !== c._id || x.a.reason !== step.action ||
       x.r.resultVersion !== phase[1] || get(x.r.result, 'state') !== phase[0] ||
       x.r.committedAt.getTime() !== step.occurredAt.getTime() ||
