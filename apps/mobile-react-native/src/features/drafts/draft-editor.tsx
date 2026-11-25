@@ -132,9 +132,11 @@ const checkMessage =
 export function DraftEditor({
   initial,
   onBack,
+  backLabel,
 }: {
   initial: Draft;
   onBack: () => void;
+  backLabel?: string;
 }) {
   const { client, state } = useSession(),
     cache = useQueryClient(),
@@ -168,6 +170,7 @@ export function DraftEditor({
   const scroll = useRef<ScrollView>(null);
   const [catalogDirty, setCatalogDirty] = useState(false);
   const auction = base.channel === "Auction";
+  const returnLabel = backLabel ?? (auction ? "Về gửi đấu giá" : "Về sách của tôi");
   const savedBundle = useRef<BookBundle | null>(null);
   const singleTerms = useRef<Pick<typeof form, "mode" | "salePrice" | "exchangeValue" | "condition"> | null>(null);
   const bundlePrice = useRef("");
@@ -649,6 +652,8 @@ export function DraftEditor({
   const navLocked = busy || uncertain || lifecyclePending;
   const canSave = editable && !approvedEdit;
   const hasPrimary = step < 4 || editable;
+  const draftSavedAtQuota =
+    quotaReached && !approvedEdit && intent.current?.savedVersion !== undefined;
 
   const nextStepTitle =
     step < 4
@@ -660,7 +665,7 @@ export function DraftEditor({
   // Footer Navigation Bar (Stitch Sticky Bottom Action Bar)
   const footer =
     hasPrimary || canSave ? (
-      <ActionBar note={canSave && dirty ? "Có thay đổi chưa lưu." : undefined}>
+      <ActionBar note={canSave && dirty && !draftSavedAtQuota ? "Có thay đổi chưa lưu." : undefined}>
         {step > 0 && (editable || step < 5) ? (
           <Button
             key="prev"
@@ -735,7 +740,7 @@ export function DraftEditor({
                 : undefined
               : moderationLabel[base.state.moderation]
           }
-          backLabel={auction ? "Về gửi đấu giá" : "Về sách của tôi"}
+          backLabel={returnLabel}
           backDisabled={busy}
           onBack={returnToList}
         />
@@ -1016,7 +1021,7 @@ export function DraftEditor({
               style={{ fontSize: 12, lineHeight: 17 }}
             >
               {quotaReached
-                ? "Bản nháp đã được lưu. Hãy ẩn hoặc lưu trữ bớt một bài cũ trong mục Sách của tôi rồi quay lại gửi duyệt."
+                ? `${draftSavedAtQuota ? "Bản nháp đã được lưu. " : ""}Trong Sách của tôi, mở Bài mua/đổi hoặc Bài đấu giá để tạm ẩn một bài đã duyệt đang sẵn sàng.`
                 : stopped
                   ? "Nội dung bạn đang nhập vẫn được giữ an toàn. Cập nhật trạng thái mới nhất trước khi tiếp tục."
                   : "Hệ thống đang giữ nguyên yêu cầu vừa gửi để tránh gửi trùng. Hãy thử lại trước khi sửa tiếp."}
@@ -1038,7 +1043,7 @@ export function DraftEditor({
                 <View style={{ flex: 1 }}>
                   <Button
                     wine
-                    title={auction ? "Về gửi đấu giá" : "Về sách của tôi"}
+                    title={returnLabel}
                     busy={busy}
                     onPress={async () => {
                       if (busyRef.current) return;

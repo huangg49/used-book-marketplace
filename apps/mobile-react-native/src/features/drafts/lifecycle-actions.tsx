@@ -39,14 +39,17 @@ export function LifecycleActions({
     return () => onPending(false);
   }, [intent, busy, onPending]);
   const eligible = manageableListing(value);
+  const auction = value.channel === "Auction";
+  const hideLabel = auction ? "Ẩn bài đấu giá" : "Ẩn khỏi kệ";
+  const showLabel = auction ? "Mở lại bài đấu giá" : "Mở lại trên kệ";
   const active =
     state.status === "authenticated" && state.user.status === "ACTIVE";
   const label =
     choice === "archive"
       ? "Xóa bài đăng"
       : choice === "Hidden"
-        ? "Ẩn khỏi kệ"
-        : "Mở lại trên kệ";
+        ? hideLabel
+        : showLabel;
   async function send() {
     if (inFlight.current || !choice) return;
     const current =
@@ -67,12 +70,14 @@ export function LifecycleActions({
         );
       await cache.invalidateQueries({ queryKey: ["public-shelf"] });
       await cache.invalidateQueries({ queryKey: ["public-listing", value.id] });
+      if (auction && state.status === "authenticated")
+        await cache.invalidateQueries({ queryKey: ["my-listings", state.user.id, "auction"] });
       setMessage(
         current.stopped
           ? "Đã tải trạng thái mới nhất. Thao tác trước không được thực hiện; kiểm tra lại trước khi chọn tiếp."
           : current.action === "Hidden"
-            ? "Đã ẩn bài khỏi kệ."
-            : "Đã mở lại bài trên kệ.",
+            ? auction ? "Đã ẩn bài đấu giá." : "Đã ẩn bài khỏi kệ."
+            : auction ? "Đã mở lại bài đấu giá." : "Đã mở lại bài trên kệ.",
       );
       setChoice(undefined);
       setIntent(undefined);
@@ -103,8 +108,8 @@ export function LifecycleActions({
           secondary
           title={
             value.state.visibility === "Visible"
-              ? "Ẩn khỏi kệ"
-              : "Mở lại trên kệ"
+              ? hideLabel
+              : showLabel
           }
           disabled={
             disabled ||
@@ -132,7 +137,9 @@ export function LifecycleActions({
           choice === "archive"
             ? "Bài sẽ biến mất khỏi kệ và Sách của tôi. Bạn không thể tự khôi phục; lịch sử được giữ để đối chiếu."
             : choice === "Hidden"
-              ? "Người khác sẽ không tìm thấy bài. Nội dung đã duyệt được giữ để bạn mở lại sau."
+            ? auction
+              ? "Bài tạm rời danh sách sách có thể gửi đấu giá để bạn có chỗ gửi bài khác. Nội dung đã duyệt được giữ lại."
+              : "Người khác sẽ không tìm thấy bài. Nội dung đã duyệt được giữ để bạn mở lại sau."
               : "Bài sẽ hiện lại nếu thông tin và tài khoản vẫn đủ điều kiện."
         }
         confirmLabel={

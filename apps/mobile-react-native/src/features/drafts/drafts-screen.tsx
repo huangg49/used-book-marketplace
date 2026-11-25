@@ -21,7 +21,7 @@ import {
   space,
   stitchTokens,
 } from "../../core/ui";
-import { draftPage, emptyContent, privateDraft, receipt } from "./contracts";
+import { draftPage, emptyContent, privateDraft, receipt, type ListingChannel } from "./contracts";
 import { DraftEditor } from "./draft-editor";
 import { photoError, useForeground } from "./draft-media";
 import { DraftListingRow } from "./draft-listing-row";
@@ -41,6 +41,11 @@ const filters = [
   { value: "Approved", label: "Đã duyệt" },
 ] as const;
 
+const channels = [
+  { value: "Marketplace", label: "Bài mua/đổi" },
+  { value: "Auction", label: "Bài đấu giá" },
+] as const;
+
 export function DraftsScreen() {
   const { client, state } = useSession(),
     cache = useQueryClient();
@@ -51,6 +56,7 @@ export function DraftsScreen() {
   const ownerId = state.status === "authenticated" ? state.user.id : null;
   const notifications = useNotifications(client, !!ownerId);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [channel, setChannel] = useState<ListingChannel>("Marketplace");
   const [filter, setFilter] = useState("");
   const [selection, setSelected] = useState<string | null>(null);
   const selected = selection ?? linkedId;
@@ -63,11 +69,11 @@ export function DraftsScreen() {
   const createKey = useRef<string | null>(null);
 
   const drafts = useInfiniteQuery({
-    queryKey: ["drafts", ownerId, filter],
+    queryKey: ["drafts", ownerId, channel, filter],
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
       client.request(
-        "/me/listings?channel=Marketplace&limit=20" +
+        `/me/listings?channel=${channel}&limit=20` +
           (filter ? "&moderation=" + filter : "") +
           (pageParam ? "&cursor=" + encodeURIComponent(pageParam) : ""),
         draftPage,
@@ -95,6 +101,7 @@ export function DraftsScreen() {
     },
     onSuccess: async (r) => {
       createKey.current = null;
+      setChannel("Marketplace");
       setFilter("");
       setSelected(r.entityId);
       await cache.invalidateQueries({ queryKey: ["drafts"] });
@@ -116,6 +123,7 @@ export function DraftsScreen() {
       <DraftEditor
         key={selected}
         initial={detail.data}
+        backLabel="Về sách của tôi"
         onBack={closeListing}
       />
     );
@@ -141,6 +149,7 @@ export function DraftsScreen() {
     );
 
   const items = drafts.data?.pages.flatMap((page) => page.items) ?? [];
+  const viewingAuction = channel === "Auction";
 
   return (
     <Screen
@@ -162,17 +171,40 @@ export function DraftsScreen() {
             Bài đăng của tôi
           </AppText>
           <Button
-            title="Đăng sách mới"
+            title={viewingAuction ? "Gửi sách đấu giá" : "Đăng sách mới"}
             wine
             busy={create.isPending}
             disabled={state.status !== "authenticated" || state.user.status !== "ACTIVE"}
             onPress={() => {
+              if (viewingAuction) {
+                router.push("/send-to-auction");
+                return;
+              }
               if (!create.isPending) create.mutate();
             }}
           />
         </View>
 
+        <View style={styles.channels}>
+          {channels.map((tab) => (
+            <Chip
+              key={tab.value}
+              selected={channel === tab.value}
+              title={tab.label}
+              wine
+              onPress={() => {
+                setChannel(tab.value);
+                setFilter("");
+              }}
+            />
+          ))}
+        </View>
+        <AppText kind="annotation" color={stitchTokens.deepCocoa}>
+          Hạn mức chung là 5 bài đang hiển thị hoặc chờ duyệt.
+        </AppText>
+
         <ScrollView
+          key={channel}
           horizontal
           keyboardShouldPersistTaps="handled"
           showsHorizontalScrollIndicator={false}
@@ -204,7 +236,13 @@ export function DraftsScreen() {
           <StatePanel
             wine
             title={filter ? "Chưa có bài trong mục này" : "Bạn chưa có bài đăng"}
-            message={filter ? undefined : "Chọn Đăng sách mới để tạo bản nháp đầu tiên."}
+            message={
+              filter
+                ? undefined
+                : viewingAuction
+                  ? "Chọn Gửi sách đấu giá để bắt đầu."
+                  : "Chọn Đăng sách mới để tạo bản nháp đầu tiên."
+            }
             icon="book"
             action={filter ? { label: "Xem tất cả", onPress: () => setFilter("") } : undefined}
           />
@@ -297,6 +335,11 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 24,
     lineHeight: 32,
+  },
+  channels: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: space.sm,
   },
   filters: {
     gap: space.xs,

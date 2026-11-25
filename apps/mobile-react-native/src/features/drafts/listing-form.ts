@@ -58,7 +58,7 @@ export const manageableListing = (d: Draft) =>
 export const editableListing = (d: Draft) =>
   manageableListing(d) && ["Draft", "Rejected"].includes(d.state.moderation);
 const tradeLabel: Record<string, string> = {
-  Reserved: "Đang giữ cho một đơn",
+  Reserved: "Đang giữ",
   Sold: "Đã bán",
   Exchanged: "Đã đổi",
   ClosedUnavailable: "Đã đóng",

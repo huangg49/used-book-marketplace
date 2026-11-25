@@ -252,7 +252,7 @@ describe("my books row summary", () => {
       1,
     );
     expect(hidden.status).toBe(
-      "Đã được duyệt · Đang ẩn · Đang giữ cho một đơn",
+      "Đã được duyệt · Đang ẩn · Đang giữ",
     );
     expect(
       JSON.stringify(listingSummary(row({ moderation: "Approved" }), 1)),

@@ -25,11 +25,15 @@ export function DraftListingRow({ listing, position, onOpen, onDelete }: {
   const action = editableListing(listing)
     ? (moderation === "Draft" ? "Hoàn thiện" : "Sửa bài")
     : "Xem chi tiết";
+  const auction = listing.channel === "Auction";
+  const priceLabel = auction ? "Giá trị khai báo" : "Giá bán";
   const amounts = [
-    mode !== "Exchange" && salePrice != null ? `Giá bán ${formatVnd(salePrice)}` : null,
-    mode !== "Sale" && exchangeValue != null ? `Giá trị đổi ${formatVnd(exchangeValue)}` : null,
+    mode !== "Exchange" && salePrice != null ? `${priceLabel} ${formatVnd(salePrice)}` : null,
+    !auction && mode !== "Sale" && exchangeValue != null ? `Giá trị đổi ${formatVnd(exchangeValue)}` : null,
   ].filter(Boolean).join(" · ");
-  const format = [mode && modeLabels[mode], bundle && `Bộ ${bundle.items.length} cuốn`].filter(Boolean).join(" · ");
+  const format = auction
+    ? ""
+    : [mode && modeLabels[mode], bundle && `Bộ ${bundle.items.length} cuốn`].filter(Boolean).join(" · ");
 
   return (
     <View style={styles.row}>

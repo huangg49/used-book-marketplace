@@ -1,3 +1,15 @@
+# Quản lý bài đăng chiếm hạn mức trên RN — 25/11/2026
+
+- Local `codex/rn-listing-quota-recovery`, nền `a8f5ac3c`. Sách của tôi
+  có hai mục Bài mua/đổi và Bài đấu giá, mỗi mục lọc và phân trang riêng.
+  Hạn mức chung vẫn theo ADR 0040/0042. Bài đấu giá đã duyệt và còn sẵn sàng
+  có thể mở để ẩn qua thao tác hiện có. Lỗi hạn mức chỉ báo đã lưu bản nháp
+  khi API đã xác nhận lưu thành công.
+- PASS lint, typecheck, 256 unit RN, Expo Web và bundle Android. Với Mongo
+  QA, Expo 320/390px mở được cả hai mục và ẩn bài đấu giá. API chặn bài thứ
+  sáu và nhận gửi lại cùng key/body sau khi có chỗ trống.
+  Kiểm tài khoản demo trên DB app bằng thao tác đọc. Chưa thao tác native.
+
 # Đồng bộ main và sửa hồi quy React Native — 25/11/2026
 
 - Main local fast-forward từ `769d9bd4` đến `ba7bc855` (PR #129), không có
