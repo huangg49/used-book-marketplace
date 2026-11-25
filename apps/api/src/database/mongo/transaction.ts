@@ -22,6 +22,7 @@ export class Tx {
   // Session-bound collections: every operation joins this transaction.
   readonly c: Collections;
   private readonly checks = new Map<string, () => Promise<void>>();
+  private readonly committedHooks = new Map<string, () => void>();
   constructor(
     readonly session: ClientSession,
     readonly db: Db,
@@ -33,6 +34,21 @@ export class Tx {
   // before commit; the same key registered twice runs once.
   check(key: string, fn: () => Promise<void>) {
     this.checks.set(key, fn);
+  }
+  // Registers a same-process signal that runs only after this attempt commits
+  // (never on abort or a retried attempt). The same key registered twice runs
+  // once. Hooks are wake-up hints; a failing hook never fails the commit.
+  afterCommit(key: string, fn: () => void) {
+    this.committedHooks.set(key, fn);
+  }
+  runCommitted() {
+    for (const fn of this.committedHooks.values()) {
+      try {
+        fn();
+      } catch {
+        // A listener error must not turn a committed decision into a failure.
+      }
+    }
   }
   // For read-only sweeps that already ran every check directly.
   discardChecks() {
@@ -142,8 +158,8 @@ export async function runTransaction<T>(
         maxCommitTimeMS: options.maxCommitTimeMS ?? 10_000,
       });
       let result: T;
+      const tx = new Tx(session, db);
       try {
-        const tx = new Tx(session, db);
         result = await fn(tx);
         await tx.runChecks();
       } catch (error) {
@@ -158,6 +174,7 @@ export async function runTransaction<T>(
       for (let commit = 1; commit <= commitAttempts; commit++) {
         try {
           await session.commitTransaction();
+          tx.runCommitted();
           return result;
         } catch (error) {
           if (hasLabel(error, 'UnknownTransactionCommitResult')) {

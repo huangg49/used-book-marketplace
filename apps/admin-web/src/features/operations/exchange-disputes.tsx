@@ -42,6 +42,7 @@ import {
 import { dateText, money } from "../../core/format";
 import { errorText } from "../../core/errors";
 import { canReview, session } from "../../core/session";
+import { staffPoll, useStaffLive } from "../../core/staff-live";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
 import { PaperSelect } from "../../core/PaperSelect";
 import { EmptyArt } from "../../core/EmptyArt";
@@ -107,6 +108,10 @@ function shipmentIssue(item: ExchangeDisputeItem) {
 }
 
 function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
+  const cache = useQueryClient();
+  const live = useStaffLive("operations", () => {
+    void cache.invalidateQueries({ queryKey: ["operations", "exchange-disputes", user.id] });
+  });
   const result = useQuery({
     queryKey: ["operations", "exchange-disputes", user.id],
     queryFn: () =>
@@ -114,7 +119,7 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
         "/operations/exchanges/resolutions",
         exchangeDisputeResolutionsList,
       ),
-    refetchInterval: 6_000,
+    refetchInterval: staffPoll(live, 6_000),
     refetchIntervalInBackground: false,
   });
   const rows = result.data;
@@ -1680,6 +1685,11 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
   const { search } = useLocation();
   const [outcome, setOutcome] = useState<Omit<Outcome, "close">>();
   const [pending, setPending] = useState(false);
+  const detailCache = useQueryClient();
+  // A decision in progress keeps the loaded case; the poll backs up a lost push.
+  const live = useStaffLive("operations", () => {
+    if (!pending) void detailCache.invalidateQueries({ queryKey: ["operations", "exchange-dispute", user.id, id] });
+  });
   const result = useQuery({
     queryKey: ["operations", "exchange-dispute", user.id, id],
     queryFn: () =>
@@ -1687,7 +1697,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
         "/operations/exchanges/" + id + "/dispute",
         exchangeDisputeResolution,
       ),
-    refetchInterval: 6_000,
+    refetchInterval: staffPoll(live, 6_000),
     refetchIntervalInBackground: false,
   });
   const item =

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { router, type Href } from "expo-router";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
   uniqueWorkItems,
@@ -13,6 +13,7 @@ import {
 } from "@used-books/session-client";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
   AppText,
   Button,
@@ -32,6 +33,11 @@ export function WorkInbox({
 }) {
   const { client } = useSession();
   const foreground = useForeground();
+  const queryClient = useQueryClient();
+  // Order, exchange, chat and notification commits wake the member inbox.
+  const live = useTransactionLive("inbox", ownerId, foreground, () => {
+    void queryClient.invalidateQueries({ queryKey: ["work-inbox", ownerId] });
+  });
   const [selection, setSelection] = useState<WorkLane>("DirectOrders");
   const lanes = workLanesFor(status);
   const lane = lanes.some(([value]) => value === selection)
@@ -49,7 +55,7 @@ export function WorkInbox({
     enabled: foreground,
     retry: false,
     staleTime: 0,
-    refetchInterval: foreground ? 6_000 : false,
+    refetchInterval: !foreground ? false : live ? 30_000 : 6_000,
   });
   const inaccessible =
     result.error instanceof ApiError &&

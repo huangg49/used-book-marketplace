@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -74,13 +74,17 @@ export function MyExchangesScreen() {
     "all" | "pending" | "active" | "completed"
   >("all");
 
+  const queryClient = useQueryClient();
+  // Exchange commits wake the member inbox; the list polls only as a backstop.
+  const live = useTransactionLive("inbox", currentUserId ?? "", foreground, () => {
+    void queryClient.invalidateQueries({ queryKey: ["my-exchanges", currentUserId] });
+  });
   const exchangesQuery = useQuery({
     queryKey: ["my-exchanges", currentUserId],
     queryFn: () => client.request("/exchanges", exchangePageSchema),
     enabled: state.status === "authenticated" && foreground,
-    refetchInterval: 6000,
+    refetchInterval: !foreground ? false : live ? 30_000 : 6_000,
   });
-  useTransactionLive("inbox", currentUserId ?? "", foreground, () => { void exchangesQuery.refetch(); });
 
   const handleBack = () => {
     if (router.canGoBack()) router.back();

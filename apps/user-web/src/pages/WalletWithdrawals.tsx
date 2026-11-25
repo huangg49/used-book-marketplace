@@ -27,6 +27,7 @@ import {
 import { PurchaseDialog } from "../components/PurchaseDialog";
 import { TransactionNotes } from "../components/TransactionReview";
 import { session } from "../lib/session";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { formatVnd } from "../lib/routes";
 import { editGroupedAmount, formatGroupedAmount } from "../lib/grouped-amount";
 import styles from "./WalletWithdrawals.module.css";
@@ -87,6 +88,10 @@ export function WalletWithdrawals({
     detailId && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(detailId)
       ? detailId
       : undefined;
+  // Admin decisions write a WithdrawalUpdated notice, which wakes the inbox.
+  const live = useTransactionLive("inbox", validId ? ownerId : undefined, () => {
+    void client.invalidateQueries({ queryKey: ["withdrawal", ownerId, validId] });
+  });
   const detail = useQuery({
     queryKey: ["withdrawal", ownerId, validId],
     staleTime: 0,
@@ -96,7 +101,7 @@ export function WalletWithdrawals({
     refetchInterval: (q) =>
       document.visibilityState === "visible" &&
       !finalStates.includes(q.state.data?.state ?? "")
-        ? 5000
+        ? (live ? 30_000 : 5_000)
         : false,
   });
   useEffect(() => {

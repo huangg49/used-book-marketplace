@@ -26,6 +26,8 @@ import {
   type SupportCase,
 } from "@used-books/session-client";
 import { useSession } from "../../core/session/session-provider";
+import { useForeground } from "../../core/hooks/use-foreground";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
   AppText,
   BackAction,
@@ -597,12 +599,17 @@ function SupportCaseDetailView({
   const [replyText, setReplyText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const foreground = useForeground();
+  // Staff updates write a SupportUpdated notice, which wakes the member inbox.
+  const live = useTransactionLive("inbox", userId, foreground, () => {
+    void queryClient.invalidateQueries({ queryKey: ["support", userId, "detail", caseId] });
+  });
 
   const detailQuery = useQuery({
     queryKey: ["support", userId, "detail", caseId],
     queryFn: () =>
       client.request(`/me/support-cases/${caseId}`, supportDetailSchema),
-    refetchInterval: 10_000,
+    refetchInterval: !foreground ? false : live ? 60_000 : 10_000,
   });
 
   if (detailQuery.isPending) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   ApiError,
@@ -9,6 +9,7 @@ import {
   type CurrentUser,
 } from "@used-books/session-client";
 import { canReview, canReviewCatalog, session } from "../../core/session";
+import { staffPoll, useStaffLive } from "../../core/staff-live";
 import { Button } from "../../core/ui";
 import styles from "./WorkInbox.module.css";
 
@@ -17,6 +18,10 @@ export function OperationsWorkInbox({ user }: { user: CurrentUser }) {
   return <Inbox key={user.id} user={user} />;
 }
 function Inbox({ user }: { user: CurrentUser }) {
+  const cache = useQueryClient();
+  const live = useStaffLive("work-items", () => {
+    void cache.invalidateQueries({ queryKey: ["operations-work-inbox", user.id] });
+  });
   const [selection, setSelection] = useState("ListingReview");
   const lanes = [
     ["ListingReview", "Bài đăng sách"],
@@ -36,7 +41,7 @@ function Inbox({ user }: { user: CurrentUser }) {
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     retry: false,
     staleTime: 0,
-    refetchInterval: 6_000,
+    refetchInterval: staffPoll(live, 6_000),
     refetchIntervalInBackground: false,
   });
   const inaccessible =

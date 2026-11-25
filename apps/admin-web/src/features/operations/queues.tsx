@@ -51,7 +51,7 @@ import {
 import { IntakeReceive, IntakeReclaim } from "./intake-actions";
 import { Forbidden, OperationsQueue } from "./queue-frame";
 import { ResolutionDecision } from "./resolution-actions";
-import { refetchWhileClosed, useQueuePanel, type Row } from "./queue-panel";
+import { useLiveQueueInterval, useQueuePanel, type Row } from "./queue-panel";
 import intakeStyles from "./IntakeQueue.module.css";
 import collectionStyles from "./CollectionQueue.module.css";
 
@@ -309,10 +309,11 @@ function IntakeQueueContent({ userId }: { userId: string }) {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [page, setPage] = useState(1);
+  const refetchInterval = useLiveQueueInterval(panel, ["operations", "auction-intakes"]);
   const result = useQuery({
     queryKey: ["operations", "auction-intakes"],
     queryFn: () => session.request("/operations/auction-intakes", intakeList),
-    refetchInterval: refetchWhileClosed(panel),
+    refetchInterval,
   });
   const items = result.data?.items ?? [];
 
@@ -770,10 +771,11 @@ function CollectionQueueContent() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<CollectionFilterTab>("all");
   const [page, setPage] = useState(1);
+  const refetchInterval = useLiveQueueInterval(panel, ["operations", "point-orders"]);
   const result = useQuery({
     queryKey: ["operations", "point-orders"],
     queryFn: () => session.request("/operations/point-orders", collectionQueue),
-    refetchInterval: refetchWhileClosed(panel),
+    refetchInterval,
   });
   const items = result.data?.items ?? [];
 
@@ -1046,11 +1048,12 @@ export function ResolutionQueue() {
 function ResolutionQueueContent() {
   const panel = useQueuePanel();
   const [search, setSearch] = useState("");
+  const refetchInterval = useLiveQueueInterval(panel, ["operations", "point-order-resolutions"]);
   const result = useQuery({
     queryKey: ["operations", "point-order-resolutions"],
     queryFn: () =>
       session.request("/operations/point-order-resolutions", resolutionQueue),
-    refetchInterval: refetchWhileClosed(panel),
+    refetchInterval,
   });
   const items = result.data?.items ?? [];
   const normalizedSearch = search.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("vi-VN");
@@ -1146,11 +1149,12 @@ export function AuctionQueue() {
 }
 function AuctionQueueContent() {
   const panel = useQueuePanel();
+  const refetchInterval = useLiveQueueInterval(panel, ["operations", "auctions"]);
   const result = useQuery({
     queryKey: ["operations", "auctions"],
     queryFn: () =>
       session.request("/operations/auctions", operationsAuctionList),
-    refetchInterval: refetchWhileClosed(panel),
+    refetchInterval,
   });
   return (
     <OperationsQueue

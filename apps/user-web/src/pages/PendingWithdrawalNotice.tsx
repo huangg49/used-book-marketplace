@@ -4,12 +4,16 @@ import { useSearchParams } from "react-router-dom";
 import { Clock3, ChevronRight } from "lucide-react";
 import { withdrawalPageSchema } from "@used-books/session-client";
 import { session } from "../lib/session";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { collectPendingWithdrawalIds } from "../lib/pending-withdrawals";
 import styles from "./WalletWithdrawals.module.css";
 
 export function PendingWithdrawalNotice({ ownerId }: { ownerId: string }) {
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
+  const live = useTransactionLive("inbox", ownerId, () => {
+    void client.invalidateQueries({ queryKey: ["withdrawals", ownerId, "pending"] });
+  });
   const pending = useQuery({
     queryKey: ["withdrawals", ownerId, "pending"],
     enabled: !!ownerId,
@@ -24,7 +28,7 @@ export function PendingWithdrawalNotice({ ownerId }: { ownerId: string }) {
         signal,
       ),
     refetchInterval: () =>
-      document.visibilityState === "visible" ? 15000 : false,
+      document.visibilityState === "visible" ? (live ? 60_000 : 15_000) : false,
   });
 
   useEffect(() => {

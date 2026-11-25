@@ -9,6 +9,7 @@ import { messageBoundary } from '../commands/message-history.js';
 import { checkMessageSendRate, MESSAGE_MAX_LENGTH } from '../commands/message-send-limits.js';
 import { requireMarketplace } from '../listings/listing-channel.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 @Injectable()
 export class PurchasesService {
@@ -202,6 +203,7 @@ export class PurchasesService {
           createdAt: now,
           readAt: null,
         });
+        signalMemberInbox(tx, [row.sellerId]);
         return { entityType: 'PurchaseConversation' as const, entityId: updated._id, listingId: updated.listingId, version: updated.version, state: updated.status, expiresAt: updated.expiresAt, decidedAt: now, event: 'PurchaseConversationQuoteAttached' };
       },
     });

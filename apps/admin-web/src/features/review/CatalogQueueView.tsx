@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -24,6 +24,7 @@ import {
 } from "@used-books/api-contract/catalog-taxonomy";
 import { dateText } from "../../core/format";
 import { session } from "../../core/session";
+import { staffPoll, useStaffLive } from "../../core/staff-live";
 import { Button, CursorPagination } from "../../core/ui";
 import { ListFeedback } from "../../core/list-feedback";
 import { EmptyArt } from "../../core/EmptyArt";
@@ -90,6 +91,10 @@ export function CatalogQueueView({ user }: { user: CurrentUser }) {
     location.state ?? { reviewReturnTo: queuePath },
   );
 
+  const cache = useQueryClient();
+  const live = useStaffLive("catalog", () => {
+    void cache.invalidateQueries({ queryKey: ["queue", "catalog-requests"] });
+  });
   const result = useInfiniteQuery({
     queryKey: ["queue", "catalog-requests", status, user.id],
     initialPageParam: "",
@@ -102,7 +107,7 @@ export function CatalogQueueView({ user }: { user: CurrentUser }) {
       );
     },
     getNextPageParam: (page) => page.nextCursor || undefined,
-    refetchInterval: 5_000,
+    refetchInterval: staffPoll(live, 5_000),
     refetchIntervalInBackground: false,
     staleTime: 4_000,
   });

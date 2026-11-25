@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Tx } from '../../database/mongo/transaction.js';
 import type { Wire } from '../commands/domain-error.js';
 import { amountsFromAgreement } from '../orders/order-amounts.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 type Receipt = Wire['SaleSettlementReceipt'];
 export type SaleSettlementOrder = Pick<Receipt, 'bookPrice' | 'commissionBps' | 'commission'> & {
@@ -40,6 +41,7 @@ export async function notifySaleSettlement(tx: Tx, order: SaleSettlementOrder, n
     createdAt: now,
     readAt: null,
   });
+  signalMemberInbox(tx, [order.sellerId]);
 }
 
 export async function saleSettlementReceipts(tx: Tx, sellerId: string, ids: string[]) {

@@ -148,3 +148,26 @@ an auction or a payment/acceptance window closes.
   Inbox watchers also check for new durable notifications. Reconnection and REST
   fallback cover missed pushes. The live channels use the existing Mongo role
   and schema.
+- Amendment 25/11/2026: every transaction that writes a member notification,
+  or marks notifications read, wakes that member's `inbox` watch after commit
+  (`Tx.afterCommit`, never for an aborted or retried attempt). The inbox version
+  is the newest notification plus the unread count, so a read in another tab or
+  device also refreshes the badge. Inbox watches use a 5 s stored-version
+  backstop instead of 400 ms; order, exchange and conversation keep 400 ms.
+- Member Web and RN keep one socket per namespace for each session client.
+  Screens watching the same resource share one server watch; the unwatch is sent
+  when the last screen leaves and the socket closes when nothing is watched.
+  The notification bell/list, the RN message badge and the work inbox use the
+  `inbox` watch and poll only as a backstop (60 s, or 30 s for work items)
+  while it is acknowledged, returning to 6 s when it is not. RN hidden tabs and
+  backgrounded apps neither watch nor poll.
+- The same backstop rule (usually 30 s while acknowledged, the previous cadence
+  otherwise) applies on Web and RN to chat rooms, conversation events and the
+  transaction hub, exchange/order lists, exchange evidence and finance panels,
+  order shipments, member support detail and member withdrawal status. Chat
+  history relies on `/purchase-chat`; exchange messages shown in a negotiation
+  follow the active exchange watch. Support and withdrawal screens use `inbox`
+  because staff decisions write a member notification. Staff screens use the
+  separate `/staff` channel in [ADR0092](0092-staff-live-queue-updates.md).
+  Auction lists, drafts and wallet top-ups keep polling: their changes do not
+  all pass through a member signal yet.

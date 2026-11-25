@@ -41,6 +41,7 @@ import { quoteAmounts } from '../quotes/quote-money.js';
 import { amountsFromAgreement } from './order-amounts.js';
 import { CarrierSimulator } from '../shipments/carrier-simulator.js';
 import { journeyEventId, listedBySeller } from './direct-order-journey.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 type JourneyAction = Wire['AdvanceDirectOrderDeliveryJourney']['action'];
 
@@ -461,6 +462,7 @@ export class OrdersService {
               createdAt: now,
               readAt: null,
             });
+            signalMemberInbox(tx, [o.buyerId]);
           }
           const listing =
             l.trade === 'Available'
@@ -724,6 +726,7 @@ export class OrdersService {
               readAt: null,
             })),
           );
+          signalMemberInbox(tx, [o.buyerId, o.sellerId]);
         }
         return {
           entityType: 'Order',

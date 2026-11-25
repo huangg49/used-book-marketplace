@@ -25,6 +25,8 @@ import {
   stitchTokens,
 } from "../../../core/ui";
 import { useSession } from "../../../core/session/session-provider";
+import { useForeground } from "../../../core/hooks/use-foreground";
+import { useTransactionLive } from "../../../core/hooks/use-transaction-live";
 import { apiBaseUrl } from "../../../core/api/api-base-url";
 import {
   changeConversationTerms,
@@ -189,11 +191,18 @@ export function ChatMessagesPanel({
     }
   };
 
-  // 1. Fetch message history with polling fallback
+  const foreground = useForeground();
+  // Conversation commits (terms, order, events) push through the shared watch.
+  const roomLive = useTransactionLive("conversation", room.id, foreground, () => {
+    void queryClient.invalidateQueries({ queryKey: ["conversation-events", room.id] });
+  });
+
+  // 1. Fetch message history; the chat socket delivers new messages, so the
+  // poll only backs up a dropped connection.
   const historyQuery = useQuery({
     queryKey: ["purchase-messages", room.id],
     queryFn: () => getPurchaseMessages(client, room.id),
-    refetchInterval: 3500,
+    refetchInterval: !foreground ? false : connectionStatus === "online" ? 30_000 : 3_500,
   });
 
   const refetchHistory = historyQuery.refetch;
@@ -202,7 +211,7 @@ export function ChatMessagesPanel({
   const eventsQuery = useQuery({
     queryKey: ["conversation-events", room.id],
     queryFn: () => getConversationEvents(client, room.id),
-    refetchInterval: 5000,
+    refetchInterval: !foreground ? false : roomLive ? 30_000 : 5_000,
   });
 
   // 3. Setup WebSocket connection

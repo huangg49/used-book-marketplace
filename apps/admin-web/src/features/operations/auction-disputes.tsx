@@ -7,7 +7,7 @@ import {
   Search,
   ShieldAlert,
 } from "lucide-react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
   useOutletContext,
@@ -23,6 +23,7 @@ import {
 } from "@used-books/session-client";
 import { dateText } from "../../core/format";
 import { canResolve, session } from "../../core/session";
+import { staffPoll, useStaffLive } from "../../core/staff-live";
 import { Button, CursorPagination, Notice } from "../../core/ui";
 import { EmptyArt } from "../../core/EmptyArt";
 import { ListFeedback } from "../../core/list-feedback";
@@ -75,6 +76,11 @@ export function AuctionDisputesPage() {
 }
 
 function AuctionDisputesContent({ user }: { user: CurrentUser }) {
+  const cache = useQueryClient();
+  // Auction complaints are support cases, so they follow the support topic.
+  const live = useStaffLive("support", () => {
+    void cache.invalidateQueries({ queryKey: ["operations", "auction-disputes", user.id] });
+  });
   const [params, setParams] = useSearchParams();
   const query = params.get("q")?.trim() ?? "";
   // ADR 0078/0079: auction complaints are Admin support cases about an auction.
@@ -95,7 +101,7 @@ function AuctionDisputesContent({ user }: { user: CurrentUser }) {
         supportPageSchema,
       ),
     retry: false,
-    refetchInterval: 6_000,
+    refetchInterval: staffPoll(live, 6_000),
     refetchIntervalInBackground: false,
   });
   const rows = result.data?.pages.flatMap((page) => page.items) ?? [];

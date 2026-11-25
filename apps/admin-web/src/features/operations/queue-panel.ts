@@ -1,4 +1,7 @@
 import { useState, type ReactNode } from "react";
+import { useQueryClient, type QueryKey } from "@tanstack/react-query";
+import type { StaffTopic } from "@used-books/session-client";
+import { useStaffLive } from "../../core/staff-live";
 import type { Finish, Outcome } from "./action-panel";
 
 export interface ActionContext {
@@ -35,3 +38,20 @@ export function useQueuePanel() {
 export type QueuePanel = ReturnType<typeof useQueuePanel>;
 export const refetchWhileClosed = (panel: QueuePanel) =>
   panel.open ? false : 5_000;
+
+/**
+ * Poll cadence for a queue whose rows change through commands. A staff push
+ * re-reads the queue unless a panel is open (the row must stay put while its
+ * command is confirmed); the poll is then only a 30 s backstop.
+ */
+export function useLiveQueueInterval(
+  panel: QueuePanel,
+  queryKey: QueryKey,
+  topic: StaffTopic = "operations",
+) {
+  const client = useQueryClient();
+  const live = useStaffLive(topic, () => {
+    if (!panel.open) void client.invalidateQueries({ queryKey });
+  });
+  return panel.open ? false : live ? 30_000 : 5_000;
+}

@@ -29,6 +29,7 @@ import { MediaStorage, digest } from '../media/media-storage.js';
 import { processImage, ImageFailure } from '../media/image-processor.js';
 import { ImageUploadSlots } from '../media/image-upload-slots.js';
 import { lockStorageBudget, reservedStorage } from '../media/media.service.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 const proofOriginalKey = (id: string) => `withdrawal-proof/${id}/original`;
 const proofPreviewKey = (id: string) => `withdrawal-proof/${id}/preview-v1.webp`;
@@ -152,6 +153,7 @@ export class WithdrawalService {
       createdAt: now,
       readAt: null,
     });
+    signalMemberInbox(tx, [row.ownerId]);
   }
   private async transition(
     tx: Tx,

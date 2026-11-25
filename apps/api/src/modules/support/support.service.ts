@@ -27,6 +27,7 @@ import { reviewPublicationPipeline } from '../reviews/review-queries.service.js'
 import { AuctionBiddingService } from '../auctions/auction-bidding.service.js';
 import { AuctionClock } from '../auctions/auction-clock.js';
 import { reviewItem } from '../reviews/review-record.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 const summary = (
   r: Case,
@@ -621,6 +622,7 @@ export class SupportService {
       createdAt: now,
       readAt: null,
     });
+    signalMemberInbox(tx, [row.reporterId]);
   }
   /** Seller excluded: members who ever registered or bid in the auction. */
   private async auctionParticipants(tx: Tx, auctionId: string) {

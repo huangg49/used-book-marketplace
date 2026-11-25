@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import { ApiError } from "@used-books/session-client";
 import { useSession } from "../../core/session/session-provider";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
   AppText,
   AppTextInput,
@@ -101,8 +102,14 @@ export function OrderShipping({
   const [tracking, setTracking] = useState(intent.trackingCode ?? "");
   const [expiredSnapshot, setExpiredSnapshot] = useState<number | null>(null);
 
+  const queryClient = useQueryClient();
+  const shipmentKey = ["order-shipment", ownerId, order.id] as const;
+  // Shipment and carrier commits push on the order watch.
+  const live = useTransactionLive("order", order.id, foreground, () => {
+    void queryClient.invalidateQueries({ queryKey: shipmentKey });
+  });
   const shipment = useQuery({
-    queryKey: ["order-shipment", ownerId, order.id],
+    queryKey: shipmentKey,
     queryFn: async () => {
       try {
         return await client.request(
@@ -116,7 +123,7 @@ export function OrderShipping({
     },
     enabled: foreground,
     retry: false,
-    refetchInterval: foreground ? 5000 : false,
+    refetchInterval: !foreground ? false : live ? 30_000 : 5_000,
   });
 
   const evidence = useQuery({

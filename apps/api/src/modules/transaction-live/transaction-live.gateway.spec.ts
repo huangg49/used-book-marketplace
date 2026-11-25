@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import { AuthService } from '../auth/auth.service.js';
 import { TransactionChanges, type TransactionTarget } from '../commands/transaction-changes.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 import { TransactionLiveGateway } from './transaction-live.gateway.js';
 
 const id = '11111111-1111-4111-8111-111111111111';
@@ -16,6 +17,9 @@ const exchange: TransactionTarget = { kind: 'exchange', id };
 const order: TransactionTarget = { kind: 'order', id };
 const conversation: TransactionTarget = { kind: 'conversation', id };
 const buyerInbox: TransactionTarget = { kind: 'inbox', id: buyer };
+const sellerInbox: TransactionTarget = { kind: 'inbox', id: seller };
+// Commits immediately, like runTransaction after a successful commit.
+const committedTx = { afterCommit: (_key: string, fn: () => void) => fn() };
 
 describe('Transaction live gateway', () => {
   let app: INestApplication;
@@ -25,6 +29,7 @@ describe('Transaction live gateway', () => {
   let shipment: number | null;
   let message: string | null;
   let revoked: Set<string>;
+  let unreadReads: number;
   const clients: Socket[] = [];
 
   beforeEach(async () => {
@@ -32,6 +37,7 @@ describe('Transaction live gateway', () => {
     shipment = null;
     message = null;
     revoked = new Set();
+    unreadReads = 0;
     const authorize = (request: { _id: string; $or?: Record<string, string>[] }) =>
       request._id === id && (!request.$or || request.$or.some(item => Object.values(item).some(user => user === buyer || user === seller)));
     const findOrder = async (request: Parameters<typeof authorize>[0]) =>
@@ -51,7 +57,10 @@ describe('Transaction live gateway', () => {
                 authorize(request) ? { _id: id, initiatorId: buyer, recipientId: seller, revision: version } : null,
             },
             exchange_messages: { findOne: async () => message ? { _id: message } : null },
-            member_notifications: { findOne: async () => null },
+            member_notifications: {
+              findOne: async () => null,
+              countDocuments: async () => { unreadReads++; return 0; },
+            },
           } },
         },
         {
@@ -153,5 +162,41 @@ describe('Transaction live gateway', () => {
     changes.committed(order);
     await vi.waitFor(() => expect(disconnected).toHaveBeenCalled());
     expect(received).not.toHaveBeenCalled();
+  });
+
+  it('pushes a committed notification write only to that member inbox', async () => {
+    const [a, b] = await Promise.all([open('buyer'), open('seller')]);
+    expect(await watch(a, buyerInbox)).toEqual({ ok: true });
+    expect(await watch(b, sellerInbox)).toEqual({ ok: true });
+    const buyerUpdate = vi.fn();
+    const sellerUpdate = vi.fn();
+    a.on('transaction:changed', buyerUpdate);
+    b.on('transaction:changed', sellerUpdate);
+    // Same version as the watch snapshot (e.g. a read in another tab that the
+    // fallback has not re-read yet): the explicit signal still reaches the owner.
+    signalMemberInbox(committedTx, [buyer]);
+    await vi.waitFor(() => expect(buyerUpdate).toHaveBeenCalledExactlyOnceWith(buyerInbox));
+    expect(sellerUpdate).not.toHaveBeenCalled();
+  });
+
+  it('does not push a notification signal to a session revoked after the watch', async () => {
+    const a = await open('buyer');
+    expect(await watch(a, buyerInbox)).toEqual({ ok: true });
+    const received = vi.fn();
+    const disconnected = vi.fn();
+    a.on('transaction:changed', received);
+    a.on('disconnect', disconnected);
+    revoked.add('buyer');
+    signalMemberInbox(committedTx, [buyer]);
+    await vi.waitFor(() => expect(disconnected).toHaveBeenCalled());
+    expect(received).not.toHaveBeenCalled();
+  });
+
+  it('re-reads a watched inbox on the slow backstop, not the 400ms transaction cadence', async () => {
+    const a = await open('buyer');
+    expect(await watch(a, buyerInbox)).toEqual({ ok: true });
+    const afterWatch = unreadReads;
+    await new Promise(resolve => setTimeout(resolve, 1_300));
+    expect(unreadReads - afterWatch).toBe(0);
   });
 });

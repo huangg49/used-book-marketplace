@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -110,6 +110,11 @@ export function OrdersScreen() {
 
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const ownerId = state.status === "authenticated" ? state.user.id : null;
+  const queryClient = useQueryClient();
+  // Order commits wake the member inbox; the list polls only as a backstop.
+  const live = useTransactionLive("inbox", ownerId ?? "", foreground, () => {
+    void queryClient.invalidateQueries({ queryKey: ["my-orders", ownerId] });
+  });
 
   const ordersQuery = useInfiniteQuery({
     queryKey: ["my-orders", ownerId],
@@ -122,9 +127,8 @@ export function OrdersScreen() {
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     enabled: foreground && state.status === "authenticated",
     staleTime: 5_000,
-    refetchInterval: foreground ? 8_000 : false,
+    refetchInterval: !foreground ? false : live ? 30_000 : 8_000,
   });
-  useTransactionLive("inbox", ownerId ?? "", foreground, () => { void ordersQuery.refetch(); });
 
   const allOrders = useMemo(
     () => ordersQuery.data?.pages.flatMap((page) => page.items) ?? [],
