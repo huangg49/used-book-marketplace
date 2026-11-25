@@ -45,6 +45,7 @@ try {
         ? (...values) => { window.qaDeadlineTicks++; callback(...values); } : callback, delay, ...args);
     });
     let state = 'AcceptedAwaitingFunding', deadline = iso(epoch + 120000), fundingDeadline, firstReceiverDeadline;
+    let bothAcknowledged = false, partnerDeadline;
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url()), p = url.pathname;
       if (p === '/api/v1/auth/login') return route.fulfill({ json: {
@@ -60,9 +61,11 @@ try {
         diffAmount: 0, diffPayerId: null, createdAt: iso(epoch), updatedAt: iso(epoch),
         fundingDeadline: state === 'AcceptedAwaitingFunding' ? deadline : fundingDeadline,
         shippingDeadline: state === 'Preparing' ? deadline : undefined,
-        inspectionDeadline: state === 'Delivered' ? deadline : undefined,
+        inspectionDeadline: state === 'Delivered' ? partnerDeadline ?? deadline : undefined,
         initiatorInspectionDeadline: state === 'Delivered' ? deadline : firstReceiverDeadline,
-        recipientInspectionDeadline: state === 'Delivered' ? deadline : undefined,
+        recipientInspectionDeadline: state === 'Delivered' ? partnerDeadline ?? deadline : undefined,
+        initiatorCompletedAt: bothAcknowledged ? iso(epoch) : undefined,
+        recipientCompletedAt: bothAcknowledged ? iso(epoch) : undefined,
         initiatorReceivedAt: state === 'Delivered' || firstReceiverDeadline ? iso(epoch) : undefined,
         recipientReceivedAt: state === 'Delivered' ? iso(epoch) : undefined,
         recipientShippedAt: firstReceiverDeadline ? iso(epoch) : undefined,
@@ -104,7 +107,7 @@ try {
       if (status === 'AcceptedAwaitingFunding') await expect(fund).toBeVisible();
       await page.clock.runFor(16000);
       if (status === 'Delivered' && !baseline) {
-        await expect(card.getByText('Đã hết hạn kiểm tra. Đang chờ kết quả.')).toBeVisible();
+        await expect(card.getByText('Cả hai hạn đã qua. Đang chờ hệ thống tất toán về Ví.')).toBeVisible();
         await expect(card.getByRole('button', { name: 'Báo sự cố', exact: true })).toHaveCount(0);
       } else {
         await expect(row).toContainText('Đã hết hạn');
@@ -130,6 +133,24 @@ try {
       await page.clock.runFor(21000);
       await expect(report).toHaveCount(0);
       results.push({ status: 'Preparing', firstReceiverClaimEndsAtOwnDeadline: true });
+
+      state = 'Delivered';
+      bothAcknowledged = true;
+      const inspectionStart = await page.evaluate(() => Date.now());
+      deadline = iso(inspectionStart + 15000);
+      partnerDeadline = iso(inspectionStart + 35000);
+      await expect.poll(async () => {
+        await page.clock.runFor(1000);
+        return card.getByText('Cả hai bên đã xác nhận kiểm tra').count();
+      }).toBe(1);
+      await expect(report).toBeVisible();
+      await expect(card.locator('p').filter({ hasText: 'Dự kiến xử lý tiền sau' }).locator('time')).toHaveAttribute('datetime', partnerDeadline);
+      await page.clock.runFor(16000);
+      await expect(report).toHaveCount(0);
+      await expect(card.getByText('Dự kiến xử lý tiền sau', { exact: false })).toBeVisible();
+      await page.clock.runFor(21000);
+      await expect(card.getByText('Cả hai hạn đã qua. Đang chờ hệ thống tất toán về Ví.')).toBeVisible();
+      results.push({ status: 'Delivered', bothAcknowledgementsPreserveClaimAndLaterSettlement: true });
     }
     await card.screenshot({ path: path.join(out, `card-${width}${baseline ? '-before' : ''}.png`) });
     assert.deepEqual(errors, []);

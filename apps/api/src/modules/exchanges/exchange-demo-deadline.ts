@@ -2,7 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 import type { ExchangeDoc } from '../../database/mongo/documents.js';
 import type { Wire } from '../commands/domain-error.js';
 import { hasExchangeDispute, inspectionDeadlines } from './exchange-inspection.js';
-import { oneSidedReturn } from './exchange-return-resolution.js';
+import { exchangeSettlementScope } from './exchange-return-resolution.js';
 
 type Deadline = Wire['DemoExchangeDeadline'];
 
@@ -34,11 +34,11 @@ export function currentDemoDeadline(row: ExchangeDoc, now: Date, operations: boo
     return;
   }
   const r = row.returnResolution;
-  if (row.status !== 'ResolutionPending' || !r || !oneSidedReturn(row)) return;
+  if (row.status !== 'ResolutionPending' || !r || !exchangeSettlementScope(row)) return;
   const open = (at: Date | null) => Boolean(at && at > now);
   if (r.phase === 'Evidence' && open(r.evidenceDueAt)) return 'Evidence';
   if (['ReturnOrdered', 'CompensationOrdered'].includes(r.phase) && !r.effectiveAt && open(r.appealDueAt)) return 'Appeal';
-  if (r.phase === 'ReturnOrdered' && open(r.returnDueAt) &&
+  if (r.phase === 'ReturnOrdered' && !r.dispatchedAt && open(r.returnDueAt) &&
     (r.effectiveAt || (r.appealDueAt && r.appealDueAt <= now && !r.appeals.length))) return 'Return';
   if (r.phase === 'CheckingReturn' && open(r.checkDueAt)) return 'ReturnCheck';
 }

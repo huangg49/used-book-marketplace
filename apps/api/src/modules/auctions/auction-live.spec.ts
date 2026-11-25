@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuctionLiveService, LIST_ROOM, LIST_TRACKED } from './auction-live.service.js';
 
-type Row = { _id: string; version: number; state: string; buyNowAt?: Date | null; endAt?: Date };
+type Row = { _id: string; version: number; state: string };
 
 function setup(initial: Row[]) {
   const rows = new Map(initial.map((r) => [r._id, { ...r }]));
@@ -134,19 +134,14 @@ describe('AuctionLiveService', () => {
     expect(t.emitted).toHaveLength(1);
   });
 
-  // ADR 0088 (M6): 0.5 s pass for watched auctions in a Buy Now window.
-  const inWindow = () => ({ buyNowAt: new Date(), endAt: new Date(Date.now() + 60_000) });
-
-  it('re-reads only watched auctions inside a Buy Now window on the fast pass', async () => {
+  it('re-reads only watched detail IDs on the fast pass', async () => {
     const t = setup([
-      { _id: A, version: 1, state: 'Active', ...inWindow() },
+      { _id: A, version: 1, state: 'Active' },
       { _id: B, version: 1, state: 'Active' },
     ]);
     cleanup = t.stop;
+    await t.live.watchList();
     await t.live.watch(A);
-    await t.live.watch(B);
-    expect(t.live.fastPolling).toBe(false);
-    await t.live.tick();
     expect(t.live.fastPolling).toBe(true);
 
     t.find.mockClear();
@@ -155,42 +150,38 @@ describe('AuctionLiveService', () => {
     await t.live.fastTick();
     expect(t.find).toHaveBeenCalledTimes(1);
     expect(t.find.mock.calls[0]![0]).toEqual({ _id: { $in: [A] } });
-    expect(t.emitted.map(([room]) => room)).toEqual([`auction:${A}`]);
-    // B's change waits for the full 2 s pass.
+    expect(t.emitted.map(([room]) => room)).toEqual([`auction:${A}`, LIST_ROOM]);
     await t.live.tick();
-    expect(t.emitted.map(([room]) => room)).toEqual([`auction:${A}`, `auction:${B}`]);
+    expect(t.emitted.map(([room]) => room)).toEqual([`auction:${A}`, LIST_ROOM, LIST_ROOM]);
   });
 
-  it('stops the fast pass when the window ends or nobody watches', async () => {
-    const t = setup([{ _id: A, version: 1, state: 'Active', ...inWindow() }]);
+  it('stops the fast pass when only list watchers remain', async () => {
+    const t = setup([{ _id: A, version: 1, state: 'Active' }]);
     cleanup = t.stop;
-    await t.live.watch(A);
-    await t.live.tick();
-    expect(t.live.fastPolling).toBe(true);
-    t.bump(A, { state: 'AwaitingWinnerPayment' });
-    await t.live.fastTick();
-    expect(t.emitted).toHaveLength(1);
+    await t.live.watchList();
     expect(t.live.fastPolling).toBe(false);
-
-    const u = setup([{ _id: B, version: 1, state: 'Active', ...inWindow() }]);
-    await u.live.watch(B);
-    await u.live.tick();
-    expect(u.live.fastPolling).toBe(true);
-    u.live.unwatch(B);
-    expect(u.live.fastPolling).toBe(false);
-    u.stop();
+    await t.live.watch(A);
+    expect(t.live.fastPolling).toBe(true);
+    t.live.unwatch(A);
+    expect(t.live.fastPolling).toBe(false);
   });
 
-  it('keeps 2 s for an Instant Buy Now, an expired window and list-only auctions', async () => {
-    const now = new Date();
+  it('checks just the changed auction on a local post-commit nudge and retries a failed snapshot', async () => {
     const t = setup([
-      { _id: A, version: 1, state: 'Active', buyNowAt: now, endAt: now },
-      { _id: B, version: 1, state: 'Active', ...inWindow() },
+      { _id: A, version: 1, state: 'Active' },
+      { _id: B, version: 1, state: 'Active' },
     ]);
     cleanup = t.stop;
     await t.live.watch(A);
     await t.live.watchList();
-    await t.live.tick();
-    expect(t.live.fastPolling).toBe(false);
+    t.find.mockClear();
+    t.bump(A);
+    t.readPublic.mockRejectedValueOnce(new Error('temporary read failure'));
+    t.live.nudge(A);
+    await t.live.fastTick();
+    expect(t.find.mock.calls.map(([query]) => query)).toEqual([{ _id: { $in: [A] } }]);
+    expect(t.emitted).toHaveLength(0);
+    await t.live.fastTick();
+    expect(t.emitted.map(([room]) => room)).toEqual([`auction:${A}`, LIST_ROOM]);
   });
 });

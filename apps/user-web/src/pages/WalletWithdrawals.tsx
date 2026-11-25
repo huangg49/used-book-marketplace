@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   ApiError,
+  withdrawalFundsNotes,
   withdrawalLabels,
   withdrawalReasons,
   withdrawalSchema,
@@ -24,6 +25,7 @@ import {
   type Withdrawal,
 } from "@used-books/session-client";
 import { PurchaseDialog } from "../components/PurchaseDialog";
+import { TransactionNotes } from "../components/TransactionReview";
 import { session } from "../lib/session";
 import { formatVnd } from "../lib/routes";
 import { editGroupedAmount, formatGroupedAmount } from "../lib/grouped-amount";
@@ -524,13 +526,10 @@ export function WalletWithdrawals({
                   )}
                 </div>
               </section>
-              <p className={styles.reviewNotice}>
+              <div className={styles.reviewNotice}>
                 <Info size={18} aria-hidden="true" />
-                <span>
-                  Khoản tiền này được giữ ngay khi gửi. Nếu bị từ chối, tiền sẽ
-                  trở lại số dư khả dụng.
-                </span>
-              </p>
+                <TransactionNotes notes={withdrawalFundsNotes} />
+              </div>
             </div>
           )}
           {!review && (

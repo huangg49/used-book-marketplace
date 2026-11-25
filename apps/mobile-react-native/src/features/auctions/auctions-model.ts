@@ -42,7 +42,7 @@ export function usePublicAuctions(client: SessionClient, enabled = true, live = 
     queryKey: AUCTIONS_QUERY_KEY,
     queryFn: () => client.request("/auctions", publicAuctionList),
     staleTime: 10_000,
-    refetchInterval: live ? 60_000 : 15_000,
+    refetchInterval: live ? 60_000 : 10_000,
     enabled,
   });
 }
@@ -53,8 +53,8 @@ export function useUpcomingAuctions(client: SessionClient, enabled = true) {
   return useQuery<PublicAuctionList, Error>({
     queryKey: UPCOMING_AUCTIONS_QUERY_KEY,
     queryFn: () => client.publicRequest("/auctions?phase=upcoming", publicAuctionList),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 5_000,
+    refetchInterval: 8_000,
     enabled,
   });
 }
@@ -680,8 +680,114 @@ export const AUCTION_MAX_SCHEDULE_EDITS = 5;
 export const AUCTION_MIN_LEAD_MS = 5 * 60_000;
 export const AUCTION_SCHEDULE_HORIZON_MS = 7 * 24 * HOUR_MS;
 export const AUCTION_MIN_REMAINING_MS = HOUR_MS;
-// ADR 0069: lengths are whole seconds (1 hour to 7 days); the sheet offers presets.
+export const AUCTION_MIN_DURATION_S = 3_600;
+export const AUCTION_MAX_DURATION_S = 7 * 24 * 3_600;
+// ADR 0069: lengths are whole seconds (1 hour to 7 days); the sheet offers presets + custom input.
 export const DURATION_CHOICES = [1, 3, 6, 12, 24, 48, 72, 168].map((h) => h * 3600);
+
+export type ScheduleDayOption = {
+  key: string;
+  year: number;
+  month: number;
+  day: number;
+  weekdayLabel: string;
+  dayNumber: string;
+  monthLabel: string;
+};
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** Builds all selectable local calendar dates from `now` through `ceiling` inclusive. */
+export function scheduleDays(now: number, ceiling: number): ScheduleDayOption[] {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(Math.max(now, ceiling));
+  end.setHours(0, 0, 0, 0);
+  const days: ScheduleDayOption[] = [];
+  const cursor = new Date(start);
+  let index = 0;
+  while (cursor.getTime() <= end.getTime() && index < 35) {
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth();
+    const day = cursor.getDate();
+    const weekdayLabel =
+      index === 0
+        ? "Hôm nay"
+        : index === 1
+          ? "Ngày mai"
+          : cursor.toLocaleDateString("vi-VN", { weekday: "short" });
+    days.push({
+      key: `${year}-${pad2(month + 1)}-${pad2(day)}`,
+      year,
+      month,
+      day,
+      weekdayLabel,
+      dayNumber: pad2(day),
+      monthLabel: `Thg ${month + 1}`,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+    index++;
+  }
+  return days;
+}
+
+export function splitDuration(totalSeconds: number) {
+  const clamped = Math.max(0, Math.floor(totalSeconds));
+  const days = Math.floor(clamped / 86_400);
+  const hours = Math.floor((clamped % 86_400) / 3_600);
+  const minutes = Math.floor((clamped % 3_600) / 60);
+  return { days, hours, minutes };
+}
+
+export function composeDurationSeconds(days: number, hours: number, minutes: number) {
+  const d = Math.max(0, Math.floor(days));
+  const h = Math.max(0, Math.floor(hours));
+  const m = Math.max(0, Math.floor(minutes));
+  return d * 86_400 + h * 3_600 + m * 60;
+}
+
+export function validateCustomSchedule({
+  live,
+  timed,
+  startAtMs,
+  durationSeconds,
+  now,
+  ceiling,
+  isLifecycle,
+}: {
+  live: boolean;
+  timed: boolean;
+  startAtMs: number;
+  durationSeconds: number;
+  now: number;
+  ceiling: number;
+  isLifecycle: boolean;
+}): string | null {
+  if (
+    !Number.isInteger(durationSeconds) ||
+    durationSeconds < AUCTION_MIN_DURATION_S ||
+    durationSeconds > AUCTION_MAX_DURATION_S
+  ) {
+    return "Thời lượng phiên phải từ 1 giờ đến 7 ngày.";
+  }
+  if (live) {
+    return durationAllowed(durationSeconds, startAtMs, now)
+      ? null
+      : "Phiên đang mở phải còn ít nhất 1 giờ. Chọn thời lượng dài hơn.";
+  }
+  if (timed) {
+    if (!Number.isFinite(startAtMs)) return "Chọn ngày giờ mở phiên hợp lệ.";
+    if (startAtMs < now + AUCTION_MIN_LEAD_MS) {
+      return "Giờ mở phiên phải cách hiện tại ít nhất 5 phút.";
+    }
+    if (startAtMs > ceiling) {
+      return isLifecycle
+        ? "Giờ mở phải trong vòng 30 ngày kể từ lúc đăng phiên."
+        : "Chỉ hẹn mở phiên trong vòng 7 ngày tới.";
+    }
+  }
+  return null;
+}
 export function durationLabel(seconds: number) {
   const h = Math.floor(seconds / 3600);
   const parts = [

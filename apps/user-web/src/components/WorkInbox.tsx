@@ -36,7 +36,8 @@ export function WorkInbox({
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     retry: false,
     staleTime: 0,
-    refetchInterval: 30_000,
+    refetchInterval: 6_000,
+    refetchIntervalInBackground: false,
   });
   const inaccessible =
     result.error instanceof ApiError &&

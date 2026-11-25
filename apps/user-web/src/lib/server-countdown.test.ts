@@ -45,9 +45,10 @@ describe('server countdown lifecycle', () => {
   });
 
   it('uses elapsed time rather than tick count after a delayed callback', () => {
+    let mono = 0;
     const update = vi.fn();
-    startServerCountdown(iso(5000), iso(0), update);
-    vi.setSystemTime(Date.now() + 30000);
+    startServerCountdown(iso(5000), iso(0), update, new ServerClock(() => mono));
+    mono += 30000;
     vi.advanceTimersByTime(1000);
     expect(update.mock.calls.map(call => call[0])).toEqual([5000, 0]);
     expect(vi.getTimerCount()).toBe(0);
@@ -80,13 +81,13 @@ describe('server countdown lifecycle', () => {
     stop()
   });
 
-  it('keeps counting on the monotonic clock when the device date is changed', () => {
+  it.each([-1, 1])('keeps counting when the device date moves in direction %s', (direction) => {
     let mono = 0
     const clock = new ServerClock(() => mono, () => Date.now())
     clock.observe(iso(0), 0, 0)
     const update = vi.fn()
     const stop = startServerCountdown(iso(10000), iso(0), update, clock)
-    vi.setSystemTime(Date.now() - 3600000) // user sets the date back an hour
+    vi.setSystemTime(Date.now() + direction * 3600000)
     mono += 1000; vi.advanceTimersByTime(1000)
     expect(update).toHaveBeenLastCalledWith(9000)
     stop()

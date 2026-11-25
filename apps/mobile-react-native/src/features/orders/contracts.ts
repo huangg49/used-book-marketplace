@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ApiError } from "@used-books/session-client";
+import { ApiError, saleFeeAmountsSchema } from "@used-books/session-client";
 import { bundleSchema } from "../bundles/book-bundle";
 
 export const quoteSchema = z.object({
@@ -14,6 +14,7 @@ export const quoteSchema = z.object({
     bookPrice: z.number().int(),
     shippingFee: z.number().int(),
     buyerTotal: z.number().int(),
+    ...saleFeeAmountsSchema.partial().shape,
   }),
 });
 export type Quote = z.infer<typeof quoteSchema>;
@@ -48,6 +49,7 @@ export const orderDetailsSchema = z.object({
     bookPrice: z.number().int(),
     shippingFee: z.number().int(),
     buyerTotal: z.number().int(),
+    ...saleFeeAmountsSchema.partial().shape,
   }),
   moneyHeld: z.number().int().optional(),
   paidAt: z.string().nullable().optional(),

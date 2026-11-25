@@ -355,14 +355,16 @@ function SellerIntakes({
     queryFn: () => getMyAuctionIntake(focusId!),
     enabled: enabled && !!focusId,
     retry: false,
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
   });
   const intakes = useQuery({
     queryKey: ["my-auction-intakes", userId],
     queryFn: () => getMyAuctionIntakes(),
     enabled: enabled && !focusId,
     retry: false,
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
   });
   const points = useQuery({
     queryKey: ["handover-points"],
@@ -448,7 +450,8 @@ export function MyAuctionsPage() {
     enabled: !!userId,
     retry: false,
     refetchOnMount: 'always',
-    refetchInterval: 20_000,
+    refetchInterval: 8_000,
+    refetchIntervalInBackground: false,
   })
   function select(next: string) {
     const p = new URLSearchParams()
@@ -465,7 +468,7 @@ export function MyAuctionsPage() {
           <h1>Đấu giá của tôi</h1>
           <p>
             Theo dõi các phiên bạn tham gia hoặc đã mở bán. Giá và trạng thái
-            được làm mới mỗi 20 giây.
+            được làm mới mỗi 8 giây.
           </p>
         </div>
         <Link to={ROUTES.auctions}>

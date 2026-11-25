@@ -1,4 +1,5 @@
-import { demoExchangeDeadlineLabel } from "@used-books/session-client";
+import { demoExchangeDeadlineLabel, exchangeFundingNotes, exchangeServiceFeeText } from "@used-books/session-client";
+import { TransactionAmount, TransactionNotes } from "../../TransactionReview";
 import { useExchangeRecovery } from "../../../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../ExchangeRecoveryPanel";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -260,21 +261,21 @@ export function ActionCard(props: Props) {
     }
   } else if (detail.status === "WAITING_YOU_CONFIRM") {
     instructions = detail.viewerShipping.receivedAt
-      ? "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận nhận sách để cùng bước vào giai đoạn kiểm tra sách (72 giờ)."
+      ? "Bạn có 72 giờ kiểm tra từ lúc nhận sách. Tiền vẫn được giữ đến khi hết hạn của cả hai bên và không có tranh chấp."
       : "Hai bên đã gửi sách. Chỉ xác nhận khi bạn đã nhận bưu phẩm và kiểm tra kỹ sách.";
     if (!detail.viewerShipping.receivedAt && detail.partnerShipping.sentAt) actions.push("received");
     if (!inspectionExpired && props.onDispute) actions.push("dispute");
   } else if (detail.status === "DELIVERING") {
     instructions = detail.viewerShipping.receivedAt
-      ? "Bạn đã nhận được sách từ bưu tá! Hãy kiểm tra kỹ sách. Nếu sách bị hỏng hóc hoặc không đúng mô tả, bạn có thể bấm 'Báo sự cố / Khiếu nại'. Đang chờ đối tác nhận được kiện sách còn lại để cùng bước vào giai đoạn nghiệm thu (72 giờ đồng kiểm)."
+      ? "Bạn có 72 giờ kiểm tra từ lúc nhận sách. Nếu sách hư hỏng hoặc khác mô tả, hãy báo sự cố trong hạn của bạn."
       : "Sách đang được vận chuyển. Theo dõi bưu gửi tại thẻ Tiến trình giao nhận.";
     if (!detail.viewerShipping.receivedAt && detail.partnerShipping.sentAt) {
       actions.push("received");
     }
     if (!inspectionExpired && props.onDispute) actions.push("dispute");
   } else if (inspecting) {
-    if (!detail.viewerCompletedAt && !expired) actions.push("complete");
-    if (!detail.viewerCompletedAt && !inspectionExpired && props.onDispute) {
+    if (!detail.viewerCompletedAt && !inspectionExpired) actions.push("complete");
+    if (!inspectionExpired && props.onDispute) {
       actions.push("dispute");
     }
   } else if (detail.status === "COMPLETED") {
@@ -290,8 +291,8 @@ export function ActionCard(props: Props) {
           : "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
   } else if (detail.status === "RESOLUTION_PENDING") {
     instructions = detail.disputeReason
-      ? `Giao dịch đang có tranh chấp / báo sự cố: "${detail.disputeReason}". Toàn bộ tiền cọc bảo chứng và tiền bù đang được tạm khóa an toàn trên Ledger để bảo vệ quyền lợi của hai bên.`
-      : "Trao đổi đang chờ giải quyết tranh chấp. Khoản tiền cọc đang được tạm khóa an toàn.";
+      ? `Đang xử lý sự cố: "${detail.disputeReason}". Tiền cọc và tiền bù vẫn được giữ trong lúc xử lý. Chưa có ngày hoàn tiền.`
+      : "Trao đổi đang chờ giải quyết tranh chấp. Tiền vẫn được giữ và chưa có ngày hoàn.";
     if (!detail.returnResolution && !detail.outboundDeliveryVerification && detail.partnerShipping.sentAt &&
       !detail.viewerShipping.receivedAt) actions.push("received");
   } else {
@@ -307,7 +308,9 @@ export function ActionCard(props: Props) {
           : detail.status === "REJECTED"
             ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
             : detail.status === "EXPIRED"
-              ? "Đề nghị hoặc thời hạn đặt cọc đã hết."
+              ? detail.cancelReason === "FundingExpired" && detail.viewerFundedAt
+                ? "Đã hết hạn đặt cọc. Khoản bạn đã nộp đã được hoàn về Ví."
+                : "Đề nghị hoặc thời hạn đặt cọc đã hết."
               : detail.cancelReason === "ListingUnavailable"
                 ? "Thỏa thuận không còn hợp lệ hoặc thiếu bản chụp sách gốc. Chưa giữ sách hay thu tiền từ đề xuất này. Hãy tạo đề xuất mới từ sách đủ điều kiện."
                 : "Đề nghị đã bị hủy.";
@@ -554,7 +557,7 @@ export function ActionCard(props: Props) {
               </div>
             )}
           </dl>
-          <p className={styles.fundingFee}>Phí giao nhận tính riêng.</p>
+          <p className={styles.fundingFee}>{exchangeServiceFeeText}</p>
           <p className={styles.fundingStatus} role="status">
             {expired ? "Hệ thống đang cập nhật phiếu."
               : detail.viewerFundedAt ? "Chờ đối tác đặt cọc."
@@ -667,6 +670,11 @@ export function ActionCard(props: Props) {
             </div>
           )}
         </ExchangeInspection>
+      )}
+      {(detail.status === "CANCELLED" || detail.status === "EXPIRED") && detail.viewerFundedAt && (
+        <Link className={styles.btnSecondary} to={`${ROUTES.wallet}#lich-su-giao-dich`}>
+          Xem lịch sử giao dịch Ví
+        </Link>
       )}
       {pending && !props.standaloneSheet && !props.handover && (
         <p role="status" className={styles.pendingRow}>
@@ -782,6 +790,7 @@ export function ActionCard(props: Props) {
       <ConfirmDialog
         isOpen={!!action}
         onClose={() => setAction(undefined)}
+        stickyFooter={fundingDialog}
         maxWidth={action === "dispute" ? "640px" : undefined}
         description={action === "advanceDemoShipping" ? demoEffect : undefined}
         title={
@@ -824,12 +833,17 @@ export function ActionCard(props: Props) {
       >
         {fundingDialog && (
           <>
+            <TransactionAmount label="Số tiền sẽ giữ" value={fundingAmount == null ? "Chưa có dữ liệu" : formatVnd(fundingAmount)} />
             <dl className={styles.fundingAmounts}>
+              {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
+              {detail.moneyCompensationType === "user_pays" && detail.moneyAmount != null && (
+                <div><dt>Tiền bù bạn trả</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
+              )}
               <div><dt>Ví mô phỏng khả dụng</dt><dd>
                 {wallet.isPending || wallet.isFetching ? "Đang tải…" : available == null ? "Chưa tải được" : formatVnd(available)}
               </dd></div>
-              <div className={styles.fundingTotal}><dt>Số tiền sẽ giữ</dt><dd>{fundingAmount == null ? "Chưa có dữ liệu" : formatVnd(fundingAmount)}</dd></div>
             </dl>
+            <TransactionNotes notes={exchangeFundingNotes} />
             {wallet.isError && (
               <p role="status">Chưa kiểm tra được số dư. <button className={styles.inlineButton} type="button" onClick={() => void wallet.refetch()}>Tải lại số dư</button></p>
             )}
@@ -847,7 +861,7 @@ export function ActionCard(props: Props) {
                 : action === "retry"
                   ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
                   : action === "complete"
-                    ? "Bạn có chắc chắn đã kiểm tra sách kỹ lưỡng và hài lòng? Sau khi xác nhận nghiệm thu, bạn sẽ từ bỏ quyền khiếu nại hay báo sự cố. Khi đối tác cũng xác nhận nghiệm thu, toàn bộ tiền cọc và tiền bù sẽ được hoàn tất và chuyển về ví của cả hai bên ngay lập tức."
+                    ? "Thao tác này ghi nhận bạn đã kiểm tra sách. Bạn vẫn có thể báo sự cố trong 72 giờ kể từ lúc nhận. Hệ thống xử lý tiền khi hết hạn kiểm tra của cả hai và không có tranh chấp."
                     : action === "cancel" && detail.status === "FUNDING"
                       ? "Sách sẽ được mở lại. Khoản đã nộp sẽ được hoàn về ví của người đã nộp."
                     : action === "cancel" &&

@@ -1189,7 +1189,27 @@ export class AuctionIntakesService {
               auctionId,
             })
           : null;
-        return { items: intake ? [await this.project(tx, intake, false)] : [] };
+        if (!intake) return { items: [] };
+        const view = await this.project(tx, intake, false);
+        const order = auction?.orderId ? await tx.c.point_orders.findOne({
+          _id: auction.orderId, auctionId, sellerId: actor._id,
+        }) : null;
+        if (order) {
+          const status = order.state === 'Completed' ? 'Settled'
+            : order.state === 'Cancelled' || order.state === 'PaymentExpired' ? 'Closed'
+            : order.paidAt ? 'PendingSettlement' : 'AwaitingPayment';
+          view.sellerSale = {
+            orderId: order._id,
+            status,
+            amounts: {
+              bookPrice: order.bookPrice,
+              commissionBps: order.commissionBps,
+              commission: order.commission,
+              sellerProceedsOnCompletion: order.sellerProceeds,
+            },
+          };
+        }
+        return { items: [view] };
       }
       const rows = await tx.c.auction_intakes
         .find({ sellerId: actor._id }, { sort: { createdAt: -1 }, limit: 50 })

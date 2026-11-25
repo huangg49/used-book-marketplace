@@ -24,8 +24,13 @@ const { createServer } = await import(
   pathToFileURL(require.resolve("vite")).href
 );
 const web = "http://127.0.0.1:5184",
-  ops = "http://127.0.0.1:5174",
+  opsPort = Number(process.env.AUCTION_QA_OPS_PORT || 5174),
+  ops = `http://127.0.0.1:${opsPort}`,
   rn = "http://127.0.0.1:8087";
+const rnDist = path.resolve(
+  root,
+  process.env.AUCTION_QA_RN_DIST || "apps/mobile-react-native/dist",
+);
 const output = path.join(root, ".tmp/auction-journey");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const button = (p, name) => p.getByRole("button", { name, exact: true });
@@ -162,7 +167,7 @@ async function reconnect(page) {
   });
 }
 async function serveRn() {
-  const dist = path.join(root, "apps/mobile-react-native/dist");
+  const dist = rnDist;
   await readFile(path.join(dist, "index.html"));
   nativeServer = createHttpServer(async (req, res) => {
     try {
@@ -269,7 +274,7 @@ async function loseFirstAck(page, pattern) {
 }
 try {
   requireQaMongo(process.env.MONGO_TEST_URL);
-  if (!(await rnUsesQaApi(path.join(root, "apps/mobile-react-native/dist"))))
+  if (!(await rnUsesQaApi(rnDist)))
     throw new Error(
       "Export RN web with the QA API base on3009 before running this suite.",
     );
@@ -286,21 +291,22 @@ try {
   report.qaDatabase = fixture.db.databaseName;
   const { api, db } = fixture;
   const seller = fixture.member;
-  // API setup actors use explicit identity/session fixtures; the four browser
-  // participants still log in through UI. Do not disable or clear the limiter.
+  // API setup actors use explicit identity/session fixtures. The main browser
+  // participants still log in against the live limiter.
   const apiRequire = createRequire(path.join(root, "apps/api/package.json"));
   const jwt = new (apiRequire("@nestjs/jwt").JwtService)({
     secret: process.env.JWT_ACCESS_SECRET,
   });
   async function setupSession(user) {
     const sessionId = randomUUID(),
+      refreshToken = randomBytes(32).toString("base64url"),
       now = new Date();
     await db
       .collection("auth_sessions")
       .insertOne({
         _id: sessionId,
         userId: user._id,
-        refreshTokenHash: randomBytes(32).toString("hex"),
+        refreshTokenHash: hash(refreshToken),
         expiresAt: new Date(now.getTime() + 30 * 60_000),
         revokedAt: null,
         createdAt: now,
@@ -308,6 +314,7 @@ try {
       });
     return {
       user: { id: user._id },
+      refreshToken,
       accessToken: await jwt.signAsync(
         { sub: user._id, sid: sessionId },
         {
@@ -352,6 +359,7 @@ try {
     "TEST_OPERATOR",
   ]);
   const independent = await actor("auction-staff-2@operations.test", ["STAFF"]);
+  const unassigned = await actor("auction-staff-unassigned@operations.test", ["STAFF"]);
   // ADR 0077/0079: a registration auction needs four registered bidders.
   const reg3 = await actor("auction-bidder-3@operations.test");
   const reg4 = await actor("auction-bidder-4@operations.test");
@@ -439,7 +447,7 @@ try {
     "QA actors/catalog/listings/point assignments prepared; no transaction states seeded",
   );
   await serve("user-web", 5184);
-  await serve("admin-web", 5174);
+  await serve("admin-web", opsPort);
   await serveRn();
   browser = await chromium.launch({ headless: true });
   async function page() {
@@ -498,9 +506,10 @@ try {
     1,
   );
   await refused(`/me/auction-intakes/${intake.id}`, buyer, undefined, 404);
+  // Admin may receive at any point. Staff still needs an active assignment.
   await refused(
     `/operations/auction-intakes/${intake.id}/receive`,
-    admin,
+    unassigned,
     { expectedVersion: intake.version, shelfCode: "QA-NO" },
     403,
   );
@@ -700,7 +709,7 @@ try {
   await login(buying, web, "/auctions", "auction-buyer@operations.test");
   await buying.locator(`a[href='/auctions/${auctionId}']`).first().click();
   await expect(
-    buying.getByText("Đăng ký để tham gia đấu giá", { exact: true }),
+    buying.getByText("Đăng ký tham gia đấu giá", { exact: true }),
   ).toBeVisible();
   assert.equal(
     await buying.getByLabel("Số tiền trả lượt này", { exact: true }).count(),
@@ -713,6 +722,10 @@ try {
   await buying
     .getByRole("button", { name: /^Đặt cọc 10\.000.* và đăng ký/ })
     .click();
+  const registerDialog = buying.getByRole("dialog", { name: "Đăng ký đấu giá", exact: true });
+  await expect(registerDialog.getByText("Cọc Ví sẽ giữ ngay", { exact: true }).locator("..")).toContainText("10.000");
+  await expect(registerDialog.getByText("Hoàn cọc", { exact: true })).toBeVisible();
+  await registerDialog.screenshot({ path: path.join(output, "registration-review-web.png") });
   await buying
     .getByRole("dialog")
     .getByRole("button", { name: "Đặt cọc và đăng ký", exact: true })
@@ -912,8 +925,48 @@ try {
   );
 
   phase = "Buyer bid replay while live";
+  function watchSocketPrices(client) {
+    const prices = [];
+    const receivedAt = new Map();
+    client.on("websocket", socket => {
+      socket.on("framereceived", ({ payload }) => {
+        if (typeof payload !== "string" || !payload.startsWith('42/auctions,["auction:update",')) return;
+        const [, snapshot] = JSON.parse(payload.slice("42/auctions,".length));
+        if (snapshot.auction.id === auctionId) {
+          const price = snapshot.auction.currentPrice;
+          prices.push(price);
+          if (!receivedAt.has(price)) receivedAt.set(price, performance.now());
+        }
+      });
+    });
+    return { prices, receivedAt };
+  }
+  const webSocketPrices = watchSocketPrices(buying);
   await navigate(buying, "/auctions");
   await buying.locator(`a[href='/auctions/${auctionId}']`).first().click();
+  const mobileBidder = await page();
+  const mobileSocketPrices = watchSocketPrices(mobileBidder);
+  // This is the sixth sign-in from the same fixture IP. Use the separate QA
+  // session provisioned above, refreshing it on the real API. The auction
+  // journey leaves the password-login limiter and all command requests intact.
+  await mobileBidder.route("**/api/v1/auth/login", async route => {
+    const session = await api("/auth/refresh", null, { refreshToken: challenger.refreshToken });
+    await route.fulfill({ json: session, headers: { "Access-Control-Allow-Origin": rn } });
+  }, { times: 1 });
+  await login(mobileBidder, rn, "/account", "auction-challenger@operations.test");
+  await navigate(mobileBidder, `/auction?id=${auctionId}&bid=1`);
+  const mobileAmount = mobileBidder.getByLabel("Số tiền trả lượt này", { exact: true });
+  await expect(mobileAmount).toBeVisible();
+  // The input defaults to the minimum. Clear it to exercise a custom draft.
+  await mobileAmount.clear();
+  await mobileAmount.fill("100000");
+  await expect(mobileBidder.getByText("Ví sẽ giữ nếu bạn dẫn giá", { exact: true }).locator("..")).toContainText("100.000");
+  const mobileRequests = [];
+  mobileBidder.on("request", request => {
+    if (request.method() === "POST" && new URL(request.url()).pathname.endsWith(`/auctions/${auctionId}/bids`))
+      mobileRequests.push(request.method());
+  });
+  await expect(buying.getByText("Trực tiếp", { exact: true })).toBeVisible();
   // This fault is a revalidation failure after a known role, not a failed
   // initial lookup (covered above). Wait until the real form is available.
   await expect(
@@ -950,6 +1003,16 @@ try {
     buying,
     `**/api/v1/auctions/${auctionId}/bids`,
   );
+  let mobileStandingReadFailed = false;
+  await mobileBidder.route(`**/api/v1/me/auctions/${auctionId}/participation`, async route => {
+    if (mobileStandingReadFailed || route.request().method() !== "GET") return route.continue();
+    mobileStandingReadFailed = true;
+    await route.fulfill({
+      status: 503,
+      json: { code: "UNAVAILABLE", message: "QA transient standing read" },
+      headers: { "Access-Control-Allow-Origin": rn },
+    });
+  });
   await buying.route(ownershipPath, (route) =>
     route.fulfill({
       status: 503,
@@ -960,6 +1023,7 @@ try {
     .getByLabel("Số tiền trả lượt này", { exact: true })
     .fill("100000");
   await buying.getByRole("button", { name: /^Tiếp tục trả/ }).click();
+  await expect(buying.getByRole("dialog").getByText("Khi bị vượt giá", { exact: true }).locator("..")).toContainText("Phần vượt mức cọc về Ví");
   await buying
     .getByRole("dialog")
     .getByRole("button", { name: "Xác nhận trả giá", exact: true })
@@ -1011,6 +1075,36 @@ try {
   );
   passed(
     "Manual bid lost ACK keeps intent; the leader's bid is held; seller/Staff bids and late edits refused",
+  );
+
+  phase = "Mobile bid sheet validates the new minimum and updates Web by socket";
+  await mobileBidder.bringToFront();
+  await expect(mobileBidder.getByText("Giá tối thiểu", { exact: true })
+    .locator("..").getByText("110.000 ₫", { exact: true })).toBeVisible();
+  await expect.poll(() => mobileSocketPrices.prices).toContain(100000);
+  await expect.poll(() => mobileStandingReadFailed).toBe(true);
+  await expect(mobileAmount).toHaveValue("100000");
+  await expect(button(mobileBidder, "Xác nhận trả giá")).toBeDisabled();
+  assert.equal(mobileRequests.length, 0);
+  await capture(mobileBidder, "rn-bid-sheet-320", 320);
+  await mobileAmount.fill("110000");
+  const bidCommitted = mobileBidder.waitForResponse(response =>
+    response.ok() && response.request().method() === "POST" &&
+    new URL(response.url()).pathname.endsWith(`/auctions/${auctionId}/bids`),
+  ).then(() => performance.now());
+  await mobileBidder.getByRole("button", { name: /^Xác nhận trả 110\.000/ }).click();
+  const committedAt = await bidCommitted;
+  await expect(buying.getByText("Bạn đã bị vượt giá", { exact: true })).toBeVisible({ timeout: 1_000 });
+  const visibleWithinMs = Math.round(performance.now() - committedAt);
+  await expect.poll(() => webSocketPrices.prices, { timeout: 1_000 }).toContain(110000);
+  const socketMs = Math.max(0, Math.round(webSocketPrices.receivedAt.get(110000) - committedAt));
+  assert.ok(socketMs < 750, `Auction push exceeded 750 ms after the bid response (${socketMs} ms)`);
+  await expect(mobileBidder.getByText("Bạn đang dẫn giá", { exact: true }).first()).toBeVisible();
+  assert.equal(mobileRequests.length, 1);
+  assert.equal((await api(`/auctions/${auctionId}`)).auction.currentPrice, 110000);
+  await capture(mobileBidder, "rn-auction-room-390", 390);
+  passed(
+    `Web bid updates Expo mobile minimum and keeps the draft through a transient standing read; stale draft sends no request; Expo bid → Web push ${socketMs} ms, outbid UI visible within ${visibleWithinMs} ms after bid response`,
   );
 
   phase = "Rival short of funds, then Instant Buy Now ends the auction";
@@ -1133,9 +1227,67 @@ try {
   await expect(
     competing.getByRole("heading", { name: "Chọn cách nhận và thanh toán" }),
   ).toBeVisible();
+  const amountFormat = new Intl.NumberFormat("vi-VN");
+  const heldForOrder = amountFormat.format(won.heldAmount);
+  const extraForOrder = amountFormat.format(order.amounts.buyerTotal - won.heldAmount);
+  await expect(competing.getByText("Ví đang giữ cho phiên", { exact: true }).locator("..")).toContainText(heldForOrder);
+  await expect(competing.getByText("Cần thêm từ số dư khả dụng", { exact: true }).locator("..")).toContainText(extraForOrder);
+  await expect(competing.getByText(/72 giờ kiểm tra kể từ lúc bạn nhận sách/)).toBeVisible();
+  await navigate(mobileBidder, `/auction?id=${auctionId}`);
+  await expect(mobileBidder.getByText("Ví đang giữ cho phiên", { exact: true }).locator("..")).toContainText(heldForOrder);
+  await expect(mobileBidder.getByText("Cần thêm từ số dư khả dụng", { exact: true }).locator("..")).toContainText(extraForOrder);
+  await expect(mobileBidder.getByText(/72 giờ kiểm tra kể từ lúc bạn nhận sách/)).toBeVisible();
+  const rnPay = mobileBidder.getByRole("button", { name: /^Thanh toán .* từ Ví Lật Lại$/ });
+  const rnReview = mobileBidder.getByRole("dialog").filter({ hasText: "Thanh toán từ Ví" });
+  await rnPay.click();
+  await expect(rnReview.getByText("Trừ thêm từ Ví", { exact: true }).locator("..")).toContainText(extraForOrder);
+  await expect(rnReview.getByText(`Tự nhận tại ${order.pointName}`, { exact: true })).toBeVisible();
+  await button(rnReview, "Quay lại").click();
+
+  const addressBook = await api("/me/addresses", challenger.accessToken);
+  const address = await api("/me/addresses", challenger.accessToken, {
+    expectedBookVersion: addressBook.version,
+    makeDefault: true,
+    address: {
+      recipientName: "Người nhận QA",
+      phone: "0900000000",
+      serviceAreaCode: "HCM-DEMO-v1",
+      localityCode: "DEMO-B",
+      detail: "Địa chỉ mô phỏng QA",
+    },
+  });
+  // Exercise the paid delivery quote from the screenshot on this disposable QA DB.
+  const deliveryPolicies = db.collection("sale_quote_policy_selection");
+  const originalPolicy = await deliveryPolicies.findOne({ _id: "DirectSale" });
+  assert(originalPolicy);
+  await deliveryPolicies.updateOne({ _id: "DirectSale" }, { $set: { policyCode: "HCM-DIRECT-v1" } });
+  const quote = await api(`/me/point-orders/${order.id}/delivery-quote?addressId=${address.addressId}`, challenger.accessToken);
+  assert(quote.outboundFee > 0, "The delivery case must exercise an additional Wallet debit");
+  await mobileBidder.getByRole("radio", { name: /Giao tận nơi/ }).click();
+  await expect(rnPay).toContainText(amountFormat.format(quote.buyerTotal));
+  await rnPay.click();
+  await expect(rnReview.getByText("Trừ thêm từ Ví", { exact: true }).locator("..")).toContainText(amountFormat.format(quote.buyerTotal - won.heldAmount));
+  await expect(rnReview.getByText("Phí giao nhận", { exact: true }).locator("..")).toContainText(amountFormat.format(quote.outboundFee));
+  await expect(rnReview.getByText("Ví đã giữ cho phiên", { exact: true }).locator("..")).toContainText(heldForOrder);
+  await expect(rnReview.getByText("Tổng thanh toán", { exact: true }).locator("..")).toContainText(amountFormat.format(quote.buyerTotal));
+  await expect(rnReview.getByText("Giao tận nơi", { exact: true })).toBeVisible();
+  await expect(rnReview.getByText(/72 giờ kiểm tra sau khi nhận sách/)).toBeVisible();
+  await capture(mobileBidder, "rn-payment-review-390");
+  await mobileBidder.setViewportSize({ width: 320, height: 520 });
+  await expect(button(rnReview, "Thanh toán")).toBeInViewport({ ratio: 1 });
+  await expect(button(rnReview, "Quay lại")).toBeInViewport({ ratio: 1 });
+  await mobileBidder.screenshot({ path: path.join(output, "rn-payment-review-320.png") });
+  const holdPolicy = rnReview.getByText(/72 giờ kiểm tra sau khi nhận sách/);
+  await holdPolicy.scrollIntoViewIfNeeded();
+  await expect(holdPolicy).toBeInViewport({ ratio: 1 });
+  await button(rnReview, "Quay lại").click();
+  await expect(rnReview).toHaveCount(0);
+  await expect(rnPay).toContainText(amountFormat.format(quote.buyerTotal));
+  assert.equal((await api(`/me/point-orders/${order.id}`, challenger.accessToken)).state, "AwaitingPayment");
+  await deliveryPolicies.updateOne({ _id: "DirectSale" }, { $set: { policyCode: originalPolicy.policyCode } });
   await capture(competing, "buyer-payment-due");
   passed(
-    "End-time refusal before sweep; two worker ticks yield one order; losers refunded; winner payment entry/deadline/ownership",
+    "End-time refusal before sweep; two worker ticks yield one order; losers refunded; winner entry and Expo payment review for pickup and quoted delivery, with actions usable on a short viewport",
   );
 
   phase = "Payment lost ACK -> one payment from the held amount";
@@ -1166,6 +1318,8 @@ try {
     }
   });
   await competing.getByRole("button", { name: /^Thanh toán 300/ }).click();
+  const paymentDialog = competing.getByRole("dialog");
+  await expect(paymentDialog.getByText("Ví đang giữ cho phiên", { exact: true }).locator("..")).toContainText(heldForOrder);
   await competing
     .getByRole("dialog")
     .getByRole("button", { name: "Thanh toán", exact: true })
@@ -1176,7 +1330,10 @@ try {
   await payAck.verify();
   releasePaymentReads();
   await competing.unroute(paymentReads);
-  await expect(competing.getByText(/^Đã thanh toán 300/)).toBeVisible();
+  await expect(competing.getByText("Tổng đã thanh toán", { exact: true }).locator(".."))
+    .toContainText("300.000 ₫");
+  await expect(competing.getByText("Tiền đang giữ cho đơn", { exact: true }).locator(".."))
+    .toContainText("300.000 ₫");
   assert.equal(
     (await api(`/me/point-orders/${order.id}`, challenger.accessToken)).state,
     "Fulfilling",
@@ -1204,6 +1361,11 @@ try {
       .countDocuments({ listingId: intake.listingId, status: "Active" }),
     1,
   );
+  await navigate(selling, `/auctions/${auctionId}`);
+  const sellerSale = selling.getByRole("region", { name: "Tiền bán sách đấu giá" });
+  await expect(sellerSale.getByText("Chờ quyết toán", { exact: true })).toBeVisible();
+  await expect(sellerSale.getByText("285.000 ₫", { exact: true })).toBeVisible();
+  await expect(sellerSale.getByText("Phí dịch vụ (5%)", { exact: true })).toBeVisible();
   await capture(competing, "buyer-paid-hold", 1440);
   await capture(competing, "buyer-paid-hold-mobile", 320);
   passed(
@@ -1348,7 +1510,8 @@ try {
   assert.equal(await button(native, "Rút sách khỏi đấu giá").count(), 0);
   await capture(native, "rn-cancelled-intake");
   await button(native, "Xem tất cả lần gửi").click();
-  await expect(native.getByText("1–168 giờ", { exact: true }).filter({ visible: true })).toBeVisible();
+  await button(native, "Xem quy trình gửi sách đấu giá").click();
+  await expect(native.getByText(/thời lượng \(1–168 giờ\)/).filter({ visible: true })).toBeVisible();
   await capture(native, "rn-send-policy", 390);
   assert.equal(
     await db

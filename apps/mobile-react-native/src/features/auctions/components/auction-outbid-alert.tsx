@@ -1,39 +1,37 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import { AppText } from "../../../core/ui/text";
-import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { AppText, Icon, colors, formatVnd, radius, space, stitchTokens } from "../../../core/ui";
 import type { PublicAuctionSummary } from "../contracts";
 
 export interface AuctionOutbidAlertProps {
-  // An open auction from the caller's own activity where they no longer lead.
   readonly auction: PublicAuctionSummary | null;
+  readonly totalOutbid?: number;
   readonly onReclaim: () => void;
 }
 
 export function AuctionOutbidAlert({
   auction,
+  totalOutbid = 1,
   onReclaim,
 }: AuctionOutbidAlertProps) {
   if (!auction || auction.minimumBid === null) return null;
 
   return (
-    <View style={styles.sectionContainer}>
-      <View style={styles.outbidAlertBox}>
-        <View style={styles.contentGroup}>
-          <View style={styles.outbidAlertIcon}>
-            <Icon name="bolt" size={16} color={stitchTokens.white} />
+    <View style={styles.wrapper}>
+      <View style={styles.box}>
+        <View style={styles.left}>
+          <View style={styles.iconWrap}>
+            <Icon name="flame" size={16} color={colors.warning} />
           </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <View style={styles.outbidBadge}>
-                <AppText kind="small" style={styles.outbidBadgeText}>
-                  BỊ VƯỢT GIÁ
-                </AppText>
-              </View>
-              <AppText kind="bold" style={styles.outbidTitle} numberOfLines={1}>
+          <View style={styles.textCol}>
+            <View style={styles.titleRow}>
+              <AppText kind="bold" style={styles.badgeText}>
+                Bị vượt giá{totalOutbid > 1 ? ` (${totalOutbid})` : ""}
+              </AppText>
+              <AppText kind="bold" style={styles.title} numberOfLines={1}>
                 {auction.title}
               </AppText>
             </View>
-            <AppText kind="small" style={styles.outbidDesc} numberOfLines={1}>
+            <AppText kind="small" color={stitchTokens.deepCocoa} numberOfLines={1}>
               Giá hiện tại {formatVnd(auction.currentPrice ?? auction.startPrice)}
             </AppText>
           </View>
@@ -43,9 +41,9 @@ export function AuctionOutbidAlert({
           accessibilityRole="button"
           accessibilityLabel={`Trả giá lại cho ${auction.title}`}
           onPress={onReclaim}
-          style={styles.reclaimBidBtn}
+          style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
         >
-          <AppText kind="bold" style={styles.reclaimBidBtnText}>
+          <AppText kind="bold" style={styles.ctaText}>
             Trả {formatVnd(auction.minimumBid)}
           </AppText>
         </Pressable>
@@ -55,64 +53,47 @@ export function AuctionOutbidAlert({
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+  wrapper: {
+    paddingHorizontal: space.lg,
+    marginTop: space.sm,
   },
-  outbidAlertBox: {
-    backgroundColor: stitchTokens.flashRedBg,
+  box: {
+    backgroundColor: stitchTokens.amberBg,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    borderRadius: 12,
+    borderColor: stitchTokens.orangeBorderSoft,
+    borderRadius: 14,
     padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
+    gap: 10,
   },
-  contentGroup: {
+  left: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    flex: 1,
-    minWidth: 0,
   },
-  outbidAlertIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: stitchTokens.flashRed,
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.whiteSurface,
     alignItems: "center",
     justifyContent: "center",
   },
-  outbidBadge: {
-    backgroundColor: stitchTokens.flashRed,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
+  textCol: { flex: 1, minWidth: 0, gap: 2 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  badgeText: { fontSize: 12, color: colors.warning, flexShrink: 0 },
+  title: { flex: 1, fontSize: 13, color: stitchTokens.wineDark },
+  cta: {
+    minHeight: 42,
+    borderRadius: radius.control,
+    backgroundColor: stitchTokens.wine,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
   },
-  outbidBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: stitchTokens.white,
+  ctaText: {
+    color: stitchTokens.gold,
+    fontSize: 13,
+    fontVariant: ["tabular-nums"],
   },
-  outbidTitle: {
-    fontSize: 12,
-    color: stitchTokens.wineDark,
-  },
-  outbidDesc: {
-    fontSize: 11,
-    color: stitchTokens.deepCocoa,
-    marginTop: 1,
-  },
-  reclaimBidBtn: {
-    backgroundColor: stitchTokens.flashRed,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  reclaimBidBtnText: {
-    fontSize: 11,
-    color: stitchTokens.white,
-  },
+  pressed: { opacity: 0.8 },
 });

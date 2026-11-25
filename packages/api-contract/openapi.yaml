@@ -3207,6 +3207,8 @@ paths:
           $ref: "#/components/responses/ListingError"
         "403":
           $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
         "429":
           $ref: "#/components/responses/ListingError"
         "500":
@@ -3249,6 +3251,8 @@ paths:
         "401":
           $ref: "#/components/responses/ListingError"
         "403":
+          $ref: "#/components/responses/ListingError"
+        "422":
           $ref: "#/components/responses/ListingError"
         "429":
           $ref: "#/components/responses/ListingError"
@@ -3319,7 +3323,7 @@ paths:
           name: kind
           schema:
             type: string
-            enum: [All, AuctionRelease, AuctionForfeit, OrderRefund, WithdrawalRefund]
+            enum: [All, AuctionRelease, AuctionForfeit, OrderRefund, WithdrawalRefund, ExchangeCompensation]
             default: All
         - in: query
           name: q
@@ -3329,7 +3333,7 @@ paths:
           schema: { type: integer, minimum: 1, default: 1 }
       responses:
         "200":
-          description: Summary and paginated deposit release/refund/forfeit ledger events.
+          description: Summary and paginated release, refund, forfeit and exchange compensation ledger events.
           headers:
             Cache-Control:
               schema: { type: string, const: no-store }
@@ -3478,6 +3482,8 @@ paths:
         "401":
           $ref: "#/components/responses/ListingError"
         "403":
+          $ref: "#/components/responses/ListingError"
+        "422":
           $ref: "#/components/responses/ListingError"
         "429":
           $ref: "#/components/responses/ListingError"
@@ -11957,7 +11963,7 @@ paths:
     post:
       operationId: completeExchange
       x-locked-access: existing-obligations
-      description: Participant acknowledgement only; it never waives either 72-hour inspection window. Settlement requires both deadlines elapsed and no dispute.
+      description: Records an inspection acknowledgement within the participant's 72-hour window. Even after both acknowledgements, each participant may report an issue within their own window. Automatic settlement requires both deadlines to have elapsed with no dispute.
       tags:
         - Exchanges
       security:
@@ -12587,7 +12593,7 @@ paths:
     post:
       operationId: advanceOperationsDemoExchangeDeadline
       tags: [Exchanges]
-      description: Close the current simulated dispute window as the assigned independent Admin. Decisions, review of appeals, evidence and settlement remain separate commands.
+      description: Close the current simulated dispute window as the assigned independent Admin. Assigned independent Staff may also advance the return deadline of an effective return order. Decisions, review of appeals, evidence and settlement remain separate commands.
       security: [{ bearerAuth: [] }]
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
@@ -12650,8 +12656,10 @@ paths:
       description: >-
         An active, independent STAFF or ADMIN assigned to the case may resolve a funded
         inspection dispute once both shipments and receipts are recorded. CompleteExchange
-        settles the original agreement. CompensateInitiator or CompensateRecipient settles
-        compensation immediately on one-book-per-side exchanges. RefundBoth is available only
+        settles the original agreement. A partial damage deduction settles the exchange with both
+        parties keeping the received books. A full verdict orders return of the affected party's
+        books and keeps funds and listings held until a substantiated return or compensation outcome.
+        RefundBoth is available only
         to replay an existing receipt. Out-of-scope or unassigned new decisions return
         409 InvalidState. Replays require the original key and body and current role, session
         and participant independence, without repeating any financial effects.
@@ -17417,8 +17425,9 @@ components:
               minimum: 10000
               maximum: 1000000
       description: Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE
-        owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible
-        with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only
+        owner has MEMBER role, Confirmed catalog and Ready media. Active direct-sale Orders hide the listing
+        from the public shelf. Direct detail reads show AwaitingPayment until payment commits, then InTransaction.
+        Unpaid reservations expose only
         their payment deadline, never participant identities. InNegotiation is retained for legacy
         conversation reservations. No new checkout or conversation can start until Available.
         Never serialize a private listing then filter on the client.
@@ -17506,6 +17515,7 @@ components:
             - AuctionPaymentExpired
             - AuctionPaid
             - OrderBuyNowPaid
+            - OrderSaleSettled
             - ExchangeProposed
             - ExchangeAccepted
             - ExchangeFunded
@@ -17524,7 +17534,7 @@ components:
         targetId:
           type: string
           format: uuid
-          description: Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
+          description: For OrderSaleSettled, identifies the order used to open the seller's wallet receipt.
         createdAt: { type: string, format: date-time }
         readAt: { type: [string, "null"], format: date-time }
     MemberNotificationPage:
@@ -17663,6 +17673,7 @@ components:
       properties:
         destination: { $ref: "#/components/schemas/OrderContact" }
         shippingFee: { type: integer, minimum: 0, description: Zero for new quotes under the free shipping policy; historical snapshots retain their fee. }
+        commissionBps: { type: integer, minimum: 0, maximum: 10000, description: Seller commission rate of this quote in basis points. }
         expiresAt: { type: string, format: date-time }
     PurchaseMessageHistory:
       type: object
@@ -20443,6 +20454,17 @@ components:
             - string
             - "null"
           format: uuid
+    SaleSettlementReceipt:
+      type: object
+      description: Breakdown of the seller's posted sale credit. Auction delivery is excluded from the seller's proceeds. Historical direct sales may include shipping reimbursement.
+      additionalProperties: false
+      required: [bookPrice, commissionBps, commission, shippingReimbursement, creditedAmount]
+      properties:
+        bookPrice: { type: integer, minimum: 0 }
+        commissionBps: { type: integer, minimum: 0, maximum: 10000 }
+        commission: { type: integer, minimum: 0 }
+        shippingReimbursement: { type: integer, minimum: 0 }
+        creditedAmount: { type: integer, minimum: 0 }
     WalletHistoryItem:
       type: object
       additionalProperties: false
@@ -20458,6 +20480,9 @@ components:
         - currency
         - orderId
       properties:
+        saleSettlement:
+          $ref: "#/components/schemas/SaleSettlementReceipt"
+          description: Present only on the seller's posted sale settlement with matching order and credit. Exchange entries are excluded.
         withdrawalState:
           anyOf:
             - $ref: "#/components/schemas/WithdrawalState"
@@ -22711,6 +22736,22 @@ components:
           maxItems: 20
           items:
             $ref: "#/components/schemas/HandoverPoint"
+    AuctionSellerSale:
+      type: object
+      additionalProperties: false
+      required: [orderId, status, amounts]
+      properties:
+        orderId: { type: string, format: uuid }
+        status: { type: string, enum: [AwaitingPayment, PendingSettlement, Settled, Closed] }
+        amounts:
+          type: object
+          additionalProperties: false
+          required: [bookPrice, commissionBps, commission, sellerProceedsOnCompletion]
+          properties:
+            bookPrice: { type: integer, minimum: 0 }
+            commissionBps: { type: integer, minimum: 0, maximum: 10000 }
+            commission: { type: integer, minimum: 0 }
+            sellerProceedsOnCompletion: { type: integer, minimum: 0 }
     AuctionIntake:
       type: object
       additionalProperties: false
@@ -22746,6 +22787,9 @@ components:
         - inspectionDueAt
         - reclaimDueAt
       properties:
+        sellerSale:
+          $ref: "#/components/schemas/AuctionSellerSale"
+          description: Available to the seller in the exact auction intake lookup when the auction has an order.
         id:
           type: string
           format: uuid
@@ -23206,6 +23250,9 @@ components:
           format: date-time
         pointName:
           type: string
+        sellerName:
+          type: string
+          description: Public display name of the seller who submitted this auction book; never includes sellerId or contact info.
         book:
           description: Approved, inspected intake revision. Null when no longer eligible for public book/media reads. Optional for compatibility with older clients; never includes seller identity or inspection notes.
           oneOf:
@@ -24016,7 +24063,7 @@ components:
               updatedAt: { type: [string, "null"], format: date-time }
     FinanceHoldHistoryKind:
       type: string
-      enum: [AuctionRelease, AuctionForfeit, OrderRefund, WithdrawalRefund]
+      enum: [AuctionRelease, AuctionForfeit, OrderRefund, WithdrawalRefund, ExchangeCompensation]
     FinanceHoldHistory:
       type: object
       additionalProperties: false
@@ -24038,10 +24085,14 @@ components:
           properties:
             totalRefunded: { type: integer, minimum: 0 }
             totalForfeited: { type: integer, minimum: 0 }
+            totalCompensated:
+              type: integer
+              minimum: 0
+              description: Amount transferred to the counterparty under exchange verdicts, including adjusted difference payments.
             totalEvents: { type: integer, minimum: 0 }
             byKind:
               type: array
-              maxItems: 4
+              maxItems: 5
               items:
                 type: object
                 additionalProperties: false
@@ -24080,7 +24131,7 @@ components:
               kindLabel: { type: string }
               outcome:
                 type: string
-                enum: [ReturnedToWallet, Forfeited]
+                enum: [ReturnedToWallet, Forfeited, TransferredToCounterparty]
               holderId: { type: [string, "null"] }
               holderName: { type: string }
               holderEmail: { type: [string, "null"] }

@@ -22,6 +22,11 @@ export function presentError(error: unknown): ErrorPresentation {
   ): ErrorPresentation => ({ message, recovery, requestId });
   if (error.code === "INVALID_CREDENTIALS")
     return result("Email hoặc mật khẩu chưa đúng.", "edit");
+  if (error.code === "ListingLimitReached")
+    return result(
+      "Bạn đã đạt giới hạn tối đa 5 bài đang hiển thị hoặc chờ duyệt (gồm cả kệ mua/đổi và đấu giá). Hãy ẩn hoặc lưu trữ bớt một bài trước khi gửi bài mới.",
+      "none",
+    );
   if (error.status === 0)
     return result(
       "Chưa kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",

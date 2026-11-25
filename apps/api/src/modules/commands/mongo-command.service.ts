@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type {
   Json,
@@ -11,6 +11,7 @@ import type { Tx } from '../../database/mongo/transaction.js';
 import { canonicalJson } from '../../common/canonical-json.js';
 import type { AuthenticatedRequest } from '../auth/auth.guard.js';
 import { DomainError, type Wire } from './domain-error.js';
+import { TransactionChanges, type TransactionTarget } from './transaction-changes.js';
 
 // MongoDB port of CommandService (ADR 0027). Order inside one transaction:
 // idempotency-key lock -> user/session locks -> current authorization ->
@@ -387,7 +388,10 @@ const sessionExpired = (
 
 @Injectable()
 export class MongoCommandService {
-  constructor(private readonly mongo: MongoService) {}
+  constructor(
+    private readonly mongo: MongoService,
+    @Optional() private readonly transactionChanges?: TransactionChanges,
+  ) {}
   runSupport<C>(
     context: CommandContext,
     operation: string,
@@ -1371,8 +1375,28 @@ export class MongoCommandService {
           processedAt: null,
           createdAt,
         });
-      return { receipt, replayed: false };
+      return { receipt, replayed: false, changedTarget: transactionTarget(change) };
+    }).then(({ receipt, replayed, changedTarget }) => {
+      if (changedTarget) this.transactionChanges?.committed(changedTarget);
+      return { receipt, replayed };
     });
+  }
+}
+
+function transactionTarget(change: CommandChange): TransactionTarget | undefined {
+  switch (change.entityType) {
+    case 'Order':
+      return { kind: 'order', id: change.entityId };
+    case 'Shipment':
+    case 'CarrierEvent':
+    case 'OrderPackagingEvidence':
+      return { kind: 'order', id: change.orderId };
+    case 'Exchange':
+      return { kind: 'exchange', id: change.entityId };
+    case 'ExchangeEvidence':
+      return { kind: 'exchange', id: change.exchangeId };
+    case 'PurchaseConversation':
+      return { kind: 'conversation', id: change.entityId };
   }
 }
 

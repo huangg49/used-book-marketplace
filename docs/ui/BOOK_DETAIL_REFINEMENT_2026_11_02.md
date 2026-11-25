@@ -1,5 +1,8 @@
 # Chi tiết bản sách Member web — 02/11/2026
 
+Nút thêm vào giỏ trong báo cáo này mô tả giao diện tại mốc 02/11. Nhóm đã ẩn
+nút trên trang chi tiết từ 25/11/2026. Xem [bàn giao phiên](../handoff/SESSION_STATE.md).
+
 Owner duyệt sửa sau khi thấy ảnh quá nặng, giá nhỏ trong nửa khung, người bán
 tách xa và nút mua/giỏ/chat không thống nhất. Scope `apps/user-web`, không Admin,
 RN/native, Flutter, API, migration, GHN hoặc gate giao dịch mới.
@@ -25,8 +28,7 @@ khác biệt SupportLink thuộc nhánh mới không được đưa sang app loc
   không tạo cột sticky hoặc nested vertical scroller. Frame con có kích thước
   xác định để ảnh không mất chiều cao ở lượt bố cục đầu. Giữ signed read/retry,
   viewer/ArrowLeft/Right/Escape/focus và scroll lock khi mở dialog.
-- [AddToCart](../../apps/user-web/src/components/AddToCart.tsx) có
-  [style riêng](../../apps/user-web/src/components/AddToCart.module.css), không
+- `AddToCart` ở mốc này có CSS riêng, không
   mượn layout CartPage. Nút/feedback đồng bộ; chỉ sau ACK mới có Xem giỏ sách.
   Giữ pending receipt/key/body và ngăn viết mới khi detail chưa đáng tin; vẫn cho
   đối chiếu yêu cầu cũ nếu lượt refresh detail lỗi. Giỏ/chat không giữ chỗ.

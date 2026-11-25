@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError, type SessionClient } from "./session-client";
+import { DEFAULT_SALE_COMMISSION_BPS } from "./sale-fees";
 
 export const orderResponseStateSchema = z.object({
   id: z.uuid(),
@@ -29,6 +30,18 @@ export type BuyNowOrderInput = {
 type CreateIntent = { key: string; body: BuyNowOrderInput };
 type Intent = { action: Action; version: number; key: string };
 
+// POL-13 / BR-20: price in whole đồng, rounding half up.
+export function directOrderCommission(bookPrice: number, bps = DEFAULT_SALE_COMMISSION_BPS) {
+  return Number((BigInt(bookPrice) * BigInt(bps) + 5000n) / 10000n);
+}
+
+export type SellerOrderInput = {
+  conversationId: string;
+  expectedVersion: number;
+  agreedBookPrice: number;
+};
+type SellerCreateIntent = { key: string; body: SellerOrderInput };
+
 function isDefiniteRejection(error: unknown) {
   // Auth, timeout and rate-limit responses cannot settle an earlier lost ACK.
   // Keep the original intent until its receipt can be recovered.
@@ -47,6 +60,7 @@ const stores = new WeakMap<
     generation: number;
     intents: Map<string, Intent>;
     creates: Map<string, CreateIntent>;
+    sellerCreates: Map<string, SellerCreateIntent>;
     acknowledged: Map<string, string>;
   }
 >();
@@ -62,6 +76,7 @@ function store(client: SessionClient) {
       generation: 0,
       intents: new Map(),
       creates: new Map(),
+      sellerCreates: new Map(),
       acknowledged: new Map(),
     };
     const current = value;
@@ -70,6 +85,7 @@ function store(client: SessionClient) {
       if (current.owner !== next) {
         current.intents.clear();
         current.creates.clear();
+        current.sellerCreates.clear();
         current.acknowledged.clear();
         current.owner = next;
         current.generation++;
@@ -78,6 +94,49 @@ function store(client: SessionClient) {
     stores.set(client, value);
   }
   return value;
+}
+
+export function pendingSellerOrder(client: SessionClient, conversationId: string) {
+  const attempt = store(client).sellerCreates.get(conversationId);
+  return attempt ? { ...attempt.body } : undefined;
+}
+
+export async function sendSellerOrder(
+  client: SessionClient,
+  conversationId: string,
+  input: SellerOrderInput | null,
+  keyFactory: () => string,
+) {
+  const s = store(client);
+  const generation = s.generation;
+  if (!s.owner)
+    throw new ApiError(401, "SESSION_EXPIRED", "Đăng nhập để tạo đơn.");
+  const saved = s.sellerCreates.get(conversationId);
+  if (!saved && (!input || input.conversationId !== conversationId))
+    throw new Error("Cần giá sách và báo giá hiện hành để tạo đơn.");
+
+  const attempt = saved ?? { key: keyFactory(), body: { ...input! } };
+  s.sellerCreates.set(conversationId, attempt);
+  try {
+    const result = await client.request("/orders", orderCommandReceiptSchema, {
+      method: "POST",
+      headers: { "Idempotency-Key": attempt.key },
+      body: JSON.stringify(attempt.body),
+    });
+    if (s.generation !== generation)
+      throw new ApiError(401, "SESSION_EXPIRED", "Phiên tài khoản đã thay đổi.");
+    if (s.sellerCreates.get(conversationId) === attempt)
+      s.sellerCreates.delete(conversationId);
+    return result;
+  } catch (error) {
+    if (
+      s.generation === generation &&
+      s.sellerCreates.get(conversationId) === attempt &&
+      isDefiniteRejection(error)
+    )
+      s.sellerCreates.delete(conversationId);
+    throw error;
+  }
 }
 export function pendingOrderResponse(client: SessionClient, id: string) {
   return store(client).intents.get(id)?.action;

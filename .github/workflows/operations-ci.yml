@@ -38,12 +38,13 @@ jobs:
         env:
           EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:3009/api/v1
           EXPO_PUBLIC_DESIGN_PREVIEW: '1'
+      - run: pnpm test:member-cart:api
+      - name: Existing cart and book detail on Web and Expo
+        run: pnpm test:member-cart:browser
       - run: pnpm test:public:browser
       - run: pnpm test:rn-buy-now:browser
       - run: pnpm test:member-profile:browser
       - run: pnpm --filter @used-books/admin-web test:account-controls:browser
-      - run: pnpm test:member-cart:api
-      - run: pnpm test:member-cart:browser
       - run: pnpm test:support:browser
       - run: pnpm test:exchange-evidence:browser
       - name: Mongo QA diagnostics on failure
@@ -61,3 +62,4 @@ jobs:
             apps/mobile-react-native/test-results
             .tmp/support-evidence
             .tmp/exchange-evidence
+            .tmp/member-cart-evidence

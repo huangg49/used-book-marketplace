@@ -14,6 +14,7 @@ import { ArrowDownLeft, ArrowLeft, ArrowUpRight, ShieldAlert } from "lucide-reac
 import { ApiError, confirmExchangeRead, sendEvidence, type EvidenceInput } from "@used-books/session-client";
 import { session } from "../services/api";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { ExchangeRecoveryPanel } from "../components/exchange/ExchangeRecoveryPanel";
 import { SupportLink } from "../features/support/SupportLink";
 import { useParams, Link, Navigate, useLocation } from "react-router-dom";
@@ -89,6 +90,14 @@ function ExchangeDetailContent({
   const id = exchangeId ?? routeId;
   const queryClient = useQueryClient();
   const auth = useSession();
+  const viewerId = auth.status === "authenticated" ? auth.user.id : undefined;
+  const exchangeKey = ["exchangeDetail", viewerId, id] as const;
+  const messagesKey = ["exchangeMessages", viewerId, id] as const;
+  const live = useTransactionLive("exchange", id, () => {
+    for (const queryKey of [exchangeKey, messagesKey, ["exchange-evidence"]]) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  });
   const [disputeUploadNotice, setDisputeUploadNotice] = useState<string>("");
   const conversations = useQuery({
     queryKey: [
@@ -107,14 +116,10 @@ function ExchangeDetailContent({
     dataUpdatedAt: detailUpdatedAt,
     refetch: refetchDetail,
   } = useQuery({
-    queryKey: [
-      "exchangeDetail",
-      auth.status === "authenticated" ? auth.user.id : undefined,
-      id,
-    ],
+    queryKey: exchangeKey,
     queryFn: () => getExchangeDetail(id!),
     enabled: !!id && auth.status === "authenticated",
-    refetchInterval: 5000,
+    refetchInterval: live ? 30_000 : 5_000,
     refetchIntervalInBackground: false,
   });
 
@@ -129,17 +134,13 @@ function ExchangeDetailContent({
   }, [id, detail, auth, detailUpdatedAt]);
 
   const messagesQuery = useInfiniteQuery({
-    queryKey: [
-      "exchangeMessages",
-      auth.status === "authenticated" ? auth.user.id : undefined,
-      id,
-    ],
+    queryKey: messagesKey,
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) => getMessagePage(id!, pageParam),
     getNextPageParam: (page) => page.olderCursor ?? undefined,
     enabled: !embedded && !!id && auth.status === "authenticated",
     // Each refresh walks the loaded pages. Bound the average request rate.
-    refetchInterval: (query) => 3000 * Math.max(1, query.state.data?.pages.length ?? 0),
+    refetchInterval: (query) => (live ? 30_000 : 3_000) * Math.max(1, query.state.data?.pages.length ?? 0),
     refetchIntervalInBackground: false,
   });
   const messagesDenied =

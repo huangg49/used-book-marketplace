@@ -1,7 +1,7 @@
 // Pure rules for the live auction channel (ADR 0031), shared in meaning with
 // apps/user-web/src/lib/auction-live.ts. Free of React Native and Socket.IO so
 // the ordering and fan-out decisions are unit tested.
-import type { PublicAuctionList, PublicAuctionSummary } from "./contracts";
+import type { PointOrder, PublicAuctionList, PublicAuctionSummary } from "./contracts";
 
 type Stamped = { serverTime: string };
 type LiveAuction = Stamped & {
@@ -22,6 +22,15 @@ export function newerSnapshot<T extends Stamped>(prev: T | undefined, next: T): 
   const after = Date.parse(next.serverTime);
   if (Number.isNaN(before) || Number.isNaN(after)) return next;
   return after >= before ? next : prev;
+}
+
+/** Monotonic cache merge for PointOrder snapshots (version never steps back). */
+export function newerPointOrder(
+  prev: PointOrder | undefined,
+  next: PointOrder,
+): PointOrder {
+  if (!prev) return next;
+  return next.version >= prev.version ? next : prev;
 }
 
 export type LiveImpact = {

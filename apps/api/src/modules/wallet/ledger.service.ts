@@ -37,6 +37,7 @@ import {
   exchangeSettlementScope,
 } from '../exchanges/exchange-return-resolution.js';
 import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
+import { notifySaleSettlement, type SaleSettlementOrder } from './sale-settlement.js';
 import {
   FEE_JOURNAL_TYPES,
   LISTING_FEE_CLEARING_ID,
@@ -1002,12 +1003,7 @@ export class LedgerService {
   // seller's available account is created when absent (seller lock held).
   async settlePointOrder(
     tx: Tx,
-    order: {
-      _id: string;
-      sellerId: string;
-      buyerTotal: number;
-      sellerProceeds: number;
-    },
+    order: SaleSettlementOrder,
     receiptId: string,
     now: Date,
   ) {
@@ -1017,7 +1013,7 @@ export class LedgerService {
       this.directRelease.assertReleased();
     return this.postOrderSettlement(tx, order, receiptId, now);
   }
-  async settleLocalDemoOrder(tx: Tx, order: { _id: string; sellerId: string; buyerTotal: number; sellerProceeds: number }, receiptId: string, now: Date) {
+  async settleLocalDemoOrder(tx: Tx, order: SaleSettlementOrder, receiptId: string, now: Date) {
     if (!this.localDemo) throw invalidState();
     this.localDemo.assertAllowed(order._id);
     const job = await tx.c.local_demo_order_completions.findOne({ _id: order._id });
@@ -1031,7 +1027,7 @@ export class LedgerService {
       throw invalidState();
     return this.postOrderSettlement(tx, order, receiptId, now);
   }
-  private async postOrderSettlement(tx: Tx, order: { _id: string; sellerId: string; buyerTotal: number; sellerProceeds: number }, receiptId: string, now: Date) {
+  private async postOrderSettlement(tx: Tx, order: SaleSettlementOrder, receiptId: string, now: Date) {
     const hold = await tx.c.wallet_accounts.findOne({ orderId: order._id });
     if (!hold) throw new Error('Wallet account missing');
     const seller = await this.account(tx, { ownerId: order.sellerId });
@@ -1083,16 +1079,12 @@ export class LedgerService {
       },
     ]);
     tx.check(`journal:${journal._id}`, () => checkJournal(tx, journal._id));
+    await notifySaleSettlement(tx, order, now);
     return journal;
   }
   async settleDirectOrder(
     tx: Tx,
-    order: {
-      _id: string;
-      sellerId: string;
-      buyerTotal: number;
-      sellerProceeds: number;
-    },
+    order: SaleSettlementOrder,
     receiptId: string,
     now: Date,
   ) {
@@ -1101,7 +1093,7 @@ export class LedgerService {
   }
   async settleDemonstratedDirectOrder(
     tx: Tx,
-    order: { _id: string; sellerId: string; buyerTotal: number; sellerProceeds: number },
+    order: SaleSettlementOrder,
     receiptId: string,
     now: Date,
   ) {
@@ -1607,7 +1599,7 @@ async function checkExchangeReturn(tx: Tx, exchange: ExchangeDoc) {
   if (!['actOnOperationsExchangeReturn', 'resolveExchangeDispute'].includes(receipt?.operation ?? '') || receipt?.resultVersion !== exchange.revision ||
       journals.length !== moves.length || moves.some((move) => !journals.some((journal) =>
         journal.receiptId === exchangeReturnJournalRef(receipt._id, move.code))) ||
-      (compensated && !(await tx.c.member_violations.findOne({
+      ((compensated || scope.bothShipped) && !(await tx.c.member_violations.findOne({
         sourceId: exchange._id, kind: 'ExchangeReturnDefault', userId: scope.holderId, receiptId: receipt._id,
       })))) throw new Error('Exchange return resolution, books or journal mismatch');
   const accounts = await tx.c.wallet_accounts.find({
@@ -1643,23 +1635,15 @@ async function checkExchangeReturnBooks(tx: Tx, exchange: ExchangeDoc) {
     }
     return;
   }
-  if (scope.bothShipped && compensated) {
-    if (
-      ownerBooks.some((b) => b.trade !== 'Available' || b.moderation !== 'Draft') ||
-      holderBooks.some((b) => b.trade !== 'ClosedUnavailable')
-    ) {
-      throw new Error('Exchange full compensation listing projection mismatch');
-    }
-    return;
-  }
   const expectedOwnerTrade = compensated ? 'ClosedUnavailable' : 'Available';
+  const expectedHolderTrade = scope.bothShipped ? 'ClosedUnavailable' : 'Available';
   if (
     ownerBooks.some(
       (b) =>
         b.trade !== expectedOwnerTrade ||
         (!compensated && b.moderation !== 'Draft'),
     ) ||
-    holderBooks.some((b) => b.trade !== 'Available')
+    holderBooks.some((b) => b.trade !== expectedHolderTrade)
   ) {
     throw new Error('Exchange return listing projection mismatch');
   }

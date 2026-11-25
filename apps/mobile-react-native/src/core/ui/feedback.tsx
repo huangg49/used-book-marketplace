@@ -12,7 +12,7 @@ import {
 import { AppText } from "./text";
 import { Button, IconButton } from "./actions";
 import { Icon, type IconName } from "./icon";
-import { colorRoles, colors, feedbackColors, space, stitchTokens } from "./theme";
+import { colorRoles, colors, feedbackColors, radius, space, stitchTokens } from "./theme";
 
 export function Notice({
   children,
@@ -32,6 +32,7 @@ export function Notice({
       accessibilityLiveRegion="polite"
       style={{
         padding: 14,
+        borderRadius: radius.control,
         backgroundColor: color.surface,
         flexDirection: "row",
         alignItems: "center",
@@ -108,23 +109,24 @@ export function ConfirmDialog({
   visible,
   title,
   message,
+  children,
   confirmLabel,
   onConfirm,
   onCancel,
   busy = false,
   error,
   destructive = false,
-}: {
+}: React.PropsWithChildren<{
   visible: boolean;
   title: string;
-  message: string;
+  message?: string;
   confirmLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
   busy?: boolean;
   error?: string;
   destructive?: boolean;
-}) {
+}>) {
   if (!visible) return null;
 
   return (
@@ -132,13 +134,14 @@ export function ConfirmDialog({
       accessibilityLabel={title}
       visible={visible}
       transparent
+      statusBarTranslucent
       animationType={Platform.OS === "web" ? "none" : "fade"}
       onRequestClose={() => {
         if (!busy) onCancel();
       }}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{
           flex: 1,
           backgroundColor: colorRoles.scrim,
@@ -160,18 +163,19 @@ export function ConfirmDialog({
         <View
           accessibilityViewIsModal
           style={{
-            backgroundColor: "#FFFFFF",
+            backgroundColor: stitchTokens.whiteSurface,
             width: "100%",
             maxWidth: 380,
-            borderRadius: 24,
-            padding: space.xxl,
-            gap: space.lg,
+            maxHeight: children != null ? "100%" : undefined,
+            borderRadius: 20,
+            padding: space.xl,
+            gap: children != null ? space.md : space.lg,
             borderWidth: 1,
-            borderColor: "#DEC0BB",
-            shadowColor: "#000",
+            borderColor: stitchTokens.peachBorder,
+            shadowColor: stitchTokens.black,
             shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.18,
-            shadowRadius: 20,
+            shadowOpacity: 0.16,
+            shadowRadius: 18,
             elevation: 10,
           }}
         >
@@ -189,9 +193,9 @@ export function ConfirmDialog({
               accessibilityRole="header"
               style={{
                 flex: 1,
-                fontSize: 20,
-                color: stitchTokens.wine,
-                fontWeight: "700",
+                fontSize: 19,
+                color: stitchTokens.wineDark,
+                fontWeight: "800",
               }}
             >
               {title}
@@ -206,10 +210,10 @@ export function ConfirmDialog({
 
           {/* Dialog message */}
           <ScrollView
-            style={{ maxHeight: 220 }}
+            style={children != null ? { flexGrow: 0, flexShrink: 1 } : { maxHeight: 240 }}
             keyboardShouldPersistTaps="handled"
           >
-            <AppText
+            {message ? <AppText
               style={{
                 fontSize: 15,
                 lineHeight: 22,
@@ -217,7 +221,8 @@ export function ConfirmDialog({
               }}
             >
               {message}
-            </AppText>
+            </AppText> : null}
+            {children}
             {error ? (
               <View style={{ marginTop: space.sm }}>
                 <Notice tone="error">{error}</Notice>
@@ -225,20 +230,21 @@ export function ConfirmDialog({
             ) : null}
           </ScrollView>
 
-          {/* Action buttons */}
-          <View style={{ gap: space.md, marginTop: space.xs }}>
-            <Button
-              title="Quay lại"
-              secondary
-              disabled={busy}
-              onPress={onCancel}
-            />
+          {/* Action buttons: primary confirmation on top, calm cancel below */}
+          <View style={{ gap: space.sm, marginTop: space.xs }}>
             <Button
               title={confirmLabel}
               busy={busy}
               wine={!destructive}
               destructive={destructive}
               onPress={onConfirm}
+            />
+            <Button
+              title="Quay lại"
+              wine
+              secondary
+              disabled={busy}
+              onPress={onCancel}
             />
           </View>
         </View>

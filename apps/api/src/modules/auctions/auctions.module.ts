@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module.js';
 import { MediaModule } from '../media/media.module.js';
 import { AuctionBookService } from './auction-book.service.js';
 import { DatabaseModule } from '../../database/database.module.js';
@@ -24,9 +25,12 @@ import { PointOrderCompletionService } from './point-order-completion.service.js
 import { PointAdministrationController } from './point-administration.controller.js';
 import { PointAdministrationService } from './point-administration.service.js';
 import { PointIncidentsService } from './point-incidents.service.js';
+import { PointOrderLiveService } from './point-order-live.service.js';
+import { PointOrderGateway } from './point-order.gateway.js';
 
 @Module({
   imports: [
+    AuthModule,
     DatabaseModule,
     CommandsModule,
     ListingsModule,
@@ -49,6 +53,8 @@ import { PointIncidentsService } from './point-incidents.service.js';
     AuctionWorker,
     AuctionLiveService,
     AuctionGateway,
+    PointOrderLiveService,
+    PointOrderGateway,
     DemoSkipPolicy,
   ],
   controllers: [
@@ -62,6 +68,7 @@ import { PointIncidentsService } from './point-incidents.service.js';
     AuctionClock,
     AuctionBiddingService,
     AuctionLiveService,
+    PointOrderLiveService,
   ],
 })
 export class AuctionsModule {}

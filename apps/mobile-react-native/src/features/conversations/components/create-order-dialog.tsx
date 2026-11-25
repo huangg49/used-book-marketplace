@@ -1,270 +1,201 @@
-import React, { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { useRef, useState } from "react";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { randomUUID } from "expo-crypto";
 import {
-  AppText,
-  Button,
-  Icon,
-  Notice,
-  Sheet,
-  TextField,
-  colors,
-  radius,
-  space,
-  stitchTokens,
+  DEFAULT_SALE_COMMISSION_BPS,
+  directOrderCommission,
+  formatSaleFeeRate,
+  pendingSellerOrder,
+  sendSellerOrder,
+} from "@used-books/session-client";
+import { useSession } from "../../../core/session/session-provider";
+import {
+  AppText, Button, Checkbox, Icon, Notice, Sheet, colors, radius, space, stitchTokens,
 } from "../../../core/ui";
 import { formatVnd } from "../../../core/ui/format";
 import type { PurchaseConversation } from "../contracts";
-
-interface CreateOrderDialogProps {
-  visible: boolean;
-  onClose: () => void;
-  room: PurchaseConversation;
-  onConfirm: (agreedPrice: number) => Promise<void>;
-  busy?: boolean;
-}
+import { sellerOrderPrice } from "../purchase-conversation-service";
 
 export function CreateOrderDialog({
-  visible,
-  onClose,
-  room,
-  onConfirm,
-  busy = false,
-}: CreateOrderDialogProps) {
-  const initialPrice = room.terms?.agreedPrice ?? 0;
-  const [priceStr, setPriceStr] = useState(
-    initialPrice > 0 ? String(initialPrice) : "",
-  );
+  visible, onClose, onCreated, onRefresh, room, listingRevision, listingPrice,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onCreated: (agreedPrice: number) => void;
+  onRefresh: () => void;
+  room: PurchaseConversation;
+  listingRevision?: string;
+  listingPrice?: number;
+}) {
+  const { client } = useSession();
+  const stacked = useWindowDimensions().fontScale > 1.3;
+  const sending = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState<string>();
   const [error, setError] = useState<string>();
+  const pending = pendingSellerOrder(client, room.id);
+  const price = pending?.agreedBookPrice ?? sellerOrderPrice(room, listingRevision);
+  const version = pending?.expectedVersion ?? room.version;
+  const commissionBps = room.quotePreview?.commissionBps ?? DEFAULT_SALE_COMMISSION_BPS;
+  const commissionRate = formatSaleFeeRate(commissionBps);
+  const consent = `${version}:${price}:${commissionBps}`;
+  const accepted = acceptedTerms === consent;
+  const commission = price == null ? null : directOrderCommission(price, commissionBps);
+  const showDestination = room.quotePreview && (!pending || pending.expectedVersion === room.version);
 
-  const shippingFee = room.quotePreview?.shippingFee ?? 0;
-  const priceNum = Number(priceStr);
-  const isValidPrice =
-    Number.isInteger(priceNum) && priceNum >= 10000 && priceNum <= 1000000;
-  const buyerTotal = isValidPrice ? priceNum + shippingFee : 0;
+  const close = () => {
+    if (sending.current) return;
+    setAcceptedTerms(undefined);
+    setError(undefined);
+    onClose();
+  };
 
-  const handleSubmit = async () => {
-    if (!isValidPrice) {
-      setError("Giá sách đã thống nhất phải từ 10.000 ₫ đến 1.000.000 ₫.");
+  const submit = async () => {
+    if (sending.current || !accepted || price == null) return;
+    if (!pending && sellerOrderPrice(room, listingRevision) !== price) {
+      setAcceptedTerms(undefined);
+      setError("Giá hoặc báo giá đã thay đổi. Vui lòng kiểm tra lại.");
+      onRefresh();
       return;
     }
+    sending.current = true;
+    setBusy(true);
     setError(undefined);
     try {
-      await onConfirm(priceNum);
-    } catch (e: any) {
-      setError(e?.message ?? "Chưa tạo được đơn hàng. Vui lòng thử lại.");
+      await sendSellerOrder(client, room.id, {
+        conversationId: room.id, expectedVersion: version, agreedBookPrice: price,
+      }, randomUUID);
+    } catch {
+      if (pendingSellerOrder(client, room.id)) {
+        setError("Chưa xác nhận được đơn đã tạo. Thử lại sẽ gửi đúng yêu cầu trước.");
+      } else {
+        setAcceptedTerms(undefined);
+        setError("Chưa tạo được đơn. Hội thoại hoặc báo giá có thể đã thay đổi.");
+        onRefresh();
+      }
+      return;
+    } finally {
+      sending.current = false;
+      setBusy(false);
     }
+    close();
+    onCreated(price);
   };
 
   return (
     <Sheet
       visible={visible}
-      onClose={onClose}
+      onClose={close}
+      dismissible={!busy}
       title="Tạo đơn cho người mua"
       footer={
-        <View style={styles.actionRow}>
-          <View style={styles.cancelBtnCol}>
-            <Button
-              secondary
-              title="Hủy"
-              onPress={onClose}
-              disabled={busy}
-            />
+        <View style={[styles.actions, stacked && styles.actionsStacked]}>
+          <View style={!stacked && styles.cancel}>
+            <Button secondary title="Hủy" onPress={close} disabled={busy} />
           </View>
-          <View style={styles.confirmBtnCol}>
+          <View style={!stacked && styles.confirm}>
             <Button
-              title={busy ? "Đang tạo đơn…" : "Xác nhận tạo đơn"}
-              onPress={() => void handleSubmit()}
-              disabled={busy || !isValidPrice}
+              wine
+              title={busy ? "Đang tạo đơn…" : pending ? "Thử lại tạo đơn" : "Xác nhận tạo đơn"}
+              onPress={() => void submit()}
+              disabled={busy || !accepted || price == null}
               busy={busy}
             />
           </View>
         </View>
       }
     >
-      <View style={styles.container}>
-        <AppText style={styles.sheetDescription}>
-          Kiểm tra thông tin nhận sách và giá đã thống nhất trước khi tạo đơn.
-        </AppText>
-
-        {error && <Notice tone="error">{error}</Notice>}
-
-        {/* Input Giá sách */}
-        <View style={styles.formGroup}>
-          <AppText style={styles.label}>Giá sách đã thỏa thuận (₫)</AppText>
-          <TextField
-            value={priceStr}
-            onChangeText={(text) => {
-              setPriceStr(text.replace(/[^0-9]/g, ""));
-              setError(undefined);
-            }}
-            placeholder="Ví dụ: 80000"
-            keyboardType="numeric"
-            editable={!busy}
-          />
-        </View>
-
-        {/* Thông tin người nhận & vận chuyển */}
-        {room.quotePreview && (
-          <View style={styles.destinationCard}>
-            <View style={styles.destHeader}>
-              <Icon name="pin" size={16} color={stitchTokens.wineDark} />
-              <AppText style={styles.destTitle}>Địa chỉ giao nhận</AppText>
-            </View>
-            <AppText style={styles.destRecipient}>
-              {room.quotePreview.destination.recipientName} ·{" "}
-              {room.quotePreview.destination.phone}
-            </AppText>
-            <AppText style={styles.destDetail}>
-              {room.quotePreview.destination.detail}
-            </AppText>
+      {price != null && commission != null ? (
+        <View style={styles.summary}>
+          <AppText accessibilityRole="header" style={styles.heading}>Giá sách và phí hoa hồng</AppText>
+          {listingPrice != null && listingPrice !== price ? (
+            <AmountRow label="Giá bài đăng" value={formatVnd(listingPrice)} />
+          ) : null}
+          <AmountRow label="Giá sách đã chốt" value={formatVnd(price)} />
+          <AmountRow label={`Hoa hồng (${commissionRate})`} value={`−${formatVnd(commission)}`} />
+          <View style={styles.net}>
+            <AmountRow label="Tiền sách dự kiến bạn nhận" value={formatVnd(price - commission)} emphasis />
           </View>
-        )}
-
-        {/* Bảng tính chi phí */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <AppText style={styles.summaryLabel}>Tiền sách thỏa thuận</AppText>
-            <AppText style={styles.summaryValue}>
-              {isValidPrice ? formatVnd(priceNum) : "—"}
-            </AppText>
-          </View>
-          {shippingFee > 0 && (<View style={styles.summaryRow}>
-            <AppText style={styles.summaryLabel}>Phí giao nhận dự tính</AppText>
-            <AppText style={styles.summaryValue}>
-              {formatVnd(shippingFee)}
-            </AppText>
-          </View>)}
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <AppText style={styles.totalLabel}>Tổng người mua cần trả</AppText>
-            <AppText style={styles.totalValue}>
-              {isValidPrice ? formatVnd(buyerTotal) : "—"}
-            </AppText>
-          </View>
-        </View>
-
-        {/* Chú thích an toàn */}
-        <View style={styles.noteBox}>
-          <Icon name="info" size={16} color={stitchTokens.goldBronze} />
-          <AppText style={styles.noteText}>
-            Tạo đơn sẽ giữ sách 15 phút ở trạng thái chờ thanh toán. Sau khi
-            người mua thanh toán thành công qua ví, đơn sẽ bắt đầu xử lý.
+          <AppText style={styles.caption}>
+            Phí này được trừ vào tiền sách khi quyết toán. Phí giao nhận tính riêng.
           </AppText>
         </View>
-      </View>
+      ) : (
+        <Notice tone="warning">Cần chốt giá và có báo giá giao nhận còn hiệu lực để tạo đơn.</Notice>
+      )}
+      {showDestination && price != null && room.quotePreview ? (
+        <View style={styles.destination}>
+          <View style={styles.destinationHeading}>
+            <Icon name="pin" size={16} color={stitchTokens.wineDark} />
+            <AppText accessibilityRole="header" style={styles.heading}>Địa chỉ nhận sách</AppText>
+          </View>
+          <AppText>{room.quotePreview.destination.recipientName} · {room.quotePreview.destination.phone}</AppText>
+          <AppText style={styles.caption}>{room.quotePreview.destination.detail}</AppText>
+          <View style={styles.net}>
+            <AmountRow label="Phí giao nhận" value={formatVnd(room.quotePreview.shippingFee)} />
+            <AmountRow label="Tổng người mua trả" value={formatVnd(price + room.quotePreview.shippingFee)} />
+          </View>
+          {!pending ? (
+            <AppText style={styles.caption}>Đơn giữ sách 15 phút để người mua thanh toán.</AppText>
+          ) : null}
+        </View>
+      ) : null}
+      {price != null ? (
+        <View style={styles.consent}>
+          <Checkbox
+            title={`Tôi đồng ý để Lật lại thu hoa hồng ${commissionRate} trên giá sách khi giao dịch hoàn tất.`}
+            checked={accepted}
+            disabled={busy}
+            onPress={() => setAcceptedTerms(accepted ? undefined : consent)}
+            color={stitchTokens.wineDark}
+          />
+        </View>
+      ) : null}
+      {error ? <Notice tone="error">{error}</Notice> : null}
     </Sheet>
   );
 }
 
+function AmountRow({ label, value, emphasis = false }: {
+  label: string; value: string; emphasis?: boolean;
+}) {
+  return (
+    <View style={styles.amountRow}>
+      <AppText style={[styles.amountLabel, emphasis && styles.netLabel]}>{label}</AppText>
+      <AppText style={[styles.amountValue, emphasis && styles.netValue]}>{value}</AppText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    gap: space.md,
-    paddingTop: space.xs,
-  },
-  sheetDescription: {
-    fontSize: 13,
-    color: colors.muted,
-    lineHeight: 18,
-  },
-  formGroup: {
-    gap: space.xs,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.ink,
-  },
-  destinationCard: {
+  summary: {
     backgroundColor: stitchTokens.parchment,
     borderRadius: radius.card,
-    padding: space.md,
     borderWidth: 1,
     borderColor: colors.rule,
-    gap: 4,
+    padding: space.md,
+    gap: space.sm,
   },
-  destHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 2,
-  },
-  destTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  destRecipient: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.ink,
-  },
-  destDetail: {
-    fontSize: 12,
-    color: colors.muted,
-    lineHeight: 16,
-  },
-  summaryCard: {
+  heading: { color: stitchTokens.wineDark, fontWeight: "700" },
+  amountRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", gap: space.sm },
+  amountLabel: { flexGrow: 1, flexShrink: 1, color: colors.muted, fontSize: 13 },
+  amountValue: { marginLeft: "auto", fontWeight: "700", fontSize: 13, color: colors.ink },
+  net: { borderTopWidth: 1, borderTopColor: colors.rule, paddingTop: space.sm, gap: space.xs },
+  netLabel: { fontWeight: "700", color: colors.ink },
+  netValue: { color: stitchTokens.wineDark, fontSize: 16 },
+  caption: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  destination: { gap: space.xs },
+  destinationHeading: { flexDirection: "row", gap: space.sm, alignItems: "center" },
+  consent: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
-    padding: space.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: 8,
+    borderColor: colors.rule,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs,
   },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: colors.muted,
-  },
-  summaryValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.ink,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.rule,
-    marginVertical: 4,
-  },
-  totalLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.ink,
-  },
-  totalValue: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  noteBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: stitchTokens.amberBg,
-    borderRadius: radius.small,
-    padding: space.sm,
-    borderWidth: 1,
-    borderColor: stitchTokens.amberBorder,
-    gap: 8,
-  },
-  noteText: {
-    flex: 1,
-    fontSize: 12,
-    color: stitchTokens.orangeDeep,
-    lineHeight: 16,
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: space.sm,
-    width: "100%",
-  },
-  cancelBtnCol: {
-    flex: 1,
-  },
-  confirmBtnCol: {
-    flex: 2,
-  },
+  actions: { flexDirection: "row", gap: space.sm, width: "100%" },
+  actionsStacked: { flexDirection: "column-reverse" },
+  cancel: { flex: 1 },
+  confirm: { flex: 2 },
 });

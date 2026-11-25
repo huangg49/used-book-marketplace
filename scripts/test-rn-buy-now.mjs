@@ -140,7 +140,7 @@ try {
   // Fixture construction consumes logins. These browser sign-ins start a separate
   // QA counter baseline; this suite makes no claim about limiter acceptance.
   await fixture.db.collection("login_attempts").deleteMany({});
-  const dist = path.join(root, "apps/mobile-react-native/dist");
+  const dist = path.resolve(root, process.env.RN_BUY_NOW_DIST || "apps/mobile-react-native/dist");
   server = createServer(async (req, res) => {
     try {
       const pathname = decodeURIComponent(new URL(req.url, origin).pathname);
@@ -193,15 +193,12 @@ try {
     });
   const openOrderFromList = async (page, id) => {
     await page.waitForURL((url) => url.pathname === "/orders");
-    const card = page
-      .getByText("#" + id.slice(0, 8).toUpperCase(), { exact: true })
-      .filter({ visible: true })
-      .locator("xpath=ancestor::div[.//*[@role='button']][1]");
-    await card
-      .getByRole("button", { name: "Mở chi tiết đơn", exact: true })
+    await page
+      .getByRole("button", { name: /^Mở chi tiết đơn / })
+      .filter({ hasText: "#" + id.slice(0, 8).toUpperCase() })
       .click();
     await page
-      .getByRole("heading", { name: "Đơn #" + id.slice(0, 8), exact: true })
+      .getByRole("heading", { name: "Đơn #" + id.slice(0, 8).toUpperCase(), exact: true })
       .waitFor();
   };
   const openOrderFromAccount = async (page, id) => {
@@ -395,6 +392,10 @@ try {
   readFault = false;
   await button(p, "Thử tải lại đơn đã tạo").click();
   await p.getByRole("button", { name: /^Thanh toán ngay \(/ }).waitFor();
+  await p.getByText("Tiền sách", { exact: true }).waitFor();
+  await p.getByText("Phí giao hàng", { exact: true }).waitFor();
+  await p.getByText(/Phí dịch vụ.*trừ vào tiền người bán/).waitFor();
+  console.log("PASS: reopened checkout shows book price, delivery fee and the seller's commission");
   await intercept("**/api/v1/orders/*/pay", async (route) => {
     pays.push({
       key: route.request().headers()["idempotency-key"],
@@ -808,7 +809,7 @@ try {
   await overdueCard.getByRole("button",{name:"Mở chi tiết đơn",exact:true}).click();
   await sellerPage
     .getByRole("heading", {
-      name: "Đơn #" + overdue.entityId.slice(0, 8),
+      name: "Đơn #" + overdue.entityId.slice(0, 8).toUpperCase(),
       exact: true,
     })
     .waitFor();

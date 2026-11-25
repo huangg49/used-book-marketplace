@@ -1,4 +1,6 @@
 import { createServerNow } from "../../core/api/session-client";
+import { auctionCheckoutBalance, auctionOrderHoldText, buyerSaleFeeText } from "@used-books/session-client";
+import { router } from "expo-router";
 import { ReviewEntry } from "../reviews/review-entry";
 import { useEffect, useState } from "react";
 import { View, TouchableOpacity } from "react-native";
@@ -13,6 +15,7 @@ import {
   ConfirmDialog,
   Icon,
   Notice,
+  Sheet,
   StatePanel,
   TextField,
   colors,
@@ -36,13 +39,14 @@ import {
   formatRemaining,
   outcomeUnknown,
   pointOrderKey,
-  pointOrderOptions,
   sendOrderCommand,
   type DeliveryChoice,
   type OrderCommand,
   type OrderStep,
 } from "./auctions-model";
 import { DemoSkipButton } from "./components/demo-skip-button";
+import { WinnerPaymentReview, type WinnerPaymentReviewProps } from "./components/winner-payment-review";
+import { readPointOrderNewest, usePointOrderLive } from "./use-point-order-live";
 import { addressBook, addressReceipt, directory } from "../addresses/contracts";
 import { deliveryQuote, type CodeIssued, type PointOrder } from "./contracts";
 
@@ -156,7 +160,7 @@ function orderPresentation(order: PointOrder) {
         tone: "action" as const,
         actor: "Đã nhận sách",
         title: "Kiểm tra sách bạn đã nhận",
-        note: "Nếu sách khác biên bản, hãy báo trong thời gian kiểm tra (72h). Nếu mọi thứ ổn, hệ thống sẽ tự hoàn tất đơn khi hết hạn.",
+        note: "Tiền vẫn được giữ. Nếu sách khác biên bản, hãy báo trong hạn kiểm tra. Khi hết hạn và không có sự cố, hệ thống quyết toán cho người bán.",
         deadline: order.inspectionDeadline,
       };
     case "ResolutionPending":
@@ -165,7 +169,7 @@ function orderPresentation(order: PointOrder) {
         tone: "issue" as const,
         actor: "Đang chờ quản trị viên",
         title: "Đơn đang được xem xét",
-        note: "Hệ thống đã nhận yêu cầu và chuyển cho quản trị viên xử lý. Tiền vẫn được giữ an toàn.",
+        note: "Hệ thống đã nhận yêu cầu. Tiền vẫn được giữ trong lúc xử lý. Chưa có ngày hoàn tiền.",
         deadline: null,
       };
     case "ReturnPending":
@@ -193,16 +197,18 @@ function orderPresentation(order: PointOrder) {
         tone: "success" as const,
         actor: "Đã hoàn tất",
         title: "Giao dịch hoàn tất",
-        note: "Bạn đã nhận sách thành công. Cảm ơn bạn đã cho cuốn sách một chương mới!",
+        note: "Tiền bán đã được chuyển vào Ví người bán.",
         deadline: null,
       };
     case "Cancelled":
       return {
         phase,
         tone: "issue" as const,
-        actor: "Đã hủy",
+        actor: order.paidAt && order.refunded ? "Đã hoàn tiền" : "Đã hủy",
         title: "Đơn đã bị hủy",
-        note: "Đơn này không còn hiệu lực. Tiền giữ đã được hoàn lại ví nếu có.",
+        note: order.paidAt && order.refunded
+          ? `Đã hoàn ${formatVnd(order.amounts.buyerTotal)} về Ví của bạn.`
+          : "Đơn đã đóng. Bạn có thể kiểm tra các khoản giữ của phiên trong Ví.",
         deadline: null,
       };
     case "PaymentExpired":
@@ -226,13 +232,34 @@ function Stepper({ currentPhase }: { currentPhase: number }) {
   return (
     <View
       style={{
+        position: "relative",
         flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
+        alignItems: "flex-start",
         marginVertical: space.xs,
-        paddingHorizontal: space.xs,
       }}
     >
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 15,
+          left: "16.67%",
+          right: "50%",
+          height: 2,
+          backgroundColor: currentPhase > 0 ? colors.success : colors.rule,
+        }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 15,
+          left: "50%",
+          right: "16.67%",
+          height: 2,
+          backgroundColor: currentPhase > 1 ? colors.success : colors.rule,
+        }}
+      />
       {steps.map((st, i) => {
         const active = i === currentPhase;
         const done = i < currentPhase;
@@ -241,11 +268,15 @@ function Stepper({ currentPhase }: { currentPhase: number }) {
             key={st.label}
             style={{
               flex: 1,
-              flexDirection: "row",
               alignItems: "center",
             }}
           >
-            <View style={{ alignItems: "center", flex: 1 }}>
+            <View
+              style={{
+                paddingHorizontal: 6,
+                backgroundColor: stitchTokens.creamBg,
+              }}
+            >
               <View
                 style={{
                   width: 32,
@@ -272,36 +303,29 @@ function Stepper({ currentPhase }: { currentPhase: number }) {
                   <AppText
                     kind="bold"
                     color={active ? colors.surface : colors.muted}
-                    style={{ fontSize: 13 }}
+                    style={{
+                      fontSize: 13,
+                      lineHeight: 16,
+                      includeFontPadding: false,
+                    }}
                   >
                     {i + 1}
                   </AppText>
                 )}
               </View>
-              <AppText
-                kind="small"
-                color={active ? stitchTokens.wine : done ? colors.ink : colors.muted}
-                style={{
-                  marginTop: 4,
-                  fontWeight: active ? "700" : "500",
-                  fontSize: 11,
-                  textAlign: "center",
-                }}
-              >
-                {st.label}
-              </AppText>
             </View>
-            {i < steps.length - 1 && (
-              <View
-                style={{
-                  height: 2,
-                  flex: 0.6,
-                  backgroundColor:
-                    i < currentPhase ? colors.success : colors.rule,
-                  marginTop: -16,
-                }}
-              />
-            )}
+            <AppText
+              kind="small"
+              color={active ? stitchTokens.wine : done ? colors.ink : colors.muted}
+              style={{
+                marginTop: 6,
+                fontWeight: active ? "700" : "500",
+                fontSize: 11,
+                textAlign: "center",
+              }}
+            >
+              {st.label}
+            </AppText>
           </View>
         );
       })}
@@ -342,6 +366,23 @@ function StatusBanner({
           ? colors.warning
           : colors.ink;
 
+  const badgeBg =
+    presentation.tone === "success"
+      ? stitchTokens.likeNewGreenBg
+      : presentation.tone === "action"
+        ? stitchTokens.wine
+        : presentation.tone === "issue"
+          ? stitchTokens.flashRedBg
+          : stitchTokens.roseWarmSurface;
+  const badgeText =
+    presentation.tone === "success"
+      ? stitchTokens.likeNewGreen
+      : presentation.tone === "action"
+        ? stitchTokens.gold
+        : presentation.tone === "issue"
+          ? stitchTokens.darkRed
+          : stitchTokens.wine;
+
   return (
     <View
       style={{
@@ -356,22 +397,24 @@ function StatusBanner({
       <View
         style={{
           flexDirection: "row",
+          flexWrap: "wrap",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: 6,
         }}
       >
         <View
           style={{
             alignSelf: "flex-start",
             paddingHorizontal: 8,
-            paddingVertical: 2,
+            paddingVertical: 3,
             borderRadius: radius.small,
-            backgroundColor: toneBorder,
+            backgroundColor: badgeBg,
           }}
         >
           <AppText
             kind="small"
-            color={colors.surface}
+            color={badgeText}
             style={{ fontWeight: "700", fontSize: 11 }}
           >
             {presentation.actor}
@@ -408,22 +451,34 @@ function StatusBanner({
 export function WinnerSteps({
   orderId,
   boughtNow,
+  heldAmount,
   paused = false,
 }: {
   orderId: string;
   boughtNow: boolean;
+  heldAmount?: number;
   paused?: boolean;
 }) {
   const { client } = useSession();
   const foreground = useForeground();
   const queryClient = useQueryClient();
+  const live = usePointOrderLive(orderId, foreground);
   const order = useQuery({
-    ...pointOrderOptions(client, orderId),
+    queryKey: pointOrderKey(orderId),
+    queryFn: () => readPointOrderNewest(client, queryClient, orderId),
     enabled: foreground,
     retry: false,
     staleTime: 0,
-    // Staff hand the book over at the desk; pick that up while the screen is open.
-    refetchInterval: foreground ? 12_000 : false,
+    // Realtime WebSocket pushes Staff handover/dispatch and carrier updates
+    // immediately; keep 5s REST polling only as a fallback when socket is down.
+    refetchInterval: (query) => {
+      if (!foreground || live) return false;
+      const st = query.state.data?.state;
+      if (st === "Completed" || st === "Cancelled" || st === "PaymentExpired") {
+        return false;
+      }
+      return 5_000;
+    },
   });
   const [pending, setPending] = useState<OrderCommand | null>(null);
   const [busy, setBusy] = useState(false);
@@ -431,10 +486,11 @@ export function WinnerSteps({
   const [confirm, setConfirm] = useState<{
     step: OrderStep;
     title: string;
-    message: string;
+    message?: string;
     label: string;
     text?: string;
     delivery?: DeliveryChoice;
+    payment?: WinnerPaymentReviewProps;
   } | null>(null);
   // Shown once, kept only in memory; leaving the screen needs a new code.
   const [issued, setIssued] = useState<{
@@ -473,16 +529,16 @@ export function WinnerSteps({
     message: string,
     label: string,
     text?: string,
-    delivery?: DeliveryChoice,
-  ) => setConfirm({ step, title, message, label, text, delivery });
+  ) => setConfirm({ step, title, message, label, text });
 
   if (order.isPending)
-    return <StatePanel loading title="Đang tải đơn nhận sách" />;
+    return <StatePanel wine loading title="Đang tải đơn nhận sách" />;
   if (order.error)
     return (
       <View style={{ gap: space.sm }}>
         <Notice tone="error">{presentError(order.error).message}</Notice>
         <Button
+          wine
           secondary
           title="Thử tải lại"
           busy={order.isFetching}
@@ -502,17 +558,36 @@ export function WinnerSteps({
 
       {/* 2. Banner trạng thái đơn hàng */}
       <StatusBanner presentation={presentation} serverTime={o.serverTime} />
+      {o.state === "Cancelled" && o.paidAt && o.refunded && (
+        <Button secondary title="Xem lịch sử giao dịch Ví" onPress={() => router.push({ pathname: "/wallet", params: { section: "history" } })} />
+      )}
+
+      {o.paidAt && (
+        <View style={{ gap: space.xs, padding: space.md, backgroundColor: stitchTokens.warmIvory, borderRadius: radius.small, borderWidth: 1, borderColor: stitchTokens.cardBorder }}>
+          <AppText kind="bold" color={stitchTokens.wine}>
+            {o.state === "Cancelled" || o.state === "Completed" ? "Tổng đã thanh toán" : "Tiền đang giữ cho đơn"} {formatVnd(o.amounts.buyerTotal)}
+          </AppText>
+          <AppText kind="small" color={colors.muted}>
+            {`Tiền sách ${formatVnd(o.amounts.bookPrice)} · Phí giao ${o.amounts.outboundFee > 0 ? formatVnd(o.amounts.outboundFee) : "0đ"}`}
+          </AppText>
+          <AppText kind="small" color={colors.muted}>
+            {o.state === "Cancelled" ? "Đơn đã đóng. Không thu phí dịch vụ." : buyerSaleFeeText(o.amounts.commissionBps)}
+          </AppText>
+        </View>
+      )}
 
       {error && <Notice tone="error">{error}</Notice>}
 
       {pending ? (
         <View style={{ gap: space.sm }}>
           <Button
+            wine
             title="Thử lại thao tác vừa rồi"
             busy={busy}
             onPress={() => void run(pending)}
           />
           <Button
+            wine
             secondary
             title="Cập nhật đơn"
             disabled={busy}
@@ -525,24 +600,21 @@ export function WinnerSteps({
           {o.state === "AwaitingPayment" && (
             <Payment
               order={o}
+              heldAmount={heldAmount}
               locked={locked}
-              onPay={(delivery) =>
-                delivery
-                  ? ask(
-                      "pay",
-                      `Thanh toán ${formatVnd(o.amounts.bookPrice + delivery.fee)} từ ví?`,
-                      `Tiền sách ${formatVnd(o.amounts.bookPrice)}. ${delivery.fee > 0 ? `Phí giao hàng ${formatVnd(delivery.fee)}.` : "Giao hàng miễn phí."} Số tiền được giữ an toàn trong Quỹ bảo chứng cho đến khi bạn nhận và kiểm tra sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`,
-                      "Thanh toán",
-                      undefined,
-                      delivery,
-                    )
-                  : ask(
-                      "pay",
-                      `Thanh toán ${formatVnd(o.amounts.bookPrice)} từ ví?`,
-                      `Số tiền được giữ an toàn cho đơn này đến khi bạn nhận sách tại ${o.pointName}. Ví cần đủ số dư khả dụng; không nhận thanh toán một phần.`,
-                      "Thanh toán",
-                    )
-              }
+              onPay={(delivery) => setConfirm({
+                step: "pay",
+                title: "Thanh toán từ Ví",
+                label: "Thanh toán",
+                delivery,
+                payment: {
+                  bookPrice: o.amounts.bookPrice,
+                  deliveryFee: delivery?.fee ?? 0,
+                  heldAmount,
+                  commissionBps: o.amounts.commissionBps,
+                  receiptMethod: delivery ? "Giao tận nơi" : `Tự nhận tại ${o.pointName}`,
+                },
+              })}
             />
           )}
 
@@ -621,7 +693,7 @@ export function WinnerSteps({
       <ConfirmDialog
         visible={!!confirm && !paused}
         title={confirm?.title ?? ""}
-        message={confirm?.message ?? ""}
+        message={confirm?.message}
         confirmLabel={confirm?.label ?? ""}
         destructive={confirm?.step === "reject-report"}
         busy={busy}
@@ -639,7 +711,9 @@ export function WinnerSteps({
             ),
           )
         }
-      />
+      >
+        {confirm?.payment ? <WinnerPaymentReview {...confirm.payment} /> : null}
+      </ConfirmDialog>
     </View>
   );
 }
@@ -654,10 +728,12 @@ type Ask = (
 
 function Payment({
   order,
+  heldAmount,
   locked,
   onPay,
 }: {
   order: PointOrder;
+  heldAmount?: number;
   locked: boolean;
   onPay: (delivery?: DeliveryChoice) => void;
 }) {
@@ -706,6 +782,9 @@ function Payment({
   });
 
   const total = deliver ? quote.data?.buyerTotal : order.amounts.bookPrice;
+  const balance = total === undefined || (deliver && quote.isError)
+    ? null
+    : auctionCheckoutBalance(total, heldAmount);
   const missingQuoteLabel = !chosen
     ? "Chọn địa chỉ"
     : quote.isFetching
@@ -788,11 +867,13 @@ function Payment({
           Phương thức nhận sách
         </AppText>
 
-        {/* 2 Card lựa chọn phương thức song song (Nổi 3D, nền đỏ khi chọn) */}
-        <View style={{ flexDirection: "row", gap: space.sm, paddingVertical: 4 }}>
+        {/* 2 Card lựa chọn phương thức song song */}
+        <View style={{ flexDirection: "row", gap: space.sm }}>
           {/* Option A: Tự nhận tại điểm */}
           <TouchableOpacity
-            activeOpacity={0.7}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: !deliver, disabled: locked }}
+            activeOpacity={0.8}
             disabled={locked}
             onPress={() => {
               setDeliver(false);
@@ -801,157 +882,81 @@ function Payment({
             }}
             style={{
               flex: 1,
-              padding: space.sm + 4,
+              minHeight: 88,
+              padding: space.md,
               borderRadius: 12,
-              borderWidth: 1,
-              borderBottomWidth: !deliver ? 3.5 : 1,
-              borderColor: !deliver ? stitchTokens.wineDark : colors.rule,
-              borderBottomColor: !deliver ? stitchTokens.wineDark : colors.rule,
-              backgroundColor: !deliver ? stitchTokens.wine : colors.surface,
+              borderWidth: 1.5,
+              borderColor: !deliver ? stitchTokens.wine : stitchTokens.cardBorder,
+              backgroundColor: !deliver ? stitchTokens.wine : stitchTokens.parchment,
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-              position: "relative",
-              shadowColor: !deliver ? stitchTokens.wineDark : "transparent",
-              shadowOffset: { width: 0, height: !deliver ? 4 : 0 },
-              shadowOpacity: !deliver ? 0.35 : 0,
-              shadowRadius: 5,
-              elevation: !deliver ? 6 : 0,
-              transform: [{ translateY: !deliver ? -2 : 0 }],
             }}
           >
-            {!deliver && (
-              <View
-                style={{
-                  position: "absolute",
-                  top: 6,
-                  right: 6,
-                  width: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  backgroundColor: colors.surface,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  shadowColor: stitchTokens.black,
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 1,
-                  elevation: 2,
-                }}
-              >
-                <Icon name="check" size={11} color={stitchTokens.wine} />
-              </View>
-            )}
             <Icon
               name="pin"
               size={20}
-              color={!deliver ? colors.surface : colors.muted}
+              color={!deliver ? stitchTokens.gold : stitchTokens.wine}
             />
             <AppText
               kind="bold"
-              color={!deliver ? colors.surface : colors.ink}
+              color={!deliver ? stitchTokens.warmIvory : stitchTokens.wineDark}
               style={{ fontSize: 13, textAlign: "center" }}
             >
               Tự nhận tại điểm
             </AppText>
-            <View
-              style={{
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                borderRadius: 4,
-                backgroundColor: !deliver ? stitchTokens.whiteAlpha20 : colors.paper,
-              }}
+            <AppText
+              kind="small"
+              color={!deliver ? stitchTokens.gold : stitchTokens.brownMuted}
+              style={{ fontSize: 11, fontWeight: "600", textAlign: "center" }}
             >
-              <AppText
-                kind="small"
-                color={!deliver ? colors.surface : colors.muted}
-                style={{ fontSize: 10, fontWeight: "700" }}
-              >
-                Miễn phí · Tại quầy
-              </AppText>
-            </View>
+              Miễn phí · Tại quầy
+            </AppText>
           </TouchableOpacity>
 
           {/* Option B: Giao tận nơi */}
           <TouchableOpacity
-            activeOpacity={0.7}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: deliver, disabled: locked }}
+            activeOpacity={0.8}
             disabled={locked}
             onPress={() => setDeliver(true)}
             style={{
               flex: 1,
-              padding: space.sm + 4,
+              minHeight: 88,
+              padding: space.md,
               borderRadius: 12,
-              borderWidth: 1,
-              borderBottomWidth: deliver ? 3.5 : 1,
-              borderColor: deliver ? stitchTokens.wineDark : colors.rule,
-              borderBottomColor: deliver ? stitchTokens.wineDark : colors.rule,
-              backgroundColor: deliver ? stitchTokens.wine : colors.surface,
+              borderWidth: 1.5,
+              borderColor: deliver ? stitchTokens.wine : stitchTokens.cardBorder,
+              backgroundColor: deliver ? stitchTokens.wine : stitchTokens.parchment,
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-              position: "relative",
-              shadowColor: deliver ? stitchTokens.wineDark : "transparent",
-              shadowOffset: { width: 0, height: deliver ? 4 : 0 },
-              shadowOpacity: deliver ? 0.35 : 0,
-              shadowRadius: 5,
-              elevation: deliver ? 6 : 0,
-              transform: [{ translateY: deliver ? -2 : 0 }],
             }}
           >
-            {deliver && (
-              <View
-                style={{
-                  position: "absolute",
-                  top: 6,
-                  right: 6,
-                  width: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  backgroundColor: colors.surface,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  shadowColor: stitchTokens.black,
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 1,
-                  elevation: 2,
-                }}
-              >
-                <Icon name="check" size={11} color={stitchTokens.wine} />
-              </View>
-            )}
             <Icon
               name="truck"
               size={20}
-              color={deliver ? colors.surface : colors.muted}
+              color={deliver ? stitchTokens.gold : stitchTokens.wine}
             />
             <AppText
               kind="bold"
-              color={deliver ? colors.surface : colors.ink}
+              color={deliver ? stitchTokens.warmIvory : stitchTokens.wineDark}
               style={{ fontSize: 13, textAlign: "center" }}
             >
               Giao tận nơi
             </AppText>
-            <View
-              style={{
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                borderRadius: 4,
-                backgroundColor: deliver ? stitchTokens.whiteAlpha20 : colors.paper,
-              }}
+            <AppText
+              kind="small"
+              color={deliver ? stitchTokens.gold : stitchTokens.brownMuted}
+              style={{ fontSize: 11, fontWeight: "600", textAlign: "center" }}
             >
-              <AppText
-                kind="small"
-                color={deliver ? colors.surface : colors.muted}
-                style={{ fontSize: 10, fontWeight: "700" }}
-              >
-                {quote.data && quote.data.outboundFee > 0
-                  ? `${formatVnd(quote.data.outboundFee)} · Lật Lại Express`
-                  : quote.data
-                    ? "Miễn phí · Lật Lại Express"
-                    : "Lật Lại Express"}
-              </AppText>
-            </View>
+              {quote.data && quote.data.outboundFee > 0
+                ? formatVnd(quote.data.outboundFee)
+                : quote.data
+                  ? "Miễn phí"
+                  : "Lật Lại Express"}
+            </AppText>
           </TouchableOpacity>
         </View>
 
@@ -1008,10 +1013,10 @@ function Payment({
 
             {/* Danh sách địa chỉ đã lưu */}
             {addresses.isPending ? (
-              <StatePanel loading title="Đang tải danh sách địa chỉ" />
+              <StatePanel wine loading title="Đang tải danh sách địa chỉ" />
             ) : addresses.error ? (
               <Notice tone="error">{presentError(addresses.error).message}</Notice>
-            ) : items.length > 0 && !addingNew ? (
+            ) : items.length > 0 ? (
               <View style={{ gap: space.xs }}>
                 {items.map((a) => {
                   const isSelected = a.id === chosen;
@@ -1102,47 +1107,63 @@ function Payment({
               </View>
             ) : null}
 
-            {/* Nút hoặc Form thêm địa chỉ mới */}
-            {!addingNew ? (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                disabled={locked}
-                onPress={() => setAddingNew(true)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingVertical: space.sm + 2,
-                  paddingHorizontal: space.md,
-                  borderRadius: radius.card,
-                  borderWidth: 1,
-                  borderStyle: "dashed",
-                  borderColor: stitchTokens.wine,
-                  backgroundColor: stitchTokens.wineAlpha05,
-                  gap: 6,
-                  marginTop: 2,
-                }}
-              >
-                <Icon name="plus" size={14} color={stitchTokens.wine} />
-                <AppText kind="bold" color={stitchTokens.wine} style={{ fontSize: 13 }}>
-                  Thêm địa chỉ giao nhận mới
-                </AppText>
-              </TouchableOpacity>
-            ) : (
-              <View
-                style={{
-                  gap: space.xs,
-                  padding: space.sm + 4,
-                  borderRadius: radius.card,
-                  backgroundColor: colors.paper,
-                  borderWidth: 1,
-                  borderColor: colors.rule,
-                }}
-              >
-                <AppText kind="bold" style={{ fontSize: 13 }}>
-                  Thêm địa chỉ nhận sách mới
-                </AppText>
-                {addressError && <Notice tone="error">{addressError}</Notice>}
+            {/* Nút mở Sheet thêm địa chỉ mới */}
+            <TouchableOpacity
+              accessibilityRole="button"
+              activeOpacity={0.75}
+              disabled={locked}
+              onPress={() => {
+                setAddressError(null);
+                setAddingNew(true);
+              }}
+              style={{
+                minHeight: 46,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 10,
+                paddingHorizontal: space.md,
+                borderRadius: radius.control,
+                borderWidth: 1,
+                borderStyle: "dashed",
+                borderColor: stitchTokens.wine,
+                backgroundColor: stitchTokens.roseWarmSurface,
+                gap: 6,
+                marginTop: 2,
+              }}
+            >
+              <Icon name="plus" size={15} color={stitchTokens.wine} />
+              <AppText kind="bold" color={stitchTokens.wine} style={{ fontSize: 13 }}>
+                Thêm địa chỉ giao nhận mới
+              </AppText>
+            </TouchableOpacity>
+
+            <Sheet
+              title="Thêm địa chỉ nhận sách"
+              visible={addingNew}
+              dismissible={!addressBusy}
+              onClose={() => !addressBusy && setAddingNew(false)}
+              footer={
+                <View style={{ gap: space.sm }}>
+                  <Button
+                    wine
+                    title={addressBusy ? "Đang lưu…" : "Lưu & chọn địa chỉ"}
+                    busy={addressBusy}
+                    disabled={addressBusy}
+                    onPress={handleSaveNewAddress}
+                  />
+                  <Button
+                    wine
+                    secondary
+                    title="Hủy"
+                    disabled={addressBusy}
+                    onPress={() => setAddingNew(false)}
+                  />
+                </View>
+              }
+            >
+              <View style={{ gap: space.md }}>
+                {addressError ? <Notice tone="error">{addressError}</Notice> : null}
 
                 <TextField
                   label="Họ tên người nhận"
@@ -1160,19 +1181,23 @@ function Payment({
                   editable={!addressBusy}
                 />
 
-                <AppText kind="small" color={colors.muted} style={{ fontSize: 11, marginTop: 4 }}>
-                  Chọn Quận/Huyện (TP.HCM):
-                </AppText>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
-                  {(areas.data?.localities ?? []).map((loc) => (
-                    <Chip
-                      key={loc.code}
-                      title={loc.label}
-                      selected={newLocality === loc.code}
-                      disabled={addressBusy}
-                      onPress={() => setNewLocality(loc.code)}
-                    />
-                  ))}
+                <View style={{ gap: space.xs }}>
+                  <AppText kind="label" color={stitchTokens.brownMuted}>
+                    Chọn Quận/Huyện (TP.HCM)
+                  </AppText>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                    {(areas.data?.localities ?? []).map((loc) => (
+                      <Chip
+                        key={loc.code}
+                        wine
+                        compact
+                        title={loc.label}
+                        selected={newLocality === loc.code}
+                        disabled={addressBusy}
+                        onPress={() => setNewLocality(loc.code)}
+                      />
+                    ))}
+                  </View>
                 </View>
 
                 <TextField
@@ -1182,23 +1207,8 @@ function Payment({
                   placeholder="Số nhà, tên đường, phường..."
                   editable={!addressBusy}
                 />
-
-                <View style={{ flexDirection: "row", gap: space.sm, marginTop: 4 }}>
-                  <Button
-                    secondary
-                    title="Hủy"
-                    disabled={addressBusy}
-                    onPress={() => setAddingNew(false)}
-                  />
-                  <Button
-                    wine
-                    title={addressBusy ? "Đang lưu…" : "Lưu & chọn địa chỉ"}
-                    disabled={addressBusy}
-                    onPress={handleSaveNewAddress}
-                  />
-                </View>
               </View>
-            )}
+            </Sheet>
 
             {/* Trạng thái báo giá */}
             {quote.error ? (
@@ -1210,32 +1220,32 @@ function Payment({
                   alignItems: "center",
                   gap: space.sm,
                   padding: space.sm + 2,
-                  borderRadius: radius.small,
-                  backgroundColor: colors.successSurface,
+                  borderRadius: 10,
+                  backgroundColor: quote.data.outboundFee > 0 ? stitchTokens.parchment : stitchTokens.likeNewGreenBg,
                   borderWidth: 1,
-                  borderColor: colors.success,
+                  borderColor: quote.data.outboundFee > 0 ? stitchTokens.cardBorder : stitchTokens.greenBorderSoft,
                   marginTop: space.xs,
                 }}
               >
                 <View
                   style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    backgroundColor: quote.data.outboundFee > 0 ? stitchTokens.wineAlpha08 : colors.success,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    backgroundColor: quote.data.outboundFee > 0 ? stitchTokens.roseWarmSurface : stitchTokens.likeNewGreen,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Icon name={quote.data.outboundFee > 0 ? "truck" : "check"} size={12} color={quote.data.outboundFee > 0 ? stitchTokens.wine : colors.surface} />
+                  <Icon name={quote.data.outboundFee > 0 ? "truck" : "check"} size={13} color={quote.data.outboundFee > 0 ? stitchTokens.wine : stitchTokens.white} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText kind="bold" color={quote.data.outboundFee > 0 ? colors.ink : colors.success} style={{ fontSize: 12 }}>
+                  <AppText kind="bold" color={quote.data.outboundFee > 0 ? stitchTokens.wineDark : stitchTokens.likeNewGreen} style={{ fontSize: 13 }}>
                     {quote.data.outboundFee > 0
                       ? `Phí giao tận nơi: ${formatVnd(quote.data.outboundFee)}`
-                      : "Miễn phí giao hàng (Hỗ trợ bạn đọc)"}
+                      : "Miễn phí giao hàng"}
                   </AppText>
-                  <AppText kind="small" color={colors.ink} style={{ fontSize: 11 }}>
+                  <AppText kind="small" color={colors.muted} style={{ fontSize: 12 }}>
                     Giao bởi Lật Lại Express tới địa chỉ đã chọn
                   </AppText>
                 </View>
@@ -1340,6 +1350,17 @@ function Payment({
           </AppText>
         </View>
 
+        {heldAmount !== undefined && balance && ([
+          ["Ví đang giữ cho phiên", heldAmount],
+          [balance.label, balance.amount],
+        ] as const).map(([label, amount]) => (
+          <View key={label} style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
+            <AppText kind="small" color={colors.muted} style={{ flex: 1 }}>{label}</AppText>
+            <AppText kind="bold">{formatVnd(amount)}</AppText>
+          </View>
+        ))}
+
+        <AppText kind="small" color={colors.muted}>{buyerSaleFeeText(order.amounts.commissionBps)}</AppText>
         {/* Khối bảo chứng an toàn */}
         <View
           style={{
@@ -1362,7 +1383,7 @@ function Payment({
               Bảo chứng thanh toán an toàn
             </AppText>
             <AppText kind="small" color={colors.ink} style={{ fontSize: 11 }}>
-              Thanh toán trực tiếp từ Số dư khả dụng trong Ví Lật Lại. Khoản tiền được giữ an toàn trong Quỹ bảo chứng cho đến khi bạn nhận và kiểm tra sách trong 72 giờ.
+              {auctionOrderHoldText}
             </AppText>
           </View>
         </View>
@@ -1445,48 +1466,63 @@ function Report({
           )
         }
       />
-      {!rejecting ? (
-        <Button
-          secondary
-          title="Từ chối biên bản"
-          disabled={locked || remaining === 0}
-          onPress={() => setRejecting(true)}
+      <Button
+        wine
+        secondary
+        title="Từ chối biên bản"
+        disabled={locked || remaining === 0}
+        onPress={() => setRejecting(true)}
+      />
+      <Sheet
+        title="Từ chối biên bản kiểm tra"
+        visible={rejecting}
+        dismissible={!locked}
+        onClose={() => !locked && setRejecting(false)}
+        footer={
+          <View style={{ gap: space.sm }}>
+            <Button
+              destructive
+              title="Gửi lý do từ chối"
+              disabled={locked}
+              onPress={() => {
+                const n = length(reason);
+                if (n < 10 || n > 1000) setInvalid(true);
+                else {
+                  setRejecting(false);
+                  ask(
+                    "reject-report",
+                    "Từ chối biên bản?",
+                    `Sách sẽ không được giao. Quản trị viên xem lý do của bạn rồi quyết định hoàn tiền hoặc mở lại thời hạn nhận sách.\n\n“${reason.trim()}”`,
+                    "Từ chối biên bản",
+                    reason.trim(),
+                  );
+                }
+              }}
+            />
+            <Button
+              wine
+              secondary
+              title="Đóng"
+              disabled={locked}
+              onPress={() => setRejecting(false)}
+            />
+          </View>
+        }
+      >
+        <TextField
+          label="Lý do từ chối biên bản"
+          multiline
+          value={reason}
+          editable={!locked}
+          maxLength={1000}
+          onChangeText={(text) => {
+            setReason(text);
+            setInvalid(false);
+          }}
+          hint="Nói rõ điểm biên bản khác mô tả (10–1.000 ký tự). Quản trị viên sẽ đọc lý do này."
+          error={invalid ? "Nhập lý do từ 10 đến 1.000 ký tự." : undefined}
         />
-      ) : (
-        <View style={{ gap: space.sm }}>
-          <TextField
-            label="Lý do từ chối biên bản"
-            multiline
-            value={reason}
-            editable={!locked}
-            maxLength={1000}
-            onChangeText={(text) => {
-              setReason(text);
-              setInvalid(false);
-            }}
-            hint="Nói rõ điểm biên bản khác mô tả (10–1.000 ký tự). Quản trị viên sẽ đọc lý do này."
-            error={invalid ? "Nhập lý do từ 10 đến 1.000 ký tự." : undefined}
-          />
-          <Button
-            secondary
-            destructive
-            title="Gửi lý do từ chối"
-            disabled={locked}
-            onPress={() => {
-              const n = length(reason);
-              if (n < 10 || n > 1000) setInvalid(true);
-              else
-                ask(
-                  "reject-report",
-                  "Từ chối biên bản?",
-                  `Sách sẽ không được giao. Quản trị viên xem lý do của bạn rồi quyết định hoàn tiền hoặc mở lại thời hạn nhận sách.\n\n“${reason.trim()}”`,
-                  "Từ chối biên bản",
-                  reason.trim(),
-                );
-            }}
-          />
-        </View>
-      )}
+      </Sheet>
     </View>
   );
 }
@@ -1590,7 +1626,7 @@ function Collection({
               color={stitchTokens.wine}
               style={{ fontWeight: "600", marginTop: 2 }}
             >
-              ⚡ Chế độ Demo: Đã mở quyền lấy mã ngoài khung giờ 09:00–18:00 để kiểm thử toàn bộ hành trình.
+              Chế độ Demo: Đã mở quyền lấy mã ngoài khung giờ 09:00–18:00 để kiểm thử toàn bộ hành trình.
             </AppText>
           )}
         </View>
@@ -1601,7 +1637,7 @@ function Collection({
         </AppText>
       )}
       <Button
-        wine={!live}
+        wine
         secondary={live}
         title={issued ? "Lấy mã mới" : "Lấy mã nhận sách tại quầy"}
         disabled={locked || (closed && !live && !demoEnabled)}
@@ -1890,77 +1926,79 @@ function DeliveryPanel({
       {demoEnabled && order.state === "InTransit" && !step3Done && (
         <View
           style={{
-            gap: space.xs,
+            gap: space.sm,
             padding: space.md,
-            borderRadius: radius.card,
-            borderWidth: 1.5,
-            borderColor: stitchTokens.goldBorder,
-            backgroundColor: stitchTokens.goldLight,
-            marginBottom: space.xl,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderStyle: "dashed",
+            borderColor: stitchTokens.peachBorder,
+            backgroundColor: stitchTokens.parchment,
           }}
         >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <AppText
+              kind="bold"
+              color={stitchTokens.wineDark}
+              style={{ fontSize: 13 }}
+            >
+              Mô phỏng bưu tá giao hàng · Demo
+            </AppText>
             <View
               style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
+                backgroundColor: stitchTokens.wineDark,
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+                borderRadius: 6,
               }}
             >
               <AppText
-                kind="bold"
-                color={stitchTokens.wineDark}
-                style={{ fontSize: 13 }}
+                kind="small"
+                color={stitchTokens.gold}
+                style={{ fontSize: 10, fontWeight: "800", includeFontPadding: false }}
               >
-                Mô phỏng bưu tá giao hàng · Demo
+                DEMO
               </AppText>
-              <View
-                style={{
-                  backgroundColor: stitchTokens.wine,
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                  borderRadius: radius.small,
-                }}
-              >
-                <AppText
-                  kind="small"
-                  color={colors.surface}
-                  style={{ fontSize: 10, fontWeight: "700" }}
-                >
-                  SIMULATOR
-                </AppText>
-              </View>
             </View>
-            <AppText
-              kind="small"
-              color={colors.ink}
-              style={{ fontSize: 11, marginBottom: 4 }}
-            >
-              Thao tác mô phỏng bưu tá giao sách (sử dụng chung cơ chế với Web) để kiểm tra toàn bộ hành trình.
-            </AppText>
-
-            {simError && <Notice tone="error">{simError}</Notice>}
-
-            {!step2Done ? (
-              <Button
-                wine
-                title={simBusy ? "Đang xử lý…" : "Bưu tá bắt đầu đi giao · Demo"}
-                disabled={simBusy || locked}
-                onPress={handleDemoStart}
-              />
-            ) : (
-              <Button
-                wine
-                title={
-                  simBusy
-                    ? "Đang xử lý…"
-                    : "Xác nhận đã giao hàng thành công · Demo"
-                }
-                disabled={simBusy || locked}
-                onPress={handleDemoDeliver}
-              />
-            )}
           </View>
-        )}
+          <AppText
+            kind="small"
+            color={colors.muted}
+            style={{ fontSize: 12, lineHeight: 17 }}
+          >
+            Thao tác mô phỏng bưu tá giao sách để kiểm thử toàn bộ hành trình.
+          </AppText>
+
+          {simError && <Notice tone="error">{simError}</Notice>}
+
+          {!step2Done ? (
+            <Button
+              wine
+              title={simBusy ? "Đang xử lý…" : "Bưu tá bắt đầu đi giao · Demo"}
+              busy={simBusy}
+              disabled={simBusy || locked}
+              onPress={handleDemoStart}
+            />
+          ) : (
+            <Button
+              wine
+              title={
+                simBusy
+                  ? "Đang xử lý…"
+                  : "Xác nhận đã giao hàng thành công · Demo"
+              }
+              busy={simBusy}
+              disabled={simBusy || locked}
+              onPress={handleDemoDeliver}
+            />
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -1990,51 +2028,67 @@ function Claim({
         Còn {formatRemaining(remaining)} để kiểm tra sách. Không có vấn đề thì
         bạn không cần làm gì thêm; đơn sẽ tự động hoàn tất.
       </AppText>
-      {!open ? (
-        <Button
-          secondary
-          title="Báo sách khác biên bản"
-          disabled={locked}
-          onPress={() => setOpen(true)}
+      <Button
+        wine
+        secondary
+        title="Báo sách khác biên bản"
+        disabled={locked}
+        onPress={() => setOpen(true)}
+      />
+      <Sheet
+        title="Báo sách khác biên bản"
+        visible={open}
+        dismissible={!locked}
+        onClose={() => !locked && setOpen(false)}
+        footer={
+          <View style={{ gap: space.sm }}>
+            <Button
+              wine
+              title="Gửi báo cáo vấn đề"
+              disabled={locked}
+              onPress={() => {
+                const n = length(text);
+                if (n < CLAIM_MIN_LENGTH || n > 5000) setInvalid(true);
+                else {
+                  setOpen(false);
+                  ask(
+                    "claim",
+                    "Gửi báo cáo vấn đề?",
+                    "Quản trị viên sẽ xem xét và có thể yêu cầu bạn mang sách trả về điểm để đối chiếu. Tiền vẫn được giữ cho đơn trong thời gian xem xét.",
+                    "Gửi báo cáo",
+                    text.trim(),
+                  );
+                }
+              }}
+            />
+            <Button
+              wine
+              secondary
+              title="Đóng"
+              disabled={locked}
+              onPress={() => setOpen(false)}
+            />
+          </View>
+        }
+      >
+        <TextField
+          label="Sách khác biên bản ở điểm nào?"
+          multiline
+          value={text}
+          editable={!locked}
+          maxLength={5000}
+          onChangeText={(value) => {
+            setText(value);
+            setInvalid(false);
+          }}
+          hint={`Ít nhất ${CLAIM_MIN_LENGTH} ký tự: trang, vết hỏng hoặc điểm khác so với biên bản. Giữ nguyên sách để đối chiếu.`}
+          error={
+            invalid
+              ? `Mô tả vấn đề từ ${CLAIM_MIN_LENGTH} đến 5.000 ký tự.`
+              : undefined
+          }
         />
-      ) : (
-        <View style={{ gap: space.sm }}>
-          <TextField
-            label="Sách khác biên bản ở điểm nào?"
-            multiline
-            value={text}
-            editable={!locked}
-            maxLength={5000}
-            onChangeText={(value) => {
-              setText(value);
-              setInvalid(false);
-            }}
-            hint={`Ít nhất ${CLAIM_MIN_LENGTH} ký tự: trang, vết hỏng hoặc điểm khác so với biên bản. Giữ nguyên sách để đối chiếu.`}
-            error={
-              invalid
-                ? `Mô tả vấn đề từ ${CLAIM_MIN_LENGTH} đến 5.000 ký tự.`
-                : undefined
-            }
-          />
-          <Button
-            secondary
-            title="Gửi báo cáo vấn đề"
-            disabled={locked}
-            onPress={() => {
-              const n = length(text);
-              if (n < CLAIM_MIN_LENGTH || n > 5000) setInvalid(true);
-              else
-                ask(
-                  "claim",
-                  "Gửi báo cáo vấn đề?",
-                  "Quản trị viên sẽ xem xét và có thể yêu cầu bạn mang sách trả về điểm để đối chiếu. Tiền vẫn được giữ cho đơn trong thời gian xem xét.",
-                  "Gửi báo cáo",
-                  text.trim(),
-                );
-            }}
-          />
-        </View>
-      )}
+      </Sheet>
     </View>
   );
 }

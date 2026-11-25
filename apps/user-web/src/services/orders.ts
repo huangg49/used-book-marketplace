@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { saleFeeAmountsSchema } from "@used-books/session-client";
 import { session } from "../lib/session";
 import { bundleSchema } from "../lib/book-bundle";
 import type { components } from "@used-books/api-contract";
@@ -14,6 +15,7 @@ const paymentOrderSchema = z.object({
     bookPrice: z.number().int(),
     shippingFee: z.number().int(),
     buyerTotal: z.number().int(),
+    ...saleFeeAmountsSchema.partial().shape,
   }),
 });
 
@@ -89,6 +91,7 @@ const orderDetails = paymentOrderSchema.extend({
   createdAt: z.string(),
   paidAt: z.string().nullable(),
   moneyHeld: z.number(),
+  refundedAmount: z.number().int().nonnegative().optional(),
   canCancel: z.boolean(),
   sellerAcceptanceEnabled: z.boolean(),
   canReject: z.boolean(),

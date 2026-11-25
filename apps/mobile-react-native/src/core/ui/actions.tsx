@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ActivityIndicator, Pressable, View } from "react-native";
 import { AppText as T } from "./text";
 import { Icon, type IconName } from "./icon";
-import { colors as c, metrics, space } from "./theme";
+import { colors as c, metrics, space, stitchTokens } from "./theme";
 import { layout as s } from "./styles";
 
 // Navigation supplied by the screen; keep it visually distinct from a form action.
@@ -146,6 +146,7 @@ export function Button({
   destructive = false,
   selected,
   wine = false,
+  accessibilityLabel,
 }: {
   title: string;
   onPress: () => void;
@@ -155,12 +156,14 @@ export function Button({
   destructive?: boolean;
   selected?: boolean;
   wine?: boolean;
+  accessibilityLabel?: string;
 }) {
   const [focused, setFocused] = useState(false);
+  const label = accessibilityLabel ?? title;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={busy ? `${title}, đang xử lý` : title}
+      accessibilityLabel={busy ? `${label}, đang xử lý` : label}
       accessibilityState={{ disabled: disabled || busy, busy, selected }}
       aria-pressed={selected}
       onFocus={() => setFocused(true)}
@@ -169,9 +172,21 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         s.button,
-        wine && { backgroundColor: "#5C0202" },
+        wine && { backgroundColor: stitchTokens.wine },
         secondary && s.secondary,
-        destructive && { backgroundColor: c.error, borderColor: c.error },
+        secondary &&
+          wine && {
+            backgroundColor: stitchTokens.whiteSurface,
+            borderColor: stitchTokens.peachBorder,
+          },
+        destructive &&
+          (secondary
+            ? {
+                backgroundColor: stitchTokens.whiteSurface,
+                borderWidth: 1,
+                borderColor: c.error,
+              }
+            : { backgroundColor: c.error, borderColor: c.error }),
         focused && s.focus,
         focused && !secondary && { boxShadow: `inset 0 0 0 2px ${c.surface}` },
         disabled && { opacity: 0.5 },
@@ -189,22 +204,26 @@ export function Button({
         {busy ? (
           <ActivityIndicator
             color={
-              secondary && !destructive
-                ? "#5C0202"
-                : wine
-                  ? "#FFDF97"
-                  : c.paper
+              destructive && secondary
+                ? c.error
+                : secondary && !destructive
+                  ? stitchTokens.wine
+                  : wine
+                    ? stitchTokens.gold
+                    : c.paper
             }
           />
         ) : null}
         <T
           kind="bold"
           color={
-            secondary && !destructive
-              ? "#5C0202"
-              : wine
-                ? "#FFDF97"
-                : "#FFFFFF"
+            destructive && secondary
+              ? c.error
+              : secondary && !destructive
+                ? stitchTokens.wine
+                : wine
+                  ? stitchTokens.gold
+                  : stitchTokens.white
           }
           style={{ textAlign: "center", flexShrink: 1 }}
         >
@@ -220,12 +239,14 @@ export function Chip({
   onPress,
   disabled = false,
   wine = false,
+  compact = false,
 }: {
   title: string;
   selected: boolean;
   onPress: () => void;
   disabled?: boolean;
   wine?: boolean;
+  compact?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const activeBg = wine ? "#5C0202" : c.forest;
@@ -242,6 +263,7 @@ export function Chip({
       onPress={onPress}
       style={({ pressed }) => [
         s.chip,
+        compact && { paddingHorizontal: 10 },
         focused && s.focus,
         pressed && { opacity: 0.8 },
         {

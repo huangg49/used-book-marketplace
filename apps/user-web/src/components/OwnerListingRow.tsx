@@ -252,6 +252,9 @@ export function OwnerListingRow({
         <div className={styles.gridBody}>
           <div>
             {author && <p className={styles.gridAuthor}>{author}</p>}
+            {item.state.trade === "ClosedUnavailable" && (
+              <span className={styles.tradeBadge}>{tradeLabels[item.state.trade]}</span>
+            )}
             <h3 className={styles.gridTitle}>
               {publicVisible ? (
                 <Link to={`/books/${item.id}`}>{title}</Link>
@@ -414,8 +417,7 @@ export function OwnerListingRow({
             {moderationLabels[item.state.moderation]}
           </strong>
           <span className={styles.visBadge}>
-            {item.state.visibility === "Visible" &&
-            item.state.moderation !== "Approved"
+            {item.state.visibility === "Visible" && !publicVisible
               ? "Chưa công khai"
               : visibilityLabels[item.state.visibility]}
           </span>

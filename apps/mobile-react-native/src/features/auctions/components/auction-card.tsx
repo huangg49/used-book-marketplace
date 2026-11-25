@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import { AppText } from "../../../core/ui/text";
-import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { AppText, Icon, formatVnd, radius, stitchTokens } from "../../../core/ui";
 import { conditions } from "../../shelf/contracts";
 import { formatRemaining, isSealedFormat } from "../auctions-model";
 import type { PublicAuctionSummary } from "../contracts";
@@ -9,8 +8,8 @@ import { AuctionCover } from "./auction-cover";
 export interface AuctionCardProps {
   readonly item: PublicAuctionSummary;
   readonly remainingMs: number;
-  readonly isSaved: boolean;
-  readonly onToggleSave: () => void;
+  readonly isSaved?: boolean;
+  readonly onToggleSave?: () => void;
   readonly onPress: () => void;
   readonly onQuickBid: () => void;
 }
@@ -18,8 +17,6 @@ export interface AuctionCardProps {
 export function AuctionCard({
   item,
   remainingMs,
-  isSaved,
-  onToggleSave,
   onPress,
   onQuickBid,
 }: AuctionCardProps) {
@@ -31,156 +28,73 @@ export function AuctionCard({
     : isSealed
       ? item.startPrice
       : (item.currentPrice ?? item.startPrice);
+  const waitingReg = item.minBidders != null && (item.registeredCount ?? 0) < item.minBidders;
+  const conditionText = item.book ? conditions[item.book.condition] : null;
   const authors = item.book?.authors.join(", ");
-  const waitingReg =
-    item.minBidders != null && (item.registeredCount ?? 0) < item.minBidders;
 
   return (
-    <View style={styles.gridCell}>
+    <View style={styles.cell}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={item.title}
         onPress={onPress}
-        style={styles.gridCard}
+        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       >
-        {/* Cover Frame with Badges */}
-        <View style={styles.cardCoverFrame}>
+        {/* Cover Frame: max 2 quiet badges so the book cover stays legible */}
+        <View style={styles.coverFrame}>
           <AuctionCover
             auctionId={item.id}
             mediaId={item.book?.photos[0]?.id}
             label={item.title}
           />
 
-          {/* Live Timer Badge */}
-          <View style={styles.cardTimerBadge}>
-            <View style={styles.livePulseDot} />
-            <AppText kind="small" style={styles.cardTimerText}>
-              {formatRemaining(remainingMs)}
-            </AppText>
+          <View style={styles.timerBadge}>
+            <View style={styles.liveDot} />
+            <AppText style={styles.timerText}>{formatRemaining(remainingMs)}</AppText>
           </View>
 
-          {/* Bookmark/Favorite Button */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Lưu vào danh sách"
-            onPress={(e) => {
-              e.stopPropagation();
-              onToggleSave();
-            }}
-            style={styles.cardBookmarkBtn}
-          >
-            <Icon
-              name="heart"
-              size={14}
-              color={isSaved ? stitchTokens.crimson : stitchTokens.wine}
-              filled={isSaved}
-            />
-          </Pressable>
-
-          {/* Condition Pill */}
-          {item.book && (
-            <View style={styles.cardConditionTag}>
-              <AppText kind="small" style={styles.cardConditionText}>
-                {conditions[item.book.condition]}
+          {(isDutch || isSealed) ? (
+            <View style={styles.formatTag}>
+              <Icon name={isDutch ? "flame" : "lock"} size={10} color={stitchTokens.gold} />
+              <AppText style={styles.formatText}>
+                {isDutch ? "Giảm dần" : formatType === "SealedSecond" ? "Kín #2" : "Kín #1"}
               </AppText>
             </View>
-          )}
-
-          {/* Format Badge on Bottom Right if Dutch or Sealed */}
-          {(isDutch || isSealed) && (
-            <View style={styles.cardFormatTag}>
-              <Icon
-                name={isDutch ? "flame" : "lock"}
-                size={9}
-                color={stitchTokens.gold}
-              />
-              <AppText kind="small" style={styles.cardFormatText}>
-                {isDutch ? "HÀ LAN" : formatType === "SealedSecond" ? "KÍN #2" : "KÍN #1"}
-              </AppText>
-            </View>
-          )}
+          ) : null}
         </View>
 
-        {/* Card Body */}
-        <View style={styles.cardBody}>
-          <View>
-            <AppText kind="bold" style={styles.cardTitle} numberOfLines={2}>
+        {/* Body */}
+        <View style={styles.body}>
+          <View style={styles.topText}>
+            <AppText kind="bold" style={styles.title} numberOfLines={2}>
               {item.title}
             </AppText>
-            <AppText kind="small" style={styles.cardAuthor} numberOfLines={1}>
-              {authors || item.pointName}
+            <AppText kind="small" style={styles.subtitle} numberOfLines={1}>
+              {[conditionText, authors || item.pointName].filter(Boolean).join(" · ")}
             </AppText>
           </View>
 
-          <View style={{ gap: 4, marginTop: 4 }}>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <AppText kind="small" style={styles.bidCountLabel}>
-                {waitingReg ? "Đăng ký:" : "Người trả giá:"}
+          <View style={styles.bottomBlock}>
+            <View style={styles.priceBlock}>
+              <AppText kind="bold" style={styles.price}>
+                {formatVnd(price)}
               </AppText>
-              <AppText kind="small" style={styles.bidCountValue}>
+              <AppText kind="small" style={styles.metaLine} numberOfLines={1}>
                 {waitingReg
-                  ? `${item.registeredCount ?? 0}/${item.minBidders}`
-                  : item.bidderCount}
+                  ? `Đăng ký ${item.registeredCount ?? 0}/${item.minBidders}`
+                  : isDutch
+                    ? `Sàn ${formatVnd(item.startPrice)}`
+                    : isSealed
+                      ? `Bước +${formatVnd(item.step)}`
+                      : item.buyNowPrice !== null
+                        ? `Mua ngay ${formatVnd(item.buyNowPrice)}`
+                        : `${item.bidderCount} người trả giá`}
               </AppText>
             </View>
 
-            <AppText kind="bold" style={styles.cardPriceText}>
-              {formatVnd(price)}
-            </AppText>
-
-            <AppText kind="small" style={styles.buyNowHint} numberOfLines={1}>
-              {isDutch ? (
-                <>
-                  Giá sàn:{" "}
-                  <AppText
-                    kind="bold"
-                    style={{ fontSize: 11, color: stitchTokens.wineDark }}
-                  >
-                    {formatVnd(item.startPrice)}
-                  </AppText>
-                </>
-              ) : isSealed ? (
-                <>
-                  Giá kín • Bước{" "}
-                  <AppText
-                    kind="bold"
-                    style={{ fontSize: 11, color: stitchTokens.wineDark }}
-                  >
-                    +{formatVnd(item.step)}
-                  </AppText>
-                </>
-              ) : item.buyNowPrice !== null ? (
-                <>
-                  Mua ngay:{" "}
-                  <AppText
-                    kind="bold"
-                    style={{ fontSize: 11, color: stitchTokens.wineDark }}
-                  >
-                    {formatVnd(item.buyNowPrice)}
-                  </AppText>
-                </>
-              ) : (
-                <>
-                  Khởi điểm:{" "}
-                  <AppText
-                    kind="bold"
-                    style={{ fontSize: 11, color: stitchTokens.subtleGray }}
-                  >
-                    {formatVnd(item.startPrice)}
-                  </AppText>
-                </>
-              )}
-            </AppText>
-
-            {/* Quick Bid / Format Action CTA Button */}
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={`Mở phiên ${item.title}`}
               onPress={(e) => {
                 e.stopPropagation();
                 if (isDutch || isSealed || waitingReg || item.minBidders != null) {
@@ -189,24 +103,16 @@ export function AuctionCard({
                   onQuickBid();
                 }
               }}
-              style={({ pressed }) => [
-                styles.cardQuickBidBtn,
-                pressed && { opacity: 0.85 },
-              ]}
+              style={({ pressed }) => [styles.ctaBtn, pressed && styles.pressed]}
             >
-              <Icon
-                name={isDutch ? "flame" : isSealed ? "lock" : waitingReg ? "shield" : "gavel"}
-                size={13}
-                color={stitchTokens.wineDark}
-              />
-              <AppText kind="bold" style={styles.cardQuickBidText}>
+              <AppText kind="bold" style={styles.ctaText}>
                 {isDutch
-                  ? "Chấp nhận giá"
+                  ? "Xem giá giảm"
                   : isSealed
                     ? "Gửi giá kín"
                     : waitingReg
                       ? "Đăng ký cọc"
-                      : `Đấu +${formatVnd(item.step)}`}
+                      : "Trả giá"}
               </AppText>
             </Pressable>
           </View>
@@ -217,142 +123,106 @@ export function AuctionCard({
 }
 
 const styles = StyleSheet.create({
-  gridCell: {
-    width: "50%",
-    padding: 5,
+  cell: {
+    width: "48.5%",
   },
-  gridCard: {
+  card: {
+    flex: 1,
     backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 12,
-    overflow: "hidden",
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardCoverFrame: {
-    width: "100%",
-    aspectRatio: 4 / 5,
-    backgroundColor: stitchTokens.parchment,
-    position: "relative",
     overflow: "hidden",
   },
-  cardTimerBadge: {
+  coverFrame: {
+    height: 156,
+    backgroundColor: stitchTokens.parchment,
+    overflow: "hidden",
+  },
+  timerBadge: {
     position: "absolute",
-    top: 6,
-    left: 6,
-    backgroundColor: stitchTokens.timerBadgeBg,
+    top: 8,
+    left: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.wineDark,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: stitchTokens.gold },
+  timerText: {
+    color: stitchTokens.warmIvory,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
+  },
+  formatTag: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    backgroundColor: stitchTokens.wine,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  cardTimerText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: stitchTokens.white,
-  },
-  livePulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: stitchTokens.white,
-  },
-  cardBookmarkBtn: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: stitchTokens.whiteAlpha90,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  cardConditionTag: {
-    position: "absolute",
-    bottom: 6,
-    left: 6,
-    backgroundColor: stitchTokens.roseParchmentAlpha90,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  cardConditionText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: stitchTokens.wine,
-  },
-  cardFormatTag: {
-    position: "absolute",
-    bottom: 6,
-    right: 6,
-    backgroundColor: stitchTokens.wineDark,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  cardFormatText: {
-    fontSize: 9,
-    fontWeight: "800",
+  formatText: {
     color: stitchTokens.gold,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700",
+    includeFontPadding: false,
   },
-  cardBody: {
+  body: {
+    flex: 1,
     padding: 10,
+    gap: 8,
     justifyContent: "space-between",
   },
-  cardTitle: {
-    fontSize: 13,
+  topText: { gap: 3 },
+  title: {
+    fontSize: 14,
+    lineHeight: 19,
     color: stitchTokens.wineDark,
-    lineHeight: 18,
   },
-  cardAuthor: {
-    fontSize: 11,
-    color: stitchTokens.subtleGray,
-    marginTop: 2,
+  subtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: stitchTokens.brownMuted,
   },
-  bidCountLabel: {
-    fontSize: 10,
-    color: stitchTokens.subtleGray,
-  },
-  bidCountValue: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: stitchTokens.flashRed,
-  },
-  cardPriceText: {
-    fontSize: 15,
+  bottomBlock: { gap: 8 },
+  priceBlock: { gap: 2 },
+  price: {
+    fontSize: 16,
+    lineHeight: 20,
     color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
   },
-  buyNowHint: {
-    fontSize: 11,
-    color: stitchTokens.subtleGray,
+  metaLine: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: stitchTokens.brownMuted,
+    fontVariant: ["tabular-nums"],
   },
-  cardQuickBidBtn: {
-    flexDirection: "row",
+  ctaBtn: {
+    minHeight: 40,
+    borderRadius: radius.control,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    backgroundColor: stitchTokens.gold,
-    paddingVertical: 7,
-    borderRadius: 6,
-    marginTop: 4,
+    paddingHorizontal: 8,
   },
-  cardQuickBidText: {
-    fontSize: 11,
+  ctaText: {
+    fontSize: 13,
     color: stitchTokens.wineDark,
   },
+  pressed: { opacity: 0.8 },
 });

@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
+  withdrawalFundsNotes,
   withdrawalReasons,
   withdrawalReceiptSchema,
   withdrawalSchema,
@@ -17,6 +18,7 @@ import {
   type Withdrawal,
 } from "@used-books/session-client";
 import { useSession } from "../../core/session/session-provider";
+import { TransactionNotes } from "../../core/ui/transaction-review";
 import {
   AppModal,
   AppText,
@@ -517,9 +519,7 @@ function WithdrawalModalContent({
 
                 {/* Hold Notice */}
                 <View style={styles.noticeBox}>
-                  <AppText kind="small" color={stitchTokens.wineDark}>
-                    Số tiền yêu cầu rút sẽ chuyển sang trạng thái đang giữ chờ rút tiền ngay khi gửi. Nếu quản trị viên từ chối, tiền sẽ được hoàn lại vào số dư khả dụng.
-                  </AppText>
+                  <TransactionNotes notes={withdrawalFundsNotes} />
                 </View>
 
                 <View style={styles.actionsRow}>

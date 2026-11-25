@@ -49,7 +49,7 @@ export function WorkInbox({
     enabled: foreground,
     retry: false,
     staleTime: 0,
-    refetchInterval: foreground ? 30_000 : false,
+    refetchInterval: foreground ? 6_000 : false,
   });
   const inaccessible =
     result.error instanceof ApiError &&

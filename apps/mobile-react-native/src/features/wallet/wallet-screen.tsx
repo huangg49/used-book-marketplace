@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   emptyWalletHistoryFilters,
   walletHistoryFilters,
@@ -16,6 +16,7 @@ import {
   Button,
   Notice,
   Screen,
+  Sheet,
   StatePanel,
   TextField,
   colors,
@@ -40,6 +41,7 @@ import { TopupModal } from "./topup-modal";
 import { WithdrawalModal } from "./withdrawal-modal";
 import { WithdrawalDetailModal } from "./withdrawal-detail-modal";
 import type { TopupState } from "./contracts";
+import { SaleFeeBreakdown } from "../../core/ui/sale-fee-breakdown";
 
 const FILTER_TABS = [
   { key: "all", label: "Tất cả" },
@@ -50,19 +52,23 @@ const FILTER_TABS = [
   { key: "ListingFeeCharge", label: "Phí bài đăng" },
 ] as const;
 
-export function WalletScreen({ ownerId }: { ownerId: string }) {
+export function WalletScreen({ ownerId, saleOrderId, showHistory = false }: { ownerId: string; saleOrderId?: string; showHistory?: boolean }) {
   const { client } = useSession();
   const queryClient = useQueryClient();
   const foreground = useForeground();
+  const scrollRef = useRef<ScrollView>(null);
+  const historyOpened = useRef(false);
+  const [historyY, setHistoryY] = useState<number>();
 
   const [topupModalVisible, setTopupModalVisible] = useState(false);
   const [withdrawalModalVisible, setWithdrawalModalVisible] = useState(false);
   const [selectedWithdrawalId, setSelectedWithdrawalId] = useState<string | null>(null);
   const [selectedWithdrawalData, setSelectedWithdrawalData] = useState<Withdrawal | null>(null);
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>(saleOrderId ? "OrderSettlement" : "all");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filterDraft, setFilterDraft] = useState(emptyWalletHistoryFilters);
-  const [historyFilters, setHistoryFilters] = useState<WalletHistoryFilters>({});
+  const [filterDraft, setFilterDraft] = useState({ ...emptyWalletHistoryFilters, reference: saleOrderId ?? "" });
+  const [historyFilters, setHistoryFilters] = useState<WalletHistoryFilters>(saleOrderId ? { reference: saleOrderId } : {});
+  const [openSaleReceipt, setOpenSaleReceipt] = useState<string | null>(saleOrderId ? "linked-order" : null);
   const [filterError, setFilterError] = useState<string>();
   const hasHistoryFilters = Object.keys(historyFilters).length > 0;
   const [checkingTopupId, setCheckingTopupId] = useState<string | null>(null);
@@ -81,6 +87,14 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
     ...topupsOptions(client, ownerId),
     enabled: foreground,
   });
+  useEffect(() => {
+    if (!showHistory || historyOpened.current || historyY === undefined || summary.isPending || topups.isPending) return;
+    const frame = requestAnimationFrame(() => {
+      historyOpened.current = true;
+      scrollRef.current?.scrollTo({ y: historyY + space.xl, animated: false });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [historyY, showHistory, summary.isPending, topups.isPending]);
 
   const denied = accessDenied(summary.error) || accessDenied(history.error);
   const deniedError = accessDenied(summary.error)
@@ -88,6 +102,9 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
     : history.error;
 
   const entries = history.data?.pages.flatMap((page) => page.items) ?? [];
+  const saleReceipt = denied ? undefined : entries.find(item =>
+    item.saleSettlement && (openSaleReceipt === "linked-order" ? item.orderId === saleOrderId : item.journalId === openSaleReceipt),
+  );
   const recentTopups = topups.data?.items ?? [];
 
   const refresh = () => {
@@ -179,6 +196,7 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
 
   return (
     <Screen
+      scrollRef={scrollRef}
       footer={<MemberNavigation current="/account" />}
       footerAppearance="navigation"
     >
@@ -411,7 +429,10 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
           )}
 
           {/* Transaction History Section */}
-          <View style={{ gap: space.sm, paddingTop: space.lg }}>
+          <View
+            style={{ gap: space.sm, paddingTop: space.lg }}
+            onLayout={showHistory ? (event) => setHistoryY(event.nativeEvent.layout.y) : undefined}
+          >
             <AppText
               kind="heading"
               color={colors.forest}
@@ -595,6 +616,9 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
                   </AppText>
                 </Pressable>
               ) : null}
+              {item.saleSettlement && (
+                <Button secondary title="Chi tiết quyết toán" onPress={() => setOpenSaleReceipt(item.journalId)} />
+              )}
               <AppText kind="small" color={stitchTokens.subtleGray}>
                 Số dư sau ghi nhận: {formatVnd(item.balanceAfter)}
               </AppText>
@@ -661,6 +685,22 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
           setSelectedWithdrawalData(null);
         }}
       />
+      <Sheet visible={openSaleReceipt !== null} onClose={() => setOpenSaleReceipt(null)} title="Biên nhận tiền bán sách">
+        {saleReceipt?.saleSettlement ? (
+          <View style={{ gap: space.sm }}>
+            <AppText kind="small" color={colors.muted} selectable>
+              {saleReceipt.orderId ? `#ĐƠN-${saleReceipt.orderId.slice(0, 6).toUpperCase()} · ` : ""}{walletDate(saleReceipt.postedAt)}
+            </AppText>
+            <SaleFeeBreakdown amounts={saleReceipt.saleSettlement} settled />
+          </View>
+        ) : history.isPending ? (
+          <StatePanel loading title="Đang tải biên nhận" />
+        ) : history.isError ? (
+          <StatePanel title="Chưa tải được biên nhận" action={{ label: "Thử lại", onPress: () => void history.refetch() }} />
+        ) : (
+          <StatePanel title="Không tìm thấy biên nhận" message="Chỉ các khoản đã ghi vào ví của bạn mới có biên nhận quyết toán." />
+        )}
+      </Sheet>
     </Screen>
   );
 }

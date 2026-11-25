@@ -1,4 +1,4 @@
-import { createServerNow } from '@used-books/session-client'
+import { auctionSellerFeeText, createServerNow } from '@used-books/session-client'
 import { useEffect, useId, useRef, useState } from 'react'
 import { CalendarClock, Flag, Info, Play, X } from 'lucide-react'
 import { lockPageScroll } from '../../lib/page-scroll'
@@ -209,6 +209,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
               ? <span>Người mua đăng ký và đặt cọc trước. Phiên <strong>chỉ mở khi đủ người</strong>: đến giờ mở mà chưa đủ, phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ; hết 24 giờ vẫn chưa đủ thì phiên bị hủy và hoàn cọc. Bạn đổi giờ mở <strong>tối đa 2 lần</strong> trong 30 ngày kể từ lúc đăng, trước giờ mở và không trong 30 phút cuối; người đăng ký được báo mỗi lần đổi.</span>
               : <span>Bạn đổi được thời gian <strong>tối đa 5 lần</strong>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên.</span>}
           </p>
+          {target.kind === 'publish' && <p className={styles.note}>{auctionSellerFeeText}</p>}
           {error && <p role="alert" className={styles.error}>{error}</p>}
           <button type="button" className={styles.confirm} disabled={busy || (!unknown && !!fieldError)} onClick={() => void submit()}>
             {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? (timed ? 'Hẹn giờ mở phiên' : 'Đăng phiên') : 'Lưu thời gian mới'}

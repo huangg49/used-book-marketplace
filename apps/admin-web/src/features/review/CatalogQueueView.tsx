@@ -102,8 +102,9 @@ export function CatalogQueueView({ user }: { user: CurrentUser }) {
       );
     },
     getNextPageParam: (page) => page.nextCursor || undefined,
-    refetchInterval: 30_000,
-    staleTime: 30_000,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    staleTime: 4_000,
   });
 
   const items = useMemo(

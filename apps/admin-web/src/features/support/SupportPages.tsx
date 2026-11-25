@@ -80,7 +80,8 @@ function SupportQueue({ owner }: { owner: string }) {
         supportPageSchema,
       ),
     retry: false,
-    refetchInterval: 30_000,
+    refetchInterval: 6_000,
+    refetchIntervalInBackground: false,
   });
   const denied =
     result.error instanceof ApiError &&
@@ -275,7 +276,8 @@ function SupportRecord({
       queryFn: () =>
         session.request(`/operations/support-cases/${id}`, supportDetailSchema),
       retry: false,
-      refetchInterval: 30_000,
+      refetchInterval: 6_000,
+      refetchIntervalInBackground: false,
     });
   const [value, setValue] = useState(""),
     [internal, setInternal] = useState(false),

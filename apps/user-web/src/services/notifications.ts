@@ -29,6 +29,7 @@ export const notificationSchema = z.object({
     'AuctionPaymentExpired',
     'AuctionPaid',
     'OrderBuyNowPaid',
+    'OrderSaleSettled',
     'ExchangeProposed',
     'ExchangeAccepted',
     'ExchangeFunded',
@@ -77,7 +78,7 @@ export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetI
     case 'Withdrawal':return `/wallet?withdrawal=${n.targetId}`;
     case 'SupportCase':return `/support/${n.targetId}`;
     case 'TransactionReview':return `/reviews?reviewId=${encodeURIComponent(n.targetId)}`;
-    case 'Order':return `/orders/${n.targetId}`;
+    case 'Order':return n.kind === 'OrderSaleSettled' ? `/wallet?sale=${n.targetId}#lich-su-giao-dich` : `/orders/${n.targetId}`;
     case 'Exchange': {
       const path = `/exchange/${n.targetId}`;
       if (n.kind === 'ExchangeShipped') return `${path}#${exchangeHandoverAnchor.incoming}`;

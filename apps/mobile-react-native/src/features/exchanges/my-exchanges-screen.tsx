@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppText,
@@ -79,6 +80,7 @@ export function MyExchangesScreen() {
     enabled: state.status === "authenticated" && foreground,
     refetchInterval: 6000,
   });
+  useTransactionLive("inbox", currentUserId ?? "", foreground, () => { void exchangesQuery.refetch(); });
 
   const handleBack = () => {
     if (router.canGoBack()) router.back();

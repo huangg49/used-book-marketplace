@@ -27,6 +27,26 @@ describe("owner shelf reads", () => {
       currentRevision: { id: "10000000-0000-4000-8000-000000000002", content: { bundle } },
     }).currentRevision.content.bundle).toEqual(bundle);
   });
+  it("reads the whole shelf when an available listing and a closed listing share a page", async () => {
+    const listing = (id: string, trade: "Available" | "ClosedUnavailable") => ({
+      id,
+      version: 1,
+      state: { moderation: "Approved", visibility: "Visible", trade },
+      currentRevision: { id, content: {} },
+    });
+    request.mockImplementation(async (_path, schema) =>
+      (schema as z.ZodType).parse({
+        items: [
+          listing("10000000-0000-4000-8000-000000000001", "Available"),
+          listing("10000000-0000-4000-8000-000000000002", "ClosedUnavailable"),
+        ],
+        nextCursor: null,
+      }),
+    );
+
+    const page = await getMyListings();
+    expect(page.items.map((item) => item.state.trade)).toEqual(["Available", "ClosedUnavailable"]);
+  });
   it("bounds the overview read without changing the default full shelf size", async () => {
     request.mockResolvedValue({ items: [], nextCursor: "more" });
     await getMyListings(undefined, undefined, 4);

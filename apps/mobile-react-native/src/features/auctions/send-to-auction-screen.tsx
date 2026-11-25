@@ -1,15 +1,20 @@
 import { useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Crypto from "expo-crypto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
-import { AppText } from "../../core/ui/text";
-import { Icon } from "../../core/ui/icon";
-import { Screen } from "../../core/ui/screen";
-import { stitchTokens } from "../../core/ui/theme";
-import { MemberNavigation } from "../navigation/member-navigation";
+import {
+  AppText,
+  Button,
+  Icon,
+  Screen,
+  StatePanel,
+  WineHeader,
+  space,
+  stitchTokens,
+} from "../../core/ui";
 import {
   draftPage,
   emptyContent,
@@ -17,7 +22,6 @@ import {
   receipt,
 } from "../drafts/contracts";
 import { DraftEditor } from "../drafts/draft-editor";
-import { BackAction, Button, StatePanel } from "../../core/ui";
 import {
   auctionDepositError,
   auctionDepositFor,
@@ -39,8 +43,6 @@ import {
   type MyIntake,
 } from "./contracts";
 import {
-  SendToAuctionHeader,
-  SendToAuctionPolicy,
   SendToAuctionNotices,
   SendToAuctionBookPicker,
   SendToAuctionPointPicker,
@@ -48,6 +50,7 @@ import {
   SendToAuctionActiveIntakes,
   SendToAuctionModals,
 } from "./send-to-auction-components";
+import { SendToAuctionPolicySheet } from "./send-to-auction-components/send-to-auction-policy";
 import { ScheduleAuctionSheet } from "./components";
 
 type PendingCommand = {
@@ -57,6 +60,8 @@ type PendingCommand = {
   key: string;
 };
 
+type SendTab = "create" | "intakes";
+
 const digits = (text: string) => Number(text.replace(/\D/g, "")) || null;
 
 export function SendToAuctionScreen({ userId }: { userId: string }) {
@@ -64,29 +69,29 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const foreground = useForeground();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ intakeId?: string }>();
-  const focusId =
-    typeof params.intakeId === "string" ? params.intakeId : undefined;
+  const focusId = typeof params.intakeId === "string" ? params.intakeId : undefined;
+  const [activeTab, setActiveTab] = useState<SendTab>("create");
+  const [policyOpen, setPolicyOpen] = useState(false);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const createKey = useRef<string | null>(null);
+
   const focus = useQuery({
     queryKey: ["my-auction-intakes", userId, "focus", focusId],
     queryFn: () => client.request(`/me/auction-intakes/${focusId}`, myIntake),
     enabled: foreground && !!focusId,
     retry: false,
-    refetchInterval: foreground ? 30_000 : false,
+    refetchInterval: foreground ? 5_000 : false,
   });
 
-  // 1. Real Queries. ADR 0042: auctions use the seller's own Auction listings,
-  // never marketplace listings.
   const listings = useQuery({
     queryKey: ["my-listings", userId, "auction"],
-    queryFn: () =>
-      client.request("/me/listings?channel=Auction&limit=50", draftPage),
+    queryFn: () => client.request("/me/listings?channel=Auction&limit=50", draftPage),
     enabled: foreground && !focusId,
     staleTime: 0,
+    refetchInterval: foreground && !editingId ? 5_000 : false,
   });
 
-  // Creating or continuing an auction listing happens in the shared editor.
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const createKey = useRef<string | null>(null);
   const editing = useQuery({
     queryKey: ["draft", userId, editingId],
     queryFn: () => client.request(`/me/listings/${editingId}`, privateDraft),
@@ -95,7 +100,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   });
   const createListing = useMutation({
     mutationFn: () => {
-      // One key per intent; a retry after an unknown outcome reuses it.
       createKey.current ??= Crypto.randomUUID();
       return client.request("/listings", receipt, {
         method: "POST",
@@ -124,13 +128,17 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
     queryKey: ["my-auction-intakes", userId],
     queryFn: () => client.request("/me/auction-intakes", myIntakes),
     enabled: foreground && !focusId,
+    refetchInterval: foreground && !editingId ? 5_000 : false,
   });
 
   const auctionListings = listings.data?.items ?? [];
   const eligibleListings = auctionListings.filter(auctionEligible);
   const openPoints = points.data?.items ?? [];
+  const activeIntakesCount = (intakes.data?.items ?? []).filter(
+    (i) => i.state !== "Cancelled" && i.state !== "Reclaimed",
+  ).length;
 
-  // 2. Form states
+  // Form state
   const [listingId, setListingId] = useState<string | null>(null);
   const [pointId, setPointId] = useState<string | null>(null);
   const [start, setStart] = useState("");
@@ -138,39 +146,31 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const [customStepOn, setCustomStepOn] = useState(false);
   const [customStep, setCustomStep] = useState("");
   const stepError = customStepOn ? auctionStepError(digits(customStep)) : undefined;
-  // Prices keep a usable grid while the custom step is still being typed.
   const step = customStepOn && !stepError ? digits(customStep)! : presetStep;
   const [buyNowOn, setBuyNowOn] = useState(false);
   const [buyNow, setBuyNow] = useState("");
   const [buyNowMode, setBuyNowMode] = useState<BuyNowMode>("Challenge");
-  // ADR 0076: format; Dutch adds an opening price and a drop interval.
   const [auctionType, setAuctionType] = useState<AuctionFormat>("English");
   const [dutchTop, setDutchTop] = useState("");
   const [dutchEvery, setDutchEvery] = useState("60");
-  // ADR 0077: registered bidders that open the auction.
   const [minBidders, setMinBidders] = useState(4);
-  // ADR 0087: the seller's deposit; null follows the 10% default.
   const [deposit, setDeposit] = useState<number | null>(null);
   const [touched, setTouched] = useState(false);
 
-  // 3. Modal & Action states
+  // Modal & Command state
   const [confirming, setConfirming] = useState(false);
   const [withdrawTarget, setWithdrawTarget] = useState<MyIntake | null>(null);
   const [publishTarget, setPublishTarget] = useState<MyIntake | null>(null);
   const [pending, setPending] = useState<PendingCommand | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [created, setCreated] = useState<MyIntake | null>(null);
 
-  // Evidence submission state
   const [evidenceMap, setEvidenceMap] = useState<Record<string, string>>({});
   const [evidenceTarget, setEvidenceTarget] = useState<MyIntake | null>(null);
-  const [evidenceError, setEvidenceError] = useState<{
-    id: string;
-    text: string;
-  } | null>(null);
+  const [evidenceError, setEvidenceError] = useState<{ id: string; text: string } | null>(null);
 
-  // Selected entities & derived errors
   const selectedListing = eligibleListings.find((l) => l.id === listingId);
   const selectedPoint = openPoints.find((p) => p.id === pointId);
   const startPrice = digits(start);
@@ -199,20 +199,18 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
 
   const formError = !selectedListing
     ? "Vui lòng chọn một sách đấu giá đã được duyệt."
-    : !selectedPoint ||
-        selectedPoint.availableSlots < 1 ||
-        selectedPoint.status !== "Active"
-      ? "Vui lòng chọn trạm tiếp nhận còn chỗ tại TP.HCM."
+    : !selectedPoint || selectedPoint.availableSlots < 1 || selectedPoint.status !== "Active"
+      ? "Vui lòng chọn điểm tiếp nhận còn chỗ tại TP.HCM."
       : (stepError ?? priceErrors.startPrice ?? priceErrors.buyNowPrice ?? dutchError ?? depositError ?? null);
 
   const locked = busy || Boolean(pending);
 
-  // 4. API Mutation Command Executor
   const executeCommand = async (command: PendingCommand) => {
     setBusy(true);
     setError(null);
+    setModalError(null);
     try {
-      const receipt = await client.request(command.path, intakeReceipt, {
+      const res = await client.request(command.path, intakeReceipt, {
         method: "POST",
         body: command.body,
         headers: { "Idempotency-Key": command.key },
@@ -220,28 +218,29 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       setPending(null);
 
       if (command.kind === "create") {
-        const newlyCreated = await client.request(
-          `/me/auction-intakes/${receipt.intakeId}`,
-          myIntake,
-        );
+        const newlyCreated = await client.request(`/me/auction-intakes/${res.intakeId}`, myIntake);
         setCreated(newlyCreated);
         setListingId(null);
         setStart("");
         setBuyNow("");
         setBuyNowOn(false);
         setTouched(false);
+        setActiveTab("intakes");
       }
-    } catch (caught) {
-      setPending(outcomeUnknown(caught) ? command : null);
-      setError(auctionErrorText(caught));
-    } finally {
-      setBusy(false);
       setConfirming(false);
       setWithdrawTarget(null);
       setEvidenceTarget(null);
-      void queryClient.invalidateQueries({
-        queryKey: ["my-auction-intakes", userId],
-      });
+    } catch (caught) {
+      const msg = auctionErrorText(caught);
+      setPending(outcomeUnknown(caught) ? command : null);
+      if (confirming || withdrawTarget || evidenceTarget) {
+        setModalError(msg);
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setBusy(false);
+      void queryClient.invalidateQueries({ queryKey: ["my-auction-intakes", userId] });
       void queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
       void queryClient.invalidateQueries({ queryKey: ["handover-points"] });
     }
@@ -250,6 +249,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const handleStartSubmit = () => {
     setTouched(true);
     setCreated(null);
+    setModalError(null);
     if (!formError) {
       setConfirming(true);
     }
@@ -297,6 +297,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       return;
     }
     setEvidenceError(null);
+    setModalError(null);
     setEvidenceTarget(item);
   };
 
@@ -307,10 +308,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       kind: "evidence",
       path: `/me/auction-intakes/${evidenceTarget.id}/evidence`,
       key: Crypto.randomUUID(),
-      body: JSON.stringify({
-        expectedVersion: evidenceTarget.version,
-        note,
-      }),
+      body: JSON.stringify({ expectedVersion: evidenceTarget.version, note }),
     });
   };
 
@@ -320,78 +318,105 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
     void queryClient.removeQueries({ queryKey: ["draft", editingId] });
   };
 
-  if (editingId && editing.data)
-    return (
-      <DraftEditor
-        key={editingId}
-        initial={editing.data}
-        onBack={closeEditor}
-      />
-    );
+  if (editingId && editing.data) {
+    return <DraftEditor key={editingId} initial={editing.data} onBack={closeEditor} />;
+  }
 
-  if (editingId)
+  if (editingId) {
     return (
-      <Screen>
-        <BackAction title="Về gửi đấu giá" onPress={closeEditor} />
+      <Screen
+        appearance="paper"
+        canvasColor={stitchTokens.creamBg}
+        headerExtendsToStatusBar
+        header={<WineHeader title="Sách đấu giá" onBack={closeEditor} backLabel="Về gửi đấu giá" />}
+      >
         <StatePanel
+          wine
           loading={editing.isPending}
-          title={
-            editing.error ? "Chưa mở được sách đấu giá" : "Đang mở sách đấu giá"
-          }
-          action={
-            editing.error
-              ? { label: "Thử lại", onPress: () => void editing.refetch() }
-              : undefined
-          }
+          title={editing.error ? "Chưa mở được sách đấu giá" : "Đang mở sách đấu giá"}
+          action={editing.error ? { label: "Thử lại", onPress: () => void editing.refetch() } : undefined}
         />
-        {editing.error ? (
-          <Button title="Về gửi đấu giá" wine secondary onPress={closeEditor} />
-        ) : null}
+        {editing.error ? <Button title="Về gửi đấu giá" wine secondary onPress={closeEditor} /> : null}
       </Screen>
     );
+  }
+
+  const stickyFooter = focusId ? (
+    <Button
+      wine
+      secondary
+      title="Xem tất cả lần gửi"
+      onPress={() => router.replace("/send-to-auction")}
+    />
+  ) : activeTab === "create" ? (
+    <View style={styles.footerDock}>
+      {touched && Boolean(formError) ? (
+        <View style={styles.footerErrorRow}>
+          <Icon name="info" size={14} color={stitchTokens.flashRed} />
+          <AppText kind="small" style={styles.footerErrorText}>{formError}</AppText>
+        </View>
+      ) : null}
+      <Button
+        wine
+        title="Xem lại và gửi sách đấu giá"
+        disabled={locked}
+        onPress={handleStartSubmit}
+      />
+    </View>
+  ) : undefined;
 
   return (
     <Screen
-      appearance="home"
-      footer={<MemberNavigation current="/auctions" />}
-      footerAppearance="navigation"
+      appearance="paper"
+      canvasColor={stitchTokens.creamBg}
+      headerExtendsToStatusBar
+      footer={stickyFooter}
+      header={
+        <WineHeader
+          title={focusId ? "Hồ sơ gửi sách" : "Gửi sách đấu giá"}
+          subtitle={
+            focusId
+              ? `Mã hồ sơ #${focusId.slice(0, 8).toUpperCase()}`
+              : "Kiểm định tại điểm TP.HCM trước khi mở phiên"
+          }
+          onBack={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace("/auctions");
+          }}
+          rightIcon={!focusId ? "info" : undefined}
+          rightLabel="Xem quy trình gửi sách đấu giá"
+          onRightPress={!focusId ? () => setPolicyOpen(true) : undefined}
+        />
+      }
     >
-      {/* 1. Header with back and title */}
-      <SendToAuctionHeader onBack={() => router.replace("/auctions")} />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {focusId && (
-          <View style={{ gap: 12 }}>
-            <AppText kind="heading">Lần gửi #{focusId.slice(0, 8)}</AppText>
-            {focus.isPending && (
-              <StatePanel loading title="Đang mở lần gửi sách…" />
-            )}
-            {focus.error && (
-              <StatePanel
-                title="Chưa mở được lần gửi"
-                message="Không kết luận hồ sơ đã mất. Kiểm tra kết nối hoặc quyền hiện tại rồi thử lại."
-                action={{
-                  label: "Thử lại",
-                  onPress: () => void focus.refetch(),
-                }}
-              />
-            )}
-            <Button
-              wine
-              secondary
-              title="Xem tất cả lần gửi"
-              onPress={() => router.replace("/send-to-auction")}
-            />
+      <View style={styles.body}>
+        {/* 2-Tab Switcher (replaces cramming form + tracking onto one endless scroll) */}
+        {!focusId ? (
+          <View style={styles.segmentedBar} accessibilityRole="tablist">
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === "create" }}
+              onPress={() => setActiveTab("create")}
+              style={[styles.segmentBtn, activeTab === "create" && styles.segmentBtnActive]}
+            >
+              <AppText kind="bold" style={[styles.segmentText, activeTab === "create" && styles.segmentTextActive]}>
+                Tạo đơn gửi sách
+              </AppText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === "intakes" }}
+              onPress={() => setActiveTab("intakes")}
+              style={[styles.segmentBtn, activeTab === "intakes" && styles.segmentBtnActive]}
+            >
+              <AppText kind="bold" style={[styles.segmentText, activeTab === "intakes" && styles.segmentTextActive]}>
+                {activeIntakesCount > 0 ? `Hồ sơ đã gửi (${activeIntakesCount})` : "Hồ sơ đã gửi"}
+              </AppText>
+            </Pressable>
           </View>
-        )}
-        {/* 2. Top Policy Banner */}
-        {!focusId && <SendToAuctionPolicy />}
+        ) : null}
 
-        {/* 3. Status Notices (Success & Error & Retry) */}
+        {/* Status Notices (Success / Error / Pending Retry) */}
         <SendToAuctionNotices
           created={created}
           error={error}
@@ -401,9 +426,22 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
           isBusy={busy}
         />
 
-        {/* 4. Section 1: Book Picker */}
-        {!focusId && (
-          <>
+        {/* Focus Mode loading / error */}
+        {focusId && focus.isPending ? (
+          <StatePanel wine loading title="Đang mở hồ sơ gửi sách…" />
+        ) : null}
+        {focusId && focus.error ? (
+          <StatePanel
+            wine
+            title="Chưa mở được hồ sơ"
+            message="Không kết luận hồ sơ đã mất. Kiểm tra kết nối hoặc quyền hiện tại rồi thử lại."
+            action={{ label: "Thử lại", onPress: () => void focus.refetch() }}
+          />
+        ) : null}
+
+        {/* TAB 1: Create Consignment Form */}
+        {!focusId && activeTab === "create" ? (
+          <View style={styles.formStack}>
             <SendToAuctionBookPicker
               eligibleListings={eligibleListings}
               selectedListingId={listingId}
@@ -425,7 +463,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               isLoading={listings.isPending}
             />
 
-            {/* 5. Section 2: Handover Point Picker */}
             <SendToAuctionPointPicker
               points={openPoints}
               selectedPointId={pointId}
@@ -437,7 +474,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               isLoading={points.isPending}
             />
 
-            {/* 6. Section 3: Pricing Settings */}
             <SendToAuctionPricing
               step={presetStep}
               onSelectStep={(value) => {
@@ -476,45 +512,11 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               depositError={touched ? (depositError ?? undefined) : undefined}
               disabled={locked}
             />
+          </View>
+        ) : null}
 
-            {/* Form Validation Alert */}
-            {touched && Boolean(formError) && (
-              <View style={styles.formErrorNotice}>
-                <Icon name="info" size={16} color={stitchTokens.flashRed} />
-                <AppText kind="small" style={styles.formErrorNoticeText}>
-                  {formError}
-                </AppText>
-              </View>
-            )}
-
-            {/* 7. Primary Action Button */}
-            <View style={styles.actionButtonContainer}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Xem lại và gửi sách đấu giá"
-                disabled={locked}
-                onPress={handleStartSubmit}
-                style={({ pressed }) => [
-                  styles.primarySubmitBtn,
-                  pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
-                  locked && { opacity: 0.6 },
-                ]}
-              >
-                <Icon name="gavel" size={18} color={stitchTokens.gold} />
-                <AppText kind="bold" style={styles.primarySubmitBtnText}>
-                  Xem lại và gửi sách đấu giá
-                </AppText>
-              </Pressable>
-
-              <AppText style={styles.legalDisclaimerText}>
-                Bằng việc gửi sách, bạn đồng ý với Quy chế ký gửi & thẩm định
-                của Lật Lại
-              </AppText>
-            </View>
-          </>
-        )}
-        {/* 8. Section 4: Active Consignments Tracking */}
-        {(!focusId || (!focus.error && focus.data)) && (
+        {/* TAB 2 or Focus Mode: Submitted Intakes Tracking */}
+        {(focusId ? !focus.error && !!focus.data : activeTab === "intakes") ? (
           <SendToAuctionActiveIntakes
             intakes={
               focusId
@@ -524,7 +526,10 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
                 : (intakes.data?.items ?? [])
             }
             isLoading={focusId ? focus.isPending : intakes.isPending}
-            onWithdraw={(item) => setWithdrawTarget(item)}
+            onWithdraw={(item) => {
+              setModalError(null);
+              setWithdrawTarget(item);
+            }}
             onPublish={(item) => setPublishTarget(item)}
             onOpenAuction={(id) => router.push({ pathname: "/auction", params: { id } })}
             includeClosed={!!focusId}
@@ -536,15 +541,13 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
             evidenceError={evidenceError}
             disabled={locked}
           />
-        )}
-      </ScrollView>
+        ) : null}
+      </View>
+
+      <SendToAuctionPolicySheet visible={policyOpen} onClose={() => setPolicyOpen(false)} />
 
       <ScheduleAuctionSheet
-        key={
-          publishTarget
-            ? `${publishTarget.id}:${publishTarget.version}`
-            : "none"
-        }
+        key={publishTarget ? `${publishTarget.id}:${publishTarget.version}` : "none"}
         visible={!!publishTarget}
         title={publishTarget?.title ?? ""}
         target={
@@ -558,89 +561,98 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         }
         onClose={() => setPublishTarget(null)}
         onDone={() => {
-          void queryClient.invalidateQueries({
-            queryKey: ["my-auction-intakes", userId],
-          });
-          void queryClient.invalidateQueries({
-            queryKey: ["my-auctions", userId],
-          });
+          void queryClient.invalidateQueries({ queryKey: ["my-auction-intakes", userId] });
+          void queryClient.invalidateQueries({ queryKey: ["my-auctions", userId] });
           void queryClient.invalidateQueries({ queryKey: ["public-auctions"] });
         }}
       />
-      {/* Confirmation & Cancel Modals */}
+
       <SendToAuctionModals
         confirmSubmitVisible={confirming}
-        onCancelSubmit={() => !busy && setConfirming(false)}
+        onCancelSubmit={() => {
+          if (!busy) {
+            setConfirming(false);
+            setModalError(null);
+          }
+        }}
         onConfirmSubmit={handleConfirmSubmit}
         isSubmitting={busy}
+        submitError={confirming ? modalError : null}
         selectedListing={selectedListing}
         selectedPoint={selectedPoint}
         startPrice={startPrice}
         step={step}
+        auctionType={auctionType}
+        minBidders={minBidders}
         buyNowPrice={buyNowPrice}
         depositAmount={deposit ?? (startPrice !== null ? auctionDepositFor(startPrice) : null)}
         withdrawTarget={withdrawTarget}
-        onCancelWithdraw={() => !busy && setWithdrawTarget(null)}
+        onCancelWithdraw={() => {
+          if (!busy) {
+            setWithdrawTarget(null);
+            setModalError(null);
+          }
+        }}
         onConfirmWithdraw={handleConfirmWithdraw}
         isWithdrawing={busy}
+        withdrawError={withdrawTarget ? modalError : null}
         evidenceTarget={evidenceTarget}
-        onCancelEvidence={() => !busy && setEvidenceTarget(null)}
+        evidenceNote={evidenceTarget ? (evidenceMap[evidenceTarget.id] ?? "") : ""}
+        onCancelEvidence={() => {
+          if (!busy) {
+            setEvidenceTarget(null);
+            setModalError(null);
+          }
+        }}
         onConfirmEvidence={handleConfirmEvidence}
         isSubmittingEvidence={busy}
+        evidenceSubmitError={evidenceTarget ? modalError : null}
       />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 120,
-    gap: 18,
+  body: { gap: space.md },
+  formStack: { gap: space.md },
+  segmentedBar: {
+    flexDirection: "row",
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 4,
+    gap: 4,
   },
-  formErrorNotice: {
+  segmentBtn: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  segmentBtnActive: {
+    backgroundColor: stitchTokens.wine,
+  },
+  segmentText: {
+    fontSize: 13,
+    color: stitchTokens.brownMuted,
+    textAlign: "center",
+  },
+  segmentTextActive: {
+    color: stitchTokens.gold,
+  },
+  footerDock: { gap: space.xs },
+  footerErrorRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: stitchTokens.flashRedBg,
-    borderWidth: 1,
-    borderColor: stitchTokens.errorLightBorder,
-    borderRadius: 10,
-    padding: 12,
+    gap: 6,
   },
-  formErrorNoticeText: {
+  footerErrorText: {
     flex: 1,
     color: stitchTokens.flashRed,
     fontSize: 12,
     lineHeight: 16,
-  },
-  actionButtonContainer: {
-    gap: 8,
-    paddingTop: 2,
-  },
-  primarySubmitBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: stitchTokens.wineDark, // #4A1010
-    height: 52,
-    borderRadius: 14,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  primarySubmitBtnText: {
-    fontSize: 15,
-    color: stitchTokens.white,
-  },
-  legalDisclaimerText: {
-    fontSize: 11,
-    color: stitchTokens.subtleGray,
-    textAlign: "center",
-    lineHeight: 15,
   },
 });

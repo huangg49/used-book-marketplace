@@ -1,141 +1,93 @@
-import { useState } from "react";
-import { LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from "react-native";
-import { AppText } from "../../../core/ui/text";
-import { Icon } from "../../../core/ui/icon";
-import { stitchTokens } from "../../../core/ui/theme";
+import { StyleSheet, View } from "react-native";
+import { AppText, Button, Icon, Sheet, space, stitchTokens } from "../../../core/ui";
 
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+const STEPS = [
+  {
+    icon: "book" as const,
+    title: "Chọn sách đấu giá đã duyệt",
+    body: "Sách đấu giá dùng bài đăng riêng (không chung kệ bán thường). Chọn sách đã duyệt, điểm tiếp nhận tại TP.HCM và cấu hình giá.",
+  },
+  {
+    icon: "pin" as const,
+    title: "Mang sách tới điểm trong 72 giờ",
+    body: "Nhân viên tiếp nhận kiểm tra tình trạng thực tế đối chiếu với mô tả của bạn.",
+  },
+  {
+    icon: "gavel" as const,
+    title: "Hẹn giờ mở phiên & nhận thanh toán",
+    body: "Khi sách đạt kiểm định, bạn chọn giờ mở và thời lượng (1–168 giờ). Tiền bán quyết toán qua ví Lật Lại sau khi đơn hoàn tất.",
+  },
+];
 
-export interface SendToAuctionPolicyProps {
-  readonly defaultExpanded?: boolean;
-}
-
-export function SendToAuctionPolicy({ defaultExpanded = true }: SendToAuctionPolicyProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-
-  const handleToggle = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpanded((prev) => !prev);
-  };
-
+export function SendToAuctionPolicySheet({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
   return (
-    <View style={styles.cardContainer}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={expanded ? "Thu gọn quy trình ký gửi" : "Mở rộng quy trình ký gửi"}
-        accessibilityState={{ expanded }}
-        onPress={handleToggle}
-        style={({ pressed }) => [styles.titleRow, pressed && { opacity: 0.8 }]}
-      >
-        <View style={styles.titleLeft}>
-          <Icon name="book" size={18} color={stitchTokens.wineDark} />
-          <AppText kind="bold" style={styles.titleText}>
-            Quy trình ký gửi đấu giá
-          </AppText>
-        </View>
-        <View style={styles.chevronWrapper}>
-          <Icon
-            name={expanded ? "chevronDown" : "chevronRight"}
-            size={18}
-            color={stitchTokens.wineDark}
-          />
-        </View>
-      </Pressable>
-
-      {expanded && (
-        <>
-          <AppText style={styles.descText}>
-            Mang sách tới điểm tiếp nhận trong <AppText kind="bold" style={styles.boldSpan}>72 giờ</AppText>. Nhân viên kiểm tra tình trạng theo bài đã duyệt. Nếu đạt, bạn chọn mở ngay hoặc hẹn phiên, thời lượng 1–168 giờ. Không đạt hoặc không có người mua, bạn nhận lại sách tại điểm.
-          </AppText>
-
-          <View style={styles.footerRow}>
-            <View style={styles.featurePill}>
-              <Icon name="clock" size={13} color={stitchTokens.subtleGray} />
-              <AppText kind="small" style={styles.featureText}>
-                Kiểm tra theo bảng kiểm
-              </AppText>
+    <Sheet
+      title="Quy trình gửi sách đấu giá"
+      visible={visible}
+      onClose={onClose}
+      footer={<Button wine title="Đã hiểu" onPress={onClose} />}
+    >
+      <View style={styles.list}>
+        {STEPS.map((s, idx) => (
+          <View key={s.title} style={[styles.item, idx > 0 && styles.itemBorder]}>
+            <View style={styles.iconWrap}>
+              <Icon name={s.icon} size={17} color={stitchTokens.wine} />
             </View>
-            <View style={styles.featurePill}>
-              <Icon name="shield" size={13} color={stitchTokens.subtleGray} />
-              <AppText kind="small" style={styles.featureText}>
-                Không chứng nhận chính hãng
-              </AppText>
+            <View style={styles.textCol}>
+              <AppText kind="bold" style={styles.title}>{s.title}</AppText>
+              <AppText kind="small" color={stitchTokens.brownMuted} style={styles.body}>{s.body}</AppText>
             </View>
           </View>
-        </>
-      )}
+        ))}
+      </View>
+    </Sheet>
+  );
+}
+
+/** Kept exported for compatibility; compact inline summary if rendered directly. */
+export function SendToAuctionPolicy() {
+  return (
+    <View style={styles.inlineCard}>
+      <Icon name="shield" size={16} color={stitchTokens.wine} />
+      <AppText kind="small" color={stitchTokens.deepCocoa} style={styles.inlineText}>
+        Mang sách tới điểm TP.HCM trong 72 giờ để kiểm định trước khi hẹn giờ mở phiên.
+      </AppText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cardContainer: {
-    backgroundColor: stitchTokens.roseWarmSurface, // #FFF8F6
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    padding: 14,
-    gap: 8,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+  list: { gap: space.md },
+  item: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  itemBorder: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
+    paddingTop: space.md,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  titleLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  chevronWrapper: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: stitchTokens.wineDarkAlpha07,
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.roseWarmSurface,
     alignItems: "center",
     justifyContent: "center",
   },
-  titleText: {
-    fontSize: 15,
-    color: stitchTokens.wineDark,
-  },
-  descText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: stitchTokens.deepCocoa,
-  },
-  boldSpan: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  footerRow: {
+  textCol: { flex: 1, gap: 4 },
+  title: { fontSize: 15, color: stitchTokens.wineDark },
+  body: { lineHeight: 19 },
+  inlineCard: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: stitchTokens.peachBorderAlpha40,
+    gap: 10,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderRadius: 12,
+    padding: 12,
   },
-  featurePill: {
-    flexDirection: "row",
-    flexShrink: 1,
-    alignItems: "center",
-    gap: 5,
-  },
-  featureText: {
-    flexShrink: 1,
-    fontSize: 11,
-    color: stitchTokens.subtleGray,
-  },
+  inlineText: { flex: 1, lineHeight: 18 },
 });

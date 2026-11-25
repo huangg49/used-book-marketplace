@@ -3,10 +3,11 @@ import {
   isClosing,
   liveImpact,
   mergeSummary,
+  newerPointOrder,
   newerSnapshot,
   privateRefresh,
 } from "./auction-live-model";
-import type { PublicAuctionList, PublicAuctionSummary } from "./contracts";
+import type { PointOrder, PublicAuctionList, PublicAuctionSummary } from "./contracts";
 
 const snap = (
   serverTime: string,
@@ -103,5 +104,20 @@ describe("isClosing", () => {
     expect(isClosing({ state: "Active", phase: "Live", endAt }, Date.parse(endAt) - 1)).toBe(false);
     expect(isClosing({ state: "Active", phase: "Live", endAt }, Date.parse(endAt))).toBe(true);
     expect(isClosing({ state: "AwaitingWinnerPayment", phase: "Ended", endAt }, Date.parse(endAt) + 5)).toBe(false);
+  });
+});
+
+describe("newerPointOrder", () => {
+  const sample = (version: number, state: PointOrder["state"]) =>
+    ({ id: "11111111-1111-4111-8111-111111111111", version, state }) as PointOrder;
+
+  it("advances on newer/equal version and never steps back behind a WebSocket push", () => {
+    const v1 = sample(1, "ReadyForCollection");
+    const v2 = sample(2, "InTransit");
+    const v2Fresh = sample(2, "InTransit");
+    expect(newerPointOrder(undefined, v1)).toBe(v1);
+    expect(newerPointOrder(v1, v2)).toBe(v2);
+    expect(newerPointOrder(v2, v2Fresh)).toBe(v2Fresh);
+    expect(newerPointOrder(v2, v1)).toBe(v2);
   });
 });

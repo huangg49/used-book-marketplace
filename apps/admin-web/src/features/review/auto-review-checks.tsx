@@ -32,8 +32,9 @@ function ChecksContent() {
         pageOf(autoReviewCheck),
       ),
     getNextPageParam: (page) => page.nextCursor || undefined,
-    refetchInterval: 30_000,
-    staleTime: 30_000,
+    refetchInterval: 8_000,
+    refetchIntervalInBackground: false,
+    staleTime: 5_000,
   });
   const items = checks.data?.pages.flatMap((page) => page.items) ?? [];
   const r = report.data;

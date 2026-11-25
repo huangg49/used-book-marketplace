@@ -38,6 +38,7 @@ import { LedgerService } from '../wallet/ledger.service.js';
 import { DirectOrderReleasePolicy } from '../wallet/direct-order-release.policy.js';
 import { checkOrder } from './order-invariants.js';
 import { quoteAmounts } from '../quotes/quote-money.js';
+import { amountsFromAgreement } from './order-amounts.js';
 import { CarrierSimulator } from '../shipments/carrier-simulator.js';
 import { journeyEventId, listedBySeller } from './direct-order-journey.js';
 
@@ -57,18 +58,7 @@ export async function loadOrder(c: Collections, id: string) {
     ? await c.agreement_snapshots.findOne({ _id: context._id })
     : null;
   const sourceQuote = (await c.sale_quotes.findOne({ _id: o.quoteId }))!;
-  const agreedAmounts = (
-    agreement?.snapshot as {
-      amounts?: {
-        bookPrice: number;
-        shippingFee: number;
-        buyerTotal: number;
-        commissionBps: number;
-        commission: number;
-        sellerProceedsOnCompletion: number;
-      };
-    } | null
-  )?.amounts;
+  const agreedAmounts = amountsFromAgreement(agreement);
   const quote = agreedAmounts
     ? {
         ...sourceQuote,
@@ -1264,8 +1254,7 @@ export class OrdersService {
             break;
           case 'SkipInspection': {
             await this.ledger.settleDemonstratedDirectOrder(tx, {
-              _id: id, sellerId: o.sellerId, buyerTotal: o.quote.buyerTotal,
-              sellerProceeds: o.quote.sellerProceeds,
+              ...o.quote, _id: id, sellerId: o.sellerId,
             }, receiptId, now);
             await this.reservations.closeDemonstratedDirectOrder(tx, o.context!._id, now, receiptId);
             await this.closeContext(tx, o.context!);
@@ -1337,7 +1326,7 @@ export class OrdersService {
           o.state !== 'InTransit' || o.version !== 4 || o.demoCompletionPolicy !== job.policy || commitment.status !== 'Active' ||
           await tx.c.order_delivery_reviews.findOne({ orderId: id }) || await tx.c.carrier_pickup_reviews.findOne({ orderId: id }) ||
           await tx.c.order_non_receipt_reports.findOne({ orderId: id })) throw invalidState();
-        await this.ledger.settleLocalDemoOrder(tx, { _id: id, sellerId: o.sellerId, buyerTotal: o.quote.buyerTotal, sellerProceeds: o.quote.sellerProceeds }, receiptId, now);
+        await this.ledger.settleLocalDemoOrder(tx, { ...o.quote, _id: id, sellerId: o.sellerId }, receiptId, now);
         await this.reservations.closeLocalDemoCompleted(tx, o.context!._id, now, receiptId);
         await this.closeContext(tx, o.context!);
         const sold = await this.listings.project(tx, listing.id, listing.version, 'Reserved', 'Sold');
@@ -1368,10 +1357,9 @@ export class OrdersService {
           await this.ledger.settleDirectOrder(
             tx,
             {
+              ...o.quote,
               _id: o._id,
               sellerId: o.sellerId,
-              buyerTotal: o.quote.buyerTotal,
-              sellerProceeds: o.quote.sellerProceeds,
             },
             receiptId,
             now,

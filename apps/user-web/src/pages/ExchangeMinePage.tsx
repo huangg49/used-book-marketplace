@@ -3,6 +3,7 @@ import { Pagination } from "../components/Pagination";
 import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { ApiError } from "@used-books/session-client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "../hooks/useSession";
@@ -95,6 +96,8 @@ export default function ExchangeMinePage() {
     queryKey: ["exchangeCounts", actor],
     queryFn: getExchangeCounts,
     enabled: !!actor,
+    refetchInterval: 8_000,
+    refetchIntervalInBackground: false,
   });
 
   const {
@@ -108,10 +111,13 @@ export default function ExchangeMinePage() {
     queryKey: ["exchangeTransactions", actor, currentTab, currentPage],
     queryFn: () => getExchangeTransactions(currentTab, currentPage),
     enabled: !!actor,
+    refetchInterval: 8_000,
+    refetchIntervalInBackground: false,
   });
   const inaccessible = listError instanceof ApiError && [401, 403].includes(listError.status);
   const countsData = counts.isError || inaccessible ? undefined : counts.data;
   const refreshExchanges = () => void Promise.all([counts.refetch(), refetch()]);
+  useTransactionLive("inbox", actor, refreshExchanges);
 
   useEffect(() => {
     if (!listData) return;

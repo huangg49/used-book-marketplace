@@ -1,4 +1,4 @@
-import { withdrawalStateSchema, type WalletHistoryFilters } from "@used-books/session-client";
+import { saleSettlementReceiptSchema, withdrawalStateSchema, type WalletHistoryFilters } from "@used-books/session-client";
 import { z } from "zod";
 import { session } from "../lib/session";
 
@@ -49,6 +49,7 @@ const walletHistoryItemSchema = z.object({
   withdrawalState: withdrawalStateSchema.nullable().optional(),
   topupId: z.uuid().nullable(),
   orderId: z.uuid().nullable(),
+  saleSettlement: saleSettlementReceiptSchema.optional(),
   type: z.enum(
     Object.keys(walletHistoryLabels) as [
       WalletHistoryType,

@@ -1,4 +1,4 @@
-import { ApiError, clearAiPriceAttribution, findPriceReference, isStale, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
+import { ApiError, clearAiPriceAttribution, findPriceReference, isStale, listingSellerFeeText, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
 import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
@@ -2804,6 +2804,7 @@ export function SellBookPage() {
                           {formData.mode !== "Exchange" && (
                             <section className={styles.tradeSection} aria-label={salePriceLabel}>
                               {tradeAmount("salePrice", salePriceLabel)}
+                              {!auction && <p className={styles.help}>{listingSellerFeeText}</p>}
                               {auction ? (
                                 <p className={styles.help}>Mức bồi thường tối đa nếu sách hư hỏng hoặc thất lạc tại điểm giao nhận. Giá khởi điểm đặt khi gửi đấu giá.</p>
                               ) : bundle ? (

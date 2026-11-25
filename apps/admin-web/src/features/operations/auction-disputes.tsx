@@ -95,7 +95,8 @@ function AuctionDisputesContent({ user }: { user: CurrentUser }) {
         supportPageSchema,
       ),
     retry: false,
-    refetchInterval: 30_000,
+    refetchInterval: 6_000,
+    refetchIntervalInBackground: false,
   });
   const rows = result.data?.pages.flatMap((page) => page.items) ?? [];
   const terms = normalizeSearch(query.replace(/^#/, ""))

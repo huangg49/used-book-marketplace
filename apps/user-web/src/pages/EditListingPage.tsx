@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { listingSellerFeeText } from "@used-books/session-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -860,6 +861,7 @@ export function EditListingPage() {
                     <span className={styles.inputSuffix}>VNĐ</span>
                   </div>
                   <span className={styles.inputHint}>Từ 10.000đ đến 1.000.000đ</span>
+                  <span className={styles.inputHint}>{listingSellerFeeText}</span>
                   {showError("salePrice") && (
                     <em className={styles.fieldError}>{showError("salePrice")}</em>
                   )}

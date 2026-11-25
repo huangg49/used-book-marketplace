@@ -36,6 +36,12 @@ export const exchangeReturnResolutionSchema = z.object({
 export type ExchangeReturnResolution = z.infer<typeof exchangeReturnResolutionSchema>;
 export type ExchangeReturnAction = components["schemas"]["ExchangeReturnCommand"]["action"];
 
+export function isExchangeReturnOverdue(resolution: ExchangeReturnResolution | undefined, now = Date.now()) {
+  if (resolution?.phase !== "ReturnOrdered" || resolution.trackingCode || !resolution.returnDueAt) return false;
+  return Date.parse(resolution.returnDueAt) <= now && Boolean(resolution.effectiveAt ||
+    (resolution.appealDueAt && Date.parse(resolution.appealDueAt) <= now && !resolution.appeals.length));
+}
+
 export const exchangeReturnPhase: Record<ExchangeReturnResolution["phase"], string> = {
   Evidence: "Đang bổ sung bằng chứng",
   ReturnOrdered: "Đã có quyết định trả sách",

@@ -13,8 +13,9 @@ import {
 } from "../services/purchase-conversations";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { io, type Socket } from "socket.io-client";
-import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, chatSendWasRateLimited, clipChatMessage } from "@used-books/session-client";
+import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, DEFAULT_SALE_COMMISSION_BPS, chatSendWasRateLimited, clipChatMessage, directOrderCommission, formatSaleFeeRate } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeftRight, ArrowUp, ArrowUpRight, Clock3, Gavel, RefreshCw, Send } from "lucide-react";
@@ -57,11 +58,6 @@ function dateTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
-}
-
-function directOrderCommission(bookPrice: number) {
-  // POL-13 / BR-20: 5% of the book price, rounded half up to the nearest VND.
-  return Number((BigInt(bookPrice) * 500n + 5000n) / 10000n);
 }
 
 // Draft changes do not alter existing messages. Keep normal prop comparison so
@@ -126,7 +122,7 @@ function ChatRoom({
   });
   const [orderBusy, setOrderBusy] = useState(false);
   const [orderError, setOrderError] = useState<string>();
-  const [commissionAccepted, setCommissionAccepted] = useState(false);
+  const [acceptedCommission, setAcceptedCommission] = useState<string>();
   const orderAttempt = useRef<
     { key: string; version: number; price: number } | undefined
   >(undefined);
@@ -355,8 +351,12 @@ function ChatRoom({
           ? "Đề nghị đổi sách"
           : "Thương lượng mua sách";
   const orderBookPrice = orderAttempt.current?.price ?? agreedBookPrice;
+  const commissionBps = room.quotePreview?.commissionBps ?? DEFAULT_SALE_COMMISSION_BPS;
+  const commissionRate = formatSaleFeeRate(commissionBps);
+  const commissionTerms = `${room.version}:${orderBookPrice}:${commissionBps}`;
+  const commissionAccepted = acceptedCommission === commissionTerms;
   const orderCommission =
-    orderBookPrice == null ? null : directOrderCommission(orderBookPrice);
+    orderBookPrice == null ? null : directOrderCommission(orderBookPrice, commissionBps);
 
   const chatPanelContent = (
     <section
@@ -717,7 +717,7 @@ function ChatRoom({
           <PurchaseDialog
             open={orderDialogOpen}
             onClose={() => {
-              setCommissionAccepted(false);
+              setAcceptedCommission(undefined);
               setOrderDialogOpen(false);
             }}
             busy={orderBusy}
@@ -759,7 +759,7 @@ function ChatRoom({
                     intent.key,
                   );
                   orderAttempt.current = undefined;
-                  setCommissionAccepted(false);
+                  setAcceptedCommission(undefined);
                   setOrderDialogOpen(false);
                   refreshRooms();
                 } catch (cause) {
@@ -821,7 +821,7 @@ function ChatRoom({
                         </div>
                       )}
                     <div>
-                      <dt>Phí hoa hồng (5% giá sách)</dt>
+                      <dt>Phí hoa hồng ({commissionRate} giá sách)</dt>
                       <dd>−{formatVnd(orderCommission)}</dd>
                     </div>
                     <div className={flow.commissionNet}>
@@ -830,9 +830,7 @@ function ChatRoom({
                     </div>
                   </dl>
                   <p>
-                    Ước tính theo giá sách hiện tại. Hoa hồng 5% áp dụng trên
-                    tiền sách thực giữ lại khi giao dịch hoàn tất; không tính
-                    phí giao nhận.
+                    Phí này được trừ vào tiền sách khi quyết toán. Phí giao nhận tính riêng.
                   </p>
                 </section>
               )}
@@ -842,10 +840,10 @@ function ChatRoom({
                   required
                   checked={commissionAccepted}
                   disabled={orderBusy}
-                  onChange={(event) => setCommissionAccepted(event.target.checked)}
+                  onChange={(event) => setAcceptedCommission(event.target.checked ? commissionTerms : undefined)}
                 />
                 <span>
-                  Tôi đã đọc và đồng ý để Lật lại thu phí hoa hồng 5% trên giá
+                  Tôi đã đọc và đồng ý để Lật lại thu phí hoa hồng {commissionRate} trên giá
                   sách khi giao dịch hoàn tất.
                 </span>
               </label>
@@ -1630,6 +1628,14 @@ export function ChatPage() {
   const scrollKey = useRef<string | undefined>(undefined);
   const frameRef = useRef<HTMLDivElement>(null);
   const auth = useSession();
+  const viewerId = auth.status === "authenticated" ? auth.user.id : undefined;
+  const cache = useQueryClient();
+  const roomKey = ["purchase-conversation", roomId, viewerId] as const;
+  const roomLive = useTransactionLive("conversation", roomId, () => {
+    for (const queryKey of [roomKey, ["conversation-events", roomId], ["purchase-conversations", viewerId]]) {
+      void cache.invalidateQueries({ queryKey });
+    }
+  });
   const rooms = useQuery({
     queryKey: [
       "purchase-conversations",
@@ -1639,17 +1645,17 @@ export function ChatPage() {
     enabled: auth.status === "authenticated",
     refetchInterval: 3000,
   });
+  useTransactionLive("inbox", roomId ? undefined : viewerId, () => {
+    for (const queryKey of [["purchase-conversations", viewerId], ["conversation-exchanges", viewerId], ["my-auctions", viewerId, "hub"]]) {
+      void cache.invalidateQueries({ queryKey });
+    }
+  });
   const room = useQuery({
-    queryKey: [
-      "purchase-conversation",
-      roomId,
-      auth.status === "authenticated" ? auth.user.id : undefined,
-    ],
+    queryKey: roomKey,
     queryFn: () => getPurchaseConversation(roomId!),
     enabled: !!roomId && auth.status === "authenticated",
-    refetchInterval: 3000,
+    refetchInterval: roomLive ? 30_000 : 3_000,
   });
-  const cache = useQueryClient();
   useLayoutEffect(() => {
     if (auth.status !== "authenticated" || (!roomId && rooms.isPending)) return;
     if (scrollKey.current === location.key) return;

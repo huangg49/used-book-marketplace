@@ -3065,6 +3065,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       type: 'OrderSettlement',
       orderId: o.orderId,
       amount: 285_000,
+      saleSettlement: { bookPrice: 300_000, commissionBps: 500, commission: 15_000, shippingReimbursement: 0, creditedAmount: 285_000 },
     });
     const buyer = await call('get', '/me/wallet', o.winner).expect(200);
     expect(buyer.body.transactionHeld).toBe(0);
@@ -3691,7 +3692,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       lister.disconnect();
     }
   });
-  it('ADR 0088 (M6): a watched Buy Now window gets changes from another process within about half a second', async () => {
+  it('watched auction details get committed changes without a local nudge', async () => {
     // Point A's 200 test slots are taken by other cases.
     const opened = await openAuction({ pointId: HANDOVER_POINT_B });
     const id = opened.auctionId;
@@ -3713,10 +3714,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const updates: Array<{ auction: { currentPrice: number | null; buyNowAt: string | null } }> = [];
       watcher.on('auction:update', (u: (typeof updates)[number]) => updates.push(u));
       expect((await watcher.emitWithAck('auction:watch', id)).ok).toBe(true);
-      expect(live.fastPolling).toBe(false);
+      expect(live.fastPolling).toBe(true);
       await cmd('post', `/auctions/${id}/buy-now`, { fulfillmentMethod: 'SelfCollect' }, await actor()).expect(200);
       await waitFor(() => updates.some((u) => u.auction.buyNowAt !== null));
-      await waitFor(() => live.fastPolling);
       // A counter-bid committed by another instance: no nudge in this process.
       const nudge = vi.spyOn(live, 'nudge').mockImplementation(() => undefined);
       try {
@@ -4475,10 +4475,10 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         key,
       );
     // A won auction paid with delivery on a pinned timeline (clock restored).
-    async function deliveryOrder(fee = FEE) {
+    async function deliveryOrder(fee = FEE, price = 300_000) {
       const winner = await actor();
-      const won = await wonAuction(winner, 300_000);
-      await fund(winner, 300_000 + fee);
+      const won = await wonAuction(winner, price);
+      await fund(winner, price + fee);
       const a = await address(winner);
       pinClock(won.payAt);
       await cmd(
@@ -4493,8 +4493,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       return { ...won, winner, address: a };
     }
     // Accepted report and Staff hand-off to the carrier (InTransit).
-    async function inTransit(fee = FEE) {
-      const o = await deliveryOrder(fee);
+    async function inTransit(fee = FEE, price = 300_000) {
+      const o = await deliveryOrder(fee, price);
       const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
       const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
       await accepted(o, acceptAt);
@@ -4522,7 +4522,18 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
             { $set: { policyCode: 'HCM-DIRECT-v1' } },
           );
         }
-        const o = await inTransit(fee);
+        const o = await inTransit(fee, 1_000_000);
+        const buyerPaid = await call('get', `/me/point-orders/${o.orderId}`, o.winner).expect(200);
+        expect(buyerPaid.body.amounts).toMatchObject({ bookPrice: 1_000_000, outboundFee: fee, buyerTotal: 1_000_000 + fee });
+        const sellerLookup = `/me/auction-intakes?auctionId=${o.auctionId}`;
+        const sellerWaiting = await call('get', sellerLookup, o.seller).expect(200);
+        validates('AuctionIntakeList', sellerWaiting.body);
+        expect(sellerWaiting.body.items[0].sellerSale).toMatchObject({
+          orderId: o.orderId, status: 'PendingSettlement',
+          amounts: { bookPrice: 1_000_000, commission: 50_000, sellerProceedsOnCompletion: 950_000 },
+        });
+        expect((await call('get', sellerLookup, o.winner).expect(200)).body.items).toEqual([]);
+        expect(await db.c.member_notifications.countDocuments({ targetId: o.orderId, kind: 'OrderSaleSettled' })).toBe(0);
         const deliveredAt = new Date(o.doc.dispatchedAt!.getTime() + 60_000);
         const completedAt = new Date(deliveredAt.getTime() + 60_000);
         pinClock(completedAt);
@@ -4572,7 +4583,22 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect(await db.c.ledger_entries.findOne({
           journalId: journals[0]._id,
           accountId: PLATFORM_COMMISSION_ACCOUNT_ID,
-        })).toMatchObject({ debit: 15_000 + fee, credit: 0 });
+        })).toMatchObject({ debit: 50_000 + fee, credit: 0 });
+        const receiptQuery = `/me/wallet/history?orderId=${o.orderId}&type=OrderSettlement`;
+        const sellerHistory = await call('get', receiptQuery, o.seller).expect(200);
+        validates('WalletHistoryPage', sellerHistory.body);
+        expect(sellerHistory.body.items).toMatchObject([{
+          amount: 950_000,
+          saleSettlement: { bookPrice: 1_000_000, commissionBps: 500, commission: 50_000, shippingReimbursement: 0, creditedAmount: 950_000 },
+        }]);
+        expect((await call('get', receiptQuery, o.winner).expect(200)).body.items).toEqual([]);
+        const alerts = await call('get', '/me/notifications', o.seller).expect(200);
+        validates('MemberNotificationPage', alerts.body);
+        expect(alerts.body.items.filter((item: { kind: string; targetId: string }) =>
+          item.kind === 'OrderSaleSettled' && item.targetId === o.orderId,
+        )).toMatchObject([{ title: 'Đã nhận 950.000đ tiền bán sách', body: expect.stringContaining('50.000đ') }]);
+        expect(await db.c.member_notifications.countDocuments({ targetId: o.orderId, kind: 'OrderSaleSettled' })).toBe(1);
+        expect((await call('get', sellerLookup, o.seller).expect(200)).body.items[0].sellerSale.status).toBe('Settled');
       } finally {
         if (selection) {
           await db.c.sale_quote_policy_selection.updateOne(
@@ -5085,6 +5111,11 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         available: 300_000 + FEE,
         transactionHeld: 0,
       });
+      expect(await db.c.member_notifications.countDocuments({
+        targetId: o.orderId,
+        kind: 'OrderSaleSettled',
+      })).toBe(0);
+      expect((await call('get', `/me/wallet/history?orderId=${o.orderId}&type=OrderSettlement`, o.seller).expect(200)).body.items).toEqual([]);
       expect(
         (await db.c.auction_intakes.findOne({ _id: o.intakeId }))!.state,
       ).toBe('ReclaimRequired');

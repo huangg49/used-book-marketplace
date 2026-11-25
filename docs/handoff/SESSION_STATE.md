@@ -1,3 +1,265 @@
+# Tải kệ sách khi có bài đã đóng trên Member Web — 25/11/2026
+
+- Local `codex/owner-shelf-closed-listings`, nền `34f545c9`. Web nhận đủ
+  trạng thái giao dịch theo OpenAPI và hiện “Đã đóng” trong kệ và Tổng quan.
+  Bài đã kết thúc không dẫn tới trang công khai. RN đã nhận trạng thái này.
+- PASS 514 unit, lint theo file, build Member Web và 12 ca browser với dữ liệu
+  mô phỏng ở 390/1440px. Kiểm đọc trên Mongo local xác nhận Web đọc đủ 10 bài
+  demo, cả năm bộ lọc và chi tiết bài đã đóng. Lượt này chỉ đọc DB và chưa
+  xác nhận lại trên tab đăng nhập của người dùng.
+
+# Trình bày bước xác nhận tiền trên Web/RN — 25/11/2026
+
+- Local `codex/transaction-review-layouts`, nền `34f545c9`, giữ working tree
+  local trước đó. Đặt cọc và trả giá đấu giá, đơn thắng Web và đặt cọc Trao đổi
+  đưa số tiền cần chú ý lên đầu. Các mục giữ tiền, hoàn tiền, cách nhận và hạn
+  thanh toán được tách theo nhãn. Mua bán và Rút Ví dùng bố cục gọn ngay trên
+  bước xác nhận đã có.
+- PASS unit Web/RN/session-client, build Web/Expo, typecheck và lint theo phạm
+  vi. PASS 14 ca Mua bán và 10 ca Rút Ví trên Web. Bộ kiểm tập trung Trao đổi
+  qua 7 ca chỉ riêng phần đặt cọc và phục hồi lệnh. Bộ kiểm thanh toán đơn
+  thắng qua 12 ca sau khi lược các bước vận chuyển sau thanh toán trong lần
+  chạy tập trung. Hai suite đầy đủ dừng ở tin nhắn trao đổi và trạng thái
+  giao hàng sau thanh toán. PASS lượt Đấu giá tập trung Web/Expo qua Mongo QA,
+  kiểm hộp đăng ký, bảng tiền ở bước trả giá RN và đơn thắng. Lượt này dùng API
+  QA cho lượt trả giá thứ hai và lược kiểm lịch sử 50 phiếu gửi. Chưa thao tác
+  trên Android/iOS native.
+
+# Hộp xác nhận thanh toán đơn đấu giá trên RN — 25/11/2026
+
+- Local `codex/auction-payment-review`, nền `34f545c9`, giữ thay đổi local
+  của các gói trước. Hộp xác nhận đưa khoản trừ thêm hoặc hoàn dư lên đầu,
+  tách tiền sách, cước, khoản giữ và tổng đơn theo dòng. Phí dịch vụ, cách nhận
+  và thời hạn giữ tiền nằm dưới bảng. Nội dung cuộn được khi màn thấp.
+- Số tiền lấy từ đơn, báo giá đã chọn và khoản Ví đang giữ cho phiên. Khi
+  thiếu số khoản giữ, hộp hiện tổng đơn và báo chưa tải được khoản giữ.
+  Nút Quay lại giữ cách nhận đang chọn để người dùng tiếp tục kiểm tra.
+- PASS typecheck, lint theo file và 252 unit RN. Bản cuối qua kiểm Expo/Mongo QA
+  cho nhận tại điểm, giao có cước 30.000đ và quay lại giữ lựa chọn. Ảnh kiểm ở
+  390px và 320×520px. Lượt kiểm tập trung dùng API QA để đặt giá và lược hai
+  bước kiểm ngoài thanh toán sau khi suite gặp lỗi chập chờn ở bước nhập giá.
+  Chưa thao tác Android/iOS native.
+
+# Ẩn nút thêm vào giỏ ở trang chi tiết — 25/11/2026
+
+- Local `codex/hide-add-to-cart`, nền `34f545c9`, giữ phần việc local từ các
+  gói trước. Chi tiết sách trên Member Web và React Native bỏ nút thêm vào
+  giỏ. Web giữ cặp Mua ngay và Chat cùng hàng ở màn rộng, xếp dọc ở màn nhỏ.
+  Giỏ sách trong Tài khoản tiếp tục xử lý những sách đã lưu.
+- User Web CI kiểm nút vắng mặt cho khách và thành viên, các trạng thái bài
+  đăng, focus bàn phím và bố cục 320–1440px. Operations CI kiểm Web/Expo và
+  dùng dữ liệu giỏ QA để kiểm xem lại giá, thử lại lệnh xóa và mua từng sách.
+  Quyết định sản phẩm được ghi trong [PRODUCT](../../PRODUCT.md).
+- PASS 8 nhóm kiểm chi tiết Web, 9 nhóm kiểm Cart API/Mongo và browser giỏ
+  Web/Expo. PASS unit Web/RN, typecheck, lint theo phạm vi và build Web/Expo.
+  Kiểm trực quan 320/390/1440px trên Web và 390px trên Expo. Chưa chạy native.
+
+# Thời hạn giữ và hoàn tiền giao dịch — 25/11/2026
+
+- Local `codex/transaction-hold-timelines`, nền `34f545c9`, cùng working tree
+  của các gói trước. API Trao đổi ghi nhận từng lần nghiệm thu trong hạn riêng.
+  Hai bên vẫn có thể báo sự cố trong 72 giờ từ lúc nhận sách. Worker chỉ tất
+  toán sau mốc muộn hơn khi có đủ xác nhận nhận sách và không có tranh chấp.
+  Nhánh tua hạn Demo vẫn dùng quyền và điều kiện đã có.
+- Member Web và RN hiển thị điều kiện giữ/hoàn khi đặt cọc, trả giá và thanh
+  toán. Phiên có cọc đăng ký phân biệt phần trả lại khi bị vượt giá với cọc
+  còn giữ đến lúc chốt phiên. Chi tiết đơn hiển thị số tiền đang giữ, mốc tiếp
+  theo và trạng thái đang xử lý sự cố. Khoản hoàn đã ghi sổ có đường tới lịch
+  sử Ví, với số tiền đã hoàn khi dữ liệu giao dịch xác nhận được.
+- PASS 70 ca Exchange E2E trên Mongo QA riêng, 17 ca đấu giá Web/Expo, kiểm
+  mốc trao đổi và 14 ca đơn mua bán/đường tới Ví trên Web 390/1440px. PASS
+  unit Web/RN/session-client, typecheck API/Web/RN, lint theo file RN, contract
+  và build Web/Expo. Bundle Android xuất được. Chưa thao tác luồng trên
+  Android/iOS native. Migration `0090` vẫn chờ trên DB app. Gate release theo
+  [READINESS](READINESS.md).
+
+# Hiển thị phí trước khi xác nhận giao dịch — 24/11/2026
+
+- Local `codex/checkout-fee-disclosures`, nền `34f545c9`. Bước thanh toán
+  đơn đã tạo trên RN hiện tiền sách, cước, tổng và bên chịu phí dịch vụ từ
+  snapshot của đơn. Web/RN hiện phần Ví đã giữ và phần cần thêm hoặc hoàn dư
+  khi thanh toán đơn thắng, dùng khoản giữ từ participation và tổng theo báo
+  giá của phương thức nhận.
+- Màn gửi đề nghị trao đổi trên Web/RN và cửa gửi từ hội thoại Web hiện phí
+  dịch vụ 0đ, mỗi bên chịu cước chiều mình gửi nếu dùng hãng vận chuyển. RN
+  gọi khoản gồm cả tiền bù là tổng dự kiến giữ từ Ví.
+- PASS 183 unit session-client, typecheck Web/RN, lint theo file RN và 17 ca
+  browser đấu giá qua Mongo QA. Ca thanh toán đơn thắng kiểm khoản đã giữ
+  300.000đ và cần thêm 0đ trên Member Web và Expo. Ca mở lại đơn trên Expo
+  và ca gửi đề nghị trong hội thoại Web đã qua các assertion về hiển thị phí.
+  Suite Mua ngay dừng ở bước quay lại danh sách đơn của người bán. Suite trao
+  đổi dừng ở bước mở lịch sử đề nghị. Android/iOS chưa chạy.
+
+# Đồng bộ trực tiếp khi demo ba luồng — 24/11/2026
+
+- Local `codex/demo-transaction-realtime`, nền `34f545c9`, giữ working tree
+  Codex và Gemini từ nhánh bàn giao. Trả giá báo ngay sau commit theo đúng
+  phiên. Khi lệnh đến từ tiến trình khác, chi tiết phiên đang mở kiểm phiên
+  bản mỗi 300 ms. Web và RN đọc ngay trạng thái dẫn giá hoặc bị vượt giá.
+- Phiếu trao đổi, tin nhắn trao đổi, đơn mua bán, thỏa thuận và các danh sách
+  giao dịch liên quan trên Web/RN dùng kênh `/transactions`. Các màn của người
+  thắng trên Web và của chủ phiên trên Web/RN dùng `/point-orders`. Socket
+  kiểm quyền hiện tại và các màn tải lại dữ liệu khi kết nối lại. Xem
+  [ADR0031](../adr/0031-live-auction-updates.md).
+- PASS 4 ca HTTP và Socket.IO qua Mongo QA, 24 ca API tập trung, Member Web
+  509 unit, RN 252 unit, session-client 178 unit, typecheck và contract/routes.
+  Browser Web–Expo đạt 17 ca và giữ số đã nhập khi lượt đọc trạng thái RN gặp
+  503 tạm thời. Lượt Expo vượt giá gửi push đến Web sau 31 ms và hiện
+  “Bạn đã bị vượt giá” trong 128 ms tính từ phản hồi trả giá.
+- Android Emulator đã mở phiên QA. Kịch bản native chưa xác nhận được cập
+  nhật qua lại khi trả giá, iOS chưa chạy. Migration `0090` của gói trước
+  còn chờ áp dụng trên DB app. Giữ các gate trong [READINESS](READINESS.md).
+
+# Đối chiếu bản local sau Gemini — 24/11/2026
+
+- Bản đang làm nằm trên `codex/sale-fee-transparency`, nền `34f545c9`. Các thay
+  đổi Gemini hiện nằm trong working tree. RN có thay đổi ở sàn, phiên của tôi,
+  gửi sách, chi tiết và bảng đặt giá tự động. Chi tiết phiên trên Web/RN đọc
+  tên hiển thị người bán từ `sellerName` trong dữ liệu công khai của phiên.
+- Màn đơn đấu giá RN dùng Socket.IO namespace `/point-orders`, xác minh lại
+  quyền trước mỗi snapshot. Web có cập nhật trực tiếp cho phiên đấu giá ngay
+  cả khi chi tiết đơn vẫn đọc REST định kỳ. API/Web/RN typecheck, contract/routes,
+  5 ca gateway PointOrder và 9 ca xử lý dữ liệu live RN đã qua trên bản local.
+- Gói phí vẫn có đủ snapshot người bán, giải thích bên mua, thông báo và biên
+  nhận Ví. Lần chạy browser toàn luồng đấu giá trước các sửa mới đạt 17 ca.
+  Kiểm lớp WebSocket mới qua thiết bị Android/iOS và luồng liên vai trò còn mở.
+
+# Minh bạch phí bán sách và biên nhận Ví — 24/11/2026
+
+- Local `codex/sale-fee-transparency`, nền `34f545c9`. Web và RN nêu bên chịu
+  phí trước khi tạo đơn mua hoặc đăng phiên. Đơn đã tạo dùng giá, cước, tỷ lệ
+  và phí từ dữ liệu đã chốt. Trao đổi hiện phí dịch vụ 0đ bên cạnh cọc và tiền bù.
+  Chủ phiên xem dự kiến nhận khi đang chờ thanh toán hoặc quyết toán ngay trong
+  chi tiết phiên, và xem thực nhận sau khi đơn được quyết toán.
+- Bút toán quyết toán bán sách và thông báo cho người bán được lưu cùng giao
+  dịch. Mở thông báo tới đúng biên nhận Ví. Lịch sử tách tiền sách, hoa hồng,
+  hoàn ứng cước lịch sử khi có và số thực nhận. Các đơn cũ đã ghi có vẫn có
+  thể xem biên nhận. Migration `0090` mở rộng validator cho loại thông báo mới.
+- Mongo QA xác minh đấu giá 1 triệu với cước 0đ và 30.000đ, ghi phí 50.000đ,
+  người bán nhận 950.000đ và chỉ một thông báo khi hai yêu cầu đến đồng thời.
+  Kiểm tra upgrade hai thứ tự migration, quyết toán trao đổi và luồng mua
+  trực tiếp rồi mở thông báo bằng Web/Expo. Kiểm tra tạo đơn thương lượng Expo.
+  Chưa áp dụng migration vào DB của app hay chạy kiểm thử Android/iOS native.
+  Giữ [READINESS](READINESS.md).
+
+# Chi tiết phiên và trả giá trên RN — 24/11/2026
+
+- Local `codex/auction-mobile-detail`, nền `34f545c9`. Chi tiết phiên gom bìa,
+  trạng thái, giá và đồng hồ vào đầu màn hình. Mobile dùng một hộp xác nhận cho
+  Trả giá và Trả giá nhanh. Giá tối thiểu đổi theo dữ liệu từ máy chủ. Số tiền
+  đã nhập được giữ và chỉ gửi khi còn hợp lệ. Lỗi phản hồi chưa rõ kết quả giữ
+  nguyên yêu cầu để thử lại. Các bước nhận sách của người thắng vẫn nằm ở màn
+  hiện có và là phạm vi của đợt thiết kế sau.
+- Web dùng giờ máy chủ cho điều kiện thời gian và kiểm tra lại giá, số dư,
+  trạng thái khi xác nhận lệnh. API vẫn quyết định giá hợp lệ, quyền và tiền giữ.
+  Bài kiểm tra trình duyệt kiểm quyền từ chối với Staff chưa được phân công,
+  theo quyền Admin đã được duyệt ở PR #114.
+- PASS typecheck RN/Web, RN 251 unit, Web 509 unit và lint theo file đổi.
+  Web browser kiểm mất kết nối, fallback, đồng hồ, đồng bộ lại và chuyển động
+  trong vùng nhìn trên sàn. Bài kiểm tra hành trình qua trình duyệt đạt 17 ca. Android
+  Emulator đã mở phiên đã bán. Bài kiểm tra Expo web với API/Mongo QA trả giá
+  100.000đ từ Web và 110.000đ từ Expo, xác minh `auction:update` qua WebSocket
+  ở cả hai chiều và chặn mức nhập cũ giữa hai lượt.
+  Chưa xác minh thao tác trả giá của phiên đang mở trên Android/iOS. Giữ READINESS.
+
+# Xác nhận hoa hồng trên RN và đồng bộ lại đồng hồ đấu giá — 24/11/2026
+
+- Local `codex/mobile-commission-auction-clock`, nền `34f545c9`. Giữ các
+  thay đổi local đã có. Cả Phiếu thỏa thuận và Hội thoại mở cùng hộp xác nhận
+  tạo đơn cho người bán. Giá dùng để tạo đơn là giá đã chốt. Màn hình hiện
+  hoa hồng 5%, tiền sách dự kiến người bán nhận và phí giao nhận riêng.
+  Người bán tick đồng ý trước khi gửi lệnh. Xác nhận nằm ở client, giữ
+  contract API hiện hành. Mất phản hồi giữ idempotency key, giá và phiên bản cũ
+  khi thử lại. Đổi tài khoản xóa yêu cầu đang chờ trong app.
+- Đồng hồ dùng thời gian trôi trên `performance.now()` để đổi giờ máy không làm
+  phiên hết sớm. Chi tiết web/RN đọc REST khi kết nối lại. Danh sách đấu giá và
+  Phiên của tôi trên RN dùng cùng giờ máy chủ. Xem [ADR0031](../adr/0031-live-auction-updates.md).
+- PASS session-client 176 unit, Member Web 509 unit, RN 251 unit, typecheck
+  hai app và ESLint trên file RN đổi. Browser Web xác minh fallback long-polling,
+  thứ tự snapshot, đổi giờ máy, reconnect và đếm ngược danh sách 390/1440 px.
+  Expo web 320/390 px với Mongo QA
+  xác minh hai cửa tạo đơn, checkbox, quyền hiển thị, hoa hồng và một đơn duy nhất
+  sau mất phản hồi. Expo web với fixture Socket.IO/REST xác minh đồng hồ danh sách
+  và chi tiết khi đổi giờ, mất kết nối và trở lại từ nền. Chưa thử trực tiếp trên
+  Android/iOS hay nghiệm thu người thật. Giữ READINESS.
+
+# Trả sách sau phán quyết và phân trang lịch sử tài chính — 24/11/2026
+
+- Local `codex/exchange-return-finance-pagination`, nền `34f545c9`. Phán quyết
+  toàn phần hai chiều mở chặng trả sách và giữ tiền/sách đến khi xác minh trả
+  thành công hoặc quyết toán bồi thường. Xem [ADR0057](../adr/0057-exchange-resolution-safety.md).
+  Staff/Admin độc lập đã nhận hồ sơ dùng **Tua hạn trả sách · Demo** khi
+  quyết định có hiệu lực, chưa bàn giao và demo được bật. Bước tiếp do Admin
+  đối chiếu bằng chứng; người tham gia xem diễn biến trên web/RN.
+- Admin **Dòng tiền & Đối soát** phân trang MongoDB 15 dòng ở lịch sử khóa,
+  hoàn/giải tỏa và nạp/rút. Tìm và lọc trên toàn bộ lịch sử, có khoản chuyển
+  tiền xử lý đổi sách ghi riêng. API giữ quyền Admin ở cả ba bảng.
+- PASS 18 ca HTTP trên Mongo QA của nhóm khiếu nại/hoàn sách, gồm từ chối sai
+  quyền, replay, tất toán cạnh tranh, trả thành công và bồi thường quá hạn.
+  Chạy lại 2 ca mới sau kiểm tra commit-time. Kiểm tra lịch sử với 526 dòng
+  mỗi bảng và Admin browser tìm mã cũ, chuyển sang trang 2. Browser fixture
+  Admin kiểm bố cục 320/390/1440 px và bấm tua hạn ở 320 px. Unit API theo phạm vi
+  64, Admin Web 253, Member Web 508, RN 251. Chưa nghiệm thu chức năng trên
+  thiết bị native hay với bằng chứng lưu trong bucket thật. Giữ READINESS.
+
+# Đồng bộ main vào nhánh RN — 24/11/2026
+
+- `feat/rn-transaction-hub-polish` cập nhật từ `53d1cdcd` lên `34f545c9`.
+  Giữ thay đổi local của Đăng sách, kệ và thanh điều hướng. Màn sàn đấu giá
+  nối cả thanh điều hướng local và cập nhật trực tiếp từ PR #126.
+- Hiện trạng đơn mua trực tiếp vẫn đọc được từ link bài gốc và ảnh công khai,
+  trong khi bài có đơn mở rời kệ/tìm kiếm. Bằng chứng khiếu nại thiếu tên
+  hiển thị vai trò bên gửi. Contract báo cáo ghi lỗi 422 khi khoảng ngày sai.
+- PASS API 577 unit, Member Web 508, Admin Web 253, RN 251, session-client 172,
+  contract/routes, API và hai build web. Browser đấu giá kiểm long-polling và
+  từ chối dữ liệu đến trễ. Seller-order trên Mongo QA kiểm xác nhận hoa hồng,
+  replay khi mất phản hồi, bài rời kệ và link gốc vẫn đọc được. Browser Mua ngay
+  kiểm xác nhận giá niêm yết và chỉ tạo một đơn. Mongo QA kiểm bảy route thống kê,
+  role và khoảng ngày sai.
+- `test:chat:browser` dừng ở tiêu đề màn thương lượng cũ trước bước tạo đơn.
+  Chưa nghiệm thu đấu giá live trên Android hoặc nhiều instance; giữ READINESS.
+
+# Làm gọn cuối kệ Trang chủ React Native — 23/11/2026
+
+- Local nhánh `feat/rn-transaction-hub-polish`, nền `53d1cdcd`. Cuối kệ
+  chỉ hiện hàng Trang trước, số trang và Trang tiếp khi có thể chuyển trang.
+- Bản chỉ có phân trang PASS typecheck và 243 unit. Expo web trên Mongo QA
+  kiểm trang 1 → 2 → 1, khổ 320 px, tự cập nhật và thử lại khi lỗi.
+
+# Làm gọn luồng Đăng sách React Native — 23/11/2026
+
+- Local nhánh `feat/rn-transaction-hub-polish`, nền `53d1cdcd`. Tab Đăng sách
+  dùng thanh điều hướng chung, nút Đăng sách mới và bộ lọc trạng thái. Bỏ số đếm
+  lấy từ trang dữ liệu đầu tiên. Danh sách hiện riêng trạng thái duyệt, hình thức
+  và mức giá. Bài đang có giao dịch không hiện thao tác xóa.
+- Màn sở hữu bài Marketplace dùng thanh quay lại cố định và giữ cảnh báo khi
+  có dữ liệu chưa lưu. Chi tiết đọc cùng trạng thái với danh sách, kể cả bài
+  đã duyệt đang giữ cho một giao dịch hoặc đang ẩn.
+- Bước Bán hoặc đổi dùng ba thẻ icon và tên, xếp dọc khi hẹp hoặc chữ lớn.
+  Thẻ đang chọn lên 3 dp, có bóng và nền đỏ rượu. Android Emulator API 37
+  xác nhận bố cục ngang và màu thẻ đã chọn. Expo web trên Mongo QA kiểm
+  bố cục 390/320 px, chuyển động khi đổi thẻ và ô giá của cả ba phương thức.
+- 24/11: Gộp hai ô giá vào một khối, đặt ₫ trong ô và hiển thị khoảng giá một lần.
+  Tiêu chí đổi sách thu gọn mặc định, hiện bản tóm tắt khi đã nhập. Android
+  Emulator kiểm mở/thu gọn. Expo web trên Mongo QA kiểm 390/320 px, ba phương
+  thức, bàn phím và dữ liệu khi đổi phương thức hoặc mở lại tiêu chí.
+- PASS lint, typecheck và 243 unit RN. Expo web 390/320 px với Mongo QA kiểm
+  tạo, mở lại bản nháp, quay về danh sách và cảnh báo khi rời bản đang sửa.
+- Android Emulator API 37 kiểm bộ lọc rỗng, nhãn Đổi và Đang giữ cho một đơn
+  ở danh sách/chi tiết, quay lại bằng nút trong app và Back hệ thống, hủy xác
+  nhận xóa. Chưa chạy gửi duyệt xuyên vai trò trong lượt này.
+
+# Đồng bộ thanh trên các tab React Native — 23/11/2026
+
+- Local nhánh `feat/rn-transaction-hub-polish`, nền `53d1cdcd`. Trang chủ,
+  Tìm sách, Đấu giá và Tài khoản dùng `TopNavbar` ngoài nội dung cuộn. Trang chủ
+  giữ ô tìm sách và nút kiểm tra tại điểm, các tab còn lại giữ logo.
+- PASS lint, typecheck và 243 unit RN. Android Emulator API 37 kiểm bốn tab,
+  huy hiệu `9+`, mở ô tìm sách và đóng/mở thông báo. Nội dung Tài khoản cuộn
+  dưới thanh cố định. Đấu giá đã kiểm ở trạng thái danh sách trống.
+- Trang chủ để mép dưới phẳng khi nối với banner đỏ. Đã đối chiếu hai góc trên
+  Android Emulator sau sửa và xác nhận thanh Đấu giá vẫn bo góc.
+
 # Trung tâm Thống kê Admin đa trang (Tài chính, Dòng tiền & Giao dịch/Rủi ro) — 23/11/2026
 
 - Nhánh `feat/admin-finance-statistics` từ `main` (`53d1cdcd`), đã merge `main` (`ecfe2189` / PR #126).

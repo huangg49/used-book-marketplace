@@ -6,12 +6,14 @@ import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { ExchangesService } from './exchanges.service.js';
 import { ExistingObligation } from '../auth/obligations.decorator.js';
+import { TransactionChanges } from '../commands/transaction-changes.js';
 
 @Controller('exchanges')
 export class ExchangesController {
   constructor(
     private readonly exchanges: ExchangesService,
     private readonly input: ContractInput,
+    private readonly transactionChanges: TransactionChanges,
   ) {}
 
   @Post()
@@ -96,16 +98,18 @@ export class ExchangesController {
   @Post(':id/messages')
   @Roles('MEMBER')
   @HttpCode(201)
-  sendMessage(
+  async sendMessage(
     @Param('id') id: string,
     @Body() body: unknown,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.exchanges.sendMessage(
+    const message = await this.exchanges.sendMessage(
       req.auth,
       this.input.uuid(id),
       this.input.body('CreateExchangeMessage', body),
     );
+    this.transactionChanges.committed({ kind: 'exchange', id: message.exchangeId });
+    return message;
   }
 
   @Post(':id/funding')

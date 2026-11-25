@@ -245,6 +245,8 @@ cuộn độc lập, đóng/Back bỏ lựa chọn chưa áp dụng. `/ui` có v
 `SearchField.submitLabel` biến icon tìm thành nút có tên khi có onSubmitEditing.
 `TextField.accessibilityLabel` cho tên đầy đủ trong nhóm ô có nhãn ngắn (Từ/Đến);
 không dùng placeholder làm nhãn. Các trường không truyền vẫn lấy tên từ label.
+`TextField.suffix` hiển thị đơn vị ngắn như ₫ ở cuối ô. Tên truy cập có thể ghi
+đầy đủ đơn vị qua `accessibilityLabel`, còn ký hiệu nằm ngoài giá trị nhập.
 `ActionRow` dùng ở tài khoản; mẫu tương tác nằm trong nhóm Hộp thoại của `/ui`.
 
 `NavigationBar` trong UI library là component trình bày: nhận `destinations`
@@ -254,8 +256,12 @@ ScrollView. Mục chọn có nền surface/bo8, icon và nhãn rừng; mục cò
 Nhãn `navigationLabel` BeBold12/18 được xuống dòng. Cập nhật28/10: bỏ đệm ngang
 và gap giữa các đích để năm mục còn chỗ ở320px/chữ130%; không ép font nhỏ/cắt nhãn.
 Nút đăng sách có cùng vai trò chữ và focus; badge Member chỉ thêm khi có dữ liệu,
-không đặt chấm cố định cho đấu giá. `TopNavbar` giữ nút thông báo/chat48dp và
-chỉ hiện subtitle từ480dp, fontScale<1,3 để không đẩy hành động khỏi màn hẹp.
+không đặt chấm cố định cho đấu giá. `TopNavbar` dùng chung ở Trang chủ, Tìm sách,
+Đấu giá, Đăng sách và Tài khoản qua `Screen.header` để giữ nguyên vị trí khi cuộn. Trang chủ
+truyền ô tìm sách và nút kiểm tra tại điểm qua `leading`, dùng `flushWithContent`
+để thanh nối liền với banner cùng nền đỏ. Các tab còn lại dùng logo và chỉ
+hiện subtitle từ480dp, fontScale<1,3. Nút thông báo và tin nhắn
+cùng rộng48dp, dùng huy hiệu đếm `9+` khi vượt 9.
 Các vùng chạm chia đều theo
 số đích thật, không khóa chiều cao hoặc cắt nhãn. Focus dùng viền rừng trên nền
 kem, lá non trên nền xanh. `/ui` nhóm Điều hướng có mẫu đổi chọn và thử chữ lớn.

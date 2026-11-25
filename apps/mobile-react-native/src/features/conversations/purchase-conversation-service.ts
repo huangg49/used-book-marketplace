@@ -2,7 +2,6 @@ import { z } from "zod";
 import type { SessionClient } from "../../core/api/session-client";
 import {
   conversationEventSchema,
-  orderReceiptSchema,
   purchaseConversationSchema,
   purchaseMessageSchema,
   receiptSchema,
@@ -110,20 +109,32 @@ export function changeConversationTerms(
   );
 }
 
-export function createSellerOrder(
-  client: SessionClient,
-  body: {
-    conversationId: string;
-    expectedVersion: number;
-    agreedBookPrice: number;
-  },
-  key: string = crypto.randomUUID(),
+export function sellerOrderPrice(
+  room: PurchaseConversation,
+  listingRevision: string | undefined,
+  now = Date.now(),
 ) {
-  return client.request("/orders", orderReceiptSchema, {
-    method: "POST",
-    headers: { "Idempotency-Key": key },
-    body: JSON.stringify(body),
-  });
+  const terms = room.terms;
+  const quote = room.quotePreview;
+  const price = terms?.agreedPrice;
+  if (
+    room.status !== "Active" ||
+    room.orderId ||
+    (room.expiresAt && !(Date.parse(room.expiresAt) > now)) ||
+    !room.hasQuote ||
+    !quote ||
+    !(Date.parse(quote.expiresAt) > now) ||
+    terms?.mode !== "Negotiation" ||
+    terms.locked ||
+    terms.pendingProposal ||
+    !listingRevision ||
+    listingRevision !== terms.agreedListingRevisionId ||
+    price == null ||
+    !Number.isInteger(price) ||
+    price < 10_000 ||
+    price > 1_000_000
+  ) return null;
+  return price;
 }
 
 export function purchaseChatGuidance(

@@ -1,14 +1,20 @@
-import { Pressable, View } from "react-native";
+import { useContext, useEffect, useState } from "react";
+import { listingSellerFeeText } from "@used-books/session-client";
+import { Animated, Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import {
   AppText,
   Icon,
   Notice,
+  TextScale,
   TextField,
   colors,
+  formatVnd,
+  layout,
+  metrics,
   space,
   stitchTokens,
 } from "../../core/ui";
-import type { Form, Errors } from "./listing-form";
+import type { Errors, Form } from "./listing-form";
 
 export type Anchor = (field: keyof Errors) => (node: View | null) => void;
 const noAnchor: Anchor = () => () => {};
@@ -469,7 +475,172 @@ export function ConditionFields({
   );
 }
 
-// Stitch Transaction & Pricing Component
+const transactionModes = [
+  { value: "Sale", title: "Bán sách", icon: "wallet" },
+  { value: "Exchange", title: "Đổi sách", icon: "sync" },
+  { value: "Both", title: "Bán & đổi", icon: "tag" },
+] as const;
+
+const selectedModeLift = -3;
+
+function TransactionModeOption({
+  mode,
+  selected,
+  stacked,
+  disabled,
+  onSelect,
+}: {
+  mode: (typeof transactionModes)[number];
+  selected: boolean;
+  stacked: boolean;
+  disabled: boolean;
+  onSelect: () => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [lift] = useState(() => new Animated.Value(selected ? selectedModeLift : 0));
+
+  useEffect(() => {
+    const animation = Animated.spring(lift, {
+      toValue: selected ? selectedModeLift : 0,
+      stiffness: 380,
+      damping: 29,
+      mass: 0.7,
+      overshootClamping: true,
+      useNativeDriver: Platform.OS !== "web",
+      isInteraction: false,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [lift, selected]);
+
+  return (
+    <Pressable
+      disabled={disabled}
+      onPress={onSelect}
+      accessibilityRole="radio"
+      accessibilityLabel={mode.title}
+      accessibilityState={{ checked: selected, disabled }}
+      aria-checked={selected}
+      aria-disabled={disabled}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={({ pressed }) => [
+        pricingStyles.modeTarget,
+        stacked && pricingStyles.modeTargetStacked,
+        pressed && pricingStyles.pressed,
+        disabled && pricingStyles.disabled,
+      ]}
+    >
+      <Animated.View
+        style={[
+          pricingStyles.modeOption,
+          stacked && pricingStyles.modeOptionStacked,
+          selected && pricingStyles.modeOptionSelected,
+          focused && layout.focus,
+          focused && selected && pricingStyles.modeOptionSelectedFocus,
+          { transform: [{ translateY: lift }] },
+        ]}
+      >
+        <View style={[pricingStyles.modeIcon, selected && pricingStyles.modeIconSelected]}>
+          <Icon name={mode.icon} size={17} color={selected ? stitchTokens.gold : stitchTokens.wine} />
+        </View>
+        <AppText
+          kind="bold"
+          color={selected ? stitchTokens.goldLight : stitchTokens.wineDark}
+          style={[pricingStyles.modeTitle, stacked && pricingStyles.modeTitleStacked]}
+        >
+          {mode.title}
+        </AppText>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+type ExchangePreferences = NonNullable<Form["exchangePreferences"]>;
+
+function ExchangePreferencesPanel({
+  preferences,
+  disabled,
+  onChange,
+}: {
+  preferences: Form["exchangePreferences"];
+  disabled: boolean;
+  onChange: (preferences: ExchangePreferences) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const summary = [preferences?.targetCategory, preferences?.targetAuthor, preferences?.targetDescription]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" · ");
+  const title = expanded || summary ? "Tiêu chí đổi sách" : "Thêm tiêu chí đổi sách";
+  const update = (key: keyof ExchangePreferences, value: string) => {
+    onChange({ ...preferences, [key]: value });
+  };
+
+  return (
+    <View style={pricingStyles.preferencesPanel}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        aria-expanded={expanded}
+        onPress={() => setExpanded((open) => !open)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={({ pressed }) => [
+          pricingStyles.preferencesToggle,
+          focused && layout.focus,
+          pressed && pricingStyles.pressed,
+        ]}
+      >
+        <View style={pricingStyles.preferencesIcon}>
+          <Icon name="sync" size={16} color={stitchTokens.wine} />
+        </View>
+        <View style={pricingStyles.preferencesHeading}>
+          <AppText kind="bold" color={stitchTokens.wine}>{title}</AppText>
+          <AppText kind="small" color={stitchTokens.deepCocoa} numberOfLines={2}>
+            {!expanded && summary ? summary : "Tùy chọn"}
+          </AppText>
+        </View>
+        <Icon name={expanded ? "chevronUp" : "chevronDown"} size={16} color={stitchTokens.wine} />
+      </Pressable>
+
+      {expanded ? (
+        <View style={pricingStyles.preferencesFields}>
+          <TextField
+            label="Thể loại"
+            placeholder="Ví dụ: Văn học, Tâm lý"
+            value={preferences?.targetCategory ?? ""}
+            editable={!disabled}
+            onChangeText={(value) => update("targetCategory", value)}
+            maxLength={100}
+          />
+          <TextField
+            label="Tác giả"
+            placeholder="Ví dụ: Haruki Murakami"
+            value={preferences?.targetAuthor ?? ""}
+            editable={!disabled}
+            onChangeText={(value) => update("targetAuthor", value)}
+            maxLength={150}
+          />
+          <TextField
+            label="Ghi chú"
+            placeholder="Ví dụ: Ưu tiên bản dịch mới"
+            multiline
+            style={pricingStyles.preferencesNote}
+            value={preferences?.targetDescription ?? ""}
+            editable={!disabled}
+            onChangeText={(value) => update("targetDescription", value)}
+            maxLength={500}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const AUCTION_DECLARED_PRESETS = [100_000, 200_000, 500_000] as const;
+
 export function PricingFields({
   form,
   onChange,
@@ -486,36 +657,137 @@ export function PricingFields({
   // ADR 0042: fixed Sale; the price is the declared value, not a shop price.
   auction?: boolean;
 }) {
-  const modes = [
-    {
-      value: "Sale" as const,
-      title: "Bán trực tiếp",
-      subtitle: "Nhận tiền VND",
-      desc: "Chuyển sách lấy tiền mặt",
-      icon: "wallet" as const,
-    },
-    {
-      value: "Exchange" as const,
-      title: "Trao đổi Sách",
-      subtitle: "Đổi đọc tác phẩm",
-      desc: "Giao lưu đổi sách cùng bạn đọc",
-      icon: "sync" as const,
-    },
-    {
-      value: "Both" as const,
-      title: "Cả bán & đổi",
-      subtitle: "Linh hoạt nhất",
-      desc: "Người mua chọn hình thức",
-      icon: "tag" as const,
-    },
-  ];
+  const { width, fontScale } = useWindowDimensions();
+  const textScale = useContext(TextScale);
+  const [groupWidth, setGroupWidth] = useState<number>();
+  const stacked =
+    (groupWidth ?? width - 2 * (space.xl + space.md)) < 300 ||
+    fontScale * textScale >= 1.25;
+  const hasSalePrice = form.mode === "Sale" || form.mode === "Both";
+  const hasExchangeValue = form.mode === "Exchange" || form.mode === "Both";
+  const saleLabel = auction ? "Giá trị khai báo" : form.bundle ? "Giá cả bộ" : "Giá bán";
+  const parsedDeclared = /^\d+$/.test(form.salePrice.trim())
+    ? Number(form.salePrice.trim())
+    : null;
+  const validDeclared =
+    parsedDeclared !== null && parsedDeclared >= 10_000 && parsedDeclared <= 1_000_000;
+
+  if (auction) {
+    return (
+      <View style={pricingStyles.auctionWrap}>
+        <View style={pricingStyles.auctionHeader}>
+          <View style={pricingStyles.auctionHeaderLeft}>
+            <View style={pricingStyles.auctionIconBadge}>
+              <Icon name="shield" size={16} color={stitchTokens.wine} />
+            </View>
+            <View style={pricingStyles.auctionHeaderText}>
+              <AppText kind="bold" style={pricingStyles.auctionTitle}>
+                Mức giá trị khai báo
+              </AppText>
+              <AppText kind="small" color={stitchTokens.brownMuted}>
+                Từ 10.000 đến 1.000.000 ₫
+              </AppText>
+            </View>
+          </View>
+          {validDeclared ? (
+            <View style={pricingStyles.auctionPreviewPill}>
+              <AppText kind="bold" style={pricingStyles.auctionPreviewText}>
+                {formatVnd(parsedDeclared)}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={pricingStyles.presetRow}>
+          {AUCTION_DECLARED_PRESETS.map((amount) => {
+            const active = parsedDeclared === amount;
+            return (
+              <Pressable
+                key={amount}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active, disabled }}
+                disabled={disabled}
+                onPress={() => onChange({ ...form, salePrice: String(amount) })}
+                style={({ pressed }) => [
+                  pricingStyles.presetChip,
+                  active && pricingStyles.presetChipActive,
+                  disabled && pricingStyles.disabled,
+                  pressed && !disabled && pricingStyles.pressed,
+                ]}
+              >
+                <AppText
+                  kind="bold"
+                  numberOfLines={1}
+                  style={[
+                    pricingStyles.presetChipText,
+                    active && pricingStyles.presetChipTextActive,
+                  ]}
+                >
+                  {formatVnd(amount)}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View ref={anchor("salePrice")}>
+          <TextField
+            label="Nhập số tiền (VNĐ)"
+            accessibilityLabel={saleLabel + " (đồng)"}
+            hint={
+              validDeclared
+                ? `Tương đương ${formatVnd(parsedDeclared)}`
+                : "Nhập số nguyên không dấu (ví dụ: 200000)"
+            }
+            suffix="₫"
+            placeholder="Ví dụ: 200000"
+            keyboardType="number-pad"
+            value={form.salePrice}
+            editable={!disabled}
+            onChangeText={(salePrice) => onChange({ ...form, salePrice })}
+            error={errors.salePrice}
+            maxLength={12}
+          />
+        </View>
+
+        <View style={pricingStyles.auctionGuideBox}>
+          <View style={pricingStyles.auctionGuideRow}>
+            <View style={pricingStyles.auctionGuideIcon}>
+              <Icon name="shield" size={14} color={stitchTokens.wine} />
+            </View>
+            <View style={pricingStyles.auctionHeaderText}>
+              <AppText kind="bold" style={pricingStyles.auctionGuideTitle}>
+                Mức bồi thường tại điểm
+              </AppText>
+              <AppText kind="small" style={pricingStyles.auctionGuideText}>
+                Là mức bồi thường tối đa nếu sách hư hỏng hoặc thất lạc trong thời gian điểm kiểm định lưu giữ.
+              </AppText>
+            </View>
+          </View>
+          <View style={pricingStyles.auctionGuideDivider} />
+          <View style={pricingStyles.auctionGuideRow}>
+            <View style={pricingStyles.auctionGuideIcon}>
+              <Icon name="gavel" size={14} color={stitchTokens.wine} />
+            </View>
+            <View style={pricingStyles.auctionHeaderText}>
+              <AppText kind="bold" style={pricingStyles.auctionGuideTitle}>
+                Không phải giá khởi điểm đấu giá
+              </AppText>
+              <AppText kind="small" style={pricingStyles.auctionGuideText}>
+                Sau khi sách được duyệt, bạn sẽ chọn điểm gửi, giá khởi điểm, bước giá và mua ngay ở màn Gửi sách đấu giá.
+              </AppText>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={{ gap: space.xl }}>
-      {/* Mode selection 3 cards */}
       <View
         ref={anchor("mode")}
-        style={{ gap: space.sm, display: auction || form.bundle ? "none" : "flex" }}
+        style={[pricingStyles.modeField, (auction || form.bundle) && { display: "none" }]}
       >
         <AppText
           kind="label"
@@ -525,166 +797,42 @@ export function PricingFields({
           PHƯƠNG THỨC GIAO DỊCH
         </AppText>
 
-        <View style={{ flexDirection: "row", gap: space.sm }}>
-          {modes.map((m) => {
-            const isSelected = form.mode === m.value;
-
-            return (
-              <Pressable
-                key={m.value}
-                disabled={disabled}
-                onPress={() => onChange({ ...form, mode: m.value })}
-                accessibilityRole="button"
-                accessibilityLabel={`${m.title}, ${m.subtitle}`}
-                style={({ pressed }) => [
-                  {
-                    flex: 1,
-                    padding: space.sm,
-                    borderRadius: 14,
-                    backgroundColor: isSelected ? stitchTokens.roseWarmSurface : stitchTokens.warmIvory,
-                    borderWidth: isSelected ? 2 : 1,
-                    borderColor: isSelected ? stitchTokens.wine : stitchTokens.borderWarm,
-                    gap: 6,
-                    shadowColor: isSelected ? stitchTokens.wine : stitchTokens.black,
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: isSelected ? 0.12 : 0.04,
-                    shadowRadius: 3,
-                    elevation: isSelected ? 2 : 1,
-                  },
-                  (pressed || disabled) && { opacity: disabled ? 0.5 : 0.8 },
-                ]}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: isSelected ? stitchTokens.wine : stitchTokens.parchment,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Icon
-                      name={m.icon}
-                      size={14}
-                      color={isSelected ? stitchTokens.gold : stitchTokens.wine}
-                    />
-                  </View>
-                  {isSelected ? (
-                    <View
-                      style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: 9,
-                        backgroundColor: stitchTokens.verifiedGreen,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon name="check" size={11} color={stitchTokens.white} />
-                    </View>
-                  ) : null}
-                </View>
-
-                <View style={{ gap: 2 }}>
-                  <AppText
-                    kind="bold"
-                    color={stitchTokens.wineDark}
-                    style={{ fontSize: 13 }}
-                  >
-                    {m.title}
-                  </AppText>
-                  <AppText
-                    kind="small"
-                    color={isSelected ? stitchTokens.wine : stitchTokens.subtleGray}
-                    style={{ fontSize: 10.5, fontWeight: "700" }}
-                  >
-                    {m.subtitle}
-                  </AppText>
-                </View>
-
-                <AppText
-                  kind="small"
-                  color={stitchTokens.slateWarm}
-                  style={{ fontSize: 10, lineHeight: 13 }}
-                  numberOfLines={2}
-                >
-                  {m.desc}
-                </AppText>
-              </Pressable>
-            );
-          })}
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Phương thức giao dịch"
+          onLayout={({ nativeEvent }) => setGroupWidth(nativeEvent.layout.width)}
+          style={[pricingStyles.modeGroup, stacked && pricingStyles.modeGroupStacked]}
+        >
+          {transactionModes.map((mode) => (
+            <TransactionModeOption
+              key={mode.value}
+              mode={mode}
+              selected={form.mode === mode.value}
+              stacked={stacked}
+              disabled={disabled}
+              onSelect={() => onChange({ ...form, mode: mode.value })}
+            />
+          ))}
         </View>
 
         {errors.mode ? <Notice tone="error">{errors.mode}</Notice> : null}
       </View>
 
-      {/* Large Sale Price Card */}
-      {form.mode === "Sale" || form.mode === "Both" ? (
-        <View
-          ref={anchor("salePrice")}
-          style={{
-            backgroundColor: stitchTokens.warmIvory,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: errors.salePrice ? colors.rustText : stitchTokens.borderWarm,
-            padding: space.md,
-            gap: space.sm,
-            shadowColor: stitchTokens.black,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 3,
-            elevation: 1,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <AppText
-              kind="label"
-              color={stitchTokens.wine}
-              style={{ fontWeight: "700", letterSpacing: 0.5 }}
-            >
-              {auction ? "GIÁ TRỊ KHAI BÁO (VND)" : form.bundle ? "GIÁ CẢ BỘ (VND)" : "GIÁ BÁN ĐỀ XUẤT (VND)"}
+      {hasSalePrice || hasExchangeValue ? (
+        <View style={pricingStyles.amountPanel}>
+          {hasSalePrice && hasExchangeValue ? (
+            <AppText kind="shelfTitle" color={stitchTokens.wineDark}>
+              Giá & giá trị đổi
             </AppText>
-            <AppText kind="small" color={stitchTokens.subtleGray}>
-              10.000₫ – 1.000.000₫
-            </AppText>
-          </View>
-
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.sm,
-            }}
-          >
-            <AppText
-              kind="title"
-              color={stitchTokens.wine}
-              style={{ fontSize: 28, fontWeight: "800" }}
-            >
-              ₫
-            </AppText>
-            <View style={{ flex: 1 }}>
+          ) : null}
+          {hasSalePrice ? (
+            <View ref={anchor("salePrice")}>
               <TextField
-                label={auction ? "Giá trị khai báo (đồng)" : form.bundle ? "Giá cả bộ (đồng)" : "Giá bán (đồng)"}
-                hint={
-                  auction
-                    ? "Mức bồi thường tối đa nếu sách gặp sự cố tại điểm, ví dụ 125000"
-                    : "Ví dụ: 125000"
-                }
+                label={saleLabel}
+                accessibilityLabel={saleLabel + " (đồng)"}
+                hint={auction ? "Mức bồi thường tối đa nếu sách gặp sự cố tại điểm." : listingSellerFeeText}
+                suffix="₫"
+                placeholder="125000"
                 keyboardType="number-pad"
                 value={form.salePrice}
                 editable={!disabled}
@@ -693,169 +841,257 @@ export function PricingFields({
                 maxLength={12}
               />
             </View>
-          </View>
-        </View>
-      ) : null}
-
-      {/* Large Exchange Value Card */}
-      {form.mode === "Exchange" || form.mode === "Both" ? (
-        <View
-          ref={anchor("exchangeValue")}
-          style={{
-            backgroundColor: stitchTokens.warmIvory,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: errors.exchangeValue ? colors.rustText : stitchTokens.borderWarm,
-            padding: space.md,
-            gap: space.sm,
-            shadowColor: stitchTokens.black,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 3,
-            elevation: 1,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <AppText
-              kind="label"
-              color={stitchTokens.wine}
-              style={{ fontWeight: "700", letterSpacing: 0.5 }}
-            >
-              GIÁ TRỊ QUY ĐỔI / ĐỐI CHIẾU (VND)
-            </AppText>
-            <AppText kind="small" color={stitchTokens.subtleGray}>
-              10.000₫ – 1.000.000₫
-            </AppText>
-          </View>
-
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.sm,
-            }}
-          >
-            <AppText
-              kind="title"
-              color={stitchTokens.wine}
-              style={{ fontSize: 28, fontWeight: "800" }}
-            >
-              ₫
-            </AppText>
-            <View style={{ flex: 1 }}>
+          ) : null}
+          {hasExchangeValue ? (
+            <View ref={anchor("exchangeValue")}>
               <TextField
-                label="Giá trị đổi (đồng)"
-                hint="Mức đối chiếu, ví dụ: 120000"
+                label="Giá trị đổi"
+                accessibilityLabel="Giá trị đổi (đồng)"
+                hint="Mức tham chiếu khi đổi sách."
+                suffix="₫"
+                placeholder="120000"
                 keyboardType="number-pad"
                 value={form.exchangeValue}
                 editable={!disabled}
-                onChangeText={(exchangeValue) =>
-                  onChange({ ...form, exchangeValue })
-                }
+                onChangeText={(exchangeValue) => onChange({ ...form, exchangeValue })}
                 error={errors.exchangeValue}
                 maxLength={12}
               />
             </View>
-          </View>
+          ) : null}
+          <AppText kind="small" color={stitchTokens.deepCocoa} style={pricingStyles.amountRange}>
+            {hasSalePrice && hasExchangeValue ? "Mỗi mức từ" : "Từ"} 10.000 đến 1.000.000 ₫
+          </AppText>
         </View>
       ) : null}
 
-      {/* Exchange Preferences Card */}
-      {!auction && (form.mode === "Exchange" || form.mode === "Both") ? (
-        <View
-          style={{
-            backgroundColor: stitchTokens.warmIvory,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: stitchTokens.borderWarm,
-            padding: space.md,
-            gap: space.sm,
-            shadowColor: stitchTokens.black,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 3,
-            elevation: 1,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <Icon name="sync" size={14} color={stitchTokens.wine} />
-            <AppText
-              kind="label"
-              color={stitchTokens.wine}
-              style={{ fontWeight: "700", letterSpacing: 0.5 }}
-            >
-              🎯 TIÊU CHÍ ĐỔI SÁCH MONG MUỐN (TÙY CHỌN)
-            </AppText>
-          </View>
-
-          <AppText kind="small" color={stitchTokens.subtleGray}>
-            Nhập thể loại, tác giả hoặc mô tả cuốn sách bạn muốn đổi lấy để hệ thống gợi ý ghép đôi trao đổi thông minh (Smart Matchmaking).
-          </AppText>
-
-          <TextField
-            label="Thể loại mong muốn"
-            hint="VD: Văn học, Kinh tế, Tâm lý..."
-            value={form.exchangePreferences?.targetCategory ?? ""}
-            editable={!disabled}
-            onChangeText={(targetCategory) =>
-              onChange({
-                ...form,
-                exchangePreferences: {
-                  ...form.exchangePreferences,
-                  targetCategory,
-                },
-              })
-            }
-            maxLength={100}
-          />
-
-          <TextField
-            label="Tác giả mong muốn"
-            hint="VD: Haruki Murakami, Dan Brown..."
-            value={form.exchangePreferences?.targetAuthor ?? ""}
-            editable={!disabled}
-            onChangeText={(targetAuthor) =>
-              onChange({
-                ...form,
-                exchangePreferences: {
-                  ...form.exchangePreferences,
-                  targetAuthor,
-                },
-              })
-            }
-            maxLength={150}
-          />
-
-          <TextField
-            label="Ghi chú tiêu chí trao đổi chi tiết"
-            hint="VD: Ưu tiên bản dịch mới hoặc sách trinh thám..."
-            value={form.exchangePreferences?.targetDescription ?? ""}
-            editable={!disabled}
-            onChangeText={(targetDescription) =>
-              onChange({
-                ...form,
-                exchangePreferences: {
-                  ...form.exchangePreferences,
-                  targetDescription,
-                },
-              })
-            }
-            maxLength={500}
-          />
-        </View>
+      {!auction && hasExchangeValue ? (
+        <ExchangePreferencesPanel
+          preferences={form.exchangePreferences}
+          disabled={disabled}
+          onChange={(exchangePreferences) => onChange({ ...form, exchangePreferences })}
+        />
       ) : null}
     </View>
   );
 }
+
+const pricingStyles = StyleSheet.create({
+  modeField: {
+    gap: space.sm,
+  },
+  modeGroup: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: space.sm,
+  },
+  modeGroupStacked: {
+    flexDirection: "column",
+  },
+  modeTarget: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 82,
+  },
+  modeTargetStacked: {
+    flex: 0,
+    minHeight: 56,
+  },
+  modeOption: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: space.xs,
+    paddingVertical: space.sm,
+    gap: space.sm,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    backgroundColor: stitchTokens.warmIvory,
+  },
+  modeOptionStacked: {
+    flexDirection: "row",
+    paddingHorizontal: space.md,
+    gap: space.md,
+  },
+  modeOptionSelected: {
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.wine,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.24,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  modeOptionSelectedFocus: {
+    borderColor: stitchTokens.gold,
+  },
+  modeIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: stitchTokens.parchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeIconSelected: {
+    backgroundColor: stitchTokens.whiteAlpha14,
+  },
+  modeTitle: { fontSize: 13, lineHeight: 18, textAlign: "center" },
+  modeTitleStacked: { flex: 1, minWidth: 0, textAlign: "left" },
+  amountPanel: {
+    backgroundColor: stitchTokens.parchment,
+    borderColor: stitchTokens.borderWarm,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: space.md,
+    gap: space.md,
+  },
+  amountRange: {
+    borderTopWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    paddingTop: space.sm,
+  },
+  auctionWrap: {
+    gap: space.md,
+  },
+  auctionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.sm,
+  },
+  auctionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+  },
+  auctionIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  auctionHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  auctionTitle: {
+    fontSize: 15,
+    color: stitchTokens.wineDark,
+  },
+  auctionPreviewPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  auctionPreviewText: {
+    fontSize: 12,
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  presetRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  presetChip: {
+    flex: 1,
+    minHeight: 40,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    backgroundColor: stitchTokens.parchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  presetChipActive: {
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.wine,
+  },
+  presetChipText: {
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    fontVariant: ["tabular-nums"],
+  },
+  presetChipTextActive: {
+    color: stitchTokens.gold,
+  },
+  auctionGuideBox: {
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    padding: 12,
+    gap: 10,
+  },
+  auctionGuideRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  auctionGuideIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  auctionGuideTitle: {
+    fontSize: 13,
+    color: stitchTokens.wineDark,
+  },
+  auctionGuideText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: stitchTokens.brownMuted,
+  },
+  auctionGuideDivider: {
+    height: 1,
+    backgroundColor: stitchTokens.borderWarm,
+  },
+  preferencesPanel: {
+    backgroundColor: stitchTokens.warmIvory,
+    borderColor: stitchTokens.borderWarm,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  preferencesToggle: {
+    minHeight: metrics.touch,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    padding: space.md,
+    borderRadius: 12,
+  },
+  preferencesIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: stitchTokens.roseParchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  preferencesHeading: { flex: 1, minWidth: 0 },
+  preferencesFields: {
+    borderTopWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    padding: space.md,
+    gap: space.md,
+  },
+  preferencesNote: { minHeight: 76 },
+  pressed: { opacity: 0.8 },
+  disabled: { opacity: 0.55 },
+});

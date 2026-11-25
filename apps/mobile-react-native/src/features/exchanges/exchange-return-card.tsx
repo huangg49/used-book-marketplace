@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   demoExchangeDeadlineLabel,
   exchangeReturnPhase,
+  isExchangeReturnOverdue,
   sendExchangeCommand,
   type ExchangeReturnAction,
 } from "@used-books/session-client";
@@ -88,6 +89,7 @@ export function ExchangeReturnAndDemoCard({
   const open = (date: string | null) => Boolean(date && Date.parse(date) > now);
   const expired = (date: string | null) =>
     Boolean(date && Date.parse(date) <= now);
+  const returnOverdue = isExchangeReturnOverdue(r, now);
 
   const available: ExchangeReturnAction[] = [];
   if (r) {
@@ -257,14 +259,19 @@ export function ExchangeReturnAndDemoCard({
                 color={stitchTokens.wine}
                 style={{ fontWeight: "700" }}
               >
-                {exchangeReturnPhase[r.phase]}
+                {returnOverdue ? "Quá hạn trả sách" : exchangeReturnPhase[r.phase]}
               </AppText>
             </View>
           </View>
 
           {r.note ? (
             <AppText kind="small" color={colors.ink}>
-              Ghi chú từ Admin: {r.note}
+              Ghi chú của người phụ trách: {r.note}
+            </AppText>
+          ) : null}
+          {returnOverdue ? (
+            <AppText kind="small" color={colors.ink}>
+              Tiền vẫn đang được giữ. Admin phụ trách sẽ đối chiếu bằng chứng để xử lý tiếp.
             </AppText>
           ) : null}
 
@@ -336,9 +343,14 @@ export function ExchangeReturnAndDemoCard({
               <AppText kind="bold">{formatVnd(r.holderDeposit)}</AppText>
               {r.differenceAmount > 0 ? ` · Tiền bù: ${formatVnd(r.differenceAmount)}` : ""}
             </AppText>
+            {!r.outcome && (
+              <AppText kind="small" color={stitchTokens.darkWood}>
+                Tiền vẫn được giữ trong lúc xử lý trả sách. Chưa có ngày hoàn tiền.
+              </AppText>
+            )}
             {r.compensation > 0 ? (
               <AppText kind="small" color={stitchTokens.darkWood}>
-                Mức bồi hoàn dự kiến:{" "}
+                {r.outcome ? "Mức bồi hoàn" : "Mức bồi hoàn dự kiến"}{" "}
                 <AppText kind="bold">{formatVnd(r.compensation)}</AppText>
               </AppText>
             ) : null}

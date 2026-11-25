@@ -6,12 +6,15 @@ import {
 } from "./session-client";
 import {
   acknowledgedBuyNowOrder,
+  directOrderCommission,
   forgetBuyNowOrder,
   pendingBuyNowOrder,
   pendingBuyNowOrderInput,
   pendingOrderResponse,
+  pendingSellerOrder,
   sendBuyNowOrder,
   sendOrderResponse,
+  sendSellerOrder,
 } from "./order-response";
 
 const id = "1101d28c-80c3-4223-b289-e9446ba940be";
@@ -82,6 +85,36 @@ function fake() {
   };
 }
 describe("order decisions across navigation and uncertain responses", () => {
+  it("uses the half-up commission on the agreed book amount", () => {
+    expect(directOrderCommission(200_000)).toBe(10_000);
+    expect(directOrderCommission(10_009)).toBe(500);
+    expect(directOrderCommission(10_010)).toBe(501);
+  });
+
+  it("replays the seller's original order after a lost reply and newer terms", async () => {
+    const f = fake();
+    const body = { conversationId: id, expectedVersion: 4, agreedBookPrice: 90_000 };
+    await expect(sendSellerOrder(f.client, id, body, () => "first")).rejects.toThrow();
+    expect(pendingSellerOrder(f.client, id)).toEqual(body);
+    f.fail(null);
+    await sendSellerOrder(f.client, id, { ...body, expectedVersion: 6, agreedBookPrice: 100_000 }, () => "new");
+    expect(f.calls).toEqual([f.calls[0], f.calls[0]]);
+    expect(f.calls[0]).toEqual({ path: "/orders", body: JSON.stringify(body), key: "first" });
+    expect(pendingSellerOrder(f.client, id)).toBeUndefined();
+  });
+
+  it("clears pending seller terms after a definitive refusal or account change", async () => {
+    const f = fake();
+    const body = { conversationId: id, expectedVersion: 4, agreedBookPrice: 90_000 };
+    f.fail(new ApiError(422, "VALIDATION", "Quote changed"));
+    await expect(sendSellerOrder(f.client, id, body, () => "first")).rejects.toThrow();
+    expect(pendingSellerOrder(f.client, id)).toBeUndefined();
+    f.fail(new ApiError(503, "UNAVAILABLE", "Lost ACK"));
+    await expect(sendSellerOrder(f.client, id, body, () => "second")).rejects.toThrow();
+    f.state({ status: "anonymous" });
+    expect(pendingSellerOrder(f.client, id)).toBeUndefined();
+  });
+
   it("exposes a copy of the pinned purchase revision and clears it on account change", async () => {
     const f=fake();
     const body={quoteId:id,expectedQuoteVersion:1,expectedListingVersion:4,expectedListingRevisionId:id};

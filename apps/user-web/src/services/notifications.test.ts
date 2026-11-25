@@ -72,6 +72,7 @@ describe("durable inbox cache and targets", () => {
       ["ReviewModerated", "TransactionReview", `/reviews?reviewId=${id}`],
       ["AuctionWon", "Auction", `/auctions/${id}/order`],
       ["AuctionSecondChanceOffered", "Auction", `/auctions/${id}`],
+      ["OrderSaleSettled", "Order", `/wallet?sale=${id}#lich-su-giao-dich`],
       ["ExchangeDisputed", "Exchange", `/exchange/${id}`],
       ["ExchangeShipped", "Exchange", `/exchange/${id}#nhan-sach`],
       ["ExchangeReceived", "Exchange", `/exchange/${id}#giao-nhan`],

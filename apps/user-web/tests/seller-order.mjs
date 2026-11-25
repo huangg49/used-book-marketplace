@@ -313,25 +313,31 @@ try {
   await sellerPage
     .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
     .click();
-  const price = sellerPage.getByRole("spinbutton", { name: /^Giá sách đã thỏa thuận/ });
-  await sellerPage.locator('dialog[open] input[name="agreedBookPrice"][value="90000"]').waitFor();
-  assert.equal(await price.inputValue(), "90000");
-  assert.equal(await price.getAttribute("readonly") !== null, true);
   const sellerDialog = sellerPage.getByRole("dialog");
+  const price = sellerDialog.getByText("Giá sách đã thỏa thuận (₫)", { exact: true })
+    .locator("..").getByText("90.000 ₫", { exact: true });
+  const consent = sellerDialog.getByRole("checkbox", { name: /đồng ý.*hoa hồng 5%/ });
+  const submitOrder = sellerDialog.getByRole("button", { name: "Tạo đơn cho người mua này", exact: true });
+  await price.waitFor();
+  assert.equal(await submitOrder.isDisabled(), true);
   await sellerDialog.getByText("QA destination, simulated only, Đang tải khu vực…", { exact: true }).waitFor();
   releaseAreas();
   await sellerDialog.getByRole("alert").filter({ hasText: "Chưa tải được tên khu vực" }).waitFor();
   assert.equal(await sellerDialog.getByText(/DEMO-[ABC]/).count(), 0);
   await sellerDialog.getByRole("button", { name: "Thử lại", exact: true }).click();
   await sellerDialog.getByText("QA destination, simulated only, TP.HCM", { exact: true }).waitFor();
-  assert.equal(await price.inputValue(), "90000");
+  assert.equal(await price.isVisible(), true);
+  await consent.check();
   await sellerPage
     .getByRole("button", { name: "Đóng popup", exact: true })
     .click();
   await sellerPage
     .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
     .click();
-  assert.equal(await price.inputValue(), "90000");
+  await price.waitFor();
+  assert.equal(await consent.isChecked(), false);
+  assert.equal(await submitOrder.isDisabled(), true);
+  await consent.check();
   await sellerDialog.getByText("QA destination, simulated only, TP.HCM", { exact: true }).waitFor();
   assert.equal(await sellerDialog.getByText(/DEMO-[ABC]/).count(), 0);
   await captureDialog(sellerPage, "seller-create-desktop.png");
@@ -371,20 +377,17 @@ try {
       await route.continue();
     }
   });
-  await sellerDialog
-    .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
-    .click();
+  await submitOrder.click();
   await sellerPage
     .getByRole("alert")
     .filter({ hasText: "Chưa xác nhận được đơn đã tạo" })
     .waitFor();
-  assert.equal(await price.isDisabled(), true);
+  assert.equal(await price.isVisible(), true);
+  assert.equal(await consent.isChecked(), true);
   const replayed = sellerPage.waitForResponse(
     (r) => r.url().endsWith("/api/v1/orders") && r.status() === 200,
   );
-  await sellerDialog
-    .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
-    .click();
+  await submitOrder.click();
   const createReceipt = await (await replayed).json();
   assert.equal(createReceipt.entityType, "Order");
   assert.equal(createAttempts.length, 2);
@@ -439,6 +442,8 @@ try {
     (await fixture.api(`/listings/${listingId}`)).purchaseAvailability.status,
     "AwaitingPayment",
   );
+  const shelf = await fixture.api("/listings?limit=50");
+  assert.equal(shelf.items.some((item) => item.id === listingId), false);
   await buyerPage.screenshot({
     path: path.join(artifacts, "buyer-payment-mobile.png"),
     fullPage: true,

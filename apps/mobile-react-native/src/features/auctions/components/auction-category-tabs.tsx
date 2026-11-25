@@ -1,82 +1,74 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { AppText } from "../../../core/ui/text";
-import { Icon, stitchTokens } from "../../../core/ui";
+import { AppText, Icon, radius, space, stitchTokens } from "../../../core/ui";
 
-export type CategoryTabId =
-  | "all"
-  | "ending_soon"
-  | "watchlist"
-  | "zero_vnd";
+export type CategoryTabId = "all" | "ending_soon" | "buy_now" | "no_bids";
 
 export interface CategoryTab {
   id: CategoryTabId;
   title: string;
   count?: number;
-  icon?: "clock" | "bookmark" | "flame" | "gavel";
+  icon?: "clock" | "bolt" | "gavel";
 }
 
 export interface AuctionCategoryTabsProps {
   readonly selectedTab: CategoryTabId;
   readonly onSelectTab: (tab: CategoryTabId) => void;
   readonly totalCount: number;
-  readonly watchlistCount: number;
+  readonly watchlistCount?: number;
 }
 
 export function AuctionCategoryTabs({
   selectedTab,
   onSelectTab,
   totalCount,
-  watchlistCount,
 }: AuctionCategoryTabsProps) {
   const tabs: CategoryTab[] = [
-    { id: "all", title: "Đang diễn ra", count: totalCount },
-    { id: "ending_soon", title: "Gần kết thúc (<1h)", icon: "clock" },
-    {
-      id: "watchlist",
-      title: "Đang theo dõi",
-      count: watchlistCount,
-      icon: "bookmark",
-    },
-    { id: "zero_vnd", title: "Phiên giá tốt" },
+    { id: "all", title: "Đang mở", count: totalCount },
+    { id: "ending_soon", title: "Sắp kết thúc (<1h)", icon: "clock" },
+    { id: "buy_now", title: "Có mua ngay", icon: "bolt" },
+    { id: "no_bids", title: "Chưa ai trả giá", icon: "gavel" },
   ];
 
   return (
     <ScrollView
       horizontal
+      style={styles.scrollView}
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.categoryTabsScroll}
+      contentContainerStyle={styles.scrollContent}
+      accessibilityRole="tablist"
     >
       {tabs.map((tab) => {
         const isSelected = selectedTab === tab.id;
         return (
           <Pressable
             key={tab.id}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isSelected }}
             onPress={() => onSelectTab(tab.id)}
-            style={[
-              styles.categoryTab,
-              isSelected
-                ? styles.categoryTabSelected
-                : styles.categoryTabUnselected,
+            style={({ pressed }) => [
+              styles.tab,
+              isSelected ? styles.tabSelected : styles.tabUnselected,
+              pressed && styles.pressed,
             ]}
           >
-            {tab.id === "all" && <View style={styles.livePulseDot} />}
-            {tab.icon && (
+            {tab.id === "all" ? (
+              <View style={[styles.liveDot, isSelected && styles.liveDotSelected]} />
+            ) : null}
+            {tab.icon ? (
               <Icon
                 name={tab.icon}
-                size={13}
-                color={isSelected ? stitchTokens.white : stitchTokens.wine}
+                size={14}
+                color={isSelected ? stitchTokens.gold : stitchTokens.wine}
               />
-            )}
+            ) : null}
             <AppText
               kind="small"
               style={[
-                styles.categoryTabText,
-                isSelected
-                  ? styles.categoryTabTextSelected
-                  : styles.categoryTabTextUnselected,
+                styles.tabText,
+                isSelected ? styles.tabTextSelected : styles.tabTextUnselected,
               ]}
             >
-              {tab.title} {tab.count !== undefined ? `(${tab.count})` : ""}
+              {tab.count !== undefined ? `${tab.title} (${tab.count})` : tab.title}
             </AppText>
           </Pressable>
         );
@@ -86,46 +78,45 @@ export function AuctionCategoryTabs({
 }
 
 const styles = StyleSheet.create({
-  categoryTabsScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  scrollView: { flexGrow: 0, marginTop: space.md },
+  scrollContent: {
+    paddingHorizontal: space.lg,
+    paddingVertical: 4,
     gap: 8,
   },
-  categoryTab: {
+  tab: {
+    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
   },
-  categoryTabSelected: {
+  tabSelected: {
     backgroundColor: stitchTokens.wine,
   },
-  categoryTabUnselected: {
+  tabUnselected: {
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
   },
-  categoryTabText: {
-    fontSize: 12,
+  tabText: {
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: "600",
+    includeFontPadding: false,
   },
-  categoryTabTextSelected: {
-    color: stitchTokens.white,
-  },
-  categoryTabTextUnselected: {
-    color: stitchTokens.deepCocoa,
-  },
-  livePulseDot: {
+  tabTextSelected: { color: stitchTokens.warmIvory },
+  tabTextUnselected: { color: stitchTokens.deepCocoa },
+  liveDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: stitchTokens.flashRed,
+    backgroundColor: stitchTokens.wine,
   },
+  liveDotSelected: {
+    backgroundColor: stitchTokens.gold,
+  },
+  pressed: { opacity: 0.78 },
 });

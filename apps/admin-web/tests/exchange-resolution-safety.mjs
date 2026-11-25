@@ -91,6 +91,14 @@ try {
         assigned = true;
         return route.fulfill({ json: { entityId: item.id, state: 'Assigned' } });
       }
+      if (url.pathname.endsWith('/demo-advance')) {
+        assert.deepEqual(route.request().postDataJSON(), {
+          deadline: 'Return', expectedVersion: current.revision,
+        });
+        current = { ...current, revision: current.revision + 1, demoDeadline: undefined,
+          returnResolution: { ...current.returnResolution, returnDueAt: new Date(Date.now() - 1000).toISOString() } };
+        return route.fulfill({ json: current });
+      }
       assert(url.pathname.endsWith('/return-resolution'));
       const command = { body: route.request().postDataJSON(), key: route.request().headers()['idempotency-key'] };
       if (command.body.action === 'VerifyOutboundDelivery') {
@@ -264,6 +272,34 @@ try {
   await preview.getByRole('button', { name: 'Xác nhận phán quyết', exact: true }).click();
   const confirmation = page.getByRole('dialog', { name: /Xác nhận khấu trừ 100[.]000.*cho Bình QA/ });
   await expect(confirmation.getByText(/Khấu trừ 100[.]000.*thiệt hại/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await preview.getByRole('button', { name: 'Toàn phần · Yêu cầu trả sách' }).click();
+  await expect(preview.getByText(/Đang giữ .* trong ký quỹ đến khi xử lý xong/)).toBeVisible();
+  await expect(preview.getByText('Dòng tiền sau phán quyết', { exact: true })).toHaveCount(0);
+  current = {
+    ...current,
+    demoDeadline: 'Return',
+    returnResolution: {
+      phase: 'ReturnOrdered', ownerId: item.recipientId, holderId: item.initiatorId,
+      listingId: item.recipientListingId, note: 'QA: yêu cầu trả sách.', appeals: [],
+      evidenceDueAt: null, appealDueAt: now, effectiveAt: now,
+      returnDueAt: new Date(Date.now() + 72 * 3600000).toISOString(),
+      trackingCode: null, returnedAt: null, checkDueAt: null, outcome: null,
+      compensation: 0, ownerDeposit: 200000, holderDeposit: 300000,
+      differenceAmount: 100000, differencePayerId: item.initiatorId,
+    },
+  };
+  await page.getByRole('button', { name: 'Tải lại hồ sơ' }).click();
+  await page.getByRole('button', { name: 'Tua hạn trả sách · Demo' }).click();
+  await page.getByRole('button', { name: 'Tua ngay', exact: true }).click();
+  const confirmSkip = page.getByRole('dialog', { name: 'Xác nhận tua hạn demo?' });
+  await expect(confirmSkip.getByText(/Tiền vẫn được giữ/i)).toBeVisible();
+  await confirmSkip.getByRole('button', { name: 'Xác nhận', exact: true }).click();
+  await expect(page.getByText('Quá hạn trả sách.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quá hạn trả sách', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tua hạn trả sách · Demo' })).toHaveCount(0);
+  await expect(page.getByLabel('Thao tác với hồ sơ').locator('option[value="OrderCompensation"]')).toHaveCount(1);
+  await page.screenshot({ path: path.join(artifacts, 'return-overdue-320.png'), fullPage: true });
   assert.deepEqual(errors, []);
   console.log('PASS: held queue, read-only out-of-scope case, assignment, return evidence request, same key/body after lost ACK, error/retry/empty, inspection compensation eligibility, 1440/390/320 + 130% text. UI HTTP fixtures.');
 } finally {

@@ -29,6 +29,7 @@ import { DirectOrderReleasePolicy } from '../src/modules/wallet/direct-order-rel
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { Gate } from './helpers/mongo-gate.js';
 import { validates } from './helpers/contract.js';
+import { connectTransactions } from './helpers/live-transactions.js';
 import { prepareDatabase, testUrl } from './mongo/harness.js';
 import type { RoleCode } from '../src/database/mongo/documents.js';
 
@@ -1303,6 +1304,35 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     expect(await db.c.ledger_journals.countDocuments({ orderId: created.entityId })).toBe(0);
     expect(await db.c.exclusive_commitments.countDocuments({ listingId: f.l.entityId, status: 'Active' })).toBe(1);
   });
+  it('pushes direct order creation to the buyer inbox and payment to the seller detail', async () => {
+    const f = await sale();
+    await fund(f.buyer, 80000);
+    const [buyer, seller] = await Promise.all([
+      connectTransactions(app, f.buyer.token),
+      connectTransactions(app, f.seller.token),
+    ]);
+    try {
+      const inbox = { kind: 'inbox', id: f.buyer.id };
+      const received: unknown[] = [];
+      buyer.on('transaction:changed', target => received.push(target));
+      expect(await buyer.timeout(1500).emitWithAck('transaction:watch', inbox)).toEqual({ ok: true });
+      const { body: order } = await post('/orders', f.body, f.seller).expect(200);
+      await vi.waitFor(() => expect(received).toContainEqual(inbox), { timeout: 1500 });
+
+      const target = { kind: 'order', id: order.entityId };
+      const sellerUpdates: unknown[] = [];
+      seller.on('transaction:changed', update => sellerUpdates.push(update));
+      expect(await seller.timeout(1500).emitWithAck('transaction:watch', target)).toEqual({ ok: true });
+      await post(`/orders/${order.entityId}/pay`, { expectedVersion: 1 }, f.buyer).expect(200);
+      await vi.waitFor(() => expect(sellerUpdates).toEqual([target]), { timeout: 1500 });
+      expect((await get(`/me/orders/${order.entityId}`, f.seller).expect(200)).body.state).toBe('PendingSellerConfirmation');
+      await post(`/orders/${order.entityId}/cancel-paid`, { expectedVersion: 2 }, f.buyer).expect(200);
+      await app.get(OrdersService).refund(order.entityId);
+    } finally {
+      buyer.disconnect();
+      seller.disconnect();
+    }
+  });
   it('holds P with shipping zero only on Buyer payment, replays each command and refunds a legal cancellation', async () => {
     const f = await sale();
     await fund(f.buyer, 80000);
@@ -1741,6 +1771,7 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
             app.get(LedgerService).settleDirectOrder(
               tx,
               {
+                ...f.amounts,
                 _id: f.id,
                 sellerId: f.seller.id,
                 buyerTotal: f.amounts.buyerTotal,
@@ -1756,6 +1787,7 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
             app.get(LedgerService).settlePointOrder(
               tx,
               {
+                ...f.amounts,
                 _id: f.id,
                 sellerId: f.seller.id,
                 buyerTotal: f.amounts.buyerTotal,

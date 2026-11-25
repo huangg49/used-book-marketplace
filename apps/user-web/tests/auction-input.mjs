@@ -96,7 +96,9 @@ try {
     await expect(page).toHaveURL(/sort=priceDesc/);
     await expect.poll(() => page.evaluate(() => window.qa.animations.some(a => a.options.duration === 220))).toBe(true);
     // Keep serverTime identical: a changed auction object alone must reach the card.
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    // Price feedback only plays in the viewport. Keep the first row visible
+    // before checking the card that the new price moves into that row.
+    await active.first().scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
     rows = rows.map(a => a.id === uuid(1) ? {
       ...a, title: 'Phiên QA cập nhật', currentPrice: 180000, minimumBid: 190000, bidderCount: 4,

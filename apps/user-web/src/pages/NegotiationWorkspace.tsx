@@ -7,7 +7,10 @@ import { commandOutcomeUnknown } from "../hooks/useAuctionClock";
 import { createdExchange, pendingProposal } from "../services/exchange";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError } from "@used-books/session-client";
+import { ApiError, buyerSaleFeeText, directOrderHoldNotes, directSellerAmounts } from "@used-books/session-client";
+import { TransactionNotes } from "../components/TransactionReview";
+import { SaleFeeBreakdown } from "../components/SaleFeeBreakdown";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { session } from "../lib/session";
@@ -243,8 +246,12 @@ export function NegotiationWorkspace({
   });
 
   const queryClient = useQueryClient();
+  const orderKey = ["direct-order", userId, room.orderId] as const;
+  const orderLive = useTransactionLive("order", room.orderId, () => {
+    void queryClient.invalidateQueries({ queryKey: orderKey, exact: true });
+  });
   const order = useQuery({
-    queryKey: ["direct-order", userId, room.orderId],
+    queryKey: orderKey,
     queryFn: () => getOrder(room.orderId!),
     enabled: !!room.orderId,
     refetchOnMount: "always",
@@ -265,7 +272,7 @@ export function NegotiationWorkspace({
         state === "InTransit" ||
         state === "Inspection" ||
         state === "SettlementPending"
-        ? 5000
+        ? (orderLive ? 30_000 : 5_000)
         : false;
     },
   });
@@ -720,6 +727,9 @@ export function NegotiationWorkspace({
   const buyerTotal = orderData
     ? orderData.amounts.buyerTotal
     : effectiveBookPrice + shippingFee;
+  const sellerAmounts = orderData && seller ? directSellerAmounts(orderData.amounts) : null;
+  const saleClosed = orderData?.state === "Cancelled" || orderData?.state === "PaymentExpired";
+  const buyerRefund = isBuyer ? orderData?.refundedAmount ?? 0 : 0;
   const shippingAddress = orderData?.shippingAddress ?? orderData?.ownAddress;
   const legacyDeliveryReview = orderData &&
     (!orderData.deliveryJourney || (orderData.state === "ResolutionPending" && !orderData.deliveryJourney.issue))
@@ -876,6 +886,7 @@ export function NegotiationWorkspace({
 
                     {isBuyer ? (
                       <div style={{ display: "grid", gap: 8, marginTop: 4 }}>
+                        <TransactionNotes notes={directOrderHoldNotes("Negotiated")} />
                         {(orderData.paymentEnabled || pendingAction === "pay") && (
                           <button
                             type="button"
@@ -972,8 +983,8 @@ export function NegotiationWorkspace({
                         <div>
                           <h4>Đã thanh toán · Chờ người bán xác nhận</h4>
                           <p>
-                            Tiền đã được giữ an toàn trong quỹ bảo chứng. Đang chờ người bán xác
-                            nhận nhận đơn để tiến hành chuẩn bị sách.
+                            Ví đã giữ {formatVnd(orderData.moneyHeld)}. Chờ người bán xác nhận
+                            {orderData.sellerConfirmationDeadline ? ` đến ${orderTime(orderData.sellerConfirmationDeadline)}` : " theo hạn của đơn"}. Nếu hết hạn, hệ thống xử lý hoàn tiền về Ví.
                           </p>
                         </div>
                       </div>
@@ -1117,7 +1128,7 @@ export function NegotiationWorkspace({
                         </p>
                       </div>
                     </div>
-                    {seller && orderData.deliveryJourney && <Link to="/wallet" className={styles.secondaryActionBtn}>
+                    {seller && <Link to={`/wallet?sale=${orderData.id}#lich-su-giao-dich`} className={styles.secondaryActionBtn}>
                       Đối chiếu tiền bán trong ví
                     </Link>}
 
@@ -1138,8 +1149,11 @@ export function NegotiationWorkspace({
                           ? "Đơn hàng tự động hủy do người mua không thanh toán trong thời hạn quy định."
                           : orderData.state === "SettlementPending"
                             ? "Đơn đang trong quá trình xử lý hoàn tiền về ví cho người mua."
-                            : "Đơn hàng đã được hủy. Mọi khoản tiền ký quỹ đã được xử lý hoàn lại theo quy định."}
+                            : "Đơn hàng đã được hủy."}
                       </p>
+                      {buyerRefund > 0 && (
+                        <p>Đã hoàn {formatVnd(buyerRefund)} về Ví. <Link to="/wallet#lich-su-giao-dich">Xem lịch sử giao dịch Ví</Link></p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2014,6 +2028,11 @@ export function NegotiationWorkspace({
                   </dd>
                 </div>
               </dl>
+              {saleClosed ? <p className={exchangeStyles.proposalAmountNote}>Đơn đã đóng. Không thu phí dịch vụ.</p> : sellerAmounts ? (
+                <SaleFeeBreakdown amounts={sellerAmounts} settled={orderData?.state === "Completed"} />
+              ) : isBuyer ? (
+                <p className={exchangeStyles.proposalAmountNote}>{buyerSaleFeeText(orderData?.amounts.commissionBps ?? room.quotePreview?.commissionBps)}</p>
+              ) : null}
               <p className={exchangeStyles.proposalAmountNote}>
                 <Clock
                   size={13}
@@ -2022,7 +2041,7 @@ export function NegotiationWorkspace({
                 />
                 {orderData
                   ? orderData.paidAt
-                    ? `Đã thanh toán lúc ${orderTime(orderData.paidAt)}. Tiền đang giữ an toàn trong quỹ bảo chứng.`
+                    ? saleClosed ? "Đơn đã đóng." : orderData.state === "Completed" ? "Đã quyết toán." : `Đã thanh toán lúc ${orderTime(orderData.paidAt)}. Tiền đang giữ ${formatVnd(orderData.moneyHeld)}.`
                     : `Chưa trừ tiền từ ví. Cần thanh toán trước ${orderTime(orderData.paymentDeadline)} để giữ sách.`
                   : quoteCurrent
                     ? "Đã có địa chỉ nhận sách. Chờ người bán tạo đơn."

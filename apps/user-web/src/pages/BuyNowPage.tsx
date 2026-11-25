@@ -2,7 +2,8 @@ import { BundleManifest, BundleAcknowledgment } from "../components/BookBundle";
 import { listingTitle } from "../lib/book-bundle";
 import { buyNowError } from "../lib/buy-now-error";
 import { useQuery } from "@tanstack/react-query";
-import { ApiError } from "@used-books/session-client";
+import { ApiError, buyerSaleFeeText, directOrderHoldNotes, saleFeeAmountsSchema } from "@used-books/session-client";
+import { TransactionNotes } from "../components/TransactionReview";
 import { useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -61,6 +62,7 @@ const quoteSchema = z.object({
     bookPrice: z.number(),
     shippingFee: z.number(),
     buyerTotal: z.number(),
+    ...saleFeeAmountsSchema.partial().shape,
   }),
 });
 type Attempt = {
@@ -646,8 +648,8 @@ function BuyNowListing() {
                 <dt>Phí giao hàng</dt>
                 <dd>
                   {prepared
-                    ? formatVnd(prepared.amounts.shippingFee)
-                    : "Miễn phí"}
+                    ? prepared.amounts.shippingFee > 0 ? formatVnd(prepared.amounts.shippingFee) : "Miễn phí"
+                    : "Chờ báo giá"}
                 </dd>
               </div>
               <div>
@@ -772,21 +774,21 @@ function BuyNowListing() {
                 <dt>Tiền sách</dt>
                 <dd>{formatVnd(prepared.amounts.bookPrice)}</dd>
               </div>
-              {(prepared?.amounts.shippingFee ?? 0) > 0 && (
-                <div>
-                  <dt>Phí giao hàng</dt>
-                  <dd>{formatVnd(prepared.amounts.shippingFee)}</dd>
-                </div>
-              )}
+              <div>
+                <dt>Phí giao hàng</dt>
+                <dd>{prepared.amounts.shippingFee > 0 ? formatVnd(prepared.amounts.shippingFee) : "Miễn phí"}</dd>
+              </div>
               <div className={styles.total}>
                 <dt>Tổng thanh toán</dt>
                 <dd>{formatVnd(prepared.amounts.buyerTotal)}</dd>
               </div>
             </dl>
-            <p className={styles.note}>
-              Đặt mua sẽ giữ sách 15 phút để bạn thanh toán từ ví. Thanh toán
-              thành công là chốt đơn; người bán chuẩn bị gửi trong 48 giờ.
-            </p>
+            <p className={styles.note}>{buyerSaleFeeText(prepared.amounts.commissionBps)}</p>
+            <TransactionNotes notes={[
+              { label: "Hạn thanh toán", detail: "Sách được giữ 15 phút sau khi đặt mua." },
+              ...directOrderHoldNotes("BuyNow"),
+              { label: "Sau khi thanh toán", detail: "Người bán chuẩn bị gửi sách trong 48 giờ." },
+            ]} />
             <div className={styles.actions}>
               <button
                 className={styles.primary}

@@ -166,6 +166,14 @@ refund failure. This funding increment adds no dispatch/strike/settlement-to-sel
 Order version differs from ownership/commitment version after funding. Reconciliation
 includes holds; history uses immutable posting sequence. Restart API and worker together.
 
+Khi đơn bán trực tiếp hoặc đấu giá được quyết toán, bút toán ghi có cho người bán
+và thông báo `OrderSaleSettled` được lưu trong cùng giao dịch MongoDB. Phí, tiền
+sách và số thực nhận dựa trên điều khoản đã chốt. Biên nhận trong Ví chỉ hiện
+cho chủ khoản ghi có và khớp với số đã ghi. Khoản hoàn ứng giao nhận của đơn mua
+trực tiếp lịch sử hiện riêng. Cước giao từ điểm và tiền cọc đổi sách không nằm
+trong biên nhận hoa hồng. Bản nâng cấp `0090` thêm loại thông báo cho lần quyết
+toán mới. Đơn cũ có thể xem lại biên nhận dựa trên dữ liệu đã ghi.
+
 ## Mua ngay DirectDelivery
 
 [ADR0038](../adr/0038-direct-buy-now-orders.md) bổ sung Buyer-created BuyNow cạnh
@@ -177,6 +185,9 @@ agreement không có purchaseMode là Negotiated; gate completion không đổi.
 Public listing chỉ hiển thị “Đang giao dịch”/InTransaction khi Order active có
 paidAt sau payment commit. Unpaid vẫn giữ commitment15phút nhưng là “Chờ thanh
 toán”/AwaitingPayment; không suy đã thanh toán từ Reserved hoặc OrderCreated.
+Kệ công khai và tìm kiếm bỏ qua bài có đơn mua bán trực tiếp đang mở. Link chi
+tiết và ảnh vẫn theo quyền đọc công khai hiện hành, để xem trạng thái từ hội
+thoại hoặc đơn. API vẫn kiểm khả năng tạo đơn mới theo trạng thái và commitment.
 
 ## Phiếu thỏa thuận mua/đổi chung
 

@@ -1,4 +1,4 @@
-import { withdrawalStateSchema } from "@used-books/session-client";
+import { saleSettlementReceiptSchema, withdrawalStateSchema } from "@used-books/session-client";
 import type { components } from "@used-books/api-contract";
 import { z } from "zod";
 
@@ -33,6 +33,7 @@ export const walletHistoryItem = z.object({
   withdrawalState: withdrawalStateSchema.nullable().optional(),
   topupId: z.uuid().nullable(),
   orderId: z.uuid().nullable(),
+  saleSettlement: saleSettlementReceiptSchema.optional(),
   type: z.enum([
     "Topup",
     "OrderPayment",

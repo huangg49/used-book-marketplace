@@ -488,7 +488,6 @@ export function SearchScreen() {
       header={
         <TopNavbar
           notificationCount={notificationCount}
-          hasNotification={notificationCount > 0}
           onNotificationsPress={() => setNotificationsOpen(true)}
           onMessagesPress={() => router.push("/chat-inbox")}
         />

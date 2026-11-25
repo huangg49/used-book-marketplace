@@ -203,6 +203,8 @@ try {
   await bookChoice.focus();
   await bookChoice.press("Space");
   assert.equal(await bookChoice.isChecked(), true);
+  await offer.getByText(/Phí dịch vụ đổi sách: 0đ/).waitFor();
+  await offer.getByText(/mỗi bên tự trả cước chiều mình gửi/).waitFor();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await capture(page, "exchange-compose-desktop.png");
   await page.setViewportSize({ width: 390, height: 844 });

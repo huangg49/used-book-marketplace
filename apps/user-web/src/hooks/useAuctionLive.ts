@@ -72,8 +72,6 @@ export function useAuctionLive(id: string | undefined, onChange?: () => void) {
       pending = null
       if (!impact || disposed) return
       const need = privateRefresh(impact, viewerOf(queryClient, id))
-      // Own standing (leading/outbid) is private: read it again over REST.
-      if (need.participation) void queryClient.invalidateQueries({ queryKey: ['auction-participation', id] })
       // ADR 0075: an outbid participant's hold is released to the wallet.
       if (need.wallet) void queryClient.invalidateQueries({ queryKey: ['wallet-summary'] })
       if (need.notifications) void queryClient.invalidateQueries({ queryKey: ['notifications'] })
@@ -81,6 +79,9 @@ export function useAuctionLive(id: string | undefined, onChange?: () => void) {
       if (need.pointOrder) void queryClient.invalidateQueries({ queryKey: ['point-order'] })
     }
     const schedule = (impact: LiveImpact) => {
+      // Read own standing as soon as the confirmed price changes.
+      if (privateRefresh(impact, viewerOf(queryClient, id)).participation)
+        void queryClient.invalidateQueries({ queryKey: ['auction-participation', id] })
       pending = pending
         ? { lifecycle: pending.lifecycle || impact.lifecycle, standing: pending.standing || impact.standing }
         : impact
@@ -99,6 +100,8 @@ export function useAuctionLive(id: string | undefined, onChange?: () => void) {
     }
     const moved = (impact: LiveImpact | null): impact is LiveImpact => !!impact && (impact.lifecycle || impact.standing)
     const watch = () => {
+      // A timed REST response refreshes the shared clock on reconnect.
+      void queryClient.invalidateQueries({ queryKey: ['auction', id], exact: true }, { cancelRefetch: false })
       s.emit('auction:watch', id, (reply: { ok?: boolean; auction?: unknown }) => {
         if (disposed) return
         const result = reply?.ok ? apply(reply.auction) : null

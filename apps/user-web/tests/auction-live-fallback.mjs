@@ -131,6 +131,22 @@ try {
   await expect(price).toContainText('130.000', { timeout: 10_000 });
   checks.push('a newer REST read still applies');
 
+  await page.evaluate(() => {
+    const now = Date.now.bind(Date);
+    Date.now = () => now() + 2 * 60 * 60 * 1000;
+  });
+  await page.waitForTimeout(1200);
+  await expect(page.getByText(/đang chốt kết quả/i)).toHaveCount(0);
+  checks.push('moving the device date past the deadline does not close the countdown');
+
+  const beforeReconnect = reads;
+  rest = ack = snapshot(140_000, 5_000);
+  for (const socket of srv.io.of('/auctions').sockets.values()) socket.conn.close();
+  await expect.poll(() => reads, { timeout: 10_000 }).toBeGreaterThan(beforeReconnect);
+  await expect(price).toContainText('140.000', { timeout: 10_000 });
+  await expect(page.getByText('Trực tiếp', { exact: true })).toBeVisible();
+  checks.push('transport reconnect reads the latest timestamp and price');
+
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ ok: true, checks }, null, 2));
 } finally {

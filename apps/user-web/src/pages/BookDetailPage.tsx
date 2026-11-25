@@ -1,4 +1,3 @@
-import { AddToCart } from "../components/AddToCart";
 import { BundleManifest } from "../components/BookBundle";
 import {SupportLink} from '../features/support/SupportLink';
 import { listingTitle } from "../lib/book-bundle";
@@ -132,6 +131,9 @@ export function BookDetailPage() {
   );
   const conversationToOpen =
     buyerOrderConversation ?? sellerOrderConversation ?? activeConversation;
+  const offersExchange = book.mode === "Exchange" || book.mode === "Both";
+  const canProposeExchange = offersExchange && !isOwner && !book.bundle &&
+    (!held || (book.purchaseAvailability.status === "InNegotiation" && Boolean(activeConversation)));
   function requestPurchase() {
     navigate(`/chat/start/${book.id}?intent=Negotiation&openChat=1`);
   }
@@ -216,7 +218,7 @@ export function BookDetailPage() {
                 </Link>
               )}
             </section>
-            {(book.salePrice !== null || ["Exchange", "Both"].includes(book.mode)) && (
+            {(book.salePrice !== null || offersExchange) && (
               <section className={styles.purchaseSection} aria-labelledby="purchase-heading">
                 <h2 id="purchase-heading" className={styles.purchaseSectionTitle}>
                   {buyerOrderConversation
@@ -288,14 +290,6 @@ export function BookDetailPage() {
                   )}
                 </div>
               )}
-              {!isOwner && !held && book.salePrice !== null && (
-                <AddToCart
-                  key={state.status === "authenticated" ? state.user.id : "anonymous"}
-                  listingId={book.id}
-                  listingVersion={book.version}
-                  disabled={detail.isFetching || detail.isError}
-                />
-              )}
               {held && !orderConversation && state.status === 'authenticated' && (
                 <Link className={styles.secondary} to="/orders">
                   <ShoppingBag size={18} aria-hidden="true" />
@@ -303,14 +297,14 @@ export function BookDetailPage() {
                   <ArrowUpRight size={18} aria-hidden="true" />
                 </Link>
               )}
-              {book.salePrice !== null && ["Exchange", "Both"].includes(book.mode) && (
+              {book.salePrice !== null && canProposeExchange && (
                 <div className={styles.actionDivider} aria-hidden="true">
                   <span className={styles.dividerDot} />
                 </div>
               )}
-              {["Exchange", "Both"].includes(book.mode) && (
+              {offersExchange && (
                 <>
-                  {!isOwner && !book.bundle && (!held || (book.purchaseAvailability.status === "InNegotiation" && activeConversation)) && (
+                  {canProposeExchange && (
                     <Link className={book.salePrice === null ? styles.primary : styles.secondary} to={ROUTES.exchangeCompose(book.id)}>
                       <ArrowLeftRight size={18} aria-hidden="true" />
                       Đề nghị đổi sách

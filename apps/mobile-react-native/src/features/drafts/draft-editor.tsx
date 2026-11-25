@@ -1,18 +1,18 @@
 import { clearAiPriceAttribution, findPriceReference, createAssistRequest, type PriceReferenceState } from "@used-books/session-client";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, View, type ScrollView } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BackHandler, Platform, Pressable, StyleSheet, View, type ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "expo-router";
+import { useFocusEffect, useNavigation } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
+import { ApiError } from "../../core/api/session-client";
 import { useSession } from "../../core/session/session-provider";
 import {
   ActionBar,
   AppModal,
   AppText,
-  BackAction,
   Button,
   Checkbox,
   ConfirmDialog,
@@ -23,7 +23,7 @@ import {
   colors,
   space,
   stitchTokens,
-  WebBrandLogo,
+  WineHeader,
 } from "../../core/ui";
 import { mediaPage, privateDraft, type Draft, type Media } from "./contracts";
 import { photoError, useForeground } from "./draft-media";
@@ -40,6 +40,7 @@ import {
   stepFields,
   editableListing,
   moderationLabel,
+  listingSummary,
   displayPrice,
   type Errors,
 } from "./listing-form";
@@ -74,7 +75,6 @@ import {
 import { PriceSuggestionPanel } from "./price-suggestion-panel";
 import { BundleEditor } from "../bundles/bundle-editor";
 import { BundleManifest } from "../bundles/bundle-manifest";
-import { AutumnDraftBackground } from "./autumn-draft-background";
 import { blankBundle, bundleCondition, type BookBundle } from "../bundles/book-bundle";
 
 const stepLabels = [
@@ -122,7 +122,7 @@ const auctionStepHelp = [
   stepHelp[0],
   stepHelp[1],
   stepHelp[2],
-  "Giá trị khai báo là mức bồi thường tối đa nếu sách hư hỏng hoặc thất lạc tại điểm; không phải giá bán.",
+  "Dùng làm mức bồi thường tối đa tại điểm kiểm định, không phải giá bán.",
   "Xem lại thông tin trước khi gửi duyệt. Sách đấu giá không hiển thị trên kệ mua/đổi.",
 ] as const;
 
@@ -161,6 +161,7 @@ export function DraftEditor({
     [retryAvailable, setRetryAvailable] = useState(false),
     [uncertain, setUncertain] = useState(false);
   const [stopped, setStopped] = useState(false);
+  const [quotaReached, setQuotaReached] = useState(false);
   const [editingApproved, setEditingApproved] = useState(false),
     [reviseConfirm, setReviseConfirm] = useState(false),
     [lifecyclePending, setLifecyclePending] = useState(false);
@@ -228,6 +229,20 @@ export function DraftEditor({
   const dirty =
     JSON.stringify(form) !==
     JSON.stringify(fromContent(base.currentRevision.content));
+  const returnToList = useCallback(() => {
+    if (busy) return;
+    if (dirty || uncertain || catalogDirty || lifecyclePending) setLeave(true);
+    else onBack();
+  }, [busy, dirty, uncertain, catalogDirty, lifecyclePending, onBack]);
+
+  useFocusEffect(useCallback(() => {
+    if (Platform.OS !== "android") return;
+    const listener = BackHandler.addEventListener("hardwareBackPress", () => {
+      returnToList();
+      return true;
+    });
+    return () => listener.remove();
+  }, [returnToList]));
 
   const navigation = useNavigation();
   const pendingNavigation = useRef<
@@ -474,6 +489,8 @@ export function DraftEditor({
       setEditingApproved(false);
       setReviseConfirm(false);
       setUncertain(false);
+      setStopped(false);
+      setQuotaReached(false);
       setDeclared(false);
       setMessage(
         isStopped
@@ -485,6 +502,7 @@ export function DraftEditor({
       if (wasSubmit) go(4);
     } catch (e) {
       setStopped(!!intent.current?.stopped);
+      setQuotaReached(e instanceof ApiError && e.code === "ListingLimitReached");
       setUncertain(true);
       setError(photoError(e));
       scroll.current?.scrollTo({ y: 0, animated: false });
@@ -610,6 +628,8 @@ export function DraftEditor({
       attempt.current = null;
       setRetryAvailable(false);
       setUncertain(false);
+      setStopped(false);
+      setQuotaReached(false);
       setCheck({ errors: {}, submit: false });
       setDeclared(false);
       setError("");
@@ -624,6 +644,7 @@ export function DraftEditor({
   };
 
   const isApprovedView = base.state.moderation === "Approved" && !editingApproved;
+  const approvedSummary = isApprovedView && !auction ? listingSummary(base, 1) : null;
   const ids = form.mediaIds;
   const navLocked = busy || uncertain || lifecyclePending;
   const canSave = editable && !approvedEdit;
@@ -643,6 +664,7 @@ export function DraftEditor({
         {step > 0 && (editable || step < 5) ? (
           <Button
             key="prev"
+            wine
             secondary
             title="Trước"
             disabled={navLocked}
@@ -652,6 +674,7 @@ export function DraftEditor({
         {canSave ? (
           <Button
             key="save"
+            wine
             secondary
             title="Lưu nháp"
             busy={busy}
@@ -670,7 +693,8 @@ export function DraftEditor({
         ) : hasPrimary && step === 4 ? (
           <Button
             key="submit"
-            title={
+            title={approvedEdit ? "Gửi sửa" : "Gửi duyệt"}
+            accessibilityLabel={
               approvedEdit ? "Gửi bản sửa để duyệt lại" : "Lưu và gửi duyệt"
             }
             disabled={locked || retryAvailable}
@@ -688,93 +712,38 @@ export function DraftEditor({
     <Screen
       scrollRef={scroll}
       footer={footer}
-      background={<AutumnDraftBackground />}
-      canvasColor="transparent"
+      headerExtendsToStatusBar
+      header={
+        <WineHeader
+          title={
+            auction
+              ? isApprovedView
+                ? "Sách đấu giá"
+                : approvedEdit
+                  ? "Sửa sách đấu giá"
+                  : "Tạo sách đấu giá"
+              : isApprovedView
+                ? "Bài đăng"
+                : approvedEdit
+                  ? "Chỉnh sửa bài đăng"
+                  : "Thông tin bài đăng"
+          }
+          subtitle={
+            isApprovedView
+              ? auction
+                ? "Kênh đấu giá · Đã duyệt"
+                : undefined
+              : moderationLabel[base.state.moderation]
+          }
+          backLabel={auction ? "Về gửi đấu giá" : "Về sách của tôi"}
+          backDisabled={busy}
+          onBack={returnToList}
+        />
+      }
+      canvasColor={stitchTokens.creamBg}
     >
       {/* Top Header & Dismiss Bar */}
       <View style={{ gap: space.sm }}>
-        <BackAction
-          title="Về sách của tôi"
-          disabled={busy}
-          onPress={() =>
-            dirty || uncertain || catalogDirty || lifecyclePending
-              ? setLeave(true)
-              : onBack()
-          }
-        />
-
-        {/* Slip Header (Web Match) */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingBottom: space.xs,
-            borderBottomWidth: 1,
-            borderColor: stitchTokens.peachBorder,
-            marginTop: space.xs,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View
-              style={{
-                backgroundColor: stitchTokens.wine,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 8,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <WebBrandLogo scale={0.5} />
-            </View>
-            <View
-              style={{
-                width: 1,
-                height: 18,
-                backgroundColor: stitchTokens.peachBorder,
-                marginHorizontal: 1,
-              }}
-            />
-            <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 11, fontWeight: "500" }}>
-              Phiếu thông tin sách
-            </AppText>
-          </View>
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: isApprovedView ? stitchTokens.greenBorderSoft : stitchTokens.darkRed,
-                backgroundColor: isApprovedView ? colors.successSurface : "transparent",
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                borderRadius: 4,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                transform: [{ rotate: isApprovedView ? "0deg" : "-2deg" }],
-              }}
-            >
-              {isApprovedView ? (
-                <Icon name="check" size={10} color={stitchTokens.verifiedGreen} />
-              ) : null}
-              <AppText
-                kind="small"
-                style={{
-                  color: isApprovedView ? stitchTokens.verifiedGreen : stitchTokens.darkRed,
-                  fontSize: 10,
-                  fontWeight: "800",
-                  letterSpacing: 0.8,
-                }}
-              >
-                {base.state.moderation === "Draft"
-                  ? "BẢN NHÁP"
-                  : moderationLabel[base.state.moderation]?.toLocaleUpperCase("vi") ?? "BẢN NHÁP"}
-              </AppText>
-            </View>
-          </View>
-        </View>
 
         {/* 5-Step Stepper Tabs - Hide when viewing an approved listing */}
         {!isApprovedView ? (
@@ -849,22 +818,18 @@ export function DraftEditor({
                   {
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 6,
-                    paddingVertical: 7,
+                    gap: 5,
+                    minHeight: 34,
+                    paddingVertical: 6,
                     paddingHorizontal: 12,
-                    borderRadius: 10,
+                    borderRadius: 999,
                     borderWidth: 1,
-                    borderBottomWidth: 2.5,
-                    backgroundColor: form.bundle ? stitchTokens.whiteSurface : stitchTokens.goldLight,
-                    borderColor: form.bundle ? stitchTokens.peachBorder : stitchTokens.goldDark,
-                    borderBottomColor: form.bundle ? stitchTokens.peachBorder : stitchTokens.goldDark,
-                    shadowColor: stitchTokens.shadowSoft,
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 2,
-                    elevation: 1,
+                    backgroundColor: form.bundle
+                      ? stitchTokens.whiteSurface
+                      : stitchTokens.roseParchment,
+                    borderColor: stitchTokens.peachBorder,
                   },
-                  pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
+                  pressed && { opacity: 0.8 },
                   locked && { opacity: 0.5 },
                 ]}
               >
@@ -876,7 +841,7 @@ export function DraftEditor({
                 <AppText
                   kind="bold"
                   color={stitchTokens.wineDark}
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 12, lineHeight: 16, includeFontPadding: false }}
                 >
                   {form.bundle ? "Bán sách lẻ" : "Đăng bộ sách"}
                 </AppText>
@@ -917,20 +882,20 @@ export function DraftEditor({
             <View style={{ flex: 1, gap: 3 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <AppText kind="heading" color={stitchTokens.wineDark} style={{ fontSize: 16 }}>
-                  Đã được duyệt
+                  {approvedSummary?.status ?? "Đã được duyệt"}
                 </AppText>
-                <View style={styles.approvedLiveBadge}>
-                  <View style={styles.liveDot} />
-                  <AppText kind="small" style={styles.liveBadgeText}>
-                    CÔNG KHAI
-                  </AppText>
-                </View>
+                {auction ? (
+                  <View style={styles.approvedLiveBadge}>
+                    <View style={styles.liveDot} />
+                    <AppText kind="small" style={styles.liveBadgeText}>ĐÃ DUYỆT</AppText>
+                  </View>
+                ) : null}
               </View>
-              <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 12, lineHeight: 17 }}>
-                {auction
-                  ? "Sách đấu giá đã được duyệt và sẵn sàng tại điểm tiếp nhận."
-                  : "Ấn bản đã được xác thực và sẵn sàng kết nối cùng người đọc trên Lật Lại."}
-              </AppText>
+              {auction ? (
+                <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 12, lineHeight: 17 }}>
+                  Sách đấu giá đã được duyệt và sẵn sàng tại điểm tiếp nhận.
+                </AppText>
+              ) : null}
             </View>
           </View>
 
@@ -974,8 +939,9 @@ export function DraftEditor({
         base.state.moderation === "Approved" &&
         base.state.visibility !== "Removed" ? (
         <Notice tone="success">
-          Bài đăng đã được duyệt. Sách chỉ hiện trên kệ khi bài đang mở, còn khả
-          dụng và tài khoản của bạn đủ điều kiện.
+          {auction
+            ? "Sách đấu giá đã được duyệt và sẵn sàng chọn để gửi tới điểm kiểm định."
+            : "Bài đăng đã được duyệt. Sách chỉ hiện trên kệ khi bài đang mở, còn khả dụng và tài khoản của bạn đủ điều kiện."}
         </Notice>
       ) : null}
 
@@ -996,57 +962,178 @@ export function DraftEditor({
           Hiện bạn chỉ có thể xem thông tin đã lưu.
         </Notice>
       ) : null}
-      {error && !checkClearedHere ? (
+      {error && !checkClearedHere && !uncertain ? (
         <Notice tone="error">{error}</Notice>
       ) : null}
       {uncertain ? (
-        <>
-          <Notice tone="warning">
-            Đang giữ yêu cầu vừa gửi. Hãy kiểm tra kết quả trước khi sửa tiếp.
-          </Notice>
-          <View style={{ gap: space.xs }}>
-            <Button
-              title={
-                stopped
-                  ? "Kiểm tra trạng thái mới nhất"
-                  : "Thử lại yêu cầu vừa gửi"
-              }
-              busy={busy}
-              onPress={() => void save(false, true)}
-            />
-            {stopped && editable ? (
-              <Button
-                secondary
-                title="Tải bản nháp để sửa (giữ thông tin đang nhập)"
-                disabled={busy}
-                onPress={async () => {
-                  setBusy(true);
-                  setError("");
-                  try {
-                    const fresh = await client.request(
-                      `/me/listings/${base.id}`,
-                      privateDraft,
-                    );
-                    if (fresh.state.moderation !== "Draft" && fresh.state.moderation !== "Rejected") {
-                      await reconcile(fresh, true);
-                      setStep(4);
-                      return;
-                    }
-                    // Keep user's active form edits, update base metadata
-                    await reconcile(fresh, false);
-                    setUncertain(false);
-                    intent.current = null;
-                    go(0);
-                  } catch (e) {
-                    setError(photoError(e));
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
+        <View
+          accessibilityRole="alert"
+          style={[
+            styles.recoveryCard,
+            stopped ? styles.recoveryCardError : styles.recoveryCardWarn,
+          ]}
+        >
+          <View style={styles.recoveryHeader}>
+            <View
+              style={[
+                styles.recoveryIconBadge,
+                stopped ? styles.recoveryIconError : styles.recoveryIconWarn,
+              ]}
+            >
+              <Icon
+                name={stopped ? "info" : "sync"}
+                size={16}
+                color={stopped ? stitchTokens.wineDark : stitchTokens.warmUmber}
               />
-            ) : null}
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText
+                kind="bold"
+                color={stitchTokens.wineDark}
+                style={{ fontSize: 15, lineHeight: 20 }}
+              >
+                {quotaReached
+                  ? "Đã đạt giới hạn 5 bài hoạt động"
+                  : stopped
+                    ? "Chưa thể hoàn tất yêu cầu"
+                    : "Chưa xác nhận được kết quả"}
+              </AppText>
+              <AppText
+                kind="small"
+                color={stitchTokens.slateWarm}
+                style={{ fontSize: 12.5, lineHeight: 18 }}
+              >
+                {error ||
+                  "Yêu cầu vừa gửi chưa được xác nhận. Kiểm tra lại trạng thái trước khi tiếp tục."}
+              </AppText>
+            </View>
           </View>
-        </>
+
+          <View style={styles.recoveryHintBox}>
+            <AppText
+              kind="small"
+              color={stitchTokens.warmUmber}
+              style={{ fontSize: 12, lineHeight: 17 }}
+            >
+              {quotaReached
+                ? "Bản nháp đã được lưu. Hãy ẩn hoặc lưu trữ bớt một bài cũ trong mục Sách của tôi rồi quay lại gửi duyệt."
+                : stopped
+                  ? "Nội dung bạn đang nhập vẫn được giữ an toàn. Cập nhật trạng thái mới nhất trước khi tiếp tục."
+                  : "Hệ thống đang giữ nguyên yêu cầu vừa gửi để tránh gửi trùng. Hãy thử lại trước khi sửa tiếp."}
+            </AppText>
+          </View>
+
+          <View style={styles.recoveryActions}>
+            {stopped && quotaReached ? (
+              <>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    wine
+                    secondary
+                    title="Ở lại xem"
+                    disabled={busy}
+                    onPress={() => void save(false, true)}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    wine
+                    title={auction ? "Về gửi đấu giá" : "Về sách của tôi"}
+                    busy={busy}
+                    onPress={async () => {
+                      if (busyRef.current) return;
+                      busyRef.current = true;
+                      setBusy(true);
+                      try {
+                        const fresh = await client.request(
+                          `/me/listings/${base.id}`,
+                          privateDraft,
+                        );
+                        await reconcile(fresh, false);
+                        intent.current = null;
+                        setUncertain(false);
+                        setStopped(false);
+                        setQuotaReached(false);
+                        setError("");
+                        onBack();
+                      } catch (e) {
+                        setError(photoError(e));
+                      } finally {
+                        busyRef.current = false;
+                        setBusy(false);
+                      }
+                    }}
+                  />
+                </View>
+              </>
+            ) : stopped ? (
+              <>
+                {editable ? (
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      wine
+                      secondary
+                      title="Sửa từ bước 1"
+                      disabled={busy}
+                      onPress={async () => {
+                        if (busyRef.current) return;
+                        busyRef.current = true;
+                        setBusy(true);
+                        setError("");
+                        try {
+                          const fresh = await client.request(
+                            `/me/listings/${base.id}`,
+                            privateDraft,
+                          );
+                          if (
+                            fresh.state.moderation !== "Draft" &&
+                            fresh.state.moderation !== "Rejected"
+                          ) {
+                            await reconcile(fresh, true);
+                            intent.current = null;
+                            setUncertain(false);
+                            setStopped(false);
+                            setQuotaReached(false);
+                            setStep(4);
+                            return;
+                          }
+                          await reconcile(fresh, false);
+                          intent.current = null;
+                          setUncertain(false);
+                          setStopped(false);
+                          setQuotaReached(false);
+                          go(0);
+                        } catch (e) {
+                          setError(photoError(e));
+                        } finally {
+                          busyRef.current = false;
+                          setBusy(false);
+                        }
+                      }}
+                    />
+                  </View>
+                ) : null}
+                <View style={{ flex: 1 }}>
+                  <Button
+                    wine
+                    title="Cập nhật lại"
+                    busy={busy}
+                    onPress={() => void save(false, true)}
+                  />
+                </View>
+              </>
+            ) : (
+              <View style={{ flex: 1 }}>
+                <Button
+                  wine
+                  title="Thử lại yêu cầu"
+                  busy={busy}
+                  onPress={() => void save(false, true)}
+                />
+              </View>
+            )}
+          </View>
+        </View>
       ) : null}
       {message ? <Notice tone="success">{message}</Notice> : null}
       {latest.error ? (
@@ -1124,7 +1211,9 @@ export function DraftEditor({
             </View>
 
             <AppText kind="small" color={stitchTokens.subtleGray}>
-              Ảnh bìa sẽ hiển thị đầu tiên trên kệ sách. Thêm các ảnh gáy, góc cạnh và ruột sách làm ảnh phụ. Tối đa 1 ảnh bìa + 7 ảnh phụ (tổng 8 ảnh). Định dạng JPEG, PNG, WebP ≤ 10 MB.
+              {auction
+                ? "Ảnh bìa sẽ hiển thị trên hồ sơ kiểm định và phiên đấu giá. Thêm các ảnh gáy, góc cạnh và ruột sách làm ảnh phụ. Tối đa 1 ảnh bìa + 7 ảnh phụ (tổng 8 ảnh). Định dạng JPEG, PNG, WebP ≤ 10 MB."
+                : "Ảnh bìa sẽ hiển thị đầu tiên trên kệ sách. Thêm các ảnh gáy, góc cạnh và ruột sách làm ảnh phụ. Tối đa 1 ảnh bìa + 7 ảnh phụ (tổng 8 ảnh). Định dạng JPEG, PNG, WebP ≤ 10 MB."}
             </AppText>
 
             {photos.isPending ? (
@@ -1594,6 +1683,7 @@ export function DraftEditor({
                     listingId={base.id}
                     mediaId={id}
                     label={index === 0 ? "Ảnh bìa" : `Ảnh phụ ${index}`}
+                    compact
                   />
                 </Pressable>
               ))}
@@ -1707,7 +1797,13 @@ export function DraftEditor({
                   <Icon name="tag" size={14} color={stitchTokens.wine} />
                 </View>
                 <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700", letterSpacing: 0.5 }}>
-                  {isApprovedView ? "PHƯƠNG THỨC & GIAO NHẬN" : "4. PHƯƠNG THỨC & GIAO NHẬN"}
+                  {auction
+                    ? isApprovedView
+                      ? "GIÁ TRỊ KHAI BÁO & KÊNH"
+                      : "4. GIÁ TRỊ KHAI BÁO & KÊNH"
+                    : isApprovedView
+                      ? "PHƯƠNG THỨC & GIAO NHẬN"
+                      : "4. PHƯƠNG THỨC & GIAO NHẬN"}
                 </AppText>
               </View>
               {editable ? (
@@ -1818,124 +1914,67 @@ export function DraftEditor({
 
           {!isApprovedView ? (
             <Notice tone="info">
-              Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên
-              trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt
-              nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn.
+              {auction
+                ? "Đăng sách đấu giá miễn phí. Sách sau khi được duyệt sẽ sẵn sàng trong mục Gửi sách đấu giá và không hiển thị trên kệ mua/đổi."
+                : "Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn."}
             </Notice>
           ) : null}
 
-          {/* Stitch Section 5: Trust Commitment Checkbox */}
+          {/* Section 5: Ownership & Honesty Commitment */}
           {editable ? (
             <View
               ref={anchor("ownershipDeclared")}
-              style={{
-                backgroundColor: declared
-                  ? colors.successSurface
-                  : stitchTokens.goldLight,
-                borderRadius: 16,
-                borderWidth: 1.5,
-                borderColor: errors.ownershipDeclared
-                  ? colors.rustText
-                  : declared
-                    ? stitchTokens.greenBorderSoft
-                    : stitchTokens.goldAccent,
-                borderLeftWidth: 4,
-                borderLeftColor: errors.ownershipDeclared
-                  ? colors.rustText
-                  : declared
-                    ? stitchTokens.verifiedGreen
-                    : stitchTokens.goldMedal,
-                padding: space.md,
-                gap: space.xs,
-                shadowColor: declared ? stitchTokens.verifiedGreen : stitchTokens.goldDark,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: declared ? 0.12 : 0.08,
-                shadowRadius: 5,
-                elevation: 2,
-              }}
+              style={[
+                styles.bentoCard,
+                declared && styles.commitCardChecked,
+                Boolean(errors.ownershipDeclared) && styles.commitCardError,
+              ]}
             >
-              {/* Trust Badge Header */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 2,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <View
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 11,
-                      backgroundColor: declared ? stitchTokens.verifiedGreen : stitchTokens.wine,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
+              <View style={styles.bentoHeader}>
+                <View style={styles.bentoTitleGroup}>
+                  <View style={[styles.bentoIconBadge, declared && styles.commitIconChecked]}>
                     <Icon
                       name={declared ? "check" : "shield"}
-                      size={12}
-                      color={stitchTokens.goldLight}
+                      size={14}
+                      color={declared ? stitchTokens.gold : stitchTokens.wine}
                     />
                   </View>
                   <AppText
-                    kind="bold"
-                    color={declared ? stitchTokens.verifiedGreen : stitchTokens.wineDark}
-                    style={{ fontSize: 12, letterSpacing: 0.5 }}
+                    kind="label"
+                    color={stitchTokens.wine}
+                    style={styles.commitHeading}
                   >
-                    {declared ? "ĐÃ XÁC NHẬN CAM KẾT" : "BẢO CHỨNG BỒI HOÀN LẬT LẠI"}
+                    CAM KẾT THÔNG TIN SÁCH
                   </AppText>
                 </View>
 
-                <View
-                  style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 2,
-                    borderRadius: 10,
-                    backgroundColor: declared ? stitchTokens.whiteSurface : stitchTokens.goldVeryLight,
-                    borderWidth: 1,
-                    borderColor: declared ? stitchTokens.greenBorderSoft : stitchTokens.goldDark,
-                  }}
-                >
+                <View style={[styles.commitPill, declared && styles.commitPillChecked]}>
                   <AppText
                     kind="small"
-                    color={declared ? stitchTokens.verifiedGreen : stitchTokens.wineDark}
-                    style={{ fontSize: 10, fontWeight: "800" }}
+                    style={[styles.commitPillText, declared && styles.commitPillTextChecked]}
                   >
-                    {declared ? "CHÍNH THỨC" : "100% BẢO HỘ"}
+                    {declared ? "Đã xác nhận" : "Bắt buộc"}
                   </AppText>
                 </View>
               </View>
 
-              {/* Checkbox */}
               <Checkbox
                 title={
                   form.bundle
                     ? "Tôi sở hữu toàn bộ các cuốn đã liệt kê, không đăng chúng đồng thời ở tin khác và mô tả đúng tình trạng từng cuốn."
-                    : "Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại."
+                    : "Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn của Lật Lại."
                 }
                 checked={declared}
                 disabled={locked}
+                color={stitchTokens.wine}
                 onPress={() => setDeclared((v) => !v)}
               />
 
-              {/* Trust Footer Note */}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 32, marginTop: 2 }}>
-                <Icon
-                  name="shield"
-                  size={11}
-                  color={declared ? stitchTokens.verifiedGreen : stitchTokens.goldDark}
-                />
-                <AppText
-                  kind="small"
-                  color={declared ? stitchTokens.forestDeep : stitchTokens.slateWarm}
-                  style={{ fontSize: 11, fontWeight: "500", flex: 1 }}
-                >
-                  Được bảo chứng bồi hoàn nếu sách không đúng mô tả. Người mua an tâm chốt đơn.
-                </AppText>
-              </View>
+              <AppText kind="small" style={styles.commitNote}>
+                {auction
+                  ? "Thông tin sẽ được đối chiếu thực tế tại điểm kiểm định TP.HCM trước khi mở phiên đấu giá."
+                  : "Mô tả trung thực giúp người đọc sau an tâm chọn sách và tránh phát sinh khiếu nại."}
+              </AppText>
 
               {errors.ownershipDeclared ? (
                 <Notice tone="error">{errors.ownershipDeclared}</Notice>
@@ -2155,7 +2194,11 @@ export function DraftEditor({
       <ConfirmDialog
         visible={reviseConfirm}
         title="Gửi bản sửa để duyệt lại?"
-        message="Bản hiện tại sẽ ngừng công khai ngay khi gửi thành công. Nội dung mới cần được kiểm duyệt lại trước khi trở lại kệ."
+        message={
+          auction
+            ? "Sách đấu giá sẽ tạm ngừng đủ điều kiện gửi phiên cho tới khi bản sửa được duyệt lại."
+            : "Bản hiện tại sẽ ngừng công khai ngay khi gửi thành công. Nội dung mới cần được kiểm duyệt lại trước khi trở lại kệ."
+        }
         confirmLabel="Gửi bản sửa"
         busy={busy}
         error={error || undefined}
@@ -2200,17 +2243,12 @@ export function DraftEditor({
 
 const styles = StyleSheet.create({
   formWhiteCard: {
-    backgroundColor: stitchTokens.white,
+    backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    padding: space.md,
-    gap: space.md,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    borderColor: stitchTokens.cardBorder,
+    padding: 14,
+    gap: 14,
   },
   bentoCard: {
     backgroundColor: stitchTokens.white,
@@ -2244,6 +2282,104 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
+  },
+  commitCardChecked: {
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  commitCardError: {
+    borderColor: stitchTokens.flashRed,
+  },
+  commitIconChecked: {
+    backgroundColor: stitchTokens.wine,
+    borderColor: stitchTokens.wine,
+  },
+  commitHeading: {
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  commitPill: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+  },
+  recoveryCard: {
+    backgroundColor: stitchTokens.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 12,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  recoveryCardError: {
+    borderColor: stitchTokens.peachBorder,
+  },
+  recoveryCardWarn: {
+    borderColor: stitchTokens.cardBorder,
+  },
+  recoveryHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  recoveryIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  recoveryIconError: {
+    backgroundColor: stitchTokens.roseParchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  recoveryIconWarn: {
+    backgroundColor: stitchTokens.warmIvory,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+  },
+  recoveryHintBox: {
+    backgroundColor: stitchTokens.warmIvory,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+  },
+  recoveryActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  commitPillChecked: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    borderColor: stitchTokens.greenBorderSoft,
+  },
+  commitPillText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "700",
+    color: stitchTokens.brownMuted,
+    includeFontPadding: false,
+  },
+  commitPillTextChecked: {
+    color: stitchTokens.likeNewGreen,
+  },
+  commitNote: {
+    paddingTop: space.xs,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
+    fontSize: 12,
+    lineHeight: 18,
+    color: stitchTokens.brownMuted,
   },
   quoteBox: {
     backgroundColor: stitchTokens.warmIvory,

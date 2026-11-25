@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { randomUUID } from "expo-crypto";
 import { CHAT_RATE_LIMIT_TEXT, chatSendWasRateLimited, clipChatMessage } from "@used-books/session-client";
 import {
   ActivityIndicator,
@@ -16,7 +17,6 @@ import {
   AppModal,
   AppTextInput,
   Button,
-  ConfirmDialog,
   Icon,
   Notice,
   colors,
@@ -28,7 +28,6 @@ import { useSession } from "../../../core/session/session-provider";
 import { apiBaseUrl } from "../../../core/api/api-base-url";
 import {
   changeConversationTerms,
-  createSellerOrder,
   eventSummaryText,
   formatDateTimeVi,
   formatMessageTime,
@@ -55,6 +54,7 @@ interface ChatMessagesPanelProps {
   listing?: Listing | null;
   onRefresh?: () => void;
   onRefreshEvents?: () => void;
+  onOpenCreateOrder?: (afterCreate: (price: number) => void) => void;
 }
 
 export function ChatMessagesPanel({
@@ -62,6 +62,7 @@ export function ChatMessagesPanel({
   listing,
   onRefresh,
   onRefreshEvents,
+  onOpenCreateOrder,
 }: ChatMessagesPanelProps) {
   const { client, state } = useSession();
   const queryClient = useQueryClient();
@@ -86,7 +87,6 @@ export function ChatMessagesPanel({
   const [proposePriceInput, setProposePriceInput] = useState<string>(
     String(room.terms?.agreedPrice ?? getListingPrice(listing))
   );
-  const [confirmOrderDialogOpen, setConfirmOrderDialogOpen] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -102,7 +102,7 @@ export function ChatMessagesPanel({
     const socket = socketRef.current;
     if (socket && connectionStatus === "online") {
       const payload = {
-        messageId: crypto.randomUUID(),
+        messageId: randomUUID(),
         conversationId: room.id,
         body: text,
       };
@@ -152,30 +152,6 @@ export function ChatMessagesPanel({
       if (onRefreshEventsRef.current) onRefreshEventsRef.current();
     } catch (err: any) {
       setTermsActionError(err?.message ?? "Không thể gửi đề xuất đổi giá lúc này.");
-    } finally {
-      setTermsBusy(false);
-    }
-  };
-
-  const handleConfirmCreateOrder = async (agreedPrice: number) => {
-    if (termsBusy) return;
-    setTermsBusy(true);
-    setTermsActionError(null);
-    try {
-      await createSellerOrder(client, {
-        conversationId: room.id,
-        expectedVersion: room.version,
-        agreedBookPrice: agreedPrice,
-      });
-      sendAutoChatMessage(
-        `Đơn hàng đã được tạo theo giá chốt ${agreedPrice.toLocaleString("vi-VN")} ₫. Bạn có thể bấm thanh toán ngay!`
-      );
-      setConfirmOrderDialogOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["orders"] });
-      if (onRefreshRef.current) onRefreshRef.current();
-      if (onRefreshEventsRef.current) onRefreshEventsRef.current();
-    } catch (err: any) {
-      setTermsActionError(err?.message ?? "Chưa tạo được đơn hàng lúc này.");
     } finally {
       setTermsBusy(false);
     }
@@ -489,7 +465,7 @@ export function ChatMessagesPanel({
                 </AppText>
               </AppText>
             </View>
-            {!isBuyer ? (
+            {onOpenCreateOrder ? (
               <View style={{ marginTop: 6 }}>
                 <AppText style={styles.agreedSub}>
                   Người mua đã đồng ý mức giá này. Hãy bấm tạo đơn hàng giữ sách để người mua tiến hành thanh toán.
@@ -499,13 +475,19 @@ export function ChatMessagesPanel({
                     title="Tạo đơn hàng giữ sách ngay"
                     wine
                     busy={termsBusy}
-                    onPress={() => setConfirmOrderDialogOpen(true)}
+                    onPress={() => onOpenCreateOrder((price) => {
+                      sendAutoChatMessage(
+                        `Đơn hàng đã được tạo theo giá chốt ${price.toLocaleString("vi-VN")} ₫. Bạn có thể bấm thanh toán ngay!`,
+                      );
+                    })}
                   />
                 </View>
               </View>
             ) : (
               <AppText style={styles.agreedSub}>
-                Đã chốt giá thành công! Đang chờ người bán tạo đơn hàng để bạn tiến hành thanh toán.
+                {isBuyer
+                  ? "Đang chờ người bán tạo đơn hàng để bạn tiến hành thanh toán."
+                  : "Cần có báo giá giao nhận còn hiệu lực trước khi tạo đơn."}
               </AppText>
             )}
           </View>
@@ -804,19 +786,6 @@ export function ChatMessagesPanel({
         </View>
       </AppModal>
 
-      {/* Confirm Dialog: Seller Creates Order */}
-      <ConfirmDialog
-        visible={confirmOrderDialogOpen}
-        title="Tạo đơn hàng giữ sách?"
-        message={`Tạo đơn hàng với mức giá đã thỏa thuận ${room.terms?.agreedPrice?.toLocaleString("vi-VN")} ₫. Người mua sẽ nhận được thông báo để bấm thanh toán qua Ví.`}
-        confirmLabel="Tạo đơn hàng ngay"
-        onCancel={() => setConfirmOrderDialogOpen(false)}
-        onConfirm={() => {
-          if (room.terms?.agreedPrice) {
-            void handleConfirmCreateOrder(room.terms.agreedPrice);
-          }
-        }}
-      />
     </KeyboardAvoidingView>
   );
 }

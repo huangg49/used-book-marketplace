@@ -1,10 +1,13 @@
-import { Redirect, router } from "expo-router";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useSession } from "../core/session/session-provider";
 import { BackAction, Screen, StatePanel } from "../core/ui";
 import { WalletScreen } from "../features/wallet/wallet-screen";
 
 export default function WalletRoute() {
   const { client, state } = useSession();
+  const { sale, section } = useLocalSearchParams<{ sale?: string; section?: string }>();
+  const saleOrderId = typeof sale === "string" && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(sale) ? sale.toLowerCase() : undefined;
+  const showHistory = section === "history";
   if (state.status === "anonymous")
     return <Redirect href="./account" />;
   if (state.status !== "authenticated")
@@ -35,5 +38,5 @@ export default function WalletRoute() {
     );
   if (!state.user.roles.includes("MEMBER"))
     return <Redirect href="./account" />;
-  return <WalletScreen key={state.user.id} ownerId={state.user.id} />;
+  return <WalletScreen key={`${state.user.id}:${saleOrderId ?? ""}:${showHistory}`} ownerId={state.user.id} saleOrderId={saleOrderId} showHistory={showHistory} />;
 }

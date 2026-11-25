@@ -21,7 +21,7 @@ export function NavigationBar<Key extends string>({
   onSelect,
 }: {
   destinations: readonly Destination<Key>[];
-  current: Key;
+  current?: Key;
   onSelect: (key: Key) => void;
 }) {
   const [focused, setFocused] = useState<Key>();

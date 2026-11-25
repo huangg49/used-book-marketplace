@@ -1,5 +1,4 @@
-export { SendToAuctionHeader, type SendToAuctionHeaderProps } from "./send-to-auction-header";
-export { SendToAuctionPolicy } from "./send-to-auction-policy";
+export { SendToAuctionPolicy, SendToAuctionPolicySheet } from "./send-to-auction-policy";
 export { SendToAuctionNotices, type SendToAuctionNoticesProps } from "./send-to-auction-notices";
 export { SendToAuctionBookPicker, type SendToAuctionBookPickerProps } from "./send-to-auction-book-picker";
 export { SendToAuctionPointPicker, type SendToAuctionPointPickerProps } from "./send-to-auction-point-picker";

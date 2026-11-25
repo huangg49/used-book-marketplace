@@ -948,6 +948,25 @@
   border-bottom: none;
 }
 
+.receiptRowWithSale {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  row-gap: 0.25rem;
+}
+
+.saleReceipt {
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+
+.saleReceipt > summary {
+  width: fit-content;
+  padding-block: 0.5rem;
+  color: var(--shop-wine);
+  cursor: pointer;
+  font-weight: 650;
+}
+
 .receiptIconCircle {
   display: flex;
   align-items: center;
@@ -1441,6 +1460,7 @@
   .receiptItemMeta { grid-column: 2; }
   .receiptItemTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
   .receiptAmountCol { margin: 0; }
+  .saleReceipt { grid-column: 1 / -1; }
 }
 
 .withdrawalHistoryState {

@@ -71,6 +71,8 @@ try {
     await entry.getByLabel('Tên chủ tài khoản', { exact: true }).fill('NGUOI DUNG QA');
     await entry.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
     const review = page.getByRole('dialog', { name: 'Xác nhận rút tiền', exact: true });
+    await expect(review.getByText('Khi gửi yêu cầu', { exact: true })).toBeVisible();
+    await expect(review.getByText('Nếu bị từ chối', { exact: true })).toBeVisible();
     await review.getByRole('button', { name: 'Xác nhận gửi yêu cầu', exact: true }).evaluate(button => { button.click(); button.click(); });
     const retry = review.getByRole('button', { name: 'Kiểm tra lại yêu cầu', exact: true });
     if (status === 409) {

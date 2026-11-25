@@ -93,6 +93,7 @@ export function TextField({
   required,
   inputRef,
   focusColor,
+  suffix,
   style,
   onFocus,
   onBlur,
@@ -104,10 +105,53 @@ export function TextField({
   required?: boolean;
   inputRef?: Ref<TextInput>;
   focusColor?: string;
+  suffix?: string;
 }) {
   const id = useId();
   const [focused, setFocused] = useState(false);
   const description = error || hint;
+  const input = (
+    <TextInput
+      {...props}
+      ref={inputRef}
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={description}
+      aria-labelledby={accessibilityLabel ? undefined : `${id}-label`}
+      aria-describedby={description ? `${id}-description` : undefined}
+      aria-invalid={!!error}
+      aria-required={required}
+      placeholderTextColor={colors.muted}
+      onFocus={(event) => {
+        setFocused(true);
+        onFocus?.(event);
+      }}
+      onBlur={(event) => {
+        setFocused(false);
+        onBlur?.(event);
+      }}
+      style={[
+        layout.input,
+        props.multiline && { minHeight: 128, textAlignVertical: "top" },
+        props.editable === false && {
+          backgroundColor: "#F4F0E8",
+        },
+        style,
+        suffix && {
+          paddingLeft: layout.input.paddingHorizontal,
+          paddingRight: space.xl * 2,
+        },
+        {
+          borderColor: error
+            ? colors.error
+            : focused
+              ? (focusColor ?? colorRoles.focus)
+              : colors.border,
+          borderWidth: 1,
+          boxShadow: focused ? `0 0 0 1px ${error ? colors.error : (focusColor ?? colorRoles.focus)}` : "none",
+        },
+      ]}
+    />
+  );
   return (
     <View style={{ gap: space.xs }}>
       {label ? (
@@ -116,42 +160,19 @@ export function TextField({
           {required ? " *" : ""}
         </AppText>
       ) : null}
-      <TextInput
-        {...props}
-        ref={inputRef}
-        accessibilityLabel={accessibilityLabel ?? label}
-        accessibilityHint={description}
-        aria-labelledby={accessibilityLabel ? undefined : `${id}-label`}
-        aria-describedby={description ? `${id}-description` : undefined}
-        aria-invalid={!!error}
-        aria-required={required}
-        placeholderTextColor={colors.muted}
-        onFocus={(event) => {
-          setFocused(true);
-          onFocus?.(event);
-        }}
-        onBlur={(event) => {
-          setFocused(false);
-          onBlur?.(event);
-        }}
-        style={[
-          layout.input,
-          props.multiline && { minHeight: 128, textAlignVertical: "top" },
-          props.editable === false && {
-            backgroundColor: "#F4F0E8",
-          },
-          style,
-          {
-            borderColor: error
-              ? colors.error
-              : focused
-                ? (focusColor ?? colorRoles.focus)
-                : colors.border,
-            borderWidth: 1,
-            boxShadow: focused ? `0 0 0 1px ${error ? colors.error : (focusColor ?? colorRoles.focus)}` : "none",
-          },
-        ]}
-      />
+      {suffix ? (
+        <View>
+          {input}
+          <View
+            pointerEvents="none"
+            aria-hidden
+            importantForAccessibility="no-hide-descendants"
+            style={{ position: "absolute", top: 0, bottom: 0, right: space.md, justifyContent: "center" }}
+          >
+            <AppText kind="bold" color={colors.muted}>{suffix}</AppText>
+          </View>
+        </View>
+      ) : input}
       {description ? (
         <AppText
           nativeID={`${id}-description`}
@@ -227,10 +248,32 @@ export function Checkbox({
   );
 }
 
-export function AppTextInput(props: TextInputProps & { ref?: Ref<TextInput>; "aria-invalid"?: boolean }) {
+export function AppTextInput({
+  composite = false,
+  ...props
+}: TextInputProps & {
+  ref?: Ref<TextInput>;
+  "aria-invalid"?: boolean;
+  /** True when an outer composite wrapper owns the focus surface border. */
+  composite?: boolean;
+}) {
   const [focused, setFocused] = useState(false);
-  return <TextInput {...props}
-    onFocus={event => { setFocused(true); props.onFocus?.(event); }}
-    onBlur={event => { setFocused(false); props.onBlur?.(event); }}
-    style={[props.style, focused && layout.focus, focused && props['aria-invalid'] && { outlineColor: colors.error }]} />;
+  return (
+    <TextInput
+      {...props}
+      onFocus={(event) => {
+        setFocused(true);
+        props.onFocus?.(event);
+      }}
+      onBlur={(event) => {
+        setFocused(false);
+        props.onBlur?.(event);
+      }}
+      style={[
+        props.style,
+        !composite && focused && layout.focus,
+        !composite && focused && props["aria-invalid"] && { outlineColor: colors.error },
+      ]}
+    />
+  );
 }

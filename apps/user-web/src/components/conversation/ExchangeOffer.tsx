@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useExchangeRecovery } from "../../hooks/useExchangeRecovery";
 import { BrandIcon } from "../BrandIcon";
-import { ApiError } from "@used-books/session-client";
+import { ApiError, exchangeServiceFeeText, exchangeShippingCostText } from "@used-books/session-client";
 import { session } from "../../lib/session";
 import {
   getMyListings,
@@ -787,9 +787,12 @@ export function ExchangeOffer({
               )}
             </div>
           </fieldset>
+          {chosen.length > 0 && (
+            <p className={styles.helpText}>{exchangeServiceFeeText} {exchangeShippingCostText}</p>
+          )}
           <p className={styles.helpText}>
-            Gửi đề nghị chưa giữ sách. Hệ thống sẽ giữ tiền cọc bảo chứng và
-            tiền bù sau khi hai bên chốt trao đổi.
+            Gửi đề nghị chưa giữ sách. Sau khi hai bên chốt trao đổi, bạn xác
+            nhận nộp tiền cọc và tiền bù nếu có.
           </p>
 
           <button

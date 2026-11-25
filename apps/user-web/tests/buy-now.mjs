@@ -252,10 +252,13 @@ try {
     assert.equal(await sellerPage.locator("summary").filter({ hasText: /đề nghị giá|đề nghị mức giá/i }).count(), 0);
     await createOrder.click();
     const orderDialog = sellerPage.getByRole("dialog", { name: "Tạo đơn cho người mua" });
-    const price = orderDialog.getByLabel("Giá sách đã thỏa thuận (₫)");
-    assert.equal(await price.inputValue(), String(listedBook.salePrice));
-    assert.equal(await price.getAttribute("readonly") !== null, true);
-    await orderDialog.getByRole("button", { name: "Tạo đơn cho người mua này", exact: true }).click();
+    const price = orderDialog.getByText("Giá sách đã thỏa thuận (₫)", { exact: true }).locator("..");
+    const formatVnd = (amount) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
+    await price.getByText(formatVnd(listedBook.salePrice), { exact: true }).waitFor();
+    const submitOrder = orderDialog.getByRole("button", { name: "Tạo đơn cho người mua này", exact: true });
+    assert.equal(await submitOrder.isDisabled(), true);
+    await orderDialog.getByRole("checkbox", { name: /đồng ý.*hoa hồng 5%/ }).check();
+    await submitOrder.click();
     await orderDialog.waitFor({ state: "hidden" });
     const savedRoom = await fixture.api(`/me/purchase-conversations/${roomPath.split("/").at(-1)}`, seller.accessToken);
     const order = await fixture.api(`/me/orders/${savedRoom.orderId}`, buyer.accessToken);
@@ -395,6 +398,28 @@ try {
         assert.equal((await fixture.api("/me/wallet", seller.accessToken)).available - walletAtStart.available,
           order.amounts.sellerProceedsOnCompletion);
         assert.equal(await fixture.db.collection("ledger_journals").countDocuments({ orderId: order.id, type: "OrderSettlement" }), 1);
+        const receiptPath = `/me/wallet/history?orderId=${order.id}&type=OrderSettlement`;
+        const { items: saleRows } = await fixture.api(receiptPath, seller.accessToken);
+        assert.equal(saleRows.length, 1);
+        assert.deepEqual(saleRows[0].saleSettlement, {
+          bookPrice: order.amounts.bookPrice,
+          commissionBps: order.amounts.commissionBps,
+          commission: order.amounts.commission,
+          shippingReimbursement: order.amounts.shippingFee,
+          creditedAmount: order.amounts.sellerProceedsOnCompletion,
+        });
+        assert.deepEqual((await fixture.api(receiptPath, buyer.accessToken)).items, []);
+        const notices = (await fixture.api("/me/notifications", seller.accessToken)).items
+          .filter(item => item.kind === "OrderSaleSettled" && item.targetId === order.id);
+        assert.equal(notices.length, 1);
+        assert.match(notices[0].body, /Phí dịch vụ 5% đã trừ/);
+        await sellerPage.getByRole("link", { name: "Đối chiếu tiền bán trong ví" }).click();
+        await sellerPage.getByText("Thực nhận vào ví", { exact: true }).waitFor();
+        for (const width of [320, 390, 1440]) {
+          await sellerPage.setViewportSize({ width, height: 900 });
+          assert(await sellerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          await sellerPage.getByText("Chi tiết quyết toán", { exact: true }).locator("..").screenshot({ path: path.join(artifacts, `sale-wallet-receipt-${width}.png`) });
+        }
         console.log("PASS: Direct Driver records all three steps, acknowledgement gates inspection skip, and seller is credited once.");
       }
     }

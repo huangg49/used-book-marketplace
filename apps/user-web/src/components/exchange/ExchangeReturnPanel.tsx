@@ -13,14 +13,16 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { Link } from "react-router-dom";
 import {
   exchangeReturnPhase,
+  isExchangeReturnOverdue,
   type ExchangeReturnAction,
   type ExchangeReturnResolution,
   type ExchangeStatement,
 } from "@used-books/session-client";
 import { BookCover } from "../BookCover";
-import { formatVnd } from "../../lib/routes";
+import { formatVnd, ROUTES } from "../../lib/routes";
 import { exchangeCommand } from "../../services/exchange";
 import styles from "./ExchangeReturnPanel.module.css";
 
@@ -87,6 +89,7 @@ export function ExchangeReturnPanel({
     (r.phase === "ReturnOrdered" || r.phase === "CompensationOrdered") &&
     !r.effectiveAt &&
     open(r.appealDueAt);
+  const returnOverdue = isExchangeReturnOverdue(r, now);
   const available: ExchangeReturnAction[] = [];
   if (r.phase === "Evidence" && (!r.evidenceDueAt || open(r.evidenceDueAt)))
     available.push("SubmitStatement");
@@ -187,7 +190,7 @@ export function ExchangeReturnPanel({
           </span>
           <div className={styles.titleArea}>
             <p className={styles.kicker}>Hồ sơ khiếu nại</p>
-            <h2 id="exchange-return-title">{exchangeReturnPhase[r.phase]}</h2>
+            <h2 id="exchange-return-title">{returnOverdue ? "Quá hạn trả sách" : exchangeReturnPhase[r.phase]}</h2>
           </div>
         </div>
         <span className={styles.roleTag}>
@@ -386,6 +389,9 @@ export function ExchangeReturnPanel({
                 Đã có kháng nghị. Đang chờ Admin xem xét.
               </p>
             )}
+          {returnOverdue && (
+            <p className={styles.noticeBox}>Tiền vẫn đang được giữ. Admin phụ trách sẽ đối chiếu bằng chứng để xử lý tiếp.</p>
+          )}
           {!owner &&
             available.includes("ReportDispatch") &&
             (returnAddress ? (
@@ -439,6 +445,11 @@ export function ExchangeReturnPanel({
                 </div>
               )}
             </dl>
+          )}
+          {r.outcome ? (
+            <p><Link to={`${ROUTES.wallet}#lich-su-giao-dich`}>Xem lịch sử giao dịch Ví</Link></p>
+          ) : (
+            <p className={styles.noticeBox}>Tiền vẫn được giữ trong lúc xử lý trả sách. Chưa có ngày hoàn tiền.</p>
           )}
           {r.phase === "CompensationOrdered" && (
             <p className={styles.noticeBox}>

@@ -3,15 +3,18 @@ import { AuctionFlag } from '../features/support/AuctionFlag';
 import { SupportLink } from '../features/support/SupportLink';
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ApiError } from '@used-books/session-client'
+import { ApiError, auctionBidHoldNotes, auctionBidHoldText, auctionSellerAmounts, auctionSellerSaleLabels, createServerNow, type TransactionNote } from '@used-books/session-client'
+import { TransactionAmount, TransactionNotes } from '../components/TransactionReview'
+import { SaleFeeBreakdown } from '../components/SaleFeeBreakdown'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowRight, BookMarked, Wallet, CalendarClock, CircleSlash, UserRound, Check, ChevronRight, FileText, Gavel, Images, MapPin, Package, ShieldCheck, StickyNote, TrendingUp, Zap,
+  AlertTriangle, ArrowLeft, ArrowRight, BookMarked, Wallet, CalendarClock, CircleSlash, Flag, UserRound, Check, ChevronRight, FileText, Gavel, Images, MapPin, Package, ShieldCheck, StickyNote, TrendingUp, Zap,
 } from 'lucide-react'
 import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { readAuctionNewest, useAuctionLive } from '../hooks/useAuctionLive'
+import { useTransactionLive } from '../hooks/useTransactionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
@@ -127,8 +130,27 @@ export function AuctionDetailPage() {
   const intakes = useQuery({
     queryKey: ['my-auction-intakes', authed ? session.user.id : undefined, 'auction', id],
     queryFn: () => getMyAuctionIntakes(id), enabled: valid && authed, retry: false, staleTime: 0,
+    refetchInterval: ({ state }) => {
+      const status = state.data?.items[0]?.sellerSale?.status
+      return status === 'AwaitingPayment' || status === 'PendingSettlement' ? 8_000 : false
+    },
   })
   const sellerIntake = intakes.data?.items.find((i) => i.auctionId === id) ?? null
+  const sellerView = !!sellerIntake
+  const saleState = detail.data?.auction.state
+  const { refetch: refreshIntakes } = intakes
+  const sellerSale = sellerIntake?.sellerSale
+  useTransactionLive('point-order',
+    sellerSale?.status === 'AwaitingPayment' || sellerSale?.status === 'PendingSettlement' ? sellerSale.orderId : undefined,
+    () => {
+      void refreshIntakes()
+      void queryClient.invalidateQueries({ queryKey: ['wallet-summary'] })
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  )
+  useEffect(() => {
+    if (sellerView && (saleState === 'AwaitingWinnerPayment' || saleState === 'BuyNowPending' || saleState === 'Sold')) void refreshIntakes()
+  }, [sellerView, saleState, refreshIntakes])
   const remaining = useCountdown(detail.data?.auction.endAt, detail.data?.serverTime)
   // ADR 0047: before startAt the auction is listed but takes no bids yet.
   const untilStart = useCountdown(detail.data?.auction.startAt, detail.data?.serverTime)
@@ -176,6 +198,7 @@ export function AuctionDetailPage() {
   if (!detail.data) return <div className={styles.state}>Đang mở phiên đấu giá…</div>
 
   const { auction, history, leaderAlias } = detail.data
+  const serverNow = createServerNow(detail.data.serverTime)()
   // ADR 0079: the server marks a start reached with too few registrants Ended.
   const open = auction.state === 'Active' && remaining > 0 && !scheduled && auction.phase !== 'Ended'
   const participationStale = participation.isError && participation.data !== undefined && outcomeUnknown(participation.error)
@@ -219,7 +242,7 @@ export function AuctionDetailPage() {
   // ADR 0085: a registrant of a full auction keeps the panel while it still
   // refunds a withdrawal (until 72 h before the open time).
   else if (authed && (scheduled || open) && !participation.isPending
-    && (registrationBlocks(auction, me) || (scheduled && canWithdrawRegistration(auction, me, Date.now()))))
+    && (registrationBlocks(auction, me) || (scheduled && canWithdrawRegistration(auction, me, serverNow))))
     action = <RegistrationPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
   else if (scheduled)
     action = (
@@ -227,7 +250,7 @@ export function AuctionDetailPage() {
         <strong>Phiên chưa mở</strong>
         <p>
           {/* ADR 0081: a waiting registration auction opens only with enough registrants. */}
-          {auction.openMode ? `${openRuleText(auction)} ` : `Người bán hẹn mở phiên lúc ${when(auction.startAt)}. `}
+          {auction.openMode ? `${openRuleText(auction, serverNow)} ` : `Người bán hẹn mở phiên lúc ${when(auction.startAt)}. `}
           Khi phiên mở, bạn có thể trả giá
           {auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ''}.
         </p>
@@ -262,7 +285,7 @@ export function AuctionDetailPage() {
     action = (
       <div className={styles.notice}>
         <strong>Đăng nhập để trả giá</strong>
-        <p>Khi bạn dẫn giá, ví giữ đúng mức bạn cam kết; bị vượt giá hoặc phiên bị hủy, tiền về lại ví. Nếu thắng, bạn thanh toán từ ví và nhận sách tại {auction.pointName}.</p>
+        <p>{auctionBidHoldText(auction.depositAmount != null)} Nếu thắng, bạn thanh toán từ Ví để nhận sách.</p>
         <Link className={styles.primaryBlock} to={`${ROUTES.login}?returnUrl=${encodeURIComponent(location.pathname + location.search)}`}>Đăng nhập để trả giá <ArrowRight size={16} aria-hidden="true" /></Link>
       </div>
     )
@@ -277,35 +300,66 @@ export function AuctionDetailPage() {
   // ADR 0076: Dutch and sealed auctions have their own panels.
   else if (auction.auctionType === 'Dutch') action = <DutchPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
   else if (auction.auctionType === 'SealedFirst' || auction.auctionType === 'SealedSecond') action = <SealedPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
-  else action = <BidPanel auction={auction} me={me} onChanged={refresh} paused={intakes.isError} />
+  else action = <BidPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} paused={intakes.isError} />
 
   return (
     <div className={styles.page}>
       {stale && <div className={styles.notice} role="alert"><p>Chưa làm mới được phiên. Giá và trạng thái bên dưới là lần tải gần nhất; máy chủ sẽ kiểm tra lại khi bạn trả giá.</p><button type="button" className={styles.secondary} onClick={() => void detail.refetch()}>Thử cập nhật lại</button></div>}
-      <nav className={styles.crumbs} aria-label="Vị trí trang">
-        <Link to={ROUTES.auctions}>Đấu giá</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">{auction.title}</span>
-      </nav>
+      <div className={styles.topBar}>
+        <Link to={ROUTES.auctions} className={styles.backButton}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>Quay lại sàn đấu giá</span>
+        </Link>
+      </div>
 
       <div className={styles.layout}>
         <div className={styles.media}><AuctionGallery key={auction.id} auction={auction} /></div>
 
         <header className={styles.head}>
-          <h1>{auction.title}</h1>
-          {!!auction.book?.authors.length && <p className={styles.authors}>{auction.book.authors.join(', ')}</p>}
-          <span className={`${styles.status} ${open ? '' : styles.statusClosed}`}>
-            {open ? <Gavel size={14} aria-hidden="true" /> : null}
-            {scheduled ? 'Sắp mở' : ended ? 'Đã hết giờ, đang chốt kết quả' : STATE_LABEL[auction.state]}
-          </span>
-          {auction.book && <span className={styles.inspected}><ShieldCheck size={15} aria-hidden="true" /> Đã kiểm tra tại điểm giao nhận</span>}
+          <div className={styles.headMain}>
+            <div className={styles.metaBadges}>
+              <span className={`${styles.status} ${open ? '' : styles.statusClosed}`}>
+                {open ? <Gavel size={14} aria-hidden="true" /> : null}
+                {scheduled ? 'Sắp mở' : ended ? 'Đã hết giờ, đang chốt kết quả' : STATE_LABEL[auction.state]}
+              </span>
+              {auction.book && (
+                <span className={styles.inspected}>
+                  <ShieldCheck size={14} aria-hidden="true" /> Đã kiểm tra tại điểm giao nhận
+                </span>
+              )}
+            </div>
+            <h1>{auction.title}</h1>
+            {(!!auction.book?.authors.length || auction.sellerName) && (
+              <div className={styles.metaSub}>
+                {!!auction.book?.authors.length && (
+                  <p className={styles.authors}>{auction.book.authors.join(', ')}</p>
+                )}
+                {!!auction.book?.authors.length && auction.sellerName && (
+                  <span className={styles.metaDot} aria-hidden="true">·</span>
+                )}
+                {auction.sellerName && (
+                  <span className={styles.sellerTag}>
+                    <UserRound size={14} aria-hidden="true" />
+                    <span>Người bán: <strong>{auction.sellerName}</strong></span>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
           {/* ADR 0078: the seller and members who registered or bid flag a
-              problem to Admin; anyone else can still report the content.
-              It follows the book's identity so the title and author stay together. */}
-          <div className={styles.report}>
+              problem to Admin; anyone else can still report the content. */}
+          <div className={styles.headActions}>
             {authed && (sellerIntake || me)
               ? <AuctionFlag auction={auction} ownerId={session.user.id} />
-              : <p><SupportLink type='Auction' id={auction.id} report/></p>}
+              : (
+                <SupportLink
+                  type="Auction"
+                  id={auction.id}
+                  report
+                  className={styles.reportButton}
+                  icon={<Flag size={14} aria-hidden="true" />}
+                />
+              )}
           </div>
         </header>
 
@@ -314,14 +368,16 @@ export function AuctionDetailPage() {
             ? <div className={styles.timerCard}><span className={styles.timerClosed}>{waitingAt!.label} {when(waitingAt!.at)} · còn {formatRemaining(untilWaiting)}</span></div>
             : <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} state={auction.state} />}
           <section className={styles.bidCard}>
-            <p className={styles.priceLabel}>{priceLabel}</p>
-            <p className={styles.price} aria-live="polite" aria-atomic="true"><span className="sr-only">{priceLabel}: </span><AuctionPrice auctionId={auction.id} amount={auction.currentPrice ?? auction.startPrice} /></p>
-            <p className={styles.priceMeta}>
-              <TrendingUp size={14} aria-hidden="true" />
-              {hasBids ? `${auction.bidderCount} người trả giá` : 'Chưa có lượt trả giá'}
-              <span aria-hidden="true">•</span>
-              bước giá {formatVnd(auction.step)}
-            </p>
+            <div className={styles.priceHeader}>
+              <p className={styles.priceLabel}>{priceLabel}</p>
+              <p className={styles.price} aria-live="polite" aria-atomic="true"><span className="sr-only">{priceLabel}: </span><AuctionPrice auctionId={auction.id} amount={auction.currentPrice ?? auction.startPrice} /></p>
+              <p className={styles.priceMeta}>
+                <TrendingUp size={14} aria-hidden="true" />
+                {hasBids ? `${auction.bidderCount} người trả giá` : 'Chưa có lượt trả giá'}
+                <span aria-hidden="true">•</span>
+                bước giá {formatVnd(auction.step)}
+              </p>
+            </div>
             {participationStale && <p className={styles.fieldError} role="alert">Chưa làm mới được lượt trả giá của bạn. Mức đã hiển thị là lần tải gần nhất. <button type="button" className={styles.linkButton} onClick={() => void participation.refetch()}>Thử cập nhật lại lượt giá</button></p>}
             {authed && intakes.isError && (
               <div className={styles.notice} role="alert">
@@ -578,7 +634,7 @@ function AmountField({ id, label, value, onChange, disabled, hint, error }: {
   )
 }
 
-function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary; me: AuctionParticipation | null; onChanged: () => Promise<unknown>; paused: boolean }) {
+function BidPanel({ auction, me, serverTime, onChanged, paused }: { auction: AuctionSummary; me: AuctionParticipation | null; serverTime: string; onChanged: () => Promise<unknown>; paused: boolean }) {
   const leading = me?.leading ?? false
   const step = auction.step
   const minimumBid = auction.minimumBid ?? AUCTION_MAX_PRICE + step
@@ -638,7 +694,30 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
   const manualCapped = minimumBid > AUCTION_MAX_PRICE
   const autoCapped = autoFloor > AUCTION_MAX_PRICE
 
+  const sending = useRef(false)
+  const validateIntent = (next: Intent) => {
+    const now = createServerNow(serverTime)()
+    if (auction.state !== 'Active' || now < Date.parse(auction.startAt) || now >= Date.parse(auction.endAt))
+      return 'Phiên đã đổi trạng thái. Vui lòng cập nhật trước khi tiếp tục.'
+    if (next.kind === 'Manual' && leading) return 'Bạn đang dẫn giá; chưa cần trả thêm.'
+    const invalid = next.kind === 'Manual' ? amountError(next.amount, minimumBid, auction.startPrice, step)
+      : next.kind === 'Auto' ? amountError(next.amount, autoFloor, auction.startPrice, step)
+      : next.kind === 'BuyNow' && (next.amount !== auction.buyNowPrice || instantNeedsRival(auction, me))
+        ? 'Điều kiện Mua ngay đã thay đổi. Vui lòng cập nhật phiên.'
+        : null
+    if (invalid) return invalid
+    const short = next.kind === 'Disable' ? 0 : shortOf(next.amount)
+    return short > 0 ? `Cần thêm ${formatVnd(short)} trong ví.` : null
+  }
+
   const run = async (next: Intent) => {
+    if (paused || sending.current) return
+    const invalid = next === unknown ? null : validateIntent(next)
+    if (invalid) {
+      setError(invalid); setConfirming(null)
+      return
+    }
+    sending.current = true
     const key = intent.keyFor(`${next.kind}:${next.amount}`)
     setBusy(true); setError(null); setNotice(null); setReceipt(null)
     try {
@@ -666,12 +745,14 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
       else { intent.settle(); setUnknown(null) }
       setError(commandError(caught))
     } finally {
+      sending.current = false
       setBusy(false); setConfirming(null)
       void onChanged()
     }
   }
 
   const dialog = confirming && dialogCopy(confirming, auction, leading)
+  const confirmProblem = confirming ? validateIntent(confirming) : null
   return (
     <div className={styles.bidPanel}>
       {hasBid && me && (
@@ -722,9 +803,8 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
             />
             <WalletLine available={available} short={shortOf(manualAmount)} />
             <p className={styles.walletLine}>
-              {heldHere > 0
-                ? <>Ví đang giữ <b>{formatVnd(heldHere)}</b> cho phiên này. Bị vượt giá hoặc phiên bị hủy, tiền về lại ví ngay.</>
-                : 'Khi bạn dẫn giá, ví sẽ giữ đúng mức bạn cam kết; bị vượt giá thì tiền được trả lại ngay.'}
+              {heldHere > 0 && <>Ví đang giữ <b>{formatVnd(heldHere)}</b> cho phiên này. </>}
+              {auctionBidHoldText(auction.depositAmount != null)}
             </p>
             <button
               type="button" className={styles.continue} disabled={locked || !!manualError || shortOf(manualAmount) > 0}
@@ -795,11 +875,20 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
           isOpen={!paused}
           onClose={() => !busy && setConfirming(null)}
           title={dialog.title}
-          description={dialog.description}
+          description={confirmProblem ?? dialog.description}
           confirmText={dialog.confirm}
+          confirmDisabled={!!confirmProblem}
           onConfirm={() => void run(confirming)}
           isBusy={busy}
-        />
+          stickyFooter
+        >
+          {!confirmProblem && dialog.amountLabel && (
+            <>
+              <TransactionAmount label={dialog.amountLabel} value={formatVnd(confirming.amount)} />
+              {dialog.notes && <TransactionNotes notes={dialog.notes} />}
+            </>
+          )}
+        </ConfirmDialog>
       )}
     </div>
   )
@@ -824,15 +913,22 @@ function WalletLine({ available, short }: { available: number | null; short: num
   )
 }
 
-function dialogCopy(intent: Intent, auction: AuctionSummary, leading: boolean) {
-  const pay = `Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và chọn nhận tại ${auction.pointName} hoặc giao tận nơi. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`
+function dialogCopy(intent: Intent, auction: AuctionSummary, leading: boolean): {
+  title: string; confirm: string; description?: string; amountLabel?: string; notes?: TransactionNote[]
+} {
+  const pay = { label: 'Nếu thắng', detail: `Thanh toán trong 24 giờ sau khi phiên kết thúc. Chọn nhận tại ${auction.pointName} hoặc giao tận nơi. Quá hạn sẽ bị ghi nhận vi phạm.` }
+  const hold = auctionBidHoldNotes(auction.depositAmount != null)
   switch (intent.kind) {
     case 'Manual':
-      return { title: `Trả ${formatVnd(intent.amount)}?`, description: `Lượt trả giá không thể rút lại. ${pay}`, confirm: 'Xác nhận trả giá' }
+      return { title: 'Xác nhận trả giá', amountLabel: 'Giá bạn trả', notes: [...hold, pay, { label: 'Cam kết', detail: 'Lượt trả giá không thể rút lại.' }], confirm: 'Xác nhận trả giá' }
     case 'Auto':
       return {
-        title: `Đặt giá tự động tối đa ${formatVnd(intent.amount)}?`,
-        description: `Hệ thống chỉ trả vừa đủ để bạn dẫn: cao hơn người khác một bước ${formatVnd(auction.step)}, không vượt mức này. Chỉ bạn thấy mức tối đa và chỉ có thể nâng lên. ${pay}`,
+        title: 'Đặt giá tự động',
+        amountLabel: 'Mức tối đa',
+        notes: [
+          { label: 'Cách trả tự động', detail: `Hệ thống chỉ trả hơn người khác một bước ${formatVnd(auction.step)}, trong mức tối đa này. Chỉ bạn thấy mức tối đa và có thể nâng lên.` },
+          ...hold, pay,
+        ],
         confirm: 'Đặt giá tự động',
       }
     case 'Disable':
@@ -843,10 +939,15 @@ function dialogCopy(intent: Intent, auction: AuctionSummary, leading: boolean) {
       }
     case 'BuyNow':
       return {
-        title: `Mua ngay với ${formatVnd(intent.amount)}?`,
-        description: auction.buyNowMode === 'Instant'
-          ? `Bạn thắng ngay với giá này và phiên kết thúc. Thanh toán từ ví trong 24 giờ, rồi chọn nhận tại ${auction.pointName} hoặc giao tận nơi. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`
-          : `Bạn cam kết mua với giá này và ${leading ? 'giữ vị trí dẫn đầu; giá hiện tại tăng lên giá mua ngay' : 'dẫn đầu'}. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi chọn nhận tại ${auction.pointName} hoặc giao tận nơi. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
+        title: 'Xác nhận mua ngay',
+        amountLabel: 'Giá mua ngay',
+        notes: [
+          { label: 'Kết quả', detail: auction.buyNowMode === 'Instant'
+            ? 'Bạn thắng ngay và phiên kết thúc.'
+            : `Bạn ${leading ? 'giữ vị trí dẫn đầu ở giá mua ngay' : 'dẫn đầu ở giá mua ngay'}. Bạn thắng nếu không ai trả cao hơn trong ${buyNowWindow(leading)}.` },
+          pay,
+          { label: 'Cam kết', detail: 'Lượt mua ngay không thể rút lại.' },
+        ],
         confirm: 'Mua ngay',
       }
   }
@@ -868,6 +969,7 @@ const SELLER_STATE: Partial<Record<AuctionState, string>> = {
 function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, paused }: {
   auction: AuctionSummary; intake: MyIntake; open: boolean; scheduled: boolean; serverTime: string; onChanged: () => Promise<unknown>; paused: boolean
 }) {
+  const sale = intake.sellerSale
   const intent = useIntentKey()
   const [confirming, setConfirming] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -915,6 +1017,13 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
             : closeReasonText(auction) ?? SELLER_STATE[auction.state] ?? STATE_LABEL[auction.state]}
         </span>
       </div>
+      {!paused && sale && (
+        <section aria-label="Tiền bán sách đấu giá" className={styles.notice}>
+          <strong>{auctionSellerSaleLabels[sale.status]}</strong>
+          {sale.status !== 'Closed' && <SaleFeeBreakdown amounts={auctionSellerAmounts(sale)} settled={sale.status === 'Settled'} />}
+          {sale.status === 'Settled' && <Link to={`/wallet?sale=${sale.orderId}#lich-su-giao-dich`}>Đối chiếu tiền bán trong ví</Link>}
+        </section>
+      )}
       {error && <p role="alert" className={styles.fieldError}>{error}</p>}
       {waiting && <WaitingSellerControls auction={auction} me={null} serverTime={serverTime} onChanged={onChanged} paused={paused} />}
       {canEdit && !unknown && (

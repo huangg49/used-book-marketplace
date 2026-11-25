@@ -41,3 +41,4 @@ export { BrandLogo, WebBrandLogo } from "./brand-logo";
 export { BookshopNote } from "./bookshop-note";
 export { presentError, type ErrorPresentation } from "./error-presentation";
 export { TopNavbar, type TopNavbarProps } from "./top-navbar";
+export { WineHeader, type WineHeaderProps } from "./wine-header";

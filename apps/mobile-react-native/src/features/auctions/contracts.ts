@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { auctionSellerSaleSchema } from "@used-books/session-client";
 
 // Auction reads and commands (OpenAPI 0.35.0, tag Auctions). Auto ceilings are
 // never public; the caller's own ceiling only comes from participation.
@@ -9,6 +10,12 @@ export const publicAuctionBook = z.object({
   revisionId: z.string().uuid(),
   authors: z.array(z.string()),
   condition: z.enum(["LikeNew", "Good", "Fair", "Worn"]),
+  pages: z.string().optional(),
+  coverNote: z.string().optional(),
+  notes: z.string().optional(),
+  accessories: z.string().optional(),
+  description: z.string().optional(),
+  hasMissingPages: z.boolean().optional(),
   photos: z.array(
     z.object({
       id: z.string().uuid(),
@@ -48,6 +55,7 @@ export const publicAuctionSummary = z.object({
   startAt: z.string(),
   endAt: z.string(),
   pointName: z.string(),
+  sellerName: z.string().optional(),
   // ADR 0043: when Buy Now opened the 60-second window (endAt already shortened).
   buyNowAt: z.string().nullable().optional(),
   // ADR 0074: absent on older servers means Challenge.
@@ -216,6 +224,7 @@ export const pointOrder = z.object({
     bookPrice: z.number().int(),
     outboundFee: z.number().int().default(0),
     buyerTotal: z.number().int(),
+      commissionBps: z.number().int().min(0).max(10000).optional(),
   }),
   delivery: pointOrderDelivery.nullable().default(null),
   paymentDeadline: z.string().nullable(),
@@ -290,6 +299,7 @@ export const intakeStates = [
   "Sold",
 ] as const;
 export const myIntake = z.object({
+  sellerSale: auctionSellerSaleSchema.optional(),
   id: z.string().uuid(),
   auctionId: z.string().uuid().nullable(),
   state: z.enum(intakeStates),
