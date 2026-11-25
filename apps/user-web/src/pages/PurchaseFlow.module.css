@@ -392,6 +392,124 @@ fieldset:disabled .primary {
   font-weight: 700;
   color: var(--shop-wine);
 }
+
+.negotiationAddressDialog {
+  max-width: 552px;
+}
+.negotiationAddressDialog > header {
+  padding-block: 22px 18px;
+}
+.negotiationAddressDialog > header p {
+  margin: 4px 0 0;
+}
+.negotiationAddressForm {
+  display: grid;
+  gap: 16px;
+}
+.negotiationBookPrice {
+  padding: 13px 16px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-shelf, #f4eddf);
+}
+.negotiationBookPrice dl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 16px;
+  row-gap: 2px;
+  margin: 0;
+}
+.negotiationBookPrice dt {
+  color: var(--shop-ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.negotiationBookPrice dd {
+  margin: 0;
+  color: var(--shop-wine);
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.negotiationBookPrice p {
+  margin: 5px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+.negotiationAddressDialog .addresses {
+  margin: 0;
+}
+.negotiationAddressDialog legend {
+  margin-bottom: 8px;
+  font-size: 0.9375rem;
+}
+.negotiationAddressDialog .address {
+  min-height: 48px;
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  line-height: 1.55;
+}
+.negotiationAddressDialog .address:last-child {
+  margin-bottom: 0;
+}
+.negotiationAddressDialog .address:has(input:checked) {
+  background: var(--shop-shelf, #f4eddf);
+}
+.negotiationAddressDialog .address input[type="radio"] {
+  appearance: auto;
+  accent-color: var(--shop-wine);
+  background: none;
+  margin-top: 2px;
+}
+.negotiationAddressDialog .address small {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--shop-paper);
+  font-weight: 600;
+}
+.negotiationAddressDialog .address:has(.addAddress) {
+  align-items: center;
+}
+.negotiationAddressDialog .address:has(.addAddress) input {
+  margin: 0;
+}
+.negotiationAddressDialog .addAddress svg {
+  display: none;
+}
+.negotiationAddressDialog .addresses + .form {
+  margin-top: 16px;
+}
+.negotiationAddressDialog .note {
+  margin: 12px 0 0 !important;
+  line-height: 1.65;
+}
+.negotiationAddressDialog .negotiationAddressLoading {
+  margin: 0;
+  color: var(--shop-muted);
+}
+.negotiationAddressForm .error {
+  margin: 0 !important;
+}
+.negotiationAddressForm .textButton {
+  justify-self: start;
+}
+.negotiationAddressActions {
+  display: grid;
+  grid-template-columns: minmax(74px, 0.8fr) minmax(0, 2.2fr);
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--shop-line);
+}
+.negotiationAddressActions button {
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
 .form {
   display: grid;
   gap: 18px;

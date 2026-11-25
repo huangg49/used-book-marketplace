@@ -1,3 +1,13 @@
+# Hộp thoại địa chỉ nhận sách trong thương lượng Web — 25/11/2026
+
+- Local `codex/negotiation-address-dialog`, nền `9d9a15ea`. Giá niêm yết
+  nằm trong khối riêng, địa chỉ đang chọn dễ nhận biết và thao tác xác nhận
+  có chiều rộng ưu tiên. Hộp thoại dùng lại trường địa chỉ và lệnh gửi báo
+  giá hiện có.
+- PASS 514 unit Member Web, lint theo file và build. Browser Mongo QA kiểm
+  bố cục 320/390/1440px, địa chỉ mặc định, chuyển sang địa chỉ mới bằng bàn
+  phím, thử lại cùng key/body và tạo một đơn ở mức giá đã xác nhận.
+
 # Quản lý bài đăng chiếm hạn mức trên RN — 25/11/2026
 
 - Local `codex/rn-listing-quota-recovery`, nền `a8f5ac3c`. Sách của tôi

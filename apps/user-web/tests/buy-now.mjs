@@ -226,9 +226,50 @@ try {
     assert.equal(await createOrder.count(), 0);
 
     await go(buyerPage, `/books/${listingId}`);
+    if (listedConfirm) {
+      await fixture.api("/me/addresses", buyer.accessToken, {
+        expectedBookVersion: 0,
+        makeDefault: true,
+        address: {
+          recipientName: "Nguyễn Mai",
+          phone: "0900654321",
+          serviceAreaCode: "HCM-DEMO-v1",
+          localityCode: "DEMO-C",
+          detail: "24 đường Hoa Sách, phường kiểm thử",
+        },
+      });
+    }
     await buyerPage.getByRole("link", { name: "Mua ngay", exact: true }).click();
     await buyerPage.waitForURL(`${origin}${roomPath}?buyNow=1`);
     const delivery = buyerPage.getByRole("dialog", { name: "Địa chỉ nhận sách" });
+    if (listedConfirm) {
+      const initialViewport = buyerPage.viewportSize();
+      const savedAddress = delivery.getByRole("radio", { name: /^Nguyễn Mai/ });
+      await savedAddress.waitFor();
+      assert.equal(await savedAddress.isChecked(), true);
+      const radioStyle = await savedAddress.evaluate((radio) => {
+        const style = getComputedStyle(radio);
+        return { accent: style.accentColor, appearance: style.appearance };
+      });
+      assert.deepEqual(radioStyle, { accent: "rgb(92, 2, 2)", appearance: "auto" });
+      const displayedPrice = new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(listedBook.salePrice);
+      assert.equal(await delivery.locator("dd").textContent(), displayedPrice);
+      for (const width of [1440, 390, 320]) {
+        await buyerPage.setViewportSize({ width, height: 850 });
+        await captureDialog(buyerPage, `negotiation-address-${width}.png`);
+        assert.equal(await delivery.evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth + 1), true);
+      }
+      await buyerPage.setViewportSize(initialViewport);
+      await savedAddress.focus();
+      await buyerPage.keyboard.press("ArrowDown");
+      assert.equal(
+        await delivery.getByRole("radio", { name: "Dùng địa chỉ mới", exact: true }).isChecked(),
+        true,
+      );
+    }
     await delivery.getByLabel("Họ tên", { exact: true }).fill("QA buyer");
     await delivery.getByLabel("Số điện thoại", { exact: true }).fill("0900654321");
     await delivery.getByLabel(/Khu vực luân chuyển sách/).selectOption("DEMO-C");

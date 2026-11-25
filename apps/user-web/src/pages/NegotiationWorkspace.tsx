@@ -2057,16 +2057,19 @@ export function NegotiationWorkspace({
         open={addressDialogOpen}
         onClose={() => !addressBusy && setAddressDialogOpen(false)}
         title="Địa chỉ nhận sách"
-        description="Chọn nơi người bán giao sách cho bạn và lấy báo giá giao hàng"
+        description="Chọn địa chỉ để lấy báo giá giao hàng."
         busy={addressBusy}
-        className={flow.flow}
+        className={`${flow.flow} ${flow.negotiationAddressDialog}`}
       >
-        <form onSubmit={submitAddressAndQuote}>
+        <form className={flow.negotiationAddressForm} onSubmit={submitAddressAndQuote}>
           {listedPrice !== null && (
-            <p className={flow.note}>
-              Giá sách niêm yết <strong>{formatVnd(listedPrice)}</strong>.
-              Sau khi bạn xác nhận, người bán có thể tạo đơn ở mức giá này.
-            </p>
+            <div className={flow.negotiationBookPrice}>
+              <dl>
+                <dt>Giá sách niêm yết</dt>
+                <dd>{formatVnd(listedPrice)}</dd>
+              </dl>
+              <p>Sau khi bạn xác nhận, người bán có thể tạo đơn ở mức giá này.</p>
+            </div>
           )}
           <fieldset disabled={addressBusy || recoveringAddress}>
             {book?.bundle && (
@@ -2082,13 +2085,7 @@ export function NegotiationWorkspace({
             )}
 
             {addresses.isLoading || areas.isLoading ? (
-              <p
-                style={{
-                  padding: 16,
-                  textAlign: "center",
-                  color: "var(--shop-muted)",
-                }}
-              >
+              <p className={flow.negotiationAddressLoading} role="status">
                 Đang tải danh sách địa chỉ…
               </p>
             ) : (
@@ -2109,14 +2106,14 @@ export function NegotiationWorkspace({
           </fieldset>
 
           {addressError && (
-            <p role="alert" className={flow.error} style={{ marginTop: 12 }}>
+            <p role="alert" className={flow.error}>
               {addressError}
             </p>
           )}
           {!recoveringAddress && (addresses.isError || areas.isError) && (
             <button
               type="button"
-              className={styles.secondaryActionBtn}
+              className={flow.textButton}
               onClick={() => {
                 void addresses.refetch();
                 void areas.refetch();
@@ -2126,17 +2123,10 @@ export function NegotiationWorkspace({
             </button>
           )}
 
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              justifyContent: "flex-end",
-              marginTop: 20,
-            }}
-          >
+          <footer className={flow.negotiationAddressActions}>
             <button
               type="button"
-              className={styles.secondaryActionBtn}
+              className={flow.secondary}
               onClick={() => setAddressDialogOpen(false)}
               disabled={addressBusy}
             >
@@ -2144,7 +2134,7 @@ export function NegotiationWorkspace({
             </button>
             <button
               type="submit"
-              className={styles.primaryActionBtn}
+              className={flow.primary}
               disabled={addressBusy || (!recoveringAddress && (!book || !addresses.data || !areas.data))}
             >
               {addressBusy ? "Đang xử lý…"
@@ -2152,7 +2142,7 @@ export function NegotiationWorkspace({
                 : listedPrice !== null ? "Xác nhận giá & đính kèm báo giá"
                 : "Xác nhận & đính kèm báo giá"}
             </button>
-          </div>
+          </footer>
         </form>
       </PurchaseDialog>
 
