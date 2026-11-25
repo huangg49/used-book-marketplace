@@ -1,6 +1,6 @@
 import { usePagedCollection } from "../components/Pagination/usePagedCollection";
 import { CollectionPager } from "../components/Pagination/CollectionPager";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionLive } from "../hooks/useTransactionLive";
 import { Link, useParams } from "react-router-dom";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -65,6 +65,11 @@ export function DirectOrderListPage() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const allOrdersFilter = useRef<HTMLButtonElement>(null);
+  const cache = useQueryClient();
+  // Order commits wake the member inbox; the list polls only as a backstop.
+  const live = useTransactionLive("inbox", ownerId, () => {
+    void cache.invalidateQueries({ queryKey: ["direct-orders", ownerId] });
+  });
 
   const pages = useInfiniteQuery({
     queryKey: ["direct-orders", ownerId],
@@ -73,10 +78,9 @@ export function DirectOrderListPage() {
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: auth.status === "authenticated",
     retry: false,
-    refetchInterval: 8_000,
+    refetchInterval: live ? 30_000 : 8_000,
     refetchIntervalInBackground: false,
   });
-  useTransactionLive("inbox", ownerId, () => { void pages.refetch(); });
 
   const inaccessible = pages.error instanceof ApiError && [401, 403].includes(pages.error.status);
   const allItems = useMemo(

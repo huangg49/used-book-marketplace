@@ -93,6 +93,15 @@ function ChatRoom({
   const [panel, setPanel] = useState<"sheet" | "chat">("sheet");
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const [historyExchange, setHistoryExchange] = useState<string | null>(null);
+  const cache = useQueryClient();
+  // The parent page owns the conversation watch; this only reads whether it is live.
+  const roomLive = useTransactionLive("conversation", room.id, () => {});
+  // Exchange messages join this history; the exchange version includes its newest message.
+  const exchangeLive = useTransactionLive(
+    "exchange",
+    room.terms?.activeExchangeId ?? room.terms?.exchangeIds.at(-1),
+    () => void cache.invalidateQueries({ queryKey: ["purchase-message-history", userId, room.id] }),
+  );
   const history = useInfiniteQuery({
     queryKey: ["purchase-message-history", userId, room.id],
     queryFn: ({ pageParam }) => getPurchaseMessageHistory(room.id, pageParam),
@@ -100,7 +109,7 @@ function ChatRoom({
     getNextPageParam: (page, _pages, _param, params) =>
       page.olderCursor && !params.includes(page.olderCursor) ? page.olderCursor : undefined,
     retry: false,
-    refetchInterval: room.terms?.exchangeIds.length ? 3000 : false,
+    refetchInterval: room.terms?.exchangeIds.length ? (exchangeLive ? 30_000 : 3_000) : false,
   });
   const book = useQuery({
     queryKey: ["public-listing", room.listingId],
@@ -153,7 +162,7 @@ function ChatRoom({
   const events = useQuery({
     queryKey: ["conversation-events", room.id],
     queryFn: () => getConversationEvents(room.id),
-    refetchInterval: 3000,
+    refetchInterval: roomLive ? 30_000 : 3_000,
   });
   const isBuyer = room.buyer.id === userId;
   const guidance = purchaseChatGuidance(
@@ -1367,6 +1376,8 @@ function TransactionHub({
   roomsError: boolean;
   refetchRooms: () => void;
 }) {
+  // ChatPage owns the inbox watch and its invalidations; this reads its state.
+  const hubLive = useTransactionLive("inbox", userId, () => {});
   const [tabParams, setTabParams] = useSearchParams();
   const requestedTab = tabParams.get("tab");
   const activeTab = TRANSACTION_TABS.find((tab) => tab === requestedTab) ?? "all";
@@ -1382,7 +1393,7 @@ function TransactionHub({
     queryKey: ["conversation-exchanges", userId],
     queryFn: getExchanges,
     retry: false,
-    refetchInterval: 10000,
+    refetchInterval: hubLive ? 30_000 : 10_000,
   });
   const auctions = useQuery({
     queryKey: ["my-auctions", userId, "hub"],
@@ -1636,6 +1647,12 @@ export function ChatPage() {
       void cache.invalidateQueries({ queryKey });
     }
   });
+  // Kept while a room is open so the list beside it follows other rooms too.
+  const inboxLive = useTransactionLive("inbox", viewerId, () => {
+    for (const queryKey of [["purchase-conversations", viewerId], ["conversation-exchanges", viewerId], ["my-auctions", viewerId, "hub"]]) {
+      void cache.invalidateQueries({ queryKey });
+    }
+  });
   const rooms = useQuery({
     queryKey: [
       "purchase-conversations",
@@ -1643,12 +1660,7 @@ export function ChatPage() {
     ],
     queryFn: getPurchaseConversations,
     enabled: auth.status === "authenticated",
-    refetchInterval: 3000,
-  });
-  useTransactionLive("inbox", roomId ? undefined : viewerId, () => {
-    for (const queryKey of [["purchase-conversations", viewerId], ["conversation-exchanges", viewerId], ["my-auctions", viewerId, "hub"]]) {
-      void cache.invalidateQueries({ queryKey });
-    }
+    refetchInterval: inboxLive ? 30_000 : 3_000,
   });
   const room = useQuery({
     queryKey: roomKey,

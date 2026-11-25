@@ -33,6 +33,7 @@ import {
   reviewItem,
   reviewRevision,
 } from './review-record.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 @Injectable()
 export class ReviewsService {
@@ -353,6 +354,7 @@ export class ReviewsService {
               body:`Admin đã cập nhật kiểm duyệt đánh giá. ${reason?`Lý do: ${reason}`:''}`.slice(0,400),
               targetType:'TransactionReview',targetId:r._id,dedupeKey:`review:${r._id}:${r.version}:${userId}`,createdAt:now,readAt:null,
             });
+            signalMemberInbox(tx,[r.authorId,r.targetUserId]);
           }
           const item = reviewItem(r, publication, now, true);
           return {

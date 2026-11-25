@@ -5,6 +5,7 @@ import type {
 } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { nextMinimumBid } from './auction-engine.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 // FR-N03/N04 inbox rows for auction events, written inside the caller's
 // transaction so they exist exactly when the event committed. The text holds
@@ -353,7 +354,10 @@ async function write(
       readAt: null,
     });
   }
-  if (rows.length) await tx.c.member_notifications.insertMany(rows);
+  if (rows.length) {
+    await tx.c.member_notifications.insertMany(rows);
+    signalMemberInbox(tx, rows.map(row => row.userId));
+  }
 }
 
 /**
@@ -380,6 +384,7 @@ export async function notifyDepositShare(
     createdAt: now,
     readAt: null,
   });
+  signalMemberInbox(tx, [a.sellerId]);
 }
 
 export type FundsReason =
@@ -451,4 +456,5 @@ export async function notifyAuctionFunds(
     createdAt: now,
     readAt: null,
   });
+  signalMemberInbox(tx, [holderId]);
 }

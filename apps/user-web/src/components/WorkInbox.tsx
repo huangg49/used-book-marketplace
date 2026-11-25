@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   ApiError,
@@ -11,6 +11,7 @@ import {
   type WorkLane,
 } from "@used-books/session-client";
 import { session } from "../lib/session";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import styles from "./WorkInbox.module.css";
 
 export function WorkInbox({
@@ -25,6 +26,10 @@ export function WorkInbox({
   const lane = lanes.some(([value]) => value === selection)
     ? selection
     : "DirectOrders";
+  const queryClient = useQueryClient();
+  const live = useTransactionLive("inbox", ownerId, () => {
+    void queryClient.invalidateQueries({ queryKey: ["work-inbox", ownerId] });
+  });
   const result = useInfiniteQuery({
     queryKey: ["work-inbox", ownerId, status, lane],
     initialPageParam: null as string | null,
@@ -36,7 +41,9 @@ export function WorkInbox({
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     retry: false,
     staleTime: 0,
-    refetchInterval: 6_000,
+    // Work items follow order, exchange, chat and notification commits, which
+    // all wake the member inbox. Lanes without a push keep a short backstop.
+    refetchInterval: live ? 30_000 : 6_000,
     refetchIntervalInBackground: false,
   });
   const inaccessible =

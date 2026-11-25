@@ -7,8 +7,10 @@ import { Icon } from "./icon";
 import { AppText } from "./text";
 import { stitchTokens } from "./theme";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../session/session-provider";
+import { useForeground } from "../hooks/use-foreground";
+import { useTransactionLive } from "../hooks/use-transaction-live";
 import { getPurchaseConversations } from "../../features/conversations/purchase-conversation-service";
 
 export interface TopNavbarProps {
@@ -41,12 +43,19 @@ export function TopNavbar({
   const userId = state.status === "authenticated" ? state.user.id : undefined;
 
   // Tự động đếm số cuộc trò chuyện cần hành động hoặc đang hoạt động nếu không truyền messageCount
+  const queryClient = useQueryClient();
+  const foreground = useForeground();
+  const counting = Boolean(userId) && messageCount === undefined;
+  // Chat commits wake the member inbox; the poll only backs up a dropped socket.
+  const live = useTransactionLive("inbox", userId ?? "", foreground && counting, () => {
+    void queryClient.invalidateQueries({ queryKey: ["purchase-conversations-inbox-count"] });
+  });
   const conversationsQuery = useQuery({
     queryKey: ["purchase-conversations-inbox-count"],
     queryFn: () => getPurchaseConversations(client),
-    enabled: Boolean(userId) && messageCount === undefined,
+    enabled: counting,
     staleTime: 4_000,
-    refetchInterval: 6_000,
+    refetchInterval: !foreground ? false : live ? 60_000 : 6_000,
   });
 
   const effectiveMessageCount =

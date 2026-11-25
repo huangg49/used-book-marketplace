@@ -8,7 +8,7 @@ import {
   Platform,
   StyleSheet,
 } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   withdrawalSchema,
   withdrawalProofReadSchema,
@@ -17,6 +17,7 @@ import {
   type Withdrawal,
 } from "@used-books/session-client";
 import { useSession } from "../../core/session/session-provider";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
   AppModal,
   AppText,
@@ -48,6 +49,11 @@ export function WithdrawalDetailModal({
     withdrawalId && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(withdrawalId)
       ? withdrawalId
       : undefined;
+  const queryClient = useQueryClient();
+  // Admin decisions write a WithdrawalUpdated notice, which wakes the inbox.
+  const live = useTransactionLive("inbox", userId ?? "", Boolean(validId), () => {
+    void queryClient.invalidateQueries({ queryKey: ["withdrawal", userId, validId] });
+  });
 
   const detail = useQuery({
     queryKey: ["withdrawal", userId, validId],
@@ -55,7 +61,7 @@ export function WithdrawalDetailModal({
     enabled: Boolean(validId && userId),
     initialData: initialData && initialData.id === validId ? initialData : undefined,
     refetchInterval: (q) =>
-      !FINAL_STATES.includes(q.state.data?.state ?? "") ? 5000 : false,
+      !FINAL_STATES.includes(q.state.data?.state ?? "") ? (live ? 30_000 : 5_000) : false,
   });
 
   const row = detail.data;

@@ -4,6 +4,7 @@ import type {
   MemberNotificationDoc,
 } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 export type ExchangeNotificationKind =
   | 'ExchangeProposed'
@@ -134,5 +135,6 @@ export async function notifyExchange(
 
   if (rows.length) {
     await tx.c.member_notifications.insertMany(rows);
+    signalMemberInbox(tx, rows.map(row => row.userId));
   }
 }

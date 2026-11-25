@@ -31,6 +31,7 @@ import {
   type CurrentUser,
 } from "@used-books/session-client";
 import { canResolve, canSimulate, session } from "../../core/session";
+import { staffPoll, useStaffLive } from "../../core/staff-live";
 import {
   Button,
   ErrorNotice,
@@ -80,6 +81,10 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
   const [selected, setSelected] = useState<Withdrawal>();
   const [feedback, setFeedback] = useState("");
   const client = useQueryClient();
+  // The simulator list is TEST_OPERATOR-only, so it keeps polling.
+  const live = useStaffLive("withdrawals", () => {
+    if (!selected) void client.invalidateQueries({ queryKey: ["withdrawals", user.id] });
+  }, !simulator);
   const query = useInfiniteQuery({
     queryKey: ["withdrawals", user.id, simulator, state],
     initialPageParam: undefined as string | undefined,
@@ -89,7 +94,7 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
         withdrawalPageSchema,
       ),
     getNextPageParam: (p) => p.nextCursor ?? undefined,
-    refetchInterval: selected ? false : 6_000,
+    refetchInterval: selected ? false : staffPoll(live, 6_000),
     refetchIntervalInBackground: false,
   });
   const rows = query.data?.pages.flatMap((p) => p.items) ?? [];
@@ -305,6 +310,9 @@ export function WithdrawalDetailPage() {
 function Detail({ user, id }: { user: CurrentUser; id: string }) {
   const [params] = useSearchParams();
   const client = useQueryClient();
+  const live = useStaffLive("withdrawals", () => {
+    void client.invalidateQueries({ queryKey: ["withdrawal", user.id, id] });
+  });
   const query = useQuery({
     queryKey: ["withdrawal", user.id, id],
     queryFn: () =>
@@ -314,7 +322,7 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
       ["Requested", "Approved", "Processing", "FailedVerified"].includes(
         q.state.data?.state ?? "",
       )
-        ? 5_000
+        ? staffPoll(live, 5_000)
         : false,
   });
   const [action, setAction] = useState<Action>();

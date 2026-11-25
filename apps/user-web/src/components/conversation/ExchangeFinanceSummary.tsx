@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import type { ReactNode } from "react";
 import { useExchangeRecovery } from "../../hooks/useExchangeRecovery";
+import { useTransactionLive } from "../../hooks/useTransactionLive";
 import type { ExchangeDetail } from "../../lib/mock/exchangeDetail";
 import { formatVnd } from "../../lib/routes";
 import { getExchangeDetail } from "../../services/exchangeDetail";
@@ -139,12 +140,16 @@ function SavedSummary({
   now?: number;
 }) {
   useExchangeRecovery();
+  const cache = useQueryClient();
+  const live = useTransactionLive("exchange", id, () => {
+    void cache.invalidateQueries({ queryKey: ["exchangeDetail", userId, id] });
+  });
   // Same cache and mapper as the embedded sheet: no second financial projection.
   const query = useQuery({
     queryKey: ["exchangeDetail", userId, id],
     queryFn: () => getExchangeDetail(id),
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: live ? 30_000 : 5_000,
     refetchIntervalInBackground: false,
   });
   const accessDenied =

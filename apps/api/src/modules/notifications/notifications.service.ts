@@ -10,6 +10,7 @@ import {
   MongoCommandService,
   type Actor,
 } from '../commands/mongo-command.service.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 const DEFAULT_LIMIT = 20;
 const invalidCursor = () =>
@@ -97,7 +98,7 @@ export class NotificationsService {
       invalidField('ids', 'Chọn các thông báo cần đánh dấu, hoặc tất cả.');
     return this.commands.readObligation(auth, async (tx, actor) => {
       const now = await tx.now();
-      await tx.c.member_notifications.updateMany(
+      const read = await tx.c.member_notifications.updateMany(
         {
           userId: actor._id,
           readAt: null,
@@ -105,6 +106,8 @@ export class NotificationsService {
         },
         { $set: { readAt: now } },
       );
+      // Other tabs and devices of the same member refresh their unread badge.
+      if (read.modifiedCount) signalMemberInbox(tx, [actor._id]);
       return {
         unreadCount: await tx.c.member_notifications.countDocuments({
           userId: actor._id,

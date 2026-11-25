@@ -51,6 +51,7 @@ import {
 } from "@used-books/session-client";
 import { session } from "../../lib/session";
 import { useSession } from "../../hooks/useSession";
+import { useTransactionLive } from "../../hooks/useTransactionLive";
 import styles from "./support.module.css";
 import { SupportTargetPicker } from "./SupportTargetPicker";
 
@@ -680,6 +681,10 @@ function SupportDetail({
   back: string;
 }) {
   const cache = useQueryClient(),
+    // Staff updates write a SupportUpdated notice, which wakes the member inbox.
+    live = useTransactionLive("inbox", owner, () => {
+      void cache.invalidateQueries({ queryKey: ["support-detail", owner, id] });
+    }),
     result = useQuery({
       queryKey: ["support-detail", owner, id],
       staleTime: 0,
@@ -691,7 +696,7 @@ function SupportDetail({
         ),
       enabled: !!owner,
       retry: false,
-      refetchInterval: 6_000,
+      refetchInterval: live ? 60_000 : 6_000,
       refetchIntervalInBackground: false,
     });
   const [value, setValue] = useState(""),

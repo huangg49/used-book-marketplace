@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Image, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import { File } from "expo-file-system";
@@ -14,6 +14,8 @@ import {
   type EvidenceInput,
 } from "@used-books/session-client";
 import { useSession } from "../../core/session/session-provider";
+import { useForeground } from "../../core/hooks/use-foreground";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
   AppText,
   Button,
@@ -109,12 +111,18 @@ export function ExchangeEvidenceCard({
   const [message, setMessage] = useState("");
   const [resumeId, setResumeId] = useState<string>();
 
+  const foreground = useForeground();
+  const queryClient = useQueryClient();
+  // Evidence commits push on the exchange watch.
+  const live = useTransactionLive("exchange", id, foreground, () => {
+    void queryClient.invalidateQueries({ queryKey: ["exchange-evidence", userId, id] });
+  });
   const list = useQuery({
     queryKey: ["exchange-evidence", userId, id],
     queryFn: () =>
       client.request(`/exchanges/${id}/evidence`, exchangeEvidenceListSchema),
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: !foreground ? false : live ? 30_000 : 5_000,
   });
 
   const pending = pendingEvidence(client, id);

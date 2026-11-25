@@ -6,6 +6,9 @@ import {
 } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import type { SessionClient } from "../../core/api/session-client";
+import { useForeground } from "../../core/hooks/use-foreground";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
+import { useSession } from "../../core/session/session-provider";
 import {
   memberNotificationPage,
   markNotificationsReadResult,
@@ -37,6 +40,15 @@ export function useNotifications(
   client: SessionClient | null,
   isAuthenticated: boolean,
 ): UseQueryResult<MemberNotificationPage, Error> {
+  const queryClient = useQueryClient();
+  const { state } = useSession();
+  const foreground = useForeground();
+  const userId = state.status === "authenticated" ? state.user.id : "";
+  // Hidden tabs neither watch nor poll; the visible screen shares one socket
+  // watch, and the poll only backs up a dropped socket.
+  const live = useTransactionLive("inbox", userId, foreground && isAuthenticated, () => {
+    void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
+  });
   return useQuery({
     queryKey: NOTIFICATIONS_QUERY_KEY,
     queryFn: () => {
@@ -45,7 +57,7 @@ export function useNotifications(
     },
     enabled: Boolean(client && isAuthenticated),
     staleTime: 4_000,
-    refetchInterval: isAuthenticated ? 6_000 : false,
+    refetchInterval: !isAuthenticated || !foreground ? false : live ? 60_000 : 6_000,
   });
 }
 

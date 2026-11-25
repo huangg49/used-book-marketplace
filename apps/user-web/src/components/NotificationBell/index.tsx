@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ROUTES } from "../../lib/routes";
 import { timeAgo, useOpenNotification } from "../../hooks/useOpenNotification";
+import { useTransactionLive } from "../../hooks/useTransactionLive";
 import {
   notificationPreviewQuery,
   markNotificationsRead,
@@ -119,9 +120,15 @@ export function NotificationBell() {
   const queryClient = useQueryClient();
   const openNotification = useOpenNotification();
 
+  const owner = auth.status === 'authenticated' ? auth.user.id : undefined;
+  // The server pushes a hint after a notification is written or read; the
+  // poll only backs up a dropped socket or another API process.
+  const live = useTransactionLive("inbox", owner, () => {
+    void queryClient.invalidateQueries({ queryKey: ["notifications", owner] });
+  });
   const inbox = useQuery({
-    ...notificationPreviewQuery(auth.status === 'authenticated' ? auth.user.id : undefined),
-    refetchInterval: 6_000,
+    ...notificationPreviewQuery(owner),
+    refetchInterval: live ? 60_000 : 6_000,
     refetchIntervalInBackground: false,
   });
   const unread = inbox.data?.unreadCount ?? 0;

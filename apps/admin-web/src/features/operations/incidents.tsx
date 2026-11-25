@@ -21,7 +21,7 @@ import {
 import { Field } from "./field";
 import { Forbidden, OperationsQueue } from "./queue-frame";
 import {
-  refetchWhileClosed,
+  useLiveQueueInterval,
   useQueuePanel,
   type ActionContext,
 } from "./queue-panel";
@@ -43,10 +43,11 @@ function IncidentsContent({ user }: { user: CurrentUser }) {
   const panel = useQueuePanel();
   const [opening, setOpening] = useState(false);
   const admin = canResolve(user);
+  const queueInterval = useLiveQueueInterval(panel, ["operations", "incidents"]);
   const result = useQuery({
     queryKey: ["operations", "incidents"],
     queryFn: () => session.request("/operations/incidents", pointIncidentList),
-    refetchInterval: opening ? false : refetchWhileClosed(panel),
+    refetchInterval: opening ? false : queueInterval,
   });
   return (
     <>

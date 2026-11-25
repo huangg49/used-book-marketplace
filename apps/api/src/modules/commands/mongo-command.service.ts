@@ -1227,6 +1227,7 @@ export class MongoCommandService {
       }
       const id = randomUUID();
       const change = await options.mutate(tx, current, id);
+      tx.afterCommit('command-entity', () => this.transactionChanges?.entityCommitted(change.entityType));
       const serverTime =
         change.entityType === 'SaleQuote' ||
         change.entityType === 'Order' ||

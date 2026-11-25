@@ -31,7 +31,7 @@ import {
 } from "./contracts";
 import { Forbidden, OperationReceipt } from "./queue-frame";
 import {
-  refetchWhileClosed,
+  useLiveQueueInterval,
   useQueuePanel,
   type ActionContext,
 } from "./queue-panel";
@@ -56,10 +56,11 @@ export function PointsPage() {
 function PointsContent() {
   const panel = useQueuePanel();
   const [creating, setCreating] = useState(false);
+  const queueInterval = useLiveQueueInterval(panel, ["operations", "points"]);
   const result = useQuery({
     queryKey: ["operations", "points"],
     queryFn: () => session.request("/operations/points", operationsPointList),
-    refetchInterval: creating ? false : refetchWhileClosed(panel),
+    refetchInterval: creating ? false : queueInterval,
   });
 
   const presented = useRef<unknown>(undefined);

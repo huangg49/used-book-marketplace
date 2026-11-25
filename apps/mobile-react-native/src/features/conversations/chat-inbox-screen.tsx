@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
   AppText,
@@ -770,12 +770,22 @@ export function ChatInboxScreen() {
 
   const currentUserId = state.status === "authenticated" ? state.user.id : "";
   const isAuthenticated = state.status === "authenticated";
+  const queryClient = useQueryClient();
+  // Order, exchange, chat and notification commits wake the member inbox;
+  // the lists poll only as a backstop while the watch is acknowledged.
+  const live = useTransactionLive("inbox", currentUserId, foreground, () => {
+    for (const queryKey of [
+      ["purchase-conversations", currentUserId],
+      ["my-exchanges", currentUserId],
+      myAuctionsOptions(client, currentUserId, "all").queryKey,
+    ]) void queryClient.invalidateQueries({ queryKey: [...queryKey] });
+  });
 
   const conversationsQuery = useQuery({
     queryKey: ["purchase-conversations", currentUserId],
     queryFn: () => getPurchaseConversations(client),
     enabled: isAuthenticated && foreground,
-    refetchInterval: 8_000,
+    refetchInterval: live ? 30_000 : 8_000,
     retry: false,
   });
 
@@ -783,7 +793,7 @@ export function ChatInboxScreen() {
     queryKey: ["my-exchanges", currentUserId],
     queryFn: () => client.request("/exchanges", exchangePageSchema),
     enabled: isAuthenticated && foreground,
-    refetchInterval: 8_000,
+    refetchInterval: live ? 30_000 : 8_000,
     retry: false,
   });
 
@@ -792,9 +802,6 @@ export function ChatInboxScreen() {
     enabled: isAuthenticated && foreground,
     refetchInterval: 20_000,
     retry: false,
-  });
-  useTransactionLive("inbox", currentUserId, foreground, () => {
-    void Promise.all([conversationsQuery.refetch(), exchangesQuery.refetch(), auctionsQuery.refetch()]);
   });
 
   const allRooms = useMemo(

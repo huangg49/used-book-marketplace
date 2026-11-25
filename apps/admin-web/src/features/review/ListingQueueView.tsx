@@ -1,5 +1,5 @@
 import { Suspense, useLayoutEffect, useRef } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,6 +21,7 @@ import {
 } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { canReviewCatalog, session } from "../../core/session";
+import { staffPoll, useStaffLive } from "../../core/staff-live";
 import { dateText, money } from "../../core/format";
 import { CursorPagination } from "../../core/ui";
 import { ListFeedback } from "../../core/list-feedback";
@@ -99,6 +100,10 @@ export function ListingQueueView({ user }: { user: CurrentUser }) {
     });
   }
 
+  const cache = useQueryClient();
+  const live = useStaffLive("listings", () => {
+    void cache.invalidateQueries({ queryKey: ["queue", "listings"] });
+  });
   const result = useInfiniteQuery({
     queryKey: ["queue", "listings", status, user.id, ...(q ? [{ q }] : [])],
     initialPageParam: "",
@@ -109,7 +114,7 @@ export function ListingQueueView({ user }: { user: CurrentUser }) {
       return session.request(`/operations/listings?${query}`, pageOf(listing));
     },
     getNextPageParam: (page) => page.nextCursor || undefined,
-    refetchInterval: 5_000,
+    refetchInterval: staffPoll(live, 5_000),
     refetchIntervalInBackground: false,
     staleTime: 4_000,
   });

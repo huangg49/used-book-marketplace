@@ -1,9 +1,10 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { dateText } from "../../core/format";
 import { ListFeedback } from "../../core/list-feedback";
 import { canReview, session } from "../../core/session";
+import { staffPoll, useStaffLive } from "../../core/staff-live";
 import { CursorPagination, ErrorNotice, Notice } from "../../core/ui";
 import { autoReviewCheck, autoReviewReport, pageOf } from "./contracts";
 import { reasonLabel } from "./auto-review-view";
@@ -19,6 +20,12 @@ export function AutoReviewChecksPage() {
 // Only AI approvals a person still has to look at. Listings the AI sent to a
 // person are already in the review queue and are not counted again here.
 function ChecksContent() {
+  const cache = useQueryClient();
+  // Automated checks open and close with listing commands.
+  const live = useStaffLive("listings", () => {
+    for (const queryKey of [["auto-review-checks"], ["auto-review-report"]])
+      void cache.invalidateQueries({ queryKey });
+  });
   const report = useQuery({
     queryKey: ["auto-review-report"],
     queryFn: () => session.request("/operations/auto-review/report", autoReviewReport),
@@ -32,7 +39,7 @@ function ChecksContent() {
         pageOf(autoReviewCheck),
       ),
     getNextPageParam: (page) => page.nextCursor || undefined,
-    refetchInterval: 8_000,
+    refetchInterval: staffPoll(live, 8_000),
     refetchIntervalInBackground: false,
     staleTime: 5_000,
   });

@@ -1,3 +1,28 @@
+# Polling sang WebSocket trên Web/RN/Admin — 25/11/2026
+
+- Local `feat/realtime-notifications`, nền `fb117b15`, chưa commit. Làm đủ 4 pha
+  của kế hoạch trên một nhánh (các pha phụ thuộc watcher chung).
+- Pha 0–1: giao dịch ghi/đọc thông báo đánh thức watch `inbox` sau commit
+  (`Tx.afterCommit`); inbox backstop 5 s. `createLiveWatcher` trong
+  `packages/session-client` dùng một socket mỗi namespace, chia sẻ watch giữa
+  màn hình. Chuông, badge tin nhắn RN, hộp việc Web/RN theo `inbox`.
+- Pha 2: chat Web/RN, sự kiện hội thoại, hub giao dịch chỉ poll dự phòng khi
+  socket/watch sống. Pha 3: namespace `/staff` (ADR 0092) cho 6 topic Admin,
+  xác thực lại quyền trước mỗi push; hỗ trợ Member theo `inbox`. Pha 4: danh
+  sách đơn/trao đổi, bằng chứng, tài chính trao đổi, vận chuyển, trạng thái rút
+  tiền Member. Cập nhật ADR 0031.
+- PASS typecheck API/Web/RN/Admin; unit API 595 (1 ca shutdown Windows timeout
+  rồi PASS khi chạy lại), session-client 188, Web 514, RN 256, Admin 253; lint
+  theo file (cảnh báo còn lại nằm ở dòng cũ). PASS build Web/Admin/API và Expo
+  Web export. Mongo QA: PASS `after-commit.mongo-spec.ts` 5/5; suite 65 PASS,
+  2 FAIL ở `local-demo-completion` (validator `member_notifications` thiếu kind
+  của migration 0091 từ main, không do nhánh này). Browser trên API/Mongo QA
+  riêng, socket thật: Web/Admin 11/11 (một kết nối `/transactions`, không poll
+  6 s khi rảnh, push chuông 194 ms, đọc ở nơi khác 89 ms, backstop 2,4 s, hàng
+  đợi hỗ trợ Admin 431 ms); Expo Web 4/4. NOT RUN API E2E đầy đủ (chủ dự án
+  bỏ qua) và native. Danh sách đấu giá, bản nháp, nạp ví, việc quá hạn và
+  simulator vẫn polling.
+
 # Hộp thoại địa chỉ nhận sách trong thương lượng Web — 25/11/2026
 
 - Local `codex/negotiation-address-dialog`, nền `9d9a15ea`. Giá niêm yết

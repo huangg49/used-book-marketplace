@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp, Paperclip, Upload } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   exchangeEvidenceListSchema,
   exchangeEvidenceReadSchema,
@@ -11,6 +11,7 @@ import {
   type EvidenceInput,
 } from "@used-books/session-client";
 import { session } from "../../lib/session";
+import { useTransactionLive } from "../../hooks/useTransactionLive";
 import ui from "./ExchangeEvidencePanel.module.css";
 
 function formatBytes(bytes: number): string {
@@ -65,12 +66,17 @@ export function ExchangeEvidencePanel({
     return () => clearTimeout(timer);
   }, [download]);
 
+  // Evidence commits push on the exchange watch.
+  const cache = useQueryClient();
+  const live = useTransactionLive("exchange", id, () => {
+    void cache.invalidateQueries({ queryKey: ["exchange-evidence", userId, id] });
+  });
   const list = useQuery({
     queryKey: ["exchange-evidence", userId, id],
     queryFn: () =>
       session.request(`/exchanges/${id}/evidence`, exchangeEvidenceListSchema),
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: live ? 30_000 : 5_000,
   });
 
   const pending = pendingEvidence(session, id);

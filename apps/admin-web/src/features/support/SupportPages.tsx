@@ -31,6 +31,7 @@ import {
   type SupportPage,
 } from "@used-books/session-client";
 import { session, canResolve } from "../../core/session";
+import { staffPoll, useStaffLive } from "../../core/staff-live";
 import { Button, CursorPagination, Notice } from "../../core/ui";
 import { dateText } from "../../core/format";
 import styles from "./support.module.css";
@@ -52,6 +53,10 @@ export function SupportQueuePage() {
   return <SupportQueue key={user.id} owner={user.id} />;
 }
 function SupportQueue({ owner }: { owner: string }) {
+  const cache = useQueryClient();
+  const live = useStaffLive("support", () => {
+    void cache.invalidateQueries({ queryKey: ["operations-support", owner] });
+  });
   const [params, setParams] = useSearchParams();
   const state = params.get("state") ?? "",
     kind = params.get("kind") ?? "",
@@ -80,7 +85,7 @@ function SupportQueue({ owner }: { owner: string }) {
         supportPageSchema,
       ),
     retry: false,
-    refetchInterval: 6_000,
+    refetchInterval: staffPoll(live, 6_000),
     refetchIntervalInBackground: false,
   });
   const denied =
@@ -269,6 +274,9 @@ function SupportRecord({
   backLabel?: string;
 }) {
   const cache = useQueryClient(),
+    live = useStaffLive("support", () => {
+      void cache.invalidateQueries({ queryKey: ["operations-support-detail", owner, id] });
+    }),
     query = useQuery({
       queryKey: ["operations-support-detail", owner, id],
       staleTime: 0,
@@ -276,7 +284,7 @@ function SupportRecord({
       queryFn: () =>
         session.request(`/operations/support-cases/${id}`, supportDetailSchema),
       retry: false,
-      refetchInterval: 6_000,
+      refetchInterval: staffPoll(live, 6_000),
       refetchIntervalInBackground: false,
     });
   const [value, setValue] = useState(""),

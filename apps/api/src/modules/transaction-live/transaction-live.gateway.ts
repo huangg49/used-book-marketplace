@@ -18,6 +18,9 @@ import {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_WATCHES = 8;
 export const TRANSACTION_FALLBACK_MS = 400;
+// Notification writes and reads signal the inbox after commit, so its stored
+// version is re-read only as a backstop for another process or a missed signal.
+export const INBOX_FALLBACK_MS = 5_000;
 
 interface LiveSocket {
   connected: boolean;
@@ -33,7 +36,7 @@ interface Namespace {
 
 type Snapshot = { members: string[]; version: string };
 type Subscription = { socket: LiveSocket; version?: string };
-type Watch = { target: TransactionTarget; subscribers: Set<Subscription> };
+type Watch = { target: TransactionTarget; subscribers: Set<Subscription>; checkedAt: number };
 
 function parseTarget(value: unknown): TransactionTarget | undefined {
   if (!value || typeof value !== 'object' || !('kind' in value) || !('id' in value))
@@ -64,6 +67,8 @@ export class TransactionLiveGateway implements OnGatewayInit, OnGatewayDisconnec
 
   afterInit(namespace: Namespace) {
     this.unsubscribe = this.changes.subscribe(target => {
+      // A notification was written or read: tell every open screen of that member.
+      if (target.kind === 'inbox') return this.check(keyOf(target), true, true);
       this.check(keyOf(target));
       if ([...this.watches.values()].some(watch => watch.target.kind === 'inbox')) {
         void this.notifyInboxes(target)
@@ -97,11 +102,16 @@ export class TransactionLiveGateway implements OnGatewayInit, OnGatewayDisconnec
       if (!current || subscriptions.get(key) !== subscription || !socket.connected)
         return { ok: false };
       subscription.version = current.version;
-      const watch = this.watches.get(key) ?? { target, subscribers: new Set<Subscription>() };
+      const watch = this.watches.get(key) ?? { target, subscribers: new Set<Subscription>(), checkedAt: Date.now() };
       watch.subscribers.add(subscription);
       this.watches.set(key, watch);
       this.timer ??= setInterval(() => {
-        for (const watchedKey of this.watches.keys()) this.check(watchedKey, false);
+        const now = Date.now();
+        for (const [watchedKey, watched] of this.watches) {
+          if (watched.target.kind === 'inbox' && now - watched.checkedAt < INBOX_FALLBACK_MS) continue;
+          watched.checkedAt = now;
+          this.check(watchedKey, false);
+        }
       }, TRANSACTION_FALLBACK_MS).unref();
       return { ok: true };
     } finally {
@@ -199,7 +209,9 @@ export class TransactionLiveGateway implements OnGatewayInit, OnGatewayDisconnec
       const latest = await collections.member_notifications.findOne(
         { userId: id }, { sort: { createdAt: -1, _id: -1 }, projection: { _id: 1 } },
       );
-      return { members: [id], version: latest?._id ?? '' };
+      // Reading in another tab changes the unread badge without a new row.
+      const unread = await collections.member_notifications.countDocuments({ userId: id, readAt: null });
+      return { members: [id], version: `${latest?._id ?? ''}:${unread}` };
     }
     if (kind === 'exchange') {
       const exchange = await collections.exchanges.findOne(

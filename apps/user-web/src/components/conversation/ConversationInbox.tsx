@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, BookOpen, MessageCircle } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
+import { useTransactionLive } from "../../hooks/useTransactionLive";
 import {
   getPurchaseConversation,
   type PurchaseConversation,
@@ -220,11 +221,13 @@ export function ConversationInbox({
   showExchanges?: boolean;
 }) {
   const position = useInboxPosition();
+  // The chat page invalidates this list on inbox pushes; poll only as a backstop.
+  const live = useTransactionLive("inbox", userId, () => {});
   const exchanges = useQuery({
     queryKey: ["conversation-exchanges", userId],
     queryFn: getExchanges,
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: live ? 30_000 : 5_000,
     enabled: showExchanges,
   });
   const [filter] = useState<InboxFilter>(position.read().filter),
