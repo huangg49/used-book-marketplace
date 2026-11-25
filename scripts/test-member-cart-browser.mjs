@@ -41,7 +41,10 @@ try {
     logLevel: "error",
   });
   await vite.listen();
-  const dist = path.join(root, "apps/mobile-react-native/dist");
+  const dist = path.resolve(
+    root,
+    process.env.MEMBER_CART_RN_DIST || "apps/mobile-react-native/dist",
+  );
   staticServer = httpServer(async (req, res) => {
     try {
       let file = path.resolve(
@@ -210,10 +213,29 @@ try {
   rn.on("pageerror", (e) => errors.push(e.message));
   const rnCartBooks = rn.getByRole("button", { name: /^Xem bài đăng(?:\s|$)/ });
   const rnCartBuy = rn.getByRole("button", { name: /^Mua bài đăng(?:\s|$)/ });
+  const rnAddToCart = rn.getByRole("button", {
+    name: /thêm vào giỏ sách|đã có trong giỏ sách/i,
+  });
   await rn.goto(rnOrigin + "/book?id=" + id);
   await expect(button(rn, "Mua ngay cuốn sách này")).toBeVisible();
+  await expect(rnAddToCart).toHaveCount(0);
   await expect(rn.getByText(/thêm vào giỏ/i)).toHaveCount(0);
-  await rn.screenshot({ path: path.join(artifacts, "rn-book-390.png"), fullPage: true });
+  for (const width of [390, 320]) {
+    await rn.setViewportSize({ width, height: 1000 });
+    for (const name of [
+      "Trò chuyện cùng chủ sách",
+      "Gửi đề nghị đổi sách",
+      "Mua ngay cuốn sách này",
+    ]) {
+      await expect(button(rn, name)).toBeVisible();
+      await expect.poll(async () => {
+        const bounds = await button(rn, name).boundingBox();
+        return Boolean(bounds && bounds.x >= 0 && bounds.x + bounds.width <= width + 1);
+      }).toBe(true);
+    }
+    await rn.screenshot({ path: path.join(artifacts, `rn-book-${width}.png`), fullPage: true });
+  }
+  await rn.setViewportSize({ width: 390, height: 1000 });
   await rn.goto(rnOrigin + "/account");
   await rn
     .getByLabel("Email", { exact: true })
@@ -225,6 +247,7 @@ try {
   await expect(rnCartBooks).toHaveCount(2);
   await rnCartBooks.first().click();
   await expect(button(rn, "Mua ngay cuốn sách này")).toBeVisible();
+  await expect(rnAddToCart).toHaveCount(0);
   await expect(rn.getByText(/thêm vào giỏ/i)).toHaveCount(0);
   await rn.goBack();
   await expect(rnCartBooks).toHaveCount(2);

@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { AppText, Icon, space, stitchTokens } from "../../../core/ui";
+import { AppText, Icon, metrics, space, stitchTokens } from "../../../core/ui";
 import type { Listing } from "../contracts";
 
 interface BookBottomBarProps {
@@ -8,9 +8,6 @@ interface BookBottomBarProps {
   onChatPress: () => void;
   onExchangePress: () => void;
   onBuyPress: () => void;
-  onAddToCartPress?: () => void;
-  cartBusy?: boolean;
-  inCart?: boolean;
   isOwner: boolean;
   hasActiveOrder?: boolean;
   activeOrderState?: string;
@@ -26,9 +23,6 @@ export function BookBottomBar({
   onChatPress,
   onExchangePress,
   onBuyPress,
-  onAddToCartPress,
-  cartBusy,
-  inCart,
   isOwner,
   hasActiveOrder,
   activeOrderState,
@@ -74,26 +68,6 @@ export function BookBottomBar({
             onPress={onChatPress}
           >
             <Icon name="message" size={18} color={stitchTokens.wineDark} />
-          </Pressable>
-        )}
-
-        {canBuy && onAddToCartPress && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={inCart ? "Đã có trong giỏ sách" : "Thêm vào giỏ sách"}
-            disabled={cartBusy}
-            style={({ pressed }) => [
-              styles.chatBtn,
-              inCart && { borderColor: stitchTokens.wineDark, backgroundColor: stitchTokens.roseWarmSurface },
-              (pressed || cartBusy) && styles.pressed,
-            ]}
-            onPress={onAddToCartPress}
-          >
-            <Icon
-              name={inCart ? "check" : "bag"}
-              size={18}
-              color={inCart ? stitchTokens.verifiedGreen : stitchTokens.wineDark}
-            />
           </Pressable>
         )}
 
@@ -156,12 +130,14 @@ export function BookBottomBar({
 
 const styles = StyleSheet.create({
   container: {
-    height: 70,
+    minHeight: 70,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    gap: 8,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    gap: space.sm,
     backgroundColor: stitchTokens.roseWarmSurface,
     borderTopWidth: 1.5,
     borderTopColor: stitchTokens.peachBorder,
@@ -175,7 +151,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 1,
     flex: 1,
-    minWidth: 0,
+    minWidth: 96,
   },
   priceLabel: {
     fontSize: 10,
@@ -190,14 +166,17 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "flex-end",
+    marginLeft: "auto",
+    maxWidth: "100%",
     flexShrink: 0,
     gap: 5,
   },
   chatBtn: {
-    width: 36,
-    height: 38,
+    width: metrics.touch,
+    minHeight: metrics.touch,
     borderRadius: 10,
     backgroundColor: stitchTokens.terracottaSoft,
     borderWidth: 1,
@@ -207,7 +186,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   exchangeBtn: {
-    height: 38,
+    minHeight: metrics.touch,
     paddingHorizontal: 10,
     borderRadius: 10,
     backgroundColor: stitchTokens.terracottaSoft,
@@ -223,7 +202,7 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   buyBtn: {
-    height: 38,
+    minHeight: metrics.touch,
     paddingHorizontal: 13,
     borderRadius: 10,
     backgroundColor: stitchTokens.wineDark,
@@ -237,7 +216,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   payNowBtn: {
-    height: 40,
+    minHeight: metrics.touch,
     paddingHorizontal: 14,
     borderRadius: 10,
     backgroundColor: stitchTokens.wineMid,

@@ -62,7 +62,10 @@ try {
     logLevel: "error",
   });
   await vite.listen();
-  const dist = path.join(root, "apps/mobile-react-native/dist");
+  const dist = path.resolve(
+    root,
+    process.env.MEMBER_PROFILE_RN_DIST || "apps/mobile-react-native/dist",
+  );
   staticServer = httpServer(async (request, response) => {
     try {
       const url = new URL(request.url, rnOrigin);
@@ -257,7 +260,7 @@ try {
     .getByRole("heading", { name: "Hồ sơ của tôi", exact: true })
     .waitFor();
   await rn.getByLabel(/^Tên hiển thị/).fill("Người đọc từ RN QA");
-  await button(rn, "Lưu hồ sơ").click();
+  await button(rn, "Lưu thay đổi").click();
   await rn.getByText("Đã lưu hồ sơ.", { exact: true }).waitFor();
   assert.equal(
     (await fixture.api("/me/profile", readToken)).displayName,
@@ -291,7 +294,7 @@ try {
     return route.continue();
   });
   await rn.getByLabel(/^Tên hiển thị/).fill("RN giữ ý định khi timeout QA");
-  await button(rn, "Lưu hồ sơ").click();
+  await button(rn, "Lưu thay đổi").click();
   await button(rn, "Xác minh lần lưu trước").waitFor();
   await button(rn, "Về tài khoản").click();
   await button(rn, "Hồ sơ & Bảo mật").click();
@@ -313,6 +316,7 @@ try {
       { userId: fixture.member.user.id, state: "Verified" },
       { $set: { createdAt: new Date(Date.now() - 61_000) } },
     );
+  await rn.getByRole("tab", { name: "Email đăng nhập", exact: true }).click();
   await rn.getByLabel("Email mới", { exact: true }).fill(rnEmail);
   await rn
     .getByLabel("Mật khẩu hiện tại", { exact: true })
@@ -335,11 +339,11 @@ try {
   );
   await rn.getByLabel("Mật khẩu hiện tại", { exact: true }).fill(password);
   await button(rn, "Xác minh yêu cầu gửi mã").click();
-  await rn.getByLabel("Mã xác nhận", { exact: true }).waitFor();
+  await rn.getByLabel("Mã xác nhận 6 số", { exact: true }).waitFor();
   const rnPending = await fixture.api("/me/profile", readToken),
     rnMail = await fixture.readAccountMail(rnPending.pendingEmailChange.id);
   assert.ok(rnMail?.code);
-  await rn.getByLabel("Mã xác nhận", { exact: true }).fill(rnMail.code);
+  await rn.getByLabel("Mã xác nhận 6 số", { exact: true }).fill(rnMail.code);
   await button(rn, "Xác minh và đổi email").click();
   await rn
     .getByText(
@@ -354,6 +358,7 @@ try {
   assert.equal((await fixture.api("/me/profile", readToken)).email, rnEmail);
   for (const width of [390, 320]) {
     await rn.setViewportSize({ width, height: 1000 });
+    await rn.getByRole("tab", { name: "Thông tin", exact: true }).click();
     await rn.getByLabel(/^Tên hiển thị/).scrollIntoViewIfNeeded();
     assert.ok(
       await rn.evaluate(
@@ -364,6 +369,7 @@ try {
       path: path.join(evidence, `rn-web-${width}.png`),
       fullPage: true,
     });
+    await rn.getByRole("tab", { name: "Email đăng nhập", exact: true }).click();
     await button(rn, "Gửi mã đến email mới").scrollIntoViewIfNeeded();
     await rn.screenshot({
       path: path.join(evidence, `rn-web-${width}-email.png`),

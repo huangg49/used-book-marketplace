@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useId, useRef, useState, useCallback, type ComponentProps } from "react";
 import {
   BackHandler,
   Image,
   Pressable,
   StyleSheet,
-  TextInput,
-  type TextInputProps,
   View,
 } from "react-native";
 import Svg, {
@@ -41,6 +39,7 @@ import {
 import { useSession } from "../../core/session/session-provider";
 import {
   AppText,
+  AppTextInput,
   ConfirmDialog,
   Icon,
   Notice,
@@ -63,12 +62,14 @@ function WineField({
   error,
   hint,
   ...props
-}: TextInputProps & {
+}: ComponentProps<typeof AppTextInput> & {
   label: string;
   required?: boolean;
   error?: string;
   hint?: string;
 }) {
+  const descriptionId = useId();
+  const description = error || hint;
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wineFieldWrap}>
@@ -76,9 +77,15 @@ function WineField({
         {label}
         {required ? " *" : ""}
       </AppText>
-      <TextInput
+      <AppTextInput
         {...props}
-        placeholderTextColor="rgba(255, 223, 151, 0.45)"
+        composite
+        accessibilityLabel={props.accessibilityLabel ?? label}
+        accessibilityHint={description}
+        aria-describedby={description ? descriptionId : undefined}
+        aria-invalid={Boolean(error)}
+        aria-required={required}
+        placeholderTextColor={stitchTokens.goldTextMuted}
         selectionColor={stitchTokens.gold}
         onFocus={(e) => {
           setFocused(true);
@@ -92,16 +99,19 @@ function WineField({
           styles.wineInput,
           focused && styles.wineInputFocused,
           error && styles.wineInputError,
+          focused && error && styles.wineInputErrorFocused,
           props.editable === false && styles.wineInputDisabled,
         ]}
       />
-      {error ? (
-        <AppText kind="small" style={styles.wineFieldError}>
-          {error}
-        </AppText>
-      ) : hint ? (
-        <AppText kind="small" style={styles.wineFieldHint}>
-          {hint}
+      {description ? (
+        <AppText
+          nativeID={descriptionId}
+          kind="small"
+          accessibilityRole={error ? "alert" : undefined}
+          accessibilityLiveRegion="polite"
+          style={error ? styles.wineFieldError : styles.wineFieldHint}
+        >
+          {description}
         </AppText>
       ) : null}
     </View>
@@ -118,28 +128,28 @@ function ProfileBackdrop() {
     >
       <Defs>
         <LinearGradient id="paperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <Stop offset="0%" stopColor="#FBF7F0" />
-          <Stop offset="52%" stopColor="#F6EFE3" />
-          <Stop offset="100%" stopColor="#EFE5D5" />
+          <Stop offset="0%" stopColor={stitchTokens.paperBackdropLight} />
+          <Stop offset="52%" stopColor={stitchTokens.paperBackdropMid} />
+          <Stop offset="100%" stopColor={stitchTokens.paperBackdropShade} />
         </LinearGradient>
         <LinearGradient id="wineArchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#6E0505" />
-          <Stop offset="55%" stopColor="#5C0202" />
-          <Stop offset="100%" stopColor="#3B0000" />
+          <Stop offset="0%" stopColor={stitchTokens.wineBackdropLight} />
+          <Stop offset="55%" stopColor={stitchTokens.wine} />
+          <Stop offset="100%" stopColor={stitchTokens.wineBackdropShade} />
         </LinearGradient>
         <RadialGradient id="goldGlowTop" cx="85%" cy="10%" r="45%">
-          <Stop offset="0%" stopColor="#FFDF97" stopOpacity="0.34" />
-          <Stop offset="60%" stopColor="#F4CB67" stopOpacity="0.08" />
-          <Stop offset="100%" stopColor="#5C0202" stopOpacity="0" />
+          <Stop offset="0%" stopColor={stitchTokens.gold} stopOpacity="0.34" />
+          <Stop offset="60%" stopColor={stitchTokens.goldAccent} stopOpacity="0.08" />
+          <Stop offset="100%" stopColor={stitchTokens.wine} stopOpacity="0" />
         </RadialGradient>
         <RadialGradient id="warmHaloBottom" cx="15%" cy="88%" r="46%">
-          <Stop offset="0%" stopColor="#F4CB67" stopOpacity="0.22" />
-          <Stop offset="65%" stopColor="#FFDF97" stopOpacity="0.08" />
-          <Stop offset="100%" stopColor="#EFE5D5" stopOpacity="0" />
+          <Stop offset="0%" stopColor={stitchTokens.goldAccent} stopOpacity="0.22" />
+          <Stop offset="65%" stopColor={stitchTokens.gold} stopOpacity="0.08" />
+          <Stop offset="100%" stopColor={stitchTokens.paperBackdropShade} stopOpacity="0" />
         </RadialGradient>
         <RadialGradient id="wineTintBottom" cx="92%" cy="74%" r="40%">
-          <Stop offset="0%" stopColor="#5C0202" stopOpacity="0.07" />
-          <Stop offset="100%" stopColor="#EFE5D5" stopOpacity="0" />
+          <Stop offset="0%" stopColor={stitchTokens.wine} stopOpacity="0.07" />
+          <Stop offset="100%" stopColor={stitchTokens.paperBackdropShade} stopOpacity="0" />
         </RadialGradient>
       </Defs>
 
@@ -166,7 +176,7 @@ function ProfileBackdrop() {
         cy="34"
         r="86"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.18"
         strokeWidth="1.2"
       />
@@ -175,7 +185,7 @@ function ProfileBackdrop() {
         cy="34"
         r="58"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.14"
         strokeWidth="1"
       />
@@ -184,7 +194,7 @@ function ProfileBackdrop() {
         cy="132"
         r="64"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.12"
         strokeWidth="1"
       />
@@ -193,7 +203,7 @@ function ProfileBackdrop() {
       <Path
         d="M0 158 Q200 202 400 158"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.45"
         strokeWidth="1.5"
       />
@@ -204,7 +214,7 @@ function ProfileBackdrop() {
         cy="780"
         r="110"
         fill="none"
-        stroke="#5C0202"
+        stroke={stitchTokens.wine}
         strokeOpacity="0.05"
         strokeWidth="1"
       />
@@ -213,7 +223,7 @@ function ProfileBackdrop() {
         cy="780"
         r="76"
         fill="none"
-        stroke="#B08D2F"
+        stroke={stitchTokens.goldDark}
         strokeOpacity="0.1"
         strokeWidth="1"
       />
@@ -258,7 +268,12 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
     [code, setCode] = useState("");
   const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const [emailError, setEmailError] = useState("");
-  const [activeTab, setActiveTab] = useState<"info" | "email">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "email">(() =>
+    pendingAccountCommand(client, "profile-email") ||
+    pendingAccountCommand(client, "profile-confirm")
+      ? "email"
+      : "info",
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [leaveOpen, setLeaveOpen] = useState(false);
   const draft =
@@ -564,6 +579,9 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
       </View>
 
       <View style={styles.content}>
+        <AppText kind="heading" color={stitchTokens.goldLight} accessibilityRole="header">
+          Hồ sơ của tôi
+        </AppText>
         {profile.isPending && <StatePanel loading title="Đang tải hồ sơ…" />}
         {(!profile.data || !draft) && profile.error && (
           <StatePanel
@@ -1224,7 +1242,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: stitchTokens.goldAlpha40,
-    backgroundColor: "rgba(38, 0, 0, 0.36)",
+    backgroundColor: stitchTokens.wineInset,
     paddingHorizontal: 14,
     paddingVertical: 11,
     color: stitchTokens.goldLight,
@@ -1233,23 +1251,26 @@ const styles = StyleSheet.create({
   },
   wineInputFocused: {
     borderColor: stitchTokens.gold,
-    borderWidth: 1.5,
-    backgroundColor: "rgba(38, 0, 0, 0.5)",
+    boxShadow: `0 0 0 1px ${stitchTokens.gold}`,
+    backgroundColor: stitchTokens.wineInsetFocused,
   },
   wineInputError: {
-    borderColor: "#FF9B9B",
+    borderColor: stitchTokens.redBorderSoft,
+  },
+  wineInputErrorFocused: {
+    boxShadow: `0 0 0 1px ${stitchTokens.redBorderSoft}`,
   },
   wineInputDisabled: {
     opacity: 0.65,
   },
   wineFieldHint: {
-    color: "rgba(255, 223, 151, 0.78)",
+    color: stitchTokens.goldTextMuted,
   },
   wineFieldError: {
-    color: "#FFD1D1",
+    color: stitchTokens.lightPink,
   },
   subtleHint: {
-    color: "rgba(255, 223, 151, 0.75)",
+    color: stitchTokens.goldTextMuted,
   },
   actionStack: {
     gap: space.sm,
@@ -1272,7 +1293,7 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   primaryCtaTextDisabled: {
-    color: "rgba(255, 223, 151, 0.65)",
+    color: stitchTokens.goldTextDisabled,
   },
   ghostCta: {
     minHeight: 42,
@@ -1291,7 +1312,7 @@ const styles = StyleSheet.create({
   currentEmailBox: {
     padding: space.md,
     borderRadius: 12,
-    backgroundColor: "rgba(38, 0, 0, 0.36)",
+    backgroundColor: stitchTokens.wineInset,
     borderWidth: 1,
     borderColor: stitchTokens.goldAlpha40,
     gap: 4,
@@ -1306,12 +1327,12 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   currentEmailHint: {
-    color: "rgba(255, 223, 151, 0.78)",
+    color: stitchTokens.goldTextMuted,
   },
   verifyBox: {
     padding: space.md,
     borderRadius: 12,
-    backgroundColor: "rgba(38, 0, 0, 0.42)",
+    backgroundColor: stitchTokens.wineInset,
     borderWidth: 1,
     borderColor: stitchTokens.gold,
     gap: space.md,

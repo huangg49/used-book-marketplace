@@ -225,8 +225,11 @@ try {
     // Use Expo Router through real entry points. A fabricated pushState({}) /
     // popstate has no router history ID and can reset the navigation tree.
     await p.bringToFront();
-    if (new URL(p.url()).pathname === "/book")
+    const currentRoute = new URL(p.url());
+    if (currentRoute.pathname === "/book")
       await button(p, "Về kệ sách").click();
+    if (currentRoute.pathname === "/orders" && currentRoute.searchParams.has("orderId"))
+      await button(p, "Về danh sách đơn trực tiếp").click();
     await p.getByRole("tab", { name: "Trang chủ", exact: true }).click();
     await button(p, listingCards.get(id)).click();
     await p.waitForURL(
@@ -805,14 +808,7 @@ try {
   });
   await fixture.openDirectOrderReview(overdue.entityId, "pickup");
   await button(sellerPage, "Về danh sách đơn trực tiếp").click();
-  const overdueCard=sellerPage.getByText("#"+overdue.entityId.slice(0,8).toUpperCase(),{exact:true}).filter({visible:true}).locator("xpath=ancestor::div[.//*[@role='button']][1]");
-  await overdueCard.getByRole("button",{name:"Mở chi tiết đơn",exact:true}).click();
-  await sellerPage
-    .getByRole("heading", {
-      name: "Đơn #" + overdue.entityId.slice(0, 8).toUpperCase(),
-      exact: true,
-    })
-    .waitFor();
+  await openOrderFromList(sellerPage, overdue.entityId);
   const overdueNotice = sellerPage
     .getByText(/Đơn đã qua bước chuẩn bị hoặc quá hạn bàn giao/)
     .filter({ visible: true });

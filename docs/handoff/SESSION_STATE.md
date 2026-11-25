@@ -1,3 +1,17 @@
+# Đồng bộ main và sửa hồi quy React Native — 25/11/2026
+
+- Main local fast-forward từ `769d9bd4` đến `ba7bc855` (PR #129), không có
+  conflict. Đối chiếu nội dung của cả 9 file local trước và sau cập nhật.
+  Bản sửa nằm trên `codex/rn-main-integration-fixes`, nền `ba7bc855`.
+- Sửa lint ở Hồ sơ, Sổ địa chỉ và Hỗ trợ bằng component và màu dùng chung.
+  Khôi phục tiêu đề, tên truy cập của trường nhập và mở lại đúng tab khi
+  yêu cầu đổi email đang chờ. Bỏ nút giỏ sách xuất hiện lại ở chi tiết sách
+  RN. Kiểm tra tên truy cập của nút chỉ có biểu tượng và bố cục mua, đổi,
+  chat ở 320/390px. Nút quay lại chi tiết đơn có nhãn đích đến.
+- PASS lint, typecheck, 256 unit RN, Expo Web và bundle Android. PASS browser
+  Giỏ sách, Hồ sơ và Mua ngay qua Mongo QA riêng, dùng storage/mail mô phỏng.
+  Chưa thao tác trên Android/iOS native.
+
 # Tải kệ sách khi có bài đã đóng trên Member Web — 25/11/2026
 
 - Local `codex/owner-shelf-closed-listings`, nền `34f545c9`. Web nhận đủ

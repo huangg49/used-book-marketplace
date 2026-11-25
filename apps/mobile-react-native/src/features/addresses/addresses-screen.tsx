@@ -58,23 +58,23 @@ function AddressBackdrop() {
     >
       <Defs>
         <LinearGradient id="addrPaperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <Stop offset="0%" stopColor="#FBF7F0" />
-          <Stop offset="55%" stopColor="#F6EFE3" />
-          <Stop offset="100%" stopColor="#EFE5D5" />
+          <Stop offset="0%" stopColor={stitchTokens.paperBackdropLight} />
+          <Stop offset="55%" stopColor={stitchTokens.paperBackdropMid} />
+          <Stop offset="100%" stopColor={stitchTokens.paperBackdropShade} />
         </LinearGradient>
         <LinearGradient id="addrWineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#6E0505" />
-          <Stop offset="55%" stopColor="#5C0202" />
-          <Stop offset="100%" stopColor="#3B0000" />
+          <Stop offset="0%" stopColor={stitchTokens.wineBackdropLight} />
+          <Stop offset="55%" stopColor={stitchTokens.wine} />
+          <Stop offset="100%" stopColor={stitchTokens.wineBackdropShade} />
         </LinearGradient>
         <RadialGradient id="addrGoldGlow" cx="86%" cy="10%" r="44%">
-          <Stop offset="0%" stopColor="#FFDF97" stopOpacity="0.32" />
-          <Stop offset="60%" stopColor="#F4CB67" stopOpacity="0.08" />
-          <Stop offset="100%" stopColor="#5C0202" stopOpacity="0" />
+          <Stop offset="0%" stopColor={stitchTokens.gold} stopOpacity="0.32" />
+          <Stop offset="60%" stopColor={stitchTokens.goldAccent} stopOpacity="0.08" />
+          <Stop offset="100%" stopColor={stitchTokens.wine} stopOpacity="0" />
         </RadialGradient>
         <RadialGradient id="addrBottomHalo" cx="12%" cy="90%" r="45%">
-          <Stop offset="0%" stopColor="#F4CB67" stopOpacity="0.2" />
-          <Stop offset="100%" stopColor="#EFE5D5" stopOpacity="0" />
+          <Stop offset="0%" stopColor={stitchTokens.goldAccent} stopOpacity="0.2" />
+          <Stop offset="100%" stopColor={stitchTokens.paperBackdropShade} stopOpacity="0" />
         </RadialGradient>
       </Defs>
       <Rect x="0" y="0" width="400" height="860" fill="url(#addrPaperGrad)" />
@@ -86,7 +86,7 @@ function AddressBackdrop() {
         cy="38"
         r="86"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.18"
         strokeWidth="1.2"
       />
@@ -95,14 +95,14 @@ function AddressBackdrop() {
         cy="38"
         r="54"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.14"
         strokeWidth="1"
       />
       <Path
         d="M0 212 Q200 248 400 212"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.45"
         strokeWidth="1.5"
       />
@@ -543,7 +543,7 @@ export function AddressesScreen() {
                           name="trash"
                           size={14}
                           color={
-                            isDef ? "#FFB4B4" : stitchTokens.crimson
+                            isDef ? stitchTokens.lightPink : stitchTokens.crimson
                           }
                         />
                       </Pressable>

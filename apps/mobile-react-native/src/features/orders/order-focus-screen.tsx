@@ -337,6 +337,7 @@ export function OrderFocusScreen({
         title={`Đơn #${id.slice(0, 8).toUpperCase()}`}
         subtitle={stateConfig?.label ?? "Chi tiết đơn hàng trực tiếp"}
         onBack={() => router.replace("/orders")}
+        backLabel="Về danh sách đơn trực tiếp"
         rightIcon="sync"
         rightLabel="Cập nhật đơn"
         onRightPress={() => void result.refetch()}

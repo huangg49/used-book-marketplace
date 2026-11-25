@@ -61,23 +61,23 @@ function SupportBackdrop({ compact = false }: { compact?: boolean }) {
     >
       <Defs>
         <LinearGradient id="supPaperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <Stop offset="0%" stopColor="#FBF7F0" />
-          <Stop offset="55%" stopColor="#F6EFE3" />
-          <Stop offset="100%" stopColor="#EFE5D5" />
+          <Stop offset="0%" stopColor={stitchTokens.paperBackdropLight} />
+          <Stop offset="55%" stopColor={stitchTokens.paperBackdropMid} />
+          <Stop offset="100%" stopColor={stitchTokens.paperBackdropShade} />
         </LinearGradient>
         <LinearGradient id="supWineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#6E0505" />
-          <Stop offset="55%" stopColor="#5C0202" />
-          <Stop offset="100%" stopColor="#3B0000" />
+          <Stop offset="0%" stopColor={stitchTokens.wineBackdropLight} />
+          <Stop offset="55%" stopColor={stitchTokens.wine} />
+          <Stop offset="100%" stopColor={stitchTokens.wineBackdropShade} />
         </LinearGradient>
         <RadialGradient id="supGoldGlow" cx="86%" cy="10%" r="44%">
-          <Stop offset="0%" stopColor="#FFDF97" stopOpacity="0.32" />
-          <Stop offset="60%" stopColor="#F4CB67" stopOpacity="0.08" />
-          <Stop offset="100%" stopColor="#5C0202" stopOpacity="0" />
+          <Stop offset="0%" stopColor={stitchTokens.gold} stopOpacity="0.32" />
+          <Stop offset="60%" stopColor={stitchTokens.goldAccent} stopOpacity="0.08" />
+          <Stop offset="100%" stopColor={stitchTokens.wine} stopOpacity="0" />
         </RadialGradient>
         <RadialGradient id="supBottomHalo" cx="14%" cy="88%" r="46%">
-          <Stop offset="0%" stopColor="#F4CB67" stopOpacity="0.2" />
-          <Stop offset="100%" stopColor="#EFE5D5" stopOpacity="0" />
+          <Stop offset="0%" stopColor={stitchTokens.goldAccent} stopOpacity="0.2" />
+          <Stop offset="100%" stopColor={stitchTokens.paperBackdropShade} stopOpacity="0" />
         </RadialGradient>
       </Defs>
       <Rect x="0" y="0" width="400" height="860" fill="url(#supPaperGrad)" />
@@ -95,7 +95,7 @@ function SupportBackdrop({ compact = false }: { compact?: boolean }) {
         cy="38"
         r="84"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.18"
         strokeWidth="1.2"
       />
@@ -104,14 +104,14 @@ function SupportBackdrop({ compact = false }: { compact?: boolean }) {
         cy="38"
         r="52"
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.14"
         strokeWidth="1"
       />
       <Path
         d={`M0 ${archY} Q200 ${curveY} 400 ${archY}`}
         fill="none"
-        stroke="#FFDF97"
+        stroke={stitchTokens.gold}
         strokeOpacity="0.45"
         strokeWidth="1.5"
       />
@@ -857,7 +857,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     backgroundColor: stitchTokens.gold,
-    shadowColor: "#1F0101",
+    shadowColor: stitchTokens.wineDark,
     shadowOpacity: 0.22,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.cardBorder,
     padding: 18,
     gap: space.md,
-    shadowColor: "#3D1212",
+    shadowColor: stitchTokens.wineDeep,
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: "center",
     gap: 12,
-    shadowColor: "#3D1212",
+    shadowColor: stitchTokens.wineDeep,
     shadowOpacity: 0.08,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
@@ -993,7 +993,7 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 14,
     backgroundColor: stitchTokens.wine,
-    shadowColor: "#3A0000",
+    shadowColor: stitchTokens.wineDark,
     shadowOpacity: 0.22,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -1010,7 +1010,7 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.cardBorder,
     padding: 16,
     gap: 8,
-    shadowColor: "#3D1212",
+    shadowColor: stitchTokens.wineDeep,
     shadowOpacity: 0.06,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
@@ -1037,10 +1037,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "#EBF7EE",
+    backgroundColor: stitchTokens.likeNewGreenBg,
   },
   ticketStatePillClosed: {
-    backgroundColor: "#F1EFEA",
+    backgroundColor: stitchTokens.surfaceSoft,
   },
   ticketStateText: {
     color: stitchTokens.verifiedGreen,

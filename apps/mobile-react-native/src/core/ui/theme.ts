@@ -89,6 +89,10 @@ export const stitchTokens = {
   wineAlpha20: "rgba(92, 2, 2, 0.2)",
   wineAlpha85: "rgba(92, 2, 2, 0.85)",
   wineScrim: "rgba(92, 2, 2, 0.85)",
+  wineBackdropLight: "#6E0505",
+  wineBackdropShade: "#3B0000",
+  wineInset: "rgba(38, 0, 0, 0.36)",
+  wineInsetFocused: "rgba(38, 0, 0, 0.5)",
 
   gold: "#FFDF97",
   goldLight: "#FFF8E7",
@@ -99,6 +103,12 @@ export const stitchTokens = {
   goldVeryLight: "#FFF2D1",
   goldAlpha20: "rgba(255, 223, 151, 0.2)",
   goldAlpha40: "rgba(255, 223, 151, 0.4)",
+  goldTextMuted: "rgba(255, 223, 151, 0.78)",
+  goldTextDisabled: "rgba(255, 223, 151, 0.65)",
+
+  paperBackdropLight: "#FBF7F0",
+  paperBackdropMid: "#F6EFE3",
+  paperBackdropShade: "#EFE5D5",
 
   creamBg: "#F7F3ED",
   whiteSurface: "#FFFFFF",
