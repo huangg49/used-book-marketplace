@@ -116,6 +116,9 @@ export function RegisterPage() {
         <label className={styles.rules}><AuthInput id="accepted-rules" name="acceptedRules" type="checkbox" required />
           <span>Tôi hiểu giao dịch, tiền là mô phỏng đồ án; không thanh toán thật.</span></label>
         <AuthFieldFeedback id="accepted-rules" />
+        <p className={styles.policyLink}>
+          Đọc <a href="/policy" target="_blank" rel="noreferrer">Chính sách & quy chế</a> (mở tab mới, giữ nguyên thông tin đã nhập).
+        </p>
         <button className={styles.submit} type="submit">{state.busy ? 'Đang tạo tài khoản…' : 'Tạo tài khoản'} <ArrowRight size={18} aria-hidden="true" /></button>
       </fieldset>
     </AuthForm>}

@@ -90,7 +90,11 @@ export default function MainLayout() {
             </p>
           </div>
           <div className={styles.footerBottom}>
-            © {new Date().getFullYear()} Lật lại · Tiệm sách cũ
+            <span>© {new Date().getFullYear()} Lật lại · Tiệm sách cũ</span>
+            <nav className={styles.footerLegal} aria-label="Thông tin">
+              <Link to={ROUTES.policy}>Chính sách & quy chế</Link>
+              <Link to={ROUTES.contact}>Liên hệ</Link>
+            </nav>
           </div>
         </footer>
       )}
