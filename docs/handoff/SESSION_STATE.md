@@ -8,9 +8,13 @@
   email/SĐT trong lý do bị che. Migration 0092 chỉ thêm index `audit_events`.
   Admin web `/audit` trong nhóm Tài khoản & ví.
 - PASS contract check/routes, typecheck API/Admin, unit API redaction 6/6,
-  Admin 258. BLOCKED: `test/audit-log.e2e-spec.ts` (Docker/Mongo QA không chạy
-  trên máy này) và kiểm browser trang `/audit` với API thật. Cần chạy
-  `pnpm infra:mongo:test:up` rồi E2E theo START_HERE trước khi PR.
+  Admin 258. Mongo QA: E2E `audit-log` 5/5, `account-controls` +
+  `operations-users` 14/14, `schema.mongo-spec` 28/28 (áp migration 0092).
+  Browser QA thật (`pnpm --filter @used-books/admin-web test:activity-log:browser`,
+  DB `ops_browser_*_test` riêng): Staff bị chặn ở UI/nav/API; Admin thấy lệnh
+  khóa, lý do đã che email/SĐT, drawer, lọc cùng đối tượng, trạng thái rỗng,
+  1440/390/320px không tràn trang; 6 lần chạy liên tiếp PASS. Bộ lọc ít dùng
+  gom vào "Bộ lọc nâng cao". NOT RUN suite E2E/Mongo toàn bộ.
 
 # Polling sang WebSocket trên Web/RN/Admin — 25/11/2026
 

@@ -308,6 +308,9 @@ function AuditFilterForm({ filters, apply }: { filters: AuditFilters; apply: (f:
   const set = (key: keyof AuditFilters) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setDraft({ ...draft, [key]: e.target.value });
   const active = auditSearchParams(filters).toString() !== "";
+  const advancedActive = Boolean(
+    filters.entityId || filters.actorId || filters.action || filters.requestId || filters.eventId || filters.reason,
+  );
   return (
     <form
       className="directory-filters audit-filters"
@@ -332,40 +335,45 @@ function AuditFilterForm({ filters, apply }: { filters: AuditFilters; apply: (f:
           onChange={(entityType) => apply({ ...draft, entityType })}
         />
       </div>
-      <label className="field filter-search-col">
-        <span>Mã đối tượng / giao dịch</span>
-        <input value={draft.entityId} onChange={set("entityId")} maxLength={36} placeholder="UUID" spellCheck={false} />
-      </label>
-      <label className="field filter-search-col">
-        <span>Mã người thực hiện</span>
-        <input value={draft.actorId} onChange={set("actorId")} maxLength={36} placeholder="UUID" spellCheck={false} />
-      </label>
-      <label className="field filter-search-col">
-        <span>Thao tác</span>
-        <input value={draft.action} onChange={set("action")} maxLength={80} placeholder="Ví dụ: lockUserAccount" spellCheck={false} />
-      </label>
-      <label className="field filter-search-col">
-        <span>Mã yêu cầu / sự kiện</span>
-        <input
-          value={draft.requestId || draft.eventId}
-          onChange={(e) => setDraft({ ...draft, requestId: e.target.value, eventId: "" })}
-          maxLength={36}
-          placeholder="UUID"
-          spellCheck={false}
-        />
-      </label>
-      <label className="field filter-search-col">
-        <span>Lý do chứa</span>
-        <input value={draft.reason} onChange={set("reason")} maxLength={100} />
-      </label>
-      <label className="field filter-search-col">
+      <label className="field audit-field">
         <span>Từ</span>
         <input type="datetime-local" value={draft.from} onChange={set("from")} />
       </label>
-      <label className="field filter-search-col">
+      <label className="field audit-field">
         <span>Đến</span>
         <input type="datetime-local" value={draft.to} onChange={set("to")} />
       </label>
+      <details className="audit-advanced" open={advancedActive || undefined}>
+        <summary>Bộ lọc nâng cao{advancedActive ? " · đang áp dụng" : ""}</summary>
+        <div className="audit-advanced-grid">
+          <label className="field audit-field">
+            <span>Mã đối tượng / giao dịch</span>
+            <input value={draft.entityId} onChange={set("entityId")} maxLength={36} placeholder="UUID" spellCheck={false} />
+          </label>
+          <label className="field audit-field">
+            <span>Mã người thực hiện</span>
+            <input value={draft.actorId} onChange={set("actorId")} maxLength={36} placeholder="UUID" spellCheck={false} />
+          </label>
+          <label className="field audit-field">
+            <span>Thao tác</span>
+            <input value={draft.action} onChange={set("action")} maxLength={80} placeholder="Ví dụ: lockUserAccount" spellCheck={false} />
+          </label>
+          <label className="field audit-field">
+            <span>Mã yêu cầu / sự kiện</span>
+            <input
+              value={draft.requestId || draft.eventId}
+              onChange={(e) => setDraft({ ...draft, requestId: e.target.value, eventId: "" })}
+              maxLength={36}
+              placeholder="UUID"
+              spellCheck={false}
+            />
+          </label>
+          <label className="field audit-field">
+            <span>Lý do chứa</span>
+            <input value={draft.reason} onChange={set("reason")} maxLength={100} />
+          </label>
+        </div>
+      </details>
       <div className="filter-actions-col audit-filter-actions">
         <Button type="submit" variant="primary">Lọc</Button>
         {active && (
