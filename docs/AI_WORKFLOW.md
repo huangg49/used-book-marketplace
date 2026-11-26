@@ -127,6 +127,9 @@ Không tạo một báo cáo mới cho mọi lần chạy test hoặc chép log 
 
 [SESSION_STATE](handoff/SESSION_STATE.md) là điểm lưu chung, cập nhật khi kết thúc
 gói/phiên có thay đổi đáng kể. Mỗi người chỉ sửa mục thuộc phần việc của mình,
-đọc/giữ thay đổi của teammate; không ghi đè cả file từ bản cũ. Máy riêng ghi local
+đọc/giữ thay đổi của teammate; không ghi đè cả file từ bản cũ. File này dùng
+`merge=union` trong `.gitattributes`: mỗi PR chỉ thêm mục mới ở đầu file, không sửa
+dòng của mục khác; khi main đổi, chạy `git merge origin/main` để git tự giữ cả hai
+mục thay vì báo conflict. Máy riêng ghi local
 notes trong `.tmp/`, không đưa PID/secret của mỗi máy thành hướng dẫn chung.
 READINESS chỉ đổi khi có evidence mới đóng/mở gate; không suy từ một PR merge.
