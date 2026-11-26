@@ -25,3 +25,4 @@ export * from "./chat-message";
 
 export * from "./exchange-return";
 export * from "./exchange-demo";
+export * from "./platform-policy";

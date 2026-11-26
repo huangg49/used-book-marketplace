@@ -1042,6 +1042,44 @@ export function AccountScreen() {
               </View>
             ) : null}
 
+            {/* Policy & contact (shared copy with user-web). */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.menuCard}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Chính sách & quy chế"
+                  onPress={() => router.push("/policy")}
+                  style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <View style={styles.menuIconBox}>
+                      <Icon name="shield" size={17} color={stitchTokens.wine} />
+                    </View>
+                    <AppText kind="bold" style={styles.menuTitleText}>
+                      Chính sách & quy chế
+                    </AppText>
+                  </View>
+                  <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Liên hệ Lật lại"
+                  onPress={() => router.push("/contact")}
+                  style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <View style={styles.menuIconBox}>
+                      <Icon name="mail" size={17} color={stitchTokens.wine} />
+                    </View>
+                    <AppText kind="bold" style={styles.menuTitleText}>
+                      Liên hệ Lật lại
+                    </AppText>
+                  </View>
+                  <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                </Pressable>
+              </View>
+            </View>
+
             {/* ==============================================================
                 9. LOGOUT & MICRO FOOTER NOTE
             ============================================================== */}

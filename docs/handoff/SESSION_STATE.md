@@ -1,3 +1,15 @@
+# Trang Chính sách và Liên hệ Web/RN — 27/11/2026
+
+- Local `feat/policy-contact-pages`, nền `81faee5f`. Nội dung chung ở
+  `packages/session-client/src/platform-policy.ts`; chỉ trích số đã có trong
+  code/contract (phí 5%, phí đổi 0đ, kiểm tra 72 giờ, giá 10.000–1.000.000đ).
+  Email liên hệ `latlai@example.com` theo chủ dự án. Web `/policy`, `/contact`,
+  link ở footer và dưới ô quy chế khi đăng ký; RN `/policy`, `/contact`, link
+  ở Tài khoản và màn đăng ký. Hỗ trợ theo hồ sơ vẫn qua `/support` cần đăng nhập.
+- PASS typecheck Web/RN, unit Web 514, RN 256, session-client (thêm 3 ca).
+  Browser: Web 1280/375px và Expo Web 375px, không tràn ngang, không lỗi
+  console. NOT RUN native.
+
 # Driver Simulator RN cho Trao đổi và Đấu giá — 27/11/2026
 
 - Local `fix/rn-driver-simulator`, nền `81faee5f`. Nguyên nhân: RN không có
