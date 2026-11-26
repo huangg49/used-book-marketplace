@@ -1,6 +1,12 @@
 import React, { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { AppText, Icon, space, stitchTokens } from "../../core/ui";
+import { router } from "expo-router";
+import { AppText, Button, Icon, space, stitchTokens } from "../../core/ui";
+import {
+  driverSimulatorEnabled,
+  exchangeDriverHref,
+  type ExchangeLeg,
+} from "../driver/driver-model";
 import type { Exchange } from "./contracts";
 
 interface ExchangeShippingCardProps {
@@ -111,6 +117,31 @@ export function ExchangeShippingCard({
   const myAddressFull = myAddress
     ? `${myAddress.recipientName} · ${myAddress.phone} · ${myAddress.detail}`
     : "";
+
+  // Demo carrier simulator per parcel, like user-web ShippingTrackingCard.
+  const closedStatus = ["Completed", "Cancelled", "ResolutionPending"].includes(exchange.status);
+  const myLeg: ExchangeLeg = isInitiator ? "initiator" : "recipient";
+  const partnerLeg: ExchangeLeg = isInitiator ? "recipient" : "initiator";
+  const driverLink = (
+    shipment: Exchange["initiatorShipment"],
+    leg: ExchangeLeg,
+    delivered: boolean,
+    direction: "gửi" | "nhận",
+  ) =>
+    !history && !closedStatus && !delivered && driverSimulatorEnabled() &&
+    shipment?.method === "carrier" && shipment.trackingCode ? (
+      <View style={styles.legActionWrap}>
+        <Button
+          wine
+          secondary
+          title="Mở Driver Simulator · Demo"
+          accessibilityLabel={`Mở Driver Simulator · Demo cho kiện bạn ${direction}`}
+          onPress={() =>
+            router.push(exchangeDriverHref(exchange.id, leg, shipment.trackingCode!))
+          }
+        />
+      </View>
+    ) : null;
 
   const deadlineText = formatDateTime(exchange.shippingDeadline);
   const shippingExpired = Boolean(
@@ -272,6 +303,7 @@ export function ExchangeShippingCard({
           </View>
         ) : null}
 
+        {driverLink(myShipment, myLeg, partnerReceivedMine, "gửi")}
         {sendAction ? <View style={styles.legActionWrap}>{sendAction}</View> : null}
         {outgoingExtra ? <View style={styles.legExtraWrap}>{outgoingExtra}</View> : null}
       </View>
@@ -377,6 +409,7 @@ export function ExchangeShippingCard({
           </AppText>
         )}
 
+        {driverLink(partnerShipment, partnerLeg, iReceivedPartners, "nhận")}
         {receiveAction ? (
           <View style={styles.legActionWrap}>{receiveAction}</View>
         ) : null}
