@@ -8,6 +8,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { AuctionBiddingService } from './auction-bidding.service.js';
+import { socketCorsOptions } from '../../common/socket-cors.js';
 import {
   AuctionLiveService,
   LIST_ROOM,
@@ -33,7 +34,7 @@ type Server = {
 // is accepted here, so bidding still goes through the REST command protocol.
 @WebSocketGateway({
   namespace: '/auctions',
-  cors: { origin: true, credentials: false },
+  cors: socketCorsOptions(),
 })
 export class AuctionGateway implements OnGatewayInit, OnGatewayDisconnect {
   @WebSocketServer() server!: Server;

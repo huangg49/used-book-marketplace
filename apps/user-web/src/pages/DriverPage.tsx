@@ -68,7 +68,7 @@ interface RecentOrderSummary {
   bothDelivered: boolean;
 }
 
-const API_BASE = (import.meta.env['VITE_API_BASE_URL'] ?? '/api/v1').replace(/\/$/, '');
+const API_BASE = (import.meta.env['VITE_API_BASE_URL'] || 'http://localhost:3000/api/v1').replace(/\/$/, '');
 
 export function DriverPage() {
   const [params, setParams] = useSearchParams();
@@ -94,6 +94,7 @@ function ExchangeDriverView() {
   const [submitting, setSubmitting] = useState(false);
   const [simulatingSpeed, setSimulatingSpeed] = useState(false);
   const [order, setOrder] = useState<ShipmentOrderData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrderSummary[]>([]);
   const [legSteps, setLegSteps] = useState<Record<string, number>>({});
   const [lastAction, setLastAction] = useState<string>('');
@@ -131,6 +132,7 @@ function ExchangeDriverView() {
   const fetchActiveOrder = useCallback(
     async (trackingCode?: string, exchangeId?: string, leg?: 'initiator' | 'recipient') => {
       setLoading(true);
+      setLoadError(null);
       try {
         const params = new URLSearchParams();
         if (trackingCode) params.set('trackingCode', trackingCode);
@@ -154,6 +156,12 @@ function ExchangeDriverView() {
         }
       } catch (err) {
         console.warn('Lỗi tải đơn vận chuyển:', err);
+        setOrder(null);
+        setLoadError(
+          err instanceof Error
+            ? `Không thể kết nối máy chủ mô phỏng (${err.message}).`
+            : 'Không thể tải dữ liệu đơn vận chuyển.',
+        );
       } finally {
         setLoading(false);
       }
@@ -482,7 +490,7 @@ function ExchangeDriverView() {
               >
                 {simulatingSpeed
                   ? '⚡ Đang tự động chạy mô phỏng 2 chiều...'
-                  : '⚡ 1-Click Tự động chạy mô phỏng (Dành cho Thuyết trình)'}
+                  : '⚡ 1-Click Tự động chạy mô phỏng giao nhận 2 chiều'}
               </button>
             )}
 
@@ -608,6 +616,20 @@ function ExchangeDriverView() {
             )}
 
           </>
+        ) : loadError ? (
+          <div className={styles.emptyBox} role="alert">
+            <p style={{ fontSize: 36, margin: '0 0 10px' }}>⚠️</p>
+            <p className={styles.emptyTitle}>Chưa kết nối được máy chủ vận chuyển</p>
+            <p className={styles.emptyDesc}>{loadError}</p>
+            <button
+              type="button"
+              className={styles.actionBtn}
+              style={{ marginTop: 12 }}
+              onClick={() => void fetchActiveOrder(requestedCode, requestedExchange, requestedLeg)}
+            >
+              Thử tải lại
+            </button>
+          </div>
         ) : (
           <div className={styles.emptyBox}>
             <p style={{ fontSize: 36, margin: '0 0 10px' }}>📦</p>

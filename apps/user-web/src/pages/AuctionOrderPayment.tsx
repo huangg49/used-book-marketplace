@@ -86,7 +86,7 @@ export function AuctionOrderPayment({
       return
     }
     if (!addressForm.localityCode) {
-      setAddressError('Chọn khu vực nhận sách trong TP.HCM, Bình Dương hoặc Vũng Tàu.')
+      setAddressError('Chọn tỉnh/thành phố nhận sách.')
       return
     }
     const attempt = addressAttempt.current ?? {
@@ -200,8 +200,7 @@ export function AuctionOrderPayment({
       ) : usable.length === 0 ? (
         <div className={styles.field}>
           <p className={styles.fieldHint}>
-            Bạn chưa có địa chỉ nhận trong khu vực hỗ trợ (TP.HCM, Bình Dương, Vũng Tàu).
-            Thêm địa chỉ ngay tại đây để nhận sách tận nơi.
+            Bạn chưa có địa chỉ nhận sách. Thêm địa chỉ ngay tại đây để tính phí giao tận nơi theo khu vực.
           </p>
           <button type="button" className={styles.secondaryBlock} disabled={choiceLocked} onClick={openNewAddress}>
             Thêm địa chỉ nhận sách
@@ -230,8 +229,12 @@ export function AuctionOrderPayment({
             <p role="alert" className={styles.fieldError}>{commandError(quote.error)}{' '}<button type="button" className={styles.secondaryBlock} disabled={quote.isFetching} onClick={() => void quote.refetch()}>Tải lại phí giao</button></p>
           ) : quote.data ? (
             <p className={styles.fieldHint}>
-              {quote.data.outboundFee > 0 && 'Điểm giao nhận thu phí giao tận nơi. '}
-              Sau khi bạn đồng ý biên bản, {o.pointName} giao sách cho hãng vận chuyển mô phỏng.
+              {quote.data.policyCode === 'GHN-LIVE-v2'
+                ? 'Phí giao tính trực tiếp từ Giao Hàng Nhanh (GHN) theo khoảng cách và giá trị sách. '
+                : quote.data.outboundFee > 0
+                  ? 'Phí giao tính theo biểu phí khu vực từ điểm giữ sách tới địa chỉ của bạn. '
+                  : ''}
+              Sau khi bạn đồng ý biên bản, {o.pointName} bàn giao sách cho đơn vị vận chuyển.
             </p>
           ) : (
             <p className={styles.fieldHint} role="status">Đang tính phí giao tới địa chỉ này…</p>

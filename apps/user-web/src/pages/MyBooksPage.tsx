@@ -1,11 +1,12 @@
 import { CursorPager } from "../components/Pagination/CursorPager";
 import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useBeforeUnload, useBlocker, useLocation, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { Plus, LayoutGrid, Rows3, X } from "lucide-react";
 import { useSession } from "../hooks/useSession";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { moderationLabels } from "../lib/owner-listing-labels";
 import { myListingsQuery } from "../lib/owner-listing-queries";
 import { OwnerListingRow } from "../components/OwnerListingRow";
@@ -25,7 +26,12 @@ const filters = [
 
 export function MyBooksPage() {
   const auth = useSession();
+  const queryClient = useQueryClient();
   const location = useLocation();
+  const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
+  useTransactionLive("inbox", ownerId, () => {
+    void queryClient.invalidateQueries({ queryKey: ["my-listings", ownerId] });
+  });
   const pendingActions = useListingActions().length > 0;
   const blocker = useBlocker(({ currentLocation, nextLocation }) =>
     pendingActions && currentLocation.pathname !== nextLocation.pathname);

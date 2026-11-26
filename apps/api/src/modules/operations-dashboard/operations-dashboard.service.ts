@@ -35,6 +35,44 @@ function historyOutcome(kind: Wire['FinanceHoldHistoryKind']): Wire['FinanceHold
 
 const zone = 'Asia/Ho_Chi_Minh';
 const dayMs = 86_400_000;
+
+export function revenueCommissionAmount(
+  row: { type: 'OrderSettlement' | 'ListingFeeSettlement'; orderId: string | null; amount: number },
+  pointCommissionByOrderId: ReadonlyMap<string, number>,
+): number {
+  if (row.type === 'OrderSettlement' && row.orderId) {
+    const pointCommission = pointCommissionByOrderId.get(row.orderId);
+    if (pointCommission !== undefined) return pointCommission;
+  }
+  return row.amount;
+}
+
+export function revenueTransactionLabel(
+  row: { type: 'OrderSettlement' | 'ListingFeeSettlement'; orderId: string | null },
+  pointOrderIds: ReadonlySet<string>,
+  directOrderIds: ReadonlySet<string>,
+): string {
+  if (row.type === 'ListingFeeSettlement') return 'Phí đăng bán';
+  if (row.orderId && pointOrderIds.has(row.orderId)) return 'Hoa hồng đấu giá (5%)';
+  if (row.orderId && directOrderIds.has(row.orderId)) return 'Hoa hồng bán trực tiếp (5%)';
+  return 'Doanh thu đơn hàng';
+}
+
+export function splitPlatformLedgerBalance(
+  platformLedgerBalance: number,
+  settledOutboundShipping: number,
+) {
+  const safeBalance = Math.max(0, platformLedgerBalance);
+  const platformShippingPassThrough = Math.min(
+    safeBalance,
+    Math.max(0, settledOutboundShipping),
+  );
+  const platformNetRevenueBalance = Math.max(
+    0,
+    safeBalance - platformShippingPassThrough,
+  );
+  return { platformNetRevenueBalance, platformShippingPassThrough };
+}
 type Day = Wire['ModerationOverview']['daily'][number];
 type RevenueDay = Wire['RevenueOverview']['daily'][number];
 type RevenueTransaction = Wire['RevenueOverview']['transactions'][number];
@@ -265,51 +303,6 @@ export class OperationsDashboardService {
         amount: 0,
         orderSettlements: 0,
       }));
-      const rows = await tx.c.ledger_journals
-        .aggregate<{
-          _id: { date: string; type: string };
-          amount: number;
-          count: number;
-        }>([
-          {
-            $match: {
-              type: { $in: ['OrderSettlement', 'ListingFeeSettlement'] },
-              postedAt: { $gte: window.start, $lt: window.endExclusive },
-            },
-          },
-          {
-            $lookup: {
-              from: 'ledger_entries',
-              localField: '_id',
-              foreignField: 'journalId',
-              as: 'entries',
-            },
-          },
-          { $unwind: '$entries' },
-          {
-            $match: {
-              'entries.accountId': PLATFORM_COMMISSION_ACCOUNT_ID,
-              'entries.debit': { $gt: 0 },
-            },
-          },
-          {
-            $group: {
-              _id: {
-                date: {
-                  $dateToString: {
-                    date: '$postedAt',
-                    format: '%Y-%m-%d',
-                    timezone: zone,
-                  },
-                },
-                type: '$type',
-              },
-              amount: { $sum: '$entries.debit' },
-              count: { $sum: 1 },
-            },
-          },
-        ])
-        .toArray();
       const transactionPipeline: Document[] = [
         {
           $match: {
@@ -333,20 +326,15 @@ export class OperationsDashboardService {
           },
         },
       ];
-      const transactionCount = await tx.c.ledger_journals
-        .aggregate<{ count: number }>([
-          ...transactionPipeline,
-          { $count: 'count' },
-        ])
-        .toArray();
-      const transactionRows = await tx.c.ledger_journals
+      const allRevenueRows = await tx.c.ledger_journals
         .aggregate<{
-          _id: string,
-          type: 'OrderSettlement' | 'ListingFeeSettlement',
-          orderId: string | null,
-          listingFeeId: string | null,
-          postedAt: Date,
-          amount: number,
+          _id: string;
+          type: 'OrderSettlement' | 'ListingFeeSettlement';
+          orderId: string | null;
+          listingFeeId: string | null;
+          postedAt: Date;
+          date: string;
+          amount: number;
         }>([
           ...transactionPipeline,
           {
@@ -356,39 +344,28 @@ export class OperationsDashboardService {
               orderId: 1,
               listingFeeId: 1,
               postedAt: 1,
+              date: {
+                $dateToString: {
+                  date: '$postedAt',
+                  format: '%Y-%m-%d',
+                  timezone: zone,
+                },
+              },
               amount: '$entries.debit',
             },
           },
           { $sort: { postedAt: -1, _id: -1 } },
-          { $skip: (page - 1) * 10 },
-          { $limit: 10 },
         ])
         .toArray();
-      const insightOrderRows = await tx.c.ledger_journals
-        .aggregate<{ orderId: string | null }>([
-          ...transactionPipeline,
-          { $project: { orderId: 1 } },
-        ])
-        .toArray();
-      for (const row of rows) {
-        const day = daily.find((value) => value.date === row._id.date);
-        if (!day) continue;
-        day.amount += row.amount;
-        if (row._id.type === 'OrderSettlement')
-          day.orderSettlements += row.count;
-      }
-      const transactions: RevenueTransaction[] = transactionRows.map((row) => ({
-        id: row._id,
-        type: row.type,
-        label:
-          row.type === 'OrderSettlement' ? 'Doanh thu đơn hàng' : 'Phí đăng bán',
-        amount: row.amount,
-        postedAt: row.postedAt.toISOString(),
-        referenceId: row.orderId ?? row.listingFeeId,
-      }));
-      const settledOrderIds = insightOrderRows
-        .map((row) => row.orderId)
-        .filter((id): id is string => Boolean(id));
+      const totalTransactions = allRevenueRows.length;
+      const transactionRows = allRevenueRows.slice((page - 1) * 10, page * 10);
+      const settledOrderIds = Array.from(
+        new Set(
+          allRevenueRows
+            .map((row) => row.orderId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
       const directOrders = settledOrderIds.length
         ? await tx.c.direct_orders
             .find({ _id: { $in: settledOrderIds } })
@@ -399,6 +376,26 @@ export class OperationsDashboardService {
             .find({ _id: { $in: settledOrderIds } })
             .toArray()
         : [];
+      const pointCommissionByOrderId = new Map(
+        pointOrders.map((order) => [order._id, order.commission]),
+      );
+      const pointOrderIds = new Set(pointOrders.map((order) => order._id));
+      const directOrderIds = new Set(directOrders.map((order) => order._id));
+      for (const row of allRevenueRows) {
+        const day = daily.find((value) => value.date === row.date);
+        if (!day) continue;
+        // Point order ledger debit includes pass-through outboundFee; report pure commission only.
+        day.amount += revenueCommissionAmount(row, pointCommissionByOrderId);
+        if (row.type === 'OrderSettlement') day.orderSettlements += 1;
+      }
+      const transactions: RevenueTransaction[] = transactionRows.map((row) => ({
+        id: row._id,
+        type: row.type,
+        label: revenueTransactionLabel(row, pointOrderIds, directOrderIds),
+        amount: revenueCommissionAmount(row, pointCommissionByOrderId),
+        postedAt: row.postedAt.toISOString(),
+        referenceId: row.orderId ?? row.listingFeeId,
+      }));
       const quotes = directOrders.length
         ? await tx.c.sale_quotes
             .find({ _id: { $in: directOrders.map((order) => order.quoteId) } })
@@ -608,7 +605,7 @@ export class OperationsDashboardService {
         daily,
         page,
         pageSize: 10,
-        totalTransactions: transactionCount[0]?.count ?? 0,
+        totalTransactions,
         transactions,
         topRevenueAccount: topAccount
           ? {
@@ -1062,6 +1059,18 @@ export class OperationsDashboardService {
         0,
       );
 
+      const settledShippingRows = await tx.c.point_orders
+        .aggregate<{ total: number }>([
+          { $match: { state: 'Completed', outboundFee: { $gt: 0 } } },
+          { $group: { _id: null, total: { $sum: '$outboundFee' } } },
+        ])
+        .toArray();
+      const { platformNetRevenueBalance, platformShippingPassThrough } =
+        splitPlatformLedgerBalance(
+          platformCommission,
+          settledShippingRows[0]?.total ?? 0,
+        );
+
       return {
         from,
         to,
@@ -1079,6 +1088,8 @@ export class OperationsDashboardService {
           auctionHeld,
           withdrawalHeld,
           platformCommission,
+          platformNetRevenueBalance,
+          platformShippingPassThrough,
           listingFeeHeld,
           incidentFundBalance: lastFundEntry?.balanceAfter ?? 0,
         },

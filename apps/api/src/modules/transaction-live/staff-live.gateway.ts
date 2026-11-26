@@ -7,6 +7,7 @@ import {
   type OnGatewayInit,
 } from '@nestjs/websockets';
 import { AuthService } from '../auth/auth.service.js';
+import { socketCorsOptions } from '../../common/socket-cors.js';
 import { TransactionChanges } from '../commands/transaction-changes.js';
 
 type StaffRole = 'STAFF' | 'ADMIN';
@@ -70,7 +71,7 @@ interface Namespace {
 
 // Invalidation hints for admin screens. No queue data crosses the socket; the
 // role is rechecked against the current session before every push.
-@WebSocketGateway({ namespace: '/staff', cors: { origin: true, credentials: false } })
+@WebSocketGateway({ namespace: '/staff', cors: socketCorsOptions() })
 export class StaffLiveGateway implements OnGatewayInit, OnModuleDestroy {
   private readonly log = new Logger(StaffLiveGateway.name);
   private readonly timers = new Map<StaffTopic, NodeJS.Timeout>();

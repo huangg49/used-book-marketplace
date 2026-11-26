@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUpRight, Check, Clock3, PackageCheck, Truck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, CheckCircle2, Clock3, FlaskConical, PackageCheck, Truck } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -56,15 +56,20 @@ export function DirectDeliveryJourney({ order, onChanged }: { order: DirectOrder
   const canDrive = tracking.actions.some((action) => driverActions.includes(action));
   const canAct = (action: DirectDeliveryAction) =>
     command.pending ? command.pending === action : tracking.actions.includes(action);
+  const issueActions = (["ReportCondition"] as IssueAction[]).filter(canAct);
   const waitNote = order.role === "Seller"
     ? "Người mua có thể kiểm tra sách và báo sự cố trong thời hạn hiển thị."
     : "Bạn có thể báo sự cố trong 72 giờ kể từ mốc giao hoặc nhận sách đã ghi nhận.";
 
   return (
     <section className={styles.panel} aria-label={inspection ? "Kiểm tra sách" : "Tiến độ giao nhận"}>
-      <header>
-        <span className={styles.kicker}>{inspection ? <PackageCheck size={16} /> : <Truck size={16} />}{inspection ? "Kiểm tra" : "Giao nhận"}</span>
-        <h3>{tracking.issue ? "Đang xử lý sự cố" : inspection ? "Kiểm tra sách bạn nhận" : "Theo dõi kiện sách"}</h3>
+      <header className={styles.header}>
+        <div className={styles.titleRow}>
+          <span className={styles.titleIcon} aria-hidden="true">
+            {inspection ? <PackageCheck size={16} /> : <Truck size={16} />}
+          </span>
+          <h3>{tracking.issue ? "Đang xử lý sự cố" : inspection ? "Kiểm tra sách bạn nhận" : "Theo dõi kiện sách"}</h3>
+        </div>
         <p>{tracking.issue ? "Tiền thanh toán đang được giữ trong lúc hồ sơ được xem xét." : inspection ? waitNote : "Các mốc được cập nhật theo vận đơn của giao dịch này."}</p>
       </header>
       {tracking.issue ? (
@@ -75,17 +80,70 @@ export function DirectDeliveryJourney({ order, onChanged }: { order: DirectOrder
         </div>
       ) : inspection ? (
         <>
-          {order.inspectionDeadline && <div className={styles.deadline}><Clock3 size={16} aria-hidden="true" /> Hạn kiểm tra <strong>{journeyTime(order.inspectionDeadline)}</strong></div>}
-          {tracking.acknowledgedAt && <p className={styles.received}>Đã xác nhận nhận sách lúc {journeyTime(tracking.acknowledgedAt)}.</p>}
-          <div className={styles.actions}>
-            {canAct("Acknowledge") && <button type="button" className={styles.primary} disabled={command.busy} onClick={() => void command.run("Acknowledge")}>
-              {command.pending ? "Thử lại xác nhận" : "Tôi đã nhận được sách"}
-            </button>}
-            {(Object.keys(issueLabels) as IssueAction[]).filter(canAct).map((action) =>
-              <button key={action} type="button" className={styles.secondary} disabled={command.busy} onClick={() => setIssue(action)}>{issueLabels[action]}</button>,
-            )}
-          </div>
-          {canAct("SkipInspection") && <button type="button" className={styles.demo} disabled={command.busy} onClick={() => setSkip(true)}>Tua hạn kiểm tra và giải ngân · Demo</button>}
+          {(order.inspectionDeadline || tracking.acknowledgedAt) && (
+            <div className={styles.statusStrip}>
+              {order.inspectionDeadline && (
+                <div className={styles.deadlineRow}>
+                  <Clock3 size={15} aria-hidden="true" />
+                  <span>Hạn kiểm tra</span>
+                  <strong>{journeyTime(order.inspectionDeadline)}</strong>
+                </div>
+              )}
+              {tracking.acknowledgedAt && (
+                <div className={styles.receivedRow}>
+                  <CheckCircle2 size={14} aria-hidden="true" />
+                  <span>Đã xác nhận nhận sách lúc {journeyTime(tracking.acknowledgedAt)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(canAct("Acknowledge") || issueActions.length > 0) && (
+            <div className={styles.actionGroup}>
+              {canAct("Acknowledge") && (
+                <button
+                  type="button"
+                  className={styles.primary}
+                  disabled={command.busy}
+                  onClick={() => void command.run("Acknowledge")}
+                >
+                  {command.pending ? "Thử lại xác nhận" : "Tôi đã nhận được sách"}
+                </button>
+              )}
+              {issueActions.length > 0 && (
+                <div className={styles.issueActions} data-count={issueActions.length}>
+                  {issueActions.map((action) => (
+                    <button
+                      key={action}
+                      type="button"
+                      className={styles.secondary}
+                      disabled={command.busy}
+                      onClick={() => setIssue(action)}
+                    >
+                      {issueLabels[action]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {canAct("SkipInspection") && (
+            <div className={styles.demoSection}>
+              <span className={styles.demoCaption}>
+                <FlaskConical size={12} aria-hidden="true" />
+                Tiện ích kiểm thử nhanh
+              </span>
+              <button
+                type="button"
+                className={styles.demo}
+                disabled={command.busy}
+                onClick={() => setSkip(true)}
+              >
+                Tua hạn kiểm tra và giải ngân · Demo
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <>

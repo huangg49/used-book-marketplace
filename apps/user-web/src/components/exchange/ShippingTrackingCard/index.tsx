@@ -152,8 +152,11 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
   const carrier = CARRIERS.find(item => item.code === shipment?.carrierCode);
   const trackingCode = shipment?.trackingCode;
   const trackingUrl = getTrackingUrl(carrier?.code, trackingCode ?? undefined);
-  const demoDriverAvailable = import.meta.env.DEV && typeof window !== "undefined"
-    && localDemoHosts.has(window.location.hostname);
+  const remoteDemoAllowed = import.meta.env.VITE_DEMO_SIMULATOR_ENABLED === "true";
+  const demoDriverAvailable = remoteDemoAllowed || (
+    import.meta.env.DEV && typeof window !== "undefined"
+    && localDemoHosts.has(window.location.hostname)
+  );
   const leg = outgoing === (detail.viewerRole === "proposer") ? "initiator" : "recipient";
   const hasJourney = Boolean(address || registered || sentAt || receivedAt);
   const expired = shippingExpired && !sentAt;

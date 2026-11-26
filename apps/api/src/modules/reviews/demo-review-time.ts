@@ -23,7 +23,14 @@ export class DemoReviewTime {
     if (!['development', 'test'].includes(mode) || this.config.get('DEMO_REVIEW_TIME_ENABLED') !== 'true') return false;
     try {
       const url = new URL(this.config.get<string>('MONGODB_URL', ''));
-      if (!['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) return false;
+      const allowRemoteDemo =
+        this.config.get<string>('DEMO_ALLOW_REMOTE_HOST') === 'true' &&
+        Boolean(this.config.get<string>('PAYMENT_SIMULATOR_SECRET'));
+      if (allowRemoteDemo) {
+        if (!['mongodb:', 'mongodb+srv:'].includes(url.protocol)) return false;
+      } else if (!['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
+        return false;
+      }
     } catch { return false; }
     return this.config.get<string>('DEMO_REVIEW_EXCHANGE_IDS', '').split(',').map(v => v.trim()).includes(id);
   }

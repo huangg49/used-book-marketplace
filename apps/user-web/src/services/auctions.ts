@@ -118,7 +118,11 @@ const deliverySchema = z.object({
   demoOutForDeliveryAt: z.string().nullish(),
 })
 const deliveryQuoteSchema = z.object({
-  addressId: z.string().uuid(), addressVersion: z.number().int(), outboundFee: z.number().int(), buyerTotal: money,
+  addressId: z.string().uuid(),
+  addressVersion: z.number().int(),
+  policyCode: z.string().optional(),
+  outboundFee: z.number().int(),
+  buyerTotal: money,
 })
 const addressListSchema = z.object({
   // Book version guards a concurrent address edit when saving a new address.

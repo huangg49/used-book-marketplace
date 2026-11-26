@@ -95,12 +95,47 @@ describe("FinancePage", () => {
       status: "ACTIVE",
       roles: ["ADMIN"],
     };
-    useQuery.mockReturnValue({
-      data: sampleData,
-      isPending: false,
-      isError: false,
-      isFetching: false,
-      refetch: vi.fn(),
+    useQuery.mockImplementation((options: { queryKey?: unknown[] }) => {
+      const key = JSON.stringify(options?.queryKey ?? []);
+      if (key.includes("revenue")) {
+        return {
+          data: {
+            from: "2026-11-01",
+            to: "2026-11-07",
+            timezone: "Asia/Ho_Chi_Minh",
+            serverTime: "2026-11-08T01:00:00.000Z",
+            total: 50000,
+            orderSettlements: 1,
+            daily: [],
+            page: 1,
+            pageSize: 10,
+            totalTransactions: 1,
+            transactions: [
+              {
+                id: "journal-1",
+                type: "OrderSettlement",
+                label: "Hoa hồng đấu giá (5%)",
+                amount: 50000,
+                postedAt: "2026-11-07T15:00:36.815Z",
+                referenceId: "be1f5bef-33ce-4c6e-ab1f-0ff544f8fb20",
+              },
+            ],
+            topRevenueAccount: null,
+            highestPricedBooks: [],
+          },
+          isPending: false,
+          isError: false,
+          isFetching: false,
+          refetch: vi.fn(),
+        };
+      }
+      return {
+        data: sampleData,
+        isPending: false,
+        isError: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      };
     });
 
     const html = renderToStaticMarkup(
@@ -110,10 +145,13 @@ describe("FinancePage", () => {
     );
 
     expect(html).toContain("Lợi nhuận ròng (Đang lỗ)");
-    expect(html).toContain("Phí ship chặng giao từ điểm");
+    expect(html).toContain("Phí vận chuyển giao tận nơi đấu giá (GHN / khu vực)");
     expect(html).toContain("Thu hộ");
     expect(html).toContain("Khối lượng Trao đổi sách");
     expect(html).toContain("5,00%");
+    expect(html).toContain("Lịch sử thu hoa hồng nền tảng");
+    expect(html).toContain("Hoa hồng đấu giá (5%)");
+    expect(html).toContain("#BE1F5BEF");
   });
 
   it("denies STAFF access to finance report and hides admin-only tabs", () => {

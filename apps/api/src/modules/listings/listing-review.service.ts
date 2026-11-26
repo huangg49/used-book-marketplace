@@ -52,6 +52,10 @@ import { attachPhotos } from './listing-drafts.service.js';
 import { ListingFeeService } from '../wallet/listing-fee.service.js';
 import { requireListingSlot } from './listing-quota.js';
 import { requireChannelContent } from './listing-channel.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
+
+const clipText = (text: string, max: number) =>
+  text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 
 @Injectable()
 export class ListingReviewService {
@@ -287,6 +291,38 @@ export class ListingReviewService {
           receiptId,
           context.auth.sessionId,
         );
+        const catalogRev = l.currentRevision?.book?.currentRevisionId
+          ? await tx.c.catalog_revisions.findOne(
+              { _id: l.currentRevision.book.currentRevisionId },
+              { projection: { title: 1 } },
+            )
+          : null;
+        const bookLabel =
+          l.currentRevision?.bundle?.title?.trim() ||
+          catalogRev?.title?.trim() ||
+          'bài đăng sách của bạn';
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: l.ownerId,
+          kind:
+            body.decision === 'Approve' ? 'ListingApproved' : 'ListingRejected',
+          title:
+            body.decision === 'Approve'
+              ? 'Bài đăng sách đã được duyệt'
+              : 'Bài đăng sách cần chỉnh sửa',
+          body: clipText(
+            body.decision === 'Approve'
+              ? `Bài đăng "${bookLabel}" đã được duyệt và hiển thị công khai trên Lật Lại.`
+              : `Bài đăng "${bookLabel}" chưa được duyệt: ${body.reason.trim()}`,
+            400,
+          ),
+          targetType: 'Listing',
+          targetId: id,
+          dedupeKey: `listing-decision:${body.revisionId}:${body.decision}`,
+          createdAt: await tx.now(),
+          readAt: null,
+        });
+        signalMemberInbox(tx, [l.ownerId]);
         return {
           entityType: 'Listing',
           entityId: id,
@@ -418,6 +454,32 @@ export class ListingReviewService {
           { returnDocument: 'after' },
         );
         tx.check(`listing:${id}`, () => checkListing(tx, id));
+        const autoCatalogRev = l.currentRevision?.book?.currentRevisionId
+          ? await tx.c.catalog_revisions.findOne(
+              { _id: l.currentRevision.book.currentRevisionId },
+              { projection: { title: 1 } },
+            )
+          : null;
+        const autoBookLabel =
+          l.currentRevision?.bundle?.title?.trim() ||
+          autoCatalogRev?.title?.trim() ||
+          'bài đăng sách của bạn';
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: l.ownerId,
+          kind: 'ListingApproved',
+          title: 'Bài đăng sách đã được duyệt tự động',
+          body: clipText(
+            `Bài đăng "${autoBookLabel}" đã vượt qua kiểm duyệt và hiển thị công khai trên Lật Lại.`,
+            400,
+          ),
+          targetType: 'Listing',
+          targetId: id,
+          dedupeKey: `listing-auto-approve:${input.revisionId}`,
+          createdAt: decidedAt,
+          readAt: null,
+        });
+        signalMemberInbox(tx, [l.ownerId]);
         return {
           entityType: 'Listing' as const,
           entityId: id,

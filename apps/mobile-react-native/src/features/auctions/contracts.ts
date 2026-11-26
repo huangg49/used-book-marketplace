@@ -206,6 +206,7 @@ export const pointOrderDelivery = z.object({
 export const deliveryQuote = z.object({
   addressId: z.string().uuid(),
   addressVersion: z.number().int(),
+  policyCode: z.string().optional(),
   outboundFee: z.number().int(),
   buyerTotal: z.number().int(),
 });

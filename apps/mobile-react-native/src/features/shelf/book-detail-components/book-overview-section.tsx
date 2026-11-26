@@ -213,7 +213,7 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
                     "";
                   router.push({
                     pathname: "/search",
-                    params: { q: query, mode: "Both" },
+                    params: { q: query, mode: "Exchange" },
                   });
                 }}
                 style={({ pressed }) => [

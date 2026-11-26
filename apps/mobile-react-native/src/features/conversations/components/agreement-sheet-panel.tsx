@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { randomUUID } from "expo-crypto";
-import { buyerSaleFeeText } from "@used-books/session-client";
+import {
+  DEFAULT_SALE_COMMISSION_BPS,
+  buyerSaleFeeText,
+  directOrderCommission,
+  type SaleSettlementReceipt,
+} from "@used-books/session-client";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +21,7 @@ import {
   stitchTokens,
 } from "../../../core/ui";
 import { formatVnd } from "../../../core/ui/format";
+import { SaleFeeBreakdown } from "../../../core/ui/sale-fee-breakdown";
 import type { Listing } from "../../shelf/contracts";
 import { addressBook } from "../../addresses/contracts";
 import { orderDetailsSchema, quoteSchema } from "../../orders/contracts";
@@ -684,6 +690,27 @@ export function AgreementSheetPanel({
               {buyerSaleFeeText(room.quotePreview.commissionBps)}
             </AppText>
           ) : null}
+
+          {isSeller && effectiveBookPrice > 0 ? (() => {
+            const commissionBps =
+              room.quotePreview?.commissionBps ?? DEFAULT_SALE_COMMISSION_BPS;
+            const commission = directOrderCommission(
+              effectiveBookPrice,
+              commissionBps,
+            );
+            const shippingReimbursement = shippingFee ?? 0;
+            const previewReceipt: SaleSettlementReceipt = {
+              bookPrice: effectiveBookPrice,
+              commissionBps,
+              commission,
+              shippingReimbursement,
+              creditedAmount:
+                effectiveBookPrice - commission + shippingReimbursement,
+            };
+            return (
+              <SaleFeeBreakdown amounts={previewReceipt} settled={false} />
+            );
+          })() : null}
 
           {/* Collapsible Price Proposal Form */}
           {!isLocked && !proposal && (

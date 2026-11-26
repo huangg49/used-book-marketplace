@@ -32,6 +32,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { ApiError } from "@used-books/session-client";
 import { useNotifications } from "../notifications/notifications-model";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 
 const filters = [
   { value: "", label: "Tất cả" },
@@ -68,6 +69,18 @@ export function DraftsScreen() {
   const [deleteError, setDeleteError] = useState("");
   const createKey = useRef<string | null>(null);
 
+  const inboxLive = useTransactionLive(
+    "inbox",
+    ownerId ?? "",
+    foreground && !!ownerId,
+    () => {
+      void cache.invalidateQueries({ queryKey: ["drafts", ownerId] });
+      if (selected) {
+        void cache.invalidateQueries({ queryKey: ["draft", ownerId, selected] });
+      }
+    },
+  );
+
   const drafts = useInfiniteQuery({
     queryKey: ["drafts", ownerId, channel, filter],
     initialPageParam: null as string | null,
@@ -80,7 +93,7 @@ export function DraftsScreen() {
       ),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     enabled: foreground,
-    refetchInterval: foreground ? 5_000 : false,
+    refetchInterval: foreground ? (inboxLive ? false : 5_000) : false,
   });
 
   const detail = useQuery({

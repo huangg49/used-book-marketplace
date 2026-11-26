@@ -18,6 +18,7 @@ import { AuctionsController } from './auctions.controller.js';
 import { AuctionDemoController } from './auction-demo.controller.js';
 import { DemoSkipPolicy } from './demo-skip.policy.js';
 import { HandoverPointsService } from './handover-points.service.js';
+import { PointDeliveryPricingService } from './point-delivery-pricing.service.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { PointCollectionService } from './point-collection.service.js';
 import { PointOrderResolutionService } from './point-order-resolution.service.js';
@@ -43,6 +44,7 @@ import { PointOrderGateway } from './point-order.gateway.js';
     AuctionBookService,
     AuctionBiddingService,
     HandoverPointsService,
+    PointDeliveryPricingService,
     PointOrdersService,
     PointCollectionService,
     PointOrderResolutionService,

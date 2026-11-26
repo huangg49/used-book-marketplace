@@ -3,7 +3,7 @@ import { auctionCheckoutBalance, auctionOrderHoldText, buyerSaleFeeText } from "
 import { router } from "expo-router";
 import { ReviewEntry } from "../reviews/review-entry";
 import { useEffect, useState } from "react";
-import { View, TouchableOpacity } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -749,6 +749,7 @@ function Payment({
   const [newRecipient, setNewRecipient] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newLocality, setNewLocality] = useState("");
+  const [localitySearch, setLocalitySearch] = useState("");
   const [newDetail, setNewDetail] = useState("");
   const [addressBusy, setAddressBusy] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
@@ -762,7 +763,7 @@ function Payment({
   const areas = useQuery({
     queryKey: ["service-areas"],
     queryFn: () => client.request("/service-areas", directory),
-    enabled: deliver && addingNew,
+    enabled: deliver,
   });
 
   const items = (addresses.data?.items ?? []).filter(
@@ -815,7 +816,7 @@ function Payment({
       return;
     }
     if (!newLocality) {
-      setAddressError("Vui lòng chọn quận/huyện trong khu vực phục vụ TP.HCM.");
+      setAddressError("Vui lòng chọn tỉnh/thành phố nhận sách.");
       return;
     }
     if (!newDetail.trim() || newDetail.trim().length < 5) {
@@ -1020,7 +1021,9 @@ function Payment({
                 Địa chỉ nhận sách
               </AppText>
               <AppText kind="small" color={colors.muted} style={{ fontSize: 11 }}>
-                Hãng: Lật Lại Express (TP.HCM)
+                {quote.data?.policyCode === "GHN-LIVE-v2"
+                  ? "Cước thực tế GHN Express"
+                  : "Giao toàn quốc từ điểm"}
               </AppText>
             </View>
 
@@ -1111,7 +1114,9 @@ function Payment({
                         </View>
                         <AppText kind="small" color={colors.ink} style={{ fontSize: 12 }}>
                           {a.detail}
-                          {a.localityCode ? ` · ${a.localityCode}` : ""}
+                          {a.localityCode
+                            ? ` · ${areas.data?.localities.find((loc) => loc.code === a.localityCode)?.label ?? a.localityCode}`
+                            : ""}
                         </AppText>
                       </View>
                     </TouchableOpacity>
@@ -1196,21 +1201,49 @@ function Payment({
 
                 <View style={{ gap: space.xs }}>
                   <AppText kind="label" color={stitchTokens.brownMuted}>
-                    Chọn Quận/Huyện (TP.HCM)
+                    Chọn Tỉnh/Thành phố nhận sách ({areas.data?.localities.length ?? 63} tỉnh/thành)
                   </AppText>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                    {(areas.data?.localities ?? []).map((loc) => (
-                      <Chip
-                        key={loc.code}
-                        wine
-                        compact
-                        title={loc.label}
-                        selected={newLocality === loc.code}
-                        disabled={addressBusy}
-                        onPress={() => setNewLocality(loc.code)}
-                      />
-                    ))}
-                  </View>
+                  <TextField
+                    label=""
+                    value={localitySearch}
+                    onChangeText={setLocalitySearch}
+                    placeholder="Tìm nhanh tỉnh/thành (VD: Hà Nội, Huế, Cà Mau...)"
+                    editable={!addressBusy}
+                  />
+                  <ScrollView
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                    style={{ maxHeight: 168 }}
+                    contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 6, paddingVertical: 4 }}
+                  >
+                    {(areas.data?.localities ?? [])
+                      .filter((loc) => {
+                        const q = localitySearch
+                          .trim()
+                          .toLowerCase()
+                          .normalize("NFD")
+                          .replace(/\p{Diacritic}/gu, "")
+                          .replaceAll("đ", "d");
+                        if (!q) return true;
+                        const label = loc.label
+                          .toLowerCase()
+                          .normalize("NFD")
+                          .replace(/\p{Diacritic}/gu, "")
+                          .replaceAll("đ", "d");
+                        return label.includes(q) || loc.code.toLowerCase().includes(q);
+                      })
+                      .map((loc) => (
+                        <Chip
+                          key={loc.code}
+                          wine
+                          compact
+                          title={loc.label}
+                          selected={newLocality === loc.code}
+                          disabled={addressBusy}
+                          onPress={() => setNewLocality(loc.code)}
+                        />
+                      ))}
+                  </ScrollView>
                 </View>
 
                 <TextField
@@ -1259,7 +1292,9 @@ function Payment({
                       : "Miễn phí giao hàng"}
                   </AppText>
                   <AppText kind="small" color={colors.muted} style={{ fontSize: 12 }}>
-                    Giao bởi Lật Lại Express tới địa chỉ đã chọn
+                    {quote.data.policyCode === "GHN-LIVE-v2"
+                      ? "Cước thực tế từ Giao Hàng Nhanh (GHN) tới địa chỉ đã chọn"
+                      : "Tính theo biểu phí khu vực từ điểm giữ sách tới địa chỉ đã chọn"}
                   </AppText>
                 </View>
               </View>

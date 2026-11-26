@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { ApiError, type CurrentUser } from "@used-books/session-client";
 import {
   BadgePercent,
@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import { canViewFinance, session } from "../../core/session";
 import { ErrorNotice } from "../../core/ui";
-import { dashboardFinanceQuery } from "./queries";
-import { dateInputInHcm, formatVnd, subtractDays } from "./revenue";
+import { dashboardFinanceQuery, dashboardRevenueQuery } from "./queries";
+import { dateInputInHcm, formatRevenueDate, formatVnd, subtractDays } from "./revenue";
 import {
   formatBps,
   formatDelta,
@@ -240,9 +240,15 @@ export function FinancePage() {
   const [toDraft, setToDraft] = useState(today);
   const [applied, setApplied] = useState({ from: subtractDays(today, 29), to: today });
   const [preset, setPreset] = useState<7 | 30 | 90 | null>(30);
+  const [txPage, setTxPage] = useState(1);
 
   const query = useQuery(
     dashboardFinanceQuery(user, applied.from, applied.to, (path, schema) =>
+      session.request(path, schema),
+    ),
+  );
+  const revenueQuery = useQuery(
+    dashboardRevenueQuery(user, applied.from, applied.to, txPage, (path, schema) =>
       session.request(path, schema),
     ),
   );
@@ -258,6 +264,7 @@ export function FinancePage() {
     setPreset(days);
     setFromDraft(start);
     setToDraft(end);
+    setTxPage(1);
     setApplied({ from: start, to: end });
   };
 
@@ -280,6 +287,13 @@ export function FinancePage() {
   const cur = data?.current;
   const prev = data?.previous.totals;
   const isLoss = (cur?.profit ?? 0) < 0;
+  const revenueData = revenueQuery.data;
+  const revenueTransactions = Array.isArray(revenueData?.transactions)
+    ? revenueData.transactions
+    : [];
+  const revenueTotalPages = revenueData
+    ? Math.max(1, Math.ceil((revenueData.totalTransactions ?? 0) / (revenueData.pageSize || 10)))
+    : 1;
 
   return (
     <div className={styles.page}>
@@ -308,6 +322,7 @@ export function FinancePage() {
               e.preventDefault();
               if (!canApply) return;
               setPreset(null);
+              setTxPage(1);
               setApplied({ from: fromDraft, to: toDraft });
             }}
           >
@@ -337,8 +352,11 @@ export function FinancePage() {
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={() => void query.refetch()}
-              disabled={query.isFetching}
+              onClick={() => {
+                void query.refetch();
+                void revenueQuery.refetch();
+              }}
+              disabled={query.isFetching || revenueQuery.isFetching}
               aria-label="Cập nhật báo cáo tài chính"
             >
               <RefreshCw size={15} />
@@ -577,7 +595,7 @@ export function FinancePage() {
                     </tr>
                     <tr>
                       <td>
-                        Phí ship chặng giao từ điểm
+                        Phí vận chuyển giao tận nơi đấu giá (GHN / khu vực)
                         <span className={styles.passThroughBadge}>Thu hộ</span>
                       </td>
                       <td>{formatVnd(cur.passThroughShipping)}</td>
@@ -632,6 +650,111 @@ export function FinancePage() {
               </details>
             </div>
           </div>
+
+          {/* Row 4: Platform Commission History Table */}
+          <section className={styles.panel} aria-labelledby="commission-history-title">
+            <div className={styles.panelHeader}>
+              <div>
+                <h2 id="commission-history-title">Lịch sử thu hoa hồng nền tảng</h2>
+                <p className={styles.panelHint}>
+                  Chi tiết từng bút toán ghi nhận hoa hồng 5% từ đơn đấu giá và đơn bán trực tiếp trong kỳ {data.from} – {data.to} (đã tách riêng phí ship thu hộ).
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {revenueData && typeof revenueData.totalTransactions === "number" && (
+                  <span className={`${styles.statusPill} ${styles.statusOk}`}>
+                    {revenueData.totalTransactions} giao dịch · {formatVnd(revenueData.total ?? 0)}
+                  </span>
+                )}
+                <Link to="/statistics" className={styles.actionLink}>
+                  Ghi sổ & Nổi bật →
+                </Link>
+              </div>
+            </div>
+
+            {revenueQuery.isError && (
+              <ErrorNotice
+                error={revenueQuery.error}
+                retry={() => void revenueQuery.refetch()}
+                busy={revenueQuery.isFetching}
+              />
+            )}
+
+            {revenueQuery.isPending && !revenueData ? (
+              <div className={styles.statusBox} role="status">
+                Đang tải lịch sử thu hoa hồng…
+              </div>
+            ) : revenueTransactions.length === 0 ? (
+              <div className={styles.statusBox}>
+                Chưa có giao dịch ghi nhận hoa hồng nào trong khoảng thời gian đã chọn.
+              </div>
+            ) : (
+              <>
+                <div className={styles.tableWrap}>
+                  <table className={`${styles.table} ${styles.stripedTable}`}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left" }}>Loại thu</th>
+                        <th style={{ textAlign: "left" }}>Mã đơn / tham chiếu</th>
+                        <th>Thời gian ghi sổ</th>
+                        <th>Hoa hồng nền tảng thu</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {revenueTransactions.map((tx) => (
+                        <tr key={tx.id}>
+                          <td style={{ textAlign: "left" }}>
+                            <strong>{tx.label}</strong>
+                          </td>
+                          <td style={{ textAlign: "left" }}>
+                            <span
+                              className={styles.monoCode}
+                              title={tx.referenceId ?? tx.id}
+                            >
+                              #{(tx.referenceId ?? tx.id).slice(0, 8).toUpperCase()}
+                            </span>
+                          </td>
+                          <td>{formatRevenueDate(tx.postedAt)}</td>
+                          <td>
+                            <strong className={styles.positiveAmt}>
+                              +{formatVnd(tx.amount)}
+                            </strong>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {revenueTotalPages > 1 && (
+                  <div className={styles.paginationRow}>
+                    <span>
+                      Hiển thị {revenueTransactions.length} / {revenueData?.totalTransactions ?? revenueTransactions.length} giao dịch · Trang{" "}
+                      {revenueData?.page ?? txPage}/{revenueTotalPages}
+                    </span>
+                    <div className={styles.paginationBtns}>
+                      <button
+                        type="button"
+                        className={styles.pageBtn}
+                        disabled={txPage <= 1 || revenueQuery.isFetching}
+                        onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+                      >
+                        Trang trước
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.pageBtn}
+                        disabled={txPage >= revenueTotalPages || revenueQuery.isFetching}
+                        onClick={() => setTxPage((p) => Math.min(revenueTotalPages, p + 1))}
+                      >
+                        Trang sau
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
         </>
       ) : null}
     </div>

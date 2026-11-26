@@ -186,9 +186,23 @@ function ChatRoom({
   useEffect(() => {
     const socket = io(`${socketUrl}/purchase-chat`, {
       auth: (callback) => callback({ token: session.getAccessToken() }),
+      tryAllTransports: true,
+      timeout: 10_000,
     });
     socketRef.current = socket;
     let disposed = false;
+    let currentToken = session.getAccessToken();
+    const unsubscribeSession = session.subscribe(() => {
+      if (disposed) return;
+      const nextToken = session.getAccessToken();
+      if (nextToken === currentToken) return;
+      currentToken = nextToken;
+      if (nextToken) {
+        socket.disconnect().connect();
+      } else {
+        socket.disconnect();
+      }
+    });
     const receive = (raw: unknown) => {
       const parsed = purchaseMessageSchema.safeParse(raw);
       if (!parsed.success || parsed.data.conversationId !== room.id || disposed)
@@ -233,6 +247,7 @@ function ChatRoom({
     });
     return () => {
       disposed = true;
+      unsubscribeSession();
       socketRef.current = null;
       socket.disconnect();
     };

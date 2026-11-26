@@ -1,189 +1,217 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import {
   AppText,
   Icon,
   layout,
   space,
   stitchTokens,
-  type IconName,
 } from "../../../core/ui";
 
 export function HomeShelfFooter({
-  page,
-  fetching,
-  onPrevious,
-  onNext,
+  loadedCount,
+  hasNextPage,
+  fetchingNextPage,
+  nextPageError,
+  onLoadMore,
+  onScrollTop,
 }: {
-  page: number;
-  fetching: boolean;
-  onPrevious?: () => void;
-  onNext?: () => void;
+  loadedCount: number;
+  hasNextPage: boolean;
+  fetchingNextPage: boolean;
+  nextPageError?: string;
+  onLoadMore: () => void;
+  onScrollTop?: () => void;
 }) {
-  if (!onPrevious && !onNext) return null;
+  const [loadMoreFocused, setLoadMoreFocused] = useState(false);
+  const [topFocused, setTopFocused] = useState(false);
+
+  if (loadedCount === 0 && !hasNextPage) return null;
 
   return (
     <View style={styles.section}>
-      <View style={styles.pagination}>
-        <ShelfControl
-          label="Trước"
-          accessibilityLabel="Trang trước"
-          icon="chevronLeft"
-          onPress={onPrevious}
-          busy={fetching}
-        />
-        <View style={styles.pageIndicator}>
-          <AppText
-            kind="small"
-            accessibilityLiveRegion="polite"
-            color={stitchTokens.wineDark}
-            style={styles.page}
-          >
-            Trang {page}
-          </AppText>
-        </View>
-        <ShelfControl
-          label="Tiếp"
-          accessibilityLabel="Trang tiếp"
-          icon="chevronRight"
-          onPress={onNext}
-          busy={fetching}
-          next
-        />
+      {/* Editorial count hairline */}
+      <View style={styles.dividerRow}>
+        <View style={styles.hairline} />
+        <AppText
+          kind="small"
+          accessibilityLiveRegion="polite"
+          style={styles.countText}
+        >
+          {hasNextPage
+            ? `Đang hiển thị ${loadedCount} cuốn`
+            : `Đã hiển thị tất cả ${loadedCount} cuốn`}
+        </AppText>
+        <View style={styles.hairline} />
       </View>
+
+      {hasNextPage ? (
+        <View style={styles.actionWrap}>
+          {nextPageError ? (
+            <AppText kind="small" style={styles.errorText}>
+              {nextPageError}
+            </AppText>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              nextPageError ? "Thử tải thêm sách" : "Xem thêm sách"
+            }
+            accessibilityState={{
+              disabled: fetchingNextPage,
+              busy: fetchingNextPage,
+            }}
+            disabled={fetchingNextPage}
+            onPress={onLoadMore}
+            onFocus={() => setLoadMoreFocused(true)}
+            onBlur={() => setLoadMoreFocused(false)}
+            style={({ pressed }) => [
+              styles.loadMoreBtn,
+              nextPageError && styles.loadMoreBtnError,
+              loadMoreFocused && layout.focus,
+              pressed && !fetchingNextPage && styles.loadMoreBtnPressed,
+              fetchingNextPage && styles.loadMoreBtnBusy,
+            ]}
+          >
+            {fetchingNextPage ? (
+              <>
+                <ActivityIndicator size="small" color={stitchTokens.wine} />
+                <AppText kind="bold" style={styles.loadMoreText}>
+                  Đang tải thêm sách…
+                </AppText>
+              </>
+            ) : (
+              <>
+                <AppText kind="bold" style={styles.loadMoreText}>
+                  {nextPageError ? "Thử tải thêm sách" : "Xem thêm sách"}
+                </AppText>
+                <Icon
+                  name="chevronDown"
+                  size={16}
+                  color={stitchTokens.wine}
+                  strokeWidth={2.2}
+                />
+              </>
+            )}
+          </Pressable>
+        </View>
+      ) : loadedCount > 6 && onScrollTop ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Lên đầu trang"
+          onPress={onScrollTop}
+          onFocus={() => setTopFocused(true)}
+          onBlur={() => setTopFocused(false)}
+          style={({ pressed }) => [
+            styles.scrollTopBtn,
+            topFocused && layout.focus,
+            pressed && styles.scrollTopBtnPressed,
+          ]}
+        >
+          <Icon
+            name="chevronUp"
+            size={14}
+            color={stitchTokens.wine}
+            strokeWidth={2.2}
+          />
+          <AppText kind="bold" style={styles.scrollTopText}>
+            Lên đầu trang
+          </AppText>
+        </Pressable>
+      ) : null}
     </View>
-  );
-}
-
-function ShelfControl({
-  label,
-  accessibilityLabel,
-  icon,
-  onPress,
-  busy,
-  next = false,
-}: {
-  label: string;
-  accessibilityLabel: string;
-  icon: IconName;
-  onPress?: () => void;
-  busy: boolean;
-  next?: boolean;
-}) {
-  const [focused, setFocused] = useState(false);
-  const disabled = !onPress || busy;
-  const solid = next && Boolean(onPress);
-  const enabledSecondary = !next && Boolean(onPress);
-  const color = solid ? stitchTokens.white : stitchTokens.wine;
-  const iconColor = solid ? stitchTokens.gold : stitchTokens.wine;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled, busy }}
-      disabled={disabled}
-      hitSlop={4}
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={({ pressed }) => [
-        styles.control,
-        next && styles.next,
-        enabledSecondary && styles.secondaryEnabled,
-        solid && styles.solid,
-        focused && layout.focus,
-        focused && solid && styles.solidFocus,
-        disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
-      ]}
-    >
-      <Icon name={icon} size={15} color={iconColor} />
-      <AppText
-        kind="small"
-        color={color}
-        numberOfLines={1}
-        style={styles.controlText}
-      >
-        {label}
-      </AppText>
-    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   section: {
     width: "100%",
+    paddingHorizontal: 12,
+    paddingTop: space.sm,
+    paddingBottom: space.md,
+    gap: 12,
     alignItems: "center",
-    paddingHorizontal: space.md,
-    paddingTop: space.md,
-    paddingBottom: space.lg,
   },
-  pagination: {
+  dividerRow: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
-    backgroundColor: stitchTokens.whiteSurface,
-    padding: 4,
-    gap: 2,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+    gap: 10,
+    paddingHorizontal: 4,
   },
-  pageIndicator: {
-    minWidth: 78,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    alignItems: "center",
-    justifyContent: "center",
+  hairline: {
+    flex: 1,
+    height: 1,
+    backgroundColor: stitchTokens.cardBorder,
   },
-  page: {
-    fontSize: 13,
-    lineHeight: 17,
-    fontWeight: "700",
-    textAlign: "center",
+  countText: {
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: stitchTokens.subtleGray,
     fontVariant: ["tabular-nums"],
     includeFontPadding: false,
   },
-  control: {
-    minHeight: 40,
-    minWidth: 94,
-    borderRadius: 999,
-    backgroundColor: "transparent",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  actionWrap: {
+    width: "100%",
+    gap: 8,
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: stitchTokens.crimson,
+    textAlign: "center",
+  },
+  loadMoreBtn: {
+    width: "100%",
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
   },
-  secondaryEnabled: {
-    backgroundColor: stitchTokens.wineAlpha05,
+  loadMoreBtnError: {
+    borderColor: stitchTokens.errorLightBorder,
+    backgroundColor: stitchTokens.roseIce,
   },
-  controlText: {
-    fontSize: 13,
-    lineHeight: 17,
-    fontWeight: "700",
-    textAlign: "center",
+  loadMoreBtnPressed: {
+    backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  loadMoreBtnBusy: {
+    opacity: 0.72,
+  },
+  loadMoreText: {
+    fontSize: 13.5,
+    lineHeight: 18,
+    color: stitchTokens.wine,
     includeFontPadding: false,
   },
-  next: {
-    flexDirection: "row-reverse",
+  scrollTopBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
   },
-  solid: {
-    backgroundColor: stitchTokens.wine,
+  scrollTopBtnPressed: {
+    backgroundColor: stitchTokens.pillWarmBg,
   },
-  solidFocus: {
-    boxShadow: `inset 0 0 0 2px ${stitchTokens.white}`,
-  },
-  disabled: {
-    opacity: 0.36,
-  },
-  pressed: {
-    opacity: 0.78,
+  scrollTopText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: stitchTokens.wine,
+    includeFontPadding: false,
   },
 });

@@ -8,6 +8,7 @@ import {
   type OnGatewayInit,
 } from '@nestjs/websockets';
 import { MongoService } from '../../database/mongo/mongo.service.js';
+import { socketCorsOptions } from '../../common/socket-cors.js';
 import { AuthService } from '../auth/auth.service.js';
 import {
   TransactionChanges,
@@ -49,7 +50,7 @@ function parseTarget(value: unknown): TransactionTarget | undefined {
 const keyOf = (target: TransactionTarget) => `${target.kind}:${target.id}`;
 
 // Sends an invalidation hint only. REST remains the source of member data.
-@WebSocketGateway({ namespace: '/transactions', cors: { origin: true, credentials: false } })
+@WebSocketGateway({ namespace: '/transactions', cors: socketCorsOptions() })
 export class TransactionLiveGateway implements OnGatewayInit, OnGatewayDisconnect, OnModuleDestroy {
   private readonly log = new Logger(TransactionLiveGateway.name);
   private readonly watches = new Map<string, Watch>();

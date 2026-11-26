@@ -27,6 +27,10 @@ import { restoreFundedExchangeTermsMigration } from './0089-restore-funded-excha
 import { createSaleSettlementNotificationMigration, withSaleSettlementNotification } from './0090-sale-settlement-notification.js';
 import { createPurchaseOrderNotificationsMigration, withPurchaseOrderNotifications } from './0091-purchase-order-notifications.js';
 import { auditActivityLogIndexesMigration } from './0092-audit-activity-log-indexes.js';
+import {
+  createListingOrderIntakeNotificationsMigration,
+  withListingOrderIntakeNotifications,
+} from './0092-listing-order-intake-notifications.js';
 import { onlinePriceCatalogRevisionMigration, withOnlinePriceCatalogRevision } from './0076-online-price-catalog-revision.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
@@ -243,6 +247,12 @@ import {
   reviewLifecycleSpecs,
   withReviewCommandTarget,
 } from './0040-transaction-review-lifecycle.js';
+import {
+  createSplitShippingPoliciesMigration,
+  withSplitShippingPolicies,
+} from './0093-split-direct-and-point-shipping-policies.js';
+import { auctionDeliveryProvincesMigration } from './0094-auction-delivery-provinces.js';
+import { vietnam63ProvincesMigration } from './0095-vietnam-63-provinces.js';
 
 export interface Migration {
   id: string;
@@ -592,7 +602,7 @@ export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals(
   onlinePriceSpecs.some(({ name }) => name === spec.name) ? withOnlinePriceCatalogRevision(spec) : spec,
 ).map(withExchangeReturnResolution).map(withExchangeOutboundDeliveryVerification).map(withExchangeDemoArchive).map(withExchangeInspectionVerdict).map(withProportionalExchangeDeposits).map(withLegacyFundedExchangeDepositCompat).map(withExchangeDisputeCompensation).map((spec) =>
   spec.name === 'point_orders' ? demoPointOrderSettlementMigration.definition.collections[0] : spec,
-).map(withDirectOrderDeliveryJourney).map(withSaleSettlementNotification).map(withPurchaseOrderNotifications).concat(directDeliveryJourneySpec, directOrderIssueEvidenceSpec);
+).map(withDirectOrderDeliveryJourney).map(withSaleSettlementNotification).map(withPurchaseOrderNotifications).map(withListingOrderIntakeNotifications).map(withSplitShippingPolicies).concat(directDeliveryJourneySpec, directOrderIssueEvidenceSpec);
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -716,7 +726,16 @@ const saleSettlementNotificationMigration = createSaleSettlementNotificationMigr
   auctionDepositShareMigration.definition.collections.find(spec => spec.name === 'member_notifications')!,
 );
 migrations.push(saleSettlementNotificationMigration);
-migrations.push(createPurchaseOrderNotificationsMigration(
+const purchaseOrderNotificationsMigration = createPurchaseOrderNotificationsMigration(
   saleSettlementNotificationMigration.definition.collections[0]!,
+);
+migrations.push(purchaseOrderNotificationsMigration);
+migrations.push(createListingOrderIntakeNotificationsMigration(
+  purchaseOrderNotificationsMigration.definition.collections[0]!,
 ));
 migrations.push(auditActivityLogIndexesMigration);
+migrations.push(createSplitShippingPoliciesMigration(
+  baselineCollections.find((spec) => spec.name === 'sale_quote_policy_selection')!,
+));
+migrations.push(auctionDeliveryProvincesMigration);
+migrations.push(vietnam63ProvincesMigration);

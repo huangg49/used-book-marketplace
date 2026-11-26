@@ -29,9 +29,10 @@ interface ShipmentDialogProps {
 
 export function ShipmentDialog(props: ShipmentDialogProps) {
     const { isOpen, onClose, onSubmit, isBusy } = props;
+    const simulatorAllowed = import.meta.env.DEV || import.meta.env.VITE_DEMO_SIMULATOR_ENABLED === 'true';
     const [method, setMethod] = useState<'carrier' | 'direct'>('carrier');
     const selectedMethod = props.partnerMethod ?? method;
-    const [carrierCode, setCarrierCode] = useState<CarrierCode>(import.meta.env.DEV ? 'SIMULATOR' : 'OTHER');
+    const [carrierCode, setCarrierCode] = useState<CarrierCode>(simulatorAllowed ? 'SIMULATOR' : 'OTHER');
     const [trackingCode, setTrackingCode] = useState('');
     const [customCarrierName, setCustomCarrierName] = useState('');
     const [meetupLocation, setMeetupLocation] = useState('');
@@ -56,6 +57,44 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
         if (isOpen) headingRef.current?.focus();
     }, [isOpen]);
 
+    const compressPhotoDataUrl = (file: File): Promise<string> =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Không đọc được ảnh.'));
+            reader.onload = (e) => {
+                const rawUrl = e.target?.result as string;
+                if (!rawUrl || rawUrl.length <= 70_000) {
+                    resolve(rawUrl);
+                    return;
+                }
+                const img = new Image();
+                img.onerror = () => resolve(rawUrl);
+                img.onload = () => {
+                    const maxSide = 800;
+                    const scale = Math.min(1, maxSide / Math.max(img.width || 1, img.height || 1));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(img.width * scale));
+                    canvas.height = Math.max(1, Math.round(img.height * scale));
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        resolve(rawUrl);
+                        return;
+                    }
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    for (const quality of [0.75, 0.55, 0.38, 0.25]) {
+                        const out = canvas.toDataURL('image/jpeg', quality);
+                        if (out.length <= 70_000) {
+                            resolve(out);
+                            return;
+                        }
+                    }
+                    resolve(canvas.toDataURL('image/jpeg', 0.2));
+                };
+                img.src = rawUrl;
+            };
+            reader.readAsDataURL(file);
+        });
+
     const handlePhotoSelect = (file: File) => {
         if (!file.type.startsWith('image/')) {
             setError('Vui lòng chọn tệp định dạng hình ảnh (JPG, PNG, WebP).');
@@ -65,13 +104,15 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
             setError('Dung lượng ảnh tối đa là 10MB.');
             return;
         }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setPackagingPhoto(e.target?.result as string);
-            setPackagingPhotoName(file.name);
-            setError('');
-        };
-        reader.readAsDataURL(file);
+        void compressPhotoDataUrl(file)
+            .then((dataUrl) => {
+                setPackagingPhoto(dataUrl);
+                setPackagingPhotoName(file.name);
+                setError('');
+            })
+            .catch(() => {
+                setError('Không thể đọc ảnh đã chọn. Hãy thử ảnh khác hoặc dùng ảnh mẫu.');
+            });
     };
 
     const handleVideoSelect = (file: File) => {
@@ -81,6 +122,10 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
         }
         if (file.size > 100 * 1024 * 1024) {
             setError('Dung lượng video tối đa là 100MB.');
+            return;
+        }
+        if (file.size > 50 * 1024) {
+            setError('Video tải trực tiếp vượt quá giới hạn gửi nhanh. Bạn hãy bấm "Dùng ảnh và video mẫu" để hoàn tất gửi vận đơn.');
             return;
         }
         const reader = new FileReader();
@@ -244,7 +289,7 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
                                             onChange={(e) => setCarrierCode(e.target.value as CarrierCode)}
                                             disabled={isBusy}
                                         >
-                                            {CARRIERS.filter(c => c.code !== 'DIRECT' && (import.meta.env.DEV || c.code !== 'SIMULATOR')).map(carrier => (
+                                            {CARRIERS.filter(c => c.code !== 'DIRECT' && (simulatorAllowed || c.code !== 'SIMULATOR')).map(carrier => (
                                                 <option key={carrier.code} value={carrier.code}>
                                                     {carrier.name}
                                                 </option>

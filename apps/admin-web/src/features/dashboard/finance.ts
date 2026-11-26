@@ -75,6 +75,8 @@ export const financeCashflow = z.object({
     auctionHeld: nonNegInt,
     withdrawalHeld: nonNegInt,
     platformCommission: nonNegInt,
+    platformNetRevenueBalance: nonNegInt,
+    platformShippingPassThrough: nonNegInt,
     listingFeeHeld: nonNegInt,
     incidentFundBalance: nonNegInt,
   }),

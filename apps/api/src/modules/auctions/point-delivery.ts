@@ -13,10 +13,16 @@ import {
   notFound,
   type Wire,
 } from '../commands/domain-error.js';
+import {
+  LOCALITY_TARIFFS,
+  POINT_ZONE_FALLBACK_POLICY_CODE,
+  fallbackFeeForLocality,
+  type PointDeliveryFeeResolution,
+} from './point-delivery-pricing.service.js';
 
-// ADR 0044: delivery from the point to the buyer's saved address in the
-// supported service area, at the selected DirectSale policy fee (one demo
-// area, fixed fee, the same as ordinary deliveries).
+// ADR 0044 + migration 0093: delivery from a Lật Lại handover point to the
+// buyer's saved address uses its dedicated PointDelivery policy (30,000 VND
+// pass-through shipping fee), separate from DirectSale (0 VND).
 export const DELIVERY_SERVICE_AREA = 'HCM-DEMO-v1';
 
 // The committed demo command stores its milestone in the order-scoped receipt.
@@ -34,10 +40,17 @@ export async function demoOutForDeliveryAt(tx: Tx, order: PointOrderDoc) {
   return receipt?.committedAt ?? null;
 }
 
+export interface PreResolvedDeliveryFee extends PointDeliveryFeeResolution {
+  addressId: string;
+  addressVersion: number;
+  bookPrice: number;
+}
+
 export async function deliveryPrice(
   tx: Tx,
   o: PointOrderDoc,
   addressId: string,
+  preResolved?: PreResolvedDeliveryFee | null,
 ) {
   const address = await tx.c.member_addresses.findOne({
     _id: addressId.toLowerCase(),
@@ -47,11 +60,32 @@ export async function deliveryPrice(
   if (address.serviceAreaCode !== DELIVERY_SERVICE_AREA)
     invalidField(
       '/destinationAddressId',
-      'Chọn địa chỉ nhận thuộc khu vực luân chuyển sách được hỗ trợ.',
+      'Chọn địa chỉ nhận thuộc khu vực giao sách được hỗ trợ.',
     );
-  const selection = await tx.c.sale_quote_policy_selection.findOne({
-    _id: 'DirectSale',
+
+  // Use pre-resolved Hybrid GHN/Zone quote computed outside the DB transaction
+  // whenever the address version and book price still match the live snapshot.
+  if (
+    preResolved &&
+    preResolved.addressId === address._id &&
+    preResolved.addressVersion === address.version &&
+    preResolved.bookPrice === o.bookPrice
+  ) {
+    return {
+      address,
+      policyCode: preResolved.policyCode,
+      fee: preResolved.fee,
+    };
+  }
+
+  const pointSelection = await tx.c.sale_quote_policy_selection.findOne({
+    _id: 'PointDelivery',
   });
+  const selection =
+    pointSelection ??
+    (await tx.c.sale_quote_policy_selection.findOne({
+      _id: 'DirectSale',
+    }));
   const policy =
     selection &&
     (await tx.c.sale_quote_policies.findOne({ _id: selection.policyCode }));
@@ -61,6 +95,22 @@ export async function deliveryPrice(
       'UNAVAILABLE',
       'Giao sách từ điểm hiện chưa có biểu phí.',
     );
+
+  // When dedicated PointDelivery policy is active, apply regional fallback
+  // tariff for known localities (e.g. TP.HCM 22k, Bình Dương/Vũng Tàu 30k, Hà Nội 50k).
+  // Legacy fixtures with only DirectSale selection preserve their exact policy fee.
+  if (
+    pointSelection &&
+    address.localityCode &&
+    LOCALITY_TARIFFS[address.localityCode]
+  ) {
+    return {
+      address,
+      policyCode: POINT_ZONE_FALLBACK_POLICY_CODE,
+      fee: fallbackFeeForLocality(address.localityCode, policy.shippingFee),
+    };
+  }
+
   return { address, policyCode: policy._id, fee: policy.shippingFee };
 }
 
@@ -94,11 +144,13 @@ export async function deliverySnapshot(
   body: Wire['PayPointOrder'],
   now: Date,
   receiptId: string,
+  preResolved?: PreResolvedDeliveryFee | null,
 ): Promise<PointOrderDeliveryDoc> {
   const { address, policyCode, fee } = await deliveryPrice(
     tx,
     o,
     body.destinationAddressId!,
+    preResolved,
   );
   if (address.version !== body.expectedDestinationAddressVersion)
     throw conflict();

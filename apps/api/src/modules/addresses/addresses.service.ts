@@ -52,8 +52,17 @@ export class AddressesService {
       async (tx, actor): Promise<Wire['ServiceAreaDirectory']> => {
         member(actor);
         const localities = await tx.c.service_localities
-          .find({ areaCode: 'HCM-DEMO-v1' }, { sort: { code: 1 } })
+          .find({ areaCode: 'HCM-DEMO-v1' })
           .toArray();
+        const priority = ['DEMO-A', 'DEMO-B', 'DEMO-C'];
+        localities.sort((a, b) => {
+          const ia = priority.indexOf(a.code);
+          const ib = priority.indexOf(b.code);
+          if (ia !== -1 || ib !== -1) {
+            return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+          }
+          return a.label.localeCompare(b.label, 'vi');
+        });
         return {
           code: 'HCM-DEMO-v1',
           name: 'TP.HCM',

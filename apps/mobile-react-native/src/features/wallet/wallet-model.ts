@@ -130,3 +130,14 @@ export async function queryVNPayTopup(client: SessionClient, topupId: string) {
     },
   );
 }
+
+export function resolveVnpayReturnUrl(env?: {
+  vnpayReturnUrl?: string;
+  webOrigin?: string;
+}): string {
+  const explicit = env?.vnpayReturnUrl?.trim();
+  if (explicit) return explicit;
+  const origin = env?.webOrigin?.trim().replace(/\/+$/, "");
+  if (origin) return `${origin}/wallet`;
+  return "http://localhost:5174/wallet";
+}

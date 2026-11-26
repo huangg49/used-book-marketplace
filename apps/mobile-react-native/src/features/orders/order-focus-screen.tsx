@@ -667,7 +667,8 @@ export function OrderFocusScreen({
                             (a) =>
                               a !== "Pickup" &&
                               a !== "OutForDelivery" &&
-                              a !== "Deliver",
+                              a !== "Deliver" &&
+                              a !== "ReportNonReceipt",
                           );
                           const hasDriverActions = driverActions.length > 0;
                           return (
@@ -704,10 +705,7 @@ export function OrderFocusScreen({
                                   busy={busy}
                                   title={DELIVERY_JOURNEY_LABELS[action]}
                                   onPress={() => {
-                                    if (
-                                      action === "ReportNonReceipt" ||
-                                      action === "ReportCondition"
-                                    ) {
+                                    if (action === "ReportCondition") {
                                       setReportText("");
                                       setReportModal({ kind: action });
                                     } else {
@@ -952,18 +950,6 @@ export function OrderFocusScreen({
                               busy={busy}
                               title="Hủy đơn & hoàn tiền"
                               onPress={() => setConfirming("cancel-paid")}
-                            />
-                          )}
-                          {order.canReportNonReceipt && (
-                            <Button
-                              wine
-                              secondary
-                              busy={busy}
-                              title="Báo chưa nhận được sách"
-                              onPress={() => {
-                                setReportText("");
-                                setReportModal({ kind: "non-receipt" });
-                              }}
                             />
                           )}
                         </>
