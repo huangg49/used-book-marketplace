@@ -1,3 +1,17 @@
+# Nhật ký hoạt động Admin — 27/11/2026
+
+- Local `feat/ops-activity-log`, nền `81faee5f`. `GET /operations/audit-events`
+  chỉ ACTIVE ADMIN (FR-G05, NFR-13; chủ dự án chốt Staff không xem). Lọc theo
+  nhóm tác nhân (mặc định Staff+Admin theo vai hiện tại), người, đối tượng,
+  thao tác, request/event ID, lý do và thời gian; cursor ký gắn bộ lọc; không có
+  route ghi. Snapshot trước/sau bỏ khóa nhạy cảm/lồng nhau và đếm số trường ẩn;
+  email/SĐT trong lý do bị che. Migration 0092 chỉ thêm index `audit_events`.
+  Admin web `/audit` trong nhóm Tài khoản & ví.
+- PASS contract check/routes, typecheck API/Admin, unit API redaction 6/6,
+  Admin 258. BLOCKED: `test/audit-log.e2e-spec.ts` (Docker/Mongo QA không chạy
+  trên máy này) và kiểm browser trang `/audit` với API thật. Cần chạy
+  `pnpm infra:mongo:test:up` rồi E2E theo START_HERE trước khi PR.
+
 # Polling sang WebSocket trên Web/RN/Admin — 25/11/2026
 
 - Local `feat/realtime-notifications`, nền `fb117b15`, chưa commit. Làm đủ 4 pha
