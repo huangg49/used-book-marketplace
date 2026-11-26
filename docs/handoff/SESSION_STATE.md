@@ -21,6 +21,23 @@
   refresh token chạy chồng, một bị 401 và đăng xuất trang (script đã chờ từng
   refresh). NOT RUN native.
 
+# Refresh token bị dùng hai lần khi provider remount — 27/11/2026
+
+- Local `fix/session-refresh-race`, nền `81faee5f`. Nguyên nhân: RN web tạo
+  `SessionClient` mới mỗi khi `SessionProvider` remount (nhảy history/popstate,
+  StrictMode); hai client cùng kho token restore song song, cùng rotate một
+  refresh token, lần sau nhận 401, xóa kho chung và đăng xuất trang. Gộp chỉ có
+  trong một instance. Sửa trong `packages/session-client`: nhớ lần rotate gần
+  nhất theo kho token; client trình token đang/vừa được rotate thì nhận kết quả
+  đó, không gửi lại và không revoke token không do mình cấp. Xóa khi lỗi, đăng
+  xuất và đăng nhập mới. Token vẫn chỉ ở bộ nhớ trên browser.
+- PASS session-client 194 (thêm 6 ca: hai client đồng thời, đọc token cũ muộn,
+  restore hai lần một client, đăng xuất, token chưa từng rotate, kho khác nhau);
+  typecheck + unit RN 256, Web 514, Admin 253. Browser: script
+  `test-rn-driver-simulator` trên nhánh tạm (driver simulator + bản sửa, bỏ bước
+  chờ refresh) 4/4 PASS, mỗi lần 2 refresh 200, không 401; trước bản sửa 3/3
+  FAIL. NOT RUN native (SecureStore) và back/forward thật của trình duyệt.
+
 # Polling sang WebSocket trên Web/RN/Admin — 25/11/2026
 
 - Local `feat/realtime-notifications`, nền `fb117b15`, chưa commit. Làm đủ 4 pha
