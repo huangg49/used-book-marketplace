@@ -1419,6 +1419,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin activity log over append-only audit events
+         * @description ACTIVE ADMIN only (FR-G05, NFR-13). Read-only, newest-first cursor page of audit events filtered by actor role, actor, entity, action, request ID, event ID, reason and time. Before/after snapshots are redacted: credentials, tokens, contact and address fields never leave the API, and nested objects are dropped. No update or delete endpoint exists. actorRole uses the actor's current role assignment; Operations means STAFF or ADMIN.
+         */
+        get: operations["listAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/ai-usage": {
         parameters: {
             query?: never;
@@ -5250,6 +5270,45 @@ export interface components {
             relatedReference: string | null;
             /** Format: date-time */
             createdAt: string;
+        };
+        /** @enum {string} */
+        AuditEntityType: "Listing" | "Book" | "Media" | "AddressBook" | "Quote" | "Context" | "Topup" | "Point" | "Withdrawal" | "SupportCase" | "Account" | "Review";
+        /** @description Redacted top-level fields only. Scalar values or arrays of scalars; sensitive and nested fields are removed and counted in redactedFields. */
+        AuditSnapshot: {
+            [key: string]: string | number | boolean | null | (string | number | boolean | null)[];
+        };
+        AuditEvent: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            createdAt: string;
+            action: string;
+            actor: {
+                /** @enum {string} */
+                kind: "User" | "System";
+                id: string | null;
+                displayName: string | null;
+                roles: components["schemas"]["RoleCode"][];
+                systemActor: string | null;
+            };
+            entity: {
+                type: components["schemas"]["AuditEntityType"];
+                /** Format: uuid */
+                id: string;
+            } | null;
+            reason: string | null;
+            /** Format: uuid */
+            requestId: string;
+            receiptId: string | null;
+            before: components["schemas"]["AuditSnapshot"] | null;
+            after: components["schemas"]["AuditSnapshot"] | null;
+            redactedFields: number;
+        };
+        AuditEventPage: {
+            items: components["schemas"]["AuditEvent"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
         };
         AccountControlEventPage: {
             items: components["schemas"]["AccountControlEvent"][];
@@ -12104,6 +12163,44 @@ export interface operations {
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
+        };
+    };
+    listAuditEvents: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                actorRole?: "Operations" | "STAFF" | "ADMIN" | "All";
+                actorId?: string;
+                entityType?: components["schemas"]["AuditEntityType"];
+                entityId?: string;
+                action?: string;
+                requestId?: string;
+                eventId?: string;
+                reason?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current authorized page of audit events. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            503: components["responses"]["Error"];
         };
     };
     getAiUsageSummary: {

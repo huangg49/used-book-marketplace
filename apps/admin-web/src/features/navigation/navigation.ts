@@ -104,6 +104,7 @@ const workspaceGroups: RouteGroup[] = [
     items: [
       { label: "Quản lý người dùng", to: "/users", icon: "users", visibleTo: canReviewCatalog },
       { label: "Yêu cầu rút tiền", to: "/withdrawals", icon: "wallet", visibleTo: canResolve },
+      { label: "Nhật ký hoạt động", to: "/audit", icon: "ledger", visibleTo: canReviewCatalog },
     ],
   },
   {

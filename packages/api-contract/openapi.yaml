@@ -3491,6 +3491,106 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/audit-events:
+    get:
+      operationId: listAuditEvents
+      tags:
+        - Operations
+      summary: Admin activity log over append-only audit events
+      description: >-
+        ACTIVE ADMIN only (FR-G05, NFR-13). Read-only, newest-first cursor page
+        of audit events filtered by actor role, actor, entity, action, request
+        ID, event ID, reason and time. Before/after snapshots are redacted:
+        credentials, tokens, contact and address fields never leave the API, and
+        nested objects are dropped. No update or delete endpoint exists.
+        actorRole uses the actor's current role assignment; Operations means
+        STAFF or ADMIN.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - in: query
+          name: cursor
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2048
+        - in: query
+          name: actorRole
+          schema:
+            type: string
+            enum: [Operations, STAFF, ADMIN, All]
+            default: Operations
+        - in: query
+          name: actorId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: entityType
+          schema:
+            $ref: "#/components/schemas/AuditEntityType"
+        - in: query
+          name: entityId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: action
+          schema:
+            type: string
+            pattern: "^[A-Za-z][A-Za-z0-9]{0,79}$"
+        - in: query
+          name: requestId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: eventId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: reason
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Current authorized page of audit events.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditEventPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
   /operations/ai-usage:
     get:
       operationId: getAiUsageSummary
@@ -15202,6 +15302,155 @@ components:
               maxLength: 100
             - type: "null"
         createdAt: *a3
+    AuditEntityType:
+      type: string
+      enum:
+        - Listing
+        - Book
+        - Media
+        - AddressBook
+        - Quote
+        - Context
+        - Topup
+        - Point
+        - Withdrawal
+        - SupportCase
+        - Account
+        - Review
+    AuditSnapshot:
+      description: >-
+        Redacted top-level fields only. Scalar values or arrays of scalars;
+        sensitive and nested fields are removed and counted in redactedFields.
+      type: object
+      maxProperties: 60
+      additionalProperties:
+        anyOf:
+          - type: string
+            maxLength: 500
+          - type: number
+          - type: boolean
+          - type: "null"
+          - type: array
+            maxItems: 20
+            items:
+              anyOf:
+                - type: string
+                  maxLength: 200
+                - type: number
+                - type: boolean
+                - type: "null"
+    AuditEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - createdAt
+        - action
+        - actor
+        - entity
+        - reason
+        - requestId
+        - receiptId
+        - before
+        - after
+        - redactedFields
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        action:
+          type: string
+          minLength: 1
+          maxLength: 80
+        actor:
+          type: object
+          additionalProperties: false
+          required: [kind, id, displayName, roles, systemActor]
+          properties:
+            kind:
+              type: string
+              enum: [User, System]
+            id:
+              anyOf:
+                - type: string
+                  format: uuid
+                - type: "null"
+            displayName:
+              anyOf:
+                - type: string
+                  maxLength: 200
+                - type: "null"
+            roles:
+              type: array
+              maxItems: 4
+              items:
+                $ref: "#/components/schemas/RoleCode"
+            systemActor:
+              anyOf:
+                - type: string
+                  maxLength: 40
+                - type: "null"
+        entity:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required: [type, id]
+              properties:
+                type:
+                  $ref: "#/components/schemas/AuditEntityType"
+                id:
+                  type: string
+                  format: uuid
+            - type: "null"
+        reason:
+          anyOf:
+            - type: string
+              maxLength: 1000
+            - type: "null"
+        requestId:
+          type: string
+          format: uuid
+        receiptId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: "null"
+        before:
+          anyOf:
+            - $ref: "#/components/schemas/AuditSnapshot"
+            - type: "null"
+        after:
+          anyOf:
+            - $ref: "#/components/schemas/AuditSnapshot"
+            - type: "null"
+        redactedFields:
+          type: integer
+          minimum: 0
+    AuditEventPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+        nextCursor:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 2048
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
     AccountControlEventPage:
       type: object
       additionalProperties: false

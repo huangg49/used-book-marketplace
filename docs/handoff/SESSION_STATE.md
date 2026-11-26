@@ -1,3 +1,21 @@
+# Nhật ký hoạt động Admin — 27/11/2026
+
+- Local `feat/ops-activity-log`, nền `81faee5f`. `GET /operations/audit-events`
+  chỉ ACTIVE ADMIN (FR-G05, NFR-13; chủ dự án chốt Staff không xem). Lọc theo
+  nhóm tác nhân (mặc định Staff+Admin theo vai hiện tại), người, đối tượng,
+  thao tác, request/event ID, lý do và thời gian; cursor ký gắn bộ lọc; không có
+  route ghi. Snapshot trước/sau bỏ khóa nhạy cảm/lồng nhau và đếm số trường ẩn;
+  email/SĐT trong lý do bị che. Migration 0092 chỉ thêm index `audit_events`.
+  Admin web `/audit` trong nhóm Tài khoản & ví.
+- PASS contract check/routes, typecheck API/Admin, unit API redaction 6/6,
+  Admin 258. Mongo QA: E2E `audit-log` 5/5, `account-controls` +
+  `operations-users` 14/14, `schema.mongo-spec` 28/28 (áp migration 0092).
+  Browser QA thật (`pnpm --filter @used-books/admin-web test:activity-log:browser`,
+  DB `ops_browser_*_test` riêng): Staff bị chặn ở UI/nav/API; Admin thấy lệnh
+  khóa, lý do đã che email/SĐT, drawer, lọc cùng đối tượng, trạng thái rỗng,
+  1440/390/320px không tràn trang; 6 lần chạy liên tiếp PASS. Bộ lọc ít dùng
+  gom vào "Bộ lọc nâng cao". NOT RUN suite E2E/Mongo toàn bộ.
+
 # Trang Chính sách và Liên hệ Web/RN — 27/11/2026
 
 - Local `feat/policy-contact-pages`, nền `81faee5f`. Nội dung chung ở

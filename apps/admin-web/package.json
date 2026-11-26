@@ -19,6 +19,7 @@
     "test:review-workspace:browser": "node tests/review-workspace.mjs",
     "test:exchange-safety:browser": "node tests/exchange-resolution-safety.mjs",
     "test:account-controls:browser": "node tests/account-controls.mjs",
+    "test:activity-log:browser": "node tests/activity-log.mjs",
     "test:auto-review:browser": "node tests/auto-review.mjs",
     "test:review-collapse:browser": "node tests/review-collapse.mjs",
     "test:auction-step-read-contract:browser": "node tests/auction-step-read-contract.mjs"

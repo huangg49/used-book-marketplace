@@ -47,6 +47,7 @@ describe("workspace navigation permissions", () => {
       "/operations/auctions",
       "/users",
       "/withdrawals",
+      "/audit",
     ]);
   });
   it("limits TEST_OPERATOR to the dashboard and carrier simulator", () => {
@@ -62,7 +63,7 @@ describe("workspace navigation permissions", () => {
   it("combines actual roles without duplicate links or a guessed account role", () => {
     const user = { ...base, roles: ["ADMIN", "STAFF", "TEST_OPERATOR"] } satisfies CurrentUser;
     const links = paths(user);
-    expect(links).toHaveLength(26);
+    expect(links).toHaveLength(27);
     expect(new Set(links).size).toBe(links.length);
     expect(workspaceRole(user)).toBe("Quản trị viên · Nhân viên · Vận hành thử");
     expect(workspaceRole(undefined)).toBe("Chờ xác minh quyền");
@@ -92,6 +93,7 @@ describe("sidebar route semantics", () => {
     expect(html).not.toContain('aria-controls="nav-items-cases"');
     expect(html).toContain('href="/operations/exchange-disputes"');
     expect(html).not.toContain('href="/users"');
+    expect(html).not.toContain('href="/audit"');
   });
   it("keeps a parent review link active on a detail route and exposes the connected dashboard without a mock label", () => {
     const html = renderToStaticMarkup(<MemoryRouter initialEntries={["/review/listings/book-1"]}>
