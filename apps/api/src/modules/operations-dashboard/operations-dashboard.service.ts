@@ -1,5 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Document } from 'mongodb';
+import { POLICY_VERSION } from '../listings/auto-review-policy.js';
 import {
   MongoCommandService,
   financeAdmin,
@@ -119,6 +121,7 @@ export class OperationsDashboardService {
   constructor(
     private readonly commands: MongoCommandService,
     @Optional() private readonly storage?: MediaStorage,
+    @Optional() private readonly config?: ConfigService,
   ) {}
 
   async readUserAvatar(auth: Actor, userId: string) {
@@ -1636,6 +1639,367 @@ export class OperationsDashboardService {
           restrictedMembers,
           lockedMembers,
         },
+      };
+    });
+  }
+
+  aiUsage(
+    auth: Actor,
+    query: Record<string, string | number>,
+  ): Promise<Wire['AiUsageSummary']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      reviewer(actor);
+      const from = String(query.from ?? '');
+      const to = String(query.to ?? '');
+      const window = revenueWindow(from, to);
+      const now = await tx.now();
+      const todayUtc = now.toISOString().slice(0, 10);
+      const env = (key: string) => this.config?.get<string>(key) ?? process.env[key];
+
+      const dailyBudgetUsd = Math.max(0, Number(env('PRICE_ASSIST_DAILY_BUDGET_USD') ?? 2) || 2);
+      const dailyBudgetMicroUsd = Math.round(dailyBudgetUsd * 1_000_000);
+
+      const globalToday = await tx.c.price_assist_usage.findOne({
+        _id: `global:${todayUtc}`,
+      });
+
+      const autofillRows = await tx.c.autofill_suggestions
+        .find(
+          { createdAt: { $gte: window.start, $lt: window.endExclusive } },
+          {
+            projection: {
+              status: 1,
+              failure: 1,
+              model: 1,
+              inputTokens: 1,
+              outputTokens: 1,
+              costMicroUsd: 1,
+              latencyMs: 1,
+              createdAt: 1,
+            },
+          },
+        )
+        .toArray();
+
+      const priceRows = await tx.c.price_suggestions
+        .find(
+          { createdAt: { $gte: window.start, $lt: window.endExclusive } },
+          {
+            projection: {
+              status: 1,
+              failure: 1,
+              model: 1,
+              inputTokens: 1,
+              outputTokens: 1,
+              costMicroUsd: 1,
+              latencyMs: 1,
+              outcome: 1,
+              createdAt: 1,
+            },
+          },
+        )
+        .toArray();
+
+      const lookupRows = await tx.c.price_lookups
+        .find(
+          { lastRunAt: { $gte: window.start, $lt: window.endExclusive } },
+          {
+            projection: {
+              status: 1,
+              failure: 1,
+              model: 1,
+              inputTokens: 1,
+              outputTokens: 1,
+              costMicroUsd: 1,
+              lastRunAt: 1,
+            },
+          },
+        )
+        .toArray();
+
+      const autoReviewRows = await tx.c.listing_auto_reviews
+        .find(
+          { decidedAt: { $gte: window.start, $lt: window.endExclusive } },
+          {
+            projection: {
+              outcome: 1,
+              model: 1,
+              inputTokens: 1,
+              outputTokens: 1,
+              costMicroUsd: 1,
+              latencyMs: 1,
+              decidedAt: 1,
+            },
+          },
+        )
+        .toArray();
+
+      const autoReviewChecks = await tx.c.listing_auto_review_checks
+        .find(
+          { createdAt: { $gte: window.start, $lt: window.endExclusive } },
+          {
+            projection: {
+              status: 1,
+              model: 1,
+              inputTokens: 1,
+              outputTokens: 1,
+              costMicroUsd: 1,
+              createdAt: 1,
+            },
+          },
+        )
+        .toArray();
+
+      const dailyMap = new Map(
+        window.dates.map((date) => [
+          date,
+          { date, calls: 0, inputTokens: 0, outputTokens: 0, costMicroUsd: 0 },
+        ]),
+      );
+      const modelMap = new Map<
+        string,
+        { model: string; calls: number; inputTokens: number; outputTokens: number; costMicroUsd: number }
+      >();
+
+      const toHcmDate = (d: Date) =>
+        new Date(d.getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
+
+      const recordUsage = (
+        date: Date,
+        model: string | null | undefined,
+        inTok: number | null | undefined,
+        outTok: number | null | undefined,
+        cost: number | null | undefined,
+      ) => {
+        const i = Math.max(0, Math.round(inTok ?? 0));
+        const o = Math.max(0, Math.round(outTok ?? 0));
+        const c = Math.max(0, Math.round(cost ?? 0));
+        const bucket = dailyMap.get(toHcmDate(date));
+        if (bucket) {
+          bucket.calls += 1;
+          bucket.inputTokens += i;
+          bucket.outputTokens += o;
+          bucket.costMicroUsd += c;
+        }
+        if (model) {
+          const m = modelMap.get(model) ?? {
+            model,
+            calls: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            costMicroUsd: 0,
+          };
+          m.calls += 1;
+          m.inputTokens += i;
+          m.outputTokens += o;
+          m.costMicroUsd += c;
+          modelMap.set(model, m);
+        }
+      };
+
+      const avg = (values: number[]) =>
+        values.length > 0
+          ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+          : null;
+
+      const failures = { timeout: 0, invalidOutput: 0, providerError: 0, refusal: 0 };
+      const countFailure = (f: string | null | undefined) => {
+        if (f === 'Timeout') failures.timeout += 1;
+        else if (f === 'InvalidOutput') failures.invalidOutput += 1;
+        else if (f === 'ProviderError') failures.providerError += 1;
+        else if (f === 'Refusal') failures.refusal += 1;
+      };
+
+      // 1. Photo Autofill
+      let afIn = 0, afOut = 0, afCost = 0, afOk = 0, afFail = 0, afSuggested = 0, afNeedsMore = 0;
+      const afLat: number[] = [];
+      for (const r of autofillRows) {
+        if (r.status === 'Pending') continue;
+        afIn += Math.max(0, Math.round(r.inputTokens ?? 0));
+        afOut += Math.max(0, Math.round(r.outputTokens ?? 0));
+        afCost += Math.max(0, Math.round(r.costMicroUsd ?? 0));
+        if (typeof r.latencyMs === 'number' && r.latencyMs >= 0) afLat.push(r.latencyMs);
+        if (r.status === 'Suggested') { afOk += 1; afSuggested += 1; }
+        else if (r.status === 'NeedsMoreData') { afOk += 1; afNeedsMore += 1; }
+        else { afFail += 1; countFailure(r.failure); }
+        recordUsage(r.createdAt, r.model, r.inputTokens, r.outputTokens, r.costMicroUsd);
+      }
+
+      // 2. Price Assist
+      let paIn = 0, paOut = 0, paCost = 0, paOk = 0, paFail = 0, paSuggested = 0;
+      let paWithOutcome = 0, paApplied = 0, paWithinRange = 0;
+      const paLat: number[] = [];
+      for (const r of priceRows) {
+        if (r.status === 'Pending') continue;
+        paIn += Math.max(0, Math.round(r.inputTokens ?? 0));
+        paOut += Math.max(0, Math.round(r.outputTokens ?? 0));
+        paCost += Math.max(0, Math.round(r.costMicroUsd ?? 0));
+        if (typeof r.latencyMs === 'number' && r.latencyMs >= 0) paLat.push(r.latencyMs);
+        if (r.status === 'Suggested') { paOk += 1; paSuggested += 1; }
+        else if (r.status === 'NeedsMoreData') { paOk += 1; }
+        else { paFail += 1; countFailure(r.failure); }
+        if (r.outcome) {
+          paWithOutcome += 1;
+          if (r.outcome.applied) paApplied += 1;
+          if (r.outcome.withinRange) paWithinRange += 1;
+        }
+        recordUsage(r.createdAt, r.model, r.inputTokens, r.outputTokens, r.costMicroUsd);
+      }
+
+      // 3. Online Price Lookup
+      let plIn = 0, plOut = 0, plCost = 0, plOk = 0, plFail = 0;
+      for (const r of lookupRows) {
+        if (r.status === 'Running') continue;
+        plIn += Math.max(0, Math.round(r.inputTokens ?? 0));
+        plOut += Math.max(0, Math.round(r.outputTokens ?? 0));
+        plCost += Math.max(0, Math.round(r.costMicroUsd ?? 0));
+        if (r.status === 'Done') plOk += 1;
+        else { plFail += 1; countFailure(r.failure); }
+        recordUsage(r.lastRunAt, r.model, r.inputTokens, r.outputTokens, r.costMicroUsd);
+      }
+
+      // 4. Listing Auto Review (+ recheck/audit checks)
+      let arIn = 0, arOut = 0, arCost = 0, arApproved = 0, arEscalated = 0;
+      const arLat: number[] = [];
+      for (const r of autoReviewRows) {
+        arIn += Math.max(0, Math.round(r.inputTokens ?? 0));
+        arOut += Math.max(0, Math.round(r.outputTokens ?? 0));
+        arCost += Math.max(0, Math.round(r.costMicroUsd ?? 0));
+        if (typeof r.latencyMs === 'number' && r.latencyMs >= 0) arLat.push(r.latencyMs);
+        if (r.outcome === 'Approved') arApproved += 1;
+        else arEscalated += 1;
+        recordUsage(r.decidedAt, r.model, r.inputTokens, r.outputTokens, r.costMicroUsd);
+      }
+      let checksOpen = 0, checksCleared = 0, checksConfirmed = 0;
+      for (const c of autoReviewChecks) {
+        arIn += Math.max(0, Math.round(c.inputTokens ?? 0));
+        arOut += Math.max(0, Math.round(c.outputTokens ?? 0));
+        arCost += Math.max(0, Math.round(c.costMicroUsd ?? 0));
+        if (c.status === 'Open') checksOpen += 1;
+        else if (c.status === 'Cleared') checksCleared += 1;
+        else if (c.status === 'Confirmed') checksConfirmed += 1;
+        if (c.inputTokens > 0 || c.outputTokens > 0 || c.costMicroUsd > 0) {
+          recordUsage(c.createdAt, c.model, c.inputTokens, c.outputTokens, c.costMicroUsd);
+        }
+      }
+
+      const arTotal = arApproved + arEscalated;
+      const staffReviewedChecks = checksCleared + checksConfirmed;
+      const features: Wire['AiUsageSummary']['features'] = [
+        {
+          key: 'autofill',
+          label: 'Đọc ảnh tự điền tin',
+          enabled: env('AUTOFILL_ENABLED') === 'true',
+          provider: `${env('AUTOFILL_PROVIDER') ?? 'nvidia'} · ${env('AUTOFILL_MODEL') ?? 'nemotron-vl'}`,
+          calls: afOk + afFail,
+          succeeded: afOk,
+          failed: afFail,
+          inputTokens: afIn,
+          outputTokens: afOut,
+          costMicroUsd: afCost,
+          avgLatencyMs: avg(afLat),
+        },
+        {
+          key: 'priceAssist',
+          label: 'Trợ lý gợi ý giá',
+          enabled: env('PRICE_ASSIST_ENABLED') === 'true',
+          provider: `${env('PRICE_ASSIST_PROVIDER') ?? 'anthropic'}${env('PRICE_ASSIST_MODEL') ? ` · ${env('PRICE_ASSIST_MODEL')}` : ''}`,
+          calls: paOk + paFail,
+          succeeded: paOk,
+          failed: paFail,
+          inputTokens: paIn,
+          outputTokens: paOut,
+          costMicroUsd: paCost,
+          avgLatencyMs: avg(paLat),
+        },
+        {
+          key: 'priceLookup',
+          label: 'Tra cứu giá sách mới',
+          enabled: env('PRICE_LOOKUP_ENABLED') === 'true',
+          provider: env('PRICE_LOOKUP_PROVIDERS') || 'gemini',
+          calls: plOk + plFail,
+          succeeded: plOk,
+          failed: plFail,
+          inputTokens: plIn,
+          outputTokens: plOut,
+          costMicroUsd: plCost,
+          avgLatencyMs: null,
+        },
+        {
+          key: 'autoReview',
+          label: 'Tự động duyệt bài',
+          enabled: env('LISTING_AUTO_REVIEW_ENABLED') === 'true',
+          provider: `nvidia · ${env('AUTOFILL_MODEL') ?? 'nemotron-vl'}`,
+          calls: arTotal,
+          succeeded: arTotal,
+          failed: 0,
+          inputTokens: arIn,
+          outputTokens: arOut,
+          costMicroUsd: arCost,
+          avgLatencyMs: avg(arLat),
+        },
+      ];
+
+      const totalCalls = features.reduce((s, f) => s + f.calls, 0);
+      const totalSucceeded = features.reduce((s, f) => s + f.succeeded, 0);
+      const totalIn = features.reduce((s, f) => s + f.inputTokens, 0);
+      const totalOut = features.reduce((s, f) => s + f.outputTokens, 0);
+      const totalCost = features.reduce((s, f) => s + f.costMicroUsd, 0);
+      const allLat = [...afLat, ...paLat, ...arLat];
+
+      return {
+        from,
+        to,
+        timezone: zone,
+        serverTime: now.toISOString(),
+        budget: {
+          todayDate: todayUtc,
+          dailyBudgetMicroUsd,
+          todaySpentMicroUsd: Math.max(0, Math.round(globalToday?.costMicroUsd ?? 0)),
+          todayCalls: Math.max(0, Math.round(globalToday?.calls ?? 0)),
+        },
+        totals: {
+          calls: totalCalls,
+          inputTokens: totalIn,
+          outputTokens: totalOut,
+          totalTokens: totalIn + totalOut,
+          costMicroUsd: totalCost,
+          successRateBps: totalCalls > 0 ? computeRateBps(totalSucceeded, totalCalls) : null,
+          avgLatencyMs: avg(allLat),
+        },
+        features,
+        quality: {
+          autoReview: {
+            policyVersion: POLICY_VERSION,
+            policyApproved: env('LISTING_AUTO_REVIEW_APPROVED_POLICY') === POLICY_VERSION,
+            approved: arApproved,
+            escalated: arEscalated,
+            checksOpen,
+            staffReviewedChecks,
+            staffConfirmedProblems: checksConfirmed,
+            overturnRateBps:
+              staffReviewedChecks > 0
+                ? computeRateBps(checksConfirmed, staffReviewedChecks)
+                : null,
+          },
+          priceAssist: {
+            suggested: paSuggested,
+            applied: paApplied,
+            withinRange: paWithinRange,
+            adoptionRateBps:
+              paWithOutcome > 0 ? computeRateBps(paApplied, paWithOutcome) : null,
+          },
+          autofill: {
+            suggested: afSuggested,
+            needsMoreData: afNeedsMore,
+            failed: afFail,
+          },
+          failures,
+        },
+        daily: [...dailyMap.values()],
+        models: [...modelMap.values()]
+          .sort((a, b) => b.costMicroUsd - a.costMicroUsd || b.calls - a.calls)
+          .slice(0, 10),
       };
     });
   }

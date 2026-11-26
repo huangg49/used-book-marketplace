@@ -53,6 +53,7 @@ const workspaceGroups: RouteGroup[] = [
       { label: "Dòng tiền & Đối soát", to: "/statistics/cashflow", icon: "wallet", visibleTo: canViewFinance },
       { label: "Giao dịch & Rủi ro", to: "/statistics/operations", icon: "overdue", visibleTo: canReview },
       { label: "Ghi sổ & Nổi bật", to: "/statistics", icon: "ledger", end: true, visibleTo: canReview },
+      { label: "AI & Token", to: "/statistics/ai", icon: "ai", visibleTo: canReview },
     ],
   },
   {

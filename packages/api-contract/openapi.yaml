@@ -3491,6 +3491,52 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/ai-usage:
+    get:
+      operationId: getAiUsageSummary
+      tags: [Operations]
+      summary: AI token usage, budget and answer quality summary
+      description: >-
+        ACTIVE STAFF/ADMIN only. Read-only aggregate of Photo Autofill, Price
+        Assistant, Online Price Lookup and Listing Auto Review token counts,
+        estimated microUSD cost, daily budget consumption and quality metrics in
+        Asia/Ho_Chi_Minh.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: AI token usage, budget and quality summary.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiUsageSummary"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/listings:
     get:
       operationId: listListingReviewQueue
@@ -24391,6 +24437,160 @@ components:
           maxItems: 50
           items:
             $ref: "#/components/schemas/PointAssignment"
+    AiUsageSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - timezone
+        - serverTime
+        - budget
+        - totals
+        - features
+        - quality
+        - daily
+        - models
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        timezone: { type: string, const: Asia/Ho_Chi_Minh }
+        serverTime: { type: string, format: date-time }
+        budget:
+          type: object
+          additionalProperties: false
+          required: [todayDate, dailyBudgetMicroUsd, todaySpentMicroUsd, todayCalls]
+          properties:
+            todayDate: { type: string, format: date }
+            dailyBudgetMicroUsd: { type: integer, minimum: 0 }
+            todaySpentMicroUsd: { type: integer, minimum: 0 }
+            todayCalls: { type: integer, minimum: 0 }
+        totals:
+          type: object
+          additionalProperties: false
+          required:
+            - calls
+            - inputTokens
+            - outputTokens
+            - totalTokens
+            - costMicroUsd
+            - successRateBps
+            - avgLatencyMs
+          properties:
+            calls: { type: integer, minimum: 0 }
+            inputTokens: { type: integer, minimum: 0 }
+            outputTokens: { type: integer, minimum: 0 }
+            totalTokens: { type: integer, minimum: 0 }
+            costMicroUsd: { type: integer, minimum: 0 }
+            successRateBps: { type: [integer, "null"], minimum: 0, maximum: 10000 }
+            avgLatencyMs: { type: [integer, "null"], minimum: 0 }
+        features:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - key
+              - label
+              - enabled
+              - provider
+              - calls
+              - succeeded
+              - failed
+              - inputTokens
+              - outputTokens
+              - costMicroUsd
+              - avgLatencyMs
+            properties:
+              key:
+                type: string
+                enum: [autofill, priceAssist, priceLookup, autoReview]
+              label: { type: string }
+              enabled: { type: boolean }
+              provider: { type: string }
+              calls: { type: integer, minimum: 0 }
+              succeeded: { type: integer, minimum: 0 }
+              failed: { type: integer, minimum: 0 }
+              inputTokens: { type: integer, minimum: 0 }
+              outputTokens: { type: integer, minimum: 0 }
+              costMicroUsd: { type: integer, minimum: 0 }
+              avgLatencyMs: { type: [integer, "null"], minimum: 0 }
+        quality:
+          type: object
+          additionalProperties: false
+          required: [autoReview, priceAssist, autofill, failures]
+          properties:
+            autoReview:
+              type: object
+              additionalProperties: false
+              required:
+                - policyVersion
+                - policyApproved
+                - approved
+                - escalated
+                - checksOpen
+                - staffReviewedChecks
+                - staffConfirmedProblems
+                - overturnRateBps
+              properties:
+                policyVersion: { type: string }
+                policyApproved: { type: boolean }
+                approved: { type: integer, minimum: 0 }
+                escalated: { type: integer, minimum: 0 }
+                checksOpen: { type: integer, minimum: 0 }
+                staffReviewedChecks: { type: integer, minimum: 0 }
+                staffConfirmedProblems: { type: integer, minimum: 0 }
+                overturnRateBps: { type: [integer, "null"], minimum: 0, maximum: 10000 }
+            priceAssist:
+              type: object
+              additionalProperties: false
+              required: [suggested, applied, withinRange, adoptionRateBps]
+              properties:
+                suggested: { type: integer, minimum: 0 }
+                applied: { type: integer, minimum: 0 }
+                withinRange: { type: integer, minimum: 0 }
+                adoptionRateBps: { type: [integer, "null"], minimum: 0, maximum: 10000 }
+            autofill:
+              type: object
+              additionalProperties: false
+              required: [suggested, needsMoreData, failed]
+              properties:
+                suggested: { type: integer, minimum: 0 }
+                needsMoreData: { type: integer, minimum: 0 }
+                failed: { type: integer, minimum: 0 }
+            failures:
+              type: object
+              additionalProperties: false
+              required: [timeout, invalidOutput, providerError, refusal]
+              properties:
+                timeout: { type: integer, minimum: 0 }
+                invalidOutput: { type: integer, minimum: 0 }
+                providerError: { type: integer, minimum: 0 }
+                refusal: { type: integer, minimum: 0 }
+        daily:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [date, calls, inputTokens, outputTokens, costMicroUsd]
+            properties:
+              date: { type: string, format: date }
+              calls: { type: integer, minimum: 0 }
+              inputTokens: { type: integer, minimum: 0 }
+              outputTokens: { type: integer, minimum: 0 }
+              costMicroUsd: { type: integer, minimum: 0 }
+        models:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [model, calls, inputTokens, outputTokens, costMicroUsd]
+            properties:
+              model: { type: string }
+              calls: { type: integer, minimum: 0 }
+              inputTokens: { type: integer, minimum: 0 }
+              outputTokens: { type: integer, minimum: 0 }
+              costMicroUsd: { type: integer, minimum: 0 }
     OperationsPointList:
       type: object
       additionalProperties: false
