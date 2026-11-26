@@ -1,3 +1,16 @@
+# Driver Simulator RN cho Trao đổi và Đấu giá — 27/11/2026
+
+- Local `fix/rn-driver-simulator`, nền `81faee5f`. Nguyên nhân: RN không có
+  nút vào simulator ở Trao đổi; `/driver` chỉ biết `kind=direct`, màn trao đổi
+  cũ gọi `orders/active` không kèm exchange/leg; không có màn đấu giá. Nay
+  `/driver` chia direct/exchange/auction như Web. Trao đổi dùng session client,
+  hai kiện, báo rõ lỗi 404 của cổng local-demo (`DEMO_ALLOW_REMOTE_HOST`). Đấu
+  giá đọc `point-orders/delivery-tracking`, lệnh demo start/deliver và báo kết
+  quả của operator, giữ key/event khi chưa rõ kết quả. Nút demo hiện ở dev hoặc
+  `EXPO_PUBLIC_DRIVER_SIMULATOR=1`; server vẫn kiểm mọi lệnh.
+- PASS typecheck, lint theo file, unit RN 263 (thêm 7). NOT RUN native và
+  Expo Web với API/Mongo QA (Docker không chạy).
+
 # Polling sang WebSocket trên Web/RN/Admin — 25/11/2026
 
 - Local `feat/realtime-notifications`, nền `fb117b15`, chưa commit. Làm đủ 4 pha
