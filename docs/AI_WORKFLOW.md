@@ -130,6 +130,7 @@ gói/phiên có thay đổi đáng kể. Mỗi người chỉ sửa mục thuộ
 đọc/giữ thay đổi của teammate; không ghi đè cả file từ bản cũ. File này dùng
 `merge=union` trong `.gitattributes`: mỗi PR chỉ thêm mục mới ở đầu file, không sửa
 dòng của mục khác; khi main đổi, chạy `git merge origin/main` để git tự giữ cả hai
-mục thay vì báo conflict. Máy riêng ghi local
+mục thay vì báo conflict; sau đó kiểm dòng trống trước tiêu đề `# ` của mục kế tiếp
+(union có thể gộp mất dòng trống dùng chung). Máy riêng ghi local
 notes trong `.tmp/`, không đưa PID/secret của mỗi máy thành hướng dẫn chung.
 READINESS chỉ đổi khi có evidence mới đóng/mở gate; không suy từ một PR merge.
