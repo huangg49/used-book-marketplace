@@ -153,7 +153,7 @@ export function AuctionDriverScreen({ trackingCode }: { trackingCode: string }) 
           ? "Bưu tá đã bắt đầu đi giao."
           : intent.kind === "Report" && intent.event.outcome === "Failed"
             ? "Đã ghi nhận giao không thành công. Đơn chuyển quản trị viên xử lý."
-            : "Đã ghi nhận giao thành công. Quay lại đơn để xác nhận đã nhận sách.",
+            : "Đã ghi nhận giao thành công.",
       });
       await Promise.all([
         query.refetch(),
@@ -175,7 +175,7 @@ export function AuctionDriverScreen({ trackingCode }: { trackingCode: string }) 
 
   const milestones = t
     ? [
-        { label: `Điểm ${t.pointName} đã bàn giao cho hãng`, detail: formatDriverTime(t.dispatchedAt), done: true },
+        { label: `${t.pointName} đã bàn giao cho hãng`, detail: formatDriverTime(t.dispatchedAt), done: true },
         {
           label: "Bưu tá bắt đầu đi giao",
           detail: formatDriverTime(t.demoOutForDeliveryAt) ?? `Hạn giao ${formatDriverTime(t.deliveryDeadline)}`,
@@ -217,7 +217,7 @@ export function AuctionDriverScreen({ trackingCode }: { trackingCode: string }) 
           />
         }
       >
-        {!ownerId && (
+        {state.status === "anonymous" && (
           <StatePanel
             wine
             title="Đăng nhập để mở simulator"
@@ -226,7 +226,7 @@ export function AuctionDriverScreen({ trackingCode }: { trackingCode: string }) 
           />
         )}
 
-        {ownerId && query.isPending && (
+        {(state.status === "loading" || (ownerId && query.isPending)) && (
           <View style={styles.centerWrap}>
             <StatePanel wine loading title="Đang tải vận đơn đấu giá…" />
           </View>
@@ -249,7 +249,7 @@ export function AuctionDriverScreen({ trackingCode }: { trackingCode: string }) 
               </View>
               <View style={{ flex: 1 }}>
                 <AppText style={styles.driverName}>Lật Lại Express (Mô phỏng)</AppText>
-                <AppText style={styles.driverSub}>Từ điểm {t.pointName} · TP.HCM</AppText>
+                <AppText style={styles.driverSub}>Từ {t.pointName} · TP.HCM</AppText>
               </View>
               <View style={styles.statusChip}>
                 <AppText style={styles.statusChipText}>
