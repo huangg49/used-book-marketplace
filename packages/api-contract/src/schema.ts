@@ -1419,6 +1419,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/ai-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI token usage, budget and answer quality summary
+         * @description ACTIVE STAFF/ADMIN only. Read-only aggregate of Photo Autofill, Price Assistant, Online Price Lookup and Listing Auto Review token counts, estimated microUSD cost, daily budget consumption and quality metrics in Asia/Ho_Chi_Minh.
+         */
+        get: operations["getAiUsageSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings": {
         parameters: {
             query?: never;
@@ -8623,6 +8643,90 @@ export interface components {
             updatedAt: string;
             assignments: components["schemas"]["PointAssignment"][];
         };
+        AiUsageSummary: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            serverTime: string;
+            budget: {
+                /** Format: date */
+                todayDate: string;
+                dailyBudgetMicroUsd: number;
+                todaySpentMicroUsd: number;
+                todayCalls: number;
+            };
+            totals: {
+                calls: number;
+                inputTokens: number;
+                outputTokens: number;
+                totalTokens: number;
+                costMicroUsd: number;
+                successRateBps: number | null;
+                avgLatencyMs: number | null;
+            };
+            features: {
+                /** @enum {string} */
+                key: "autofill" | "priceAssist" | "priceLookup" | "autoReview";
+                label: string;
+                enabled: boolean;
+                provider: string;
+                calls: number;
+                succeeded: number;
+                failed: number;
+                inputTokens: number;
+                outputTokens: number;
+                costMicroUsd: number;
+                avgLatencyMs: number | null;
+            }[];
+            quality: {
+                autoReview: {
+                    policyVersion: string;
+                    policyApproved: boolean;
+                    approved: number;
+                    escalated: number;
+                    checksOpen: number;
+                    staffReviewedChecks: number;
+                    staffConfirmedProblems: number;
+                    overturnRateBps: number | null;
+                };
+                priceAssist: {
+                    suggested: number;
+                    applied: number;
+                    withinRange: number;
+                    adoptionRateBps: number | null;
+                };
+                autofill: {
+                    suggested: number;
+                    needsMoreData: number;
+                    failed: number;
+                };
+                failures: {
+                    timeout: number;
+                    invalidOutput: number;
+                    providerError: number;
+                    refusal: number;
+                };
+            };
+            daily: {
+                /** Format: date */
+                date: string;
+                calls: number;
+                inputTokens: number;
+                outputTokens: number;
+                costMicroUsd: number;
+            }[];
+            models: {
+                model: string;
+                calls: number;
+                inputTokens: number;
+                outputTokens: number;
+                costMicroUsd: number;
+            }[];
+        };
         OperationsPointList: {
             items: components["schemas"]["OperationsPoint"][];
             /** Format: date-time */
@@ -11991,6 +12095,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationsAnalytics"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getAiUsageSummary: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AI token usage, budget and quality summary. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiUsageSummary"];
                 };
             };
             400: components["responses"]["ListingError"];

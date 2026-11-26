@@ -14,6 +14,7 @@ describe("workspace navigation permissions", () => {
       "/dashboard",
       "/statistics/operations",
       "/statistics",
+      "/statistics/ai",
       "/review/listings",
       "/ai-review-checks",
       "/transaction-reviews",
@@ -30,6 +31,7 @@ describe("workspace navigation permissions", () => {
       "/statistics/cashflow",
       "/statistics/operations",
       "/statistics",
+      "/statistics/ai",
       "/review/catalog-requests",
       "/review/listings",
       "/ai-review-checks",
@@ -60,7 +62,7 @@ describe("workspace navigation permissions", () => {
   it("combines actual roles without duplicate links or a guessed account role", () => {
     const user = { ...base, roles: ["ADMIN", "STAFF", "TEST_OPERATOR"] } satisfies CurrentUser;
     const links = paths(user);
-    expect(links).toHaveLength(25);
+    expect(links).toHaveLength(26);
     expect(new Set(links).size).toBe(links.length);
     expect(workspaceRole(user)).toBe("Quản trị viên · Nhân viên · Vận hành thử");
     expect(workspaceRole(undefined)).toBe("Chờ xác minh quyền");

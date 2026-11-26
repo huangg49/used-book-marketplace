@@ -82,6 +82,14 @@ export class OperationsDashboardController {
       this.input.query('getOperationsAnalytics', query),
     );
   }
+  @Get('ai-usage')
+  @Roles('STAFF', 'ADMIN')
+  aiUsage(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.aiUsage(
+      req.auth,
+      this.input.query('getAiUsageSummary', query),
+    );
+  }
   @Get('users/:userId/avatar/read')
   @Roles('STAFF', 'ADMIN')
   avatar(@Req() req: AuthenticatedRequest, @Param('userId') userId: string) {

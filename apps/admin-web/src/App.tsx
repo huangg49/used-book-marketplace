@@ -42,6 +42,11 @@ const OperationsAnalyticsPage = lazy(() =>
     default: m.OperationsAnalyticsPage,
   })),
 );
+const AiAnalyticsPage = lazy(() =>
+  import("./features/dashboard/AiAnalyticsPage").then((m) => ({
+    default: m.AiAnalyticsPage,
+  })),
+);
 const Queue = lazy(() =>
   import("./features/review/queue").then((m) => ({ default: m.Queue })),
 );
@@ -157,6 +162,7 @@ const router = createBrowserRouter([
       { path: "/statistics/finance", element: <FinancePage /> },
       { path: "/statistics/cashflow", element: <CashflowPage /> },
       { path: "/statistics/operations", element: <OperationsAnalyticsPage /> },
+      { path: "/statistics/ai", element: <AiAnalyticsPage /> },
       {
         path: "/review/:kind",
         element: <Queue />,

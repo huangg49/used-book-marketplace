@@ -1,0 +1,469 @@
+.aiGrid {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* Daily Budget Hero Banner */
+.budgetCard {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 163, 89, 0.42);
+  background: linear-gradient(135deg, #5c0202 0%, #3d0404 62%, #2b0303 100%);
+  color: #fffcf5;
+  box-shadow: 0 10px 26px rgba(61, 4, 4, 0.16);
+}
+
+.budgetTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.budgetTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.budgetIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(255, 223, 151, 0.14);
+  border: 1px solid rgba(255, 223, 151, 0.32);
+  color: #ffdf97;
+  flex-shrink: 0;
+}
+
+.budgetHeading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fffcf5;
+}
+
+.budgetSub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: rgba(255, 223, 151, 0.85);
+}
+
+.budgetNumbers {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.budgetSpent {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #ffdf97;
+  letter-spacing: -0.02em;
+}
+
+.budgetLimit {
+  font-size: 0.85rem;
+  color: rgba(255, 252, 245, 0.78);
+}
+
+.budgetBarTrack {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.budgetBarFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffdf97 0%, #e6b34c 100%);
+  transition: width 320ms ease;
+}
+
+.budgetBarFillWarn {
+  background: linear-gradient(90deg, #ffb74d 0%, #e65100 100%);
+}
+
+.budgetBarFillDanger {
+  background: linear-gradient(90deg, #ff7043 0%, #d32f2f 100%);
+}
+
+.budgetMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  font-size: 0.78rem;
+  color: rgba(255, 252, 245, 0.82);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 4 KPI Summary Strip */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.kpiCard {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  box-shadow: var(--shadow-sm);
+}
+
+.kpiHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kpiLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+}
+
+.kpiIcon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+}
+
+.kpiValue {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--shop-ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.kpiSub {
+  font-size: 0.76rem;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chart Panel */
+.panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+
+.panelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+}
+
+.panelSub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--shop-muted);
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.76rem;
+  color: var(--shop-muted);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDotInput {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: #6e1616;
+}
+
+.legendDotOutput {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: #d4a359;
+}
+
+.chartWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chartSvg {
+  display: block;
+  width: 100%;
+  min-width: 520px;
+  height: 220px;
+}
+
+/* 4 Feature Cards */
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.featureCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--shop-line);
+  background: linear-gradient(180deg, #fffdf9 0%, #fcf8f0 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.featureTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.featureName {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+}
+
+.featureProvider {
+  margin: 3px 0 0;
+  font-size: 0.73rem;
+  color: var(--shop-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+}
+
+.statusPillOn,
+.statusPillOff {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusPillOn {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.statusPillOff {
+  background: #f3efe6;
+  color: var(--shop-muted);
+}
+
+.featureMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--shop-line);
+  font-variant-numeric: tabular-nums;
+}
+
+.featureMetricLabel {
+  display: block;
+  font-size: 0.71rem;
+  color: var(--shop-muted);
+}
+
+.featureMetricVal {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+}
+
+/* Bottom 2-Column Quality & Models */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 960px) {
+  .twoCol {
+    grid-template-columns: 1.15fr 1fr;
+  }
+}
+
+.qualityList {
+  display: grid;
+  gap: 12px;
+}
+
+.qualityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  background: var(--shop-shelf);
+  border: 1px solid rgba(110, 22, 22, 0.08);
+}
+
+.qualityRow strong {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--shop-ink);
+}
+
+.qualityRow span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--shop-muted);
+}
+
+.qualityStat {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.qualityStat b {
+  display: block;
+  font-size: 0.98rem;
+  color: var(--shop-wine);
+}
+
+.failureStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.failureChip {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--shop-line);
+  background: #fffcf5;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.failureChip b {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--shop-ink);
+}
+
+.failureChip span {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--shop-muted);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.modelTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.modelTable th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--shop-line);
+  color: var(--shop-muted);
+  font-weight: 600;
+  font-size: 0.74rem;
+}
+
+.modelTable td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--shop-ink);
+}
+
+.modelTable th:not(:first-child),
+.modelTable td:not(:first-child) {
+  text-align: right;
+}
+
+.modelCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.76rem;
+  color: var(--shop-wine);
+  font-weight: 600;
+}
+
+.auditLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--shop-wine);
+  color: var(--shop-wine);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: #fffcf5;
+}
+
+.auditLink:hover {
+  background: var(--shop-wine);
+  color: #fff;
+}
+
+.emptyNote {
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+  border-radius: 12px;
+  background: var(--shop-shelf);
+  color: var(--shop-muted);
+  font-size: 0.84rem;
+}
+
