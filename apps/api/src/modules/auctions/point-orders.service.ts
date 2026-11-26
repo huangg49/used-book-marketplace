@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type {
   AuctionDoc,
@@ -36,7 +36,9 @@ import {
   deliveryPrice,
   deliverySnapshot,
   deliveryView,
+  type PreResolvedDeliveryFee,
 } from './point-delivery.js';
+import { PointDeliveryPricingService } from './point-delivery-pricing.service.js';
 import { checkPointOrder } from './point-order-invariants.js';
 
 // ViaPoint Order formed by an auction win or Buy Now (FR-AU06/07, FR-O05).
@@ -49,6 +51,7 @@ export class PointOrdersService {
     private readonly reservations: ReservationsService,
     private readonly ledger: LedgerService,
     private readonly clock: AuctionClock,
+    @Optional() private readonly deliveryPricing?: PointDeliveryPricingService,
   ) {}
 
   static change(
@@ -246,7 +249,28 @@ export class PointOrdersService {
     return o;
   }
 
-  pay(context: CommandContext, id: string, body: Wire['PayPointOrder']) {
+  async pay(context: CommandContext, id: string, body: Wire['PayPointOrder']) {
+    // Pre-resolve Hybrid GHN/Zone delivery fee OUTSIDE the MongoDB transaction
+    // so live carrier HTTP calls never hold database locks or fail snapshots.
+    let preResolved: PreResolvedDeliveryFee | null = null;
+    if (
+      body.fulfillmentMethod === 'CarrierOutbound' &&
+      body.destinationAddressId &&
+      this.deliveryPricing
+    ) {
+      try {
+        preResolved = await this.resolveHybridDeliveryFee(
+          context.auth,
+          id,
+          body.destinationAddressId,
+        );
+      } catch {
+        // Validation, ownership, or state errors are re-checked authoritatively
+        // inside runAuction below with proper lock/replay semantics.
+        preResolved = null;
+      }
+    }
+
     return this.commands.runAuction(context, 'payPointOrder', id, body, {
       discover: async (tx) => {
         const o = await this.own(tx, id, context.auth.user.id, true);
@@ -289,7 +313,7 @@ export class PointOrdersService {
         // ADR 0044: delivery adds the outbound fee to the one payment.
         const delivery =
           method === 'CarrierOutbound'
-            ? await deliverySnapshot(tx, o, body, now, receiptId)
+            ? await deliverySnapshot(tx, o, body, now, receiptId, preResolved)
             : null;
         const outboundFee = delivery?.outboundFee ?? 0;
         // ADR 0075: the winner's hold returns to available and is paid out
@@ -422,14 +446,12 @@ export class PointOrdersService {
     });
   }
 
-  // ADR 0044: prices delivery of an unpaid Order to one of the buyer's
-  // addresses. Reserves nothing; payment rechecks address version and fee.
-  deliveryQuote(
+  private async resolveHybridDeliveryFee(
     auth: Actor,
     id: string,
     addressId: string,
-  ): Promise<Wire['PointOrderDeliveryQuote']> {
-    return this.commands.read(auth, async (tx, actor) => {
+  ): Promise<PreResolvedDeliveryFee> {
+    const context = await this.commands.read(auth, async (tx, actor) => {
       member(actor);
       const o = await this.own(tx, id, actor._id, true);
       if (o.state !== 'AwaitingPayment') throw invalidState();
@@ -438,18 +460,126 @@ export class PointOrdersService {
         o,
         addressId,
       );
+      const point = await tx.c.handover_points.findOne({ _id: o.pointId });
+      const item = await tx.c.workflow_items.findOne({
+        _id: `${o.contextId}:${o.listingId}`,
+      });
+      const bundleCount = Number(
+        (item?.snapshot as { bundle?: { bookCount?: number } })?.bundle
+          ?.bookCount ?? 1,
+      );
+      const weightGrams =
+        bundleCount > 1 ? Math.min(5_000, Math.max(1_000, bundleCount * 600)) : 1_000;
       return {
         orderId: o._id,
-        addressId: address._id,
-        addressVersion: address.version,
-        serviceAreaCode: address.serviceAreaCode,
-        policyCode,
         bookPrice: o.bookPrice,
-        outboundFee: fee,
-        buyerTotal: o.bookPrice + fee,
-        currency: 'VND',
-        demoOnly: true,
+        pointCode: point?.code ?? null,
+        address,
+        defaultPolicyCode: policyCode,
+        defaultPolicyFee: fee,
+        weightGrams,
       };
     });
+
+    if (!this.deliveryPricing) {
+      return {
+        addressId: context.address._id,
+        addressVersion: context.address.version,
+        bookPrice: context.bookPrice,
+        fee: context.defaultPolicyFee,
+        policyCode: context.defaultPolicyCode,
+        source: 'ZoneFallback',
+      };
+    }
+
+    const resolved = await this.deliveryPricing.resolveFee({
+      orderId: context.orderId,
+      addressId: context.address._id,
+      addressVersion: context.address.version,
+      localityCode: context.address.localityCode,
+      detail: context.address.detail,
+      bookPrice: context.bookPrice,
+      pointCode: context.pointCode,
+      defaultPolicyFee: context.defaultPolicyFee,
+      defaultPolicyCode: context.defaultPolicyCode,
+      weightGrams: context.weightGrams,
+    });
+
+    return {
+      addressId: context.address._id,
+      addressVersion: context.address.version,
+      bookPrice: context.bookPrice,
+      ...resolved,
+    };
+  }
+
+  // ADR 0044: prices delivery of an unpaid Order to one of the buyer's
+  // addresses. Reserves nothing; payment rechecks address version and fee.
+  async deliveryQuote(
+    auth: Actor,
+    id: string,
+    addressId: string,
+  ): Promise<Wire['PointOrderDeliveryQuote']> {
+    const context = await this.commands.read(auth, async (tx, actor) => {
+      member(actor);
+      const o = await this.own(tx, id, actor._id, true);
+      if (o.state !== 'AwaitingPayment') throw invalidState();
+      const { address, policyCode, fee } = await deliveryPrice(
+        tx,
+        o,
+        addressId,
+      );
+      const point = await tx.c.handover_points.findOne({ _id: o.pointId });
+      const item = await tx.c.workflow_items.findOne({
+        _id: `${o.contextId}:${o.listingId}`,
+      });
+      const bundleCount = Number(
+        (item?.snapshot as { bundle?: { bookCount?: number } })?.bundle
+          ?.bookCount ?? 1,
+      );
+      const weightGrams =
+        bundleCount > 1 ? Math.min(5_000, Math.max(1_000, bundleCount * 600)) : 1_000;
+      return {
+        orderId: o._id,
+        bookPrice: o.bookPrice,
+        pointCode: point?.code ?? null,
+        address,
+        defaultPolicyCode: policyCode,
+        defaultPolicyFee: fee,
+        weightGrams,
+      };
+    });
+
+    const resolved = this.deliveryPricing
+      ? await this.deliveryPricing.resolveFee({
+          orderId: context.orderId,
+          addressId: context.address._id,
+          addressVersion: context.address.version,
+          localityCode: context.address.localityCode,
+          detail: context.address.detail,
+          bookPrice: context.bookPrice,
+          pointCode: context.pointCode,
+          defaultPolicyFee: context.defaultPolicyFee,
+          defaultPolicyCode: context.defaultPolicyCode,
+          weightGrams: context.weightGrams,
+        })
+      : {
+          fee: context.defaultPolicyFee,
+          policyCode: context.defaultPolicyCode,
+          source: 'ZoneFallback' as const,
+        };
+
+    return {
+      orderId: context.orderId,
+      addressId: context.address._id,
+      addressVersion: context.address.version,
+      serviceAreaCode: context.address.serviceAreaCode,
+      policyCode: resolved.policyCode,
+      bookPrice: context.bookPrice,
+      outboundFee: resolved.fee,
+      buyerTotal: context.bookPrice + resolved.fee,
+      currency: 'VND',
+      demoOnly: true,
+    };
   }
 }

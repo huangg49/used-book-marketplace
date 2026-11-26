@@ -113,20 +113,25 @@ function InventoryBookRow({
       accessibilityLabel={
         isSelected ? "Bỏ chọn cuốn sách này" : "Chọn cuốn sách này"
       }
+      accessibilityState={{ selected: isSelected }}
       onPress={onToggle}
       style={({ pressed }) => [
         styles.bookOptionCard,
+        isMatched && !isSelected && styles.bookOptionCardMatched,
         isSelected && styles.bookOptionCardSelected,
-        isMatched && styles.bookOptionCardMatched,
         pressed && styles.pressed,
       ]}
     >
       <View style={styles.optionPhotoBox}>
         {coverMediaId ? (
-          <DraftCoverPhoto listingId={listing.id} mediaId={coverMediaId} />
+          <DraftCoverPhoto
+            listingId={listing.id}
+            mediaId={coverMediaId}
+            compact
+          />
         ) : (
           <View style={styles.optionPhotoEmpty}>
-            <Icon name="book" size={20} color={stitchTokens.roseBrown} />
+            <Icon name="book" size={18} color={stitchTokens.roseBrown} />
           </View>
         )}
       </View>
@@ -134,17 +139,16 @@ function InventoryBookRow({
       <View style={styles.optionInfoCol}>
         <BookIdentity id={listing.currentRevision.content.bookId} compact />
 
-        {isMatched && (
-          <View style={styles.matchedBadge}>
-            <Icon name="star" size={11} color={stitchTokens.wine} />
-            <AppText style={styles.matchedBadgeText}>Khớp mong muốn</AppText>
-          </View>
-        )}
-
-        <View style={styles.optionValueRow}>
+        <View style={styles.optionMetaRow}>
           <AppText style={styles.optionValueTag}>
-            Quy đổi: {formatVnd(listingValue)}
+            {formatVnd(listingValue)}
           </AppText>
+          {isMatched && (
+            <View style={styles.matchedBadge}>
+              <Icon name="star" size={10} color={stitchTokens.goldBronze} />
+              <AppText style={styles.matchedBadgeText}>Khớp mong muốn</AppText>
+            </View>
+          )}
         </View>
       </View>
 
@@ -539,17 +543,14 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
         </View>
       }
     >
-      {/* 1. Sách bạn muốn nhận (Target Book Banner - Full Width Red) */}
+      {/* 1. Sách bạn muốn nhận + tiêu chí đối tác */}
       <View style={styles.targetCard}>
         <View style={styles.targetCardBadgeRow}>
           <View style={styles.targetBadge}>
-            <Icon name="bookmark" size={13} color={stitchTokens.wineDark} />
-            <AppText style={styles.targetBadgeText}>
-              SÁCH BẠN MUỐN NHẬN
-            </AppText>
+            <AppText style={styles.targetBadgeText}>Bạn sẽ nhận</AppText>
           </View>
-          <AppText style={styles.targetOwner}>
-            Chủ sách: @{targetBook.seller.displayName}
+          <AppText style={styles.targetOwner} numberOfLines={1}>
+            @{targetBook.seller.displayName}
           </AppText>
         </View>
 
@@ -562,9 +563,13 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
                 mediaId={targetBook.photos[0].id}
                 label="Bìa sách muốn nhận"
                 active={true}
-                compact
+                thumbnail
               />
-            ) : null}
+            ) : (
+              <View style={styles.optionPhotoEmpty}>
+                <Icon name="book" size={20} color={stitchTokens.roseBrown} />
+              </View>
+            )}
           </View>
 
           <View style={styles.targetDetails}>
@@ -575,114 +580,89 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
               {targetBook.book.authors.join(", ")}
             </AppText>
             <View style={styles.valueRow}>
-              <AppText style={styles.valueLabel}>Định giá quy đổi:</AppText>
+              <AppText style={styles.valueLabel}>Định giá</AppText>
               <AppText style={styles.targetValueText}>
                 {formatVnd(targetValue)}
               </AppText>
             </View>
           </View>
         </View>
+
+        {/* Compact partner preferences strip (attached cleanly to partner's book) */}
+        {targetBook?.exchangePreferences &&
+          (targetBook.exchangePreferences.targetCategory ||
+            targetBook.exchangePreferences.targetAuthor ||
+            targetBook.exchangePreferences.targetDescription) && (
+            <View style={styles.prefStrip}>
+              <View style={styles.prefStripTop}>
+                <AppText style={styles.prefStripHeading}>
+                  Đối tác ưu tiên đổi
+                </AppText>
+                <View style={styles.prefChipsWrap}>
+                  {targetBook.exchangePreferences.targetCategory ? (
+                    <View style={styles.prefChip}>
+                      <AppText style={styles.prefChipText}>
+                        {targetBook.exchangePreferences.targetCategory}
+                      </AppText>
+                    </View>
+                  ) : null}
+                  {targetBook.exchangePreferences.targetAuthor ? (
+                    <View style={styles.prefChip}>
+                      <AppText style={styles.prefChipText}>
+                        {targetBook.exchangePreferences.targetAuthor}
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+
+              {targetBook.exchangePreferences.targetDescription ? (
+                <AppText style={styles.prefStripNote}>
+                  &ldquo;{targetBook.exchangePreferences.targetDescription}&rdquo;
+                </AppText>
+              ) : null}
+            </View>
+          )}
       </View>
 
       <View style={styles.scrollContent}>
         {errorNotice ? <Notice tone="error">{errorNotice}</Notice> : null}
 
         {/* 2. Chọn sách từ kệ của bạn */}
-        <View style={styles.sectionCard}>
+        <View style={styles.sectionBlock}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleWithIcon}>
-              <Icon name="book" size={18} color={stitchTokens.wineDark} />
-              <AppText style={styles.sectionTitle}>
-                Chọn sách của bạn để hoán đổi
-              </AppText>
-            </View>
-            <View style={styles.countBadge}>
-              <AppText style={styles.countBadgeText}>
+            <AppText style={styles.sectionTitle}>
+              Chọn sách của bạn để gửi
+            </AppText>
+            <View
+              style={[
+                styles.countBadge,
+                selectedMyListingIds.length > 0 && styles.countBadgeActive,
+              ]}
+            >
+              <AppText
+                style={[
+                  styles.countBadgeText,
+                  selectedMyListingIds.length > 0 &&
+                    styles.countBadgeTextActive,
+                ]}
+              >
                 {selectedMyListingIds.length > 0
-                  ? `Đã chọn ${selectedMyListingIds.length} cuốn`
-                  : `${myEligibleListings.length} cuốn khả dụng`}
+                  ? `Đã chọn ${selectedMyListingIds.length}/5`
+                  : `${myEligibleListings.length} cuốn sẵn sàng`}
               </AppText>
             </View>
           </View>
 
-          {/* Target Preferences Banner */}
-          {targetBook?.exchangePreferences &&
-            (targetBook.exchangePreferences.targetCategory ||
-              targetBook.exchangePreferences.targetAuthor ||
-              targetBook.exchangePreferences.targetDescription) && (
-              <View style={styles.prefBanner}>
-                <View style={styles.prefBannerHeader}>
-                  <View style={styles.prefHeaderLeft}>
-                    <View style={styles.prefIconCircle}>
-                      <Icon name="bookmark" size={13} color={stitchTokens.wine} />
-                    </View>
-                    <View>
-                      <AppText style={styles.prefBannerTitle}>
-                        Tiêu chí đối tác đang tìm kiếm
-                      </AppText>
-                      <AppText style={styles.prefBannerSubtitle}>
-                        Khớp tiêu chí giúp lời đề nghị dễ được chấp nhận
-                      </AppText>
-                    </View>
-                  </View>
-                </View>
-
-                {(targetBook.exchangePreferences.targetCategory ||
-                  targetBook.exchangePreferences.targetAuthor) && (
-                  <View style={styles.prefTagsRow}>
-                    {targetBook.exchangePreferences.targetCategory ? (
-                      <View style={styles.prefTagItem}>
-                        <Icon name="tag" size={12} color={stitchTokens.wineLight} />
-                        <AppText style={styles.prefTagLabel}>Thể loại:</AppText>
-                        <AppText style={styles.prefTagValue}>
-                          {targetBook.exchangePreferences.targetCategory}
-                        </AppText>
-                      </View>
-                    ) : null}
-
-                    {targetBook.exchangePreferences.targetAuthor ? (
-                      <View style={styles.prefTagItem}>
-                        <Icon name="pen" size={12} color={stitchTokens.wineLight} />
-                        <AppText style={styles.prefTagLabel}>Tác giả:</AppText>
-                        <AppText style={styles.prefTagValue}>
-                          {targetBook.exchangePreferences.targetAuthor}
-                        </AppText>
-                      </View>
-                    ) : null}
-                  </View>
-                )}
-
-                {targetBook.exchangePreferences.targetDescription ? (
-                  <View style={styles.prefNoteBox}>
-                    <View style={styles.prefNoteHeader}>
-                      <Icon name="message" size={12} color={stitchTokens.roseBrown} />
-                      <AppText style={styles.prefNoteLabel}>Ghi chú từ chủ sách:</AppText>
-                    </View>
-                    <AppText style={styles.prefNoteText}>
-                      &ldquo;{targetBook.exchangePreferences.targetDescription}&rdquo;
-                    </AppText>
-                  </View>
-                ) : null}
-
-                <View style={styles.prefHintRow}>
-                  <Icon name="star" size={12} color={stitchTokens.goldBronze} />
-                  <AppText style={styles.prefHint}>
-                    Sách trên kệ khớp tiêu chí sẽ có nhãn{" "}
-                    <AppText style={styles.prefHintHighlight}>Khớp mong muốn</AppText>
-                  </AppText>
-                </View>
-              </View>
-            )}
-
           {myEligibleListings.length === 0 ? (
             <View style={styles.emptyInventory}>
-              <Icon name="book" size={32} color={stitchTokens.roseBrown} />
+              <Icon name="book" size={28} color={stitchTokens.roseBrown} />
               <AppText style={styles.emptyTitle}>
                 Chưa có sách nào sẵn sàng đổi
               </AppText>
               <AppText style={styles.emptySubtitle}>
-                Bạn cần có ít nhất một cuốn sách đã được duyệt và bật chế độ Đổi
-                sách trong kệ của mình.
+                Bạn cần ít nhất một cuốn sách đã duyệt và bật chế độ Đổi sách
+                trong kệ của mình.
               </AppText>
               <Button
                 title="Đăng sách mới vào kệ"
@@ -712,91 +692,91 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
           )}
         </View>
 
-        {/* 3. So khớp giá trị & Cọc tỷ lệ (đồng bộ công thức Web) */}
+        {/* 3. So khớp giá trị & Dự tính đặt cọc */}
         {chosenMyListings.length > 0 && (
-          <View style={styles.diffCard}>
-            <View style={styles.diffHeader}>
-              <Icon name="shield" size={16} color={stitchTokens.wine} />
-              <AppText style={styles.diffTitle}>
-                Nếu hai bên đồng ý (dự tính đặt cọc)
+          <View style={styles.receiptCard}>
+            <View style={styles.receiptHeader}>
+              <AppText style={styles.receiptTitle}>
+                Dự tính ký quỹ nếu đối tác đồng ý
               </AppText>
+              <View style={styles.zeroFeePill}>
+                <AppText style={styles.zeroFeeText}>Phí 0đ</AppText>
+              </View>
             </View>
 
-            <View style={styles.diffGrid}>
-              <View style={styles.diffItem}>
-                <AppText style={styles.diffItemLabel}>
+            <View style={styles.receiptRows}>
+              <View style={styles.receiptRow}>
+                <AppText style={styles.receiptLabel}>
                   Cọc của bạn ({chosenMyListings.length} cuốn gửi)
                 </AppText>
-                <AppText style={styles.diffItemValue}>
+                <AppText style={styles.receiptValue}>
                   {formatVnd(totalMyValue)}
                 </AppText>
               </View>
 
-              <View style={styles.diffDivider}>
-                <Icon name="swap" size={14} color={stitchTokens.subtleGray} />
+              <View style={styles.receiptRow}>
+                <AppText style={styles.receiptLabel}>
+                  Cọc đối tác giữ lại
+                </AppText>
+                <AppText style={styles.receiptValueMuted}>
+                  {formatVnd(targetValue)}
+                </AppText>
               </View>
 
-              <View style={styles.diffItem}>
-                <AppText style={styles.diffItemLabel}>Cọc đối tác</AppText>
-                <AppText style={styles.diffItemValue}>
-                  {formatVnd(targetValue)}
+              <View style={styles.receiptRow}>
+                <AppText style={styles.receiptLabel}>
+                  {diff > 0
+                    ? "Chênh lệch (bạn bù thêm)"
+                    : diff < 0
+                      ? "Chênh lệch (đối tác bù bạn)"
+                      : "Chênh lệch giá trị"}
+                </AppText>
+                <AppText
+                  style={[
+                    styles.receiptValue,
+                    diff > 0
+                      ? styles.receiptDiffPay
+                      : diff < 0
+                        ? styles.receiptDiffReceive
+                        : styles.receiptValueMuted,
+                  ]}
+                >
+                  {diff > 0
+                    ? `+${formatVnd(diff)}`
+                    : diff < 0
+                      ? `+${formatVnd(-diff)}`
+                      : "Ngang giá"}
+                </AppText>
+              </View>
+
+              <View style={styles.receiptDivider} />
+
+              <View style={styles.receiptRow}>
+                <AppText style={styles.receiptTotalLabel}>
+                  Tổng dự kiến giữ từ Ví
+                </AppText>
+                <AppText style={styles.receiptTotalValue}>
+                  {formatVnd(totalMyValue + Math.max(0, diff))}
                 </AppText>
               </View>
             </View>
 
-            <View
-              style={[
-                styles.diffResultBox,
-                diff > 0
-                  ? styles.diffResultBoxWarning
-                  : diff < 0
-                    ? styles.diffResultBoxPositive
-                    : styles.diffResultBoxNeutral,
-              ]}
-            >
-              <AppText
-                style={[
-                  styles.diffResultText,
-                  diff > 0
-                    ? styles.diffResultTextWarning
-                    : diff < 0
-                      ? styles.diffResultTextPositive
-                      : styles.diffResultTextNeutral,
-                ]}
-              >
-                {diff > 0
-                  ? `Bạn bù thêm: ${formatVnd(diff)} · Tổng bạn nộp: ${formatVnd(totalMyValue + diff)}`
-                  : diff < 0
-                    ? `Đối tác bù cho bạn: ${formatVnd(-diff)} · Tổng bạn nộp: ${formatVnd(totalMyValue)}`
-                    : `Trao đổi ngang giá · Tổng bạn nộp: ${formatVnd(totalMyValue)}`}
+            <View style={styles.receiptFootnotes}>
+              <AppText style={styles.receiptNoteText}>
+                {exchangeServiceFeeText} {exchangeShippingCostText}
+              </AppText>
+              <AppText style={styles.receiptNoteText}>
+                Gửi đề nghị chưa giữ sách hay trừ ví. Tiền cọc được hoàn khi hai
+                bên hoàn tất trao đổi.
               </AppText>
             </View>
-
-            <AppText
-              style={{
-                fontSize: 11.5,
-                color: stitchTokens.subtleGray,
-                lineHeight: 16,
-              }}
-            >
-              {exchangeServiceFeeText} {exchangeShippingCostText}
-            </AppText>
-            <AppText kind="small" color={stitchTokens.subtleGray}>
-              Gửi đề nghị chưa giữ sách hay trừ tiền ví. Tiền cọc được hoàn khi
-              giao dịch hoàn tất bình thường.
-            </AppText>
           </View>
         )}
 
         {/* 4. Địa chỉ nhận sách của bạn */}
-        <View style={styles.sectionCard}>
+        <View style={styles.sectionBlock}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleWithIcon}>
-              <Icon name="pin" size={18} color={stitchTokens.wineDark} />
-              <AppText style={styles.sectionTitle}>
-                Địa chỉ nhận sách của bạn
-              </AppText>
-            </View>
+            <AppText style={styles.sectionTitle}>Địa chỉ nhận sách</AppText>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Quản lý địa chỉ"
@@ -807,7 +787,7 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
               ]}
             >
               <AppText style={styles.addressManageText}>
-                Quản lý sổ địa chỉ ↗
+                Quản lý sổ địa chỉ ›
               </AppText>
             </Pressable>
           </View>
@@ -821,16 +801,18 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
                   <Pressable
                     key={addr.id}
                     accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
                     onPress={() => setSelectedAddressId(addr.id)}
-                    style={[
+                    style={({ pressed }) => [
                       styles.addressCard,
                       isSelected && styles.addressCardSelected,
+                      pressed && styles.pressed,
                     ]}
                   >
-                    <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flex: 1, gap: 3 }}>
                       <View style={styles.addressTopRow}>
-                        <AppText style={styles.addressName}>
-                          {addr.recipientName} ({addr.phone})
+                        <AppText style={styles.addressName} numberOfLines={1}>
+                          {addr.recipientName} · {addr.phone}
                         </AppText>
                         {addr.isDefault && (
                           <View style={styles.defaultPill}>
@@ -840,7 +822,10 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
                           </View>
                         )}
                       </View>
-                      <AppText style={styles.addressDetailText}>
+                      <AppText
+                        style={styles.addressDetailText}
+                        numberOfLines={2}
+                      >
                         {addr.detail}
                       </AppText>
                     </View>
@@ -878,21 +863,19 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
         </View>
 
         {/* 5. Lời nhắn mở đầu gửi chủ sách */}
-        <View style={styles.sectionCard}>
+        <View style={styles.sectionBlock}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleWithIcon}>
-              <Icon name="message" size={18} color={stitchTokens.wineDark} />
-              <AppText style={styles.sectionTitle}>
-                Lời nhắn gửi đối tác (Tùy chọn)
-              </AppText>
-            </View>
+            <AppText style={styles.sectionTitle}>
+              Lời nhắn gửi đối tác
+            </AppText>
+            <AppText style={styles.optionalTag}>Tùy chọn</AppText>
           </View>
 
           <TextField
             style={styles.messageInput}
             value={initialMessage}
             onChangeText={setInitialMessage}
-            placeholder="Chào bạn, mình muốn gửi cuốn sách này để đổi lấy cuốn của bạn..."
+            placeholder="Ví dụ: Sách mình giữ kỹ, có thể gửi ngay hôm nay..."
             multiline
             numberOfLines={3}
             maxLength={500}
@@ -910,8 +893,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: stitchTokens.wine,
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
   },
   backBtn: {
     width: 38,
@@ -921,15 +904,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: stitchTokens.white,
-  },
   headerTitle: {
     fontSize: 16.5,
-    fontWeight: "800",
+    fontWeight: "700",
     color: stitchTokens.white,
+    letterSpacing: -0.2,
   },
   composeDockRow: {
     flexDirection: "row",
@@ -942,46 +921,37 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   composeDockLabel: {
-    fontSize: 11.5,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "500",
     color: stitchTokens.subtleGray,
   },
   composeDockAmount: {
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "800",
     color: stitchTokens.wine,
     fontVariant: ["tabular-nums"],
   },
   composeDockBtn: {
     minHeight: 46,
-    paddingHorizontal: 18,
-    borderRadius: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     backgroundColor: stitchTokens.wine,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
   },
   composeDockBtnDisabled: {
-    opacity: 0.45,
+    opacity: 0.42,
   },
   composeDockBtnText: {
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 14.5,
+    fontWeight: "700",
     color: stitchTokens.white,
-  },
-  scrollContainer: {
-    flex: 1,
-    backgroundColor: stitchTokens.creamBg,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 18,
     paddingBottom: space.section,
-    gap: 14,
+    gap: 20,
   },
   errorBox: {
     padding: space.lg,
@@ -990,50 +960,45 @@ const styles = StyleSheet.create({
   targetCard: {
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 18,
+    padding: 14,
     backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: stitchTokens.wineAlpha05,
-    gap: 12,
-    shadowColor: stitchTokens.darkWood,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
+    borderColor: stitchTokens.borderWarm,
+    gap: 10,
   },
   targetCardBadgeRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
   targetBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: stitchTokens.roseParchment,
+    backgroundColor: stitchTokens.likeNewGreenBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 999,
   },
   targetBadgeText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: "700",
-    color: stitchTokens.wine,
+    color: stitchTokens.likeNewGreen,
   },
   targetOwner: {
     fontSize: 12,
     fontWeight: "600",
     color: stitchTokens.subtleGray,
+    flexShrink: 1,
   },
   targetBookRow: {
     flexDirection: "row",
     gap: 12,
+    alignItems: "center",
   },
   photoBox: {
     width: 60,
-    height: 80,
-    borderRadius: 6,
+    height: 82,
+    borderRadius: 8,
     overflow: "hidden",
     backgroundColor: stitchTokens.canvasMuted,
     borderWidth: 1,
@@ -1056,219 +1021,157 @@ const styles = StyleSheet.create({
   },
   valueRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
     gap: 6,
-    marginTop: 2,
+    marginTop: 4,
   },
   valueLabel: {
     fontSize: 12,
     color: stitchTokens.subtleGray,
   },
   targetValueText: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 14.5,
+    fontWeight: "800",
     color: stitchTokens.wine,
     fontVariant: ["tabular-nums"],
   },
-  sectionCard: {
-    padding: 18,
-    borderRadius: 20,
-    backgroundColor: stitchTokens.whiteSurface,
+  prefStrip: {
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.borderWarm,
+    paddingTop: 10,
+    gap: 6,
+  },
+  prefStripTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  prefStripHeading: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: stitchTokens.roseBrown,
+    marginRight: 2,
+  },
+  prefChipsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  prefChip: {
+    backgroundColor: stitchTokens.parchment,
     borderWidth: 1,
-    borderColor: stitchTokens.wineAlpha05,
-    gap: 12,
-    shadowColor: stitchTokens.darkWood,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
+    borderColor: stitchTokens.borderWarm,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  prefChipText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: stitchTokens.darkWood,
+  },
+  prefStripNote: {
+    fontSize: 12,
+    fontStyle: "italic",
+    color: stitchTokens.subtleGray,
+    lineHeight: 17,
+  },
+  sectionBlock: {
+    gap: 10,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  sectionTitleWithIcon: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
+    paddingHorizontal: 2,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.darkWood,
+    letterSpacing: -0.2,
   },
-  countBadge: {
-    backgroundColor: stitchTokens.terracottaSoft,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  countBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  inventoryList: {
-    gap: 10,
-  },
-  prefBanner: {
-    backgroundColor: stitchTokens.warmIvory,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
-    borderRadius: 14,
-    padding: 12,
-    gap: 9,
-    shadowColor: stitchTokens.wineDark,
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  prefBannerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  prefHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  prefIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: stitchTokens.roseWarmTag,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-  },
-  prefBannerTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  prefBannerSubtitle: {
-    fontSize: 10.5,
-    color: stitchTokens.roseBrown,
-    marginTop: 1,
-  },
-  prefTagsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-  },
-  prefTagItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  prefTagLabel: {
-    fontSize: 11,
+  optionalTag: {
+    fontSize: 12,
+    fontWeight: "500",
     color: stitchTokens.subtleGray,
   },
-  prefTagValue: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  prefNoteBox: {
+  countBadge: {
     backgroundColor: stitchTokens.parchment,
-    borderLeftWidth: 3,
-    borderLeftColor: stitchTokens.wineLight,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    gap: 3,
-  },
-  prefNoteHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  prefNoteLabel: {
-    fontSize: 10.5,
-    fontWeight: "600",
-    color: stitchTokens.roseBrown,
-  },
-  prefNoteText: {
-    fontSize: 12,
-    fontStyle: "italic",
-    color: stitchTokens.deepCocoa,
-    lineHeight: 17,
-  },
-  prefHintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: stitchTokens.goldLight,
     borderWidth: 1,
-    borderColor: stitchTokens.goldAlpha40,
-    borderRadius: 8,
+    borderColor: stitchTokens.borderWarm,
     paddingHorizontal: 9,
-    paddingVertical: 6,
+    paddingVertical: 3,
+    borderRadius: 999,
   },
-  prefHint: {
-    fontSize: 11,
-    color: stitchTokens.goldBronze,
-    flex: 1,
+  countBadgeActive: {
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderColor: stitchTokens.wine,
   },
-  prefHintHighlight: {
+  countBadgeText: {
+    fontSize: 11.5,
     fontWeight: "700",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.subtleGray,
+    fontVariant: ["tabular-nums"],
+  },
+  countBadgeTextActive: {
+    color: stitchTokens.wine,
+  },
+  inventoryList: {
+    gap: 9,
   },
   bookOptionCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1.5,
-    borderColor: "transparent",
+    padding: 11,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
     gap: 12,
-  },
-  bookOptionCardSelected: {
-    borderColor: stitchTokens.wine,
-    backgroundColor: stitchTokens.roseWarmSurface,
   },
   bookOptionCardMatched: {
     borderColor: stitchTokens.goldAccent,
-    backgroundColor: stitchTokens.goldLight,
+    backgroundColor: stitchTokens.warmIvory,
   },
-  matchedBadge: {
-    alignSelf: "flex-start",
+  bookOptionCardSelected: {
+    borderWidth: 1.5,
+    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  optionMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
+  matchedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
     backgroundColor: stitchTokens.goldVeryLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 0.5,
+    borderRadius: 999,
+    borderWidth: 1,
     borderColor: stitchTokens.goldBorder,
-    marginTop: 3,
   },
   matchedBadgeText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "700",
     color: stitchTokens.warmUmber,
   },
   optionPhotoBox: {
-    width: 50,
-    height: 65,
-    borderRadius: 6,
+    width: 54,
+    height: 74,
+    borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: stitchTokens.warmCard,
+    backgroundColor: stitchTokens.canvasMuted,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderColor: stitchTokens.borderWarm,
   },
   optionPhotoEmpty: {
     flex: 1,
@@ -1277,135 +1180,152 @@ const styles = StyleSheet.create({
   },
   optionInfoCol: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
-  optionValueRow: {
-    marginTop: 2,
-  },
   optionValueTag: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
-    color: stitchTokens.likeNewGreen,
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
   },
   checkCol: {
     paddingLeft: 4,
   },
   radioCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
+    borderColor: stitchTokens.borderWarm,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: stitchTokens.whiteSurface,
   },
   radioCircleSelected: {
-    backgroundColor: stitchTokens.wineDark,
-    borderColor: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.wine,
+    borderColor: stitchTokens.wine,
   },
   emptyInventory: {
     padding: space.lg,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
     alignItems: "center",
     gap: 8,
   },
   emptyTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     color: stitchTokens.darkWood,
   },
   emptySubtitle: {
-    fontSize: 11,
+    fontSize: 12.5,
     color: stitchTokens.subtleGray,
     textAlign: "center",
-    lineHeight: 16,
-    marginBottom: 6,
+    lineHeight: 18,
+    marginBottom: 4,
   },
-  diffCard: {
-    padding: 18,
-    borderRadius: 20,
+  receiptCard: {
+    padding: 15,
+    borderRadius: 14,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: stitchTokens.goldAccent,
+    borderColor: stitchTokens.borderWarm,
     gap: 12,
-    shadowColor: stitchTokens.darkWood,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
   },
-  diffHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  diffTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  diffGrid: {
+  receiptHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: stitchTokens.whiteSurface,
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: stitchTokens.goldBorderAlpha35,
+    gap: 8,
   },
-  diffItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 2,
-  },
-  diffItemLabel: {
-    fontSize: 10,
-    color: stitchTokens.subtleGray,
-    fontWeight: "600",
-  },
-  diffItemValue: {
-    fontSize: 13,
+  receiptTitle: {
+    fontSize: 14,
     fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  diffDivider: {
-    paddingHorizontal: 8,
-  },
-  diffResultBox: {
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  diffResultBoxWarning: {
-    backgroundColor: stitchTokens.roseWarmTag,
-  },
-  diffResultBoxPositive: {
-    backgroundColor: stitchTokens.likeNewGreenBg,
-  },
-  diffResultBoxNeutral: {
-    backgroundColor: stitchTokens.whiteSurface,
-  },
-  diffResultText: {
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  diffResultTextWarning: {
-    color: stitchTokens.wineDark,
-  },
-  diffResultTextPositive: {
-    color: stitchTokens.likeNewGreen,
-  },
-  diffResultTextNeutral: {
     color: stitchTokens.darkWood,
   },
-  addressManageBtn: {
+  zeroFeePill: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    paddingHorizontal: 8,
     paddingVertical: 2,
+    borderRadius: 999,
   },
-  addressManageText: {
+  zeroFeeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: stitchTokens.wineMid,
+    color: stitchTokens.likeNewGreen,
+  },
+  receiptRows: {
+    gap: 8,
+  },
+  receiptRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  receiptLabel: {
+    fontSize: 13,
+    color: stitchTokens.subtleGray,
+    flex: 1,
+  },
+  receiptValue: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+    fontVariant: ["tabular-nums"],
+  },
+  receiptValueMuted: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: stitchTokens.subtleGray,
+    fontVariant: ["tabular-nums"],
+  },
+  receiptDiffPay: {
+    color: stitchTokens.wine,
+  },
+  receiptDiffReceive: {
+    color: stitchTokens.likeNewGreen,
+  },
+  receiptDivider: {
+    height: 1,
+    backgroundColor: stitchTokens.borderWarm,
+    marginVertical: 2,
+  },
+  receiptTotalLabel: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+    flex: 1,
+  },
+  receiptTotalValue: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  receiptFootnotes: {
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  receiptNoteText: {
+    fontSize: 11.5,
+    color: stitchTokens.subtleGray,
+    lineHeight: 16,
+  },
+  addressManageBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  addressManageText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: stitchTokens.wine,
   },
   addressList: {
     gap: 8,
@@ -1413,68 +1333,77 @@ const styles = StyleSheet.create({
   addressCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: stitchTokens.parchment,
+    padding: 13,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorderAlpha40,
+    borderColor: stitchTokens.borderWarm,
     gap: 10,
   },
   addressCardSelected: {
-    borderColor: stitchTokens.wineMid,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.wine,
     backgroundColor: stitchTokens.roseWarmSurface,
   },
   addressTopRow: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: 6,
   },
   addressName: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: "700",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.darkWood,
+    flexShrink: 1,
   },
   defaultPill: {
-    backgroundColor: stitchTokens.terracottaSoft,
-    paddingHorizontal: 5,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    paddingHorizontal: 6,
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: 999,
   },
   defaultPillText: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: "700",
     color: stitchTokens.wineDark,
   },
   addressDetailText: {
-    fontSize: 11,
-    color: stitchTokens.darkWood,
-    lineHeight: 15,
+    fontSize: 12.5,
+    color: stitchTokens.subtleGray,
+    lineHeight: 17,
   },
   addressEmpty: {
     alignItems: "center",
     padding: space.md,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
     gap: 8,
   },
   addressEmptyText: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: stitchTokens.subtleGray,
   },
   messageInput: {
-    minHeight: 70,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: stitchTokens.parchment,
+    minHeight: 78,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorderAlpha40,
-    fontSize: 13,
-    color: stitchTokens.wineDark,
+    borderColor: stitchTokens.borderWarm,
+    fontSize: 13.5,
+    color: stitchTokens.darkWood,
     textAlignVertical: "top",
   },
   stickyFooterContainer: {
     paddingVertical: space.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.72,
   },
 });

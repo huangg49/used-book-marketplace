@@ -26,6 +26,7 @@ import {
 import {
   createVNPayTopup,
   queryVNPayTopup,
+  resolveVnpayReturnUrl,
   topupLabels,
 } from "./wallet-model";
 import type { TopupIntent } from "./contracts";
@@ -112,13 +113,16 @@ function TopupInnerContent({
       const receipt = await createVNPayTopup(client, parsedAmount, idempotencyKey);
 
       // Open auth session in-app browser with VNPay Sandbox URL.
-      // When VNPay redirects to the return URL (http://localhost:5174/wallet),
-      // openAuthSessionAsync intercepts the redirect immediately and closes the browser
-      // before it tries to load localhost on the mobile device, avoiding ERR_CONNECTION_REFUSED.
+      // When VNPay redirects to the configured web return URL,
+      // openAuthSessionAsync intercepts the redirect immediately and closes the browser.
+      const returnUrl = resolveVnpayReturnUrl({
+        vnpayReturnUrl: process.env.EXPO_PUBLIC_VNPAY_RETURN_URL,
+        webOrigin: process.env.EXPO_PUBLIC_WEB_ORIGIN,
+      });
       try {
         await WebBrowser.openAuthSessionAsync(
           receipt.paymentUrl,
-          "http://localhost:5174/wallet",
+          returnUrl,
         );
       } catch {
         // Fallback to openBrowserAsync if auth session is unavailable
@@ -414,7 +418,7 @@ function TopupInnerContent({
                     ? "Đang mở cổng VNPay..."
                     : `Mở cổng VNPay Sandbox (${formatVnd(parsedAmount)})`
                 }
-                disabled={busy || parsedAmount < 5_000 || parsedAmount > 10_000_000}
+                disabled={busy || parsedAmount < 5_000 || parsedAmount > VNPAY_TOPUP_MAX}
                 onPress={() => void handleStartTopup()}
               />
             </>

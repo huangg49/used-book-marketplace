@@ -10,6 +10,7 @@ import {
   Clock,
   Calendar,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 import {
   notificationPreviewQuery,
@@ -92,13 +93,31 @@ export function getNotificationMeta(n: MemberNotification): NotificationMeta {
     };
   }
 
-  // 2. Auction (Đấu giá)
+  // 2. Auction / AuctionIntake (Đấu giá & kiểm định đấu giá)
   if (
     n.targetType === "Auction" ||
+    n.targetType === "AuctionIntake" ||
     n.kind.startsWith("Auction") ||
     titleLower.includes("đấu giá") ||
     isOutbid
   ) {
+    if (n.targetType === "AuctionIntake" || n.kind === "AuctionIntakeUpdated") {
+      return {
+        category: "auction",
+        label: "Kiểm định đấu giá",
+        pillBg: "bg-amber-50",
+        pillBorder: "border-amber-200",
+        pillText: "text-amber-900",
+        icon: Gavel,
+        iconContainerBg: "bg-amber-100/70 text-amber-900 border-amber-200",
+        iconColor: "text-amber-800",
+        heroBannerBg: "bg-gradient-to-r from-[#4A0A0A] to-[#691111] text-amber-50",
+        heroBannerTag: "KIỂM ĐỊNH ĐẤU GIÁ",
+        heroBannerTitle: "CẬP NHẬT SÁCH GỬI ĐẤU GIÁ",
+        actionLabel: "Xem phiên đấu giá của tôi",
+        actionBtnClass: "bg-primary text-on-primary hover:bg-primary-hover shadow-sm",
+      };
+    }
     if (isOutbid) {
       return {
         category: "auction",
@@ -182,7 +201,39 @@ export function getNotificationMeta(n: MemberNotification): NotificationMeta {
     };
   }
 
-  // 5. Default General
+  // 5. Listing Moderation (Duyệt / Từ chối / Gỡ bài đăng)
+  if (
+    n.targetType === "Listing" ||
+    n.kind === "ListingApproved" ||
+    n.kind === "ListingRejected"
+  ) {
+    const approved = n.kind === "ListingApproved";
+    return {
+      category: "general",
+      label: approved ? "Bài đăng đã duyệt" : "Bài đăng cần sửa",
+      pillBg: approved ? "bg-emerald-50" : "bg-rose-50",
+      pillBorder: approved ? "border-emerald-200" : "border-rose-200",
+      pillText: approved ? "text-emerald-900" : "text-rose-900",
+      icon: BookOpen,
+      iconContainerBg: approved
+        ? "bg-emerald-100/80 text-emerald-900 border-emerald-200"
+        : "bg-rose-100/80 text-rose-900 border-rose-200",
+      iconColor: approved ? "text-emerald-800" : "text-rose-800",
+      heroBannerBg: approved
+        ? "bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 text-emerald-50"
+        : "bg-gradient-to-r from-[#6B1010] to-[#4A0A0A] text-rose-50",
+      heroBannerTag: approved ? "BÀI ĐĂNG ĐƯỢC DUYỆT" : "DUYỆT BÀI ĐĂNG",
+      heroBannerTitle: approved
+        ? "SÁCH ĐÃ HIỂN THỊ CÔNG KHAI"
+        : "BÀI ĐĂNG CẦN KIỂM TRA LẠI",
+      actionLabel: approved ? "Xem trang sách" : "Mở kệ sách của tôi",
+      actionBtnClass: approved
+        ? "bg-emerald-800 hover:bg-emerald-900 text-white shadow-sm"
+        : "bg-primary text-on-primary hover:bg-primary-hover shadow-sm",
+    };
+  }
+
+  // 6. Default General
   return {
     category: "general",
     label: "Thông báo",
@@ -214,7 +265,8 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
   }
 
   const items = query.data?.items || [];
-  const unreadCount = items.filter((n) => !n.readAt).length;
+  const unreadCount =
+    query.data?.unreadCount ?? items.filter((n) => !n.readAt).length;
 
   // Hero Item: Prioritize unread Outbid alert, then first unread item, otherwise top item
   const outbidNotice =
@@ -469,7 +521,10 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
                 to={ROUTES.notifications}
                 className="font-semibold text-primary hover:text-secondary inline-flex items-center gap-1 transition-colors"
               >
-                <span>Xem tất cả thông báo ({items.length})</span>
+                <span>
+                  Xem tất cả thông báo
+                  {query.data?.nextCursor ? ` (${items.length}+)` : ` (${items.length})`}
+                </span>
                 <ArrowRight size={13} />
               </Link>
             </div>

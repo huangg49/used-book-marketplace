@@ -9,6 +9,7 @@ import * as Crypto from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import { ApiError } from "../../core/api/session-client";
 import { useSession } from "../../core/session/session-provider";
+import { useTransactionLive } from "../../core/hooks/use-transaction-live";
 import {
   ActionBar,
   AppModal,
@@ -300,12 +301,25 @@ export function DraftEditor({
         : false,
   });
 
+  const ownerId = state.status === "authenticated" ? state.user.id : "";
+  const inboxLive = useTransactionLive(
+    "inbox",
+    ownerId,
+    foreground && !!ownerId && !dirty && !busy && !uncertain && !lifecyclePending,
+    () => {
+      void cache.invalidateQueries({ queryKey: ["listing-status", base.id] });
+      void cache.invalidateQueries({ queryKey: ["drafts", ownerId] });
+    },
+  );
+
   const latest = useQuery({
     queryKey: ["listing-status", base.id],
     queryFn: () => client.request(`/me/listings/${base.id}`, privateDraft),
     enabled: foreground && !dirty && !busy && !uncertain && !lifecyclePending,
     refetchInterval:
-      foreground && base.state.moderation === "PendingReview" ? 15000 : false,
+      foreground && base.state.moderation === "PendingReview" && !inboxLive
+        ? 15000
+        : false,
   });
 
   if (

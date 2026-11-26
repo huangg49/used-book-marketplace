@@ -1,6 +1,19 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { it, expect } from 'vitest';
+import { resolveTrustProxy } from './configure-app.js';
+
+it('resolves Express trust proxy safely for local and cloud reverse-proxy hosts', () => {
+  expect(resolveTrustProxy(undefined, undefined, 'development')).toBeUndefined();
+  expect(resolveTrustProxy('', 'false', 'test')).toBeUndefined();
+  expect(resolveTrustProxy(undefined, 'true', 'development')).toBe(1);
+  expect(resolveTrustProxy(undefined, undefined, 'production')).toBe(1);
+  expect(resolveTrustProxy('1', 'false', 'development')).toBe(1);
+  expect(resolveTrustProxy('2', 'true', 'production')).toBe(2);
+  expect(resolveTrustProxy('true', 'false', 'development')).toBe(true);
+  expect(resolveTrustProxy('false', 'true', 'production')).toBe(false);
+  expect(resolveTrustProxy('loopback', 'false', 'development')).toBe('loopback');
+});
 
 it.skipIf(process.platform !== 'win32')(
   'Windows shutdown completes lifecycle hooks without re-raising an unsupported signal',

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { HttpException, Logger } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service.js';
+import { socketCorsOptions } from '../../common/socket-cors.js';
 import type { Actor } from '../commands/mongo-command.service.js';
 import { PointOrdersService } from './point-orders.service.js';
 import {
@@ -56,7 +57,7 @@ type NamespaceServer = {
 // ownership and ADR 0044 address privacy are enforced on every message.
 @WebSocketGateway({
   namespace: '/point-orders',
-  cors: { origin: true, credentials: false },
+  cors: socketCorsOptions(),
 })
 export class PointOrderGateway implements OnGatewayInit, OnGatewayDisconnect {
   @WebSocketServer() server!: NamespaceServer;

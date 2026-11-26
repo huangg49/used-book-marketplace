@@ -31,6 +31,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { BundleEditor } from "../components/BookBundle";
 import { bundleCondition } from "../lib/book-bundle";
 import { useSession } from "../hooks/useSession";
+import { useTransactionLive } from "../hooks/useTransactionLive";
 import { useActionCooldown } from "../hooks/useActionCooldown";
 import { useListingActions } from "../hooks/useListingActions";
 import { OwnerListingRecovery } from "../components/OwnerListingRecovery";
@@ -140,6 +141,12 @@ export function EditListingPage() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
+  useTransactionLive("inbox", ownerId, () => {
+    if (!busy && !pending) {
+      void queryClient.invalidateQueries({ queryKey: ["my-listing", ownerId, listingId] });
+      void queryClient.invalidateQueries({ queryKey: ["my-listings", ownerId] });
+    }
+  });
   const [savedAck, setSavedAck] = useState<{ id: string; version: number; owner: string }>();
   const waitingSavedRead = savedAck?.id === listingId && savedAck.owner === ownerId;
   const savedHeading = useRef<HTMLHeadingElement>(null);

@@ -53,7 +53,11 @@ import {
   onGrid,
 } from './auction-engine.js';
 import { checkAuction, checkIntake } from './auction-invariants.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 import { HandoverPointsService } from './handover-points.service.js';
+
+const clipText = (text: string, max: number) =>
+  text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 import { requireUnrestricted } from './member-violations.js';
 import {
   lifecyclePublish,
@@ -653,7 +657,7 @@ export class AuctionIntakesService {
             'InvalidState',
             'Đã quá hạn gửi sách cho phiên đấu giá này.',
           );
-        return this.transition(
+        const next = await this.transition(
           tx,
           i,
           {
@@ -664,6 +668,23 @@ export class AuctionIntakesService {
           },
           now,
         );
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: i.sellerId,
+          kind: 'AuctionIntakeUpdated',
+          title: 'Điểm giao dịch đã nhận sách đấu giá',
+          body: clipText(
+            `Sách của bạn đã được tiếp nhận tại điểm giao dịch (kệ ${body.shelfCode}) và đang chờ kiểm định.`,
+            400,
+          ),
+          targetType: 'AuctionIntake',
+          targetId: i._id,
+          dedupeKey: `intake-received:${i._id}`,
+          createdAt: now,
+          readAt: null,
+        });
+        signalMemberInbox(tx, [i.sellerId]);
+        return next;
       },
       event: 'AuctionBookReceived',
     });
@@ -688,7 +709,7 @@ export class AuctionIntakesService {
           actor,
           now,
         );
-        return this.transition(
+        const next = await this.transition(
           tx,
           i,
           {
@@ -713,6 +734,36 @@ export class AuctionIntakesService {
           },
           now,
         );
+        const noteSuffix = note ? ` Ghi chú: ${note}` : '';
+        const inspectCopy =
+          body.outcome === 'Pass'
+            ? {
+                title: 'Sách đấu giá đã đạt kiểm định',
+                body: `Sách của bạn đã vượt qua bước kiểm định tại điểm giao dịch và sẵn sàng mở phiên đấu giá.${noteSuffix}`,
+              }
+            : body.outcome === 'NeedsEvidence'
+              ? {
+                  title: 'Sách đấu giá cần bổ sung bằng chứng',
+                  body: `Nhân viên kiểm định yêu cầu bạn bổ sung thông tin/bằng chứng cho sách trước khi hết hạn.${noteSuffix}`,
+                }
+              : {
+                  title: 'Sách đấu giá không đạt kiểm định',
+                  body: `Sách không đạt yêu cầu kiểm định và cần nhận lại tại điểm giao dịch.${noteSuffix}`,
+                };
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: i.sellerId,
+          kind: 'AuctionIntakeUpdated',
+          title: inspectCopy.title,
+          body: clipText(inspectCopy.body, 400),
+          targetType: 'AuctionIntake',
+          targetId: i._id,
+          dedupeKey: `intake-inspected:${i._id}:${next.version}`,
+          createdAt: now,
+          readAt: null,
+        });
+        signalMemberInbox(tx, [i.sellerId]);
+        return next;
       },
       event: 'AuctionBookInspected',
     });
@@ -803,7 +854,7 @@ export class AuctionIntakesService {
           actor,
           now,
         );
-        return this.transition(
+        const next = await this.transition(
           tx,
           i,
           {
@@ -820,6 +871,30 @@ export class AuctionIntakesService {
           },
           now,
         );
+        const evidenceCopy =
+          body.outcome === 'Pass'
+            ? {
+                title: 'Bằng chứng sách đấu giá đã được duyệt',
+                body: `Sách của bạn đã đạt kiểm định sau khi xem xét bằng chứng và sẵn sàng mở phiên đấu giá. Ghi chú: ${note}`,
+              }
+            : {
+                title: 'Bằng chứng sách đấu giá không đạt',
+                body: `Sau khi xem xét bằng chứng, sách không đạt kiểm định và cần nhận lại tại điểm giao dịch. Ghi chú: ${note}`,
+              };
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: i.sellerId,
+          kind: 'AuctionIntakeUpdated',
+          title: evidenceCopy.title,
+          body: clipText(evidenceCopy.body, 400),
+          targetType: 'AuctionIntake',
+          targetId: i._id,
+          dedupeKey: `intake-evidence-decided:${i._id}:${next.version}`,
+          createdAt: now,
+          readAt: null,
+        });
+        signalMemberInbox(tx, [i.sellerId]);
+        return next;
       },
       event: 'AuctionBookInspected',
     });

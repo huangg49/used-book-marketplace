@@ -211,11 +211,25 @@ export function CashflowPage() {
             pct: ((totalHeld / circulatingSum) * 100).toFixed(1).replace(".", ","),
           },
           {
-            label: "Tài khoản nền tảng",
-            value: cons.platformCommission,
+            label: "Doanh thu sàn (hoa hồng)",
+            value: cons.platformNetRevenueBalance,
             color: "#5c0202",
-            pct: ((cons.platformCommission / circulatingSum) * 100).toFixed(1).replace(".", ","),
+            pct: ((cons.platformNetRevenueBalance / circulatingSum) * 100)
+              .toFixed(1)
+              .replace(".", ","),
           },
+          ...(cons.platformShippingPassThrough > 0
+            ? [
+                {
+                  label: "Thu hộ phí vận chuyển",
+                  value: cons.platformShippingPassThrough,
+                  color: "#164b56",
+                  pct: ((cons.platformShippingPassThrough / circulatingSum) * 100)
+                    .toFixed(1)
+                    .replace(".", ","),
+                },
+              ]
+            : []),
         ]
       : [];
 
@@ -435,12 +449,16 @@ export function CashflowPage() {
 
               <div className={styles.accountCard}>
                 <div className={styles.accountCardTop}>
-                  <span className={`${styles.accountBadge} ${styles.badgeWine}`}>Doanh thu sàn</span>
+                  <span className={`${styles.accountBadge} ${styles.badgeWine}`}>Tài khoản sàn</span>
                   <Coins size={15} className={styles.accountIconWine} aria-hidden="true" />
                 </div>
                 <div className={styles.accountLabel}>Tài khoản nền tảng</div>
                 <strong className={styles.accountValue}>{formatVnd(cons.platformCommission)}</strong>
-                <span className={styles.accountHint}>Hoa hồng dịch vụ đã tất toán</span>
+                <span className={styles.accountHint}>
+                  {cons.platformShippingPassThrough > 0
+                    ? `Doanh thu sàn ${formatVnd(cons.platformNetRevenueBalance)} · Thu hộ ship ${formatVnd(cons.platformShippingPassThrough)}`
+                    : "Hoa hồng & doanh thu dịch vụ đã tất toán"}
+                </span>
               </div>
 
               <div className={styles.accountCard}>

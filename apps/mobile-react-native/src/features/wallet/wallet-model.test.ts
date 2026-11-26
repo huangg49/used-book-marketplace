@@ -13,6 +13,7 @@ import {
   createVNPayTopup,
   historyOptions,
   queryVNPayTopup,
+  resolveVnpayReturnUrl,
   signedAmount,
   summaryOptions,
   topupsOptions,
@@ -319,5 +320,17 @@ describe("private wallet queries", () => {
 
     const optsTopups = topupsOptions(client, ownerA);
     expect(optsTopups.queryKey).toEqual(["wallet", ownerA, "topups"]);
+  });
+  it("derives the VNPay return URL from env with localhost fallback", () => {
+    expect(resolveVnpayReturnUrl({})).toBe("http://localhost:5174/wallet");
+    expect(
+      resolveVnpayReturnUrl({ webOrigin: "https://latlai.vercel.app/" }),
+    ).toBe("https://latlai.vercel.app/wallet");
+    expect(
+      resolveVnpayReturnUrl({
+        webOrigin: "https://latlai.vercel.app",
+        vnpayReturnUrl: "https://custom.example.com/wallet-callback",
+      }),
+    ).toBe("https://custom.example.com/wallet-callback");
   });
 });

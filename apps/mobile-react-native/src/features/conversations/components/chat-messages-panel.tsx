@@ -216,6 +216,7 @@ export function ChatMessagesPanel({
 
   // 3. Setup WebSocket connection
   useEffect(() => {
+    if (!foreground) return;
     let disposed = false;
     let url: string;
     try {
@@ -227,17 +228,29 @@ export function ChatMessagesPanel({
       });
       url = base.replace(/\/api\/v1\/?$/, "");
     } catch {
-      url = "http://localhost:3000";
+      url = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
     }
 
-    const token = client.getAccessToken();
+    let currentToken = client.getAccessToken();
     const socket = io(`${url}/purchase-chat`, {
       transports: ["websocket", "polling"],
-      auth: { token },
-      extraHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-      timeout: 10000,
+      tryAllTransports: true,
+      auth: (callback) => callback({ token: client.getAccessToken() }),
+      timeout: 10_000,
     });
     socketRef.current = socket;
+
+    const unsubscribeSession = client.subscribe(() => {
+      if (disposed) return;
+      const nextToken = client.getAccessToken();
+      if (nextToken === currentToken) return;
+      currentToken = nextToken;
+      if (nextToken) {
+        socket.disconnect().connect();
+      } else {
+        socket.disconnect();
+      }
+    });
 
     socket.on("connect", () => {
       if (disposed) return;
@@ -269,10 +282,11 @@ export function ChatMessagesPanel({
 
     return () => {
       disposed = true;
+      unsubscribeSession();
       socketRef.current = null;
       socket.disconnect();
     };
-  }, [room.id, client, refetchHistory]);
+  }, [room.id, client, refetchHistory, foreground]);
 
   // Combine history messages + live messages, sorted by sentAt
   const allMessages = [

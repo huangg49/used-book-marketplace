@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   dailyPipeline,
   moderationWindow,
+  revenueCommissionAmount,
+  revenueTransactionLabel,
   revenueWindow,
+  splitPlatformLedgerBalance,
   OperationsDashboardService,
 } from './operations-dashboard.service.js';
 import type { MongoCommandService } from '../commands/mongo-command.service.js';
@@ -64,4 +67,67 @@ describe('moderation calendar and authorization', () => {
       ).rejects.toThrow();
     },
   );
+  it('separates point-order auction commission from pass-through outbound shipping in revenue history', () => {
+    const pointCommissionByOrderId = new Map([['point-1', 50_000]]);
+    const pointOrderIds = new Set(['point-1']);
+    const directOrderIds = new Set(['direct-1']);
+
+    // Point order journal debit into PlatformCommission = 50,000 commission + 30,000 outboundFee.
+    expect(
+      revenueCommissionAmount(
+        { type: 'OrderSettlement', orderId: 'point-1', amount: 80_000 },
+        pointCommissionByOrderId,
+      ),
+    ).toBe(50_000);
+    expect(
+      revenueTransactionLabel(
+        { type: 'OrderSettlement', orderId: 'point-1' },
+        pointOrderIds,
+        directOrderIds,
+      ),
+    ).toBe('Hoa hồng đấu giá (5%)');
+
+    // Direct order keeps its ledger commission debit and distinct label.
+    expect(
+      revenueCommissionAmount(
+        { type: 'OrderSettlement', orderId: 'direct-1', amount: 15_000 },
+        pointCommissionByOrderId,
+      ),
+    ).toBe(15_000);
+    expect(
+      revenueTransactionLabel(
+        { type: 'OrderSettlement', orderId: 'direct-1' },
+        pointOrderIds,
+        directOrderIds,
+      ),
+    ).toBe('Hoa hồng bán trực tiếp (5%)');
+
+    // Listing fee settlements keep their amount and label.
+    expect(
+      revenueCommissionAmount(
+        { type: 'ListingFeeSettlement', orderId: null, amount: 10_000 },
+        pointCommissionByOrderId,
+      ),
+    ).toBe(10_000);
+    expect(
+      revenueTransactionLabel(
+        { type: 'ListingFeeSettlement', orderId: null },
+        pointOrderIds,
+        directOrderIds,
+      ),
+    ).toBe('Phí đăng bán');
+  });
+
+  it('splits PlatformCommission ledger balance into real platform revenue and pass-through auction shipping', () => {
+    // 558,000 total in PlatformCommission = 474,000 net revenue + 84,000 dynamic GHN shipping pass-through (30k + 21,001 + 32,999).
+    expect(splitPlatformLedgerBalance(558_000, 84_000)).toEqual({
+      platformNetRevenueBalance: 474_000,
+      platformShippingPassThrough: 84_000,
+    });
+    // Guard against negative net balance if ledger balance is smaller than shipping input.
+    expect(splitPlatformLedgerBalance(20_000, 34_000)).toEqual({
+      platformNetRevenueBalance: 0,
+      platformShippingPassThrough: 20_000,
+    });
+  });
 });

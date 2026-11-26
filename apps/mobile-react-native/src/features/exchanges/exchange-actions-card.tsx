@@ -1882,14 +1882,20 @@ function ExchangeActionsContent({
       return (
         <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
           <View style={styles.dockInfoSlot}>
-            <AppText
-              style={[
-                styles.dockInfoTitle,
-                { color: stitchTokens.likeNewGreen },
-              ]}
-            >
-              Đã cọc {formatVnd(amountToPay)}
-            </AppText>
+            <View style={styles.dockInfoTitleRow}>
+              <View style={[styles.dockStatusIcon, styles.dockStatusIconGreen]}>
+                <Icon name="check" size={11} color={stitchTokens.likeNewGreen} />
+              </View>
+              <AppText
+                style={[
+                  styles.dockInfoTitle,
+                  { color: stitchTokens.likeNewGreen },
+                ]}
+                numberOfLines={1}
+              >
+                Đã cọc {formatVnd(amountToPay)}
+              </AppText>
+            </View>
             <AppText style={styles.dockInfoSub} numberOfLines={1}>
               Chờ {partnerName} hoàn tất cọc
             </AppText>
@@ -1903,7 +1909,7 @@ function ExchangeActionsContent({
               pressed && styles.dockPressed,
             ]}
           >
-            <AppText style={styles.dockSecondaryText}>Hủy & Hoàn cọc</AppText>
+            <AppText style={styles.dockSecondaryText}>Hủy &amp; Hoàn cọc</AppText>
           </Pressable>
         </View>
       );
@@ -1959,6 +1965,7 @@ function ExchangeActionsContent({
                   pressed && styles.dockPressed,
                 ]}
               >
+                <Icon name="shield" size={14} color={stitchTokens.crimson} />
                 <AppText style={styles.dockDangerOutlineText}>Báo sự cố</AppText>
               </Pressable>
             ) : null}
@@ -1985,14 +1992,47 @@ function ExchangeActionsContent({
       const canReportShippingIssue =
         missedOneSided ||
         ((exchange.status === "InTransit" || isReceivedByMe) && inspectionOpen);
-      if (!canReportShippingIssue) return null;
+      if (!canReportShippingIssue) {
+        return (
+          <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+            <View style={styles.dockInfoSlot}>
+              <View style={styles.dockInfoTitleRow}>
+                <View style={[styles.dockStatusIcon, styles.dockStatusIconGreen]}>
+                  <Icon name="check" size={11} color={stitchTokens.likeNewGreen} />
+                </View>
+                <AppText
+                  style={[
+                    styles.dockInfoTitle,
+                    { color: stitchTokens.likeNewGreen },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {isReceivedByMe ? "Đã nhận sách" : "Đã gửi sách đi"}
+                </AppText>
+              </View>
+              <AppText style={styles.dockInfoSub} numberOfLines={1}>
+                Đang chờ {partnerName} hoàn tất giao nhận
+              </AppText>
+            </View>
+            <View style={styles.dockStatusChip}>
+              <Icon name="clock" size={13} color={stitchTokens.subtleGray} />
+              <AppText style={styles.dockStatusChipText}>Đang chờ</AppText>
+            </View>
+          </View>
+        );
+      }
 
       return (
         <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
           <View style={styles.dockInfoSlot}>
-            <AppText style={styles.dockInfoTitle}>
-              {isReceivedByMe ? "Bạn đã nhận sách" : "Đã gửi sách đi"}
-            </AppText>
+            <View style={styles.dockInfoTitleRow}>
+              <View style={[styles.dockStatusIcon, styles.dockStatusIconGreen]}>
+                <Icon name="check" size={11} color={stitchTokens.likeNewGreen} />
+              </View>
+              <AppText style={styles.dockInfoTitle} numberOfLines={1}>
+                {isReceivedByMe ? "Bạn đã nhận sách" : "Đã gửi sách đi"}
+              </AppText>
+            </View>
             <AppText style={styles.dockInfoSub} numberOfLines={1}>
               {missedOneSided
                 ? `${partnerName} đã quá hạn gửi`
@@ -2021,12 +2061,122 @@ function ExchangeActionsContent({
     }
 
     if (exchange.status === "Delivered") {
-      if (isCompletedByMe && !inspectionOpen) {
-        return null;
+      const canConfirmReceive = !isReceivedByMe && Boolean(partnerPickedUpAt);
+      const canConfirmSatisfied =
+        !isCompletedByMe && isReceivedByMe && inspectionOpen;
+
+      // Active primary decision: user still needs to confirm receipt or satisfaction
+      if (canConfirmReceive || canConfirmSatisfied) {
+        return (
+          <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+            {inspectionOpen ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={isBusy}
+                onPress={() => openDisputeSheet()}
+                style={({ pressed }) => [
+                  styles.dockDangerOutlineBtn,
+                  pressed && styles.dockPressed,
+                ]}
+              >
+                <Icon name="shield" size={14} color={stitchTokens.crimson} />
+                <AppText style={styles.dockDangerOutlineText}>Báo sự cố</AppText>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={() =>
+                canConfirmReceive
+                  ? receiveMutation.mutate()
+                  : setConfirmCompleteOpen(true)
+              }
+              style={({ pressed }) => [
+                styles.dockPrimaryBtn,
+                { flex: 1 },
+                pressed && styles.dockPressed,
+                isBusy && styles.dockDisabled,
+              ]}
+            >
+              <Icon name="check" size={16} color={stitchTokens.white} />
+              <AppText style={styles.dockPrimaryText}>
+                {canConfirmReceive
+                  ? "Xác nhận đã nhận sách"
+                  : "Xác nhận hài lòng"}
+              </AppText>
+            </Pressable>
+          </View>
+        );
       }
+
+      // Confirmed or waiting state: always show clear status summary on the left
+      // and a balanced right-aligned action (never a lonely stub button on the left)
+      const shortSettlementTime = exchange.inspectionDeadline
+        ? new Date(exchange.inspectionDeadline).toLocaleString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            day: "2-digit",
+            month: "2-digit",
+          })
+        : null;
+
+      const statusTitle = isCompletedByMe
+        ? "Bạn đã nghiệm thu"
+        : !isReceivedByMe
+          ? "Chờ xác nhận nhận sách"
+          : "Đã qua hạn báo sự cố";
+
+      const statusSub =
+        inspectionPhase === "settling"
+          ? "Đang chờ hệ thống tất toán về Ví"
+          : isCompletedByMe
+            ? isPartnerCompleted
+              ? shortSettlementTime
+                ? `Tất toán sau ${shortSettlementTime}`
+                : "Cả hai đã xác nhận · Chờ tất toán"
+              : `Chờ ${partnerName} nghiệm thu`
+            : shortSettlementTime
+              ? `Hạn kiểm tra đến ${shortSettlementTime}`
+              : `Đang chờ ${partnerName}`;
 
       return (
         <View style={[styles.bottomDock, { paddingBottom: bottomInset }]}>
+          <View style={styles.dockInfoSlot}>
+            <View style={styles.dockInfoTitleRow}>
+              <View
+                style={[
+                  styles.dockStatusIcon,
+                  isCompletedByMe
+                    ? styles.dockStatusIconGreen
+                    : styles.dockStatusIconWarm,
+                ]}
+              >
+                <Icon
+                  name={isCompletedByMe ? "check" : "clock"}
+                  size={11}
+                  color={
+                    isCompletedByMe
+                      ? stitchTokens.likeNewGreen
+                      : stitchTokens.wineDark
+                  }
+                />
+              </View>
+              <AppText
+                style={[
+                  styles.dockInfoTitle,
+                  isCompletedByMe && { color: stitchTokens.likeNewGreen },
+                ]}
+                numberOfLines={1}
+              >
+                {statusTitle}
+              </AppText>
+            </View>
+            <AppText style={styles.dockInfoSub} numberOfLines={1}>
+              {statusSub}
+            </AppText>
+          </View>
+
           {inspectionOpen ? (
             <Pressable
               accessibilityRole="button"
@@ -2037,45 +2187,22 @@ function ExchangeActionsContent({
                 pressed && styles.dockPressed,
               ]}
             >
+              <Icon name="shield" size={14} color={stitchTokens.crimson} />
               <AppText style={styles.dockDangerOutlineText}>Báo sự cố</AppText>
             </Pressable>
-          ) : null}
-
-          {!isReceivedByMe && partnerPickedUpAt ? (
+          ) : (
             <Pressable
               accessibilityRole="button"
-              disabled={isBusy}
-              onPress={() => receiveMutation.mutate()}
+              onPress={() => router.push("/wallet")}
               style={({ pressed }) => [
-                styles.dockPrimaryBtn,
-                { flex: 1 },
+                styles.dockSecondaryBtn,
                 pressed && styles.dockPressed,
-                isBusy && styles.dockDisabled,
               ]}
             >
-              <Icon name="check" size={16} color={stitchTokens.white} />
-              <AppText style={styles.dockPrimaryText}>
-                Xác nhận đã nhận sách
-              </AppText>
+              <Icon name="wallet" size={14} color={stitchTokens.wineDark} />
+              <AppText style={styles.dockSecondaryText}>Kiểm tra ví</AppText>
             </Pressable>
-          ) : !isCompletedByMe && isReceivedByMe && inspectionOpen ? (
-            <Pressable
-              accessibilityRole="button"
-              disabled={isBusy}
-              onPress={() => setConfirmCompleteOpen(true)}
-              style={({ pressed }) => [
-                styles.dockPrimaryBtn,
-                { flex: 1 },
-                pressed && styles.dockPressed,
-                isBusy && styles.dockDisabled,
-              ]}
-            >
-              <Icon name="check" size={16} color={stitchTokens.white} />
-              <AppText style={styles.dockPrimaryText}>
-                Xác nhận hài lòng
-              </AppText>
-            </Pressable>
-          ) : null}
+          )}
         </View>
       );
     }
@@ -3813,34 +3940,31 @@ const styles = StyleSheet.create({
   bottomDock: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
     paddingHorizontal: 16,
     paddingTop: 12,
     backgroundColor: stitchTokens.whiteSurface,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
     borderTopWidth: 1,
-    borderColor: stitchTokens.wineAlpha05,
+    borderTopColor: stitchTokens.cardBorder,
     shadowColor: stitchTokens.darkWood,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    elevation: 14,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 6,
   },
   bottomDockCol: {
     gap: 10,
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 12,
     backgroundColor: stitchTokens.whiteSurface,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
     borderTopWidth: 1,
-    borderColor: stitchTokens.wineAlpha05,
+    borderTopColor: stitchTokens.cardBorder,
     shadowColor: stitchTokens.darkWood,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    elevation: 14,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 6,
   },
   dockTopMetaRow: {
     flexDirection: "row",
@@ -3876,16 +4000,53 @@ const styles = StyleSheet.create({
   dockInfoSlot: {
     flex: 1,
     minWidth: 0,
-    gap: 1,
+    gap: 2,
+  },
+  dockInfoTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  dockStatusIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  dockStatusIconGreen: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+  },
+  dockStatusIconWarm: {
+    backgroundColor: stitchTokens.parchment,
+  },
+  dockStatusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+  },
+  dockStatusChipText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: stitchTokens.subtleGray,
   },
   dockInfoTitle: {
+    flexShrink: 1,
     fontSize: 13.5,
-    fontWeight: "800",
+    fontWeight: "700",
     color: stitchTokens.darkWood,
   },
   dockInfoSub: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: stitchTokens.subtleGray,
+    fontVariant: ["tabular-nums"],
   },
   dockAmountText: {
     fontSize: 17,
@@ -3894,29 +4055,24 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   dockPrimaryBtn: {
-    minHeight: 48,
-    paddingHorizontal: 18,
-    borderRadius: 14,
+    minHeight: 46,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     backgroundColor: stitchTokens.wine,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 4,
   },
   dockPrimaryText: {
-    fontSize: 14.5,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
     color: stitchTokens.white,
   },
   dockSecondaryBtn: {
-    minHeight: 48,
-    paddingHorizontal: 16,
-    borderRadius: 14,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     backgroundColor: stitchTokens.parchment,
     borderWidth: 1,
     borderColor: stitchTokens.borderWarm,
@@ -3926,24 +4082,24 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dockSecondaryText: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: "700",
     color: stitchTokens.wineDark,
   },
   dockDangerOutlineBtn: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    borderRadius: 14,
+    minHeight: 44,
+    paddingHorizontal: 13,
+    borderRadius: 12,
     backgroundColor: stitchTokens.roseWarmSurface,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 6,
   },
   dockDangerOutlineText: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: "700",
     color: stitchTokens.crimson,
   },

@@ -11,7 +11,10 @@ import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 // transaction so they exist exactly when the event committed. The text holds
 // public prices, states and deadlines only — never a private Auto ceiling,
 // another member's identity, a collection code or an address.
-type Kind = Extract<MemberNotificationDoc['kind'], `Auction${string}`>;
+type Kind = Exclude<
+  Extract<MemberNotificationDoc['kind'], `Auction${string}`>,
+  'AuctionIntakeUpdated'
+>;
 
 const vnd = (amount: number | null) =>
   amount === null ? '—' : `${amount.toLocaleString('vi-VN')}đ`;

@@ -33,6 +33,10 @@ import { attachPhotos, lowerIds } from './listing-drafts.service.js';
 import { PriceAssistService } from '../price-assist/price-assist.service.js';
 import { requireListingSlot } from './listing-quota.js';
 import { requireChannelContent } from './listing-channel.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
+
+const clipText = (text: string, max: number) =>
+  text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 
 @Injectable()
 export class ListingLifecycleService {
@@ -276,6 +280,32 @@ export class ListingLifecycleService {
           visibility: 'Removed',
           removalReason: body.reason,
         });
+        const catalogRev = l.currentRevision?.book?.currentRevisionId
+          ? await tx.c.catalog_revisions.findOne(
+              { _id: l.currentRevision.book.currentRevisionId },
+              { projection: { title: 1 } },
+            )
+          : null;
+        const bookLabel =
+          l.currentRevision?.bundle?.title?.trim() ||
+          catalogRev?.title?.trim() ||
+          'bài đăng sách của bạn';
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: l.ownerId,
+          kind: 'ListingRejected',
+          title: 'Bài đăng sách đã bị gỡ',
+          body: clipText(
+            `Bài đăng "${bookLabel}" đã bị gỡ bởi kiểm duyệt viên. Lý do: ${body.reason.trim()}`,
+            400,
+          ),
+          targetType: 'Listing',
+          targetId: id,
+          dedupeKey: `listing-removed:${id}:${next.version}`,
+          createdAt: await tx.now(),
+          readAt: null,
+        });
+        signalMemberInbox(tx, [l.ownerId]);
         return {
           ...this.change(l, next),
           reason: body.reason,

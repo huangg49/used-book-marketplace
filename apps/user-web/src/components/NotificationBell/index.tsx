@@ -13,6 +13,7 @@ import {
   CircleX,
   TrendingUp,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { ROUTES } from "../../lib/routes";
 import { timeAgo, useOpenNotification } from "../../hooks/useOpenNotification";
@@ -32,6 +33,13 @@ function getCategoryInfo(item: MemberNotification) {
       boxClass: styles.iconExchange,
     };
   }
+  if (item.targetType === "AuctionIntake" || item.kind === "AuctionIntakeUpdated") {
+    return {
+      label: "Kiểm định đấu giá",
+      Icon: Gavel,
+      boxClass: styles.iconAuction,
+    };
+  }
   if (item.targetType === "Auction" || item.kind.startsWith("Auction")) {
     return {
       label: "Đấu giá",
@@ -39,9 +47,25 @@ function getCategoryInfo(item: MemberNotification) {
       boxClass: item.kind === 'AuctionCancelled' ? styles.iconCancelled : styles.iconAuction,
     };
   }
-  if (item.targetType === "Order" || item.kind.startsWith("Order")) {
+  if (
+    item.targetType === "Listing" ||
+    item.kind === "ListingApproved" ||
+    item.kind === "ListingRejected"
+  ) {
     return {
-      label: "Đơn hàng",
+      label: item.kind === "ListingApproved" ? "Bài đăng đã duyệt" : "Bài đăng cần sửa",
+      Icon: BookOpen,
+      boxClass: item.kind === "ListingApproved" ? styles.iconOrder : styles.iconCancelled,
+    };
+  }
+  if (
+    item.targetType === "Order" ||
+    item.targetType === "PurchaseConversation" ||
+    item.kind.startsWith("Order") ||
+    item.kind.startsWith("Purchase")
+  ) {
+    return {
+      label: item.targetType === "PurchaseConversation" ? "Yêu cầu mua" : "Đơn hàng",
       Icon: ShoppingBag,
       boxClass: styles.iconOrder,
     };

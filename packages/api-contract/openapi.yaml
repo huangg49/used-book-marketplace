@@ -17812,7 +17812,11 @@ components:
             - OrderBuyNowPaid
             - OrderSaleSettled
             - OrderCreatedAwaitingPayment
+            - OrderStatusUpdated
             - PurchaseQuoteReady
+            - ListingApproved
+            - ListingRejected
+            - AuctionIntakeUpdated
             - ExchangeProposed
             - ExchangeAccepted
             - ExchangeFunded
@@ -17827,7 +17831,7 @@ components:
             - ReviewModerated
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction, Exchange, Order, PurchaseConversation, SupportCase, TransactionReview, Withdrawal] }
+        targetType: { type: string, enum: [Auction, AuctionIntake, Exchange, Listing, Order, PurchaseConversation, SupportCase, TransactionReview, Withdrawal] }
         targetId:
           type: string
           format: uuid
@@ -24241,6 +24245,8 @@ components:
             - auctionHeld
             - withdrawalHeld
             - platformCommission
+            - platformNetRevenueBalance
+            - platformShippingPassThrough
             - listingFeeHeld
             - incidentFundBalance
           properties:
@@ -24254,6 +24260,8 @@ components:
             auctionHeld: { type: integer, minimum: 0 }
             withdrawalHeld: { type: integer, minimum: 0 }
             platformCommission: { type: integer, minimum: 0 }
+            platformNetRevenueBalance: { type: integer, minimum: 0 }
+            platformShippingPassThrough: { type: integer, minimum: 0 }
             listingFeeHeld: { type: integer, minimum: 0 }
             incidentFundBalance: { type: integer, minimum: 0 }
         period:

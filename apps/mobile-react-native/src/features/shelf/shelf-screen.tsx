@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Keyboard, ScrollView, View } from "react-native";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
@@ -14,7 +14,7 @@ import {
   space,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { publicPage } from "./contracts";
+import { publicPage, type Listing } from "./contracts";
 import {
   filterError,
   initialFilters,
@@ -46,10 +46,8 @@ export function ShelfScreen() {
   const [vouchersOpen, setVouchersOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [error, setError] = useState<string>();
-  const [cursors, setCursors] = useState<string[]>([""]);
   const scroll = useRef<ScrollView>(null);
-  const cursor = cursors[cursors.length - 1],
-    query = queryString(applied);
+  const query = queryString(applied);
 
   const auctionsQuery = usePublicAuctions(client);
 
@@ -58,13 +56,15 @@ export function ShelfScreen() {
     Date.parse(auction.endAt) > Date.parse(auctionsQuery.data!.serverTime),
   ) ?? [];
 
-  const result = useQuery({
-    queryKey: ["public-shelf", query, cursor],
-    queryFn: () =>
+  const result = useInfiniteQuery({
+    queryKey: ["public-shelf", query],
+    initialPageParam: "",
+    queryFn: ({ pageParam }) =>
       client.publicRequest(
-        `/listings?bundleSupport=whole-v1&${query}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+        `/listings?bundleSupport=whole-v1&${query}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`,
         publicPage,
       ),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: active,
     staleTime: 8_000,
     gcTime: 300_000,
@@ -72,13 +72,26 @@ export function ShelfScreen() {
     retry: false,
   });
 
+  const items = useMemo(() => {
+    const seen = new Set<string>();
+    const list: Listing[] = [];
+    for (const page of result.data?.pages ?? []) {
+      for (const item of page.items) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          list.push(item);
+        }
+      }
+    }
+    return list;
+  }, [result.data?.pages]);
+
   function apply(next: Filters) {
     const issue = filterError(next);
     setError(issue);
     if (issue) return;
     setApplied({ ...next, q: next.q.trim() });
     setSearch(next.q.trim());
-    setCursors([""]);
     Keyboard.dismiss();
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
@@ -90,7 +103,6 @@ export function ShelfScreen() {
     Number(!!(applied.minSalePrice || applied.maxSalePrice)) +
     Number(!!(applied.minExchangeValue || applied.maxExchangeValue));
   const hasCriteria = !!applied.q || filterCount > 0;
-  const nextCursor = result.error ? undefined : result.data?.nextCursor;
 
   const handleOpenAuction = (id: string) => {
     router.push({ pathname: "./auction", params: { id } });
@@ -126,7 +138,7 @@ export function ShelfScreen() {
           onAuctionPress={() => router.navigate("/auctions")}
           onNewestPress={() => apply({ ...applied, sort: "newest" })}
           onExchangePress={() =>
-            router.push({ pathname: "/search", params: { mode: "Both" } })
+            router.push({ pathname: "/search", params: { mode: "Exchange" } })
           }
           onRarePress={() => apply({ ...applied, condition: "LikeNew" })}
         />
@@ -155,7 +167,7 @@ export function ShelfScreen() {
 
         {error ? <Notice tone="error">{error}</Notice> : null}
 
-        {hasCriteria && (result.data?.items.length !== 0 || result.error) && (
+        {hasCriteria && (items.length !== 0 || result.error) && (
           <View style={{ alignSelf: "flex-start", paddingHorizontal: 12 }}>
             <Chip
               title="Xóa tìm kiếm và bộ lọc"
@@ -167,28 +179,22 @@ export function ShelfScreen() {
 
         {result.isPending && <StatePanel loading title="Đang tải sách…" />}
 
-        {result.error && (
-          <>
+        {result.error && items.length === 0 && (
+          <View style={{ paddingHorizontal: 12, gap: 10 }}>
             <Notice tone="error">
-              {result.data
-                ? "Chưa cập nhật được danh sách. Sách bên dưới là dữ liệu lần tải trước và có thể không còn khả dụng. "
-                : ""}
               {presentError(result.error).message}
             </Notice>
             <Button
-              title={cursor ? "Tải lại từ trang đầu" : "Thử lại"}
+              title="Thử lại"
               secondary
               wine
               busy={result.isFetching}
-              onPress={() => {
-                if (cursor) setCursors([""]);
-                else void result.refetch();
-              }}
+              onPress={() => void result.refetch()}
             />
-          </>
+          </View>
         )}
 
-        {result.data?.items.length === 0 && !result.error && (
+        {!result.isPending && items.length === 0 && !result.error && (
           <StatePanel
             icon="book"
             title={
@@ -218,7 +224,7 @@ export function ShelfScreen() {
         {/* 6. Curated Product Grid */}
         <View style={{ paddingHorizontal: 12 }}>
           <ShelfResults
-            items={result.data?.items ?? []}
+            items={items}
             composition="grid"
             onOpen={(item) =>
               router.push({ pathname: "./book", params: { id: item.id } })
@@ -240,16 +246,20 @@ export function ShelfScreen() {
         </View>
 
         <HomeShelfFooter
-          page={cursors.length}
-          fetching={result.isFetching}
-          onPrevious={cursors.length > 1 ? () => {
-            setCursors((previous) => previous.slice(0, -1));
-            scroll.current?.scrollTo({ y: 0, animated: false });
-          } : undefined}
-          onNext={nextCursor ? () => {
-            setCursors((previous) => [...previous, nextCursor]);
-            scroll.current?.scrollTo({ y: 0, animated: false });
-          } : undefined}
+          loadedCount={items.length}
+          hasNextPage={Boolean(result.hasNextPage)}
+          fetchingNextPage={result.isFetchingNextPage}
+          nextPageError={
+            result.isFetchNextPageError && result.error
+              ? presentError(result.error).message
+              : undefined
+          }
+          onLoadMore={() => {
+            if (!result.isFetchingNextPage) {
+              void result.fetchNextPage();
+            }
+          }}
+          onScrollTop={() => scroll.current?.scrollTo({ y: 0, animated: true })}
         />
       </View>
 

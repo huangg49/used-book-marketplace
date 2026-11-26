@@ -1590,7 +1590,11 @@ export interface MemberNotificationDoc {
     | 'OrderBuyNowPaid'
     | 'OrderSaleSettled'
     | 'OrderCreatedAwaitingPayment'
+    | 'OrderStatusUpdated'
     | 'PurchaseQuoteReady'
+    | 'ListingApproved'
+    | 'ListingRejected'
+    | 'AuctionIntakeUpdated'
     | 'AuctionPaid'
     | 'ExchangeProposed'
     | 'ExchangeAccepted'
@@ -1606,7 +1610,16 @@ export interface MemberNotificationDoc {
     | 'ReviewModerated';
   title: string;
   body: string;
-  targetType: 'Withdrawal' | 'Auction' | 'Exchange' | 'Order' | 'PurchaseConversation' | 'SupportCase' | 'TransactionReview';
+  targetType:
+    | 'Withdrawal'
+    | 'Auction'
+    | 'AuctionIntake'
+    | 'Exchange'
+    | 'Listing'
+    | 'Order'
+    | 'PurchaseConversation'
+    | 'SupportCase'
+    | 'TransactionReview';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;

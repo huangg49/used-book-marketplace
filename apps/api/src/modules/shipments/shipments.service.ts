@@ -23,6 +23,7 @@ import { OrderClock } from '../orders/order-clock.js';
 import { checkShipment } from '../orders/order-invariants.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import { CarrierSimulator } from './carrier-simulator.js';
+import { signalMemberInbox } from '../commands/member-inbox-signal.js';
 
 // Shipments, their evidence links and carrier events are append-only. Every
 // writer takes the Order fulfillment locks first (OrdersService.locked), which
@@ -161,6 +162,19 @@ export class ShipmentsService {
           receiptId,
         });
         tx.check(`shipment:${shipmentId}`, () => checkShipment(tx, shipmentId));
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: o.buyerId,
+          kind: 'OrderStatusUpdated',
+          title: 'Người bán đã tạo vận đơn',
+          body: `Đơn hàng đã có mã vận đơn ${body.trackingCode}. Chờ đơn vị vận chuyển tới lấy sách.`,
+          targetType: 'Order',
+          targetId: o._id,
+          dedupeKey: `shipment-registered:${shipmentId}:buyer`,
+          createdAt: now,
+          readAt: null,
+        });
+        signalMemberInbox(tx, [o.buyerId]);
         return {
           entityType: 'Shipment',
           entityId: shipmentId,

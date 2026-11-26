@@ -5942,11 +5942,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionResumed" | "AuctionSecondChanceOffered" | "AuctionDepositShareReceived" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "OrderSaleSettled" | "OrderCreatedAwaitingPayment" | "PurchaseQuoteReady" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
+            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionResumed" | "AuctionSecondChanceOffered" | "AuctionDepositShareReceived" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "OrderSaleSettled" | "OrderCreatedAwaitingPayment" | "OrderStatusUpdated" | "PurchaseQuoteReady" | "ListingApproved" | "ListingRejected" | "AuctionIntakeUpdated" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
-            targetType: "Auction" | "Exchange" | "Order" | "PurchaseConversation" | "SupportCase" | "TransactionReview" | "Withdrawal";
+            targetType: "Auction" | "AuctionIntake" | "Exchange" | "Listing" | "Order" | "PurchaseConversation" | "SupportCase" | "TransactionReview" | "Withdrawal";
             /**
              * Format: uuid
              * @description For OrderSaleSettled, identifies the order used to open the seller's wallet receipt.
@@ -8474,6 +8474,8 @@ export interface components {
                 auctionHeld: number;
                 withdrawalHeld: number;
                 platformCommission: number;
+                platformNetRevenueBalance: number;
+                platformShippingPassThrough: number;
                 listingFeeHeld: number;
                 incidentFundBalance: number;
             };

@@ -7,7 +7,14 @@ import { commandOutcomeUnknown } from "../hooks/useAuctionClock";
 import { createdExchange, pendingProposal } from "../services/exchange";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError, buyerSaleFeeText, directOrderHoldNotes, directSellerAmounts } from "@used-books/session-client";
+import {
+  ApiError,
+  DEFAULT_SALE_COMMISSION_BPS,
+  buyerSaleFeeText,
+  directOrderCommission,
+  directOrderHoldNotes,
+  directSellerAmounts,
+} from "@used-books/session-client";
 import { TransactionNotes } from "../components/TransactionReview";
 import { SaleFeeBreakdown } from "../components/SaleFeeBreakdown";
 import { useTransactionLive } from "../hooks/useTransactionLive";
@@ -728,7 +735,27 @@ export function NegotiationWorkspace({
   const buyerTotal = orderData
     ? orderData.amounts.buyerTotal
     : effectiveBookPrice + shippingFee;
-  const sellerAmounts = orderData && seller ? directSellerAmounts(orderData.amounts) : null;
+  const previewCommissionBps =
+    room.quotePreview?.commissionBps ?? DEFAULT_SALE_COMMISSION_BPS;
+  const sellerAmounts = seller
+    ? orderData
+      ? directSellerAmounts(orderData.amounts)
+      : effectiveBookPrice > 0
+        ? (() => {
+            const commission = directOrderCommission(
+              effectiveBookPrice,
+              previewCommissionBps,
+            );
+            return {
+              bookPrice: effectiveBookPrice,
+              commissionBps: previewCommissionBps,
+              commission,
+              shippingReimbursement: shippingFee,
+              creditedAmount: effectiveBookPrice - commission + shippingFee,
+            };
+          })()
+        : null
+    : null;
   const saleClosed = orderData?.state === "Cancelled" || orderData?.state === "PaymentExpired";
   const buyerRefund = isBuyer ? orderData?.refundedAmount ?? 0 : 0;
   const shippingAddress = orderData?.shippingAddress ?? orderData?.ownAddress;

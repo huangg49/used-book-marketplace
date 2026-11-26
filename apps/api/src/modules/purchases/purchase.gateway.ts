@@ -8,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { HttpException, Logger } from '@nestjs/common';
 import { DomainError } from '../commands/domain-error.js';
+import { socketCorsOptions } from '../../common/socket-cors.js';
 import { AuthService } from '../auth/auth.service.js';
 import { PurchasesService } from './purchases.service.js';
 
@@ -19,7 +20,7 @@ type Subscriber = {
 
 @WebSocketGateway({
   namespace: '/purchase-chat',
-  cors: { origin: true, credentials: false },
+  cors: socketCorsOptions(),
 })
 export class PurchaseGateway implements OnGatewayInit {
   @WebSocketServer() server!: {

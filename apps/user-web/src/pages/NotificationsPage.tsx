@@ -26,7 +26,7 @@ import {
 } from "../services/notifications";
 import styles from "./NotificationsPage.module.css";
 
-type FilterTab = "all" | "unread" | "exchange" | "auction" | "order";
+type FilterTab = "all" | "unread" | "exchange" | "auction" | "order" | "listing";
 
 function getNotificationCategory(item: MemberNotification) {
   if (item.targetType === "Exchange" || item.kind.startsWith("Exchange")) {
@@ -37,6 +37,14 @@ function getNotificationCategory(item: MemberNotification) {
       label: "Trao đổi",
     };
   }
+  if (item.targetType === "AuctionIntake" || item.kind === "AuctionIntakeUpdated") {
+    return {
+      type: "auction" as const,
+      Icon: Gavel,
+      boxClass: styles.iconAuction,
+      label: "Kiểm định đấu giá",
+    };
+  }
   if (item.targetType === "Auction" || item.kind.startsWith("Auction")) {
     return {
       type: "auction" as const,
@@ -45,12 +53,29 @@ function getNotificationCategory(item: MemberNotification) {
       label: "Đấu giá",
     };
   }
-  if (item.targetType === "Order" || item.kind.startsWith("Order")) {
+  if (
+    item.targetType === "Listing" ||
+    item.kind === "ListingApproved" ||
+    item.kind === "ListingRejected"
+  ) {
+    return {
+      type: "listing" as const,
+      Icon: BookOpen,
+      boxClass: styles.iconOrder,
+      label: item.kind === "ListingApproved" ? "Bài đăng đã duyệt" : "Bài đăng cần sửa",
+    };
+  }
+  if (
+    item.targetType === "Order" ||
+    item.targetType === "PurchaseConversation" ||
+    item.kind.startsWith("Order") ||
+    item.kind.startsWith("Purchase")
+  ) {
     return {
       type: "order" as const,
       Icon: ShoppingBag,
       boxClass: styles.iconOrder,
-      label: "Đơn hàng",
+      label: item.targetType === "PurchaseConversation" ? "Yêu cầu mua" : "Đơn hàng",
     };
   }
   return {
@@ -91,9 +116,24 @@ export function NotificationsPage() {
     if (activeFilter === "exchange")
       return item.targetType === "Exchange" || item.kind.startsWith("Exchange");
     if (activeFilter === "auction")
-      return item.targetType === "Auction" || item.kind.startsWith("Auction");
+      return (
+        item.targetType === "Auction" ||
+        item.targetType === "AuctionIntake" ||
+        item.kind.startsWith("Auction")
+      );
     if (activeFilter === "order")
-      return item.targetType === "Order" || item.kind.startsWith("Order");
+      return (
+        item.targetType === "Order" ||
+        item.targetType === "PurchaseConversation" ||
+        item.kind.startsWith("Order") ||
+        item.kind.startsWith("Purchase")
+      );
+    if (activeFilter === "listing")
+      return (
+        item.targetType === "Listing" ||
+        item.kind === "ListingApproved" ||
+        item.kind === "ListingRejected"
+      );
     return true;
   });
 
@@ -236,6 +276,17 @@ export function NotificationsPage() {
         >
           <ShoppingBag size={14} />
           <span>Đơn hàng</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeFilter === "listing"}
+          className={`${styles.filterBtn} ${activeFilter === "listing" ? styles.filterBtnActive : ""}`}
+          onClick={() => setActiveFilter("listing")}
+        >
+          <BookOpen size={14} />
+          <span>Bài đăng</span>
         </button>
       </div>
 

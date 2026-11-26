@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
   readonly VITE_CATALOG_PREVIEW?: string;
+  readonly VITE_DEMO_SIMULATOR_ENABLED?: string;
   // Các biến môi trường khác thêm vào đây
 }
 

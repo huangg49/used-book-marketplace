@@ -31,7 +31,11 @@ export const notificationSchema = z.object({
     'OrderBuyNowPaid',
     'OrderSaleSettled',
     'OrderCreatedAwaitingPayment',
+    'OrderStatusUpdated',
     'PurchaseQuoteReady',
+    'ListingApproved',
+    'ListingRejected',
+    'AuctionIntakeUpdated',
     'ExchangeProposed',
     'ExchangeAccepted',
     'ExchangeFunded',
@@ -47,7 +51,7 @@ export const notificationSchema = z.object({
   ]),
   title: z.string(),
   body: z.string(),
-  targetType: z.enum(['Auction', 'Exchange', 'Order', 'PurchaseConversation', 'SupportCase', 'TransactionReview', 'Withdrawal']),
+  targetType: z.enum(['Auction', 'AuctionIntake', 'Exchange', 'Listing', 'Order', 'PurchaseConversation', 'SupportCase', 'TransactionReview', 'Withdrawal']),
   targetId: z.string().uuid(),
   createdAt: z.string(),
   readAt: z.string().nullable(),
@@ -90,6 +94,8 @@ export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetI
       return path;
     }
     case 'Auction':return n.kind === 'AuctionWon' ? ROUTES.auctionOrder(n.targetId) : ROUTES.auctionDetail(n.targetId);
+    case 'AuctionIntake':return `/my-auctions?view=selling&intakeId=${encodeURIComponent(n.targetId)}`;
+    case 'Listing':return n.kind === 'ListingApproved' ? `/books/${n.targetId}` : '/my-books';
     default:return '/notifications';
   }
 }

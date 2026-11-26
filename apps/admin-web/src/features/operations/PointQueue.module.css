@@ -1,0 +1,964 @@
+/* Shared Operate-mode layout for Point Operations queues:
+ * - /operations/intakes (Sách gửi đấu giá)
+ * - /operations/collections (Giao sách tại điểm)
+ */
+
+.queue {
+  container: point-queue / inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 1.25rem;
+  row-gap: 0.25rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.queue > :global(*):not(:global(.page-heading)):not(:global(.queue-toolbar)) {
+  grid-column: 1 / -1;
+}
+
+/* --------------------------------------------------------------------------
+   FLAT EDITORIAL HEADER (Matches StatisticsHub / Finance / AI pages)
+   -------------------------------------------------------------------------- */
+.queue :global(.page-heading) {
+  grid-column: 1;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  min-width: 0;
+}
+
+.queue :global(.page-heading h1) {
+  margin: 0;
+  color: var(--shop-ink);
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.4rem, 2.2cqw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.queue :global(.page-heading .intro) {
+  margin: 0.35rem 0 0;
+  max-width: 68ch;
+  color: var(--shop-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.queue :global(.queue-toolbar) {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+}
+
+.queue :global(.queue-toolbar .muted) {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--shop-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.queue :global(.queue-toolbar > .button) {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.queue :global(.queue-toolbar > .button:hover:not(:disabled)) {
+  background: var(--shop-shelf);
+  border-color: var(--shop-wine);
+}
+
+/* --------------------------------------------------------------------------
+   UNIFIED STAT-TABS STRIP (Single source of truth for KPI + Filter)
+   -------------------------------------------------------------------------- */
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(var(--stat-cols, 5), minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 1rem 0 0.75rem;
+}
+
+.statTab {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.4rem;
+  min-height: 68px;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.statTab:hover {
+  border-color: color-mix(in srgb, var(--shop-wine) 45%, var(--shop-line));
+  background: color-mix(in srgb, var(--shop-shelf) 45%, var(--shop-paper));
+}
+
+.statTab[data-empty="true"]:not([data-active="true"]) {
+  background: color-mix(in srgb, var(--shop-shelf) 35%, var(--shop-paper));
+}
+
+.statTab[data-empty="true"]:not([data-active="true"]) .statCount {
+  color: var(--shop-muted);
+}
+
+.statTab[data-active="true"] {
+  background: var(--shop-wine);
+  border-color: var(--shop-wine);
+  color: var(--shop-cream);
+}
+
+.statTabTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.statLabel {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statTab[data-active="true"] .statLabel {
+  color: color-mix(in srgb, var(--shop-cream) 86%, transparent);
+}
+
+.statDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--shop-orange);
+  flex-shrink: 0;
+}
+
+.statTab[data-active="true"] .statDot {
+  background: var(--shop-yellow);
+}
+
+.statBottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.statCount {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 750;
+  line-height: 1.05;
+  color: var(--shop-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.statTab[data-active="true"] .statCount {
+  color: var(--shop-cream);
+}
+
+.statIcon {
+  color: color-mix(in srgb, var(--shop-muted) 75%, transparent);
+  flex-shrink: 0;
+}
+
+.statTab[data-active="true"] .statIcon {
+  color: color-mix(in srgb, var(--shop-cream) 72%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   SEARCH & FILTER SUMMARY BAR
+   -------------------------------------------------------------------------- */
+.searchBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 300px;
+  max-width: 440px;
+  height: 40px;
+  padding: 0 0.8rem;
+  border-radius: 9px;
+  border: 1px solid var(--shop-control);
+  background: var(--shop-paper);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.searchIcon {
+  color: var(--shop-muted);
+  flex-shrink: 0;
+}
+
+.searchBox input:not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--shop-ink);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.searchBox input:not([type="checkbox"]):not([type="radio"]):focus,
+.searchBox input:not([type="checkbox"]):not([type="radio"]):focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.searchBox input::placeholder {
+  color: var(--shop-muted);
+  opacity: 0.85;
+}
+
+.searchBox input::-webkit-search-cancel-button,
+.searchBox input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.clearSearchBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--shop-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.clearSearchBtn:hover {
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+}
+
+.searchMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.searchSummary {
+  font-size: 0.8rem;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.resetFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 32px;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.resetFilterBtn:hover {
+  background: var(--shop-shelf);
+  border-color: var(--shop-wine);
+}
+
+/* --------------------------------------------------------------------------
+   QUEUE LIST & DOSSIER ROWS (Flat 1px surface, no ghost shadows, no nested boxes)
+   -------------------------------------------------------------------------- */
+.queue :global(.queue-list) {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.queue :global(.queue-list:empty) {
+  display: none;
+}
+
+.queue :global(.queue-row) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.05rem 1.25rem;
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.queue :global(.queue-row:hover) {
+  border-color: color-mix(in srgb, var(--shop-wine) 38%, var(--shop-line));
+  background: #fffefa;
+}
+
+.queue :global(.queue-row:has(> span:empty)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.queue :global(.queue-row > span:empty) {
+  display: none;
+}
+
+/* Primary operational action button (Staff must act) */
+.queue :global(.queue-row > button.row-action) {
+  justify-self: end;
+  min-width: 8.75rem;
+  min-height: 40px;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--shop-wine);
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font-size: 0.84rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.queue :global(.queue-row > button.row-action:hover:not(:disabled)) {
+  background: var(--shop-wine-hover);
+  border-color: var(--shop-wine-hover);
+}
+
+/* Open inline drawer toggle ("Đóng") steps down so the drawer owns focus */
+.queue :global(.queue-row > button.row-action[aria-expanded="true"]) {
+  background: var(--shop-shelf);
+  border-color: var(--shop-control);
+  color: var(--shop-ink);
+}
+
+.queue :global(.queue-row > button.row-action[aria-expanded="true"]:hover:not(:disabled)) {
+  background: var(--shop-paper);
+  border-color: var(--shop-wine);
+  color: var(--shop-wine);
+}
+
+/* Secondary navigation link ("Xem phiên ↗") does not compete with urgent tasks */
+.queue :global(.queue-row > a.row-action) {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8.75rem;
+  min-height: 38px;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.queue :global(.queue-row > a.row-action:hover) {
+  background: var(--shop-shelf);
+  border-color: var(--shop-wine);
+}
+
+.queue :global(.row-panel) {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin-top: 0.35rem;
+  padding: clamp(0.9rem, 2.5cqw, 1.35rem);
+  background: var(--shop-cream);
+  border-radius: 10px;
+  border: 1px solid var(--shop-line);
+}
+
+/* --------------------------------------------------------------------------
+   DOSSIER CARD INTERIOR
+   -------------------------------------------------------------------------- */
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.05rem;
+  min-width: 0;
+}
+
+/* Physical Shelf Location Anchor (Replaces toy static book graphic) */
+.shelfAnchor {
+  width: 86px;
+  min-width: 86px;
+  min-height: 68px;
+  padding: 0.55rem 0.45rem;
+  border-radius: 9px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-shelf);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.shelfAnchor[data-empty="true"] {
+  background: transparent;
+  border-style: dashed;
+}
+
+.shelfAnchorLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.66rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--shop-muted);
+}
+
+.shelfAnchorCode {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: var(--shop-ink);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.shelfAnchor[data-empty="true"] .shelfAnchorCode {
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+}
+
+.shelfAnchorIndex {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Main Dossier Content */
+.dossier {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.headerLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+
+.bookTitle {
+  margin: 0;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.refCode {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.42rem;
+  border-radius: 5px;
+  background: var(--shop-shelf);
+  color: var(--shop-muted);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* Status & Method Pills */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.statusBadge[data-tone="neutral"] {
+  background: #f1ebe2;
+  color: #574a42;
+}
+
+.statusBadge[data-tone="ready"] {
+  background: #fbf0da;
+  color: #7c4707;
+}
+
+.statusBadge[data-tone="active"] {
+  background: #f8e9e7;
+  color: var(--shop-wine);
+}
+
+.statusBadge[data-tone="in-transit"] {
+  background: #e6f1f3;
+  color: #164b56;
+}
+
+.statusBadge[data-tone="attention"] {
+  background: #fdebe5;
+  color: #912b0e;
+}
+
+.statusBadge[data-tone="completed"] {
+  background: #e6f2eb;
+  color: #1f4d36;
+}
+
+.pulseDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--shop-wine);
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+}
+
+.methodBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.methodBadge[data-method="carrier"] {
+  background: #e6f1f3;
+  color: #164b56;
+  border: 1px solid #bfd8dc;
+}
+
+.methodBadge[data-method="self"] {
+  background: var(--shop-shelf);
+  color: #5b3428;
+  border: 1px solid var(--shop-line);
+}
+
+/* Inline Notice */
+.noticeLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #7c4707;
+}
+
+/* Inline Operational Fact Strip (Price on Intake, Recipient on Collection) */
+.factStrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.25rem;
+}
+
+.factItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.38rem;
+  min-width: 0;
+  font-size: 0.83rem;
+  line-height: 1.4;
+}
+
+.factIcon {
+  color: var(--shop-control);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.factLabel {
+  font-size: 0.76rem;
+  color: var(--shop-muted);
+  white-space: nowrap;
+}
+
+.factValue {
+  font-weight: 650;
+  color: var(--shop-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.factValueAccent {
+  font-weight: 700;
+  color: var(--shop-wine);
+  font-variant-numeric: tabular-nums;
+}
+
+.factValueMono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.79rem;
+  font-weight: 650;
+  color: var(--shop-ink);
+}
+
+.addressLine {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--shop-ink);
+  line-height: 1.4;
+}
+
+.addressLine svg {
+  color: var(--shop-control);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Inline Inspection Result Line (Replaces boxed nested cert card) */
+.certLine {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid color-mix(in srgb, var(--shop-line) 65%, transparent);
+}
+
+.certRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.certStamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-weight: 700;
+}
+
+.certStamp[data-outcome="Pass"] {
+  color: #1f4d36;
+}
+
+.certStamp[data-outcome="Fail"] {
+  color: #912b0e;
+}
+
+.certStamp[data-outcome="NeedsEvidence"] {
+  color: #8a4b08;
+}
+
+.certMeta {
+  color: var(--shop-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.certNote {
+  margin: 0;
+  font-size: 0.81rem;
+  font-style: italic;
+  color: var(--shop-ink);
+  line-height: 1.45;
+}
+
+.historyToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.12rem 0.45rem;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--shop-wine);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.historyToggle:hover {
+  background: var(--shop-shelf);
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--shop-line);
+}
+
+.historyItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.76rem;
+  color: var(--shop-muted);
+}
+
+.historyOutcome {
+  font-weight: 700;
+}
+
+.historyOutcome[data-outcome="Pass"] {
+  color: #1f4d36;
+}
+
+.historyOutcome[data-outcome="Fail"] {
+  color: #912b0e;
+}
+
+.historyOutcome[data-outcome="NeedsEvidence"] {
+  color: #8a4b08;
+}
+
+.historyTime {
+  font-variant-numeric: tabular-nums;
+}
+
+.noCertText {
+  font-size: 0.78rem;
+  color: var(--shop-muted);
+}
+
+/* Footer Meta & Urgency Deadlines */
+.metaList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.95rem;
+  padding-top: 0.1rem;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  font-size: 0.78rem;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.metaItem svg {
+  color: var(--shop-control);
+  flex-shrink: 0;
+}
+
+.metaItem[data-urgency="soon"] {
+  color: #8a4b08;
+  font-weight: 600;
+}
+
+.metaItem[data-urgency="soon"] svg {
+  color: #b4630d;
+}
+
+.metaItem[data-urgency="overdue"],
+.metaItem[data-urgency="reason"] {
+  color: #912b0e;
+  font-weight: 600;
+}
+
+.metaItem[data-urgency="overdue"] svg,
+.metaItem[data-urgency="reason"] svg {
+  color: #912b0e;
+}
+
+/* --------------------------------------------------------------------------
+   PAGINATION
+   -------------------------------------------------------------------------- */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--shop-line);
+}
+
+.pagination p,
+.pagination span {
+  margin: 0;
+  color: var(--shop-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination button {
+  min-height: 36px;
+  padding-inline: 0.9rem;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.pagination button:hover:not(:disabled) {
+  border-color: var(--shop-wine);
+  background: var(--shop-shelf);
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE CONTAINER QUERIES
+   -------------------------------------------------------------------------- */
+@container point-queue (max-width: 56rem) {
+  .statStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container point-queue (max-width: 44rem) {
+  .queue {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.5rem;
+  }
+
+  .queue :global(.page-heading),
+  .queue :global(.queue-toolbar) {
+    grid-column: 1;
+  }
+
+  .queue :global(.queue-toolbar) {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .queue :global(.queue-toolbar .muted) {
+    text-align: left;
+  }
+
+  .queue :global(.queue-row) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.85rem;
+  }
+
+  .queue :global(.queue-row > button.row-action),
+  .queue :global(.queue-row > a.row-action) {
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+@container point-queue (max-width: 30rem) {
+  .statStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .card {
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .shelfAnchor {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0.45rem 0.75rem;
+  }
+}

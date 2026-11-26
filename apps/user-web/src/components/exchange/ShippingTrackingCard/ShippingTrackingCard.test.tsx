@@ -90,4 +90,9 @@ it("offers the simulator only for the registered carrier leg on loopback", () =>
 
   vi.stubGlobal("window", { location: { hostname: "192.168.1.8" } });
   expect(render()).not.toContain("Mở Driver Simulator");
+
+  vi.stubEnv("VITE_DEMO_SIMULATOR_ENABLED", "true");
+  expect(render()).toContain('aria-label="Mở Driver Simulator · Demo cho kiện bạn gửi"');
+  expect(render()).not.toContain('aria-label="Mở Driver Simulator · Demo cho kiện bạn nhận"');
+  vi.unstubAllEnvs();
 });

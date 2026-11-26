@@ -727,6 +727,20 @@ export class OrdersService {
             })),
           );
           signalMemberInbox(tx, [o.buyerId, o.sellerId]);
+        } else {
+          await tx.c.member_notifications.insertOne({
+            _id: randomUUID(),
+            userId: o.sellerId,
+            kind: 'OrderStatusUpdated',
+            title: 'Đơn hàng đã thanh toán — chờ bạn xác nhận',
+            body: 'Người mua đã thanh toán đơn thương lượng. Hãy mở đơn để xác nhận nhận đơn trước khi quá hạn.',
+            targetType: 'Order',
+            targetId: o._id,
+            dedupeKey: `order-paid:${o._id}:seller`,
+            createdAt: now,
+            readAt: null,
+          });
+          signalMemberInbox(tx, [o.sellerId]);
         }
         return {
           entityType: 'Order',
@@ -766,6 +780,53 @@ export class OrdersService {
       cancellationRequestedAt: now,
       cancellationReason: reason,
     });
+    const refundNotices =
+      reason === 'BuyerCancelled'
+        ? [
+            {
+              userId: o.sellerId,
+              title: 'Người mua đã hủy đơn hàng',
+              body: 'Đơn hàng đã được người mua hủy trước khi xác nhận. Tiền đang được hoàn lại cho người mua.',
+            },
+          ]
+        : reason === 'SellerRejected'
+          ? [
+              {
+                userId: o.buyerId,
+                title: 'Người bán từ chối đơn hàng',
+                body: 'Người bán không thể thực hiện đơn hàng này. Hệ thống đang hoàn tiền về ví của bạn.',
+              },
+            ]
+          : [
+              {
+                userId: o.buyerId,
+                title: 'Đơn hàng quá hạn xác nhận',
+                body: 'Người bán không kịp xác nhận đơn. Hệ thống đang hoàn tiền về ví của bạn.',
+              },
+              {
+                userId: o.sellerId,
+                title: 'Đơn hàng quá hạn xác nhận',
+                body: 'Đơn hàng đã quá hạn xác nhận và tự động chuyển hoàn tiền cho người mua.',
+              },
+            ];
+    await tx.c.member_notifications.insertMany(
+      refundNotices.map((n) => ({
+        _id: randomUUID(),
+        userId: n.userId,
+        kind: 'OrderStatusUpdated' as const,
+        title: n.title,
+        body: n.body,
+        targetType: 'Order' as const,
+        targetId: o._id,
+        dedupeKey: `order-refund-requested:${o._id}:${reason}:${n.userId}`,
+        createdAt: now,
+        readAt: null,
+      })),
+    );
+    signalMemberInbox(
+      tx,
+      refundNotices.map((n) => n.userId),
+    );
     return {
       entityType: 'Order',
       entityId: o._id,
@@ -861,6 +922,19 @@ export class OrdersService {
           receiptId,
         });
         const next = await this.transition(tx, o, { state: 'Preparing' });
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: o.buyerId,
+          kind: 'OrderStatusUpdated',
+          title: 'Người bán đã xác nhận đơn hàng',
+          body: 'Người bán đang chuẩn bị đóng gói và sẽ bàn giao sách cho đơn vị vận chuyển trong 48 giờ.',
+          targetType: 'Order',
+          targetId: o._id,
+          dedupeKey: `order-accepted:${o._id}:buyer`,
+          createdAt: now,
+          readAt: null,
+        });
+        signalMemberInbox(tx, [o.buyerId]);
         return {
           entityType: 'Order',
           entityId: o._id,
@@ -939,6 +1013,19 @@ export class OrdersService {
           deliveredAt: now,
           inspectionDeadline: new Date(now.getTime() + 72 * 3600000),
         });
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: o.sellerId,
+          kind: 'OrderStatusUpdated',
+          title: 'Người mua đã xác nhận nhận sách',
+          body: 'Đơn hàng đang trong thời hạn kiểm tra 72 giờ trước khi hoàn tất thanh toán.',
+          targetType: 'Order',
+          targetId: o._id,
+          dedupeKey: `order-receipt-confirmed:${o._id}:seller`,
+          createdAt: now,
+          readAt: null,
+        });
+        signalMemberInbox(tx, [o.sellerId]);
         return {
           entityType: 'Order',
           entityId: o._id,
@@ -1289,6 +1376,60 @@ export class OrdersService {
             tx.check(`order:${id}`, () => checkOrder(tx, id));
             break;
         }
+        const journeyNotice: Record<
+          typeof action,
+          { userId: string; title: string; body: string }
+        > = {
+          Pickup: {
+            userId: o.buyerId,
+            title: 'Đơn hàng đã được lấy hàng',
+            body: 'Đơn vị vận chuyển đã tiếp nhận sách từ người bán và đang trên đường giao đến bạn.',
+          },
+          OutForDelivery: {
+            userId: o.buyerId,
+            title: 'Đơn hàng đang được giao đến bạn',
+            body: 'Tài xế đang trên đường giao sách. Hãy chú ý điện thoại để nhận hàng.',
+          },
+          Deliver: {
+            userId: o.buyerId,
+            title: 'Sách đã được giao thành công',
+            body: 'Đơn vị vận chuyển đã giao sách. Hãy kiểm tra và xác nhận hoàn tất đơn trong 72 giờ.',
+          },
+          Acknowledge: {
+            userId: o.sellerId,
+            title: 'Người mua đã xác nhận nhận sách',
+            body: 'Người mua đã nhận sách và đang kiểm tra tình trạng trong thời hạn 72 giờ.',
+          },
+          ReportNonReceipt: {
+            userId: o.sellerId,
+            title: 'Người mua báo chưa nhận được sách',
+            body: 'Đơn hàng đã mở yêu cầu hỗ trợ về việc giao nhận. Mở đơn hàng để theo dõi chi tiết.',
+          },
+          ReportCondition: {
+            userId: o.sellerId,
+            title: 'Người mua báo sách có vấn đề',
+            body: 'Đơn hàng đã mở yêu cầu hỗ trợ về tình trạng sách. Mở đơn hàng để theo dõi chi tiết.',
+          },
+          SkipInspection: {
+            userId: o.buyerId,
+            title: 'Đơn hàng đã hoàn tất',
+            body: 'Cảm ơn bạn đã xác nhận nhận sách. Giao dịch đã hoàn tất thành công.',
+          },
+        };
+        const notice = journeyNotice[action];
+        await tx.c.member_notifications.insertOne({
+          _id: randomUUID(),
+          userId: notice.userId,
+          kind: 'OrderStatusUpdated',
+          title: notice.title,
+          body: notice.body,
+          targetType: 'Order',
+          targetId: id,
+          dedupeKey: `order-journey:${id}:${action}:${notice.userId}`,
+          createdAt: now,
+          readAt: null,
+        });
+        signalMemberInbox(tx, [notice.userId]);
         return {
           entityType: 'Order', entityId: id, contextId: o.context!._id,
           version: next.version, state: next.state as OrderChange['state'],

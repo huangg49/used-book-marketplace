@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { router } from "expo-router";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   View,
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,7 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   acknowledgedBuyNowOrder,
   buyerSaleFeeText,
-  directOrderHoldNotes,
   forgetBuyNowOrder,
   pendingBuyNowOrder,
   pendingBuyNowOrderInput,
@@ -33,7 +34,6 @@ import {
   space,
   stitchTokens,
 } from "../../core/ui";
-import { TransactionNotes } from "../../core/ui/transaction-review";
 import type { Listing } from "../shelf/contracts";
 import { PublicPhoto } from "../shelf/public-photo";
 import { addressBook, addressReceipt } from "../addresses/contracts";
@@ -576,6 +576,14 @@ function BuyNowSession({
     0;
   const hasEnoughBalance = walletReady && walletBalance >= totalAmount;
 
+  const canSubmitOrder = !(
+    busy ||
+    quoteLoading ||
+    !usableQuote ||
+    addingAddress ||
+    (!!listing?.bundle && !bundleAcknowledged)
+  );
+
   return (
     <AppModal
       visible={visible}
@@ -585,40 +593,25 @@ function BuyNowSession({
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{
-          flex: 1,
-          backgroundColor: stitchTokens.modalScrim,
-          justifyContent: "flex-end",
-        }}
+        style={styles.backdrop}
       >
-        <View
-          style={{
-            backgroundColor: stitchTokens.white,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            maxHeight: "92%",
-            paddingTop: space.md,
-            paddingBottom: Math.max(insets.bottom, 20),
-          }}
-        >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Đóng cửa sổ mua ngay"
+          style={StyleSheet.absoluteFill}
+          onPress={handleDismiss}
+        />
+
+        <View style={styles.sheet}>
+          {/* Drag Handle */}
+          <View style={styles.handleWrap}>
+            <View style={styles.handleBar} />
+          </View>
+
           {/* Header */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              paddingHorizontal: space.lg,
-              paddingBottom: space.sm,
-              borderBottomWidth: 1,
-              borderColor: stitchTokens.parchment,
-            }}
-          >
-            <View>
-              <AppText
-                kind="bold"
-                color={stitchTokens.wineDark}
-                style={{ fontSize: 18 }}
-              >
+          <View style={styles.header}>
+            <View style={styles.headerTextWrap}>
+              <AppText kind="bold" style={styles.headerTitle} numberOfLines={1}>
                 {step === "address_quote"
                   ? listing?.bundle
                     ? "Mua cả bộ sách"
@@ -627,7 +620,7 @@ function BuyNowSession({
                     ? "Thanh toán đơn hàng"
                     : "Đặt mua thành công"}
               </AppText>
-              <AppText kind="small" color={stitchTokens.subtleGray}>
+              <AppText kind="small" style={styles.headerSubtitle} numberOfLines={1}>
                 {step === "address_quote"
                   ? "Giao tận nơi · Xem phí trước khi đặt mua"
                   : step === "payment"
@@ -639,57 +632,27 @@ function BuyNowSession({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Đóng modal mua ngay"
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               onPress={handleDismiss}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: stitchTokens.roseWarmSurface,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              style={({ pressed }) => [
+                styles.closeBtn,
+                pressed && { opacity: 0.72 },
+              ]}
             >
-              <Icon name="close" size={20} color={stitchTokens.wine} />
+              <Icon name="close" size={18} color={stitchTokens.wineDark} strokeWidth={2.2} />
             </Pressable>
           </View>
 
           <ScrollView
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{
-              paddingHorizontal: space.lg,
-              paddingVertical: space.md,
-              gap: space.md,
-            }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
           >
             {/* Book Mini Card */}
             {!mismatchedPending &&
             (listing || initialBookTitle || orderDetails) ? (
-              <View
-                style={{
-                  flexDirection: "row",
-                  backgroundColor: stitchTokens.warmIvory,
-                  borderRadius: 14,
-                  padding: space.sm,
-                  gap: space.md,
-                  borderWidth: 1,
-                  borderColor: stitchTokens.peachBorder,
-                  alignItems: "center",
-                }}
-              >
-                <View
-                  style={{
-                    width: 52,
-                    height: 70,
-                    borderRadius: 6,
-                    backgroundColor: stitchTokens.parchment,
-                    overflow: "hidden",
-                    borderWidth: 1,
-                    borderColor: stitchTokens.peachBorder,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+              <View style={styles.bookCard}>
+                <View style={styles.bookCoverBox}>
                   {listing?.photos?.[0] ? (
                     <PublicPhoto
                       listingId={listing.id}
@@ -700,15 +663,14 @@ function BuyNowSession({
                       compact
                     />
                   ) : (
-                    <Icon name="book" size={24} color={stitchTokens.wine} />
+                    <Icon name="book" size={22} color={stitchTokens.wine} />
                   )}
                 </View>
-                <View style={{ flex: 1, gap: 2 }}>
+                <View style={styles.bookInfo}>
                   <AppText
                     kind="bold"
-                    color={stitchTokens.wineDark}
+                    style={styles.bookTitle}
                     numberOfLines={2}
-                    style={{ fontSize: 14 }}
                   >
                     {orderDetails?.item?.bundle?.title ||
                       orderDetails?.item?.metadata.title ||
@@ -718,15 +680,11 @@ function BuyNowSession({
                       "Bản sách đang đặt mua"}
                   </AppText>
                   {listing?.book?.authors ? (
-                    <AppText kind="small" color={stitchTokens.subtleGray}>
+                    <AppText kind="small" style={styles.bookAuthor} numberOfLines={1}>
                       {listing.book.authors.join(", ") || "Nhiều tác giả"}
                     </AppText>
                   ) : null}
-                  <AppText
-                    kind="bold"
-                    color={stitchTokens.wine}
-                    style={{ fontSize: 15, marginTop: 2 }}
-                  >
+                  <AppText kind="bold" style={styles.bookPrice}>
                     {formatVnd(
                       orderDetails?.amounts?.bookPrice ?? listing?.salePrice,
                     )}
@@ -835,8 +793,9 @@ function BuyNowSession({
                       />
                     </>
                   )}
+
                 {/* Delivery Address Section */}
-                <View style={{ gap: space.xs }}>
+                <View style={styles.sectionBlock}>
                   {addressesQuery.isPending && (
                     <Notice>Đang tải địa chỉ nhận sách…</Notice>
                   )}
@@ -864,6 +823,30 @@ function BuyNowSession({
                       />
                     </>
                   )}
+
+                  <View style={styles.sectionHeaderRow}>
+                    <AppText kind="small" style={styles.sectionOverline}>
+                      ĐỊA CHỈ NHẬN SÁCH
+                    </AppText>
+                    {!addingAddress && addressesQuery.data?.items.length ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Thêm địa chỉ giao hàng mới"
+                        onPress={() => setAddingAddress(true)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={({ pressed }) => [
+                          styles.addAddressPill,
+                          pressed && { opacity: 0.75 },
+                        ]}
+                      >
+                        <Icon name="plus" size={12} color={stitchTokens.wine} strokeWidth={2.4} />
+                        <AppText kind="small" style={styles.addAddressText}>
+                          Thêm địa chỉ
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+
                   {addressesQuery.data?.items.length === 0 &&
                     !addingAddress && (
                       <Button
@@ -872,50 +855,12 @@ function BuyNowSession({
                         onPress={() => setAddingAddress(true)}
                       />
                     )}
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <AppText
-                      kind="label"
-                      color={stitchTokens.wine}
-                      style={{ fontWeight: "700" }}
-                    >
-                      ĐỊA CHỈ NHẬN SÁCH (DIRECT DELIVERY)
-                    </AppText>
-                    {!addingAddress && addressesQuery.data?.items.length ? (
-                      <Pressable
-                        onPress={() => setAddingAddress(true)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <AppText
-                          kind="small"
-                          color={stitchTokens.wine}
-                          style={{ fontWeight: "700" }}
-                        >
-                          + Thêm địa chỉ mới
-                        </AppText>
-                      </Pressable>
-                    ) : null}
-                  </View>
 
                   {/* Add New Address Form */}
                   {addingAddress ? (
-                    <View
-                      style={{
-                        backgroundColor: stitchTokens.warmIvory,
-                        borderRadius: 14,
-                        borderWidth: 1,
-                        borderColor: stitchTokens.peachBorder,
-                        padding: space.md,
-                        gap: space.sm,
-                      }}
-                    >
-                      <AppText kind="bold" color={stitchTokens.wineDark}>
-                        Nhập địa chỉ giao hàng mới
+                    <View style={styles.addressFormCard}>
+                      <AppText kind="bold" style={styles.addressFormTitle}>
+                        Thêm địa chỉ nhận sách mới
                       </AppText>
 
                       <TextField
@@ -934,13 +879,9 @@ function BuyNowSession({
                         onChangeText={setNewPhone}
                       />
 
-                      <View style={{ gap: 4 }}>
-                        <AppText
-                          kind="small"
-                          color={stitchTokens.wineDark}
-                          style={{ fontWeight: "600" }}
-                        >
-                          Khu vực luân chuyển
+                      <View style={{ gap: 6 }}>
+                        <AppText kind="small" style={styles.fieldSubLabel}>
+                          Khu vực giao nhận
                         </AppText>
                         <ScrollView
                           horizontal
@@ -953,29 +894,17 @@ function BuyNowSession({
                               <Pressable
                                 key={loc.code}
                                 onPress={() => setNewLocality(loc.code)}
-                                style={{
-                                  paddingHorizontal: 12,
-                                  paddingVertical: 8,
-                                  borderRadius: 8,
-                                  backgroundColor: isLocActive
-                                    ? stitchTokens.wine
-                                    : stitchTokens.parchment,
-                                  borderWidth: 1,
-                                  borderColor: isLocActive
-                                    ? stitchTokens.wine
-                                    : stitchTokens.peachBorder,
-                                }}
+                                style={[
+                                  styles.localityChip,
+                                  isLocActive && styles.localityChipActive,
+                                ]}
                               >
                                 <AppText
                                   kind="small"
-                                  color={
-                                    isLocActive
-                                      ? stitchTokens.white
-                                      : stitchTokens.wineDark
-                                  }
-                                  style={{
-                                    fontWeight: isLocActive ? "700" : "500",
-                                  }}
+                                  style={[
+                                    styles.localityChipText,
+                                    isLocActive && styles.localityChipTextActive,
+                                  ]}
                                 >
                                   {loc.label}
                                 </AppText>
@@ -996,23 +925,17 @@ function BuyNowSession({
                         <Notice tone="error">{addressError}</Notice>
                       ) : null}
 
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          gap: space.sm,
-                          marginTop: 4,
-                        }}
-                      >
+                      <View style={styles.addressFormActions}>
                         {addressesQuery.data?.items?.length ? (
                           <Button
                             secondary
-                            title="Quay lại danh sách"
+                            title="Quay lại"
                             onPress={() => setAddingAddress(false)}
                           />
                         ) : null}
                         <Button
                           wine
-                          title="Lưu và chọn nơi nhận"
+                          title="Lưu & chọn địa chỉ"
                           busy={busy}
                           onPress={() => void handleSaveNewAddress()}
                         />
@@ -1020,66 +943,52 @@ function BuyNowSession({
                     </View>
                   ) : (
                     /* Existing Addresses List */
-                    <View style={{ gap: space.xs }}>
+                    <View style={{ gap: 8 }}>
                       {addressesQuery.data?.items.map((addr) => {
                         const isSelected = addr.id === effectiveAddressId;
                         return (
                           <Pressable
                             key={addr.id}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: isSelected }}
                             onPress={() => setSelectedAddressId(addr.id)}
-                            style={{
-                              backgroundColor: isSelected
-                                ? stitchTokens.roseWarmSurface
-                                : stitchTokens.warmIvory,
-                              borderWidth: isSelected ? 2 : 1,
-                              borderColor: isSelected
-                                ? stitchTokens.wine
-                                : stitchTokens.borderWarm,
-                              borderRadius: 12,
-                              padding: space.sm,
-                              gap: 2,
-                            }}
+                            style={({ pressed }) => [
+                              styles.addressOption,
+                              isSelected && styles.addressOptionSelected,
+                              pressed && { opacity: 0.88 },
+                            ]}
                           >
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                              }}
-                            >
+                            <View style={styles.addressOptionBody}>
                               <AppText
                                 kind="bold"
-                                color={stitchTokens.wineDark}
-                                style={{ fontSize: 13 }}
+                                style={styles.addressRecipient}
+                                numberOfLines={1}
                               >
                                 {addr.recipientName} · {addr.phone}
                               </AppText>
+                              <AppText
+                                kind="small"
+                                style={styles.addressDetail}
+                                numberOfLines={2}
+                              >
+                                {addr.detail}
+                              </AppText>
+                            </View>
+                            <View
+                              style={[
+                                styles.radioCircle,
+                                isSelected && styles.radioCircleSelected,
+                              ]}
+                            >
                               {isSelected ? (
-                                <View
-                                  style={{
-                                    width: 16,
-                                    height: 16,
-                                    borderRadius: 8,
-                                    backgroundColor: stitchTokens.wine,
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                  }}
-                                >
-                                  <Icon
-                                    name="check"
-                                    size={10}
-                                    color={stitchTokens.gold}
-                                  />
-                                </View>
+                                <Icon
+                                  name="check"
+                                  size={11}
+                                  color={stitchTokens.white}
+                                  strokeWidth={2.8}
+                                />
                               ) : null}
                             </View>
-                            <AppText
-                              kind="small"
-                              color={stitchTokens.subtleGray}
-                              numberOfLines={2}
-                            >
-                              {addr.detail}
-                            </AppText>
                           </Pressable>
                         );
                       })}
@@ -1087,118 +996,92 @@ function BuyNowSession({
                   )}
                 </View>
 
-                {/* Price Breakdown / Quote Result */}
-                <View
-                  style={{
-                    backgroundColor: stitchTokens.warmIvory,
-                    borderRadius: 14,
-                    borderWidth: 1,
-                    borderColor: stitchTokens.borderWarm,
-                    padding: space.md,
-                    gap: space.xs,
-                  }}
-                >
-                  <AppText
-                    kind="label"
-                    color={stitchTokens.wine}
-                    style={{ fontWeight: "700" }}
-                  >
-                    CHI PHÍ ĐƠN HÀNG
+                {/* Price Breakdown Card */}
+                <View style={styles.summaryCard}>
+                  <AppText kind="small" style={styles.sectionOverline}>
+                    CHI TIẾT THANH TOÁN
                   </AppText>
 
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      paddingVertical: 2,
-                    }}
-                  >
-                    <AppText kind="body" color={stitchTokens.subtleGray}>
-                      Tiền sách
-                    </AppText>
-                    <AppText kind="bold" color={stitchTokens.wineDark}>
-                      {formatVnd(
-                        quote?.amounts.bookPrice ?? listing?.salePrice,
+                  <View style={styles.summaryRows}>
+                    <View style={styles.summaryRow}>
+                      <AppText kind="small" style={styles.summaryLabel}>
+                        Tiền sách
+                      </AppText>
+                      <AppText kind="bold" style={styles.summaryValue}>
+                        {formatVnd(
+                          quote?.amounts.bookPrice ?? listing?.salePrice,
+                        )}
+                      </AppText>
+                    </View>
+
+                    <View style={styles.summaryRow}>
+                      <AppText kind="small" style={styles.summaryLabel}>
+                        Phí vận chuyển
+                      </AppText>
+                      {quoteLoading ? (
+                        <View style={styles.inlineLoading}>
+                          <ActivityIndicator size="small" color={stitchTokens.wine} />
+                          <AppText kind="small" style={styles.summaryMuted}>
+                            Đang tính…
+                          </AppText>
+                        </View>
+                      ) : quote ? (
+                        quote.amounts.shippingFee > 0 ? (
+                          <AppText kind="bold" style={styles.summaryValue}>
+                            {formatVnd(quote.amounts.shippingFee)}
+                          </AppText>
+                        ) : (
+                          <View style={styles.freeShipBadge}>
+                            <AppText kind="small" style={styles.freeShipText}>
+                              Miễn phí
+                            </AppText>
+                          </View>
+                        )
+                      ) : (
+                        <AppText kind="small" style={styles.summaryMuted}>
+                          Chưa có báo giá
+                        </AppText>
                       )}
-                    </AppText>
+                    </View>
                   </View>
 
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      paddingVertical: 2,
-                    }}
-                  >
-                    <AppText kind="body" color={stitchTokens.subtleGray}>
-                      Phí giao hàng
-                    </AppText>
-                    <AppText kind="bold" color={stitchTokens.wineDark}>
-                      {quoteLoading
-                        ? "Đang tính phí..."
-                        : quote
-                          ? quote.amounts.shippingFee > 0 ? formatVnd(quote.amounts.shippingFee) : "Miễn phí"
-                          : "Chưa có báo giá"}
-                    </AppText>
-                  </View>
+                  <View style={styles.summaryDivider} />
 
-                  <View
-                    style={{
-                      height: 1,
-                      backgroundColor: stitchTokens.borderWarm,
-                      marginVertical: 4,
-                    }}
-                  />
-
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      paddingVertical: 2,
-                    }}
-                  >
-                    <AppText
-                      kind="bold"
-                      color={stitchTokens.wineDark}
-                      style={{ fontSize: 16 }}
-                    >
+                  <View style={styles.totalRow}>
+                    <AppText kind="bold" style={styles.totalLabel}>
                       Tổng thanh toán
                     </AppText>
-                    <AppText
-                      kind="bold"
-                      color={stitchTokens.wine}
-                      style={{ fontSize: 18, fontWeight: "800" }}
-                    >
+                    <AppText kind="bold" style={styles.totalValue}>
                       {quoteLoading
-                        ? "..."
+                        ? "…"
                         : quote
                           ? formatVnd(quote.amounts.buyerTotal)
-                          : "Chưa có báo giá"}
+                          : "—"}
                     </AppText>
                   </View>
-                  {quote && <AppText kind="small" color={stitchTokens.subtleGray}>{buyerSaleFeeText(quote.amounts.commissionBps)}</AppText>}
+
+                  {quote ? (
+                    <View style={styles.feeFootnoteRow}>
+                      <Icon name="info" size={13} color={stitchTokens.softStone} />
+                      <AppText kind="small" style={styles.feeFootnoteText}>
+                        {buyerSaleFeeText(quote.amounts.commissionBps)}
+                      </AppText>
+                    </View>
+                  ) : null}
                 </View>
 
-                <Notice tone="info">
-                  Bấm &quot;Xác nhận đặt mua&quot; sẽ giữ bản sách trong 15 phút
-                  để thanh toán qua Ví Lật Lại. Sau thanh toán, người bán chuẩn
-                  bị bàn giao theo thời hạn tại đơn.
-                </Notice>
-                <TransactionNotes notes={directOrderHoldNotes("BuyNow")} />
-
-                {/* Order Action Button */}
-                <Button
-                  wine
-                  title={busy ? "Đang tạo đơn mua..." : "Xác nhận đặt mua"}
-                  disabled={
-                    busy ||
-                    quoteLoading ||
-                    !usableQuote ||
-                    addingAddress ||
-                    (!!listing?.bundle && !bundleAcknowledged)
-                  }
-                  onPress={() => void handleCreateOrder()}
-                />
+                {/* Compact Protection Note */}
+                <View style={styles.protectionCard}>
+                  <Icon name="shield" size={16} color={stitchTokens.likeNewGreen} />
+                  <View style={styles.protectionBody}>
+                    <AppText kind="bold" style={styles.protectionTitle}>
+                      Bảo chứng Ví Lật Lại · Giữ sách 15 phút
+                    </AppText>
+                    <AppText kind="small" style={styles.protectionDesc}>
+                      Tiền đơn được Ví giữ an toàn trong lúc giao nhận và kiểm tra sách. Theo dõi các mốc tiếp theo trong chi tiết đơn.
+                    </AppText>
+                  </View>
+                </View>
               </>
             )}
 
@@ -1252,251 +1135,273 @@ function BuyNowSession({
               orderDetails &&
               (orderDetails.paymentEnabled || pending) && (
                 <>
-                  <View
-                    style={{
-                      backgroundColor: stitchTokens.goldLight,
-                      borderRadius: 12,
-                      padding: space.md,
-                      gap: 6,
-                      borderWidth: 1,
-                      borderColor: stitchTokens.goldDark,
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Icon
-                        name="clock"
-                        size={18}
-                        color={stitchTokens.wineDark}
-                      />
-                      <AppText
-                        kind="bold"
-                        color={stitchTokens.wineDark}
-                        style={{ fontSize: 14 }}
-                      >
-                        Đang giữ sách trong 15 phút
+                  <View style={styles.deadlineBanner}>
+                    <View style={styles.deadlineHeader}>
+                      <Icon name="clock" size={16} color={stitchTokens.goldBronze} />
+                      <AppText kind="bold" style={styles.deadlineTitle}>
+                        Đang giữ bản sách trong 15 phút
                       </AppText>
                     </View>
-                    <AppText kind="small" color={stitchTokens.wineDark}>
+                    <AppText kind="small" style={styles.deadlineBody}>
                       Hạn thanh toán:{" "}
-                      {new Date(
-                        orderDetails.paymentDeadline,
-                      ).toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      })}
-                      . Quá thời gian này, sách sẽ tự động mở lại cho người khác
-                      mua.
+                      <AppText kind="bold" style={styles.deadlineTime}>
+                        {new Date(
+                          orderDetails.paymentDeadline,
+                        ).toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </AppText>
+                      . Quá hạn, bản sách sẽ tự động mở lại cho bạn đọc khác.
                     </AppText>
                   </View>
 
-                  {/* Wallet Balance Card */}
-                  <View
-                    style={{
-                      backgroundColor: stitchTokens.warmIvory,
-                      borderRadius: 14,
-                      borderWidth: 1,
-                      borderColor: stitchTokens.peachBorder,
-                      padding: space.md,
-                      gap: space.xs,
-                    }}
-                  >
-                    <AppText
-                      kind="label"
-                      color={stitchTokens.wine}
-                      style={{ fontWeight: "700" }}
-                    >
-                      VÍ LẬT LẠI (SỐ DƯ THANH TOÁN)
+                  {/* Wallet Balance & Payment Breakdown Card */}
+                  <View style={styles.summaryCard}>
+                    <AppText kind="small" style={styles.sectionOverline}>
+                      THANH TOÁN QUA VÍ LẬT LẠI
                     </AppText>
 
-                    {[
-                      ["Tiền sách", formatVnd(orderDetails.amounts.bookPrice)],
-                      ["Phí giao hàng", orderDetails.amounts.shippingFee > 0
-                        ? formatVnd(orderDetails.amounts.shippingFee)
-                        : "Miễn phí"],
-                    ].map(([label, value]) => (
-                      <View key={label} style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
-                        <AppText style={{ flex: 1 }} color={stitchTokens.subtleGray}>{label}</AppText>
-                        <AppText kind="bold">{value}</AppText>
+                    <View style={styles.summaryRows}>
+                      <View style={styles.summaryRow}>
+                        <AppText kind="small" style={styles.summaryLabel}>
+                          Tiền sách
+                        </AppText>
+                        <AppText kind="bold" style={styles.summaryValue}>
+                          {formatVnd(orderDetails.amounts.bookPrice)}
+                        </AppText>
                       </View>
-                    ))}
-
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <AppText kind="body" color={stitchTokens.subtleGray}>
-                        Số dư khả dụng:
-                      </AppText>
-                      <AppText
-                        kind="bold"
-                        color={stitchTokens.wineDark}
-                        style={{ fontSize: 16 }}
-                      >
-                        {walletQuery.isPending
-                          ? "Đang tải…"
-                          : walletReady
-                            ? formatVnd(walletBalance)
-                            : "Chưa tải được"}
-                      </AppText>
+                      <View style={styles.summaryRow}>
+                        <AppText kind="small" style={styles.summaryLabel}>
+                          Phí vận chuyển
+                        </AppText>
+                        {orderDetails.amounts.shippingFee > 0 ? (
+                          <AppText kind="bold" style={styles.summaryValue}>
+                            {formatVnd(orderDetails.amounts.shippingFee)}
+                          </AppText>
+                        ) : (
+                          <View style={styles.freeShipBadge}>
+                            <AppText kind="small" style={styles.freeShipText}>
+                              Miễn phí
+                            </AppText>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.summaryRow}>
+                        <AppText kind="small" style={styles.summaryLabel}>
+                          Số dư Ví khả dụng
+                        </AppText>
+                        <AppText
+                          kind="bold"
+                          style={[
+                            styles.summaryValue,
+                            walletReady && {
+                              color: hasEnoughBalance
+                                ? stitchTokens.likeNewGreen
+                                : stitchTokens.crimson,
+                            },
+                          ]}
+                        >
+                          {walletQuery.isPending
+                            ? "Đang tải…"
+                            : walletReady
+                              ? formatVnd(walletBalance)
+                              : "Chưa tải được"}
+                        </AppText>
+                      </View>
                     </View>
 
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <AppText kind="body" color={stitchTokens.subtleGray}>
-                        Số tiền cần trả:
+                    <View style={styles.summaryDivider} />
+
+                    <View style={styles.totalRow}>
+                      <AppText kind="bold" style={styles.totalLabel}>
+                        Số tiền cần trả
                       </AppText>
-                      <AppText
-                        kind="bold"
-                        color={stitchTokens.wine}
-                        style={{ fontSize: 18, fontWeight: "800" }}
-                      >
+                      <AppText kind="bold" style={styles.totalValue}>
                         {formatVnd(orderDetails.amounts.buyerTotal)}
                       </AppText>
                     </View>
-                    <AppText kind="small" color={stitchTokens.subtleGray}>
-                      {buyerSaleFeeText(orderDetails.amounts.commissionBps)}
-                    </AppText>
-                    <TransactionNotes notes={directOrderHoldNotes(orderDetails.purchaseMode ?? (listing ? "BuyNow" : undefined))} />
+
+                    <View style={styles.feeFootnoteRow}>
+                      <Icon name="info" size={13} color={stitchTokens.softStone} />
+                      <AppText kind="small" style={styles.feeFootnoteText}>
+                        {buyerSaleFeeText(orderDetails.amounts.commissionBps)}
+                      </AppText>
+                    </View>
+                  </View>
+
+                  {/* Compact Protection Note for Step 2 */}
+                  <View style={styles.protectionCard}>
+                    <Icon name="shield" size={16} color={stitchTokens.likeNewGreen} />
+                    <View style={styles.protectionBody}>
+                      <AppText kind="bold" style={styles.protectionTitle}>
+                        Tiền được bảo chứng qua Ví Lật Lại
+                      </AppText>
+                      <AppText kind="small" style={styles.protectionDesc}>
+                        Ví giữ toàn bộ tiền đơn trong lúc giao nhận và kiểm tra sách.
+                      </AppText>
+                    </View>
                   </View>
 
                   {walletReady && !hasEnoughBalance && (
                     <Notice tone="warning">
-                      Số dư ví không đủ để thanh toán đơn hàng này. Vui lòng nạp
-                      thêm tiền vào ví trước khi hết hạn 15 phút.
+                      Số dư ví chưa đủ để thanh toán đơn này. Vui lòng nạp thêm
+                      trước khi hết hạn 15 phút.
                     </Notice>
                   )}
 
-                  <View style={{ gap: space.sm, marginTop: space.sm }}>
-                    {pending ? (
-                      <>
-                        <Notice tone="warning">
-                          Chưa xác minh xong thao tác trước. Thử lại cùng yêu
-                          cầu; chưa thanh toán hoặc hủy bằng lệnh khác.
-                        </Notice>
-                        {pending === "pay" || pending === "cancel" ? (
-                          <Button
-                            wine
-                            busy={busy}
-                            title={
-                              pending === "pay"
-                                ? "Thử lại thanh toán trước"
-                                : "Thử lại hủy đơn trước"
-                            }
-                            onPress={() =>
-                              void (pending === "pay"
-                                ? handlePayOrder()
-                                : handleCancelOrder())
-                            }
-                          />
-                        ) : (
-                          <Notice>
-                            Mở chi tiết đơn để xác minh quyết định trước.
-                          </Notice>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {!walletReady ? (
-                          <Button
-                            secondary
-                            title="Thử tải lại số dư ví"
-                            busy={walletQuery.isFetching}
-                            onPress={() => void walletQuery.refetch()}
-                          />
-                        ) : hasEnoughBalance ? (
-                          <Button
-                            wine
-                            title={`Thanh toán ngay (${formatVnd(orderDetails.amounts.buyerTotal)})`}
-                            busy={busy}
-                            disabled={!orderDetails.paymentEnabled}
-                            onPress={() => void handlePayOrder()}
-                          />
-                        ) : (
-                          <Button
-                            wine
-                            title={`Nạp tiền vào Ví (Thiếu ${formatVnd(Math.max(0, orderDetails.amounts.buyerTotal - walletBalance))})`}
-                            onPress={() => setShowTopupModal(true)}
-                          />
-                        )}
+                  {pending ? (
+                    <View style={{ gap: space.sm }}>
+                      <Notice tone="warning">
+                        Chưa xác minh xong thao tác trước. Thử lại cùng yêu
+                        cầu; chưa thanh toán hoặc hủy bằng lệnh khác.
+                      </Notice>
+                      {pending === "pay" || pending === "cancel" ? (
                         <Button
-                          secondary
-                          destructive
-                          title="Hủy đơn đặt mua"
-                          disabled={busy || orderDetails.canCancel === false}
-                          onPress={() => void handleCancelOrder()}
+                          wine
+                          busy={busy}
+                          title={
+                            pending === "pay"
+                              ? "Thử lại thanh toán trước"
+                              : "Thử lại hủy đơn trước"
+                          }
+                          onPress={() =>
+                            void (pending === "pay"
+                              ? handlePayOrder()
+                              : handleCancelOrder())
+                          }
                         />
-                      </>
-                    )}
-                  </View>
+                      ) : (
+                        <Notice>
+                          Mở chi tiết đơn để xác minh quyết định trước.
+                        </Notice>
+                      )}
+                    </View>
+                  ) : null}
                 </>
               )}
 
             {/* STEP 3: Success Step */}
             {step === "success" && (
-              <View
-                style={{
-                  alignItems: "center",
-                  gap: space.md,
-                  paddingVertical: space.lg,
-                }}
-              >
-                <View
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 32,
-                    backgroundColor: stitchTokens.likeNewGreenBg,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+              <View style={styles.successWrap}>
+                <View style={styles.successIconCircle}>
                   <Icon
                     name="check"
-                    size={32}
+                    size={30}
                     color={stitchTokens.likeNewGreen}
+                    strokeWidth={2.5}
                   />
                 </View>
 
-                <AppText
-                  kind="heading"
-                  color={stitchTokens.wineDark}
-                  style={{ textAlign: "center" }}
-                >
+                <AppText kind="heading" style={styles.successTitle}>
                   Đặt mua thành công!
                 </AppText>
 
-                <AppText
-                  kind="body"
-                  color={stitchTokens.subtleGray}
-                  style={{ textAlign: "center", lineHeight: 22 }}
-                >
-                  Tiền đang được giữ trong giao dịch. Mở chi tiết để theo dõi
-                  trạng thái, thời hạn và bước tiếp theo.
+                <AppText kind="body" style={styles.successBody}>
+                  Tiền đơn đã được Ví Lật Lại bảo chứng an toàn. Mở chi tiết đơn
+                  để theo dõi quá trình gửi sách và mốc kiểm tra.
                 </AppText>
 
-                <Button
-                  wine
-                  title="Xem đơn vừa thanh toán"
-                  onPress={openCreatedOrder}
-                />
+                <View style={{ width: "100%", marginTop: 4 }}>
+                  <Button
+                    wine
+                    title="Xem đơn vừa thanh toán"
+                    onPress={openCreatedOrder}
+                  />
+                </View>
               </View>
             )}
           </ScrollView>
+
+          {/* Anchored Bottom CTA Bar (Step 1: Ready to Create Order) */}
+          {step === "address_quote" && !pendingCreation && !addingAddress ? (
+            <View
+              style={[
+                styles.stickyFooter,
+                { paddingBottom: Math.max(insets.bottom, 14) },
+              ]}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Xác nhận đặt mua"
+                accessibilityState={{ disabled: !canSubmitOrder, busy }}
+                disabled={!canSubmitOrder}
+                onPress={() => void handleCreateOrder()}
+                style={({ pressed }) => [
+                  styles.stickyPrimaryBtn,
+                  !canSubmitOrder && styles.stickyPrimaryBtnDisabled,
+                  pressed && canSubmitOrder && { opacity: 0.86 },
+                ]}
+              >
+                {busy ? (
+                  <ActivityIndicator size="small" color={stitchTokens.gold} />
+                ) : null}
+                <AppText kind="bold" style={styles.stickyPrimaryBtnText} numberOfLines={1}>
+                  {busy ? "Đang tạo đơn…" : "Xác nhận đặt mua"}
+                </AppText>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {/* Anchored Bottom CTA Bar (Step 2: Wallet Payment) */}
+          {step === "payment" &&
+          orderDetails &&
+          orderDetails.paymentEnabled &&
+          !pending ? (
+            <View
+              style={[
+                styles.stickyFooterStacked,
+                { paddingBottom: Math.max(insets.bottom, 14) },
+              ]}
+            >
+              {!walletReady ? (
+                <Button
+                  secondary
+                  title="Thử tải lại số dư ví"
+                  busy={walletQuery.isFetching}
+                  onPress={() => void walletQuery.refetch()}
+                />
+              ) : hasEnoughBalance ? (
+                <Button
+                  wine
+                  title={`Thanh toán ngay · ${formatVnd(orderDetails.amounts.buyerTotal)}`}
+                  busy={busy}
+                  disabled={!orderDetails.paymentEnabled}
+                  onPress={() => void handlePayOrder()}
+                />
+              ) : (
+                <Button
+                  wine
+                  title={`Nạp thêm vào Ví (thiếu ${formatVnd(Math.max(0, orderDetails.amounts.buyerTotal - walletBalance))})`}
+                  onPress={() => setShowTopupModal(true)}
+                />
+              )}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Hủy đơn đặt mua"
+                disabled={busy || orderDetails.canCancel === false}
+                onPress={() => void handleCancelOrder()}
+                style={({ pressed }) => [
+                  styles.cancelOrderLink,
+                  (busy || orderDetails.canCancel === false) && { opacity: 0.45 },
+                  pressed && { opacity: 0.72 },
+                ]}
+              >
+                <AppText kind="bold" style={styles.cancelOrderLinkText}>
+                  Hủy đơn đặt mua
+                </AppText>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {/* Safe area spacer when no sticky footer is active */}
+          {!(
+            (step === "address_quote" && !pendingCreation && !addingAddress) ||
+            (step === "payment" && orderDetails && orderDetails.paymentEnabled && !pending)
+          ) ? (
+            <View style={{ height: Math.max(insets.bottom, 14) }} />
+          ) : null}
         </View>
       </KeyboardAvoidingView>
 
@@ -1522,3 +1427,453 @@ function BuyNowSession({
     </AppModal>
   );
 }
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: stitchTokens.modalScrim,
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: stitchTokens.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "92%",
+    overflow: "hidden",
+  },
+  handleWrap: {
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  handleBar: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: stitchTokens.cardBorder,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: space.lg,
+    paddingTop: 6,
+    paddingBottom: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderColor: stitchTokens.borderParchmentSoft,
+  },
+  headerTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  headerTitle: {
+    fontSize: 18,
+    lineHeight: 23,
+    color: stitchTokens.wineDark,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: stitchTokens.subtleGray,
+  },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: stitchTokens.pillWarmBg,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+
+  scrollContent: {
+    paddingHorizontal: space.lg,
+    paddingTop: 14,
+    paddingBottom: 16,
+    gap: 14,
+  },
+
+  // Book Summary Row
+  bookCard: {
+    flexDirection: "row",
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 14,
+    padding: 10,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    alignItems: "center",
+  },
+  bookCoverBox: {
+    width: 48,
+    height: 66,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.white,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  bookInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  bookTitle: {
+    fontSize: 14,
+    lineHeight: 19,
+    color: stitchTokens.wineDark,
+  },
+  bookAuthor: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: stitchTokens.subtleGray,
+  },
+  bookPrice: {
+    fontSize: 14.5,
+    lineHeight: 19,
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+    marginTop: 3,
+  },
+
+  // Section Headers
+  sectionBlock: {
+    gap: 8,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionOverline: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: stitchTokens.subtleGray,
+  },
+  addAddressPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: stitchTokens.roseParchment,
+  },
+  addAddressText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+    includeFontPadding: false,
+  },
+
+  // Address Options
+  addressOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: stitchTokens.white,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  addressOptionSelected: {
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.wine,
+  },
+  addressOptionBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  addressRecipient: {
+    fontSize: 13.5,
+    lineHeight: 18,
+    color: stitchTokens.wineDark,
+  },
+  addressDetail: {
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: stitchTokens.subtleGray,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.radioDisabledBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  radioCircleSelected: {
+    backgroundColor: stitchTokens.wine,
+    borderColor: stitchTokens.wine,
+  },
+
+  // Inline Address Form
+  addressFormCard: {
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 14,
+    gap: 10,
+  },
+  addressFormTitle: {
+    fontSize: 14,
+    color: stitchTokens.wineDark,
+  },
+  fieldSubLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  localityChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: stitchTokens.white,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+  },
+  localityChipActive: {
+    backgroundColor: stitchTokens.wine,
+    borderColor: stitchTokens.wine,
+  },
+  localityChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  localityChipTextActive: {
+    color: stitchTokens.white,
+    fontWeight: "700",
+  },
+  addressFormActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+  },
+
+  // Summary / Price Breakdown Card
+  summaryCard: {
+    backgroundColor: stitchTokens.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 14,
+    gap: 10,
+  },
+  summaryRows: {
+    gap: 8,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  summaryLabel: {
+    fontSize: 13.5,
+    lineHeight: 18,
+    color: stitchTokens.subtleGray,
+  },
+  summaryValue: {
+    fontSize: 13.5,
+    lineHeight: 18,
+    color: stitchTokens.wineDark,
+    fontVariant: ["tabular-nums"],
+  },
+  summaryMuted: {
+    fontSize: 12.5,
+    color: stitchTokens.subtleGray,
+  },
+  inlineLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  freeShipBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 999,
+    backgroundColor: stitchTokens.likeNewGreenBg,
+  },
+  freeShipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.likeNewGreen,
+    includeFontPadding: false,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: stitchTokens.borderParchmentSoft,
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  totalLabel: {
+    fontSize: 14.5,
+    lineHeight: 20,
+    color: stitchTokens.wineDark,
+  },
+  totalValue: {
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: "800",
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+  feeFootnoteRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    paddingTop: 2,
+  },
+  feeFootnoteText: {
+    flex: 1,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: stitchTokens.softStone,
+  },
+
+  // Compact Protection Card
+  protectionCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: stitchTokens.cardWarmLight,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarmLight,
+    padding: 12,
+  },
+  protectionBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  protectionTitle: {
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: stitchTokens.wineDark,
+  },
+  protectionDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: stitchTokens.subtleGray,
+  },
+
+  // Step 2 Deadline Banner
+  deadlineBanner: {
+    backgroundColor: stitchTokens.amberWarmBg,
+    borderRadius: 14,
+    padding: 12,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorderSoft,
+  },
+  deadlineHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  deadlineTitle: {
+    fontSize: 13.5,
+    color: stitchTokens.wineDark,
+  },
+  deadlineBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: stitchTokens.espresso,
+  },
+  deadlineTime: {
+    fontSize: 12.5,
+    color: stitchTokens.wine,
+    fontVariant: ["tabular-nums"],
+  },
+
+  // Step 3 Success
+  successWrap: {
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 18,
+  },
+  successIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  successTitle: {
+    textAlign: "center",
+    color: stitchTokens.wineDark,
+  },
+  successBody: {
+    textAlign: "center",
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: stitchTokens.subtleGray,
+  },
+
+  // Sticky Bottom Checkout Footer
+  stickyFooter: {
+    paddingHorizontal: space.lg,
+    paddingTop: 10,
+    backgroundColor: stitchTokens.white,
+    borderTopWidth: 1,
+    borderColor: stitchTokens.borderParchmentSoft,
+  },
+  stickyPrimaryBtn: {
+    width: "100%",
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.wine,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  stickyPrimaryBtnDisabled: {
+    opacity: 0.45,
+  },
+  stickyPrimaryBtnText: {
+    fontSize: 14.5,
+    lineHeight: 19,
+    color: stitchTokens.gold,
+    includeFontPadding: false,
+  },
+  stickyFooterStacked: {
+    paddingHorizontal: space.lg,
+    paddingTop: 12,
+    gap: 8,
+    backgroundColor: stitchTokens.white,
+    borderTopWidth: 1,
+    borderColor: stitchTokens.borderParchmentSoft,
+  },
+  cancelOrderLink: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+  cancelOrderLinkText: {
+    fontSize: 13,
+    color: stitchTokens.crimson,
+  },
+});
