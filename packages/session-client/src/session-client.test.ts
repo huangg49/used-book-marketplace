@@ -406,3 +406,122 @@ describe("session lifecycle", () => {
     expect(client.getSnapshot().status).toBe("anonymous");
   });
 });
+
+// A provider that remounts (web history jump, StrictMode) builds a second
+// client over the same token store while the first is still restoring.
+describe("refresh token rotation shared by clients over one store", () => {
+  // Server model: each refresh token works once; reuse is a 401.
+  function rotatingServer(delayMs = 5) {
+    let current = tokens("a").refreshToken;
+    let n = 0;
+    const calls: string[] = [];
+    const fetcher = vi.fn<Fetcher>(async (url, init) => {
+      const path = new URL(url).pathname;
+      if (path.endsWith("/auth/refresh")) {
+        const sent = JSON.parse(String(init?.body)).refreshToken as string;
+        calls.push(sent);
+        await new Promise((r) => setTimeout(r, delayMs));
+        if (sent !== current) return json({ code: "SESSION_EXPIRED", message: "expired" }, 401);
+        const next = tokens(String.fromCharCode(98 + n++)); // b, c, ...
+        current = next.refreshToken;
+        return json(next);
+      }
+      return new Response(null, { status: 204 });
+    });
+    return { fetcher, calls, current: () => current };
+  }
+
+  it("rotates once when two clients restore at the same time", async () => {
+    const storage = memoryStorage(tokens("a").refreshToken);
+    const server = rotatingServer();
+    const first = new SessionClient("https://api.test", storage, server.fetcher);
+    const second = new SessionClient("https://api.test", storage, server.fetcher);
+    await Promise.all([first.restore(), second.restore()]);
+    expect(server.calls).toEqual([tokens("a").refreshToken]);
+    expect(first.getSnapshot()).toEqual({ status: "authenticated", user });
+    expect(second.getSnapshot()).toEqual({ status: "authenticated", user });
+    expect(await storage.read()).toBe(server.current());
+    expect(storage.clear).not.toHaveBeenCalled();
+  });
+
+  it("adopts a rotation that finished after it read the old token", async () => {
+    const storage = memoryStorage(tokens("a").refreshToken);
+    const server = rotatingServer();
+    const first = new SessionClient("https://api.test", storage, server.fetcher);
+    const second = new SessionClient("https://api.test", storage, server.fetcher);
+    // The second client reads the stored token, then resumes only after the
+    // first client's rotation has been accepted.
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    storage.read.mockImplementationOnce(async () => tokens("a").refreshToken);
+    storage.read.mockImplementationOnce(async () => {
+      const stale = tokens("a").refreshToken;
+      await gate;
+      return stale;
+    });
+    const firstRestore = first.restore();
+    const secondRestore = second.restore();
+    await firstRestore;
+    release();
+    await secondRestore;
+    expect(server.calls).toEqual([tokens("a").refreshToken]);
+    expect(second.getSnapshot()).toEqual({ status: "authenticated", user });
+    expect(storage.clear).not.toHaveBeenCalled();
+    expect(await storage.read()).toBe(server.current());
+  });
+
+  it("restores twice on one client without spending the token twice", async () => {
+    const storage = memoryStorage(tokens("a").refreshToken);
+    const server = rotatingServer();
+    const client = new SessionClient("https://api.test", storage, server.fetcher);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    storage.read.mockImplementationOnce(async () => tokens("a").refreshToken);
+    storage.read.mockImplementationOnce(async () => {
+      await gate;
+      return tokens("a").refreshToken;
+    });
+    const one = client.restore();
+    const two = client.restore();
+    await one;
+    release();
+    await two;
+    expect(server.calls).toHaveLength(1);
+    expect(client.getSnapshot()).toEqual({ status: "authenticated", user });
+    expect(storage.clear).not.toHaveBeenCalled();
+  });
+
+  it("still signs out when the stored token was never rotated by a client", async () => {
+    const storage = memoryStorage(tokens("z").refreshToken);
+    const server = rotatingServer();
+    const client = new SessionClient("https://api.test", storage, server.fetcher);
+    await client.restore();
+    expect(client.getSnapshot()).toEqual({ status: "anonymous" });
+    expect(storage.clear).toHaveBeenCalled();
+  });
+
+  it("forgets the rotation on sign-out so an old token cannot revive it", async () => {
+    const storage = memoryStorage(tokens("a").refreshToken);
+    const server = rotatingServer();
+    const first = new SessionClient("https://api.test", storage, server.fetcher);
+    await first.restore();
+    await first.logout();
+    await storage.write(tokens("a").refreshToken); // a stale copy reappears
+    const second = new SessionClient("https://api.test", storage, server.fetcher);
+    await second.restore();
+    expect(server.calls).toEqual([tokens("a").refreshToken, tokens("a").refreshToken]);
+    expect(second.getSnapshot()).toEqual({ status: "anonymous" });
+  });
+
+  it("does not share a rotation across different token stores", async () => {
+    const a = memoryStorage(tokens("a").refreshToken);
+    const b = memoryStorage(tokens("a").refreshToken);
+    const server = rotatingServer();
+    const one = new SessionClient("https://api.test", a, server.fetcher);
+    const two = new SessionClient("https://api.test", b, server.fetcher);
+    await one.restore();
+    await two.restore();
+    expect(server.calls).toHaveLength(2);
+    expect(two.getSnapshot()).toEqual({ status: "anonymous" });
+  });
+});
