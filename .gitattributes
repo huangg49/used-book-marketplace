@@ -10,3 +10,7 @@
 *.pdf binary
 # Unified diffs require a single-space prefix on empty context lines.
 patches/*.patch whitespace=-blank-at-eol
+# Append-only shared handoff log: every PR prepends its own entry at the top,
+# which git otherwise reports as a conflict once another PR lands. Union keeps
+# both sides' new lines (see docs/AI_WORKFLOW.md).
+docs/handoff/SESSION_STATE.md merge=union

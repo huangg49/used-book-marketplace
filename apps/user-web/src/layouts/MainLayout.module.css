@@ -518,6 +518,28 @@
   border-top: 1px solid #853735;
   font-size: 0.75rem;
   color: #f0d9b9;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+.footerLegal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+.footerLegal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: #f0d9b9;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.footerLegal a:hover {
+  color: #fff;
 }
 .skipLink {
   position: fixed;

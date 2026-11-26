@@ -556,6 +556,17 @@ export function RegisterScreen({
                 color={stitchTokens.wine}
                 onPress={() => setAcceptedRules(!acceptedRules)}
               />
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Đọc Chính sách và quy chế"
+                hitSlop={8}
+                onPress={() => router.push("/policy")}
+                style={{ marginLeft: 30, minHeight: 32, justifyContent: "center" }}
+              >
+                <AppText kind="small" color={stitchTokens.wine} style={{ fontSize: 12, textDecorationLine: "underline" }}>
+                  Đọc Chính sách & quy chế
+                </AppText>
+              </Pressable>
               {attempted && !acceptedRules ? (
                 <AppText
                   kind="small"
