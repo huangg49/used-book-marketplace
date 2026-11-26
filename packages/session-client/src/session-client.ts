@@ -24,6 +24,16 @@ export class ApiError extends Error {
     super(message);
   }
 }
+// The latest refresh-token rotation per token store. A provider that remounts
+// (a web history jump, StrictMode) builds a second client over the same store
+// while the first is still restoring; both read the same rotating refresh
+// token. Spending it twice makes the second refresh a 401 that signs the page
+// out. A client presenting a token that is being, or was just, rotated in this
+// store adopts that result instead. Memory-only, like the tokens themselves;
+// cleared on failure, sign-out and new login.
+type Rotation = { from: string; result: Promise<AuthTokens> };
+const rotations = new WeakMap<TokenStorage, Rotation>();
+
 export type SessionState =
   | { status: "loading" }
   | { status: "anonymous" }
@@ -130,6 +140,7 @@ export class SessionClient {
   }
 
   private async discard() {
+    rotations.delete(this.storage);
     this.revision++;
     this.accessToken = null;
     this.refreshToken = null;
@@ -144,9 +155,11 @@ export class SessionClient {
     });
   }
 
-  private async accept(tokens: AuthTokens, revision: number) {
+  // `owned` is false for tokens adopted from another client's rotation: they
+  // belong to that client too, so this one never revokes them.
+  private async accept(tokens: AuthTokens, revision: number, owned = true) {
     if (revision !== this.revision) {
-      await this.revoke(tokens.refreshToken).catch(() => {});
+      if (owned) await this.revoke(tokens.refreshToken).catch(() => {});
       return;
     }
     try {
@@ -155,7 +168,7 @@ export class SessionClient {
           await this.storage.write(tokens.refreshToken);
       });
     } catch {
-      await this.revoke(tokens.refreshToken).catch(() => {});
+      if (owned) await this.revoke(tokens.refreshToken).catch(() => {});
       // Revocation/storage may have waited while another login took ownership.
       // An obsolete failure must never clear that newer session or its token.
       if (revision === this.revision) await this.discard().catch(() => {});
@@ -166,7 +179,7 @@ export class SessionClient {
       );
     }
     if (revision !== this.revision) {
-      await this.revoke(tokens.refreshToken).catch(() => {});
+      if (owned) await this.revoke(tokens.refreshToken).catch(() => {});
       return;
     }
     this.accessToken = tokens.accessToken;
@@ -203,11 +216,29 @@ export class SessionClient {
     if (this.signingOut)
       throw new ApiError(401, "SIGNING_OUT", "Đang đăng xuất.");
     const revision = ++this.revision;
+    rotations.delete(this.storage);
     const body = await this.send("/auth/login", {
       method: "POST",
       body: JSON.stringify(input),
     });
     await this.accept(authTokensSchema.parse(body), revision);
+  }
+
+  // Spends `token` once per store: a token already being, or just, rotated by
+  // any client over this store resolves to that rotation's tokens.
+  private rotate(token: string): { tokens: Promise<AuthTokens>; owned: boolean } {
+    const last = rotations.get(this.storage);
+    if (last && last.from === token) return { tokens: last.result, owned: false };
+    const result = this.send("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refreshToken: token }),
+    }).then((body) => authTokensSchema.parse(body));
+    const entry: Rotation = { from: token, result };
+    rotations.set(this.storage, entry);
+    result.catch(() => {
+      if (rotations.get(this.storage) === entry) rotations.delete(this.storage);
+    });
+    return { tokens: result, owned: true };
   }
 
   private refresh(): Promise<void> {
@@ -222,11 +253,8 @@ export class SessionClient {
       if (!token)
         throw new ApiError(401, "SESSION_EXPIRED", "Vui lòng đăng nhập lại.");
       try {
-        const body = await this.send("/auth/refresh", {
-          method: "POST",
-          body: JSON.stringify({ refreshToken: token }),
-        });
-        await this.accept(authTokensSchema.parse(body), revision);
+        const { tokens, owned } = this.rotate(token);
+        await this.accept(await tokens, revision, owned);
       } catch (error) {
         if (
           error instanceof ApiError &&
