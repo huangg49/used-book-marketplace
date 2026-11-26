@@ -1,3 +1,26 @@
+# Driver Simulator RN cho Trao đổi và Đấu giá — 27/11/2026
+
+- Local `fix/rn-driver-simulator`, nền `81faee5f`. Nguyên nhân: RN không có
+  nút vào simulator ở Trao đổi; `/driver` chỉ biết `kind=direct`, màn trao đổi
+  cũ gọi `orders/active` không kèm exchange/leg; không có màn đấu giá. Nay
+  `/driver` chia direct/exchange/auction như Web. Trao đổi dùng session client,
+  hai kiện, báo rõ lỗi 404 của cổng local-demo (`DEMO_ALLOW_REMOTE_HOST`). Đấu
+  giá đọc `point-orders/delivery-tracking`, lệnh demo start/deliver và báo kết
+  quả của operator, giữ key/event khi chưa rõ kết quả. Nút demo hiện ở dev hoặc
+  `EXPO_PUBLIC_DRIVER_SIMULATOR=1`; server vẫn kiểm mọi lệnh.
+- PASS typecheck, lint theo file, unit RN 263 (thêm 7). Mongo QA: API E2E
+  `auctions` nhóm ADR 0044 10/10. Browser Expo Web 390px trên DB
+  `ops_browser_*_test` riêng (`pnpm test:rn-driver-simulator:browser`, cần
+  export RN với API 3009 và `EXPO_PUBLIC_DRIVER_SIMULATOR=1`): Trao đổi qua API
+  thật từ nút ở thẻ vận chuyển, 4 mốc kiện 1 tới Delivered trong Mongo, giao nhanh
+  cả hai kiện, Back, thông báo 404 cổng local-demo. Đấu giá dùng phản hồi đúng
+  contract (đơn InTransit cần ghim đồng hồ máy chủ): mất phản hồi gửi lại đúng
+  key/body, giao thành công dùng version mới. 320/390px không tràn; 6 lần PASS.
+  Sửa thêm: màn đấu giá không còn báo "Đăng nhập" khi phiên đang tải; bỏ lặp
+  "Điểm Điểm". Ghi chú: hai lần nhảy history liên tiếp trên RN web làm hai
+  refresh token chạy chồng, một bị 401 và đăng xuất trang (script đã chờ từng
+  refresh). NOT RUN native.
+
 # Refresh token bị dùng hai lần khi provider remount — 27/11/2026
 
 - Local `fix/session-refresh-race`, nền `81faee5f`. Nguyên nhân: RN web tạo
