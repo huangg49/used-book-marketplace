@@ -48,6 +48,7 @@ import { DemoSkipButton } from "./components/demo-skip-button";
 import { WinnerPaymentReview, type WinnerPaymentReviewProps } from "./components/winner-payment-review";
 import { readPointOrderNewest, usePointOrderLive } from "./use-point-order-live";
 import { walletSummary } from "../wallet/contracts";
+import { auctionDriverHref, driverSimulatorEnabled } from "../driver/driver-model";
 import { addressBook, addressReceipt, directory } from "../addresses/contracts";
 import { deliveryQuote, type CodeIssued, type PointOrder } from "./contracts";
 
@@ -1784,6 +1785,18 @@ function DeliveryPanel({
             >
               Hãng vận chuyển: Lật Lại Express (Mô phỏng)
             </AppText>
+            <View style={{ marginTop: space.sm }}>
+              <Button
+                wine
+                secondary
+                title={
+                  demoEnabled && driverSimulatorEnabled() && order.state === "InTransit"
+                    ? "Mở Driver Simulator · Demo"
+                    : "Theo dõi vận đơn"
+                }
+                onPress={() => router.push(auctionDriverHref(d.trackingCode!))}
+              />
+            </View>
           </View>
         ) : (
           <AppText
