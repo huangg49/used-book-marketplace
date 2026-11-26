@@ -26,6 +26,7 @@ import { createExchangeDisputeCompensationMigration, withExchangeDisputeCompensa
 import { restoreFundedExchangeTermsMigration } from './0089-restore-funded-exchange-terms.js';
 import { createSaleSettlementNotificationMigration, withSaleSettlementNotification } from './0090-sale-settlement-notification.js';
 import { createPurchaseOrderNotificationsMigration, withPurchaseOrderNotifications } from './0091-purchase-order-notifications.js';
+import { auditActivityLogIndexesMigration } from './0092-audit-activity-log-indexes.js';
 import { onlinePriceCatalogRevisionMigration, withOnlinePriceCatalogRevision } from './0076-online-price-catalog-revision.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
@@ -718,3 +719,4 @@ migrations.push(saleSettlementNotificationMigration);
 migrations.push(createPurchaseOrderNotificationsMigration(
   saleSettlementNotificationMigration.definition.collections[0]!,
 ));
+migrations.push(auditActivityLogIndexesMigration);

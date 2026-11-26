@@ -17,6 +17,7 @@ import { OrdersModule } from './modules/orders/orders.module.js';
 import { WalletModule } from './modules/wallet/wallet.module.js';
 import { ShipmentsModule } from './modules/shipments/shipments.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { AuditLogModule } from './modules/audit-log/audit-log.module.js';
 import { WishlistModule } from './modules/wishlist/wishlist.module.js';
 import { AuctionsModule } from './modules/auctions/auctions.module.js';
 import { PurchasesModule } from './modules/purchases/purchases.module.js';
@@ -45,6 +46,7 @@ import { TransactionLiveModule } from './modules/transaction-live/transaction-li
     WalletModule,
     ShipmentsModule,
     UsersModule,
+    AuditLogModule,
     WishlistModule,
     AuctionsModule,
     PurchasesModule,

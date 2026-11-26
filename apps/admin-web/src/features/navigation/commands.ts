@@ -30,6 +30,10 @@ const details: Record<string, [string, string]> = {
     "Hiệu suất 3 kênh mua bán, trao đổi, đấu giá và rủi ro",
     "giao dich rui ro hieu suat kenh thanh vien tranh chap",
   ],
+  "/audit": [
+    "Tra cứu thao tác của nhân viên và quản trị viên",
+    "nhat ky hoat dong audit log truy vet nhan vien quan tri thao tac",
+  ],
   "/statistics/ai": [
     "Theo dõi token, ngân sách ngày và chất lượng trả lời AI",
     "ai token chi phi ngan sach chat luong autofill gia tu duyet",

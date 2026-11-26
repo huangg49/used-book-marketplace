@@ -63,6 +63,11 @@ const UserDirectory = lazy(() =>
     default: m.UserDirectory,
   })),
 );
+const ActivityLogPage = lazy(() =>
+  import("./features/audit/ActivityLogPage").then((m) => ({
+    default: m.ActivityLogPage,
+  })),
+);
 const AccountControls = lazy(() => import('./features/users/account-controls').then(m=>({default:m.AccountControls})));
 const TransactionReviewsPage=lazy(()=>import('./features/reviews/TransactionReviewsPage').then(m=>({default:m.TransactionReviewsPage})));
 const SupportQueuePage=lazy(()=>import('./features/support/SupportPages').then(m=>({default:m.SupportQueuePage})));
@@ -174,6 +179,7 @@ const router = createBrowserRouter([
       { path: "/simulator/withdrawals", element: <WithdrawalsPage simulator /> },
       { path: "/users", element: <UserDirectory /> },
       { path: "/users/:id", element: <AccountControls /> },
+      { path: "/audit", element: <ActivityLogPage /> },
       { path: "/transaction-reviews", element: <TransactionReviewsPage /> },
       { path: '/support', element: <SupportQueuePage /> },
       { path: '/support/:caseId', element: <SupportDetailPage /> },
