@@ -125,13 +125,15 @@ export function DurationInput({ id, label, value, presets, disabled, onChange }:
           </div>
         ))}
       </div>
-      <div className={styles.presets} role="group" aria-label="Chọn nhanh">
-        {presets.map((p) => (
-          <button key={p} type="button" disabled={disabled} aria-pressed={value === p} onClick={() => onChange(p)}>
-            {formatDuration(p)}
-          </button>
-        ))}
-      </div>
+      {presets.length > 0 && (
+        <div className={styles.presets} role="group" aria-label="Chọn nhanh">
+          {presets.map((p) => (
+            <button key={p} type="button" disabled={disabled} aria-pressed={value === p} onClick={() => onChange(p)}>
+              {formatDuration(p)}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

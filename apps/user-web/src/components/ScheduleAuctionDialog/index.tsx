@@ -1,6 +1,6 @@
-import { auctionSellerFeeText, createServerNow } from '@used-books/session-client'
+import { DEFAULT_SALE_COMMISSION_BPS, auctionSellerFeeText, createServerNow, formatSaleFeeRate } from '@used-books/session-client'
 import { useEffect, useId, useRef, useState } from 'react'
-import { CalendarClock, Flag, Info, Play, X } from 'lucide-react'
+import { ArrowRight, CalendarClock, Flag, Play, X } from 'lucide-react'
 import { lockPageScroll } from '../../lib/page-scroll'
 import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
 import { commandError } from '../../lib/auction-errors'
@@ -11,6 +11,8 @@ import {
   type ScheduleBody,
 } from '../../services/auctions'
 import { DateTimePicker } from '../DateTimePicker'
+import { InfoTip } from '../InfoTip'
+import { SelectMenu } from '../SelectMenu'
 import { DurationInput, formatDuration } from '../DurationInput'
 import styles from './ScheduleAuctionDialog.module.css'
 
@@ -67,6 +69,8 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const [later, setLater] = useState(lifecycle || (target.kind === 'reschedule' && !live))
   const [startInput, setStartInput] = useState('')
   const [seconds, setSeconds] = useState(currentSeconds)
+  // One dropdown of common lengths; "Tùy chỉnh" opens the exact h/m/s fields.
+  const [custom, setCustom] = useState(!PRESETS.includes(currentSeconds))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // A lost response keeps the same body and key so the retry replays it.
@@ -87,7 +91,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
       if (!prepared.current) {
         const start = target.kind === 'reschedule' && !target.live ? Date.parse(target.startAt) : ceilSlot(now + HOUR)
         setLater(lifecycle || (target.kind === 'reschedule' && !target.live))
-        setStartInput(toLocalInput(start)); setSeconds(currentSeconds); setError(null)
+        setStartInput(toLocalInput(start)); setSeconds(currentSeconds); setCustom(!PRESETS.includes(currentSeconds)); setError(null)
         prepared.current = true
       }
       dialog.showModal()
@@ -147,6 +151,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
 
   const heading = target.kind === 'publish' ? 'Đăng phiên đấu giá' : 'Đổi thời gian phiên'
   const locked = busy || !!unknown
+  const openText = timed || live ? when(startMs) : 'Ngay khi xác nhận'
   return (
     <dialog ref={ref} data-lenis-prevent="true" className={styles.dialog} aria-labelledby={`${ids}-title`}>
       <div className={styles.sheet}>
@@ -160,66 +165,107 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
           </button>
         </header>
         <div className={styles.body}>
+          {/* Step 1: when it opens. A live auction keeps its open time. */}
           {live ? (
-            <p className={styles.note}>Phiên đã mở lúc {when(Date.parse((target as { startAt: string }).startAt))}. Khi chưa có ai trả giá, bạn có thể đổi thời lượng; giờ mở giữ nguyên.</p>
+            <p className={styles.liveNote}>
+              <Play size={15} aria-hidden="true" />
+              <span>Phiên đã mở lúc <b>{when(Date.parse((target as { startAt: string }).startAt))}</b>. Giờ mở giữ nguyên; bạn chỉ đổi thời lượng.</span>
+            </p>
           ) : (
-            <fieldset className={styles.choice} disabled={locked}>
-              <legend>{fixedLater ? (target.kind === 'publish' ? 'Hẹn giờ mở phiên' : 'Giờ mở mới') : 'Khi nào mở phiên?'}</legend>
-              {!fixedLater && <label><input type="radio" name={`${ids}-when`} checked={!later} onChange={() => setLater(false)} /> Mở ngay</label>}
-              {!fixedLater && <label><input type="radio" name={`${ids}-when`} checked={later} onChange={() => setLater(true)} /> Hẹn giờ mở</label>}
-              {timed && (
-                <div className={styles.field}>
-                  <label htmlFor={`${ids}-start`}>Giờ mở phiên</label>
-                  <DateTimePicker
-                    id={`${ids}-start`} label="Giờ mở phiên" value={startInput}
-                    min={toLocalInput(ceilSlot(now + AUCTION_MIN_LEAD_MS))} max={toLocalInput(horizon)}
-                    onChange={setStartInput}
-                  />
+            <fieldset className={styles.step} disabled={locked}>
+              <legend className={styles.stepTitle}>
+                <span className={styles.num} aria-hidden="true">1</span>
+                {fixedLater ? (target.kind === 'publish' ? 'Giờ mở phiên' : 'Giờ mở mới') : 'Khi nào mở phiên?'}
+                <InfoTip label="Giờ mở phiên">
+                  {lifecycle ? (
+                    <ul>
+                      <li>Người mua đăng ký và đặt cọc trước; phiên <b>chỉ mở khi đủ người</b>.</li>
+                      <li>Đến giờ mà chưa đủ: chờ thêm tối đa <b>24 giờ</b>, đủ thì mở ngay; hết hạn thì <b>hủy và hoàn cọc</b>.</li>
+                      <li>Bạn đổi giờ mở <b>tối đa 2 lần</b> trong 30 ngày kể từ lúc đăng, không trong 30 phút cuối. Người đăng ký được báo mỗi lần đổi.</li>
+                    </ul>
+                  ) : (
+                    <>Bạn đổi được thời gian <b>tối đa 5 lần</b>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian được giữ nguyên.</>
+                  )}
+                </InfoTip>
+              </legend>
+              {!fixedLater && (
+                <div className={styles.segment}>
+                  <label><input type="radio" name={`${ids}-when`} checked={!later} onChange={() => setLater(false)} /> Mở ngay</label>
+                  <label><input type="radio" name={`${ids}-when`} checked={later} onChange={() => setLater(true)} /> Hẹn giờ</label>
                 </div>
+              )}
+              {timed && (
+                <DateTimePicker
+                  id={`${ids}-start`} label="Giờ mở phiên" value={startInput}
+                  min={toLocalInput(ceilSlot(now + AUCTION_MIN_LEAD_MS))} max={toLocalInput(horizon)}
+                  onChange={setStartInput}
+                />
               )}
             </fieldset>
           )}
-          <DurationInput
-            id={`${ids}-duration`} label="Thời lượng phiên" value={seconds}
-            presets={PRESETS} disabled={locked} onChange={setSeconds}
-          />
+
+          {/* Step 2: how long it runs. */}
+          <fieldset className={styles.step} disabled={locked}>
+            <legend className={styles.stepTitle}>
+              {!live && <span className={styles.num} aria-hidden="true">2</span>}
+              <span id={`${ids}-length-label`}>Thời lượng</span>
+              <InfoTip label="Thời lượng">Phiên kéo dài từ <b>1 giờ</b> đến <b>7 ngày</b>{lifecycle ? <>, tính <b>từ lúc phiên mở</b></> : null}.</InfoTip>
+            </legend>
+            <SelectMenu
+              id={`${ids}-length`} labelledBy={`${ids}-length-label`} disabled={locked}
+              value={custom ? 'custom' : String(seconds)}
+              options={[
+                ...PRESETS.map((p) => ({ value: String(p), label: formatDuration(p) })),
+                { value: 'custom', label: 'Tùy chỉnh…', separated: true },
+              ]}
+              onChange={(next) => {
+                if (next === 'custom') { setCustom(true); return }
+                setCustom(false); setSeconds(Number(next))
+              }}
+            />
+            {custom && (
+              <DurationInput id={`${ids}-duration`} label="Độ dài chính xác" value={seconds} presets={[]} disabled={locked} onChange={setSeconds} />
+            )}
+          </fieldset>
+
+          {/* Result: one start → end line. */}
           {fieldError ? (
             <p className={styles.error} role="alert">{fieldError}</p>
           ) : (
-            <dl className={styles.summary}>
+            <div className={styles.timeline} aria-label="Lịch phiên">
               <div>
-                <dt><Play size={14} aria-hidden="true" /> Mở phiên</dt>
-                <dd>{timed || live ? `${when(startMs)}${lifecycle ? ' nếu đủ người' : ''}` : 'Ngay khi xác nhận'}</dd>
+                <span className={styles.tlLabel}><Play size={13} aria-hidden="true" /> Mở</span>
+                <strong>{openText}</strong>
+                {lifecycle && <span className={styles.tlHint}>nếu đủ người</span>}
               </div>
-              {lifecycle && (
-                <div>
-                  <dt><CalendarClock size={14} aria-hidden="true" /> Chưa đủ người</dt>
-                  <dd>Chờ thêm tới {when(startMs + AUCTION_OPEN_GRACE_MS)}, rồi hủy</dd>
-                </div>
-              )}
+              <ArrowRight className={styles.tlArrow} size={18} aria-hidden="true" />
               <div>
-                <dt><Flag size={14} aria-hidden="true" /> Kết thúc</dt>
-                <dd>{lifecycle ? `${formatDuration(seconds)} sau khi mở` : when(endMs)}</dd>
+                <span className={styles.tlLabel}><Flag size={13} aria-hidden="true" /> Kết thúc</span>
+                <strong>{lifecycle ? `${formatDuration(seconds)} sau khi mở` : when(endMs)}</strong>
+                {lifecycle && <span className={styles.tlHint}>chưa đủ người: hủy lúc {when(startMs + AUCTION_OPEN_GRACE_MS)}</span>}
               </div>
-            </dl>
+            </div>
           )}
-          <p className={styles.note}>
-            <Info size={15} aria-hidden="true" />
-            {lifecycle
-              ? <span>Người mua đăng ký và đặt cọc trước. Phiên <strong>chỉ mở khi đủ người</strong>: đến giờ mở mà chưa đủ, phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ; hết 24 giờ vẫn chưa đủ thì phiên bị hủy và hoàn cọc. Bạn đổi giờ mở <strong>tối đa 2 lần</strong> trong 30 ngày kể từ lúc đăng, trước giờ mở và không trong 30 phút cuối; người đăng ký được báo mỗi lần đổi.</span>
-              : <span>Bạn đổi được thời gian <strong>tối đa 5 lần</strong>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên.</span>}
-          </p>
-          {target.kind === 'publish' && <p className={styles.note}>{auctionSellerFeeText}</p>}
+
           {error && <p role="alert" className={styles.error}>{error}</p>}
+        </div>
+        <footer className={styles.footer}>
+          {target.kind === 'publish' && (
+            <p className={styles.fee}>
+              Phí dịch vụ <b>{formatSaleFeeRate(DEFAULT_SALE_COMMISSION_BPS)}</b> trên giá chốt
+              <InfoTip label="Phí dịch vụ">{auctionSellerFeeText}</InfoTip>
+            </p>
+          )}
           <div className={styles.actions}>
             <button type="button" className={styles.cancel} onClick={onClose} disabled={busy}>
               Hủy
             </button>
             <button type="button" data-focus-inverse className={styles.confirm} disabled={busy || (!unknown && !!fieldError)} onClick={() => void submit()}>
-              {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? (timed ? 'Hẹn giờ mở phiên' : 'Đăng phiên') : 'Lưu thời gian mới'}
+              {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? 'Đăng phiên' : 'Lưu thời gian mới'}
+              {!busy && !unknown && <ArrowRight size={18} aria-hidden="true" />}
             </button>
           </div>
-        </div>
+        </footer>
       </div>
     </dialog>
   )

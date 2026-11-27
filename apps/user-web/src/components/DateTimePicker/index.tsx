@@ -12,6 +12,8 @@ const format = (d: Date) =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 const dayKey = (d: Date) => d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate()
 const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
+// Narrowest width that fits the calendar and the hour/minute columns side by side.
+const SIDE_BY_SIDE = 388
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5)
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
@@ -48,11 +50,17 @@ export function DateTimePicker({ id, label, value, min, max, disabled, onChange 
       const t = trigger.current?.getBoundingClientRect()
       if (!t) return
       const gap = 6, edge = 12
-      const w = el.offsetWidth, h = el.offsetHeight
+      // Exactly as wide as the field. Below SIDE_BY_SIDE the hour/minute
+      // columns move under the calendar instead of squeezing it.
+      const w = Math.min(t.width, window.innerWidth - edge * 2)
+      el.style.width = `${w}px`
+      el.toggleAttribute('data-stacked', w < SIDE_BY_SIDE)
+      const h = el.offsetHeight
       const below = window.innerHeight - t.bottom - gap - edge
       const top = below >= h || t.top - gap - edge < h ? t.bottom + gap : t.top - gap - h
       const left = Math.min(Math.max(edge, t.left), window.innerWidth - w - edge)
-      setPlace({ top: Math.max(edge, top), left })
+      // Neither side fits (short phone screens): keep the whole panel on screen.
+      setPlace({ top: Math.max(edge, Math.min(top, window.innerHeight - h - edge)), left, width: w })
     }
     position()
     window.addEventListener('resize', position)
