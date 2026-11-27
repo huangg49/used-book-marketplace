@@ -1,6 +1,6 @@
 import { DEFAULT_SALE_COMMISSION_BPS, auctionSellerFeeText, createServerNow, formatSaleFeeRate } from '@used-books/session-client'
 import { useEffect, useId, useRef, useState } from 'react'
-import { ArrowRight, CalendarClock, Flag, Play, X } from 'lucide-react'
+import { ArrowRight, CalendarClock, Flag, Hourglass, Lock, Play, X } from 'lucide-react'
 import { lockPageScroll } from '../../lib/page-scroll'
 import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
 import { commandError } from '../../lib/auction-errors'
@@ -152,12 +152,30 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const heading = target.kind === 'publish' ? 'Đăng phiên đấu giá' : 'Đổi thời gian phiên'
   const locked = busy || !!unknown
   const openText = timed || live ? when(startMs) : 'Ngay khi xác nhận'
+  const endText = lifecycle ? `${formatDuration(seconds)} sau khi mở` : when(endMs)
+  // Reschedule: show the current end and how the length changes. Saving an
+  // unchanged time would only spend one of the limited edits, so it is off.
+  const before = target.kind === 'reschedule'
+    ? { end: lifecycle ? `${formatDuration(currentSeconds)} sau khi mở` : when(Date.parse(target.endAt)), start: Date.parse(target.startAt) }
+    : null
+  const lengthDelta = before ? seconds - currentSeconds : 0
+  const unchanged = !!before && lengthDelta === 0 && (live || Math.floor(startMs / 60_000) === Math.floor(before.start / 60_000))
+  const rules = lifecycle ? (
+    <ul>
+      <li>Người mua đăng ký và đặt cọc trước; phiên <b>chỉ mở khi đủ người</b>.</li>
+      <li>Đến giờ mà chưa đủ: chờ thêm tối đa <b>24 giờ</b>, đủ thì mở ngay; hết hạn thì <b>hủy và hoàn cọc</b>.</li>
+      <li>Bạn đổi giờ mở <b>tối đa 2 lần</b> trong 30 ngày kể từ lúc đăng, không trong 30 phút cuối. Người đăng ký được báo mỗi lần đổi.</li>
+    </ul>
+  ) : (
+    <>Bạn đổi được thời gian <b>tối đa 5 lần</b>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian được giữ nguyên.</>
+  )
   return (
     <dialog ref={ref} data-lenis-prevent="true" className={styles.dialog} aria-labelledby={`${ids}-title`}>
       <div className={styles.sheet}>
         <header className={styles.header} data-focus-inverse>
+          <span className={styles.badge} aria-hidden="true"><CalendarClock size={20} /></span>
           <span className={styles.heading}>
-            <strong id={`${ids}-title`}><CalendarClock size={20} aria-hidden="true" /> {heading}</strong>
+            <strong id={`${ids}-title`}>{heading}</strong>
             <small>{title}</small>
           </span>
           <button type="button" className={styles.close} onClick={onClose} disabled={busy} aria-label="Đóng">
@@ -165,87 +183,92 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
           </button>
         </header>
         <div className={styles.body}>
-          {/* Step 1: when it opens. A live auction keeps its open time. */}
-          {live ? (
-            <p className={styles.liveNote}>
-              <Play size={15} aria-hidden="true" />
-              <span>Phiên đã mở lúc <b>{when(Date.parse((target as { startAt: string }).startAt))}</b>. Giờ mở giữ nguyên; bạn chỉ đổi thời lượng.</span>
-            </p>
-          ) : (
-            <fieldset className={styles.step} disabled={locked}>
-              <legend className={styles.stepTitle}>
-                <span className={styles.num} aria-hidden="true">1</span>
-                {fixedLater ? (target.kind === 'publish' ? 'Giờ mở phiên' : 'Giờ mở mới') : 'Khi nào mở phiên?'}
-                <InfoTip label="Giờ mở phiên">
-                  {lifecycle ? (
-                    <ul>
-                      <li>Người mua đăng ký và đặt cọc trước; phiên <b>chỉ mở khi đủ người</b>.</li>
-                      <li>Đến giờ mà chưa đủ: chờ thêm tối đa <b>24 giờ</b>, đủ thì mở ngay; hết hạn thì <b>hủy và hoàn cọc</b>.</li>
-                      <li>Bạn đổi giờ mở <b>tối đa 2 lần</b> trong 30 ngày kể từ lúc đăng, không trong 30 phút cuối. Người đăng ký được báo mỗi lần đổi.</li>
-                    </ul>
-                  ) : (
-                    <>Bạn đổi được thời gian <b>tối đa 5 lần</b>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian được giữ nguyên.</>
+          {/* The schedule as one track: open → length → end. */}
+          <fieldset className={styles.track} disabled={locked}>
+            <legend className={styles.srOnly}>Lịch phiên</legend>
+            <ol className={styles.stops}>
+              <li className={styles.stop}>
+                <span className={styles.node} aria-hidden="true"><Play size={15} /></span>
+                <div className={styles.stopBody}>
+                  <div className={styles.stopLabel}>
+                    {live ? 'Mở lúc' : fixedLater ? (target.kind === 'publish' ? 'Giờ mở phiên' : 'Giờ mở mới') : 'Mở phiên'}
+                    {live
+                      ? <span className={styles.kept}><Lock size={12} aria-hidden="true" /> Đã mở · giữ nguyên</span>
+                      : <InfoTip label="Giờ mở phiên">{rules}</InfoTip>}
+                  </div>
+                  {!live && !fixedLater && (
+                    <div className={styles.segment}>
+                      <label><input type="radio" name={`${ids}-when`} checked={!later} onChange={() => setLater(false)} /> Mở ngay</label>
+                      <label><input type="radio" name={`${ids}-when`} checked={later} onChange={() => setLater(true)} /> Hẹn giờ</label>
+                    </div>
                   )}
-                </InfoTip>
-              </legend>
-              {!fixedLater && (
-                <div className={styles.segment}>
-                  <label><input type="radio" name={`${ids}-when`} checked={!later} onChange={() => setLater(false)} /> Mở ngay</label>
-                  <label><input type="radio" name={`${ids}-when`} checked={later} onChange={() => setLater(true)} /> Hẹn giờ</label>
+                  {timed && !live ? (
+                    <DateTimePicker
+                      id={`${ids}-start`} label="Giờ mở phiên" value={startInput}
+                      min={toLocalInput(ceilSlot(now + AUCTION_MIN_LEAD_MS))} max={toLocalInput(horizon)}
+                      onChange={setStartInput}
+                    />
+                  ) : (
+                    <strong className={styles.time}>{openText}</strong>
+                  )}
+                  {lifecycle && <span className={styles.hint}>Chỉ mở khi đủ người đăng ký.</span>}
                 </div>
-              )}
-              {timed && (
-                <DateTimePicker
-                  id={`${ids}-start`} label="Giờ mở phiên" value={startInput}
-                  min={toLocalInput(ceilSlot(now + AUCTION_MIN_LEAD_MS))} max={toLocalInput(horizon)}
-                  onChange={setStartInput}
-                />
-              )}
-            </fieldset>
-          )}
+              </li>
 
-          {/* Step 2: how long it runs. */}
-          <fieldset className={styles.step} disabled={locked}>
-            <legend className={styles.stepTitle}>
-              {!live && <span className={styles.num} aria-hidden="true">2</span>}
-              <span id={`${ids}-length-label`}>Thời lượng</span>
-              <InfoTip label="Thời lượng">Phiên kéo dài từ <b>1 giờ</b> đến <b>7 ngày</b>{lifecycle ? <>, tính <b>từ lúc phiên mở</b></> : null}.</InfoTip>
-            </legend>
-            <SelectMenu
-              id={`${ids}-length`} labelledBy={`${ids}-length-label`} disabled={locked}
-              value={custom ? 'custom' : String(seconds)}
-              options={[
-                ...PRESETS.map((p) => ({ value: String(p), label: formatDuration(p) })),
-                { value: 'custom', label: 'Tùy chỉnh…', separated: true },
-              ]}
-              onChange={(next) => {
-                if (next === 'custom') { setCustom(true); return }
-                setCustom(false); setSeconds(Number(next))
-              }}
-            />
-            {custom && (
-              <DurationInput id={`${ids}-duration`} label="Độ dài chính xác" value={seconds} presets={[]} disabled={locked} onChange={setSeconds} />
-            )}
+              <li className={styles.stop}>
+                <span className={styles.node} aria-hidden="true"><Hourglass size={15} /></span>
+                <div className={styles.stopBody}>
+                  <div className={styles.stopLabel}>
+                    <span id={`${ids}-length-label`}>Thời lượng</span>
+                    <InfoTip label="Thời lượng">
+                      Phiên kéo dài từ <b>1 giờ</b> đến <b>7 ngày</b>{lifecycle ? <>, tính <b>từ lúc phiên mở</b></> : null}.
+                      {live ? <> Phiên đang mở phải <b>còn ít nhất 1 giờ</b>. {rules}</> : null}
+                    </InfoTip>
+                  </div>
+                  <SelectMenu
+                    id={`${ids}-length`} labelledBy={`${ids}-length-label`} disabled={locked}
+                    value={custom ? 'custom' : String(seconds)}
+                    options={[
+                      ...PRESETS.map((p) => ({ value: String(p), label: formatDuration(p) })),
+                      { value: 'custom', label: 'Tùy chỉnh…', separated: true },
+                    ]}
+                    onChange={(next) => {
+                      if (next === 'custom') { setCustom(true); return }
+                      setCustom(false); setSeconds(Number(next))
+                    }}
+                  />
+                  {custom && (
+                    <DurationInput id={`${ids}-duration`} label="Độ dài chính xác" value={seconds} presets={[]} disabled={locked} onChange={setSeconds} />
+                  )}
+                </div>
+              </li>
+
+              <li className={styles.stop} data-end>
+                <span className={styles.node} aria-hidden="true"><Flag size={15} /></span>
+                <div className={styles.stopBody}>
+                  <div className={styles.stopLabel}>
+                    Kết thúc
+                    {lengthDelta !== 0 && (
+                      <span className={styles.delta} data-down={lengthDelta < 0 || undefined}>
+                        {lengthDelta > 0 ? '+' : '−'}{formatDuration(Math.abs(lengthDelta))}
+                      </span>
+                    )}
+                  </div>
+                  {fieldError ? (
+                    <p className={styles.error} role="alert">{fieldError}</p>
+                  ) : (
+                    <>
+                      <strong className={styles.time}>{endText}</strong>
+                      {before && (unchanged
+                        ? <span className={styles.hint}>Chưa thay đổi so với hiện tại.</span>
+                        : <span className={styles.hint}>Hiện tại: {before.end}</span>)}
+                      {lifecycle && <span className={styles.hint}>Chưa đủ người: hủy và hoàn cọc lúc {when(startMs + AUCTION_OPEN_GRACE_MS)}.</span>}
+                    </>
+                  )}
+                </div>
+              </li>
+            </ol>
           </fieldset>
-
-          {/* Result: one start → end line. */}
-          {fieldError ? (
-            <p className={styles.error} role="alert">{fieldError}</p>
-          ) : (
-            <div className={styles.timeline} aria-label="Lịch phiên">
-              <div>
-                <span className={styles.tlLabel}><Play size={13} aria-hidden="true" /> Mở</span>
-                <strong>{openText}</strong>
-                {lifecycle && <span className={styles.tlHint}>nếu đủ người</span>}
-              </div>
-              <ArrowRight className={styles.tlArrow} size={18} aria-hidden="true" />
-              <div>
-                <span className={styles.tlLabel}><Flag size={13} aria-hidden="true" /> Kết thúc</span>
-                <strong>{lifecycle ? `${formatDuration(seconds)} sau khi mở` : when(endMs)}</strong>
-                {lifecycle && <span className={styles.tlHint}>chưa đủ người: hủy lúc {when(startMs + AUCTION_OPEN_GRACE_MS)}</span>}
-              </div>
-            </div>
-          )}
 
           {error && <p role="alert" className={styles.error}>{error}</p>}
         </div>
@@ -260,7 +283,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
             <button type="button" className={styles.cancel} onClick={onClose} disabled={busy}>
               Hủy
             </button>
-            <button type="button" data-focus-inverse className={styles.confirm} disabled={busy || (!unknown && !!fieldError)} onClick={() => void submit()}>
+            <button type="button" data-focus-inverse className={styles.confirm} disabled={busy || (!unknown && (!!fieldError || unchanged))} onClick={() => void submit()}>
               {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? 'Đăng phiên' : 'Lưu thời gian mới'}
               {!busy && !unknown && <ArrowRight size={18} aria-hidden="true" />}
             </button>
