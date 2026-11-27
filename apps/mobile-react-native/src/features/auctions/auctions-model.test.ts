@@ -165,8 +165,8 @@ describe("seller intake (POL-39, FR-AU01)", () => {
     expect(intakePriceErrors(200_000, 50_000, 320_000).buyNowPrice).toMatch(/350\.000/);
     expect(intakePriceErrors(200_000, 50_000, 600_000)).toEqual({});
   });
-  it("lets any approved, visible, available single listing enter an auction (matches API & user-web)", () => {
-    const listing = (over: Partial<{ moderation: string; visibility: string; trade: string; mode: string; channel: string; bundle: unknown }>) => ({
+  it("lets approved, visible, available single books from Auction or Marketplace in", () => {
+    const listing = (over: Partial<{ moderation: string; visibility: string; trade: string; mode: string; channel: string; bundle: unknown | null }>) => ({
       channel: over.channel ?? "Auction",
       state: { moderation: "Approved", visibility: "Visible", trade: "Available", deletedAt: null, ...over },
       currentRevision: { content: { mode: over.mode ?? "Sale", bundle: over.bundle ?? null } },
@@ -174,7 +174,7 @@ describe("seller intake (POL-39, FR-AU01)", () => {
     expect(auctionEligible(listing({}))).toBe(true);
     expect(auctionEligible(listing({ channel: "Marketplace" }))).toBe(true);
     expect(auctionEligible(listing({ channel: "Marketplace", mode: "Both" }))).toBe(true);
-    expect(auctionEligible(listing({ bundle: { title: "Bộ 3 cuốn" } }))).toBe(false);
+    expect(auctionEligible(listing({ bundle: { title: "Combo", items: [] } }))).toBe(false);
     expect(auctionEligible(listing({ trade: "Reserved" }))).toBe(false);
     expect(auctionEligible(listing({ visibility: "Hidden" }))).toBe(false);
   });

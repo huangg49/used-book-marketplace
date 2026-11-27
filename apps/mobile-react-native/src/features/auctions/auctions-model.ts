@@ -660,9 +660,10 @@ export function intakePriceErrors(
 export function auctionEligible(listing: {
   channel?: string;
   state: { moderation: string; visibility: string; trade: string; deletedAt: string | null };
-  currentRevision: { content: { mode?: string | null; bundle?: unknown } };
+  currentRevision: { content: { mode?: string | null; bundle?: unknown | null } };
 }) {
   return (
+    (listing.channel === "Auction" || listing.channel === "Marketplace") &&
     listing.state.moderation === "Approved" &&
     listing.state.visibility === "Visible" &&
     listing.state.trade === "Available" &&

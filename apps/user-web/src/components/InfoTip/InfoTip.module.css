@@ -3,17 +3,19 @@
 .trigger {
   position: relative; display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0;
   border: 0; border-radius: 999px; background: transparent; color: var(--shop-muted); cursor: help;
-  transition: color 140ms ease, background-color 140ms ease;
+  transition: color 140ms ease, background-color 140ms ease, scale 160ms ease;
 }
 /* 44px touch target without widening the label row. */
 .trigger::after { content: ''; position: absolute; inset: -10px; }
 .trigger:hover, .trigger[aria-expanded='true'] { color: var(--shop-wine); background: #5c020212; }
+@media (hover: hover) { .trigger:hover { scale: 1.12; } }
 
 .bubble {
   position: fixed; inset: auto; z-index: 70; margin: 0; width: max-content; max-width: min(300px, calc(100vw - 24px));
   padding: 10px 12px; border: 1px solid var(--shop-line); border-top: 3px solid var(--shop-wine); border-radius: 8px;
   background: var(--shop-paper); color: var(--shop-ink); box-shadow: 0 12px 28px rgba(40, 25, 20, .18), 0 2px 6px rgba(40, 25, 20, .08);
-  font-size: .8125rem; font-weight: 400; line-height: 1.65; text-align: left; white-space: normal; letter-spacing: normal;
+  /* Own font: a tip inside a display-font heading must not inherit Anton. */
+  font-family: var(--shop-body, system-ui, sans-serif); font-size: .8125rem; font-weight: 400; font-style: normal; line-height: 1.65; text-align: left; white-space: normal; letter-spacing: normal; text-transform: none;
   animation: tip-in 140ms ease-out;
 }
 .bubble[hidden] { display: none; }
