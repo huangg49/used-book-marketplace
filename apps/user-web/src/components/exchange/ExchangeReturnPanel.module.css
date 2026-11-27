@@ -1,17 +1,20 @@
 .panel {
   display: grid;
-  gap: 1rem;
+  gap: 1.1rem;
   container: return-workspace / inline-size;
   min-width: 0;
-  margin-block: 0.5rem 1rem;
-  padding: clamp(1rem, 2.4vw, 1.45rem);
-  border: 1.5px solid var(--shop-line, #e8dfd5);
-  border-radius: 16px;
-  background: #ffffff;
+  margin-block: 0.25rem 0.75rem;
+  padding: clamp(1.1rem, 2.5vw, 1.55rem);
+  border: 1.5px solid transparent;
+  border-radius: 18px;
+  background:
+    radial-gradient(90% 140% at 0% 0%, #912b0e1e, transparent 48%) padding-box,
+    linear-gradient(180deg, #ffffff, #fffaf2) padding-box,
+    linear-gradient(130deg, #912b0ed1, #5c02021c 45%, #d9a44194) border-box;
   color: var(--shop-ink);
   font: 400 0.9375rem/1.55 var(--shop-body, "Be Vietnam Pro", sans-serif);
   overflow-wrap: anywhere;
-  box-shadow: 0 4px 20px rgba(40, 25, 20, 0.045);
+  box-shadow: 0 1px 2px rgba(40, 25, 20, .06), 0 16px 34px -22px rgba(145, 43, 14, .45);
 }
 
 .panel :is(h2, h3, p, dl, dd, ol) {
@@ -73,35 +76,36 @@
 .roleTag {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.45;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  line-height: 1.4;
 }
 
 .turnBadge {
-  background: var(--shop-wine, #5c0202);
-  color: var(--shop-cream, #fcf8db);
+  background: linear-gradient(180deg, #7c1a17, #5c0202);
+  color: var(--shop-cream, #fffcf5);
 }
 
 .alertBadge {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: #fdf0ec;
+  border: 1px solid #912b0e42;
+  border-inline-start: 3px solid #912b0e;
+  color: #912b0e;
 }
 
 .kickerBadge {
   background: #f7ebe8;
-  border: 1px solid #dec0bb;
+  border-inline-start: 3px solid var(--shop-wine, #5c0202);
   color: var(--shop-wine, #5c0202);
 }
 
 .roleTag {
-  background: var(--shop-paper, #fbf7f0);
-  border: 1px solid var(--shop-line);
-  color: var(--shop-muted);
-  font-weight: 600;
+  background: #f4eddf;
+  border: 1px solid #d9cbbd;
+  color: var(--shop-ink, #281914);
+  font-weight: 650;
 }
 
 .heading h2 {

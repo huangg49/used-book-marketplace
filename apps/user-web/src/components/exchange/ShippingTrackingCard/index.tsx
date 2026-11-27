@@ -15,6 +15,7 @@ type Direction = "outgoing" | "incoming";
 interface Props extends Partial<HandoverNavigation> {
   detail: ExchangeDetail;
   sendAction?: ReactNode;
+  sendDemoAction?: ReactNode;
   sendForm?: ReactNode;
   sendDeadline?: ReactNode;
   receiveAction?: ReactNode;
@@ -101,7 +102,7 @@ function BookList({ books, start = 0, label }: {
     <ul className={styles.visibleBooks} aria-label={label}>
       {books.map((book, index) => (
         <li className={styles.book} key={book.id}>
-          <div aria-hidden="true"><BookCover title={book.title} index={start + index} coverUrl={book.coverUrl} className={styles.cover} /></div>
+          <div aria-hidden="true"><BookCover title={book.title} index={start + index} coverUrl={book.coverUrl} className={styles.cover} fallbackLabel="Chưa có ảnh" /></div>
           <div className={styles.bookText}>
             <strong dir="auto" title={book.title}>{book.title}</strong>
             {book.author && <span dir="auto" title={book.author}>{book.author}</span>}
@@ -112,10 +113,11 @@ function BookList({ books, start = 0, label }: {
   );
 }
 
-function ShippingLeg({ detail, direction, action, form, deadline, canSend, shippingExpired, navigationKey, targeted }: {
+function ShippingLeg({ detail, direction, action, demoAction, form, deadline, canSend, shippingExpired, navigationKey, targeted }: {
   detail: ExchangeDetail;
   direction: Direction;
   action: ReactNode;
+  demoAction?: ReactNode;
   form?: ReactNode;
   deadline?: ReactNode;
   canSend?: boolean;
@@ -195,17 +197,29 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
         </div>
         <div className={styles.next}>
           <div className={styles.nextFacts}>
-            <p className={styles.status} data-state={receivedAt ? "received" : expired ? "expired" : sentAt ? "sent" : "waiting"}>
-              {receivedAt ? <Check size={16} aria-hidden="true" /> : <Clock size={15} aria-hidden="true" />}
-              {status}
-            </p>
+            <div className={styles.statusHeaderRow}>
+              <p className={styles.status} data-state={receivedAt ? "received" : expired ? "expired" : sentAt ? "sent" : "waiting"}>
+                {receivedAt ? <Check size={16} aria-hidden="true" /> : <Clock size={15} aria-hidden="true" />}
+                {status}
+              </p>
+              {trackingCode && <p className={styles.trackingPreview} title={trackingCode}>{trackingCode}</p>}
+            </div>
             {!sentAt && deadline}
-            {trackingCode && <p className={styles.trackingPreview} title={trackingCode}>{trackingCode}</p>}
+            {sentAt && !receivedAt && (shipment?.carrierName || carrier?.name || shipment?.lastEvent) && (
+              <p className={styles.carrierCaption}>
+                {[shipment?.carrierName || carrier?.name, shipment?.lastEvent].filter(Boolean).join(" · ")}
+              </p>
+            )}
             {receivedAt && inspectionDeadline && (
               <p className={styles.muted}>{outgoing ? "Hạn kiểm tra của đối tác " : "Hạn kiểm tra "}<HandoverTime value={inspectionDeadline} /></p>
             )}
           </div>
-          {action}
+          {(action || (!sentAt && demoAction)) && (
+            <div className={styles.nextActions}>
+              {action}
+              {!sentAt && demoAction}
+            </div>
+          )}
         </div>
       {form}
       {hasJourney && (
@@ -254,7 +268,7 @@ function ShippingLeg({ detail, direction, action, form, deadline, canSend, shipp
   );
 }
 
-export function ShippingTrackingCard({ detail, sendAction, sendForm, sendDeadline, receiveAction, history, canSend, shippingExpired, target, navigationKey }: Props) {
+export function ShippingTrackingCard({ detail, sendAction, sendDemoAction, sendForm, sendDeadline, receiveAction, history, canSend, shippingExpired, target, navigationKey }: Props) {
   const overview = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (target !== exchangeHandoverAnchor.overview) return;
@@ -270,7 +284,7 @@ export function ShippingTrackingCard({ detail, sendAction, sendForm, sendDeadlin
   return (
     <div ref={overview} id={exchangeHandoverAnchor.overview} className={styles.legs}
       role="region" aria-label="Giao nhận hai chiều" tabIndex={-1}>
-      <ShippingLeg detail={detail} direction="outgoing" action={sendAction} form={sendForm} deadline={sendDeadline}
+      <ShippingLeg detail={detail} direction="outgoing" action={sendAction} demoAction={sendDemoAction} form={sendForm} deadline={sendDeadline}
         canSend={canSend} shippingExpired={shippingExpired}
         targeted={target === exchangeHandoverAnchor.outgoing} navigationKey={navigationKey} />
       <ShippingLeg detail={detail} direction="incoming" action={receiveAction}

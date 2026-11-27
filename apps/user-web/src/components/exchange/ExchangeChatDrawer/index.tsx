@@ -28,6 +28,7 @@ export function ExchangeChatDrawer({
   exchangeId,
   transactionCode,
   partnerName,
+  partnerAvatarUrl,
   latest,
   defaultOpen = false,
   children,
@@ -36,6 +37,7 @@ export function ExchangeChatDrawer({
   exchangeId: string;
   transactionCode: string;
   partnerName: string;
+  partnerAvatarUrl?: string;
   latest: ChatMessage[];
   defaultOpen?: boolean;
   children: (open: boolean) => ReactNode;
@@ -49,7 +51,12 @@ export function ExchangeChatDrawer({
   const [seen, setSeen] = useState(() => readMarker(storageKey));
   const [open, setOpen] = useState(defaultOpen);
   const [closing, setClosing] = useState(false);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string>();
   const last = latest.at(-1);
+  const avatarSrc =
+    partnerAvatarUrl && partnerAvatarUrl !== failedAvatarUrl
+      ? partnerAvatarUrl
+      : undefined;
 
   useEffect(() => {
     if (defaultOpen && dialogRef.current && !dialogRef.current.open) {
@@ -111,17 +118,32 @@ export function ExchangeChatDrawer({
   return (
     <>
       <button ref={trigger} type="button" className={styles.trigger}
+        aria-label={unread > 0 ? `Nhắn cho ${partnerName} (${unread} tin mới)` : `Nhắn cho ${partnerName}`}
         aria-haspopup="dialog" aria-controls={dialogId} aria-expanded={open}
         onClick={() => {
           dialogRef.current?.showModal();
           setOpen(true);
         }}>
-        <MessageCircle size={18} aria-hidden="true" />
-        <span className={styles.name} title={partnerName}>Nhắn cho <bdi>{partnerName}</bdi></span>
-        {unread > 0 && <span className={styles.count} aria-label={`${unread} tin mới trên tab này`}>{unread}</span>}
+        <span className={styles.triggerAvatar} aria-hidden="true">
+          {avatarSrc ? (
+            <img
+              src={avatarSrc}
+              alt=""
+              className={styles.avatarImg}
+              onError={() => setFailedAvatarUrl(avatarSrc)}
+            />
+          ) : (
+            initial || <MessageCircle size={14} />
+          )}
+        </span>
+        <span className={styles.name} title={partnerName}>
+          <bdi>{partnerName}</bdi>
+        </span>
+        <MessageCircle size={15} className={styles.chatCue} aria-hidden="true" />
+        {unread > 0 && <span className={styles.count} aria-hidden="true">{unread}</span>}
       </button>
       <dialog id={dialogId} ref={dialogRef} className={styles.drawer}
-        aria-labelledby={titleId} aria-describedby={codeId}
+        aria-label={`Nhắn cho ${partnerName}`} aria-describedby={codeId}
         data-closing={closing || undefined} onClose={close} data-lenis-prevent
         onCancel={event => {
           event.preventDefault();
@@ -130,7 +152,16 @@ export function ExchangeChatDrawer({
         <div className={styles.sheet}>
           <header className={styles.header}>
             <span className={styles.avatar} aria-hidden="true">
-              {initial || <MessageCircle size={20} />}
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  className={styles.avatarImg}
+                  onError={() => setFailedAvatarUrl(avatarSrc)}
+                />
+              ) : (
+                initial || <MessageCircle size={20} />
+              )}
             </span>
             <div className={styles.identity}>
               <div className={styles.nameRow}>

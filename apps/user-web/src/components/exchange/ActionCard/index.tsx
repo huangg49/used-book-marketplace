@@ -1,16 +1,32 @@
 import { demoExchangeDeadlineLabel, exchangeFundingNotes, exchangeServiceFeeText } from "@used-books/session-client";
-import { TransactionAmount, TransactionNotes } from "../../TransactionReview";
 import { useExchangeRecovery } from "../../../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../ExchangeRecoveryPanel";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { ArrowLeftRight, ArrowUpRight, Check, ChevronUp, Clock, AlertCircle, Paperclip, X } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeftRight,
+  ArrowUpRight,
+  Check,
+  CheckCircle2,
+  ChevronUp,
+  Clock,
+  FastForward,
+  Paperclip,
+  ShieldAlert,
+  Truck,
+  Wallet,
+  X,
+  XCircle,
+} from "lucide-react";
 import { BrandIcon } from "../../BrandIcon";
+import { InfoTip } from "../../InfoTip";
+import { SelectMenu } from "../../SelectMenu";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { session } from "../../../lib/session";
-import { ConfirmDialog } from "../../ConfirmDialog";
+import { ExchangeActionDialog, type ExchangeDialogStep } from "../ExchangeActionDialog";
 import { ShipmentDialog } from "../ShipmentDialog";
 import { ReceiveDialog } from "../ReceiveDialog";
 import { CounterDialog, type CounterOfferData } from "../CounterDialog";
@@ -43,6 +59,15 @@ const addressBookSchema = z.object({
     }),
   ),
 });
+
+const DISPUTE_CATEGORY_OPTIONS = [
+  { value: "Đối tác chưa gửi sách", label: "Đối tác chưa gửi sách" },
+  { value: "Sách rách nát / hư hỏng nặng", label: "Sách hư hỏng" },
+  { value: "Giao sai sách / Không đúng cam kết", label: "Sai sách hoặc sai mô tả" },
+  { value: "Thiếu sách / Bưu kiện rỗng", label: "Thiếu sách hoặc kiện rỗng" },
+  { value: "Sách nghi vấn bản in lậu / photo", label: "Nghi sách in lậu" },
+  { value: "Sự cố giao nhận khác", label: "Sự cố giao nhận khác" },
+];
 
 type Action =
   | "cancel"
@@ -94,7 +119,6 @@ const labels: Record<Action, string> = {
   advanceDemoShipping: "Qua hạn gửi sách · Demo",
 };
 
-/** The card shows an expiry flag, so it only needs to update at the deadline. */
 function useDeadlineExpired(deadline: string | undefined) {
   const at = deadline ? Date.parse(deadline) : NaN;
   const expired = useCallback(() => at <= Date.now(), [at]);
@@ -105,7 +129,6 @@ function useDeadlineExpired(deadline: string | undefined) {
       window.clearTimeout(timer);
       const remaining = at - Date.now();
       if (remaining > 0) {
-        // Browser timers accept at most a signed 32-bit delay.
         timer = window.setTimeout(schedule, Math.min(remaining, 2_147_483_647));
       }
       notify();
@@ -419,9 +442,7 @@ export function ActionCard(props: Props) {
     } else if (action === "dispute") {
       const currentDetail = disputeDetail.trim();
       if (currentDetail.length < 5) {
-        setError(
-          "Nhập mô tả sự cố từ 5 ký tự.",
-        );
+        setError("Nhập mô tả sự cố từ 5 ký tự.");
         return;
       }
     }
@@ -502,7 +523,7 @@ export function ActionCard(props: Props) {
     const expanded = next === "sent" && shipmentOpen;
     const Icon = next === "received" ? Check : expanded ? ChevronUp : ArrowUpRight;
     return (
-      <button type="button" className={styles.btnPrimary} disabled={busy}
+      <button type="button" data-focus-inverse className={styles.btnPrimary} disabled={busy}
         ref={next === "sent" ? sendTrigger : undefined}
         aria-expanded={next === "sent" ? shipmentOpen : undefined}
         aria-controls={next === "sent" ? "exchange-shipment-form" : undefined}
@@ -511,41 +532,139 @@ export function ActionCard(props: Props) {
       </button>
     );
   };
+
+  const bookHeadline = (() => {
+    const first = detail.receiveBooks[0]?.title ?? detail.giveBooks[0]?.title;
+    if (!first) return `Phiếu #${detail.transactionCode}`;
+    const total = detail.giveBooks.length + detail.receiveBooks.length;
+    return total > 2 ? `${first} · Phiếu #${detail.transactionCode}` : first;
+  })();
+
+  const isDangerAction = action === "cancel" || action === "reject" || action === "dispute";
+
+  const dialogSteps: ExchangeDialogStep[] | undefined =
+    action === "fund"
+      ? [
+          {
+            icon: <Wallet size={14} />,
+            label: "Giữ khoản cọc từ Ví mô phỏng",
+            detail: fundingAmount != null ? <>Tạm giữ <strong>{formatVnd(fundingAmount)}</strong>.</> : "Tạm giữ theo thỏa thuận.",
+          },
+          {
+            icon: <Truck size={14} />,
+            label: "Mở bước giao nhận hai chiều",
+            detail: "Khi cả hai bên đã đặt cọc, hệ thống mở tạo đơn gửi sách.",
+          },
+          {
+            icon: <CheckCircle2 size={14} />,
+            label: "Hoàn 100% cọc khi hoàn tất",
+            detail: "Tự động hoàn về Ví sau hạn kiểm tra 72 giờ của cả hai bên.",
+            result: true,
+          },
+        ]
+      : action === "complete"
+        ? [
+            {
+              icon: <CheckCircle2 size={14} />,
+              label: "Ghi nhận bạn đã kiểm tra sách",
+              detail: "Bạn vẫn có thể báo sự cố trong 72 giờ kể từ lúc nhận.",
+            },
+            {
+              icon: <Wallet size={14} />,
+              label: "Hoàn cọc & tất toán tự động",
+              detail: "Hệ thống xử lý tiền khi hết hạn kiểm tra của cả hai và không có tranh chấp.",
+              result: true,
+            },
+          ]
+        : action === "advanceDemoShipping"
+          ? [
+              {
+                icon: <FastForward size={14} />,
+                label: "Tua đồng hồ mô phỏng",
+                detail: demoEffect,
+                result: true,
+              },
+            ]
+          : undefined;
+
+  const dialogWarning =
+    action === "cancel" && detail.status === "PENDING"
+      ? "Đề nghị sẽ đóng vĩnh viễn và không thể khôi phục."
+      : action === "reject" && detail.status === "PENDING"
+        ? "Đề nghị của đối tác sẽ bị từ chối vĩnh viễn."
+        : action === "cancel" && detail.status === "FUNDING"
+          ? "Phiếu sẽ hủy ngay; khoản đã nộp sẽ hoàn về ví người nộp."
+          : action === "dispute"
+            ? "Giao dịch sẽ tạm dừng tất toán để Admin rà soát bằng chứng."
+            : undefined;
+
+  const dialogIcon =
+    action === "fund" ? <Wallet size={20} /> :
+    action === "dispute" ? <ShieldAlert size={20} /> :
+    action === "complete" ? <CheckCircle2 size={20} /> :
+    action === "advanceDemoShipping" ? <FastForward size={20} /> :
+    <XCircle size={20} />;
+
   return (
-    <div className={styles.card} data-compact={props.compact || undefined} data-sheet={props.standaloneSheet || undefined} data-handover={Boolean(props.handover) || undefined} data-funding={detail.status === "FUNDING" || undefined} data-proposal-actions={detail.status === "PENDING" || undefined}>
-      {!props.compact && <div className={styles.headerRow}>
-        <h2 className={styles.cardTitle}>
-          <BrandIcon size={18} />
-          <span>Hành động tiếp theo</span>
-        </h2>
-        <span className={styles.roleBadge}>
-          {detail.status === "PENDING"
-            ? (detail.canViewerAccept ?? detail.viewerRole !== "proposer")
-              ? "Chờ bạn phản hồi"
-              : "Chờ đối tác phản hồi"
-            : detail.status === "FUNDING"
-              ? "Đặt cọc bảo chứng"
-              : detail.status === "WAITING_YOU_SEND"
-                ? "Chuẩn bị gửi sách"
-                : ["CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)
-                  ? "Đã đóng"
-                  : ["COMPLETED", "NEED_REVIEW"].includes(detail.status)
-                    ? "Đã hoàn tất"
-                    : detail.status === 'INSPECTING' ? 'Đang kiểm tra sách' : detail.viewerShipping.receivedAt ? 'Bạn đã nhận sách' : 'Đang giao nhận'}
-        </span>
-      </div>
-      }
+    <div
+      className={styles.card}
+      data-compact={props.compact || undefined}
+      data-sheet={props.standaloneSheet || undefined}
+      data-handover={Boolean(props.handover) || undefined}
+      data-funding={detail.status === "FUNDING" || undefined}
+      data-proposal-actions={detail.status === "PENDING" || undefined}
+    >
+      {!props.compact && (
+        <div className={styles.headerRow}>
+          <h2 className={styles.cardTitle}>
+            <BrandIcon size={18} />
+            <span>Hành động tiếp theo</span>
+          </h2>
+          <span className={styles.roleBadge}>
+            {detail.status === "PENDING"
+              ? (detail.canViewerAccept ?? detail.viewerRole !== "proposer")
+                ? "Chờ bạn phản hồi"
+                : "Chờ đối tác phản hồi"
+              : detail.status === "FUNDING"
+                ? "Đặt cọc bảo chứng"
+                : detail.status === "WAITING_YOU_SEND"
+                  ? "Chuẩn bị gửi sách"
+                  : ["CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)
+                    ? "Đã đóng"
+                    : ["COMPLETED", "NEED_REVIEW"].includes(detail.status)
+                      ? "Đã hoàn tất"
+                      : detail.status === "INSPECTING"
+                        ? "Đang kiểm tra sách"
+                        : detail.viewerShipping.receivedAt
+                          ? "Bạn đã nhận sách"
+                          : "Đang giao nhận"}
+          </span>
+        </div>
+      )}
+
       {!inspecting && !props.handover && (!props.standaloneSheet || (expired && detail.status === "PENDING")) && (
         <div className={styles.calloutBox}>
           <p className={styles.instructions}>{instructions}</p>
         </div>
       )}
+
       {props.standaloneSheet && detail.status === "FUNDING" && (
         <>
           <dl className={styles.fundingAmounts}>
             {fundingAmount != null && (
               <div className={styles.fundingTotal}>
-                <dt>{detail.viewerFundedAt ? "Đã giữ từ ví mô phỏng" : expired ? "Khoản theo thỏa thuận" : "Cần nộp từ ví mô phỏng"}</dt>
+                <dt className={styles.fundingTotalLabel}>
+                  <span>{detail.viewerFundedAt ? "Đã giữ từ ví mô phỏng" : expired ? "Khoản theo thỏa thuận" : "Cần nộp từ ví mô phỏng"}</span>
+                  <InfoTip label="Quy định đặt cọc bảo chứng">
+                    <ul>
+                      {exchangeFundingNotes.map((note, idx) => (
+                        <li key={idx}>
+                          <strong>{note.label}:</strong> {note.detail}
+                        </li>
+                      ))}
+                    </ul>
+                  </InfoTip>
+                </dt>
                 <dd>{formatVnd(fundingAmount)}</dd>
               </div>
             )}
@@ -566,22 +685,28 @@ export function ActionCard(props: Props) {
           </p>
         </>
       )}
+
       {props.standaloneSheet && detail.status === "PENDING" && !canAccept && !expired && (
         <p className={styles.proposalWaiting}>Chờ đối tác phản hồi</p>
       )}
+
       {detail.status === "PENDING" && detail.proposalExpiresAt && !expired && (
         <p className={styles.deadlineRow}>
-          Hạn phản hồi{" "}
-          <time dateTime={detail.proposalExpiresAt}>
-            {new Date(detail.proposalExpiresAt).toLocaleString("vi-VN", {
-              hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
-            })}
-          </time>
+          <Clock size={14} className={styles.iconGold} aria-hidden="true" />
+          <span>
+            Hạn phản hồi{" "}
+            <time dateTime={detail.proposalExpiresAt}>
+              {new Date(detail.proposalExpiresAt).toLocaleString("vi-VN", {
+                hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
+              })}
+            </time>
+          </span>
         </p>
       )}
+
       {detail.status === "FUNDING" && detail.fundingDeadline && (
         <p className={styles.deadlineRow}>
-          <Clock size={14} className={styles.iconGold} />
+          <Clock size={14} className={styles.iconGold} aria-hidden="true" />
           <span>
             Hạn đặt cọc:{" "}
             <time dateTime={detail.fundingDeadline}>
@@ -593,13 +718,20 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
+
       {!props.handover && shippingDeadline}
       {(!props.handover || detail.demoDeadline === "Transit") && !inspecting && demoAdvance}
+
       {props.handover && (
-        <ShippingTrackingCard detail={detail} {...props.handover}
-          canSend={!blocked && actions.includes("sent")} shippingExpired={preparing && expired}
-          sendDeadline={<>{shippingDeadline}{preparing && demoAdvance}</>}
-          sendAction={handoverAction("sent")} receiveAction={handoverAction("received")}
+        <ShippingTrackingCard
+          detail={detail}
+          {...props.handover}
+          canSend={!blocked && actions.includes("sent")}
+          shippingExpired={preparing && expired}
+          sendDeadline={shippingDeadline}
+          sendDemoAction={preparing ? demoAdvance : undefined}
+          sendAction={handoverAction("sent")}
+          receiveAction={handoverAction("received")}
           sendForm={preparing && (
             <ShipmentDialog
               isOpen={shipmentOpen && !blocked && actions.includes("sent")}
@@ -616,32 +748,38 @@ export function ActionCard(props: Props) {
               partnerMethod={detail.partnerShipment?.method === 'direct' || detail.partnerShipment?.registeredAt
                 ? detail.partnerShipment.method : undefined}
             />
-          )} />
+          )}
+        />
       )}
+
       {props.handover && preparing && detail.cancellationRequestedBy && (
         <p className={styles.cancellationNotice} role="status">
           {otherRequestedCancellation ? "Đối tác đã đề nghị hủy." : "Bạn đã đề nghị hủy. Đang chờ đối tác trả lời."}
         </p>
       )}
-      {(!inspecting && !props.handover && (detail.viewerInspectionDeadline || detail.partnerInspectionDeadline)) && <details className={styles.inspectionDetails}>
-        <summary>Hạn kiểm tra của từng bên</summary>
-      {detail.viewerInspectionDeadline && (
-        <p className={styles.deadlineRow}>
-          Hạn kiểm tra sách của bạn:{" "}
-          <time dateTime={detail.viewerInspectionDeadline}>
-            {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
-          </time>
-        </p>
+
+      {(!inspecting && !props.handover && (detail.viewerInspectionDeadline || detail.partnerInspectionDeadline)) && (
+        <details className={styles.inspectionDetails}>
+          <summary>Hạn kiểm tra của từng bên</summary>
+          {detail.viewerInspectionDeadline && (
+            <p className={styles.deadlineRow}>
+              Hạn kiểm tra sách của bạn:{" "}
+              <time dateTime={detail.viewerInspectionDeadline}>
+                {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
+              </time>
+            </p>
+          )}
+          {detail.partnerInspectionDeadline && (
+            <p className={styles.deadlineRow}>
+              Hạn kiểm tra của đối tác:{" "}
+              <time dateTime={detail.partnerInspectionDeadline}>
+                {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
+              </time>
+            </p>
+          )}
+        </details>
       )}
-      {detail.partnerInspectionDeadline && (
-        <p className={styles.deadlineRow}>
-          Hạn kiểm tra của đối tác:{" "}
-          <time dateTime={detail.partnerInspectionDeadline}>
-            {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
-          </time>
-        </p>
-      )}
-      </details>}
+
       {inspecting && (
         <ExchangeInspection detail={detail} expired={inspectionExpired} awaitingResult={expired}>
           {!blocked && actions.length > 0 && (
@@ -649,6 +787,7 @@ export function ActionCard(props: Props) {
               {actions.includes("complete") && (
                 <button
                   type="button"
+                  data-focus-inverse
                   className={styles.btnPrimary}
                   disabled={busy}
                   onClick={() => void open("complete")}
@@ -671,17 +810,17 @@ export function ActionCard(props: Props) {
           )}
         </ExchangeInspection>
       )}
+
       {(detail.status === "CANCELLED" || detail.status === "EXPIRED") && detail.viewerFundedAt && (
         <Link className={styles.btnSecondary} to={`${ROUTES.wallet}#lich-su-giao-dich`}>
           Xem lịch sử giao dịch Ví
         </Link>
       )}
+
       {pending && !props.standaloneSheet && !props.handover && (
         <p role="status" className={styles.pendingRow}>
-          <AlertCircle size={15} />
-          <span>
-            Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.
-          </span>
+          <AlertCircle size={15} aria-hidden="true" />
+          <span>Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.</span>
         </p>
       )}
 
@@ -719,6 +858,7 @@ export function ActionCard(props: Props) {
                 type="button"
                 key={next}
                 disabled={busy}
+                data-focus-inverse={isPrimary || undefined}
                 className={
                   isPrimary
                     ? styles.btnPrimary
@@ -733,21 +873,21 @@ export function ActionCard(props: Props) {
               </button>
             );
           })}
-          {!props.standaloneSheet && !props.handover && <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
-            Trao đổi của tôi
-          </Link>}
+          {!props.standaloneSheet && !props.handover && (
+            <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
+              Trao đổi của tôi
+            </Link>
+          )}
           {props.handoverSupport && <div className={styles.handoverSupport}>{props.handoverSupport}</div>}
         </div>
       )}
 
       {error && !action && (
-        <p role="alert" className={styles.errorText} style={{ marginTop: 12 }}>
+        <p role="alert" className={styles.errorText} style={{ marginTop: 10 }}>
           {error}
         </p>
       )}
 
-
-      {/* Accept Exchange Contract Review Modal */}
       <AcceptExchangeDialog
         isOpen={acceptOpen}
         onClose={() => setAcceptOpen(false)}
@@ -778,21 +918,42 @@ export function ActionCard(props: Props) {
         />
       )}
 
-      {/* Receive Modal */}
-      {receiveOpen && <ReceiveDialog
-        onClose={() => setReceiveOpen(false)}
-        onConfirm={handleReceiveConfirm}
-        isBusy={busy}
-        books={detail.receiveBooks}
-      />}
+      {receiveOpen && (
+        <ReceiveDialog
+          onClose={() => setReceiveOpen(false)}
+          onConfirm={handleReceiveConfirm}
+          isBusy={busy}
+          books={detail.receiveBooks}
+        />
+      )}
 
-      {/* Generic Confirmation Modal for Reject/Cancel/Fund/Complete/Dispute */}
-      <ConfirmDialog
+      <ExchangeActionDialog
         isOpen={!!action}
         onClose={() => setAction(undefined)}
-        stickyFooter={fundingDialog}
-        maxWidth={action === "dispute" ? "640px" : undefined}
-        description={action === "advanceDemoShipping" ? demoEffect : undefined}
+        icon={dialogIcon}
+        bookTitle={bookHeadline}
+        wide={action === "dispute"}
+        danger={isDangerAction}
+        warning={dialogWarning}
+        steps={dialogSteps}
+        amount={
+          fundingDialog
+            ? {
+                label: "Số tiền sẽ giữ",
+                value: fundingAmount == null ? "Chưa có dữ liệu" : formatVnd(fundingAmount),
+                tipLabel: "Quy định giữ tiền ký quỹ",
+                tip: (
+                  <ul>
+                    {exchangeFundingNotes.map((note, idx) => (
+                      <li key={idx}>
+                        <strong>{note.label}:</strong> {note.detail}
+                      </li>
+                    ))}
+                  </ul>
+                ),
+              }
+            : undefined
+        }
         title={
           action === "cancel" && detail.status === "FUNDING"
             ? "Hủy trao đổi"
@@ -808,9 +969,9 @@ export function ActionCard(props: Props) {
         }
         confirmText={
           action === "dispute"
-            ? "Gửi biên bản khiếu nại"
+            ? "Gửi khiếu nại"
             : action === "complete"
-              ? "Xác nhận nghiệm thu"
+              ? "Đã kiểm tra"
               : action === "cancel" &&
                   detail.status === "WAITING_YOU_SEND" &&
                   detail.cancellationRequestedBy
@@ -819,101 +980,111 @@ export function ActionCard(props: Props) {
                   ? "Hủy trao đổi"
                 : action === "reject" && detail.status === "WAITING_YOU_SEND"
                   ? "Từ chối hủy"
-                  : action === "advanceDemoShipping" ? "Xác nhận tua hạn" : action
-                    ? labels[action]
-                    : "Xác nhận"
+                  : action === "advanceDemoShipping"
+                    ? "Tua hạn · Demo"
+                    : action === "fund"
+                      ? "Đặt cọc ngay"
+                      : action === "cancel"
+                        ? "Hủy đề nghị"
+                        : action === "reject"
+                          ? "Từ chối"
+                          : "Xác nhận"
         }
         isBusy={busy}
-        isDanger={
-          action === "cancel" || action === "reject" || action === "dispute"
+        confirmDisabled={
+          (fundingDialog && fundDisabled) ||
+          ((action === "dispute" || action === "complete" || action === "advanceDemoShipping") && !actions.includes(action))
         }
-        confirmDisabled={(fundingDialog && fundDisabled) ||
-          ((action === "dispute" || action === "complete" || action === "advanceDemoShipping") && !actions.includes(action))}
+        error={error || undefined}
         onConfirm={() => void confirm()}
       >
         {fundingDialog && (
-          <>
-            <TransactionAmount label="Số tiền sẽ giữ" value={fundingAmount == null ? "Chưa có dữ liệu" : formatVnd(fundingAmount)} />
+          <div className={styles.fundDialogBody}>
             <dl className={styles.fundingAmounts}>
               {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
               {detail.moneyCompensationType === "user_pays" && detail.moneyAmount != null && (
                 <div><dt>Tiền bù bạn trả</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
               )}
-              <div><dt>Ví mô phỏng khả dụng</dt><dd>
-                {wallet.isPending || wallet.isFetching ? "Đang tải…" : available == null ? "Chưa tải được" : formatVnd(available)}
-              </dd></div>
+              <div>
+                <dt>Ví mô phỏng khả dụng</dt>
+                <dd>
+                  {wallet.isPending || wallet.isFetching
+                    ? "Đang tải…"
+                    : available == null
+                      ? "Chưa tải được"
+                      : formatVnd(available)}
+                </dd>
+              </div>
             </dl>
-            <TransactionNotes notes={exchangeFundingNotes} />
             {wallet.isError && (
-              <p role="status">Chưa kiểm tra được số dư. <button className={styles.inlineButton} type="button" onClick={() => void wallet.refetch()}>Tải lại số dư</button></p>
+              <p role="status" className={styles.dialogStatus}>
+                Chưa kiểm tra được số dư.{" "}
+                <button className={styles.inlineButton} type="button" onClick={() => void wallet.refetch()}>
+                  Tải lại số dư
+                </button>
+              </p>
             )}
             {shortfall > 0 && (
-              <p role="alert">Ví còn thiếu {formatVnd(shortfall)}. <Link to={ROUTES.wallet}>Mở ví</Link></p>
+              <p role="alert" className={styles.errorText}>
+                Ví còn thiếu <strong>{formatVnd(shortfall)}</strong>.{" "}
+                <Link to={ROUTES.wallet}>Mở ví</Link>
+              </p>
             )}
-            {wallet.isSuccess && !wallet.data.paymentsEnabled && <p role="status">Ví hiện chưa thể thanh toán.</p>}
-            {expired && <p role="status">Đã hết hạn đặt cọc.</p>}
-          </>
+            {wallet.isSuccess && !wallet.data.paymentsEnabled && (
+              <p role="status" className={styles.dialogStatus}>Ví hiện chưa thể thanh toán.</p>
+            )}
+            {expired && <p role="status" className={styles.dialogStatus}>Đã hết hạn đặt cọc.</p>}
+          </div>
         )}
-        {action !== "dispute" && !fundingDialog && (
+
+        {action !== "dispute" && !fundingDialog && !dialogSteps && (
           <p className={styles.dialogText}>
             {action === "accept"
               ? "Bằng việc chấp nhận, bạn đồng ý với các điều khoản trao đổi."
-                : action === "retry"
-                  ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
-                  : action === "complete"
-                    ? "Thao tác này ghi nhận bạn đã kiểm tra sách. Bạn vẫn có thể báo sự cố trong 72 giờ kể từ lúc nhận. Hệ thống xử lý tiền khi hết hạn kiểm tra của cả hai và không có tranh chấp."
-                    : action === "cancel" && detail.status === "FUNDING"
-                      ? "Sách sẽ được mở lại. Khoản đã nộp sẽ được hoàn về ví của người đã nộp."
-                    : action === "cancel" &&
-                        detail.status === "WAITING_YOU_SEND"
-                      ? detail.cancellationRequestedBy
-                        ? "Đối tác đã đề nghị hủy giao dịch này trước khi gửi sách. Bằng việc đồng ý, giao dịch sẽ hủy an toàn và toàn bộ 100% tiền cọc cùng tiền bù của cả hai bên sẽ được hoàn trả về ví mô phỏng. Sách sẽ được mở lại trên kệ."
-                        : "Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Hệ thống sẽ gửi thông báo đến đối tác. Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% tiền cọc cho cả hai bên."
-                      : action === "reject" &&
-                          detail.status === "WAITING_YOU_SEND"
-                        ? "Bạn có chắc muốn từ chối yêu cầu hủy của đối tác để tiếp tục giao dịch? Hãy nhập lý do để đối tác yên tâm chuẩn bị và gửi sách đúng hạn."
-                        : action === "cancel"
-                          ? "Đề nghị trao đổi này sẽ đóng vĩnh viễn và không thể khôi phục. Chưa có khoản cọc nào bị trừ và các cuốn sách vẫn mở trên kệ."
-                          : action === "reject"
-                            ? "Đề nghị trao đổi từ đối tác sẽ đóng vĩnh viễn và không thể khôi phục. Không có khoản tiền nào bị trừ; sách của bạn vẫn mở trên kệ."
-                            : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
+              : action === "retry"
+                ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
+                : action === "cancel" && detail.status === "FUNDING"
+                  ? "Sách sẽ được mở lại trên kệ. Khoản đã nộp sẽ được hoàn về ví người đã nộp."
+                  : action === "cancel" && detail.status === "WAITING_YOU_SEND"
+                    ? detail.cancellationRequestedBy
+                      ? "Hai bên đồng thuận hủy trước khi gửi sách: hoàn 100% cọc và tiền bù về ví và mở lại sách."
+                      : "Gửi yêu cầu hủy trước khi gửi sách. Khi đối tác đồng ý, 100% cọc và tiền bù sẽ hoàn về ví."
+                    : action === "reject" && detail.status === "WAITING_YOU_SEND"
+                      ? "Từ chối yêu cầu hủy để tiếp tục giao dịch. Nhập ngắn gọn lý do cho đối tác."
+                      : action === "cancel"
+                        ? "Chưa có khoản cọc nào bị trừ và sách vẫn mở trên kệ."
+                        : action === "reject"
+                          ? "Không có khoản tiền nào bị trừ; sách của bạn vẫn mở trên kệ."
+                          : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
           </p>
         )}
+
         {action === "dispute" ? (
           <div className={styles.disputeContainer}>
-            <p className={styles.dialogText}>Khi sự cố được ghi nhận, giao dịch sẽ tạm dừng tất toán.</p>
-            {inspectionExpired && <p role="alert" className={styles.errorText}>Hạn báo sự cố của bạn đã qua.</p>}
+            {inspectionExpired && (
+              <p role="alert" className={styles.errorText}>Hạn báo sự cố của bạn đã qua.</p>
+            )}
 
             <div className={styles.disputeForm}>
               <div className={styles.formGroup}>
-                <label htmlFor="dispute-category" className={styles.inputLabel}>
+                <span id="dispute-category-label" className={styles.inputLabel}>
                   <span>Phân loại sự cố</span>
                   <span className={styles.reqStar}>*</span>
-                </label>
-                <div className={styles.selectWrap}>
-                  <select
-                    id="dispute-category"
-                    className={styles.select}
-                    value={disputeCategory}
-                    onChange={(e) => setDisputeCategory(e.target.value)}
-                    disabled={busy || !!pending}
-                  >
-                    <option value="Đối tác chưa gửi sách">Đối tác chưa gửi sách</option>
-                    <option value="Sách rách nát / hư hỏng nặng">Sách hư hỏng</option>
-                    <option value="Giao sai sách / Không đúng cam kết">Sai sách hoặc sai mô tả</option>
-                    <option value="Thiếu sách / Bưu kiện rỗng">Thiếu sách hoặc kiện rỗng</option>
-                    <option value="Sách nghi vấn bản in lậu / photo">Nghi sách in lậu</option>
-                    <option value="Sự cố giao nhận khác">
-                      Sự cố giao nhận khác
-                    </option>
-                  </select>
-                </div>
+                </span>
+                <SelectMenu
+                  id="dispute-category"
+                  labelledBy="dispute-category-label"
+                  value={disputeCategory}
+                  options={DISPUTE_CATEGORY_OPTIONS}
+                  disabled={busy || !!pending}
+                  onChange={setDisputeCategory}
+                />
               </div>
 
               {detail.receiveBooks.length > 1 && (
                 <div className={styles.formGroup}>
                   <span className={styles.inputLabel}>
-                    Chọn cuốn sách gặp sự cố (không bắt buộc)
+                    Chọn sách gặp sự cố (tùy chọn)
                   </span>
                   <div className={styles.disputeBookList} role="group" aria-label="Sách gặp sự cố">
                     {detail.receiveBooks.map((book) => {
@@ -954,25 +1125,28 @@ export function ActionCard(props: Props) {
                     <span>Mô tả sự cố</span>
                     <span className={styles.reqStar}>*</span>
                   </label>
-                  <span className={styles.charCounter}>
-                    {disputeDetail.length}/500 ký tự
-                  </span>
+                  <span className={styles.charCounter}>{disputeDetail.length}/500</span>
                 </div>
                 <textarea
                   id="dispute-detail"
                   className={styles.textarea}
                   value={disputeDetail}
                   maxLength={500}
-                  placeholder="Ví dụ: Cuốn Nhà Giả Kim bị rách gáy và thiếu trang 45 đến 52..."
+                  placeholder="Ví dụ: Sách rách gáy và thiếu trang 45–52 so với ảnh ban đầu..."
                   disabled={busy || !!pending}
                   onChange={(e) => setDisputeDetail(e.target.value)}
                 />
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="dispute-files" className={styles.inputLabel}>
-                  <span>Đính kèm bằng chứng ngay (không bắt buộc · tối đa 3 tệp)</span>
-                </label>
+                <div className={styles.labelWithCounter}>
+                  <label htmlFor="dispute-files" className={styles.inputLabel}>
+                    <span>Đính kèm bằng chứng (tối đa 3 tệp)</span>
+                  </label>
+                  <InfoTip label="Định dạng tệp bằng chứng">
+                    Nhận ảnh JPG, PNG, WebP (≤ 10 MB), PDF (≤ 20 MB) hoặc video MP4 (≤ 100 MB). Bạn có thể bổ sung thêm sau khi gửi báo cáo.
+                  </InfoTip>
+                </div>
                 <div className={styles.disputeFilePicker}>
                   <input
                     id="dispute-files"
@@ -987,9 +1161,6 @@ export function ActionCard(props: Props) {
                       e.target.value = "";
                     }}
                   />
-                  <span className={styles.disputeFileHint}>
-                    Nhận ảnh JPG, PNG, WebP (≤10 MB), PDF (≤20 MB) hoặc video MP4 (≤100 MB). Bạn vẫn có thể bổ sung thêm sau khi gửi báo cáo.
-                  </span>
                 </div>
                 {disputeFiles.length > 0 && (
                   <ul className={styles.disputeFileList}>
@@ -1018,10 +1189,10 @@ export function ActionCard(props: Props) {
             </div>
           </div>
         ) : action === "reject" ? (
-          <>
-            <label htmlFor="exchange-reason">
+          <div className={styles.formGroup}>
+            <label htmlFor="exchange-reason" className={styles.inputLabel}>
               {detail.status === "WAITING_YOU_SEND"
-                ? "Lý do từ chối hủy (từ 5 đến 300 ký tự)"
+                ? "Lý do từ chối hủy (5–300 ký tự)"
                 : "Lý do từ chối"}
             </label>
             <textarea
@@ -1031,20 +1202,15 @@ export function ActionCard(props: Props) {
               maxLength={300}
               placeholder={
                 detail.status === "WAITING_YOU_SEND"
-                  ? "Ví dụ: Tôi đã đóng gói sách cẩn thận và sẽ gửi đi ngay hôm nay..."
-                  : ""
+                  ? "Ví dụ: Mình đã đóng gói sách cẩn thận và sẽ gửi hôm nay..."
+                  : "Nhập ngắn gọn lý do từ chối đề nghị..."
               }
               disabled={busy || !!pending}
               onChange={(e) => setReason(e.target.value)}
             />
-          </>
+          </div>
         ) : null}
-        {error && (
-          <p role="alert" className={styles.errorText}>
-            {error}
-          </p>
-        )}
-      </ConfirmDialog>
+      </ExchangeActionDialog>
     </div>
   );
 }

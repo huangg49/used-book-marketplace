@@ -1,11 +1,14 @@
 .panelCard {
-  background: #ffffff;
-  border: 1px solid var(--shop-line, #ebd9c8);
-  border-radius: 14px;
+  background:
+    radial-gradient(90% 130% at 0% 0%, #f4cb6724, transparent 48%) padding-box,
+    linear-gradient(180deg, #ffffff, #fffaf2) padding-box,
+    linear-gradient(130deg, #7c1a1773, #5c02021a 45%, #d9a44194) border-box;
+  border: 1.5px solid transparent;
+  border-radius: 16px;
   padding: clamp(1rem, 2.2vw, 1.35rem);
   margin-top: 0;
   color: var(--shop-ink, #281914);
-  box-shadow: 0 4px 18px rgba(40, 25, 20, 0.04);
+  box-shadow: 0 1px 2px rgba(40, 25, 20, .06), 0 14px 28px -20px rgba(92, 2, 2, .38);
 }
 
 .panelCard[data-collapsed="true"] {
@@ -57,11 +60,11 @@
   display: inline-flex;
   align-items: center;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--shop-shelf, #f4eddf);
-  border: 1px solid var(--shop-line, #ebd9c8);
+  border: 1px solid #d9cbbd;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 750;
   color: var(--shop-wine, #5c0202);
   font-variant-numeric: tabular-nums;
 }

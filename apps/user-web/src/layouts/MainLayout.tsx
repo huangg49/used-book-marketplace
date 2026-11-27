@@ -21,6 +21,10 @@ export default function MainLayout() {
     location.pathname.startsWith("/buy-now/") ||
     location.pathname.startsWith("/checkout/") ||
     location.pathname.startsWith("/orders/");
+  const isExchangeDetail =
+    location.pathname.startsWith("/exchange/") &&
+    location.pathname !== "/exchange/new" &&
+    location.pathname !== "/exchange/mine";
   const isBookDetail =
     location.pathname.startsWith("/books/") && location.pathname !== "/books";
   const chatTransition = useConversationTransition("/chat");
@@ -61,7 +65,7 @@ export default function MainLayout() {
       {!isChat && (
         <footer
           data-focus-inverse
-          className={`${styles.footer} ${location.pathname === ROUTES.home || location.pathname === ROUTES.search ? styles.homeFooter : ""}`}
+          className={`${styles.footer} ${location.pathname === ROUTES.home || location.pathname === ROUTES.search || isExchangeDetail ? styles.homeFooter : ""}`}
         >
           <div className={styles.footerInner}>
             <div>

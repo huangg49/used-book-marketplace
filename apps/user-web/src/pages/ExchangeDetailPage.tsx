@@ -10,13 +10,24 @@ import { exchangeStage } from "../lib/transaction-stage";
 import { exchangeHandoverTarget, isExchangeHandover } from "../lib/exchange-handover";
 import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
 import { useEffect, useState } from "react";
-import { ArrowDownLeft, ArrowLeft, ArrowUpRight, ShieldAlert } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowLeft,
+  ArrowLeftRight,
+  ArrowUpRight,
+  CheckCircle2,
+  Clock,
+  LifeBuoy,
+  ShieldAlert,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { ApiError, confirmExchangeRead, sendEvidence, type EvidenceInput } from "@used-books/session-client";
 import { session } from "../services/api";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
 import { useTransactionLive } from "../hooks/useTransactionLive";
 import { ExchangeRecoveryPanel } from "../components/exchange/ExchangeRecoveryPanel";
-import { SupportLink } from "../features/support/SupportLink";
+import { ExchangeSupportDialog } from "../components/exchange/ExchangeSupportDialog";
 import { useParams, Link, Navigate, useLocation } from "react-router-dom";
 import { useConversationTransition } from "../components/conversation/conversation-navigation";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
@@ -51,7 +62,42 @@ import { ChatPanel } from "../components/exchange/ChatPanel";
 import { ExchangeChatDrawer } from "../components/exchange/ExchangeChatDrawer";
 import { exchangeChatGuidance } from "../lib/exchange-chat-guidance";
 import { SafetyTipsCard } from "../components/exchange/SafetyTipsCard";
+import { BookConditionDisclosure } from "../components/exchange/BookConditionDisclosure";
+import { InfoTip } from "../components/InfoTip";
+import { conditions } from "../lib/listing-labels";
+import type { ExchangeDetail } from "../lib/mock/exchangeDetail";
 import styles from "./ExchangeDetailPage.module.css";
+
+type ExchangeTone =
+  | "pending"
+  | "funding"
+  | "handover"
+  | "inspect"
+  | "dispute"
+  | "done-ok"
+  | "closed";
+
+function toneOfExchange(status: ExchangeDetail["status"]): ExchangeTone {
+  switch (status) {
+    case "PENDING":
+      return "pending";
+    case "FUNDING":
+      return "funding";
+    case "WAITING_YOU_SEND":
+    case "WAITING_YOU_CONFIRM":
+    case "DELIVERING":
+      return "handover";
+    case "INSPECTING":
+      return "inspect";
+    case "RESOLUTION_PENDING":
+      return "dispute";
+    case "COMPLETED":
+    case "NEED_REVIEW":
+      return "done-ok";
+    default:
+      return "closed";
+  }
+}
 
 export function ExchangeDetailPage(
   props: {
@@ -70,6 +116,7 @@ export function ExchangeDetailPage(
     />
   );
 }
+
 function ExchangeDetailContent({
   exchangeId,
   embedded = false,
@@ -99,6 +146,7 @@ function ExchangeDetailContent({
     }
   });
   const [disputeUploadNotice, setDisputeUploadNotice] = useState<string>("");
+  const [supportOpen, setSupportOpen] = useState(false);
   const conversations = useQuery({
     queryKey: [
       "purchase-conversations",
@@ -139,20 +187,18 @@ function ExchangeDetailContent({
     queryFn: ({ pageParam }) => getMessagePage(id!, pageParam),
     getNextPageParam: (page) => page.olderCursor ?? undefined,
     enabled: !embedded && !!id && auth.status === "authenticated",
-    // Each refresh walks the loaded pages. Bound the average request rate.
-    refetchInterval: (query) => (live ? 30_000 : 3_000) * Math.max(1, query.state.data?.pages.length ?? 0),
+    refetchInterval: (query) =>
+      (live ? 30_000 : 3_000) * Math.max(1, query.state.data?.pages.length ?? 0),
     refetchIntervalInBackground: false,
   });
   const messagesDenied =
     messagesQuery.error instanceof ApiError &&
     [401, 403, 404].includes(messagesQuery.error.status);
 
-  // Mutations
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["exchangeDetail"] });
     queryClient.invalidateQueries({ queryKey: ["exchangeTransactions"] });
     queryClient.invalidateQueries({ queryKey: ["exchangeCounts"] });
-    // Wallet views refresh at the service ACK, including recovery retries.
     queryClient.invalidateQueries({
       queryKey: [
         "exchangeMessages",
@@ -281,45 +327,64 @@ function ExchangeDetailContent({
   const linked = conversations.data?.find((room) =>
     room.terms?.exchangeIds.includes(id ?? ""),
   );
+
   if (auth.status !== "authenticated") {
     return (
-      <div className={styles.authContainer}>
-        <h2>
-          {auth.status === "loading"
-            ? "Đang kiểm tra đăng nhập…"
-            : "Đăng nhập để xem trao đổi"}
-        </h2>
-        {auth.status !== "loading" && (
-          <Link
-            className={styles.loginBtn}
-            to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ""}${location.hash}`)}`}
-          >
-            Đăng nhập
-          </Link>
-        )}
+      <div className={styles.stateWrap}>
+        <div className={styles.stateCard}>
+          <h1>
+            {auth.status === "loading"
+              ? "Đang kiểm tra đăng nhập…"
+              : "Đăng nhập để xem trao đổi"}
+          </h1>
+          {auth.status !== "loading" && (
+            <>
+              <p className={styles.stateText}>
+                Phiếu trao đổi chỉ hiển thị cho hai thành viên tham gia giao dịch.
+              </p>
+              <Link
+                data-focus-inverse
+                className={styles.primaryInline}
+                to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ""}${location.hash}`)}`}
+              >
+                Đăng nhập
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     );
   }
+
   if (id && !detail && (pendingExchange(id) || exchangeAcknowledged(id))) {
     return (
-      <div className={styles.errorContainer}>
-        <ExchangeRecoveryPanel
-          id={id}
-          onRead={async () => {
-            await refetchDetail();
-          }}
-        />
-        <Link to={ROUTES.exchangeMine}>Trao đổi của tôi</Link>
+      <div className={styles.stateWrap}>
+        <div className={styles.stateCard}>
+          <ExchangeRecoveryPanel
+            id={id}
+            onRead={async () => {
+              await refetchDetail();
+            }}
+          />
+          <Link className={styles.secondaryInline} to={ROUTES.exchangeMine}>
+            <ArrowLeft size={16} aria-hidden="true" />
+            Trao đổi của tôi
+          </Link>
+        </div>
       </div>
     );
   }
+
   if (isDetailLoading) {
     return (
       <div
-        className={styles.loadingContainer}
+        className={styles.stateWrap}
         data-chat-morph-room={transitioning || undefined}
       >
-        Đang tải...
+        <div className={styles.stateCard} role="status">
+          <span className={styles.loadingLine} aria-hidden="true" />
+          <p className={styles.stateText}>Đang tải phiếu trao đổi…</p>
+        </div>
       </div>
     );
   }
@@ -328,44 +393,58 @@ function ExchangeDetailContent({
     return (
       <div
         id={"exchange-recovery-" + id}
-        className={styles.errorContainer}
+        className={styles.stateWrap}
         data-chat-morph-room={transitioning || undefined}
       >
-        <h2>Chưa tải được trạng thái hiện tại</h2>
-        {id && (
-          <ExchangeRecoveryPanel
-            id={id}
-            onRead={async () => {
-              await refetchDetail();
-            }}
-          />
-        )}
-        <button className={styles.retryBtn} onClick={() => refetchDetail()}>
-          Thử lại
-        </button>
-        {embedded && id && auth.status === "authenticated" && (
-          <div className={styles.recoveryFinance}>
-            <ExchangeFinanceSummary
+        <div className={styles.stateCard}>
+          <h1>Chưa tải được trạng thái hiện tại</h1>
+          {id && (
+            <ExchangeRecoveryPanel
               id={id}
-              userId={auth.user.id}
-              sheetId={"exchange-recovery-" + id}
+              onRead={async () => {
+                await refetchDetail();
+              }}
             />
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            data-focus-inverse
+            className={styles.primaryInline}
+            onClick={() => refetchDetail()}
+          >
+            Thử lại
+          </button>
+          {embedded && id && auth.status === "authenticated" && (
+            <div className={styles.recoveryFinance}>
+              <ExchangeFinanceSummary
+                id={id}
+                userId={auth.user.id}
+                sheetId={"exchange-recovery-" + id}
+              />
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   if (!detail) {
     return (
-      <div className={styles.notFoundContainer}>
-        <h2>Không tìm thấy giao dịch</h2>
-        <p style={{ marginBottom: 16 }}>
-          Giao dịch bạn tìm kiếm không tồn tại hoặc bạn không có quyền truy cập.
-        </p>
-        <Link to={ROUTES.exchangeMine} className={styles.backBtn}>
-          Quay lại Trao đổi của tôi
-        </Link>
+      <div className={styles.stateWrap}>
+        <div className={styles.stateCard}>
+          <h1>Không tìm thấy giao dịch</h1>
+          <p className={styles.stateText}>
+            Giao dịch bạn tìm kiếm không tồn tại hoặc bạn không có quyền truy cập.
+          </p>
+          <Link
+            data-focus-inverse
+            to={ROUTES.exchangeMine}
+            className={styles.primaryInline}
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            Quay lại Trao đổi của tôi
+          </Link>
+        </div>
       </div>
     );
   }
@@ -373,10 +452,8 @@ function ExchangeDetailContent({
   let statusText = String(detail.status);
   if (detail.status === "PENDING") statusText = "Chờ phản hồi";
   else if (detail.status === "FUNDING") statusText = "Chờ đặt cọc";
-  else if (detail.status === "WAITING_YOU_SEND")
-    statusText = "Chuẩn bị gửi sách";
-  else if (detail.status === "RESOLUTION_PENDING")
-    statusText = "Đang cần xử lý";
+  else if (detail.status === "WAITING_YOU_SEND") statusText = "Chuẩn bị gửi sách";
+  else if (detail.status === "RESOLUTION_PENDING") statusText = "Đang cần xử lý";
   else if (detail.status === "DELIVERING") {
     statusText = detail.viewerShipping.receivedAt
       ? "Đang chờ đối tác nhận sách"
@@ -413,14 +490,23 @@ function ExchangeDetailContent({
   const funding = detail.status === "FUNDING";
   const handover = isExchangeHandover(detail.status);
   const inspecting = detail.status === "INSPECTING";
+  const tone = toneOfExchange(detail.status);
+  const isActiveFlow = !["COMPLETED", "REJECTED", "CANCELLED", "EXPIRED"].includes(
+    detail.status,
+  );
+
   if (!embedded && linked && !handoverTarget && proposal)
     return <Navigate replace to={`/chat/${linked.id}`} />;
+
   const standaloneSheet = !embedded && (proposal || funding);
   const handoverNavigation = { target: handoverTarget, navigationKey: location.key };
-  const recoveringAction = Boolean(pendingExchange(detail.id) || exchangeAcknowledged(detail.id));
+  const recoveringAction = Boolean(
+    pendingExchange(detail.id) || exchangeAcknowledged(detail.id),
+  );
   const caseBookId = detail.returnResolution?.listingId;
   const outgoingCaseBook = detail.giveBooks.find((book) => book.id === caseBookId);
-  const caseBook = outgoingCaseBook ?? detail.receiveBooks.find((book) => book.id === caseBookId);
+  const caseBook =
+    outgoingCaseBook ?? detail.receiveBooks.find((book) => book.id === caseBookId);
   const returnResolution = detail.revision ? detail.returnResolution : undefined;
   const shouldExpandEvidence =
     !returnResolution ||
@@ -439,6 +525,7 @@ function ExchangeDetailContent({
   );
   const isDispute = detail.status === "RESOLUTION_PENDING";
   const showOuterDisputeHeader = isDispute && !returnResolution;
+
   const actionSection = (
     <section
       id="exchange-actions"
@@ -453,8 +540,15 @@ function ExchangeDetailContent({
       {showOuterDisputeHeader && (
         <header className={styles.disputeDossierHeader}>
           <div className={styles.disputeDossierTitleRow}>
-            <ShieldAlert size={18} aria-hidden="true" />
-            <h2>Hồ sơ tranh chấp · Đang chờ Admin tiếp nhận</h2>
+            <span className={styles.disputeBadgeIcon} aria-hidden="true">
+              <ShieldAlert size={18} />
+            </span>
+            <div>
+              <h2>Hồ sơ tranh chấp · Đang chờ Admin tiếp nhận</h2>
+              <span className={styles.disputeSub}>
+                Ký quỹ và tiền bù được giữ nguyên cho đến khi có phán quyết.
+              </span>
+            </div>
           </div>
           {disputeUploadNotice && (
             <p className={styles.disputeUploadNotice} role="status">
@@ -473,7 +567,6 @@ function ExchangeDetailContent({
           compact={embedded || standaloneSheet || handover || inspecting}
           standaloneSheet={standaloneSheet || handover || inspecting}
           handover={handover ? handoverNavigation : undefined}
-          handoverSupport={handover && !embedded ? <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" /> : undefined}
           detail={detail}
           onCancel={handleCancel}
           onAccept={handleAccept}
@@ -493,19 +586,33 @@ function ExchangeDetailContent({
           onAdvanceDemoDeadline={async () => {
             const deadline = detail.demoDeadline;
             const latest = await getExchangeDetail(detail.id);
-            if (latest.demoDeadline !== deadline || latest.revision !== detail.revision) {
+            if (
+              latest.demoDeadline !== deadline ||
+              latest.revision !== detail.revision
+            ) {
               invalidate();
               if (deadline === "Inspection" && latest.status === "COMPLETED") return;
-              throw new ApiError(409, "VersionConflict", "Phiếu vừa thay đổi. Xem lại trạng thái trước khi tua hạn.");
+              throw new ApiError(
+                409,
+                "VersionConflict",
+                "Phiếu vừa thay đổi. Xem lại trạng thái trước khi tua hạn.",
+              );
             }
             try {
               await exchangeCommand(`/exchanges/${detail.id}/demo-advance`, {
-                expectedVersion: detail.revision!, deadline,
+                expectedVersion: detail.revision!,
+                deadline,
               });
             } catch (error) {
-              // The other participant may finish inspection after our preflight read.
-              if (deadline !== "Inspection" || !(error instanceof ApiError) || error.status !== 409) throw error;
-              const current = await getExchangeDetail(detail.id).catch(() => undefined);
+              if (
+                deadline !== "Inspection" ||
+                !(error instanceof ApiError) ||
+                error.status !== 409
+              )
+                throw error;
+              const current = await getExchangeDetail(detail.id).catch(
+                () => undefined,
+              );
               if (current?.status !== "COMPLETED") throw error;
             }
             invalidate();
@@ -517,8 +624,14 @@ function ExchangeDetailContent({
         />
       )}
       {detail.outboundDeliveryVerification && (
-        <section className={styles.deliveryVerification} aria-label="Xác minh giao sách">
-          <h2>Admin đã xác minh sách đã đến người nhận</h2>
+        <section
+          className={styles.deliveryVerification}
+          aria-label="Xác minh giao sách"
+        >
+          <div className={styles.verificationHead}>
+            <CheckCircle2 size={18} aria-hidden="true" />
+            <h2>Admin đã xác minh sách đã đến người nhận</h2>
+          </div>
           <p>{detail.outboundDeliveryVerification.note}</p>
         </section>
       )}
@@ -531,8 +644,17 @@ function ExchangeDetailContent({
           resolution={returnResolution}
           evidence={evidence}
           statements={detail.statements}
-          caseBook={caseBook && { title: caseBook.title, coverUrl: caseBook.coverUrl,
-            confirmed: Boolean(outgoingCaseBook ? detail.partnerShipping.receivedAt : detail.viewerShipping.receivedAt) }}
+          caseBook={
+            caseBook && {
+              title: caseBook.title,
+              coverUrl: caseBook.coverUrl,
+              confirmed: Boolean(
+                outgoingCaseBook
+                  ? detail.partnerShipping.receivedAt
+                  : detail.viewerShipping.receivedAt,
+              ),
+            }
+          }
           disputeReason={detail.disputeReason}
           returnAddress={detail.partnerAddress}
           blocked={recoveringAction}
@@ -542,8 +664,10 @@ function ExchangeDetailContent({
       {!returnResolution && evidence}
     </section>
   );
+
   const messagePages = messagesDenied ? undefined : messagesQuery.data?.pages;
-  const messages = messagePages?.slice().reverse().flatMap(page => page.items) ?? [];
+  const messages =
+    messagePages?.slice().reverse().flatMap((page) => page.items) ?? [];
   const renderChat = (inDrawer = false, visible = true) => (
     <ChatPanel
       key={id}
@@ -551,12 +675,17 @@ function ExchangeDetailContent({
       visible={visible}
       messages={messages}
       isLoading={messagesQuery.isPending}
-      loadError={messagesDenied || (messagesQuery.isError && !messagesQuery.isFetchNextPageError)}
+      loadError={
+        messagesDenied ||
+        (messagesQuery.isError && !messagesQuery.isFetchNextPageError)
+      }
       isRefreshing={messagesQuery.isFetching}
       hasOlder={!messagesDenied && messagesQuery.hasNextPage}
       isLoadingOlder={messagesQuery.isFetchingNextPage}
       olderError={!messagesDenied && messagesQuery.isFetchNextPageError}
-      onLoadOlder={() => messagesQuery.fetchNextPage({ cancelRefetch: false })}
+      onLoadOlder={() =>
+        messagesQuery.fetchNextPage({ cancelRefetch: false })
+      }
       onRetry={() => void messagesQuery.refetch()}
       giveBooks={detail.giveBooks.map((book) => book.title)}
       receiveBooks={detail.receiveBooks.map((book) => book.title)}
@@ -564,27 +693,47 @@ function ExchangeDetailContent({
       guidance={exchangeChatGuidance(detail)}
       partner={detail.partner}
       onSendMessage={handleSendMessage}
-      isReadOnly={[
-        "COMPLETED",
-        "CANCELLED",
-        "REJECTED",
-        "EXPIRED",
-      ].includes(detail.status)}
+      isReadOnly={["COMPLETED", "CANCELLED", "REJECTED", "EXPIRED"].includes(
+        detail.status,
+      )}
       unavailable={messagesDenied}
     />
   );
-  const contact = linked ? <Link className={styles.chatLink} to={`/chat/${linked.id}`}>Mở hội thoại</Link> : (
-    <ExchangeChatDrawer viewerId={detail.viewer.id} exchangeId={detail.id}
-      transactionCode={detail.transactionCode} partnerName={detail.partner.username}
-      latest={messagePages?.[0]?.items ?? []}>
-      {open => renderChat(true, open)}
+
+  const partnerInitial =
+    Array.from(detail.partner.username.trim())[0]?.toLocaleUpperCase("vi") || "Đ";
+  const contact = linked ? (
+    <Link
+      className={styles.chatLink}
+      to={`/chat/${linked.id}`}
+      aria-label={`Nhắn cho ${detail.partner.username}`}
+    >
+      <span className={styles.chatLinkAvatar} aria-hidden="true">
+        {partnerInitial}
+      </span>
+      <span className={styles.chatLinkName} title={detail.partner.username}>
+        <bdi>{detail.partner.username}</bdi>
+      </span>
+    </Link>
+  ) : (
+    <ExchangeChatDrawer
+      viewerId={detail.viewer.id}
+      exchangeId={detail.id}
+      transactionCode={detail.transactionCode}
+      partnerName={detail.partner.username}
+      partnerAvatarUrl={detail.partner.avatarUrl}
+      latest={messagePages?.[0]?.items ?? []}
+    >
+      {(open) => renderChat(true, open)}
     </ExchangeChatDrawer>
   );
+
   const stepPanel = (children: ReactNode) => (
     <ExchangeSteps detail={detail} navigation={handoverNavigation}>
       {children}
     </ExchangeSteps>
   );
+
   if (embedded)
     return (
       <div
@@ -603,11 +752,15 @@ function ExchangeDetailContent({
             </p>
           </header>
           <div className={styles.embeddedSteps}>
-            {stepPanel(<>
-              {actionSection}
-              <ReviewCard detail={detail} />
-              {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
-            </>)}
+            {stepPanel(
+              <>
+                {actionSection}
+                <ReviewCard detail={detail} />
+                {detail.status === "COMPLETED" && (
+                  <SettlementCard detail={detail} />
+                )}
+              </>,
+            )}
           </div>
           {workspaceNavigation}
           <TransactionDisclosure title="Hướng dẫn giao nhận và bảo quản">
@@ -618,107 +771,448 @@ function ExchangeDetailContent({
     );
 
   const waitingForViewer = detail.canViewerAccept ?? detail.viewerRole === "recipient";
-  const updatedProposal = proposal && (detail.revision ?? 0) > 1 && !!detail.lastProposedById;
-  const multipleBooks = detail.giveBooks.length > 1 || detail.receiveBooks.length > 1;
+  const updatedProposal =
+    proposal && (detail.revision ?? 0) > 1 && !!detail.lastProposedById;
+  const multipleBooks =
+    detail.giveBooks.length > 1 || detail.receiveBooks.length > 1;
   const title = funding
-      ? detail.viewerFundedAt ? "Bạn đã đặt cọc" : "Đặt cọc đổi sách"
-      : handover ? "Giao nhận sách"
-      : !proposal ? (detail.status === "REJECTED" ? "Đề nghị bị từ chối" : statusText)
-      : updatedProposal ? waitingForViewer ? "Đề nghị đã cập nhật" : "Đã gửi đề nghị mới"
-      : waitingForViewer ? "Đề nghị đổi sách" : "Đã gửi đề nghị";
+    ? detail.viewerFundedAt
+      ? "Bạn đã đặt cọc"
+      : "Đặt cọc đổi sách"
+    : handover
+      ? "Giao nhận sách"
+      : !proposal
+        ? detail.status === "REJECTED"
+          ? "Đề nghị bị từ chối"
+          : statusText
+        : updatedProposal
+          ? waitingForViewer
+            ? "Đề nghị đã cập nhật"
+            : "Đã gửi đề nghị mới"
+          : waitingForViewer
+            ? "Đề nghị đổi sách"
+            : "Đã gửi đề nghị";
+
   return (
-      <div className={styles.exchangeSheet} data-chat-morph-room={transitioning || undefined}>
-        <nav className={styles.handoverNav} aria-label="Điều hướng phiếu trao đổi">
+      <div
+        className={styles.page}
+        data-tone={tone}
+        data-chat-morph-room={transitioning || undefined}
+      >
+        <nav className={styles.topBar} aria-label="Điều hướng phiếu trao đổi">
           {location.state?.chatFromInbox === true ? (
-            <ConversationBackLink className={styles.proposalBack} />
+            <ConversationBackLink className={styles.backButton} />
           ) : (
-            <Link className={styles.proposalBack} to={ROUTES.exchangeMine}>
-              <ArrowLeft size={18} aria-hidden="true" />
+            <Link className={styles.backButton} to={ROUTES.exchangeMine}>
+              <ArrowLeft size={16} aria-hidden="true" />
               Trao đổi của tôi
             </Link>
           )}
-          <span className={styles.proposalCode}>Phiếu #{detail.transactionCode}</span>
+          <div className={styles.topMeta}>
+            <span className={styles.codeStamp}>Phiếu #{detail.transactionCode}</span>
+            <button
+              type="button"
+              className={styles.supportButton}
+              aria-haspopup="dialog"
+              aria-expanded={supportOpen}
+              onClick={() => setSupportOpen(true)}
+            >
+              <LifeBuoy size={15} aria-hidden="true" />
+              Gửi phản ánh
+            </button>
+          </div>
         </nav>
-        <header className={styles.handoverHeader}>
-          <div>
-            <h1>{title}</h1>
-            <p>Đổi sách với <strong dir="auto" title={detail.partner.username}>{detail.partner.username}</strong></p>
-          </div>
-          {contact}
-        </header>
-        {stepPanel(standaloneSheet ? (
-          <div className={funding ? styles.fundingWorkspace : styles.proposalWorkspace}>
-            <div className={funding ? styles.fundingControls : proposal ? styles.proposalControls : undefined}>
-              <div className={funding ? styles.fundingPanel : proposal ? styles.proposalActions : undefined}>{actionSection}</div>
-              <div className={styles.proposalContact}>
-                <SupportLink type="Exchange" id={detail.id} label={funding ? "Cần hỗ trợ" : undefined} />
+
+        <ExchangeSupportDialog
+          isOpen={supportOpen}
+          onClose={() => setSupportOpen(false)}
+          exchangeId={detail.id}
+          transactionCode={detail.transactionCode}
+          bookTitle={detail.receiveBooks[0]?.title ?? detail.giveBooks[0]?.title}
+        />
+
+        <header className={styles.headCard} data-tone={tone}>
+          <div className={styles.headMain}>
+            <div className={styles.stampRow}>
+              <span className={styles.statusStamp}>
+                {isActiveFlow && <span className={styles.liveDot} aria-hidden="true" />}
+                {statusText}
+              </span>
+              <span
+                className={styles.roleStamp}
+                data-role={detail.viewerRole}
+              >
+                <UserRound size={13} aria-hidden="true" />
+                {detail.viewerRole === "proposer" ? "Bạn gửi đề nghị" : "Bạn nhận đề nghị"}
+              </span>
+              {multipleBooks && (
+                <span className={styles.bundleStamp}>
+                  <ArrowLeftRight size={13} aria-hidden="true" />
+                  Đổi nhiều cuốn
+                </span>
+              )}
+            </div>
+
+            <div className={styles.titleRow}>
+              <h1>{title}</h1>
+              <InfoTip label="Quy trình bảo chứng trao đổi">
+                <ul>
+                  <li>
+                    <strong>Đặt cọc hai chiều:</strong> hai bên ký quỹ theo giá trị sách để đảm bảo cam kết giao nhận.
+                  </li>
+                  <li>
+                    <strong>72 giờ kiểm tra:</strong> tính từ lúc mỗi bên xác nhận đã nhận sách.
+                  </li>
+                  <li>
+                    <strong>Hoàn 100% tiền cọc</strong> về Ví mô phỏng sau khi hết hạn kiểm tra và không có tranh chấp.
+                  </li>
+                </ul>
+              </InfoTip>
+            </div>
+
+            <div className={styles.partnerBar}>
+              <div className={styles.partnerGroup}>
+                <span className={styles.partnerLead}>Đổi sách với</span>
+                {contact}
               </div>
-            </div>
-            <div className={styles.proposalLayout} data-books-only={funding || undefined}>
-              <section aria-labelledby="proposal-facts"
-                className={funding || proposal || multipleBooks ? styles.fundingBooks : undefined}
-                data-multiple-books={multipleBooks || undefined}>
-                <h2 id="proposal-facts">{proposal && !updatedProposal ? "Phiếu đề nghị đổi sách" : "Sách trong phiếu"}</h2>
-                {[
-                  { title: "Sách bạn gửi", books: detail.giveBooks, Icon: ArrowUpRight },
-                  { title: "Sách bạn nhận", books: detail.receiveBooks, Icon: ArrowDownLeft },
-                ].map(({ title: label, books, Icon }) => {
-                  const total = books.reduce((sum, book) => sum + (book.price ?? 0), 0);
-                  return (
-                    <div className={styles.proposalBooks} key={label} data-receive={Icon === ArrowDownLeft || undefined}>
-                      <h3>
-                        {(proposal || funding || multipleBooks) && <Icon size={18} aria-hidden="true" />}
-                        {label}
-                        {multipleBooks && books.length > 0 && <span className={styles.bookGroupCount}>{books.length} cuốn</span>}
-                      </h3>
-                      {multipleBooks && books.length > 0 && books.every(book => book.price != null) && (
-                        <p className={styles.bookGroupTotal}><span>Tổng giá trị đổi</span> <strong>{formatVnd(total)}</strong></p>
-                      )}
-                      {books.map((book, index) => (
-                        <div className={styles.proposalBook} key={book.id}>
-                          <div aria-hidden="true"><BookCover title={book.title} coverUrl={book.coverUrl} index={index} /></div>
-                          <div>
-                            <strong className={styles.proposalBookTitle} title={multipleBooks ? book.title : undefined}>{book.title}</strong>
-                            {book.author && <span className={styles.proposalBookAuthor}>{book.author}</span>}
-                            {book.price != null && <span className={styles.proposalBookPrice}>{formatVnd(book.price)}</span>}
-                            {book.conditionDetails && <details>
-                              <summary>Tình trạng sách</summary><p>{book.conditionDetails}</p>
-                            </details>}
-                          </div>
-                        </div>
-                      ))}
-                      {books.length === 0 && <p>Chưa tải được thông tin sách.</p>}
-                    </div>
-                  );
-                })}
-                {!detail.hasAgreementSnapshot && <p>Phiếu cũ thiếu thông tin sách lúc gửi đề nghị.</p>}
-              </section>
-              {proposal && <section className={styles.proposalAmounts} aria-labelledby="proposal-amounts">
-                <h2 id="proposal-amounts">Nếu hai bên đồng ý</h2>
-                <dl>
-                  {detail.viewerDeposit != null && <div><dt>Cọc của bạn</dt><dd>{formatVnd(detail.viewerDeposit)}</dd></div>}
-                  {detail.partnerDeposit != null && <div><dt>Cọc của đối tác</dt><dd>{formatVnd(detail.partnerDeposit)}</dd></div>}
-                  {detail.moneyAmount != null && detail.moneyCompensationType !== "none" && (
-                    <div><dt>{detail.moneyCompensationType === "user_pays" ? "Tiền bù bạn trả" : "Tiền bù bạn nhận"}</dt><dd>{formatVnd(detail.moneyAmount)}</dd></div>
-                  )}
-                  {detail.viewerFundingAmount != null && <div><dt>Bạn cần nộp</dt><dd><strong>{formatVnd(detail.viewerFundingAmount)}</strong></dd></div>}
-                </dl>
-                <p className={styles.proposalAmountNote}>Chưa giữ sách hay trừ tiền.</p>
-              </section>}
+              {detail.createdAt && (
+                <span className={styles.createdMeta}>
+                  <Clock size={13} aria-hidden="true" />
+                  <span>Tạo ngày</span>
+                  <time dateTime={detail.createdAt}>
+                    {new Date(detail.createdAt).toLocaleDateString("vi-VN")}
+                  </time>
+                </span>
+              )}
             </div>
           </div>
-        ) : (
-          <>
-            {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
-            {actionSection}
-            <ReviewCard detail={detail} />
-            <div className={styles.handoverFooter} data-shipping={handover || undefined}>
-              {handover ? <TransactionDisclosure title="Hướng dẫn đóng gói và giao nhận">
-                <SafetyTipsCard />
-              </TransactionDisclosure> : <SupportLink type="Exchange" id={detail.id} label="Cần hỗ trợ" />}
-            </div>
-          </>
-        ))}
+
+          <img
+            src="/illustrations/exchange-detail/exchange-crest.svg"
+            alt=""
+            aria-hidden="true"
+            className={styles.headArt}
+            width={184}
+            height={140}
+          />
+        </header>
+
+        <div className={styles.exchangeContent}>
+          {stepPanel(
+            standaloneSheet ? (
+              <div
+                className={
+                  funding ? styles.fundingWorkspace : styles.proposalWorkspace
+                }
+              >
+                <div
+                  className={styles.proposalLayout}
+                  data-books-only={funding || undefined}
+                >
+                  <section
+                    aria-labelledby="proposal-facts"
+                    className={styles.booksCard}
+                    data-multiple-books={multipleBooks || undefined}
+                  >
+                    <header className={styles.booksCardHead}>
+                      <h2 id="proposal-facts">
+                        {proposal && !updatedProposal
+                          ? "Phiếu đề nghị đổi sách"
+                          : "Sách trong phiếu"}
+                      </h2>
+                      <InfoTip label="Bản chụp thỏa thuận sách">
+                        Tình trạng và giá trị trao đổi được khóa theo bản chụp tại thời điểm gửi đề nghị để đối chiếu khi nhận sách.
+                      </InfoTip>
+                    </header>
+
+                    {detail.giveBooks.length > 0 &&
+                      detail.receiveBooks.length > 0 &&
+                      detail.giveBooks.every((book) => book.price != null) &&
+                      detail.receiveBooks.every((book) => book.price != null) && (() => {
+                        const giveTotal = detail.giveBooks.reduce(
+                          (sum, book) => sum + (book.price ?? 0),
+                          0,
+                        );
+                        const receiveTotal = detail.receiveBooks.reduce(
+                          (sum, book) => sum + (book.price ?? 0),
+                          0,
+                        );
+                        const priceGap = Math.abs(receiveTotal - giveTotal);
+                        return (
+                          <div
+                            className={styles.valueCompareBar}
+                            aria-label="Đối chiếu tổng giá trị sách hai bên"
+                          >
+                            <div className={styles.compareSide}>
+                              <span className={styles.compareLabel}>
+                                <ArrowUpRight size={14} aria-hidden="true" />
+                                Bạn gửi ({detail.giveBooks.length} cuốn)
+                              </span>
+                              <strong className={styles.compareAmount}>
+                                {formatVnd(giveTotal)}
+                              </strong>
+                            </div>
+                            <div className={styles.compareDiff}>
+                              <ArrowLeftRight size={14} aria-hidden="true" />
+                              <span>
+                                {priceGap === 0
+                                  ? "Ngang giá sách"
+                                  : `Chênh lệch ${formatVnd(priceGap)}`}
+                              </span>
+                            </div>
+                            <div className={styles.compareSide} data-receive="true">
+                              <span className={styles.compareLabel}>
+                                <ArrowDownLeft size={14} aria-hidden="true" />
+                                Bạn nhận ({detail.receiveBooks.length} cuốn)
+                              </span>
+                              <strong className={styles.compareAmount}>
+                                {formatVnd(receiveTotal)}
+                              </strong>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                    <div className={styles.booksColumns}>
+                      {[
+                        {
+                          title: "Sách bạn gửi",
+                          books: detail.giveBooks,
+                          Icon: ArrowUpRight,
+                          receive: false,
+                        },
+                        {
+                          title: "Sách bạn nhận",
+                          books: detail.receiveBooks,
+                          Icon: ArrowDownLeft,
+                          receive: true,
+                        },
+                      ].map(({ title: label, books, Icon, receive }) => {
+                        const total = books.reduce(
+                          (sum, book) => sum + (book.price ?? 0),
+                          0,
+                        );
+                        return (
+                          <div
+                            className={styles.bookLane}
+                            key={label}
+                            data-receive={receive || undefined}
+                          >
+                            <div className={styles.bookLaneHead}>
+                              <h3>
+                                <Icon size={17} aria-hidden="true" />
+                                <span>{label}</span>
+                              </h3>
+                              {books.length > 0 && (
+                                <span className={styles.bookGroupCount}>
+                                  {books.length} cuốn
+                                </span>
+                              )}
+                            </div>
+
+                            <div className={styles.bookLaneList}>
+                              {books.map((book, index) => (
+                                <article
+                                  className={styles.proposalBook}
+                                  key={book.id}
+                                >
+                                  {books.length > 1 && (
+                                    <div className={styles.bookIndexBar}>
+                                      <span className={styles.bookIndexStamp}>
+                                        Cuốn {index + 1} / {books.length}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div
+                                    className={styles.bookCoverBox}
+                                    aria-hidden="true"
+                                  >
+                                    <BookCover
+                                      title={book.title}
+                                      coverUrl={book.coverUrl}
+                                      index={index}
+                                      fallbackLabel="Chưa có ảnh"
+                                    />
+                                  </div>
+                                  <div className={styles.bookMeta}>
+                                    <strong
+                                      className={styles.proposalBookTitle}
+                                      title={book.title}
+                                    >
+                                      {book.title}
+                                    </strong>
+                                    {book.author && (
+                                      <span className={styles.proposalBookAuthor}>
+                                        {book.author}
+                                      </span>
+                                    )}
+                                    {book.condition && (
+                                      <span className={styles.conditionTag}>
+                                        {conditions[
+                                          book.condition as keyof typeof conditions
+                                        ] ?? book.condition}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {book.price != null && (
+                                    <div className={styles.priceHighlight}>
+                                      <span className={styles.priceLabel}>Giá trị đổi</span>
+                                      <strong className={styles.proposalBookPrice}>
+                                        {formatVnd(book.price)}
+                                      </strong>
+                                    </div>
+                                  )}
+                                  <BookConditionDisclosure
+                                    label="Tình trạng sách"
+                                    editionLabel={book.editionLabel}
+                                    conditionDetails={book.conditionDetails}
+                                    report={book.conditionReport}
+                                    incoming={receive}
+                                  />
+                                </article>
+                              ))}
+                              {books.length === 0 && (
+                                <p className={styles.emptyBooks}>
+                                  Chưa tải được thông tin sách.
+                                </p>
+                              )}
+                            </div>
+
+                            {multipleBooks &&
+                              books.length > 0 &&
+                              books.every((book) => book.price != null) && (
+                                <div className={styles.bookGroupTotal}>
+                                  <div className={styles.bookGroupTotalMeta}>
+                                    <span className={styles.bookGroupTotalLabel}>
+                                      Tổng giá trị đổi
+                                    </span>
+                                    <span className={styles.bookGroupTotalSub}>
+                                      {books.length > 1
+                                        ? `${books.length} cuốn cộng gộp`
+                                        : "1 cuốn trong phiếu"}
+                                    </span>
+                                  </div>
+                                  <strong className={styles.bookGroupTotalValue}>
+                                    {formatVnd(total)}
+                                  </strong>
+                                </div>
+                              )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {!detail.hasAgreementSnapshot && (
+                      <p className={styles.snapshotNotice}>
+                        Phiếu cũ thiếu thông tin sách lúc gửi đề nghị.
+                      </p>
+                    )}
+                  </section>
+                </div>
+
+                <aside
+                  className={funding ? styles.fundingControls : styles.decisionRail}
+                  aria-label={funding ? "Đặt cọc trao đổi" : "Tóm tắt tài chính và quyết định"}
+                >
+                  {proposal && (
+                    <section
+                      className={styles.proposalAmounts}
+                      aria-labelledby="proposal-amounts"
+                    >
+                      <header className={styles.amountsHead}>
+                        <div className={styles.amountsTitleWrap}>
+                          <ShieldCheck size={17} aria-hidden="true" />
+                          <h2 id="proposal-amounts">Nếu hai bên đồng ý</h2>
+                        </div>
+                        <InfoTip label="Cách tính tiền cọc và tiền bù">
+                          <ul>
+                            <li>
+                              <strong>Chưa giữ sách hay trừ tiền</strong> khi phiếu còn đang ở bước đề nghị.
+                            </li>
+                            <li>
+                              Khi hai bên đồng ý, mỗi bên nộp tiền cọc tương ứng trong <strong>24 giờ</strong>.
+                            </li>
+                            <li>
+                              Tiền cọc được hoàn lại <strong>100%</strong> sau khi hoàn tất trao đổi.
+                            </li>
+                          </ul>
+                        </InfoTip>
+                      </header>
+                      <dl className={styles.amountsList}>
+                        {detail.viewerDeposit != null && (
+                          <div>
+                            <dt>Cọc của bạn</dt>
+                            <dd>{formatVnd(detail.viewerDeposit)}</dd>
+                          </div>
+                        )}
+                        {detail.partnerDeposit != null && (
+                          <div>
+                            <dt>Cọc của đối tác</dt>
+                            <dd>{formatVnd(detail.partnerDeposit)}</dd>
+                          </div>
+                        )}
+                        {detail.moneyAmount != null &&
+                          detail.moneyCompensationType !== "none" && (
+                            <div
+                              className={styles.compRow}
+                              data-direction={
+                                detail.moneyCompensationType === "user_pays"
+                                  ? "out"
+                                  : "in"
+                              }
+                            >
+                              <dt>
+                                {detail.moneyCompensationType === "user_pays"
+                                  ? "Tiền bù bạn trả"
+                                  : "Tiền bù bạn nhận"}
+                              </dt>
+                              <dd className={styles.compHighlight}>
+                                {detail.moneyCompensationType === "user_pays"
+                                  ? "-"
+                                  : "+"}
+                                {formatVnd(detail.moneyAmount)}
+                              </dd>
+                            </div>
+                          )}
+                      </dl>
+                      {detail.viewerFundingAmount != null && (
+                        <div className={styles.amountsTotalBox}>
+                          <span>Bạn cần nộp</span>
+                          <strong>{formatVnd(detail.viewerFundingAmount)}</strong>
+                        </div>
+                      )}
+                      <p className={styles.proposalAmountNote}>
+                        Chưa giữ sách hay trừ tiền.
+                      </p>
+                    </section>
+                  )}
+
+                  <div
+                    className={
+                      funding ? styles.fundingPanel : styles.proposalActions
+                    }
+                    data-tone={tone}
+                  >
+                    {actionSection}
+                  </div>
+                </aside>
+              </div>
+            ) : (
+              <div className={styles.stageStack}>
+                {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
+                {actionSection}
+                <ReviewCard detail={detail} />
+                {handover && (
+                  <div className={styles.handoverFooter} data-shipping="true">
+                    <TransactionDisclosure title="Hướng dẫn đóng gói và giao nhận">
+                      <SafetyTipsCard />
+                    </TransactionDisclosure>
+                  </div>
+                )}
+              </div>
+            ),
+          )}
+        </div>
       </div>
   );
 }

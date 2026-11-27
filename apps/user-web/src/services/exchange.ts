@@ -326,8 +326,18 @@ export async function exchangeBook(
         snapshot.hasMissingPages ? "Có thiếu trang" : "Không thiếu trang",
         snapshot.readable ? "Đọc được" : "Không đọc được",
       ]
+        .map((part) => part?.trim().replace(/\.+$/, ""))
         .filter(Boolean)
         .join(". "),
+      conditionReport: {
+        description: snapshot.description?.trim() || undefined,
+        pages: snapshot.pages?.trim() || undefined,
+        coverNote: snapshot.coverNote?.trim() || undefined,
+        notes: snapshot.notes?.trim() || undefined,
+        accessories: snapshot.accessories?.trim() || undefined,
+        hasMissingPages: snapshot.hasMissingPages,
+        readable: snapshot.readable,
+      },
     };
   }
   return {
