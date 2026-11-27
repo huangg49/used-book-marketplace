@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="#5c0202" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Step 2: a drop-off counter with an awning, a map pin and an hourglass. Hand-authored for Lật lại. -->
+  <ellipse cx="60" cy="106" rx="46" ry="5" fill="#5c0202" fill-opacity=".12" stroke="none"/>
+  <rect x="20" y="44" width="80" height="58" rx="3" fill="#fffcf5"/>
+  <rect x="30" y="54" width="38" height="26" rx="2" fill="#f6e0a8" stroke-width="2.5"/>
+  <rect x="38" y="60" width="8" height="20" fill="#7c1a17" stroke-width="2"/>
+  <rect x="47" y="63" width="7" height="17" fill="#f4cb67" stroke-width="2"/>
+  <path d="M56 80l4-15 6 1.5-3.6 13.5" fill="#fffcf5" stroke-width="2"/>
+  <path d="M20 88h80" stroke-width="2.5"/>
+  <path d="M14 30h92v12H14z" fill="#fffcf5"/>
+  <path d="M14 30h11.5v12H14zM37 30h11.5v12H37zM60 30h11.5v12H60zM83 30h11.5v12H83z" fill="#7c1a17" stroke="none"/>
+  <path d="M14 30h92v12H14z"/>
+  <path d="M14 42a5.75 5.75 0 0 0 11.5 0a5.75 5.75 0 0 0 11.5 0a5.75 5.75 0 0 0 11.5 0a5.75 5.75 0 0 0 11.5 0a5.75 5.75 0 0 0 11.5 0a5.75 5.75 0 0 0 11.5 0a5.75 5.75 0 0 0 11.5 0a5.75 5.75 0 0 0 11.5 0" fill="#f6e0a8"/>
+  <path d="M74 56h16M74 84h16" stroke-width="3"/>
+  <path d="M76 56h12l-6 14 6 14H76l6-14z" fill="#fffcf5" stroke-width="2.5"/>
+  <path d="M78.5 60h7L82 66.5z" fill="#f4cb67" stroke="none"/>
+  <path d="M77.6 83.5c1.4-4 3-5.5 4.4-5.5s3 1.5 4.4 5.5z" fill="#f4cb67" stroke="none"/>
+  <path d="M96 4a12 12 0 0 1 12 12c0 9-12 21-12 21S84 25 84 16A12 12 0 0 1 96 4z" fill="#7c1a17"/>
+  <circle cx="96" cy="16" r="4.5" fill="#fffcf5" stroke-width="2"/>
+</svg>
