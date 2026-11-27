@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, ArrowUpRight, BookOpen, Clock3, HandCoins, MessagesSquare, RefreshCw, UserRound } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, BookOpen, Clock3, HandCoins, MessagesSquare, RefreshCw } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
 import { useTransactionLive } from "../../hooks/useTransactionLive";
 import {
@@ -19,6 +19,7 @@ import { ListingPhoto } from "../BookCard";
 import { formatVnd } from "../../lib/routes";
 import { useNearViewport } from "../../hooks/useNearViewport";
 import card from "./TransactionCard.module.css";
+import { PartnerChip } from "./PartnerChip";
 
 type Tone = "attention" | "progress" | "complete" | "closed";
 /** Where the conversation stands, from the viewer's side. */
@@ -126,10 +127,7 @@ function ConversationCard({
                   : unavailable ? "Bài đăng không còn công khai" : "Chưa tải được tên sách")}
             </Link>
           </h3>
-          <p className={card.who}>
-            <UserRound size={14} aria-hidden="true" />
-            {buyer ? "Người bán" : "Người mua"} · <b>{partner.displayName}</b>
-          </p>
+          <PartnerChip id={partner.id} name={partner.displayName} role={buyer ? "Người bán" : "Người mua"} />
         </div>
       </div>
       {book.isError && (
@@ -214,9 +212,7 @@ function LegacyCard({ exchange, userId, index }: { exchange: Exchange; userId: s
               {title || "Cuộc trao đổi sách"}
             </Link>
           </h3>
-          <p className={card.who}>
-            <UserRound size={14} aria-hidden="true" /> Với <b>{partner}</b>
-          </p>
+          <PartnerChip id={partnerName ? (initiator ? exchange.recipientId : exchange.initiatorId) : undefined} name={partner} role="Đối tác đổi sách" />
         </div>
       </div>
       <div className={card.foot}>

@@ -48,6 +48,17 @@
 .who { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--shop-muted); font-size: .85rem; line-height: 1.45; }
 .who svg { flex: none; color: var(--shop-wine); }
 .who b { color: var(--shop-ink); font-weight: 700; }
+/* The other member: initial avatar + role + name, a link above the card's own link. */
+.partner { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin-top: 8px; padding: 3px 12px 3px 3px; border-radius: 999px; background: #fff; color: var(--shop-ink); text-decoration: none; box-shadow: inset 0 0 0 1px #5c02021f; transition: box-shadow .2s; }
+a.partner:hover { box-shadow: inset 0 0 0 1px var(--shop-wine), 0 6px 12px -8px rgba(92, 2, 2, .5); }
+.avatar { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--av, linear-gradient(150deg, #a3342a, #5c0202)); color: #fffcf5; font-size: .85rem; font-weight: 800; box-shadow: inset 0 0 0 2px #ffffff40; }
+.avatar[data-hue="1"] { --av: linear-gradient(150deg, #3f8a69, #254337); }
+.avatar[data-hue="2"] { --av: linear-gradient(150deg, #d19a2a, #8a5f0c); }
+.avatar[data-hue="3"] { --av: linear-gradient(150deg, #4f6f9a, #2c3f5e); }
+.avatar[data-hue="4"] { --av: linear-gradient(150deg, #c0623a, #7c2d12); }
+.partnerText { display: grid; min-width: 0; line-height: 1.2; }
+.partnerText small { color: var(--shop-muted); font-size: .68rem; font-weight: 600; }
+.partnerText b { overflow: hidden; font-size: .86rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .meta { margin: 4px 0 0; color: var(--shop-muted); font-size: .82rem; line-height: 1.45; }
 .price { display: block; margin-top: 6px; color: var(--shop-wine); font: 400 1.35rem/1.15 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
 .price small { display: block; margin-bottom: 2px; color: var(--shop-muted); font: 700 .68rem/1.3 var(--shop-body); letter-spacing: .06em; text-transform: uppercase; }

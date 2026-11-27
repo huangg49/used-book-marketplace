@@ -1,5 +1,6 @@
 import { NegotiationWorkspace } from "./NegotiationWorkspace";
 import { ConversationInbox } from "../components/conversation/ConversationInbox";
+import { PartnerChip } from "../components/conversation/PartnerChip";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
 import {
   useConversationTransition,
@@ -18,7 +19,7 @@ import { io, type Socket } from "socket.io-client";
 import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, DEFAULT_SALE_COMMISSION_BPS, chatSendWasRateLimited, clipChatMessage, directOrderCommission, formatSaleFeeRate } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeftRight, ArrowRight, ArrowUp, ArrowUpRight, Clock3, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, UserRound, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, ArrowUp, ArrowUpRight, Clock3, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, type LucideIcon } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
@@ -1142,9 +1143,11 @@ function ExchangeCard({
               {exchangeBookTitle(exchange, userId)}
             </Link>
           </h3>
-          <p className={card.who}>
-            <UserRound size={14} aria-hidden="true" /> Với <b>{partner}</b>
-          </p>
+          <PartnerChip
+            id={exchange.initiatorId === userId ? exchange.recipientId : exchange.initiatorId}
+            name={partner}
+            role="Đối tác đổi sách"
+          />
           <p className={card.meta}>
             {exchange.initiatorId === userId ? "Bạn đề xuất" : "Bạn nhận đề nghị"} ·{" "}
             <time dateTime={exchange.createdAt}>{shortDate(exchange.createdAt)}</time>
