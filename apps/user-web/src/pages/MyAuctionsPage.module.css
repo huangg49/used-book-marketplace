@@ -211,74 +211,11 @@
   .tabs button { padding-inline: 12px; font-size: .8125rem; }
 }
 
-/* Backdrop (this page only): an auction stage, made purely of gradients.
-   - base: cream paper with wine side-shading
-   - two fields of wine and gold light drifting slowly (aurora)
-   - autumn leaves (gradient almonds) falling, swaying and spinning down the page
-   - a breathing lamp at the top
-   Only transform, rotate, translate, scale and opacity animate. */
-.stage { position: relative; isolation: isolate; overflow-x: clip; }
-/* bottom: -72px runs the stage through MainLayout's footer gap (.footer margin-top: 72px). */
-.backdrop {
-  position: absolute; inset: 0 0 -72px; z-index: -1; overflow: hidden; pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(92, 2, 2, .09), transparent 16%, transparent 84%, rgba(92, 2, 2, .09)),
-    linear-gradient(180deg, #fbefe0 0%, #fbf1e3 30%, #f7e6d0 70%, #f2dcc0 100%);
-}
-.bdPattern { position: absolute; inset: 0; }
-.bdPattern::before, .bdPattern::after { content: ""; position: absolute; inset: -12% -8%; will-change: transform; }
-.bdPattern::before {
-  background:
-    radial-gradient(38rem 30rem at 6% 10%, rgba(124, 26, 23, .18), transparent 70%),
-    radial-gradient(34rem 28rem at 8% 58%, rgba(196, 96, 70, .14), transparent 70%),
-    radial-gradient(40rem 30rem at 96% 92%, rgba(124, 26, 23, .15), transparent 70%);
-  animation: aurora 18s ease-in-out infinite alternate;
-}
-.bdPattern::after {
-  background:
-    radial-gradient(36rem 28rem at 94% 34%, rgba(244, 203, 103, .4), transparent 70%),
-    radial-gradient(30rem 24rem at 40% 78%, rgba(244, 203, 103, .28), transparent 70%),
-    radial-gradient(30rem 22rem at 56% 18%, rgba(255, 236, 200, .75), transparent 70%);
-  animation: aurora 24s ease-in-out -7s infinite alternate-reverse;
-}
-.bdLamp {
-  position: absolute; top: -12rem; left: 50%; width: 46rem; height: 30rem; margin-left: -23rem; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 232, 170, .9), rgba(246, 224, 168, .3) 55%, transparent);
-  will-change: transform, opacity; animation: lamp 6s ease-in-out infinite alternate;
-}
-/* Falling leaves (positions, sizes and timings come from LEAVES in the page).
-   Each leaf is a pure gradient: an almond shape (two sharp opposite corners)
-   with a light midrib. One keyframe set falls, sways, spins and flutters it. */
-.bdLeaf {
-  --leaf-a: #7c1a17; --leaf-b: #b0461a;
-  position: absolute; opacity: 0; border-radius: 0 100% 0 100%; scale: 1.3;
-  background: linear-gradient(135deg, var(--leaf-a), var(--leaf-b));
-  box-shadow: inset -1px -1px 0 rgba(0, 0, 0, .12);
-  will-change: transform, opacity; animation-name: fall; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
-}
-.bdLeaf::after { content: ""; position: absolute; left: -10%; right: -10%; top: 50%; height: 1.5px; margin-top: -.75px; rotate: 45deg; background: linear-gradient(90deg, transparent, rgba(255, 244, 214, .7) 30%, rgba(255, 244, 214, .35) 75%, transparent); }
-.bdLeaf[data-c="1"] { --leaf-a: #b0461a; --leaf-b: #d9a441; }
-.bdLeaf[data-c="2"] { --leaf-a: #d9a441; --leaf-b: #f4cb67; }
-.bdLeaf[data-c="3"] { --leaf-a: #8a5f3c; --leaf-b: #c98a2e; }
-.bdLeaf[data-c="4"] { --leaf-a: #9c2b1c; --leaf-b: #e07a4a; }
-/* Fewer leaves on small screens. */
-@media (max-width: 760px) { .bdLeaf:nth-of-type(3n) { display: none; } }
-@media (forced-colors: active) { .backdrop { display: none; } .row, .tabs, .intakes, .empty { border-color: CanvasText; } }
+@media (forced-colors: active) { .row, .tabs, .intakes, .empty { border-color: CanvasText; } }
 
 /* Motion. Owner policy (AGENTS.md, 11/10/2026): designed motion stays on even
    under prefers-reduced-motion. Only transform-type properties and opacity
    animate; hover lifts apply on real hover devices so touch never sticks. */
-@keyframes aurora { 0% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(3%, 2%, 0) scale(1.06); } 100% { transform: translate3d(-2%, 4%, 0) scale(1.02); } }
-@keyframes fall {
-  0% { opacity: 0; transform: translate3d(0, -8vh, 0) rotate(0deg) rotateX(0deg); }
-  8% { opacity: .85; }
-  25% { transform: translate3d(34px, 18vh, 0) rotate(70deg) rotateX(50deg); }
-  50% { transform: translate3d(-26px, 44vh, 0) rotate(160deg) rotateX(0deg); }
-  75% { transform: translate3d(30px, 68vh, 0) rotate(240deg) rotateX(55deg); }
-  90% { opacity: .75; }
-  100% { opacity: 0; transform: translate3d(-12px, 90vh, 0) rotate(320deg) rotateX(0deg); }
-}
-@keyframes lamp { from { opacity: .6; transform: scale(.95); } to { opacity: 1; transform: scale(1.04); } }
 @keyframes rise { from { opacity: 0; translate: 0 18px; } }
 @keyframes pick { 0% { scale: .93; } 55% { scale: 1.05; } 100% { scale: 1; } }
 @keyframes bump { from { translate: 0 -8px; opacity: .25; } }

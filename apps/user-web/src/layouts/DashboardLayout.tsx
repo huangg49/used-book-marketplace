@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { DashboardSidebar } from "../pages/profile/components/DashboardSidebar";
 import { Header } from "../components/Header";
+import { AccountBackdrop } from "../components/AccountBackdrop";
 import { useSession } from "../hooks/useSession";
 import styles from "./DashboardLayout.module.css";
 
@@ -55,6 +56,7 @@ export function DashboardLayout() {
     );
   return (
     <div className={styles.root}>
+      <AccountBackdrop />
       <a className={styles.skip} href="#account-content">
         Bỏ qua điều hướng
       </a>

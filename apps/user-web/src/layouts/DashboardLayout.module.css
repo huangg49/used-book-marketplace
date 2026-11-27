@@ -1,10 +1,15 @@
 .root {
+  position: relative;
+  isolation: isolate;
   min-height: 100dvh;
+  /* Fallback under AccountBackdrop (fixed, full window, z-index 0). */
   background: #f5eddc;
   color: var(--shop-ink);
   font-family: var(--shop-body);
 }
 .workspace {
+  position: relative;
+  z-index: 1;
   max-width: 1360px;
   margin: 0 auto;
   padding: 36px 40px 72px;

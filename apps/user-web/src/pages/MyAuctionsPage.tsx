@@ -2,7 +2,7 @@ import { CursorPager } from "../components/Pagination/CursorPager";
 import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { formatDuration } from '../components/DurationInput'
 import { InfoTip } from '../components/InfoTip'
-import { useRef, useState, type ReactNode } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -32,38 +32,6 @@ const views: { value: string; label: string; icon: LucideIcon }[] = [
 // Colour family for a row: drives the accent bar, the status pill and the clock.
 type Tone = 'pay' | 'lead' | 'outbid' | 'mine' | 'soon' | 'won' | 'done'
 
-// Falling leaves: [left %, top %, size px, duration s, delay s, colour 0-4].
-// Fixed values so the scene is the same on every render and device. Leaves are
-// spread down the whole page, each falling about one screen while it sways.
-const LEAVES: [number, number, number, number, number, number][] = [
-  [4, -2, 22, 14, 0, 0], [16, 4, 16, 17, -6, 1], [29, -4, 26, 15, -3, 2], [43, 8, 18, 19, -11, 3], [57, -3, 24, 16, -8, 4],
-  [70, 6, 18, 18, -2, 0], [84, -1, 28, 15, -12, 2], [95, 10, 16, 20, -5, 1], [8, 22, 20, 17, -9, 3], [24, 30, 14, 15, -1, 4],
-  [37, 25, 22, 19, -14, 0], [63, 28, 18, 16, -7, 2], [78, 24, 24, 18, -3, 1], [92, 34, 18, 15, -10, 3], [3, 46, 26, 19, -4, 2],
-  [18, 52, 16, 16, -13, 0], [50, 48, 20, 18, -6, 4], [88, 54, 22, 17, -9, 1], [10, 68, 18, 15, -2, 3], [33, 72, 24, 19, -11, 2],
-  [66, 70, 16, 16, -5, 0], [96, 74, 20, 18, -8, 4], [22, 86, 22, 17, -12, 1], [74, 88, 18, 15, -1, 3],
-]
-
-// Full-width auction stage behind the centred page column: drifting wine/gold
-// light, a breathing lamp at the top and autumn leaves falling past the page.
-function AuctionStage({ children }: { children: ReactNode }) {
-  return (
-    <div className={styles.stage}>
-      <div className={styles.backdrop} aria-hidden="true">
-        <span className={styles.bdPattern} />
-        <span className={styles.bdLamp} />
-        {LEAVES.map(([x, y, size, duration, delay, colour], i) => (
-          <span
-            key={i}
-            className={styles.bdLeaf}
-            data-c={colour}
-            style={{ left: `${x}%`, top: `${y}%`, width: size, height: size, animationDuration: `${duration}s`, animationDelay: `${delay}s` }}
-          />
-        ))}
-      </div>
-      {children}
-    </div>
-  )
-}
 const states: Record<string, string> = {
   BuyNowPending: 'Chờ thanh toán mua ngay',
   AwaitingWinnerPayment: 'Chờ người thắng thanh toán',
@@ -609,7 +577,6 @@ export function MyAuctionsPage() {
   const readDenied = query.error instanceof ApiError && [401, 403].includes(query.error.status)
   const showData = !!query.data && (!query.isError || stale)
   return (
-    <AuctionStage>
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerText}>
@@ -696,6 +663,5 @@ export function MyAuctionsPage() {
       {!readDenied && <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
         busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang đấu giá của tôi" itemLabel="phiên" anchorId="my-auction-results" />}
     </div>
-    </AuctionStage>
   )
 }
