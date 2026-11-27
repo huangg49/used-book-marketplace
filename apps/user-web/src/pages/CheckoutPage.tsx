@@ -23,8 +23,7 @@ import { SupportLink } from "../features/support/SupportLink";
 import { conditions } from "../lib/listing-labels";
 import { MapPin, ArrowRight, ArrowLeft, ArrowDownLeft, MessageCircle } from "lucide-react";
 import styles from "./PurchaseFlow.module.css";
-import exchangeStyles from "./ExchangeDetailPage.module.css";
-import stepStyles from "../components/exchange/ExchangeSteps/ExchangeSteps.module.css";
+import dealStyles from "./DealSheet.module.css";
 import {
   attachPurchaseQuote,
   getPurchaseConversations,
@@ -379,21 +378,21 @@ function CheckoutListing() {
   const partnerName = displayedListing?.seller.displayName ?? "Người bán";
   const shortCode = (conversationId || listingId).slice(0, 8).toUpperCase();
   return (
-    <section className={exchangeStyles.exchangeSheet}>
-      <div className={exchangeStyles.handoverNav}>
+    <section className={dealStyles.exchangeSheet}>
+      <div className={dealStyles.handoverNav}>
         <Link
-          className={exchangeStyles.proposalBack}
+          className={dealStyles.proposalBack}
           to={conversationId ? `/chat/${conversationId}` : `/books/${listingId}`}
         >
           <ArrowLeft size={16} aria-hidden="true" />
           <span>Quay lại hội thoại</span>
         </Link>
         {shortCode && (
-          <span className={exchangeStyles.proposalCode}>Phiếu #{shortCode}</span>
+          <span className={dealStyles.proposalCode}>Phiếu #{shortCode}</span>
         )}
       </div>
 
-      <header className={exchangeStyles.handoverHeader}>
+      <header className={dealStyles.handoverHeader}>
         <div>
           <h1>Thông tin giao nhận</h1>
           <p>
@@ -403,7 +402,7 @@ function CheckoutListing() {
         {conversationId && (
           <Link
             to={`/chat/${conversationId}?openChat=1`}
-            className={exchangeStyles.chatLink}
+            className={dealStyles.chatLink}
             style={{ gap: 8, textDecoration: "none" }}
           >
             <MessageCircle size={18} aria-hidden="true" />
@@ -412,7 +411,7 @@ function CheckoutListing() {
         )}
       </header>
 
-      <nav className={stepStyles.steps} aria-label="Tiến độ mua sách">
+      <nav className={dealStyles.steps} aria-label="Tiến độ mua sách">
         <ol>
           {checkoutSteps.map((step, index) => (
             <li
@@ -421,23 +420,23 @@ function CheckoutListing() {
               data-selected={step.state === "active" ? "true" : undefined}
             >
               <span
-                className={stepStyles.step}
+                className={dealStyles.step}
                 aria-current={step.state === "active" ? "step" : undefined}
               >
-                <span className={stepStyles.marker} aria-hidden="true">
+                <span className={dealStyles.marker} aria-hidden="true">
                   {index + 1}
                 </span>
-                <span className={stepStyles.label}>{step.label}</span>
+                <span className={dealStyles.label}>{step.label}</span>
               </span>
             </li>
           ))}
         </ol>
       </nav>
 
-      <div className={exchangeStyles.proposalWorkspace}>
-        <div className={exchangeStyles.proposalControls}>
+      <div className={dealStyles.proposalWorkspace}>
+        <div className={dealStyles.proposalControls}>
           <section
-            className={exchangeStyles.proposalActions}
+            className={dealStyles.proposalActions}
             aria-label="Thao tác gửi địa chỉ"
           >
             <strong>
@@ -462,7 +461,7 @@ function CheckoutListing() {
                 </button>
                 <button
                   type="button"
-                  className={exchangeStyles.secondaryButton}
+                  className={dealStyles.secondaryButton}
                   onClick={() => setDialogOpen(true)}
                 >
                   Đổi địa chỉ nhận
@@ -480,39 +479,39 @@ function CheckoutListing() {
             )}
           </section>
 
-          <div className={exchangeStyles.proposalContact}>
+          <div className={dealStyles.proposalContact}>
             <SupportLink type="Listing" id={listingId} />
           </div>
         </div>
 
-        <div className={exchangeStyles.proposalLayout}>
+        <div className={dealStyles.proposalLayout}>
           <section
-            className={exchangeStyles.fundingBooks}
+            className={dealStyles.fundingBooks}
             aria-labelledby="checkout-sheet-heading"
           >
             <h2 id="checkout-sheet-heading">Phiếu gửi địa chỉ nhận sách</h2>
 
-            <div className={exchangeStyles.proposalBooks} data-receive="true">
+            <div className={dealStyles.proposalBooks} data-receive="true">
               <h3>
                 <ArrowDownLeft size={18} aria-hidden="true" />
                 Sách bạn nhận
               </h3>
               {displayedListing && (
-                <div className={exchangeStyles.proposalBook}>
+                <div className={dealStyles.proposalBook}>
                   <div aria-hidden="true">
                     <div>
                       <ListingPhoto book={displayedListing} />
                     </div>
                   </div>
                   <div>
-                    <strong className={exchangeStyles.proposalBookTitle}>
+                    <strong className={dealStyles.proposalBookTitle}>
                       {listingTitle(displayedListing)}
                     </strong>
-                    <span className={exchangeStyles.proposalBookAuthor}>
+                    <span className={dealStyles.proposalBookAuthor}>
                       {displayedListing.book.authors.join(", ")}
                     </span>
                     {displayedListing.salePrice != null && (
-                      <span className={exchangeStyles.proposalBookPrice}>
+                      <span className={dealStyles.proposalBookPrice}>
                         {formatVnd(displayedListing.salePrice)}
                       </span>
                     )}
@@ -542,13 +541,13 @@ function CheckoutListing() {
               )}
             </div>
 
-            <div className={exchangeStyles.proposalBooks}>
+            <div className={dealStyles.proposalBooks}>
               <h3>
                 <MapPin size={18} aria-hidden="true" />
                 Địa chỉ nhận sách
               </h3>
               <div
-                className={exchangeStyles.proposalBook}
+                className={dealStyles.proposalBook}
                 style={{ paddingBlock: 12 }}
               >
                 <div style={{ display: "none" }} aria-hidden="true" />
@@ -560,7 +559,7 @@ function CheckoutListing() {
                         ? `${selectedAddress.recipientName} · ${selectedAddress.phone} · ${selectedAddress.detail}`
                         : "Chọn nơi nhận trước khi gửi người bán.")}
                   </span>
-                  <span className={exchangeStyles.proposalBookPrice}>
+                  <span className={dealStyles.proposalBookPrice}>
                     {prepared
                       ? prepared.shipping === 0
                         ? "Miễn phí giao nhận"
@@ -581,7 +580,7 @@ function CheckoutListing() {
           </section>
 
           <aside
-            className={exchangeStyles.proposalAmounts}
+            className={dealStyles.proposalAmounts}
             aria-labelledby="checkout-amounts-heading"
           >
             <h2 id="checkout-amounts-heading">Nếu hai bên đồng ý</h2>
@@ -611,7 +610,7 @@ function CheckoutListing() {
                 </dd>
               </div>
             </dl>
-            <p className={exchangeStyles.proposalAmountNote}>
+            <p className={dealStyles.proposalAmountNote}>
               Gửi báo giá chưa giữ sách hay trừ tiền.
             </p>
           </aside>
