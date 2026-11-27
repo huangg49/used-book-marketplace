@@ -231,12 +231,16 @@ export async function serverNow(tx: {
   db: Db;
   session?: ClientSession;
 }): Promise<Date> {
-  const [row] = await tx.db
+  // Use the applied migration ledger as a read-only source for one document.
+  // Atlas Free treats a database-level aggregate as a change-stream command.
+  const row = await tx.db
+    .collection('_migrations')
     .aggregate<{ now: Date }>(
-      [{ $documents: [{}] }, { $project: { _id: 0, now: '$$NOW' } }],
-      tx.session ? { session: tx.session } : {},
+      [{ $limit: 1 }, { $project: { _id: 0, now: '$$NOW' } }],
+      { session: tx.session },
     )
-    .toArray();
+    .next();
+  if (!row) throw new Error('MongoDB migration ledger is empty.');
   return row.now;
 }
 
