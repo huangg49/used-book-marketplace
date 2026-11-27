@@ -18,7 +18,7 @@
 /* Listing vs auction: the listing side stays quiet paper; the auction side is the gold sheet. */
 .compare { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 16px; margin-bottom: 36px; }
 .compare ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: .875rem; line-height: 1.7; }
-.compareListing, .compareAuction { border-radius: 12px; padding: 18px 22px 20px; }
+.compareListing, .compareAuction { border-radius: 12px; padding: 20px 24px 22px; }
 .compareListing { background: var(--shop-paper); border: 1px dashed var(--shop-line); color: var(--shop-muted); }
 .compareAuction { background: var(--auction-paper); color: var(--shop-ink); box-shadow: 3px 4px 0 var(--shop-wine); }
 .compareAuction li::marker { color: var(--shop-wine); }
@@ -27,11 +27,12 @@
 .compareArrow { align-self: center; color: var(--shop-wine); }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 40px; align-items: start; }
-.form { display: grid; gap: 20px; min-width: 0; }
-.step { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 16px; }
+.form { display: grid; gap: 24px; min-width: 0; }
+.step { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 18px; }
 /* Each numbered step is a white card lifted off the ledger-paper backdrop. */
-.stepCard { min-width: 0; padding: 22px 24px 24px; border: 1px solid #5c02021c; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px rgba(40, 25, 20, .05), 0 14px 32px -22px rgba(92, 2, 2, .35); }
-.step legend { display: flex; align-items: center; gap: 12px; padding: 0; margin-bottom: 4px; font-size: 1.25rem; font-weight: 700; line-height: 1.5; }
+.stepCard { min-width: 0; padding: 28px 28px 30px; border: 1px solid #5c02021c; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px rgba(40, 25, 20, .05), 0 14px 32px -22px rgba(92, 2, 2, .35); }
+/* A legend sits outside the fieldset grid gap, so it carries its own spacing. */
+.step legend { display: flex; align-items: center; gap: 12px; padding: 0; margin-bottom: 20px; font-size: 1.25rem; font-weight: 700; line-height: 1.5; }
 .num { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--shop-wine); color: var(--shop-cream); font: 400 1rem/1 var(--shop-display); }
 .stepHint { margin: 0; font-size: .8125rem; line-height: 1.85; color: var(--shop-muted); max-width: 70ch; }
 .stepHint a { color: var(--shop-wine); }
@@ -44,7 +45,8 @@
 .inlineState > svg { color: var(--shop-wine); flex: none; }
 .inlineState p { margin: 0; flex: 1 1 260px; }
 .inlineState button, .inlineActions a { min-height: 44px; display: inline-flex; align-items: center; padding: 8px 16px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-wine); font-weight: 600; font-size: .8125rem; cursor: pointer; text-decoration: none; }
-.inlineActions { display: flex; gap: 10px; flex-wrap: wrap; }
+/* Step 1 action sits on the right, opposite the list it adds to. */
+.inlineActions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 
 /* Selectable book and point cards share the same radio treatment. */
 .bookList, .points { display: grid; gap: 10px; }
@@ -54,15 +56,7 @@
 .bookList { max-height: min(468px, 62vh); overflow-y: auto; overscroll-behavior: contain; padding: 4px 8px 4px 4px; margin: -4px -8px -4px -4px; scrollbar-width: thin; scrollbar-color: var(--shop-control) transparent; }
 .bookList::-webkit-scrollbar { width: 8px; }
 .bookList::-webkit-scrollbar-thumb { border-radius: 8px; background: var(--shop-control); }
-.bookSearch { display: flex; align-items: center; gap: 8px; max-width: 480px; min-height: 44px; padding: 0 6px 0 14px; border: 1px solid var(--shop-control); border-radius: 10px; background: var(--shop-paper); color: var(--shop-muted); }
-.bookSearch:focus-within { border-color: var(--shop-wine); box-shadow: 0 0 0 3px color-mix(in srgb, var(--shop-wine) 18%, transparent); }
-.bookSearch input, .bookSearch input:focus { flex: 1; min-width: 0; min-height: 42px; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; outline: none; font: inherit; font-size: .9375rem; color: var(--shop-ink); }
-.bookSearch input::-webkit-search-cancel-button { display: none; }
-.bookSearch button { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--shop-muted); cursor: pointer; }
-.bookSearch button:hover { background: var(--shop-shelf); color: var(--shop-wine); }
-.noMatch { display: none; margin: 0; font-size: .875rem; color: var(--shop-muted); }
 .bookList:not(:has(> label)) { display: none; }
-.bookList:not(:has(> label)) + .noMatch { display: block; }
 .pointOption { grid-template-columns: auto minmax(0, 1fr) auto; padding-left: 16px; }
 .bookOption input, .pointOption input, .segment input, .toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .bookOption:hover, .pointOption:hover { border-color: var(--shop-control); }
@@ -151,26 +145,77 @@
 
 /* Preview ticket: the gold auction paper with a perforated stub edge. */
 .preview { position: sticky; top: 96px; display: grid; gap: 12px; }
-.ticket { position: relative; padding: 22px 22px 20px; border-radius: 12px; background: var(--auction-paper); box-shadow: 4px 5px 0 var(--shop-wine); }
-.ticket::after { content: ''; position: absolute; left: 14px; right: 14px; top: 58px; border-top: 2px dashed #5c020240; }
+/* Preview ticket: a stub and a body joined by a perforation with punched side
+   notches (mask). The wrapper's drop-shadow follows the notched outline. */
+.ticket { display: grid; filter: drop-shadow(4px 5px 0 var(--shop-wine)); }
+.ticketStub, .ticketBody { --notch: 11px; }
+.ticketStub {
+  display: grid; gap: 14px; padding: 22px 24px 20px; border-radius: 12px 12px 0 0; background: var(--auction-paper);
+  -webkit-mask: radial-gradient(circle var(--notch) at 0 100%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle var(--notch) at 100% 100%, #0000 98%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle var(--notch) at 0 100%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle var(--notch) at 100% 100%, #0000 98%, #000) right / 51% 100% no-repeat;
+}
+.ticketBody {
+  display: grid; gap: 16px; padding: 22px 24px 24px; border-radius: 0 0 12px 12px;
+  background: linear-gradient(to right, #5c020266 55%, transparent 0) 0 0 / 9px 2px repeat-x, var(--auction-paper);
+  -webkit-mask: radial-gradient(circle var(--notch) at 0 0, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle var(--notch) at 100% 0, #0000 98%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle var(--notch) at 0 0, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle var(--notch) at 100% 0, #0000 98%, #000) right / 51% 100% no-repeat;
+}
+.ticketHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+/* Shared small-caps label (ticket header, receipt). */
 .kicker { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 30px; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-wine); }
-.ticketBook { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px; align-items: center; }
+.ticketHead .kicker { margin: 0; }
+.stamp { flex: none; transform: rotate(-7deg); padding: 2px 8px; border: 2px solid #5c0202b3; border-radius: 4px; color: #5c0202b3; font: 700 .6875rem/1.4 var(--shop-body); letter-spacing: .12em; text-transform: uppercase; }
+.progress { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.progress button { position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 11px; border: 1px dashed #5c020266; border-radius: 999px; background: #fffcf599; color: var(--shop-muted); font: 600 .75rem/1 var(--shop-body); cursor: pointer; transition: background-color .15s, color .15s; }
+.progress button::after { content: ""; position: absolute; inset: -7px 0; }
+.progress button[data-done] { border-style: solid; border-color: var(--shop-wine); background: var(--shop-wine); color: var(--shop-cream); }
+.ticketBook { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center; }
 .ticketBook > div { display: grid; gap: 2px; font-size: .8125rem; color: var(--shop-muted); line-height: 1.6; min-width: 0; }
 .ticketBook strong { font-size: 1rem; color: var(--shop-ink); overflow-wrap: anywhere; }
-.ticketCover { width: 72px; height: 96px; border-radius: 4px; background: var(--shop-paper); display: grid; place-items: center; overflow: hidden; box-shadow: 0 2px 6px #28191426; }
-.ticketPrices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 18px 0 0; padding: 16px 0 0; border-top: 1px solid #5c020226; }
-.ticketPrices div { display: grid; gap: 2px; }
-.ticketPrices dt { font-size: .75rem; color: var(--shop-muted); }
-.ticketPrices dd { margin: 0; font-weight: 700; font-size: .9375rem; font-variant-numeric: tabular-nums; }
-.ticketMain { grid-column: 1 / -1; }
-.ticketMain dd { font: 400 2rem/1.2 var(--shop-display); color: var(--shop-wine); }
+.ticketCover { width: 64px; height: 86px; border-radius: 4px; background: var(--shop-paper); display: grid; place-items: center; overflow: hidden; box-shadow: 0 2px 6px #28191426; }
 .ticketTerm { display: flex; align-items: center; gap: 2px; }
-.timeline { list-style: none; margin: 18px 0 0; padding: 16px 0 0; border-top: 1px solid #5c020226; display: grid; gap: 12px; }
-.timeline li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; font-size: .75rem; color: var(--shop-muted); line-height: 1.6; }
-.timeline li > svg { box-sizing: content-box; padding: 6px; border-radius: 50%; background: #fffcf599; color: var(--shop-wine); }
-.timeline li > span { display: grid; }
-.timeline strong { font-size: .8125rem; color: var(--shop-ink); }
-.timelineNow > svg { background: var(--shop-wine) !important; color: var(--shop-cream) !important; }
+.hero { display: grid; gap: 2px; justify-items: start; }
+.hero > span { font-size: .75rem; color: var(--shop-muted); }
+.hero strong { font: 400 2.25rem/1.1 var(--shop-display); color: var(--shop-wine); font-variant-numeric: tabular-nums; }
+.missing { justify-self: start; padding: 1px 9px; border: 1px dashed #5c020280; border-radius: 999px; background: #fffcf599; color: var(--shop-wine); font: 600 .75rem/1.7 var(--shop-body); cursor: pointer; }
+.missing:hover { background: var(--shop-paper); }
+/* Price ladder: start dot, step ticks, dashed protection line, buy-now flag. */
+.ladder { display: grid; gap: 8px; }
+.ladderTrack { position: relative; height: 22px; margin: 0 10px; }
+.ladderTrack::before { content: ""; position: absolute; left: 0; right: 0; top: 10px; height: 2px; border-radius: 2px; background: #5c020226; }
+.ladderFill { position: absolute; top: 9px; height: 4px; border-radius: 4px; background: var(--shop-wine); }
+.ladderOpen { background: linear-gradient(to right, var(--shop-wine), #5c020200); }
+.ladderTick { position: absolute; top: 6px; width: 1px; height: 10px; background: #5c020273; transform: translateX(-50%); }
+.ladderGuard { position: absolute; top: 0; height: 22px; border-left: 2px dashed #281914a6; transform: translateX(-1px); }
+.ladderStart { position: absolute; top: 4px; width: 14px; height: 14px; border: 2px solid var(--auction-paper); border-radius: 50%; background: var(--shop-wine); transform: translateX(-50%); }
+.ladderBuy { position: absolute; top: -1px; display: grid; place-items: center; width: 22px; height: 22px; border: 2px solid var(--auction-paper); border-radius: 50%; background: var(--shop-orange); color: #fff; transform: translateX(-50%); }
+.ladderLegend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; font-size: .6875rem; color: var(--shop-muted); }
+.ladderLegend > span { display: inline-flex; align-items: center; gap: 5px; }
+.dotStart, .dotBuy { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.dotStart { background: var(--shop-wine); }
+.dotBuy { background: var(--shop-orange); }
+.dotGuard { display: inline-block; height: 10px; border-left: 2px dashed #281914a6; }
+.ladderScale { margin-left: auto; }
+/* Grouped facts, mirroring the three panels of step 3. */
+.factGroups { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid #5c020226; }
+.factGroup { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; align-items: start; }
+.factHead, .flowHead { margin: 0; font-size: .6875rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--shop-wine); }
+.factHead { display: flex; align-items: center; min-height: 24px; line-height: 1.3; }
+.factGroup dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; }
+.factGroup dl > div { display: grid; align-content: start; gap: 2px; min-width: 0; }
+/* Every label gets the ⓘ button's height so values line up across a row. */
+.factGroup dt { display: flex; align-items: center; gap: 2px; min-height: 24px; font-size: .6875rem; line-height: 1.3; color: var(--shop-muted); }
+.factGroup dd { display: grid; margin: 0; font-weight: 700; font-size: .875rem; line-height: 1.45; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.factGroup dd small { font-weight: 400; font-size: .6875rem; color: var(--shop-muted); }
+/* Compact flow: four stops on one dotted line; details live in the InfoTip. */
+.flowHead { display: flex; align-items: center; gap: 4px; padding-top: 14px; border-top: 1px solid #5c020226; }
+.flow { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
+.flow::before { content: ""; position: absolute; top: 15px; left: 12.5%; right: 12.5%; border-top: 2px dotted #5c020266; }
+.flow li { position: relative; display: grid; justify-items: center; gap: 1px; text-align: center; font-size: .6875rem; line-height: 1.35; color: var(--shop-muted); }
+.flowIcon { display: grid; place-items: center; width: 30px; height: 30px; margin-bottom: 4px; border-radius: 50%; background: var(--shop-paper); color: var(--shop-wine); box-shadow: 0 0 0 3px var(--auction-paper); }
+.flow strong { font-size: .75rem; color: var(--shop-ink); }
+.flowNow .flowIcon { background: var(--shop-wine); color: var(--shop-cream); }
+@media (forced-colors: active) { .ticket { filter: none; } .ticketStub, .ticketBody { border: 1px solid CanvasText; } }
 .demo { margin: 0; font-size: .75rem; line-height: 1.8; color: var(--shop-muted); }
 
 /* Success receipt follows the book-journey receipt geometry. */
@@ -196,7 +241,7 @@
   .intro h1 { font-size: 2rem; }
   .intro p { font-size: .875rem; }
   .compare { grid-template-columns: 1fr; gap: 8px; margin-bottom: 28px; }
-  .compareListing, .compareAuction { padding: 14px 16px; }
+  .compareListing, .compareAuction { padding: 16px 18px; }
   .compare ul { font-size: .8125rem; gap: 2px; }
   .compareArrow { justify-self: center; rotate: 90deg; }
   .bookOption { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; }
@@ -230,7 +275,7 @@
 @media (forced-colors: active) { .flag { color: MarkText; background: Mark; forced-color-adjust: none; } }
 
 /* Step 3 panels: each titled group of fields is its own card. */
-.panel { display: grid; gap: 18px; min-width: 0; padding: 18px 20px 20px; border: 1px solid #ecdfcc; border-radius: 14px; background: #fcf7ee; }
+.panel { display: grid; gap: 18px; min-width: 0; padding: 20px 22px 22px; border: 1px solid #ecdfcc; border-radius: 14px; background: #fcf7ee; }
 .panelHead { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px dashed var(--shop-line); }
 .panelHead h2 { margin: 0; font-size: 1rem; font-weight: 700; line-height: 1.4; color: var(--shop-ink); }
 .panelHead .toggle { padding: 0; }
@@ -240,29 +285,106 @@
 .pair { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 16px; align-items: start; }
 .pair > .field { max-width: none; }
 .panel .segment { max-width: none; }
-@media (max-width: 760px) { .panel { padding: 16px 14px 18px; } .stepCard { padding: 18px 16px 20px; border-radius: 16px; } }
+@media (max-width: 760px) { .panel { padding: 18px 16px 20px; } .stepCard { padding: 22px 18px 24px; border-radius: 16px; } .step legend { margin-bottom: 16px; } }
 
-/* Page backdrop: warm ledger paper. A butter-gold glow sits behind the auction
-   art, faint wine-ruled lines fade out under the header, and the shared ivory
-   grain (login-art) ties it to the Auth paper. Static: no motion to manage. */
+/* Page backdrop: an auction room by day. Cream paper with velvet-wine shading at
+   the edges, the lamp's glow breathing above the auction art, a hand-drawn tile
+   of auction motifs (auction-create/pattern.svg) drifting slowly over the page,
+   and the shared ivory grain on top. Only opacity/transform animate. */
 .stage { position: relative; isolation: isolate; overflow-x: clip; }
 .backdrop {
-  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
   background:
-    radial-gradient(56rem 26rem at 86% -4rem, rgba(246, 224, 168, .8), transparent 70%),
-    radial-gradient(38rem 30rem at -8% 48%, rgba(92, 2, 2, .07), transparent 70%),
-    radial-gradient(48rem 24rem at 108% 100%, rgba(244, 203, 103, .22), transparent 70%),
-    #f8f1e3;
+    radial-gradient(60% 55% at 0% 38%, rgba(92, 2, 2, .08), transparent 70%),
+    radial-gradient(60% 55% at 100% 72%, rgba(92, 2, 2, .07), transparent 70%),
+    radial-gradient(60rem 30rem at 50% 104%, rgba(244, 203, 103, .24), transparent 70%),
+    linear-gradient(#fbf5e9, #f6eddb 55%, #f2e6d0);
 }
-.backdrop::before {
-  content: ""; position: absolute; inset: 0;
-  background: repeating-linear-gradient(to bottom, transparent 0 35px, rgba(92, 2, 2, .06) 35px 36px);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 240px, transparent 720px);
-  mask-image: linear-gradient(to bottom, #000 0, #000 240px, transparent 720px);
+/* Covers the whole page evenly: no fade, so the room does not empty out on scroll. */
+.bdPattern { position: absolute; inset: 0; }
+.bdPattern::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -240px; bottom: 0;
+  background: url("/illustrations/auction-create/pattern.svg") 0 0 / 240px repeat;
+  opacity: .13; will-change: transform;
+  animation: drift 48s linear infinite;
+}
+.bdLamp {
+  position: absolute; top: -13rem; left: calc(50% + 140px); width: 44rem; height: 34rem; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 224, 150, .9), rgba(246, 224, 168, .35) 55%, transparent);
+  will-change: transform, opacity; animation: lamp 6s ease-in-out infinite alternate;
 }
 .backdrop::after {
   content: ""; position: absolute; inset: 0;
   background: url("/login-art/ivory-paper.webp") repeat; background-size: 512px;
-  mix-blend-mode: multiply; opacity: .5;
+  mix-blend-mode: multiply; opacity: .45;
 }
+@media (max-width: 1000px) { .bdLamp { left: auto; right: -18rem; width: 34rem; height: 28rem; } }
 @media (forced-colors: active) { .backdrop { display: none; } }
+
+/* Step art: hand-drawn auction-create illustrations peeking over each card's top edge. */
+.stepCard { position: relative; }
+.stepArt { position: absolute; height: auto; pointer-events: none; user-select: none; filter: drop-shadow(0 6px 8px rgba(92, 2, 2, .18)); transform-origin: 50% 100%; transition: translate .35s cubic-bezier(.3, 1.6, .5, 1), rotate .35s cubic-bezier(.3, 1.6, .5, 1); }
+.stepArt { width: 96px; top: -42px; right: 18px; }
+.step legend { padding-right: 96px; }
+.emptyArt { width: min(220px, 70%); height: auto; }
+@media (max-width: 760px) {
+  /* Small enough to sit fully above the title row, so titles keep the full width. */
+  .stepArt { width: 56px; top: -38px; right: 12px; }
+  .step legend { padding-right: 0; }
+}
+
+/* Motion. Owner policy (AGENTS.md, 11/10/2026): designed motion stays on even
+   under prefers-reduced-motion. Only transform-type properties and opacity
+   animate; hover lifts apply on real hover devices so touch never sticks. */
+@keyframes drift { to { transform: translate3d(0, 240px, 0); } }
+@keyframes lamp { from { opacity: .6; transform: scale(.95); } to { opacity: 1; transform: scale(1.04); } }
+@keyframes rise { from { opacity: 0; translate: 0 18px; } }
+@keyframes pop { 0% { scale: .4; opacity: 0; } 60% { scale: 1.22; opacity: 1; } 100% { scale: 1; } }
+@keyframes pick { 0% { scale: .93; } 55% { scale: 1.05; } 100% { scale: 1; } }
+@keyframes stampIn { 0% { scale: 1.9; opacity: 0; } 65% { scale: .92; opacity: 1; } 100% { scale: 1; } }
+@keyframes bump { from { translate: 0 -8px; opacity: .25; } }
+@keyframes ring { from { scale: 1; opacity: .55; } to { scale: 1.8; opacity: 0; } }
+
+.intro, .compare, .stepCard, .preview { animation: rise .55s cubic-bezier(.2, .7, .2, 1) backwards; }
+.compare { animation-delay: .06s; }
+.stepCard:nth-child(1) { animation-delay: .12s; }
+.stepCard:nth-child(2) { animation-delay: .2s; }
+.stepCard:nth-child(3) { animation-delay: .28s; }
+.preview { animation-delay: .18s; }
+.stamp { animation: stampIn .5s cubic-bezier(.3, 1.4, .5, 1) .55s backwards; }
+.hero strong { animation: bump .35s ease-out; }
+.selected .tick { animation: pop .35s cubic-bezier(.3, 1.5, .5, 1); }
+.progress button[data-done], .chips button[aria-pressed='true'], .segmentOn, .minCustomOn { animation: pick .32s cubic-bezier(.3, 1.5, .5, 1); }
+.flowNow .flowIcon { position: relative; }
+.flowNow .flowIcon::after { content: ""; position: absolute; inset: 0; border: 2px solid var(--shop-wine); border-radius: 50%; animation: ring 2.2s ease-out infinite; }
+.ladderFill, .ladderStart, .ladderBuy, .ladderGuard, .ladderTick { transition: left .35s cubic-bezier(.2, .7, .2, 1), width .35s cubic-bezier(.2, .7, .2, 1); }
+.primary:active:not(:disabled), .chips button:active:not(:disabled), .progress button:active, .missing:active, .inlineState button:active, .inlineActions a:active { scale: .97; }
+
+@media (hover: hover) {
+  .bookOption, .pointOption, .chips button, .minCustom, .inlineState button, .inlineActions a, .missing, .progress button, .compareListing, .compareAuction {
+    transition: translate .2s cubic-bezier(.2, .7, .2, 1), scale .12s, box-shadow .2s, border-color .15s, background-color .15s;
+  }
+  .bookOption:hover, .pointOption:not(.full):hover { translate: 0 -2px; box-shadow: 0 10px 22px -14px rgba(92, 2, 2, .45); }
+  .chips button:hover:not(:disabled), .minCustom:hover, .inlineState button:hover, .inlineActions a:hover, .missing:hover, .progress button:hover {
+    translate: 0 -2px; box-shadow: 0 8px 16px -10px rgba(92, 2, 2, .45);
+  }
+  .compareListing:hover, .compareAuction:hover { translate: 0 -3px; }
+  .segment label { transition: background-color .15s, color .15s; }
+  .segment label:not(.segmentOn):hover { background: #fffcf5; color: var(--shop-ink); }
+  .primary { position: relative; overflow: hidden; transition: background-color .15s, translate .2s, scale .12s, box-shadow .2s; }
+  .primary:hover:not(:disabled) { translate: 0 -2px; box-shadow: 0 12px 22px -12px rgba(92, 2, 2, .7); }
+  .primary svg { transition: translate .2s; }
+  .primary:hover:not(:disabled) svg { translate: 4px 0; }
+  .primary::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255, 252, 245, .35) 50%, transparent 65%); translate: -120% 0; transition: translate .6s ease; pointer-events: none; }
+  .primary:hover:not(:disabled)::after { translate: 120% 0; }
+  .stepCard { transition: box-shadow .3s; }
+  .stepCard:hover { box-shadow: 0 1px 2px rgba(40, 25, 20, .05), 0 20px 40px -24px rgba(92, 2, 2, .45); }
+  .stepCard:hover .stepArt { translate: 0 -8px; rotate: -6deg; }
+  .ticket { transition: translate .3s cubic-bezier(.2, .7, .2, 1), rotate .3s; }
+  .preview:hover .ticket { translate: 0 -3px; rotate: -.4deg; }
+  .flowIcon { transition: scale .2s; }
+  .flow li:hover .flowIcon { scale: 1.12; }
+  .moneySteps button svg { transition: scale .15s; }
+  .moneySteps button:hover:not(:disabled) svg { scale: 1.2; }
+}
+@media (max-width: 420px) { .factGroup { grid-template-columns: 1fr; gap: 6px; } .ticketStub, .ticketBody { padding-inline: 18px; } }
