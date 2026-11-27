@@ -23,7 +23,7 @@ import { io, type Socket } from "socket.io-client";
 import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, DEFAULT_SALE_COMMISSION_BPS, chatSendWasRateLimited, clipChatMessage, directOrderCommission, formatSaleFeeRate } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { ArrowDownUp, ArrowLeftRight, ArrowRight, ArrowUp, ArrowUpRight, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, X, type LucideIcon } from "lucide-react";
+import { ArrowDownUp, ArrowLeftRight, BellRing, ArrowRight, ArrowUp, ArrowUpRight, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, X, type LucideIcon } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
@@ -1064,6 +1064,13 @@ const TAB_ICONS: Record<TransactionTab, LucideIcon> = {
   auction: Gavel,
 };
 
+/** Why a category needs the member, matching each status marked "attention". */
+const ATTENTION_REASONS: Record<"buy" | "exchange" | "auction", string> = {
+  buy: "Đối tác gửi đề nghị, chờ bạn phản hồi",
+  exchange: "Cần phản hồi, đặt cọc hoặc xử lý sự cố",
+  auction: "Cần thanh toán hoặc đã bị vượt giá",
+};
+
 type SortKey = "attention" | "newest" | "oldest";
 const SORTS: { value: SortKey; label: string }[] = [
   { value: "attention", label: "Cần xử lý trước" },
@@ -1250,26 +1257,36 @@ function TransactionHub({
 
       {attention.all > 0 && (
         <section className={hub.attention} aria-labelledby="txn-attention">
-          <span className={hub.attentionCount} aria-hidden="true">{attention.all}</span>
-          <div className={hub.attentionText}>
+          <div className={hub.attentionLead}>
+            <span className={hub.bell} aria-hidden="true"><BellRing size={22} /></span>
             <p id="txn-attention" role="status">
-              <b>{attention.all} giao dịch</b> đang chờ bạn xử lý
+              <span className={hub.attentionKicker}>Cần bạn xử lý</span>
+              <span className={hub.attentionTotal}>
+                <b>{attention.all}</b> giao dịch
+              </span>
             </p>
-            <div className={hub.attentionChips}>
-              {(["buy", "exchange", "auction"] as const)
-                .filter((tab) => attention[tab] > 0)
-                .map((tab) => {
-                  const Icon = TAB_ICONS[tab];
-                  return (
-                    <button key={tab} type="button" onClick={() => goToTab(tab)}>
-                      <Icon size={14} aria-hidden="true" />
-                      <b>{attention[tab]}</b> {TAB_LABELS[tab].toLowerCase()}
-                      <ArrowRight size={14} aria-hidden="true" />
-                    </button>
-                  );
-                })}
-            </div>
           </div>
+          <ul className={hub.attentionTiles}>
+            {(["buy", "exchange", "auction"] as const)
+              .filter((tab) => attention[tab] > 0)
+              .map((tab) => {
+                const Icon = TAB_ICONS[tab];
+                return (
+                  <li key={tab}>
+                    <button type="button" data-kind={tab} onClick={() => goToTab(tab)}>
+                      <span className={hub.tileIcon} aria-hidden="true"><Icon size={18} /></span>
+                      <span className={hub.tileText}>
+                        <span className={hub.tileHead}>
+                          <b>{attention[tab]}</b> {TAB_LABELS[tab]}
+                        </span>
+                        <small>{ATTENTION_REASONS[tab]}</small>
+                      </span>
+                      <ArrowRight className={hub.tileArrow} size={18} aria-hidden="true" />
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
         </section>
       )}
 
