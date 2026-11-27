@@ -1,6 +1,13 @@
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "../../../core/session/session-provider";
+import { useForeground } from "../../../core/hooks/use-foreground";
 import { AppText, Button, Icon, TextField, formatVnd, radius, space, stitchTokens } from "../../../core/ui";
-import type { MyIntake } from "../contracts";
+import { conditions } from "../../shelf/contracts";
+import { privateDraft } from "../../drafts/contracts";
+import { DraftCoverPhoto } from "../../drafts/draft-cover-photo";
+import { useCatalogBook } from "../../drafts/catalog-picker";
+import { handoverPoints, type MyIntake } from "../contracts";
 import { EVIDENCE_MIN_LENGTH, withdrawable } from "../auctions-model";
 
 export interface SendToAuctionActiveIntakesProps {
@@ -37,6 +44,139 @@ const intakeLabels: Record<MyIntake["state"], string> = {
   Cancelled: "Đã hủy lần gửi sách",
 };
 
+const auctionTypeLabels: Record<NonNullable<MyIntake["auctionType"]>, string> = {
+  English: "Trả giá lên",
+  Dutch: "Đấu giá ngược",
+  SealedFirst: "Đấu giá kín (giá nhất)",
+  SealedSecond: "Đấu giá kín (giá nhì)",
+};
+
+function IntakeBookSection({
+  item,
+  pointName,
+}: {
+  item: MyIntake;
+  pointName?: string;
+}) {
+  const { client } = useSession();
+  const foreground = useForeground();
+
+  const listing = useQuery({
+    queryKey: ["my-listing-detail", item.listingId],
+    queryFn: () => client.request(`/me/listings/${item.listingId}`, privateDraft),
+    enabled: foreground && Boolean(item.listingId),
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const content = listing.data?.currentRevision.content;
+  const coverMediaId = content?.mediaIds?.[0];
+  const book = useCatalogBook(content?.bookId ?? null);
+
+  const authorsText = book.data?.authors?.filter(Boolean).join(", ");
+  const pubMeta = [book.data?.publisher, book.data?.publicationYear ? String(book.data.publicationYear) : null]
+    .filter(Boolean)
+    .join(" · ");
+  const conditionText = content?.condition
+    ? (conditions[content.condition] ?? content.condition)
+    : null;
+  const pageTag =
+    content?.hasMissingPages === false
+      ? "Đủ trang"
+      : content?.hasMissingPages === true
+        ? "Thiếu trang"
+        : null;
+  const formatText = item.auctionType ? auctionTypeLabels[item.auctionType] : "Trả giá lên";
+  const notePreview = content?.description?.trim() || content?.coverNote?.trim() || null;
+
+  return (
+    <View style={styles.bookSection}>
+      <View style={styles.bookRow}>
+        <View style={styles.coverFrame}>
+          <DraftCoverPhoto
+            listingId={item.listingId}
+            mediaId={coverMediaId}
+            label={`Ảnh bìa ${item.title}`}
+            compact
+          />
+        </View>
+
+        <View style={styles.bookMetaCol}>
+          <AppText kind="bold" style={styles.intakeTitle} numberOfLines={2}>
+            {item.title}
+          </AppText>
+
+          {authorsText ? (
+            <AppText kind="small" color={stitchTokens.brownMuted} numberOfLines={1}>
+              {authorsText}
+            </AppText>
+          ) : null}
+
+          {pubMeta ? (
+            <AppText kind="small" color={stitchTokens.brownMuted} style={styles.subMeta} numberOfLines={1}>
+              {pubMeta}
+            </AppText>
+          ) : null}
+
+          <View style={styles.chipRow}>
+            {conditionText ? (
+              <View style={styles.conditionChip}>
+                <AppText style={styles.conditionChipText}>{conditionText}</AppText>
+              </View>
+            ) : null}
+            {pageTag ? (
+              <View style={styles.neutralChip}>
+                <AppText style={styles.neutralChipText}>{pageTag}</AppText>
+              </View>
+            ) : null}
+            <View style={styles.neutralChip}>
+              <AppText style={styles.neutralChipText}>{formatText}</AppText>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {notePreview ? (
+        <AppText kind="small" color={stitchTokens.deepCocoa} style={styles.bookDesc} numberOfLines={2}>
+          {notePreview}
+        </AppText>
+      ) : null}
+
+      <View style={styles.pricingBox}>
+        <AppText kind="small" color={stitchTokens.brownMuted} style={styles.metaText}>
+          Khởi điểm{" "}
+          <AppText kind="bold" color={stitchTokens.wineDark} style={styles.metaText}>
+            {formatVnd(item.startPrice)}
+          </AppText>
+          {" · "}Bước{" "}
+          <AppText kind="bold" color={stitchTokens.wineDark} style={styles.metaText}>
+            {formatVnd(item.step)}
+          </AppText>
+        </AppText>
+
+        {(item.buyNowPrice != null || (item.depositAmount != null && item.depositAmount > 0)) ? (
+          <AppText kind="small" color={stitchTokens.brownMuted} style={styles.metaText}>
+            {item.buyNowPrice != null ? `Mua ngay ${formatVnd(item.buyNowPrice)}` : ""}
+            {item.buyNowPrice != null && item.depositAmount != null && item.depositAmount > 0 ? " · " : ""}
+            {item.depositAmount != null && item.depositAmount > 0
+              ? `Cọc ${formatVnd(item.depositAmount)}`
+              : ""}
+          </AppText>
+        ) : null}
+
+        {pointName ? (
+          <View style={styles.pointRow}>
+            <Icon name="pin" size={13} color={stitchTokens.brownMuted} />
+            <AppText kind="small" color={stitchTokens.brownMuted} numberOfLines={1} style={styles.pointText}>
+              {pointName}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 export function SendToAuctionActiveIntakes({
   intakes,
   isLoading = false,
@@ -50,6 +190,15 @@ export function SendToAuctionActiveIntakes({
   evidenceError,
   disabled = false,
 }: SendToAuctionActiveIntakesProps) {
+  const { client } = useSession();
+  const foreground = useForeground();
+  const points = useQuery({
+    queryKey: ["handover-points"],
+    queryFn: () => client.request("/handover-points", handoverPoints),
+    enabled: foreground,
+    staleTime: 60_000,
+  });
+  const pointNames = new Map((points.data?.items ?? []).map((p) => [p.id, p.name]));
   const activeList = intakes.filter((i) => includeClosed || (i.state !== "Cancelled" && i.state !== "Reclaimed"));
 
   return (
@@ -119,12 +268,9 @@ export function SendToAuctionActiveIntakes({
                   <AppText kind="small" style={styles.refCode}>#{item.id.slice(0, 6).toUpperCase()}</AppText>
                 </View>
 
-                {/* 2. Title & Pricing */}
+                {/* 2. Book Cover, Info & Pricing */}
                 <View style={styles.infoBlock}>
-                  <AppText kind="bold" style={styles.intakeTitle}>{item.title}</AppText>
-                  <AppText kind="small" color={stitchTokens.brownMuted} style={styles.metaText}>
-                    Khởi điểm {formatVnd(item.startPrice)} · Bước {formatVnd(item.step)}
-                  </AppText>
+                  <IntakeBookSection item={item} pointName={pointNames.get(item.pointId)} />
                   {item.state === "AwaitingDropoff" ? (
                     <View style={styles.deadlineRow}>
                       <Icon name="clock" size={13} color={stitchTokens.flashRed} />
@@ -296,8 +442,58 @@ const styles = StyleSheet.create({
   statusTextSuccess: { color: stitchTokens.likeNewGreen },
   refCode: { color: stitchTokens.brownMuted, fontVariant: ["tabular-nums"], fontWeight: "600" },
 
-  infoBlock: { gap: 4 },
-  intakeTitle: { fontSize: 16, lineHeight: 22, color: stitchTokens.wineDark },
+  infoBlock: { gap: 8 },
+  bookSection: { gap: 10 },
+  bookRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  coverFrame: {
+    width: 68,
+    height: 92,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+  },
+  bookMetaCol: { flex: 1, gap: 3 },
+  intakeTitle: { fontSize: 15, lineHeight: 21, color: stitchTokens.wineDark },
+  subMeta: { fontSize: 12 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
+  conditionChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  conditionChipText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+    includeFontPadding: false,
+  },
+  neutralChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: stitchTokens.parchment,
+  },
+  neutralChipText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "600",
+    color: stitchTokens.deepCocoa,
+    includeFontPadding: false,
+  },
+  bookDesc: { lineHeight: 18 },
+  pricingBox: {
+    backgroundColor: stitchTokens.creamBg,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 3,
+  },
+  pointRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  pointText: { flex: 1 },
   metaText: { fontVariant: ["tabular-nums"] },
   deadlineRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
   deadlineText: { color: stitchTokens.flashRed, fontWeight: "600" },

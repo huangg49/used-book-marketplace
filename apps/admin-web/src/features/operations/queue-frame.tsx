@@ -17,6 +17,7 @@ import { MotionPanel } from "../../core/MotionPanel";
 import { useListMotion, useTaskArrival } from "../../core/task-motion";
 import styles from "../../core/task-motion.module.css";
 import { EmptyArt, type EmptyArtVariant } from "../../core/EmptyArt";
+import { PageHeading } from "../../core/PageHeading";
 
 export function OperationsQueue({
   title,
@@ -79,16 +80,10 @@ export function OperationsQueue({
   );
   const queue = (
     <>
-      <header className="page-heading">
-        <h1>{title}</h1>
-        <p className="intro">{intro}</p>
-      </header>
-      <div className="queue-toolbar queue-status">
-        <p className="muted">
-          {order}{" "}
-          {result.data !== undefined &&
-            `Đang hiển thị ${rows.length} ${unit}.${serverTime ? ` Cập nhật ${dateText(serverTime)}.` : ""}`}
-        </p>
+      <PageHeading
+        title={title}
+        description={intro}
+      >
         <Button
           busy={result.isFetching}
           disabled={pending}
@@ -96,6 +91,13 @@ export function OperationsQueue({
         >
           Cập nhật danh sách
         </Button>
+      </PageHeading>
+      <div className="queue-toolbar queue-status">
+        <p className="muted">
+          {order}{" "}
+          {result.data !== undefined &&
+            `Đang hiển thị ${rows.length} ${unit}.${serverTime ? ` Cập nhật ${dateText(serverTime)}.` : ""}`}
+        </p>
       </div>
       {extra && (
         <div className="queue-extra">

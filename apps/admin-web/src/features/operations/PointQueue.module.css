@@ -5,87 +5,7 @@
 
 .queue {
   container: point-queue / inline-size;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  column-gap: 1.25rem;
-  row-gap: 0.25rem;
-  max-width: 1280px;
-  margin: 0 auto;
-}
-
-.queue > :global(*):not(:global(.page-heading)):not(:global(.queue-toolbar)) {
-  grid-column: 1 / -1;
-}
-
-/* --------------------------------------------------------------------------
-   FLAT EDITORIAL HEADER (Matches StatisticsHub / Finance / AI pages)
-   -------------------------------------------------------------------------- */
-.queue :global(.page-heading) {
-  grid-column: 1;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  border: 0;
   min-width: 0;
-}
-
-.queue :global(.page-heading h1) {
-  margin: 0;
-  color: var(--shop-ink);
-  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
-  font-size: clamp(1.4rem, 2.2cqw, 1.75rem);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
-}
-
-.queue :global(.page-heading .intro) {
-  margin: 0.35rem 0 0;
-  max-width: 68ch;
-  color: var(--shop-muted);
-  font-size: 0.84rem;
-  line-height: 1.5;
-}
-
-.queue :global(.queue-toolbar) {
-  grid-column: 2;
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0.1rem 0 0;
-  margin: 0;
-  background: transparent;
-  border: 0;
-}
-
-.queue :global(.queue-toolbar .muted) {
-  margin: 0;
-  font-size: 0.76rem;
-  color: var(--shop-muted);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.queue :global(.queue-toolbar > .button) {
-  flex: 0 0 auto;
-  min-height: 36px;
-  padding: 0.4rem 0.9rem;
-  border-radius: 8px;
-  border: 1px solid var(--shop-line);
-  background: var(--shop-paper);
-  color: var(--shop-wine);
-  font-size: 0.8125rem;
-  font-weight: 650;
-  cursor: pointer;
-  transition: background-color 140ms ease, border-color 140ms ease;
-}
-
-.queue :global(.queue-toolbar > .button:hover:not(:disabled)) {
-  background: var(--shop-shelf);
-  border-color: var(--shop-wine);
 }
 
 /* --------------------------------------------------------------------------
@@ -910,27 +830,6 @@
 }
 
 @container point-queue (max-width: 44rem) {
-  .queue {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 0.5rem;
-  }
-
-  .queue :global(.page-heading),
-  .queue :global(.queue-toolbar) {
-    grid-column: 1;
-  }
-
-  .queue :global(.queue-toolbar) {
-    flex-direction: row-reverse;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .queue :global(.queue-toolbar .muted) {
-    text-align: left;
-  }
-
   .queue :global(.queue-row) {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.85rem;

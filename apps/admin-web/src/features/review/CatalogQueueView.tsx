@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -146,14 +147,10 @@ export function CatalogQueueView({ user }: { user: CurrentUser }) {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1>Yêu cầu đầu sách</h1>
-          <p>
-            Rà soát tên sách, tác giả, nhà xuất bản và mã ISBN trước khi đưa đầu
-            sách vào danh mục dùng chung.
-          </p>
-        </div>
+      <PageHeading
+        title="Yêu cầu đầu sách"
+        description="Rà soát tên sách, tác giả, nhà xuất bản và mã ISBN trước khi đưa đầu sách vào danh mục dùng chung."
+      >
         <div className={styles.headerActions}>
           <Button
             className={styles.iconBtn}
@@ -175,7 +172,7 @@ export function CatalogQueueView({ user }: { user: CurrentUser }) {
             </Link>
           )}
         </div>
-      </header>
+      </PageHeading>
 
       <div className={styles.filterBar}>
         <div

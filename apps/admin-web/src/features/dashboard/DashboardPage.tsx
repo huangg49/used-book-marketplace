@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useState } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { refreshDashboard } from "../../core/dashboard-cache";
@@ -81,23 +82,20 @@ export function DashboardPage() {
   );
   return (
     <div className={styles.dashboard}>
-      <header className={styles.header}>
-        <div>
-          <h1>
-            Tổng quan<span aria-hidden="true">.</span>
-          </h1>
-          <p>
-            {data
-              ? new Intl.DateTimeFormat("vi-VN", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                  timeZone: "Asia/Ho_Chi_Minh",
-                }).format(new Date(data.serverTime))
-              : "Bàn vận hành Lật lại"}
-          </p>
-        </div>
+      <PageHeading
+        title="Tổng quan"
+        description={
+          data
+            ? new Intl.DateTimeFormat("vi-VN", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                timeZone: "Asia/Ho_Chi_Minh",
+              }).format(new Date(data.serverTime))
+            : "Bàn vận hành Lật lại"
+        }
+      >
         <div className={styles.headerActions}>
           {canReview(user) && (
             <div
@@ -129,7 +127,7 @@ export function DashboardPage() {
             <span>Cập nhật</span>
           </Button>
         </div>
-      </header>
+      </PageHeading>
       {canReview(user) && (
         <>
           {overview.isError && (

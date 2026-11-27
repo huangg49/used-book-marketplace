@@ -7,39 +7,13 @@
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
-  max-width: 1440px;
-  margin: 0 auto;
+  --page-heading-margin: 0rem;
 }
 
 /* Page Header & Top Toolbar */
-.pageHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  padding-bottom: 0.5rem;
-}
 
-.titleArea {
-  max-width: 700px;
-}
 
-.titleArea h1 {
-  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
-  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
-  font-weight: 700;
-  color: var(--shop-ink, #281914);
-  margin: 0 0 0.5rem 0;
-  letter-spacing: -0.02em;
-}
 
-.titleArea .intro {
-  color: var(--shop-muted, #716157);
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  margin: 0;
-}
 
 .topActions {
   display: flex;

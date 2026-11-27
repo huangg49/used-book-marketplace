@@ -18,6 +18,7 @@ import {
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
 import { formatAuthError } from "./auth-api";
+import { AuthWineBackdrop } from "./auth-wine-backdrop";
 
 export function LoginScreen({
   returnBook,
@@ -82,51 +83,54 @@ export function LoginScreen({
     <Screen
       footer={<MemberNavigation current="/account" />}
       footerAppearance="navigation"
+      canvasColor={stitchTokens.wineDark}
+      statusBarStyle="light"
+      background={<AuthWineBackdrop />}
       centerContent
     >
-      {/* Official App Logo (Owl + Lật Lại) */}
+      {/* Official App Logo (Owl + Lật Lại) on Wine Velvet */}
       <View
         style={{
           alignItems: "center",
           justifyContent: "center",
           marginTop: space.xs,
-          marginBottom: space.sm,
+          marginBottom: space.xs,
+          gap: 6,
         }}
       >
-        <View
-          style={{
-            backgroundColor: stitchTokens.wine,
-            paddingHorizontal: 16,
-            paddingVertical: 7,
-            borderRadius: 14,
-            shadowColor: stitchTokens.wine,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
-            elevation: 3,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <WebBrandLogo scale={0.75} />
+        <WebBrandLogo scale={0.95} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ width: 22, height: 1, backgroundColor: stitchTokens.goldAlpha40 }} />
+          <AppText
+            kind="small"
+            style={{
+              color: stitchTokens.goldTextMuted,
+              fontSize: 10.5,
+              letterSpacing: 1.8,
+              fontWeight: "600",
+            }}
+          >
+            CHỢ SÁCH CŨ SÀI GÒN
+          </AppText>
+          <View style={{ width: 22, height: 1, backgroundColor: stitchTokens.goldAlpha40 }} />
         </View>
       </View>
 
-      {/* Central Parchment Card (Single-Screen Fit) */}
+      {/* Central Ivory Book-Page Card */}
       <View
         style={{
           backgroundColor: stitchTokens.warmIvory,
-          borderRadius: 18,
+          borderRadius: 24,
           borderWidth: 1,
-          borderColor: stitchTokens.peachBorder,
-          paddingHorizontal: space.md,
-          paddingVertical: space.md,
+          borderColor: stitchTokens.goldAlpha40,
+          paddingHorizontal: space.lg,
+          paddingVertical: space.lg,
           gap: space.sm,
           shadowColor: stitchTokens.black,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 2,
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.32,
+          shadowRadius: 22,
+          elevation: 10,
         }}
       >
         {/* Header Greeting */}
@@ -311,113 +315,6 @@ export function LoginScreen({
             </AppText>
           </Pressable>
         </View>
-
-        {__DEV__ && (
-          <View
-            style={{
-              marginTop: 6,
-              paddingTop: 8,
-              borderTopWidth: 1,
-              borderTopColor: stitchTokens.canvasWhite,
-              gap: 6,
-            }}
-          >
-            <AppText
-              kind="small"
-              style={{
-                fontSize: 10,
-                color: stitchTokens.deepCocoa,
-                textAlign: "center",
-              }}
-            >
-              Tài khoản thử nghiệm nhanh (DEV):
-            </AppText>
-            <View
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: 6,
-                justifyContent: "center",
-              }}
-            >
-              <Pressable
-                onPress={() => {
-                  setEmail("reader1@latlai.local");
-                  setPassword("LatLai-Local-2026!");
-                }}
-                style={{
-                  backgroundColor: stitchTokens.lemonLight,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 6,
-                  borderWidth: 1,
-                  borderColor: stitchTokens.lemonBg,
-                }}
-              >
-                <AppText
-                  kind="small"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: "600",
-                    color: stitchTokens.wine,
-                  }}
-                >
-                  Reader 1 (Nam)
-                </AppText>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setEmail("reader2@latlai.local");
-                  setPassword("LatLai-Local-2026!");
-                }}
-                style={{
-                  backgroundColor: stitchTokens.lemonLight,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 6,
-                  borderWidth: 1,
-                  borderColor: stitchTokens.lemonBg,
-                }}
-              >
-                <AppText
-                  kind="small"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: "600",
-                    color: stitchTokens.wine,
-                  }}
-                >
-                  Reader 2 (Thư)
-                </AppText>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setEmail("member@latlai.local");
-                  setPassword("LatLai-Local-2026!");
-                }}
-                style={{
-                  backgroundColor: stitchTokens.lemonLight,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 6,
-                  borderWidth: 1,
-                  borderColor: stitchTokens.lemonBg,
-                }}
-              >
-                <AppText
-                  kind="small"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: "600",
-                    color: stitchTokens.wine,
-                  }}
-                >
-                  Member Seed
-                </AppText>
-              </Pressable>
-            </View>
-          </View>
-        )}
       </View>
     </Screen>
   );

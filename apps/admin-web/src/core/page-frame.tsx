@@ -1,6 +1,7 @@
 import { Component, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigationType } from "react-router-dom";
 import { Button } from "./ui";
+import { PageTitle } from "./PageHeading";
 import { playWorkspaceEdge, shouldTurnWorkspace } from "./workspace-motion";
 import styles from "./page-frame.module.css";
 
@@ -13,7 +14,7 @@ export function PageLoadError({ dashboard }: { dashboard: boolean }) {
   useEffect(() => { heading.current?.focus(); }, []);
   return (
     <section aria-label="Không mở được nội dung trang">
-      <h1 ref={heading} tabIndex={-1}>Chưa mở được trang này.</h1>
+      <PageTitle ref={heading} tabIndex={-1}>Chưa mở được trang này.</PageTitle>
       <p>Thử tải lại trang để mở nội dung. Bạn sẽ cần đăng nhập lại.</p>
       <div className="actions">
         <Button onClick={() => window.location.reload()}>Tải lại trang</Button>

@@ -27,6 +27,21 @@
   ngoài repo): không tràn ngang, không lỗi console. NOT RUN: API/Mongo/Socket.IO
   thật, native RN, Safari/thiết bị thật.
 
+# Đồng bộ tiêu đề Admin/Staff — 28/11/2026
+
+- Nhánh `codex/admin-page-headings`, nền `533b6e10`. Dùng `PageHeading` và
+  `PageTitle` để đồng bộ Be Vietnam Pro, màu đỏ rượu và lề trang làm việc.
+  Nút và bộ lọc tự xuống hàng khi hẹp. Hàng chờ, hồ sơ chi tiết và trạng thái
+  lỗi dùng cùng kiểu chữ. Cách dùng ở [UI_COMPONENTS](../design/UI_COMPONENTS.md#adminstaff--tiêu-đề-trang).
+- PASS lint, typecheck, build, 258 unit và 85 lượt kiểm trình duyệt trên 28
+  trang cấp chính cùng hồ sơ chi tiết và quyền Staff. Đã đo ở 320–1760 px,
+  thêm chữ 130% ở 390 px. Test trình duyệt tổng dừng ở bước focus mục sidebar
+  “Bài đăng sách”. Cùng lỗi tái hiện trên `main` chưa sửa. QA dùng Mongo riêng
+  và ảnh kiểm thử. Chưa push hoặc triển khai Vercel.
+- AI & Token dùng cùng kiểu ô Từ/Đến, nút Áp dụng và làm mới như Tài chính.
+  PASS build, 258 unit và browser QA 1440/390/320 px. Khoảng ngày sai bị
+  chặn, áp dụng và làm mới gửi đúng khoảng ngày đã chọn.
+
 # Nhật ký hoạt động Admin — 27/11/2026
 
 - Local `feat/ops-activity-log`, nền `81faee5f`. `GET /operations/audit-events`

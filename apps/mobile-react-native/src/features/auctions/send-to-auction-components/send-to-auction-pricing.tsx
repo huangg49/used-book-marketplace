@@ -416,6 +416,21 @@ export function SendToAuctionPricing({
 
           {buyNowOn ? (
             <View style={styles.subBlock}>
+              <TextField
+                label="Giá mua ngay (VNĐ)"
+                keyboardType="number-pad"
+                value={buyNowPriceText}
+                editable={!disabled}
+                placeholder="Cao hơn giá khởi điểm"
+                onChangeText={(t) => onChangeBuyNowPriceText(t.replace(/\D/g, ""))}
+                hint={
+                  parsedBuyNow > 0
+                    ? `${formatVnd(parsedBuyNow)} · Cao hơn giá khởi điểm ít nhất 1 bước giá`
+                    : "Bằng giá khởi điểm cộng thêm ít nhất 1 bước giá"
+                }
+                error={buyNowPriceError}
+              />
+
               <AppText kind="bold" style={styles.subLabel}>Khi có người mua ngay</AppText>
               <View style={styles.optionList} accessibilityRole="radiogroup">
                 {BUY_NOW_MODES.map((m) => {
@@ -448,21 +463,6 @@ export function SendToAuctionPricing({
                   );
                 })}
               </View>
-
-              <TextField
-                label="Giá mua ngay (VNĐ)"
-                keyboardType="number-pad"
-                value={buyNowPriceText}
-                editable={!disabled}
-                placeholder="Cao hơn giá khởi điểm"
-                onChangeText={(t) => onChangeBuyNowPriceText(t.replace(/\D/g, ""))}
-                hint={
-                  parsedBuyNow > 0
-                    ? `${formatVnd(parsedBuyNow)} · Cao hơn giá khởi điểm ít nhất 1 bước giá`
-                    : "Bằng giá khởi điểm cộng thêm ít nhất 1 bước giá"
-                }
-                error={buyNowPriceError}
-              />
             </View>
           ) : null}
         </View>

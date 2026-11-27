@@ -10,9 +10,8 @@
 .page {
   display: grid;
   gap: 20px;
-  max-width: 1240px;
   width: 100%;
-  margin: 0 auto;
+  --page-heading-margin: 0rem;
 }
 
 .page ::selection,
@@ -46,28 +45,8 @@
 
 /* ── Header & Filter Bar ───────────────────────────────────────────────── */
 
-.header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-}
 
-.header h1 {
-  margin: 0 0 4px;
-  font: 700 1.75rem/1.25 "Be Vietnam Pro", sans-serif;
-  letter-spacing: -0.025em;
-  color: var(--shop-wine);
-}
 
-.header p {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: var(--shop-muted);
-  max-width: 66ch;
-}
 
 .headerActions {
   display: flex;

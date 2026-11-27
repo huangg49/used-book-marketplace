@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -167,12 +168,10 @@ function AccountContent({ id, owner }: { id: string; owner: string }) {
   return (
     <div className="account-controls">
       <Link to={back}>← Về danh sách người dùng</Link>
-      <header className="page-heading">
-        <h1>Quản lý tài khoản</h1>
-        <p className="intro">
-          Giới hạn giao dịch mới, giữ kênh xử lý nghĩa vụ đang có.
-        </p>
-      </header>
+      <PageHeading
+        title="Quản lý tài khoản"
+        description="Giới hạn giao dịch mới, giữ kênh xử lý nghĩa vụ đang có."
+      />
       {result.isPending && <p role="status">Đang tải tài khoản…</p>}
       {result.error && (
         <Notice tone="error">{operationErrorText(result.error)}</Notice>

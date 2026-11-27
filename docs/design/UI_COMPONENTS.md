@@ -714,6 +714,15 @@ hàng và plot đo width thực. Borderworkboard #9e5750/text phụ #e3c6b6 dùn
 tonal wine/cream với sidebar. Các đoạn Dashboard26/10 bên dưới là evidence cũ,
 không thay phần mô tả27/10 này. Không đổi session/API quyết định hoặc gate.
 
+## Admin/Staff — tiêu đề trang
+
+[PageHeading](../../apps/admin-web/src/core/PageHeading.tsx) đặt tiêu đề `h1`,
+mô tả và thao tác theo một bố cục. Tiêu đề dùng Be Vietnam Pro, màu đỏ rượu,
+căn theo lề nội dung của WorkspaceShell. Truyền nút và bộ lọc làm `children`.
+Nhóm thao tác tự xuống dưới tiêu đề khi bề rộng hiện tại không đủ. Với hồ sơ
+chi tiết hoặc thông báo lỗi cần bố cục riêng, dùng `PageTitle` để giữ cùng kiểu chữ
+và truyền được `id`, `ref` và `tabIndex` cho tiêu đề.
+
 ## Admin — WorkspaceShell và BrandMark —26/10/2026
 
 [WorkspaceShell](../../apps/admin-web/src/features/navigation/WorkspaceShell.tsx)

@@ -7,28 +7,12 @@
   min-width: 0;
   container: withdrawal-queue / inline-size;
 }
-.queueHeading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 24px;
-}
-.queueHeading > div {
-  min-width: 0;
-}
-.queueHeading h1 {
-  font-size: 1.75rem;
-}
-.queueHeading :global(.intro) {
-  margin: 8px 0 0;
-}
-.queueHeading .refresh {
+.queuePage .refresh {
   flex-shrink: 0;
   box-shadow: none;
   background: var(--paper);
 }
-.queueHeading .refresh:hover:not(:disabled) {
+.queuePage .refresh:hover:not(:disabled) {
   background: var(--shop-shelf);
 }
 .queuePanel {
@@ -275,12 +259,6 @@
   max-width: 1120px;
   font-size: 0.875rem;
   line-height: 1.6;
-}
-.detailHeading h1 {
-  font-family: inherit;
-  font-size: clamp(1.5rem, 2vw, 1.625rem);
-  line-height: 1.4;
-  margin: 0 0 20px;
 }
 .summary {
   display: flex;
@@ -785,15 +763,6 @@
 }
 
 @container withdrawal-queue (max-width: 720px) {
-  .queueHeading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-  .queueHeading h1 {
-    font-size: 1.5rem;
-  }
   .toolbar {
     padding: 18px;
     gap: 14px;

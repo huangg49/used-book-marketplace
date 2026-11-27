@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useRef, useState } from "react";
 import { useListMotion } from "../../core/task-motion";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -120,21 +121,16 @@ function UserDirectoryContent() {
   return (
     <>
       {/* 1. Header trang: Tiêu đề + mô tả bên trái, nút Cập nhật danh sách căn phải */}
-      <header className="page-heading user-directory-header">
-        <div className="directory-header-row">
-          <div className="directory-header-title-group">
-            <h1>Người dùng</h1>
-            <p className="intro">
-              Tra cứu trạng thái, xem lịch sử và quản lý khóa tài khoản.
-            </p>
-          </div>
-          <Button
-            busy={result.isFetching}
-            onClick={() => void result.refetch()}
-            className={`btn-subtle-refresh ${result.isFetching ? "spinning" : ""}`}
-          ><RotateCw size={14} aria-hidden="true" />Cập nhật danh sách</Button>
-        </div>
-      </header>
+      <PageHeading
+        title="Người dùng"
+        description="Tra cứu trạng thái, xem lịch sử và quản lý khóa tài khoản."
+      >
+        <Button
+          busy={result.isFetching}
+          onClick={() => void result.refetch()}
+          className={`btn-subtle-refresh ${result.isFetching ? "spinning" : ""}`}
+        ><RotateCw size={14} aria-hidden="true" />Cập nhật danh sách</Button>
+      </PageHeading>
 
       {/* 2. Thanh lọc: Chip tabs thống kê + Form bộ lọc 1 hàng */}
       <div className="directory-controls-block">

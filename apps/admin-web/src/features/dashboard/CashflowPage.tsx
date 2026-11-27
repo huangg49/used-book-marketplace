@@ -1,3 +1,4 @@
+import { PageHeading, PageTitle } from "../../core/PageHeading";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useOutletContext } from "react-router-dom";
@@ -173,7 +174,7 @@ export function CashflowPage() {
     return (
       <div className={styles.page}>
         <section className={styles.denied} aria-labelledby="cashflow-denied">
-          <h1 id="cashflow-denied">Không có quyền xem dòng tiền & đối soát</h1>
+          <PageTitle id="cashflow-denied">Không có quyền xem dòng tiền & đối soát</PageTitle>
           <p className={styles.subtitle}>
             Báo cáo Dòng tiền & Đối soát chỉ dành cho Quản trị viên (ADMIN).
           </p>
@@ -235,11 +236,7 @@ export function CashflowPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerTitle}>
-          <h1>Dòng tiền & Đối soát</h1>
-        </div>
-
+      <PageHeading title="Dòng tiền & Đối soát">
         <div className={styles.controls}>
           <div className={styles.presets} role="group" aria-label="Chọn nhanh khoảng thời gian">
             {([7, 30, 90] as const).map((days) => (
@@ -297,7 +294,7 @@ export function CashflowPage() {
             </button>
           </form>
         </div>
-      </header>
+      </PageHeading>
 
       {query.isError && (
         <ErrorNotice

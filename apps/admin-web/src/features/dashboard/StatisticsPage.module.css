@@ -2,28 +2,7 @@
   display: grid;
   gap: 20px;
   min-width: 0;
-  max-width: 1180px;
-  margin: 0 auto;
-}
-.pageHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 4px 0 6px;
-}
-.pageHeader h1 {
-  margin: 0;
-  color: var(--shop-ink);
-  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
-  line-height: 1.15;
-  letter-spacing: -0.035em;
-}
-.intro {
-  margin: 8px 0 0;
-  color: var(--shop-muted);
-  font-size: 0.875rem;
+  --page-heading-margin: 0rem;
 }
 .headerActions {
   display: flex;
@@ -660,11 +639,6 @@
   border: 1px solid var(--shop-line);
   border-radius: 12px;
 }
-.denied h1 {
-  margin: 0;
-  color: var(--shop-ink);
-  font-size: 1.5rem;
-}
 .denied p {
   margin: 8px 0 0;
   color: var(--shop-muted);
@@ -1124,10 +1098,6 @@
   font-size: 0.75rem;
 }
 @media (max-width: 760px) {
-  .pageHeader {
-    align-items: flex-start;
-    flex-direction: column;
-  }
   .headerActions {
     width: 100%;
     align-items: stretch;

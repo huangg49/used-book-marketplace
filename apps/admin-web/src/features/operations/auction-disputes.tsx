@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useRef } from "react";
 import {
   ArrowRight,
@@ -128,19 +129,15 @@ function AuctionDisputesContent({ user }: { user: CurrentUser }) {
 
   return (
     <div className={styles.page}>
-      <header className={styles.heading}>
-        <div className="page-heading">
-          <h1>Khiếu nại đấu giá</h1>
-          <p className="intro">
-            Đối chiếu báo cáo về phiên, người báo và tiền cọc đang giữ trước khi
-            quyết định.
-          </p>
-        </div>
+      <PageHeading
+        title="Khiếu nại đấu giá"
+        description="Đối chiếu báo cáo về phiên, người báo và tiền cọc đang giữ trước khi quyết định."
+      >
         <Button busy={result.isFetching} onClick={() => void result.refetch()}>
           {!result.isFetching && <RefreshCw size={16} aria-hidden="true" />}
           Cập nhật danh sách
         </Button>
-      </header>
+      </PageHeading>
 
       <Notice tone="info">
         Hồ sơ khiếu nại không tự tạm dừng hay đóng phiên đấu giá, cũng không

@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import type { OperationsReviewsPage } from "@used-books/session-client";
 import { useRef, useState, type FormEvent } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -50,13 +51,10 @@ function ReviewQueue({ owner }: { owner: string }) {
     );
   return (
     <>
-      <header className="page-heading">
-        <h1>Đánh giá giao dịch</h1>
-        <p className="intro">
-          Kiểm duyệt đánh giá đã đủ điều kiện công bố và phản hồi. Không hiển
-          thị giao dịch bạn tham gia hoặc đánh giá còn trong thời gian bảo mật.
-        </p>
-      </header>
+      <PageHeading
+        title="Đánh giá giao dịch"
+        description="Kiểm duyệt đánh giá đã đủ điều kiện công bố và phản hồi. Không hiển thị giao dịch bạn tham gia hoặc đánh giá còn trong thời gian bảo mật."
+      />
       <Button busy={result.isFetching} onClick={() => void result.refetch()}>
         Cập nhật danh sách
       </Button>
