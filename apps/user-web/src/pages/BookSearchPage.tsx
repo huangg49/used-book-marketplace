@@ -57,6 +57,17 @@ type FilterValues = {
   minExchangeValue: string;
   maxExchangeValue: string;
 };
+const emptyFilters: FilterValues = {
+  categoryId: "",
+  attributes: {},
+  series: "",
+  language: "",
+  condition: "",
+  minSalePrice: "",
+  maxSalePrice: "",
+  minExchangeValue: "",
+  maxExchangeValue: "",
+};
 function invalidPrice(min: string, max: string) {
   return (
     [min, max].some(
@@ -126,6 +137,13 @@ function FilterForm({
     const minKey = kind === "SalePrice" ? "minSalePrice" : "minExchangeValue";
     const maxKey = kind === "SalePrice" ? "maxSalePrice" : "maxExchangeValue";
     const error = invalidPrice(draft[minKey], draft[maxKey]);
+    const errorId = `${id}-${kind}-error`;
+    const changed =
+      draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey];
+    const fields = [
+      { key: minKey, label: "Từ", placeholder: "10.000" },
+      { key: maxKey, label: "Đến", placeholder: "1.000.000" },
+    ] as const;
     return (
       <fieldset
         className={styles.priceFilter + " " + styles.filterGroup}
@@ -149,52 +167,31 @@ function FilterForm({
           )}
         </legend>
         <div className={styles.priceFields}>
-          <label data-focus-surface>
-            <span>Từ</span>
-            <input
-              aria-label={title + " từ"}
-              inputMode="numeric"
-              placeholder="10.000"
-              value={draft[minKey]}
-              onChange={(e) => setDraft({ ...draft, [minKey]: e.target.value })}
-              onBlur={() => {
-                if (!error && (draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey])) {
-                  updateDraft(draft, true);
+          {fields.map((field) => (
+            <label key={field.key} data-focus-surface>
+              <span>{field.label}</span>
+              <input
+                aria-label={`${title} ${field.label.toLowerCase()}`}
+                inputMode="numeric"
+                placeholder={field.placeholder}
+                value={draft[field.key]}
+                onChange={(e) =>
+                  setDraft({ ...draft, [field.key]: e.target.value })
                 }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (!error) updateDraft(draft, true);
-                }
-              }}
-              aria-invalid={error}
-              aria-describedby={error ? id + "-" + kind + "-error" : undefined}
-            />
-          </label>
-          <label data-focus-surface>
-            <span>Đến</span>
-            <input
-              aria-label={title + " đến"}
-              inputMode="numeric"
-              placeholder="1.000.000"
-              value={draft[maxKey]}
-              onChange={(e) => setDraft({ ...draft, [maxKey]: e.target.value })}
-              onBlur={() => {
-                if (!error && (draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey])) {
-                  updateDraft(draft, true);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (!error) updateDraft(draft, true);
-                }
-              }}
-              aria-invalid={error}
-              aria-describedby={error ? id + "-" + kind + "-error" : undefined}
-            />
-          </label>
+                onBlur={() => {
+                  if (!error && changed) updateDraft(draft, true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!error) updateDraft(draft, true);
+                  }
+                }}
+                aria-invalid={error}
+                aria-describedby={error ? errorId : undefined}
+              />
+            </label>
+          ))}
         </div>
         <div className={styles.pricePresets}>
           {[50000, 100000, 200000].map((price) => (
@@ -213,7 +210,7 @@ function FilterForm({
         </div>
         {error && (
           <p
-            id={id + "-" + kind + "-error"}
+            id={errorId}
             role="alert"
             className={styles.error}
           >
@@ -338,19 +335,7 @@ function FilterForm({
           <button
             type="button"
             className={styles.reset}
-            onClick={() =>
-              setDraft({
-                categoryId: "",
-                attributes: {},
-                series: "",
-                language: "",
-                condition: "",
-                minSalePrice: "",
-                maxSalePrice: "",
-                minExchangeValue: "",
-                maxExchangeValue: "",
-              })
-            }
+            onClick={() => setDraft(emptyFilters)}
           >
             Xóa lựa chọn
           </button>

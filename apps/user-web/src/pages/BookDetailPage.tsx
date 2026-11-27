@@ -1,142 +1,102 @@
-import { BundleManifest } from "../components/BookBundle";
-import {SupportLink} from '../features/support/SupportLink';
-import { listingTitle } from "../lib/book-bundle";
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, ArrowLeftRight, ShoppingBag, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, BookOpen, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
+import { BundleManifest } from "../components/BookBundle";
+import { InfoTip } from "../components/InfoTip";
 import { ListingGallery } from "../components/ListingGallery";
-import { conditions } from "../lib/listing-labels";
+import { SupportLink } from "../features/support/SupportLink";
 import { useSession } from "../hooks/useSession";
+import { listingTitle } from "../lib/book-bundle";
+import { conditions, listingModes } from "../lib/listing-labels";
 import { formatVnd, ROUTES } from "../lib/routes";
-import {
-  getPurchaseConversations,
-} from "../services/purchase-conversations";
 import { getPublicListing, type PublicListing } from "../services/public-listings";
+import { getPurchaseConversations } from "../services/purchase-conversations";
+import { BookFactsSection } from "./book-detail/BookFactsSection";
+import { BookParcelArt } from "./book-detail/BookDetailArt";
+import { ConditionSection } from "./book-detail/ConditionSection";
+import { PurchasePanel } from "./book-detail/PurchasePanel";
+import { listingPurchaseState } from "./book-detail/listing-purchase-state";
 import styles from "./BookDetailPage.module.css";
 import "../components/BookTransition.css";
-import {
-  categoryFor,
-  categoryPath,
-  classificationLabels,
-  languageLabel,
-} from "@used-books/api-contract/catalog-taxonomy";
-import { searchUrl } from "../lib/routes";
+
+const listingIdPattern = /^[0-9a-f-]{36}$/i;
+
+/** Only return to the catalog, keeping its filters; anything else falls back to /books. */
+function catalogReturnPath(state: unknown) {
+  const value = (state as { catalogReturn?: unknown } | null)?.catalogReturn;
+  return typeof value === "string" &&
+    (value === ROUTES.search || value.startsWith(ROUTES.search + "?"))
+    ? value
+    : ROUTES.search;
+}
 
 export function BookDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const state = useSession();
-  const valid = /^[0-9a-f-]{36}$/i.test(id);
+  const session = useSession();
+  const currentUserId = session.status === "authenticated" ? session.user.id : undefined;
+  const valid = listingIdPattern.test(id);
+
   const detail = useQuery({
     queryKey: ["public-listing", id],
     queryFn: () => getPublicListing(id),
-    initialData: () => (location.state?.listing?.id === id ? (location.state.listing as PublicListing) : undefined),
+    initialData: () =>
+      location.state?.listing?.id === id ? (location.state.listing as PublicListing) : undefined,
     enabled: valid,
     refetchOnMount: "always",
     retry: false,
   });
   const conversations = useQuery({
-    queryKey: ["purchase-conversations", state.status === "authenticated" ? state.user.id : undefined],
+    queryKey: ["purchase-conversations", currentUserId],
     queryFn: getPurchaseConversations,
-    enabled: state.status === "authenticated",
+    enabled: session.status === "authenticated",
     refetchOnMount: "always",
     retry: false,
   });
-  const catalogReturn = location.state?.catalogReturn;
-  const returnTo =
-    typeof catalogReturn === "string" &&
-    (catalogReturn === ROUTES.search ||
-      catalogReturn.startsWith(ROUTES.search + "?"))
-      ? catalogReturn
-      : ROUTES.search;
+
   const back = (
     <Link
       className={styles.back}
-      to={returnTo}
+      to={catalogReturnPath(location.state)}
       viewTransition
       state={{ morphBookId: id }}
     >
       <ArrowLeft size={17} aria-hidden="true" /> Về kệ sách
     </Link>
   );
-  if (
-    !valid ||
-    (detail.error instanceof ApiError && detail.error.status === 404)
-  )
-    return (
-      <section className={styles.state}>
-        {back}
+  const notice = (children: ReactNode, role?: "status") => (
+    <section className={styles.state} role={role}>
+      {back}
+      {children}
+    </section>
+  );
+
+  if (!valid || (detail.error instanceof ApiError && detail.error.status === 404))
+    return notice(
+      <>
         <h1>Không tìm thấy bài đăng này</h1>
         <p>Sách có thể đã được gỡ. Hãy tìm một cuốn khác trên kệ.</p>
-      </section>
+      </>,
     );
   if (detail.isError && !detail.data)
-    return (
-      <section className={styles.state}>
-        {back}
-        <div role="alert">
-          <h1>Chưa tải được thông tin sách</h1>
-          <p>Kiểm tra kết nối rồi thử lại.</p>
-          <button
-            type="button"
-            onClick={() => void detail.refetch()}
-            disabled={detail.isFetching}
-          >
-            Thử lại
-          </button>
-        </div>
-      </section>
+    return notice(
+      <div role="alert">
+        <h1>Chưa tải được thông tin sách</h1>
+        <p>Kiểm tra kết nối rồi thử lại.</p>
+        <button type="button" onClick={() => void detail.refetch()} disabled={detail.isFetching}>
+          Thử lại
+        </button>
+      </div>,
     );
-  if (!detail.data)
-    return (
-      <section className={styles.state} role="status">
-        {back}
-        <p>Đang mở thông tin sách…</p>
-      </section>
-    );
+  if (!detail.data) return notice(<p>Đang mở thông tin sách…</p>, "status");
+
   const book = detail.data;
-  const held = book.purchaseAvailability.status !== "Available";
-  const heldLabel = book.purchaseAvailability.status === "AwaitingPayment"
-    ? "Chờ thanh toán"
-    : book.purchaseAvailability.status === "InTransaction"
-      ? "Đang giao dịch"
-      : "Đang giữ sách";
-  const currentUserId =
-    state.status === "authenticated" ? state.user.id : undefined;
-  const isOwner =
-    currentUserId === book.seller.id;
-  const orderConversation = held
-    ? conversations.data?.find(
-        (conversation) =>
-          conversation.listingId === book.id &&
-          conversation.status === "OrderCreated" &&
-          (conversation.buyer.id === currentUserId ||
-            conversation.seller.id === currentUserId),
-      )
-    : undefined;
-  const buyerOrderConversation =
-    orderConversation?.buyer.id === currentUserId
-      ? orderConversation
-      : undefined;
-  const sellerOrderConversation =
-    orderConversation?.seller.id === currentUserId
-      ? orderConversation
-      : undefined;
-  const activeConversation = conversations.data?.find(
-    (conversation) =>
-      conversation.listingId === book.id && conversation.status === "Active",
-  );
-  const conversationToOpen =
-    buyerOrderConversation ?? sellerOrderConversation ?? activeConversation;
-  const offersExchange = book.mode === "Exchange" || book.mode === "Both";
-  const canProposeExchange = offersExchange && !isOwner && !book.bundle &&
-    (!held || (book.purchaseAvailability.status === "InNegotiation" && Boolean(activeConversation)));
-  function requestPurchase() {
-    navigate(`/chat/start/${book.id}?intent=Negotiation&openChat=1`);
-  }
+  const purchase = listingPurchaseState(book, conversations.data, currentUserId);
+
   return (
     <div className={styles.page} data-book-detail="true">
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -158,52 +118,69 @@ export function BookDetailPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className={styles.bookCard}>
+          <div className={styles.bookCard} data-tone={purchase.tone}>
+            {purchase.statusTag && <p className={styles.statusTag}>{purchase.statusTag}</p>}
             <h1>{listingTitle(book)}</h1>
             <BundleManifest bundle={book.bundle} />
             <p className={styles.author}>
               Tác giả: {book.book.authors.join(", ") || "Chưa rõ tác giả"}
             </p>
 
-            <div className={styles.labels}>
-              <span className={styles.conditionLabel}>Người bán mô tả: {conditions[book.condition]}</span>
-              <span>
-                {book.mode === "Sale"
-                  ? "Đăng bán"
-                  : book.mode === "Exchange"
-                    ? "Trao đổi"
-                    : "Bán hoặc đổi"}
-              </span>
-              {held && (
-                <span>
-                  {buyerOrderConversation && book.purchaseAvailability.status === "InTransaction"
-                    ? "Đang giao dịch với bạn"
-                    : heldLabel}
-                </span>
-              )}
-            </div>
-            <p className={styles.conditionSummary}>
-              <BookOpen size={18} aria-hidden="true" />
+            <ul className={styles.quickFacts}>
+              <li>
+                <span>Người bán mô tả</span>
+                <strong>{conditions[book.condition]}</strong>
+              </li>
+              <li>
+                <span>Số trang</span>
+                <strong className={book.hasMissingPages ? styles.factWarning : undefined}>
+                  {book.hasMissingPages ? "Có trang thiếu" : "Không thiếu trang"}
+                </strong>
+              </li>
+              <li>
+                <span>Hình thức</span>
+                <strong>{listingModes[book.mode]}</strong>
+              </li>
+            </ul>
+            <a className={styles.conditionLink} href="#book-condition">
+              <BookOpen size={16} aria-hidden="true" />
               {book.hasMissingPages
-                ? "Có trang thiếu — xem mô tả và ảnh trước khi mua."
-                : "Người bán khai báo sách không thiếu trang."}
-              <a href="#book-condition">Xem tình trạng</a>
-            </p>
-            <div className={styles.prices}>
-              {book.salePrice !== null && (
-                <div className={styles.priceCard}>
-                  <span className={styles.priceLabel}>{book.bundle ? "GIÁ CẢ BỘ" : "GIÁ BÁN"}</span>
-                  <strong>{formatVnd(book.salePrice)}</strong>
-                </div>
-              )}
-              {book.exchangeValue !== null && (
-                <div className={styles.exchangePriceCard}>
-                  <span className={styles.priceLabel}>GIÁ TRỊ ĐỔI</span>
-                  <strong>{formatVnd(book.exchangeValue)}</strong>
-                  <span className={styles.priceHint}>Dùng để tính tiền bù</span>
-                </div>
-              )}
+                ? "Có trang thiếu — xem mô tả và ảnh trước khi mua"
+                : "Xem chi tiết tình trạng"}
+            </a>
+
+            <div className={styles.buyPanel}>
+              <div className={styles.prices}>
+                {book.salePrice !== null && (
+                  <div className={styles.priceCard}>
+                    <span className={styles.priceLabel}>{book.bundle ? "Giá cả bộ" : "Giá bán"}</span>
+                    <strong>{formatVnd(book.salePrice)}</strong>
+                  </div>
+                )}
+                {book.exchangeValue !== null && (
+                  <div className={styles.exchangePriceCard}>
+                    <span className={styles.priceLabel}>
+                      Giá trị đổi
+                      <InfoTip label="Giá trị đổi">
+                        Dùng để <strong>tính tiền bù</strong> khi hai cuốn sách trong đề nghị đổi
+                        có giá trị khác nhau.
+                      </InfoTip>
+                    </span>
+                    <strong>{formatVnd(book.exchangeValue)}</strong>
+                  </div>
+                )}
+              </div>
+              <PurchasePanel
+                book={book}
+                purchase={purchase}
+                signedIn={session.status === "authenticated"}
+                chatBlocked={detail.isFetching || detail.isError || session.status === "loading"}
+                onRequestPurchase={() =>
+                  navigate(`/chat/start/${book.id}?intent=Negotiation&openChat=1`)
+                }
+              />
             </div>
+
             <section className={styles.sellerCard} aria-label="Thông tin người đăng">
               <div className={styles.sellerAvatar} aria-hidden="true">
                 {book.seller.displayName.trim().slice(0, 1).toLocaleUpperCase("vi-VN") || "?"}
@@ -212,320 +189,47 @@ export function BookDetailPage() {
                 <span className={styles.sellerCardMeta}>Người đăng sách</span>
                 <strong>{book.seller.displayName}</strong>
               </div>
-              {isOwner ? <span className={styles.ownerLabel}>Bài của bạn</span> : (
+              {purchase.isOwner ? (
+                <span className={styles.ownerPill}>Bài của bạn</span>
+              ) : (
                 <Link className={styles.sellerProfile} to={`/members/${book.seller.id}`}>
                   Xem hồ sơ <ArrowUpRight size={16} aria-hidden="true" />
                 </Link>
               )}
             </section>
-            {(book.salePrice !== null || offersExchange) && (
-              <section className={styles.purchaseSection} aria-labelledby="purchase-heading">
-                <h2 id="purchase-heading" className={styles.purchaseSectionTitle}>
-                  {buyerOrderConversation
-                    ? "Người bán đã tạo đơn cho bạn"
-                    : sellerOrderConversation
-                      ? "Bạn đã tạo đơn cho người mua"
-                      : isOwner
-                    ? "Đây là bài đăng của bạn"
-                    : held
-                      ? heldLabel
-                      : "Chọn cách mua"}
-                </h2>
-                <p className={styles.purchaseSectionSubtitle}>
-                  {buyerOrderConversation
-                    ? "Đơn hàng này dành cho bạn. Mở đơn để xem giá đã thỏa thuận và xác nhận thanh toán."
-                    : sellerOrderConversation
-                      ? "Bạn đã tạo đơn cho người mua này. Mở hội thoại để xem thông tin đơn hàng."
-                      : isOwner
-                    ? "Khi người mua xác nhận giá và địa chỉ nhận sách, bạn có thể tạo đơn trong hội thoại."
-                    : held
-                      ? "Bản sách này đã có đơn giữ chỗ. Bạn vẫn có thể xem bài đăng nhưng chưa thể đặt mua."
-                      : "Mua theo giá niêm yết hoặc nhắn người bán để trao đổi thêm."}
-                </p>
-              {book.salePrice !== null && (
-                <div className={styles.actionRow}>
-                  {!isOwner && !held && (
-                    <Link
-                      className={styles.primary}
-                      to={ROUTES.buyNow(book.id)}
-                    >
-                      <ShoppingBag size={18} aria-hidden="true" />
-                      {book.bundle ? "Mua cả bộ" : "Mua ngay"}
-                      <ArrowUpRight size={18} aria-hidden="true" />
-                    </Link>
-                  )}
-                  {conversationToOpen ? (
-                    <Link
-                      className={styles.secondary}
-                      to={`${ROUTES.chat(conversationToOpen.id)}${buyerOrderConversation ? "" : "?openChat=1"}`}
-                    >
-                      <MessageCircle size={18} aria-hidden="true" />
-                      {buyerOrderConversation
-                        ? "Xem đơn hàng của bạn"
-                        : sellerOrderConversation
-                          ? "Mở hội thoại giao dịch"
-                          : isOwner
-                            ? "Mở chat với người mua"
-                            : "Mở chat với người bán"}
-                      <ArrowUpRight size={18} aria-hidden="true" />
-                    </Link>
-                  ) : (
-                    !isOwner && (
-                      <button
-                        type="button"
-                        className={styles.secondary}
-                        disabled={
-                          held ||
-                          detail.isFetching ||
-                          detail.isError ||
-                          state.status === "loading"
-                        }
-                        onClick={requestPurchase}
-                      >
-                        <MessageCircle size={18} aria-hidden="true" />
-                        {held ? heldLabel : "Chat với người bán"}
-                        <ArrowUpRight size={18} aria-hidden="true" />
-                      </button>
-                    )
-                  )}
-                </div>
-              )}
-              {held && !orderConversation && state.status === 'authenticated' && (
-                <Link className={styles.secondary} to="/orders">
-                  <ShoppingBag size={18} aria-hidden="true" />
-                  Xem đơn hàng của tôi
-                  <ArrowUpRight size={18} aria-hidden="true" />
-                </Link>
-              )}
-              {book.salePrice !== null && canProposeExchange && (
-                <div className={styles.actionDivider} aria-hidden="true">
-                  <span className={styles.dividerDot} />
-                </div>
-              )}
-              {offersExchange && (
-                <>
-                  {canProposeExchange && (
-                    <Link className={book.salePrice === null ? styles.primary : styles.secondary} to={ROUTES.exchangeCompose(book.id)}>
-                      <ArrowLeftRight size={18} aria-hidden="true" />
-                      Đề nghị đổi sách
-                      <ArrowUpRight size={18} aria-hidden="true" />
-                    </Link>
-                  )}
-                  {book.exchangePreferences &&
-                    (book.exchangePreferences.targetCategory ||
-                      book.exchangePreferences.targetAuthor ||
-                      book.exchangePreferences.targetDescription) && (
-                      <div className={styles.exchangePreferences}>
-                        <h3><BookOpen size={18} aria-hidden="true" />Tiêu chí đổi sách của người đăng</h3>
-                        {book.exchangePreferences.targetCategory && (
-                          <p><strong>Thể loại:</strong>{" "}
-                            <Link to={searchUrl({ data: "live", q: book.exchangePreferences.targetCategory })}>
-                              {book.exchangePreferences.targetCategory}
-                            </Link>
-                          </p>
-                        )}
-                        {book.exchangePreferences.targetAuthor && (
-                          <p><strong>Tác giả:</strong>{" "}
-                            <Link to={searchUrl({ data: "live", q: book.exchangePreferences.targetAuthor })}>
-                              {book.exchangePreferences.targetAuthor}
-                            </Link>
-                          </p>
-                        )}
-                        {book.exchangePreferences.targetDescription && (
-                          <p><strong>Ghi chú:</strong> {book.exchangePreferences.targetDescription}</p>
-                        )}
-                        {isOwner && (
-                          <Link className={styles.exchangeSearch} to={searchUrl({
-                            data: "live",
-                            q: book.exchangePreferences.targetAuthor || book.exchangePreferences.targetCategory || "",
-                          })}>
-                            Tìm sách theo mong muốn <ArrowUpRight size={16} aria-hidden="true" />
-                          </Link>
-                        )}
-                      </div>
-                    )}
-                  {held && !isOwner && !activeConversation && <p className={styles.exchangeNote}>Bản sách đang được giữ cho giao dịch hiện tại.</p>}
-                  {isOwner ? (
-                    <Link className={styles.primary} to={ROUTES.exchangeMine}>
-                      <ArrowLeftRight size={18} aria-hidden="true" />
-                      Trao đổi của tôi
-                      <ArrowUpRight size={18} aria-hidden="true" />
-                    </Link>
-                  ) : null}
-                </>
-              )}
-            </section>
-          )}
           </div>
-          <div className={styles.report}><SupportLink type="Listing" id={book.id} report /></div>
+          <div className={styles.report}>
+            <SupportLink type="Listing" id={book.id} report />
+          </div>
         </motion.article>
       </div>
+
       <div className={styles.detailsGrid}>
-        <section className={styles.details} id="book-condition" tabIndex={-1}>
-          <div className={styles.detailsHeading}>
-            <span className={styles.detailsIcon}><ClipboardCheck size={19} aria-hidden="true" /></span>
-            <div>
-              <h2>Tình trạng sách</h2>
-              <p>Thông tin do người đăng mô tả. Đối chiếu cùng ảnh bản sách.</p>
-            </div>
-          </div>
-          <p className={styles.description}>
-            {book.description || "Người đăng chưa có mô tả thêm."}
-          </p>
-          <div className={styles.conditionGrid}>
-            <div className={styles.conditionItem}>
-              <span className={styles.conditionMark}><BookOpen size={16} aria-hidden="true" /></span>
-              <div><span>Ruột sách</span><strong>{book.pages || "Chưa ghi rõ"}</strong></div>
-            </div>
-            <div className={styles.conditionItem}>
-              <span className={styles.conditionMark}><ClipboardCheck size={16} aria-hidden="true" /></span>
-              <div><span>Trang thiếu</span><strong className={book.hasMissingPages ? styles.conditionWarning : styles.conditionGood}>{book.hasMissingPages ? "Có trang thiếu" : "Không có trang thiếu"}</strong></div>
-            </div>
-            <div className={styles.conditionItem}>
-              <span className={styles.conditionMark}><Layers3 size={16} aria-hidden="true" /></span>
-              <div><span>Bìa và gáy</span><strong>{book.coverNote || "Chưa ghi rõ"}</strong></div>
-            </div>
-            <div className={styles.conditionItem}>
-              <span className={styles.conditionMark}><BookOpen size={16} aria-hidden="true" /></span>
-              <div><span>Ghi chú, đánh dấu</span><strong>{book.notes || "Chưa ghi rõ"}</strong></div>
-            </div>
-            <div className={styles.conditionItem}>
-              <span className={styles.conditionMark}><ClipboardCheck size={16} aria-hidden="true" /></span>
-              <div><span>Phụ kiện</span><strong>{book.accessories || "Chưa ghi rõ"}</strong></div>
-            </div>
-          </div>
-        </section>
+        <ConditionSection book={book} />
         <div>
-          <section className={styles.details}>
-            <div className={styles.detailsHeading}>
-              <span className={styles.detailsIcon}><BookOpen size={19} aria-hidden="true" /></span>
-              <div>
-                <h2>{book.bundle ? "Đầu sách đại diện" : "Thông tin sách"}</h2>
-                <p>{book.bundle ? "Phân loại theo đầu sách đại diện. Các cuốn thực tế được ghi trong danh sách bộ sách ở trên." : "Thông tin xuất bản và phân loại"}</p>
-              </div>
-            </div>
-            <dl>
-              <div>
-                <dt>Danh mục</dt>
-                <dd>
-                  {categoryFor(book.book.categoryId || book.book.category)
-                    ? categoryPath(
-                        book.book.categoryId || book.book.category,
-                      ).map((c, index) => (
-                        <span key={c.id}>
-                          {index > 0 && " / "}
-                          <Link
-                            to={searchUrl({ data: "live", categoryId: c.id })}
-                          >
-                            {c.label}
-                          </Link>
-                        </span>
-                      ))
-                    : book.book.category || "Chưa ghi rõ"}
-                </dd>
-              </div>
-              {book.book.series && (
-                <div>
-                  <dt>Bộ truyện</dt>
-                  <dd>
-                    <Link
-                      to={searchUrl({
-                        data: "live",
-                        categoryId:
-                          book.book.categoryId ||
-                          categoryFor(book.book.category)?.id ||
-                          "",
-                        series: book.book.series,
-                      })}
-                    >
-                      {book.book.series}
-                    </Link>
-                  </dd>
-                </div>
-              )}
-              {classificationLabels(book.book).map((f) => (
-                <div key={f.id}>
-                  <dt>{f.label}</dt>
-                  <dd>
-                    {f.values.map((o, index) => (
-                      <span key={o.id}>
-                        {index > 0 && " · "}
-                        <Link
-                          to={searchUrl({
-                            data: "live",
-                            categoryId:
-                              book.book.categoryId ||
-                              categoryFor(book.book.category)?.id ||
-                              "",
-                            facets: JSON.stringify({
-                              [f.id]: [o.id],
-                              ...(f.id === "level" &&
-                              book.book.attributes?.purpose?.includes("exam")
-                                ? { purpose: ["exam"] }
-                                : {}),
-                              ...(f.id === "grade" &&
-                              book.book.attributes?.schoolStage
-                                ? {
-                                    schoolStage:
-                                      book.book.attributes.schoolStage,
-                                  }
-                                : {}),
-                            }),
-                          })}
-                        >
-                          {o.label}
-                        </Link>
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-              ))}
-              <div>
-                <dt><Languages size={14} aria-hidden="true" /> Ngôn ngữ</dt>
-                <dd>{languageLabel(book.book.language)}</dd>
-              </div>
-              {book.book.publisher && (
-                <div>
-                  <dt><Building2 size={14} aria-hidden="true" /> Nhà xuất bản</dt>
-                  <dd>{book.book.publisher}</dd>
-                </div>
-              )}
-              {book.book.publicationYear && (
-                <div>
-                  <dt><CalendarDays size={14} aria-hidden="true" /> Năm xuất bản</dt>
-                  <dd>{book.book.publicationYear}</dd>
-                </div>
-              )}
-              {book.book.edition && (
-                <div>
-                  <dt><Layers3 size={14} aria-hidden="true" /> Ấn bản</dt>
-                  <dd>{book.book.edition}</dd>
-                </div>
-              )}
-              {book.book.isbn && (
-                <div>
-                  <dt><Hash size={14} aria-hidden="true" /> ISBN</dt>
-                  <dd>{book.book.isbn}</dd>
-                </div>
-              )}
-            </dl>
-          </section>
+          <BookFactsSection book={book} />
           <section className={styles.seller}>
-            <h2>Giao nhận và lưu ý</h2>
+            <div className={styles.headingRow}>
+              <h2>Giao nhận</h2>
+              <InfoTip label="Giao nhận">
+                Ảnh và tình trạng do người đăng cung cấp; kiểm duyệt bài đăng
+                <strong> không xác nhận tình trạng vật lý</strong>.
+              </InfoTip>
+            </div>
+            <BookParcelArt className={styles.parcelArt} />
             <p>
               <MapPin size={16} aria-hidden="true" />
-              {book.fulfillment
-                ? "Giao hàng mô phỏng giữa TP.HCM, Bình Dương và Vũng Tàu."
-                : "Bài đăng chưa cấu hình giao nhận."}
-            </p>
-            <p className={styles.note}>
-              Ảnh và tình trạng do người đăng cung cấp; kiểm duyệt bài đăng
-              không xác nhận tình trạng vật lý.
+              {book.fulfillment ? (
+                <span>
+                  Giao hàng mô phỏng giữa <strong>TP.HCM, Bình Dương và Vũng Tàu</strong>.
+                </span>
+              ) : (
+                "Bài đăng chưa cấu hình giao nhận."
+              )}
             </p>
           </section>
         </div>
       </div>
-
     </div>
   );
 }
