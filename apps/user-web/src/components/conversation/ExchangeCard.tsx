@@ -43,8 +43,8 @@ export function ExchangeCard({ exchange, userId, index, title, open, conversatio
         <span className={card.status}>{status.label}</span>
       </div>
       <div className={card.main}>
-        <span className={card.cover} data-swap aria-hidden="true">
-          <ArrowLeftRight size={24} />
+        <span className={card.cover} aria-hidden="true">
+          <img src="/illustrations/chat/swap-cover.svg" alt="" width={64} height={88} />
         </span>
         <div>
           <BookTitle text={title} />

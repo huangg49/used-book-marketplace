@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, ArrowUpRight, BookOpen, HandCoins } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, HandCoins } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
 import {
   getPurchaseConversation,
@@ -80,10 +80,10 @@ export function ConversationCard({
       </div>
       <div className={card.main}>
         <div className={card.cover} data-conversation-cover>
-          {visibleBook ? (
+          {visibleBook?.photos.length ? (
             <ListingPhoto book={visibleBook} />
           ) : (
-            <BookOpen size={26} aria-hidden="true" />
+            <img src="/illustrations/chat/no-cover.svg" alt="" width={64} height={88} />
           )}
         </div>
         <div>

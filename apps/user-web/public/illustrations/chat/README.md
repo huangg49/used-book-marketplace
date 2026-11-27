@@ -9,6 +9,8 @@ green (`#2e6b52`) and cream (`#fffcf5`).
 | --- | --- |
 | `letters.svg` | Header: two speech bubbles trading over an open book, a price tag and swap arrows |
 | `empty-inbox.svg` | Empty list: an open envelope with a book peeking out |
+| `swap-cover.svg` | Exchange card cover: two books trading places with swap arrows |
+| `no-cover.svg` | Card cover when a listing or auction has no photo: a book with a blank, dashed label |
 
-Both are decorative (`alt=""`, `aria-hidden`). The page backdrop is the shared
-`AccountBackdrop` component (gradients only).
+All are decorative (`alt=""`, `aria-hidden`). `/chat` keeps the site's own page
+background.

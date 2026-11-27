@@ -1010,7 +1010,11 @@ function AuctionCard({
       </div>
       <div className={card.main}>
         <span className={card.cover}>
-          <AuctionPhoto auction={auction} interactive={false} />
+          {auction.book?.photos.length ? (
+            <AuctionPhoto auction={auction} interactive={false} />
+          ) : (
+            <img src="/illustrations/chat/no-cover.svg" alt="" width={64} height={88} />
+          )}
         </span>
         <div>
           <BookTitle text={auction.title} />
