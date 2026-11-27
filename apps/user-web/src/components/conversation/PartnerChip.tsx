@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import card from "./TransactionCard.module.css";
 
 /**
- * The other member on a transaction card: avatar + role + name, linking to
+ * The other member on a transaction card: a small avatar, the name and
+ * the role in one quiet line (no pill), linking to
  * their public reputation page. Members cannot read each other's profile
  * photos (the avatar read is owner/staff only), so the avatar is the initial
  * on a colour picked from the member id, like the seller card on book pages.
@@ -14,10 +15,8 @@ export function PartnerChip({ id, name, role }: { id?: string; name: string; rol
   const body = (
     <>
       <span className={card.avatar} data-hue={hue} aria-hidden="true">{initial}</span>
-      <span className={card.partnerText}>
-        <small>{role}</small>
-        <b>{name}</b>
-      </span>
+      <span className={card.partnerName}>{name}</span>
+      <span className={card.partnerRole}>{role}</span>
     </>
   );
   return id ? (
