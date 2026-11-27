@@ -1,0 +1,154 @@
+/* One card for every transaction in the /chat hub: a conversation, an exchange
+   or an auction. The tone (attention, progress, complete, closed) drives the
+   gradient edge, the corner wash, the status pill and the callout. Card bodies
+   are opaque gradients so the page backdrop never shows through. */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.grid > * { min-width: 0; }
+/* Line cards up across a row: each card's four parts (kind + status, book +
+   price, next step, footer) share the row's tracks through subgrid, so the
+   same part starts at the same height on every card in the row. */
+.grid > li { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; }
+.grid > li > .card { grid-row: 1 / -1; grid-template-rows: subgrid; }
+
+.card {
+  --tone: #7c1a17; --tone-bg: #5c020212; --tone-line: #7c1a1740; --tone-wash: rgba(124, 26, 23, .1); --tone-edge: linear-gradient(135deg, #b0461a, #f0c9a0 55%, #7c1a17);
+  position: relative; display: grid; grid-template-rows: auto 1fr auto auto; gap: 14px; height: 100%; box-sizing: border-box;
+  padding: 18px; border: 1.5px solid transparent; border-radius: 18px; color: var(--shop-ink);
+  background:
+    radial-gradient(120% 90% at 100% 0%, var(--tone-wash), transparent 55%) padding-box,
+    linear-gradient(180deg, #fffdf8, #fbf5ea) padding-box,
+    var(--tone-edge) border-box;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, .06), 0 16px 34px -22px rgba(92, 2, 2, .4);
+  transition: translate .25s cubic-bezier(.2, .7, .2, 1), box-shadow .25s;
+  animation: rise .5s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i, 0) * 50ms);
+}
+.card[data-tone="attention"] { --tone: #8f3a0a; --tone-bg: #f4cb6747; --tone-line: #d9822b66; --tone-wash: rgba(244, 203, 103, .38); --tone-edge: linear-gradient(135deg, #d9822b, #f4cb67 55%, #b0461a); }
+.card[data-tone="complete"] { --tone: #1c5638; --tone-bg: #1c563814; --tone-line: #2e7d5650; --tone-wash: rgba(46, 125, 86, .14); --tone-edge: linear-gradient(135deg, #2e7d56, #a9d8bc 60%, #2e7d56); }
+.card[data-tone="closed"] { --tone: #6b5d53; --tone-bg: #5b4c4314; --tone-line: #78695f50; --tone-wash: rgba(120, 105, 95, .08); --tone-edge: linear-gradient(135deg, #d8cfc6, #efe8df); }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+/* Kind: what sort of transaction, in its own colour family. */
+/* Kind: a small icon badge and the word in the kind's colour (no second pill). */
+.kind { --kind-ink: #7c1a17; --kind-grad: linear-gradient(135deg, #a3342a, #5c0202); display: inline-flex; align-items: center; gap: 7px; color: var(--kind-ink); font-size: .72rem; font-weight: 700; letter-spacing: .06em; line-height: 1.5; text-transform: uppercase; }
+.kind svg { box-sizing: content-box; padding: 4px; border-radius: 7px; background: var(--kind-grad); color: #fffcf5; }
+.kind[data-kind="exchange"] { --kind-ink: #2e6b52; --kind-grad: linear-gradient(135deg, #3f8a69, #254337); }
+.kind[data-kind="auction"] { --kind-ink: #8a5f0c; --kind-grad: linear-gradient(135deg, #d19a2a, #8a5f0c); }
+.status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--tone-bg); color: var(--tone); font-size: .75rem; font-weight: 600; line-height: 1.5; }
+.status::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.card[data-tone="attention"] .status::before { animation: blink 1.1s ease-in-out infinite alternate; }
+
+.main { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: start; }
+.cover { position: relative; width: 64px; height: 88px; display: grid; place-items: center; overflow: hidden; border-radius: 8px; background: linear-gradient(160deg, #f4eddf, #e7d8c0); color: var(--shop-wine); box-shadow: 0 8px 14px -8px rgba(40, 25, 20, .55), inset 0 0 0 1px #5c02021a; rotate: -2deg; transition: rotate .3s cubic-bezier(.2, .7, .2, 1); }
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover > div { display: grid; place-items: center; gap: 2px; padding: 4px; font-size: .65rem; line-height: 1.3; text-align: center; color: var(--shop-muted); }
+.cover > div svg { width: 22px; height: 22px; }
+/* Book name: one line with "…"; hover shows the full name, click expands it. */
+.titleWrap { position: relative; min-width: 0; }
+.title { min-width: 0; margin: 0; font-size: 1.02rem; font-weight: 700; line-height: 1.4; }
+.titleText { display: block; overflow: hidden; color: var(--shop-ink); text-overflow: ellipsis; white-space: nowrap; }
+.title[data-expanded] .titleText { overflow-wrap: anywhere; white-space: normal; }
+.titleButton { position: relative; z-index: 1; display: block; width: 100%; min-height: 24px; padding: 0; border: 0; border-radius: 4px; background: none; font: inherit; text-align: left; cursor: zoom-in; }
+.title[data-expanded] .titleButton { cursor: zoom-out; }
+.titleButton:hover .titleText { color: var(--shop-wine); }
+.titleTip { position: absolute; top: calc(100% + 6px); left: -6px; z-index: 5; width: max-content; max-width: calc(100% + 12px); padding: 8px 11px; border-radius: 10px; background: #2a0f0c; color: #fffcf5; font-size: .84rem; font-weight: 600; line-height: 1.45; box-shadow: 0 12px 24px -12px rgba(40, 10, 5, .7); opacity: 0; translate: 0 4px; pointer-events: none; transition: opacity .15s, translate .15s; }
+.titleTip::before { content: ""; position: absolute; top: -5px; left: 16px; width: 10px; height: 10px; rotate: 45deg; background: inherit; }
+.titleWrap:hover .titleTip, .titleWrap:has(.titleButton:focus-visible) .titleTip { opacity: 1; translate: 0 0; }
+/* The card opens through its main button, stretched over the whole card;
+   the title, partner chip and other actions sit above it. z-index: auto,
+   because a flex item with a z-index would lift the stretch above them. */
+.go[data-stretch] { position: static; z-index: auto; }
+.go[data-stretch]::after { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: 16px; }
+/* No lift on the stretched button: a translate would make it the containing
+   block and shrink the card-wide click area to the button while hovered. */
+.go[data-stretch]:hover { translate: none; }
+/* Keep an open tooltip above the next row of cards. */
+.card:hover, .card:focus-within { z-index: 2; }
+.who { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--shop-muted); font-size: .85rem; line-height: 1.45; }
+.who svg { flex: none; color: var(--shop-wine); }
+.who b { color: var(--shop-ink); font-weight: 600; }
+/* The other member: avatar, name and role in one quiet line, no pill.
+   The link sits above the card's own link; the name underlines on hover. */
+.partner { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin-top: 8px; color: var(--shop-ink); text-decoration: none; }
+.avatar { flex: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--av, linear-gradient(150deg, #a3342a, #5c0202)); color: #fffcf5; font-size: .72rem; font-weight: 700; box-shadow: 0 0 0 2px #fffdf8, 0 0 0 3px var(--av-ring, #5c020233); }
+.avatar[data-hue="1"] { --av: linear-gradient(150deg, #3f8a69, #254337); --av-ring: #25433740; }
+.avatar[data-hue="2"] { --av: linear-gradient(150deg, #d19a2a, #8a5f0c); --av-ring: #8a5f0c40; }
+.avatar[data-hue="3"] { --av: linear-gradient(150deg, #4f6f9a, #2c3f5e); --av-ring: #2c3f5e40; }
+.avatar[data-hue="4"] { --av: linear-gradient(150deg, #c0623a, #7c2d12); --av-ring: #7c2d1240; }
+.partnerName { overflow: hidden; font-size: .88rem; font-weight: 600; text-overflow: ellipsis; text-decoration: underline transparent; text-underline-offset: 3px; white-space: nowrap; transition: text-decoration-color .15s, color .15s; }
+.partnerRole { flex: none; color: var(--shop-muted); font-size: .8rem; white-space: nowrap; }
+.partnerRole::before { content: "·"; margin-right: 6px; }
+a.partner:hover .partnerName { color: var(--shop-wine); text-decoration-color: currentColor; }
+.meta { margin: 4px 0 0; color: var(--shop-muted); font-size: .82rem; line-height: 1.45; }
+
+/* The one thing to know next: a proposal, a deadline, an agreed price. */
+/* Next step: a soft box in the card's status colour, on every card. */
+.callout { display: flex; align-items: center; align-self: stretch; gap: 7px; margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--tone-bg); color: var(--tone); font-size: .86rem; font-weight: 500; line-height: 1.5; }
+.callout svg { flex: none; }
+.callout button { margin-left: auto; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
+
+
+/* Highlighted times and small values: a cream chip outlined in the status colour. */
+.stamp { display: inline-block; padding: 0 7px; border-radius: 6px; background: #fffcf5; box-shadow: inset 0 0 0 1px var(--tone-line); font-weight: 600; line-height: 1.55; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Key figure under the book: amount in the display face, label after it. */
+.priceLine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 10px 0 0; }
+.priceLine strong { color: var(--shop-wine); font: 400 1.4rem/1.1 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.priceLine span { color: var(--shop-muted); font-size: .78rem; }
+
+/* Countdown beside a deadline under a day away; solid tag once overdue. */
+.due { display: inline-flex; align-items: center; gap: 5px; color: #a3261a; font-size: .8rem; font-weight: 600; white-space: nowrap; }
+.due::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: blink 1.1s ease-in-out infinite alternate; }
+.due[data-late] { padding: 0 8px; border-radius: 6px; background: #a3261a; color: #fffcf5; }
+.due[data-late]::before { display: none; }
+
+/* The small fact under the price: icon, label and a highlighted value. */
+.sideLine { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 6px 0 0; color: var(--shop-muted); font-size: .78rem; line-height: 1.5; }
+.sideLine svg { flex: none; color: var(--tone); }
+.sideLine .stamp { color: var(--shop-ink); font-size: .8rem; }
+
+/* Footer: meta on the left (wraps), the button pinned right on one line. */
+.foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px dashed #5c020224; }
+.foot > :last-child { justify-self: end; }
+.go, .ghost { white-space: nowrap; }
+.footNote { overflow: hidden; color: var(--shop-muted); font-size: .8rem; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.go, .ghost { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 10px; font-size: .84rem; font-weight: 700; text-decoration: none; transition: translate .2s cubic-bezier(.2, .7, .2, 1), box-shadow .2s; }
+.go { background: linear-gradient(180deg, #7c1a17, #5c0202); color: #fffcf5; box-shadow: inset 0 1px 0 #ffffff26; }
+.ghost { background: #fff; color: var(--shop-wine); box-shadow: inset 0 0 0 1px var(--shop-control); }
+.go svg, .ghost svg { transition: translate .2s; }
+
+/* A failed book read, inside the card body so the card keeps its five parts. */
+.inlineAlert { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: #912b0e12; color: #912b0e; font-size: .78rem; font-weight: 600; line-height: 1.4; }
+.inlineAlert button { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
+
+/* List states: loading, error, empty and "see more". */
+.inbox { display: grid; gap: 14px; min-width: 0; }
+.state { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 12px; background: #fffdf8; box-shadow: inset 0 0 0 1px #5c02021a; color: var(--shop-muted); font-size: .9rem; }
+.state[role="alert"] { background: #912b0e0f; color: #912b0e; font-weight: 600; }
+.state button, .more { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: #fff; color: var(--shop-wine); font: inherit; font-size: .85rem; font-weight: 700; box-shadow: inset 0 0 0 1px var(--shop-control); cursor: pointer; }
+.more { justify-self: center; padding: 0 20px; }
+.empty { display: grid; justify-items: center; gap: 8px; padding: 28px 20px 30px; border-radius: 18px; border: 1.5px dashed #5c020230; background: radial-gradient(80% 120% at 50% 0%, rgba(244, 203, 103, .22), transparent 60%), #fffdf8; text-align: center; }
+.empty img { width: 150px; height: auto; margin-bottom: 4px; animation: float 4s ease-in-out infinite alternate; }
+.empty h3 { margin: 0; color: var(--shop-wine); font-size: 1.1rem; }
+.empty p { max-width: 42ch; margin: 0 0 8px; color: var(--shop-muted); font-size: .9rem; line-height: 1.55; }
+.empty p b { color: var(--shop-ink); }
+
+@media (hover: hover) {
+  .card:hover { translate: 0 -3px; box-shadow: 0 2px 4px rgba(40, 25, 20, .06), 0 24px 40px -22px rgba(92, 2, 2, .5); }
+  .card:hover .cover { rotate: 0deg; }
+  .go:hover, .ghost:hover { translate: 0 -1px; }
+  .go:hover { box-shadow: inset 0 1px 0 #ffffff26, 0 10px 18px -10px rgba(92, 2, 2, .7); }
+  .go:hover svg, .ghost:hover svg { translate: 2px -2px; }
+}
+@media (max-width: 420px) {
+  .card { padding: 14px; }
+  .main { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; }
+  .cover { width: 56px; height: 78px; }
+}
+@media (forced-colors: active) { .card { border-color: CanvasText; } .status, .kind { border: 1px solid CanvasText; } }
+
+/* Motion. Owner policy (AGENTS.md, 11/10/2026): designed motion stays on
+   under prefers-reduced-motion. Only transform-type properties and opacity animate. */
+@keyframes rise { from { opacity: 0; translate: 0 14px; } }
+@keyframes blink { from { opacity: .35; } to { opacity: 1; } }
+@keyframes float { from { translate: 0 0; } to { translate: 0 -6px; } }
