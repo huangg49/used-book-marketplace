@@ -93,8 +93,16 @@ a.partner:hover { box-shadow: inset 0 0 0 1px var(--shop-wine), 0 6px 12px -8px 
 .stats dt { color: var(--shop-muted); font-size: .75rem; line-height: 1.4; }
 .stats dd { margin: 0; }
 .statMain dd { color: var(--shop-wine); font: 400 1.45rem/1.15 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
-.statSide { text-align: right; }
-.statSide dd { color: var(--shop-ink); font-size: .88rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.statSide { display: grid; justify-items: end; gap: 2px; text-align: right; }
+.statSide dt { display: inline-flex; align-items: center; gap: 4px; }
+.statSide dt svg { color: var(--tone); }
+.statSide dd { color: var(--shop-ink); font-size: .9rem; }
+/* Highlighted times and small values: a soft, full-height tint behind the text. */
+.stamp { display: inline-block; padding: 0 7px; border-radius: 6px; background: rgba(244, 203, 103, .38); box-shadow: inset 0 0 0 1px rgba(201, 138, 46, .28); font-weight: 600; line-height: 1.55; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* On the amber "needs you" box the highlighter would vanish: use a cream chip. */
+.card[data-tone="attention"] .callout .stamp { background: #fffcf5; box-shadow: inset 0 0 0 1px #d9822b55; }
+.card[data-tone="closed"] .stamp { background: rgba(120, 105, 95, .12); box-shadow: inset 0 0 0 1px rgba(120, 105, 95, .2); }
+.card[data-tone="complete"] .stamp { background: rgba(46, 125, 86, .12); box-shadow: inset 0 0 0 1px rgba(46, 125, 86, .22); }
 
 .foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px dashed #5c020224; }
 .footNote { color: var(--shop-muted); font-size: .8rem; line-height: 1.4; }

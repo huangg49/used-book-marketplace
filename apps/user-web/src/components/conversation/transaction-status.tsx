@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import type { PurchaseConversation } from "../../services/purchase-conversations";
 import type { Exchange } from "../../services/exchange";
 import { auctionPhase, type MyAuctionItem } from "../../services/auctions";
+import { Clock3, Users, Wallet, type LucideIcon } from "lucide-react";
 import { formatVnd } from "../../lib/routes";
+import card from "./TransactionCard.module.css";
 
 /**
  * Status, roles, the next step and the key figures for every card in the
@@ -13,7 +15,7 @@ import { formatVnd } from "../../lib/routes";
  */
 export type StatusTone = "attention" | "progress" | "complete" | "closed";
 export type StatusInfo = { label: string; tone: StatusTone };
-export type Fact = { label: string; value: ReactNode };
+export type Fact = { label: string; value: ReactNode; icon?: LucideIcon };
 /** The card's key figure, plus at most one small fact beside it. */
 export type Stats = { main: Fact; side?: Fact };
 
@@ -26,6 +28,10 @@ export function dateTime(value: string) {
 /** Time + day without the year, for deadlines inside a card. */
 export function shortDateTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" }).format(new Date(value));
+}
+/** A highlighted time inside a card sentence. */
+function stamp(value: string) {
+  return <time className={card.stamp} dateTime={value}>{shortDateTime(value)}</time>;
 }
 
 // ─── Conversations (buy now / exchange intent) ────────────────────────────────
@@ -88,8 +94,8 @@ export function conversationStats(room: PurchaseConversation, listedPrice?: numb
           : listedPrice != null ? { label: "Giá niêm yết", value: formatVnd(listedPrice) }
             : { label: "Giá", value: "Chưa chốt" };
   const side: Fact | undefined =
-    room.status === "Active" && room.expiresAt ? { label: "Mở đến", value: shortDateTime(room.expiresAt) }
-      : room.closedAt ? { label: "Đóng lúc", value: shortDateTime(room.closedAt) }
+    room.status === "Active" && room.expiresAt ? { label: "Mở đến", value: shortDateTime(room.expiresAt), icon: Clock3 }
+      : room.closedAt ? { label: "Đóng lúc", value: shortDateTime(room.closedAt), icon: Clock3 }
         : undefined;
   return { main, side };
 }
@@ -131,7 +137,7 @@ export function exchangeStatus(exchange: Exchange, userId: string): StatusInfo {
 }
 
 export function exchangeNext(exchange: Exchange): ReactNode {
-  const by = (label: string, value?: string | null) => (value ? `${label} ${shortDateTime(value)}.` : null);
+  const by = (label: string, value?: string | null) => (value ? <>{label} {stamp(value)}</> : null);
   switch (exchange.status) {
     case "Proposed": return by("Trả lời trước", exchange.proposalExpiresAt) ?? "Đề nghị đổi đang chờ trả lời.";
     case "AcceptedAwaitingFunding": return by("Đặt cọc trước", exchange.fundingDeadline) ?? "Hai bên đặt cọc để bắt đầu.";
@@ -151,7 +157,7 @@ export function exchangeStats(exchange: Exchange, userId: string): Stats {
     main: exchange.diffAmount > 0
       ? { label: "Tiền bù", value: formatVnd(exchange.diffAmount) }
       : { label: "Tiền bù", value: "Không" },
-    side: { label: "Cọc của bạn", value: formatVnd(deposit) },
+    side: { label: "Cọc của bạn", value: formatVnd(deposit), icon: Wallet },
   };
 }
 
@@ -202,15 +208,15 @@ export function auctionStatus(item: MyAuctionItem, serverTime: string): StatusIn
 
 export function auctionNext(item: MyAuctionItem, serverTime: string): ReactNode {
   const auction = item.auction;
-  if (item.needsPayment && item.paymentDeadline) return `Thanh toán trước ${shortDateTime(item.paymentDeadline)}.`;
+  if (item.needsPayment && item.paymentDeadline) return <>Thanh toán trước {stamp(item.paymentDeadline)}</>;
   const phase = auctionPhase(auction, serverTime);
-  if (phase === "Scheduled") return `Mở lúc ${shortDateTime(auction.startAt)}.`;
+  if (phase === "Scheduled") return <>Mở lúc {stamp(auction.startAt)}</>;
   if (phase === "Live") {
-    const end = shortDateTime(auction.endAt);
-    if (item.role !== "Seller" && !item.leading && auction.bidderCount > 0) return `Trả giá mới trước ${end}.`;
-    return `Kết thúc lúc ${end}.`;
+    const end = stamp(auction.endAt);
+    if (item.role !== "Seller" && !item.leading && auction.bidderCount > 0) return <>Trả giá mới trước {end}</>;
+    return <>Kết thúc lúc {end}</>;
   }
-  return `Đã kết thúc ${shortDateTime(auction.endAt)}.`;
+  return <>Đã kết thúc {stamp(auction.endAt)}</>;
 }
 
 /** Key figure: the price; beside it, how many people bid. */
@@ -219,6 +225,6 @@ export function auctionStats(item: MyAuctionItem): Stats {
   const label = auction.currentPrice === null ? "Giá khởi điểm" : auction.state === "Sold" ? "Giá chốt" : "Giá hiện tại";
   return {
     main: { label, value: formatVnd(auction.currentPrice ?? auction.startPrice) },
-    side: { label: "Người trả giá", value: auction.bidderCount },
+    side: { label: "Người trả giá", value: auction.bidderCount, icon: Users },
   };
 }

@@ -57,8 +57,8 @@ export function StatsRow({ stats }: { stats: Stats }) {
       </div>
       {stats.side && (
         <div className={card.statSide}>
-          <dt>{stats.side.label}</dt>
-          <dd>{stats.side.value}</dd>
+          <dt>{stats.side.icon && <stats.side.icon size={13} aria-hidden="true" />}{stats.side.label}</dt>
+          <dd><span className={card.stamp}>{stats.side.value}</span></dd>
         </div>
       )}
     </dl>
