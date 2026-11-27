@@ -11,7 +11,7 @@
 .grid > li > .card { grid-row: 1 / -1; grid-template-rows: subgrid; }
 
 .card {
-  --tone: #7c1a17; --tone-bg: #5c020212; --tone-wash: rgba(124, 26, 23, .1); --tone-edge: linear-gradient(135deg, #b0461a, #f0c9a0 55%, #7c1a17);
+  --tone: #7c1a17; --tone-bg: #5c020212; --tone-line: #7c1a1740; --tone-wash: rgba(124, 26, 23, .1); --tone-edge: linear-gradient(135deg, #b0461a, #f0c9a0 55%, #7c1a17);
   position: relative; display: grid; grid-template-rows: auto 1fr auto auto; gap: 14px; height: 100%; box-sizing: border-box;
   padding: 16px 18px 14px; border: 1.5px solid transparent; border-radius: 18px; color: var(--shop-ink);
   background:
@@ -22,9 +22,9 @@
   transition: translate .25s cubic-bezier(.2, .7, .2, 1), box-shadow .25s;
   animation: rise .5s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i, 0) * 50ms);
 }
-.card[data-tone="attention"] { --tone: #8f3a0a; --tone-bg: #f4cb6747; --tone-wash: rgba(244, 203, 103, .38); --tone-edge: linear-gradient(135deg, #d9822b, #f4cb67 55%, #b0461a); }
-.card[data-tone="complete"] { --tone: #1c5638; --tone-bg: #1c563814; --tone-wash: rgba(46, 125, 86, .14); --tone-edge: linear-gradient(135deg, #2e7d56, #a9d8bc 60%, #2e7d56); }
-.card[data-tone="closed"] { --tone: #6b5d53; --tone-bg: #5b4c4314; --tone-wash: rgba(120, 105, 95, .08); --tone-edge: linear-gradient(135deg, #d8cfc6, #efe8df); }
+.card[data-tone="attention"] { --tone: #8f3a0a; --tone-bg: #f4cb6747; --tone-line: #d9822b66; --tone-wash: rgba(244, 203, 103, .38); --tone-edge: linear-gradient(135deg, #d9822b, #f4cb67 55%, #b0461a); }
+.card[data-tone="complete"] { --tone: #1c5638; --tone-bg: #1c563814; --tone-line: #2e7d5650; --tone-wash: rgba(46, 125, 86, .14); --tone-edge: linear-gradient(135deg, #2e7d56, #a9d8bc 60%, #2e7d56); }
+.card[data-tone="closed"] { --tone: #6b5d53; --tone-bg: #5b4c4314; --tone-line: #78695f50; --tone-wash: rgba(120, 105, 95, .08); --tone-edge: linear-gradient(135deg, #d8cfc6, #efe8df); }
 
 .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 /* Kind: what sort of transaction, in its own colour family. */
@@ -80,18 +80,14 @@ a.partner:hover .partnerName { color: var(--shop-wine); text-decoration-color: c
 .meta { margin: 4px 0 0; color: var(--shop-muted); font-size: .82rem; line-height: 1.45; }
 
 /* The one thing to know next: a proposal, a deadline, an agreed price. */
-.callout { display: flex; align-items: flex-start; align-self: start; gap: 7px; margin: 0; color: var(--tone); font-size: .86rem; font-weight: 500; line-height: 1.45; }
-.card[data-tone="attention"] .callout { align-self: stretch; padding: 8px 12px; border-radius: 12px; background: var(--tone-bg); }
-.callout svg { flex: none; margin-top: 3px; }
+/* Next step: a soft box in the card's status colour, on every card. */
+.callout { display: flex; align-items: center; align-self: stretch; gap: 7px; margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--tone-bg); color: var(--tone); font-size: .86rem; font-weight: 500; line-height: 1.5; }
+.callout svg { flex: none; }
 .callout button { margin-left: auto; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 
 
-/* Highlighted times and small values: a soft, full-height tint behind the text. */
-.stamp { display: inline-block; padding: 0 7px; border-radius: 6px; background: rgba(244, 203, 103, .38); box-shadow: inset 0 0 0 1px rgba(201, 138, 46, .28); font-weight: 600; line-height: 1.55; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* On the amber "needs you" box the highlighter would vanish: use a cream chip. */
-.card[data-tone="attention"] .callout .stamp { background: #fffcf5; box-shadow: inset 0 0 0 1px #d9822b55; }
-.card[data-tone="closed"] .stamp { background: rgba(120, 105, 95, .12); box-shadow: inset 0 0 0 1px rgba(120, 105, 95, .2); }
-.card[data-tone="complete"] .stamp { background: rgba(46, 125, 86, .12); box-shadow: inset 0 0 0 1px rgba(46, 125, 86, .22); }
+/* Highlighted times and small values: a cream chip outlined in the status colour. */
+.stamp { display: inline-block; padding: 0 7px; border-radius: 6px; background: #fffcf5; box-shadow: inset 0 0 0 1px var(--tone-line); font-weight: 600; line-height: 1.55; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* Key figure under the book: amount in the display face, label after it. */
 .priceLine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 10px 0 0; }
