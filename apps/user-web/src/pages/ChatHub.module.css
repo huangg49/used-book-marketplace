@@ -43,21 +43,24 @@
 .tabAttention { display: inline-flex; align-items: center; gap: 3px; min-width: 20px; margin-left: -4px; padding: 0 7px 0 6px; border-radius: 999px; background: linear-gradient(160deg, #e39a3f, #a8470e); color: #fffcf5; font-size: .72rem; font-weight: 800; line-height: 1.65; }
 .tabAttention::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: blink 1.1s ease-in-out infinite alternate; }
 
-/* Sections: icon + heading + count, optional tooltip and link. */
-.panel { display: grid; gap: 28px; min-width: 0; }
+/* Search + sort bar above the list. */
+.panel { display: grid; gap: 14px; min-width: 0; }
+.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 300px); align-items: center; gap: 10px; }
+.search { position: relative; display: flex; align-items: center; min-width: 0; }
+.search > svg { position: absolute; left: 14px; color: var(--shop-wine); pointer-events: none; }
+.search input { width: 100%; min-height: 48px; box-sizing: border-box; padding: 0 44px 0 42px; border: 1px solid var(--shop-control); border-radius: 12px; background: #fffdf8; color: var(--shop-ink); font: inherit; font-size: .95rem; box-shadow: 0 8px 18px -16px rgba(92, 2, 2, .5); transition: border-color .15s, box-shadow .15s; }
+.search input::placeholder { color: var(--shop-muted); }
+.search input:hover { border-color: var(--shop-wine); }
+.search input::-webkit-search-cancel-button { display: none; }
+.clear { position: absolute; right: 6px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--shop-muted); cursor: pointer; }
+.clear:hover { background: #5c02020f; color: var(--shop-wine); }
+.sort { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.sortLabel { display: inline-flex; align-items: center; gap: 5px; color: var(--shop-muted); font-size: .85rem; font-weight: 700; white-space: nowrap; }
+.sortLabel svg { color: var(--shop-wine); }
+.summary { margin: 0; color: var(--shop-muted); font-size: .88rem; }
+.summary b { color: var(--shop-ink); }
+
 .panel[hidden] { display: none; }
-.section { display: grid; gap: 14px; min-width: 0; }
-.sectionHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.sectionHead h2 { display: inline-flex; align-items: center; gap: 10px; margin: 0; color: var(--shop-ink); font-size: 1.2rem; font-weight: 800; }
-.sectionIcon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: var(--wine-grad); color: #f4cb67; }
-.countBadge { min-width: 24px; padding: 0 8px; border-radius: 999px; background: var(--wine-grad); color: #fffcf5; font-size: .78rem; font-weight: 800; line-height: 1.75; text-align: center; }
-.sectionLink { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; min-height: 40px; padding: 0 4px; color: var(--shop-wine); font-size: .88rem; font-weight: 700; text-decoration: none; }
-.sectionLink:hover { text-decoration: underline; }
-.notice { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 14px; background: radial-gradient(90% 140% at 0% 0%, rgba(53, 122, 93, .14), transparent 60%), #fffdf8; box-shadow: inset 0 0 0 1px #2543372e; color: var(--shop-ink); font-size: .9rem; line-height: 1.55; }
-.notice svg { flex: none; margin-top: 3px; color: #2e6b52; }
-.notice a { color: #254337; font-weight: 700; }
-.more { margin: 0; text-align: center; }
-.more a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: 999px; background: #fffdf8; color: var(--shop-wine); font-size: .88rem; font-weight: 700; text-decoration: none; box-shadow: inset 0 0 0 1px var(--shop-control); }
 
 @media (hover: hover) {
   .primaryLink:hover, .ghostLink:hover { translate: 0 -2px; }
@@ -77,10 +80,12 @@
   .tabs button > svg { display: none; }
   .art { margin-top: 6px; }
   .attention { align-items: flex-start; padding: 12px 14px; gap: 12px; }
+  .toolbar { grid-template-columns: minmax(0, 1fr); }
+  .search input { font-size: 1rem; }
   .attentionCount { width: 44px; height: 44px; font-size: 1.35rem; }
 }
 @media (forced-colors: active) {
-  .attention, .tabs, .notice { border: 1px solid CanvasText; }
+  .attention, .tabs { border: 1px solid CanvasText; }
   .tabs button[aria-selected="true"] { outline: 2px solid CanvasText; }
 }
 

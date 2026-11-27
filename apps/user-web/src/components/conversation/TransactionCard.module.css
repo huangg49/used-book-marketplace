@@ -4,10 +4,15 @@
    are opaque gradients so the page backdrop never shows through. */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
 .grid > * { min-width: 0; }
+/* Line cards up across a row: each card's five parts (pills, book, next step,
+   facts, footer) share the row's tracks through subgrid, so the same part
+   starts at the same height on every card in the row. */
+.grid > li { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 0; }
+.grid > li > .card { grid-row: 1 / -1; grid-template-rows: subgrid; }
 
 .card {
   --tone: #7c1a17; --tone-bg: #5c020212; --tone-wash: rgba(124, 26, 23, .1); --tone-edge: linear-gradient(135deg, #b0461a, #f0c9a0 55%, #7c1a17);
-  position: relative; display: flex; flex-direction: column; gap: 14px; height: 100%; box-sizing: border-box;
+  position: relative; display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 14px; height: 100%; box-sizing: border-box;
   padding: 16px 18px 14px; border: 1.5px solid transparent; border-radius: 18px; color: var(--shop-ink);
   background:
     radial-gradient(120% 90% at 100% 0%, var(--tone-wash), transparent 55%) padding-box,
@@ -64,21 +69,18 @@ a.partner:hover { box-shadow: inset 0 0 0 1px var(--shop-wine), 0 6px 12px -8px 
 .price small { display: block; margin-bottom: 2px; color: var(--shop-muted); font: 700 .68rem/1.3 var(--shop-body); letter-spacing: .06em; text-transform: uppercase; }
 
 /* The one thing to know next: a proposal, a deadline, an agreed price. */
-.callout { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 12px; background: var(--tone-bg); color: var(--tone); font-size: .85rem; font-weight: 600; line-height: 1.45; }
+.callout { position: relative; z-index: 1; display: flex; align-items: flex-start; align-self: stretch; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 12px; background: var(--tone-bg); color: var(--tone); font-size: .85rem; font-weight: 600; line-height: 1.45; }
 .callout svg { flex: none; margin-top: 2px; }
 .callout b { font-weight: 800; }
 .callout button { margin-left: auto; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 
 /* Facts: two or three short label/value pairs, same row on every card. */
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 6px 12px; margin: 0; padding: 10px 12px; border-radius: 12px; background: #fffaf1; box-shadow: inset 0 0 0 1px #5c020214; }
-/* Facts and footer sit at the bottom, so they line up across a row of cards. */
-.facts { margin-top: auto; }
-.facts + .foot { margin-top: 0; }
 .facts > div { min-width: 0; }
 .facts dt { color: var(--shop-muted); font-size: .66rem; font-weight: 700; letter-spacing: .05em; line-height: 1.4; text-transform: uppercase; }
 .facts dd { display: -webkit-box; margin: 2px 0 0; overflow: hidden; color: var(--shop-ink); font-size: .84rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 
-.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 12px; border-top: 1px dashed #5c020224; }
+.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px dashed #5c020224; }
 .footNote { color: var(--shop-muted); font-size: .8rem; line-height: 1.4; }
 .footNote b { color: var(--shop-ink); }
 .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
@@ -86,6 +88,10 @@ a.partner:hover { box-shadow: inset 0 0 0 1px var(--shop-wine), 0 6px 12px -8px 
 .go { background: linear-gradient(180deg, #7c1a17, #5c0202); color: #fffcf5; box-shadow: inset 0 1px 0 #ffffff26; }
 .ghost { background: #fff; color: var(--shop-wine); box-shadow: inset 0 0 0 1px var(--shop-control); }
 .go svg, .ghost svg { transition: translate .2s; }
+
+/* A failed book read, inside the card body so the card keeps its five parts. */
+.inlineAlert { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: #912b0e12; color: #912b0e; font-size: .78rem; font-weight: 600; line-height: 1.4; }
+.inlineAlert button { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 
 /* List states: loading, error, empty and "see more". */
 .inbox { display: grid; gap: 14px; min-width: 0; }

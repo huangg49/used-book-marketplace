@@ -1,5 +1,7 @@
 import { NegotiationWorkspace } from "./NegotiationWorkspace";
-import { ConversationInbox } from "../components/conversation/ConversationInbox";
+import { ConversationCard, LegacyCard } from "../components/conversation/ConversationInbox";
+import { SelectMenu } from "../components/SelectMenu";
+import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { ExchangeCard } from "../components/conversation/ExchangeCard";
 import { Facts, NextStep } from "../components/conversation/CardParts";
 import { auctionFacts, auctionNext, auctionStatus, conversationStatus, exchangeStatus } from "../components/conversation/transaction-status";
@@ -15,13 +17,13 @@ import {
   type ConversationEvent,
 } from "../services/purchase-conversations";
 import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionLive } from "../hooks/useTransactionLive";
 import { io, type Socket } from "socket.io-client";
 import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, DEFAULT_SALE_COMMISSION_BPS, chatSendWasRateLimited, clipChatMessage, directOrderCommission, formatSaleFeeRate } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeftRight, ArrowRight, ArrowUp, ArrowUpRight, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, type LucideIcon } from "lucide-react";
+import { ArrowDownUp, ArrowLeftRight, ArrowRight, ArrowUp, ArrowUpRight, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, X, type LucideIcon } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
@@ -42,7 +44,6 @@ import flow from "./PurchaseFlow.module.css";
 import styles from "./ChatPage.module.css";
 import hub from "./ChatHub.module.css";
 import card from "../components/conversation/TransactionCard.module.css";
-import { AccountBackdrop } from "../components/AccountBackdrop";
 import { InfoTip } from "../components/InfoTip";
 import exchangeStyles from "./ExchangeDetailPage.module.css";
 import { getExchanges, type Exchange } from "../services/exchange";
@@ -984,73 +985,6 @@ function exchangeBookTitle(exchange: Exchange, userId: string) {
   return titles.length ? titles.join(", ") : "Cuộc trao đổi sách";
 }
 
-// ─── Giao dịch đổi sách ───────────────────────────────────────────────────────
-
-function ListState({ pending, error, what, onRetry }: { pending: boolean; error: boolean; what: string; onRetry: () => void }) {
-  if (pending)
-    return <p className={card.state} role="status">Đang tải giao dịch {what}…</p>;
-  if (error)
-    return (
-      <p className={card.state} role="alert">
-        Chưa tải được giao dịch {what}.
-        <button type="button" onClick={onRetry}><RefreshCw size={14} aria-hidden="true" /> Thử lại</button>
-      </p>
-    );
-  return null;
-}
-
-function ExchangeList({
-  userId,
-  items,
-  rooms,
-  pending,
-  error,
-  onRetry,
-}: {
-  userId: string;
-  items: Exchange[];
-  rooms: PurchaseConversation[];
-  pending: boolean;
-  error: boolean;
-  onRetry: () => void;
-}) {
-  if (pending || error) return <ListState pending={pending} error={error} what="đổi sách" onRetry={onRetry} />;
-  if (!items.length)
-    return (
-      <div className={card.empty}>
-        <img src="/illustrations/chat/empty-inbox.svg" alt="" width={160} height={120} />
-        <h3>Chưa có giao dịch đổi sách</h3>
-        <p>Mở một cuốn sách để <b>gửi đề nghị đổi</b>; đề nghị, khoản cọc và giao nhận hai chiều được theo dõi tại đây.</p>
-        <Link className={card.go} to="/books?data=live">
-          Tìm sách để đổi <ArrowUpRight size={15} aria-hidden="true" />
-        </Link>
-      </div>
-    );
-  return (
-    <div className={card.grid} role="list">
-      {items.map((exchange, index) => {
-        const room = rooms.find(
-          (item) =>
-            item.terms?.exchangeIds?.includes(exchange.id) ||
-            item.terms?.activeExchangeId === exchange.id,
-        );
-        return (
-          <div key={exchange.id} role="listitem">
-            <ExchangeCard
-              exchange={exchange}
-              userId={userId}
-              index={index}
-              title={exchangeBookTitle(exchange, userId)}
-              conversationHref={room ? ROUTES.chat(room.id) : undefined}
-              open={{ to: ROUTES.exchangeDetail(exchange.id), label: "Mở phiếu" }}
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── Giao dịch đấu giá ────────────────────────────────────────────────────────
 
 function AuctionCard({
@@ -1111,54 +1045,6 @@ function AuctionCard({
   );
 }
 
-function AuctionList({
-  items,
-  serverTime,
-  pending,
-  error,
-  onRetry,
-  limit,
-}: {
-  items: MyAuctionItem[];
-  serverTime: string;
-  pending: boolean;
-  error: boolean;
-  onRetry: () => void;
-  limit?: number;
-}) {
-  if (pending || error) return <ListState pending={pending} error={error} what="đấu giá" onRetry={onRetry} />;
-  if (!items.length)
-    return (
-      <div className={card.empty}>
-        <img src="/illustrations/my-auctions/empty-rack.svg" alt="" width={160} height={120} />
-        <h3>Chưa có giao dịch đấu giá</h3>
-        <p>Phiên bạn <b>mở bán</b> hoặc <b>đang trả giá</b> xuất hiện tại đây cùng giá hiện tại và bước tiếp theo.</p>
-        <Link className={card.go} to={ROUTES.auctions}>
-          Xem các phiên đang mở <ArrowUpRight size={15} aria-hidden="true" />
-        </Link>
-      </div>
-    );
-  const visible = limit ? items.slice(0, limit) : items;
-  return (
-    <>
-      <div className={card.grid} role="list">
-        {visible.map((item, index) => (
-          <div key={item.auction.id} role="listitem">
-            <AuctionCard item={item} serverTime={serverTime} index={index} />
-          </div>
-        ))}
-      </div>
-      {items.length > visible.length && (
-        <p className={hub.more}>
-          <Link to={ROUTES.myAuctions}>
-            Xem tất cả {items.length} phiên đấu giá <ArrowRight size={15} aria-hidden="true" />
-          </Link>
-        </p>
-      )}
-    </>
-  );
-}
-
 // ─── Trang quản lý giao dịch tập trung ────────────────────────────────────────
 
 type TransactionTab = "all" | "buy" | "exchange" | "auction";
@@ -1178,30 +1064,23 @@ const TAB_ICONS: Record<TransactionTab, LucideIcon> = {
   auction: Gavel,
 };
 
-function SectionHead({ id, icon: Icon, title, count, tip, link }: {
-  id: string;
-  icon: LucideIcon;
-  title: string;
-  count?: number;
-  tip?: ReactNode;
-  link?: { to: string; label: string };
-}) {
-  return (
-    <div className={hub.sectionHead}>
-      <h2 id={id}>
-        <span className={hub.sectionIcon} aria-hidden="true"><Icon size={16} /></span>
-        {title}
-        {count != null && count > 0 && <span className={hub.countBadge}>{count}</span>}
-      </h2>
-      {tip && <InfoTip label={title}>{tip}</InfoTip>}
-      {link && (
-        <Link className={hub.sectionLink} to={link.to}>
-          {link.label} <ArrowUpRight size={15} aria-hidden="true" />
-        </Link>
-      )}
-    </div>
-  );
-}
+type SortKey = "attention" | "newest" | "oldest";
+const SORTS: { value: SortKey; label: string }[] = [
+  { value: "attention", label: "Cần xử lý trước" },
+  { value: "newest", label: "Mới nhất" },
+  { value: "oldest", label: "Cũ nhất" },
+];
+const PAGE_SIZE = 12;
+
+/** One card in a hub list, with what search and sorting need. */
+type Entry =
+  | { type: "room"; key: string; room: PurchaseConversation; at: number; attention: boolean; text: string }
+  | { type: "exchange"; key: string; exchange: Exchange; room?: PurchaseConversation; at: number; attention: boolean; text: string }
+  | { type: "auction"; key: string; item: MyAuctionItem; at: number; attention: boolean; text: string };
+
+/** Case- and accent-insensitive, so "dac nhan tam" finds "Đắc nhân tâm". */
+const fold = (value: string) =>
+  value.normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/đ/gi, "d").toLowerCase();
 
 function TransactionHub({
   userId,
@@ -1218,17 +1097,32 @@ function TransactionHub({
 }) {
   // ChatPage owns the inbox watch and its invalidations; this reads its state.
   const hubLive = useTransactionLive("inbox", userId, () => {});
-  const [tabParams, setTabParams] = useSearchParams();
-  const requestedTab = tabParams.get("tab");
-  const activeTab = TRANSACTION_TABS.find((tab) => tab === requestedTab) ?? "all";
-  function setActiveTab(tab: TransactionTab) {
-    setTabParams((previous) => {
+  const position = useInboxPosition();
+  const [params, setParams] = useSearchParams();
+  const activeTab = TRANSACTION_TABS.find((tab) => tab === params.get("tab")) ?? "all";
+  const query = params.get("q") ?? "";
+  const sort = SORTS.find((option) => option.value === params.get("sort"))?.value ?? "attention";
+  const requestedPage = Math.max(1, Number(params.get("page")) || 1);
+  // Tab, search, sort and page live in the URL, so Back returns to the same list.
+  function update(patch: Record<string, string | null>) {
+    setParams((previous) => {
       const next = new URLSearchParams(previous);
-      if (tab === "all") next.delete("tab");
-      else next.set("tab", tab);
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null || value === "") next.delete(key);
+        else next.set(key, value);
+      }
       return next;
     }, { replace: true, preventScrollReset: true });
   }
+  const setActiveTab = (tab: TransactionTab) => update({ tab: tab === "all" ? null : tab, page: null });
+  useLayoutEffect(() => {
+    const rememberScroll = () => {
+      if (window.location.pathname === "/chat") position.save({ scrollY: window.scrollY });
+    };
+    window.addEventListener("scroll", rememberScroll, { passive: true });
+    return () => window.removeEventListener("scroll", rememberScroll);
+  }, [position]);
+
   const exchanges = useQuery({
     queryKey: ["conversation-exchanges", userId],
     queryFn: getExchanges,
@@ -1241,43 +1135,95 @@ function TransactionHub({
     retry: false,
     refetchInterval: 20000,
   });
-  const buyRooms = rooms.filter((room) => room.terms?.mode !== "Exchange");
-  // An exchange-mode conversation has no Exchange record until a proposal is
-  // sent, so it is reachable from its own notice in the exchange category.
-  const exchangeRooms = rooms.filter(
-    (room) =>
-      room.terms?.mode === "Exchange" &&
-      !room.terms.exchangeIds?.length &&
-      !room.terms.activeExchangeId,
-  );
+  // Book titles for searching conversations: the same reads the cards make,
+  // only while a search is typed.
+  const listings = useQueries({
+    queries: rooms.map((room) => ({
+      queryKey: ["public-listing", room.listingId],
+      queryFn: () => getPublicListing(room.listingId),
+      enabled: query.trim().length > 0,
+      retry: false,
+      staleTime: 60000,
+    })),
+  });
+
   const exchangeItems = exchanges.data?.items ?? [];
   const auctionItems = auctions.data?.items ?? [];
   const auctionTime = auctions.data?.serverTime ?? "";
-  const attention: Record<TransactionTab, number> = {
-    all: 0,
-    buy: buyRooms.filter(
-      (room) => conversationStatus(room, userId).tone === "attention",
-    ).length,
-    exchange: exchangeItems.filter(
-      (exchange) => exchangeStatus(exchange, userId).tone === "attention",
-    ).length,
-    auction: auctionItems.filter(
-      (item) => auctionStatus(item, auctionTime).tone === "attention",
-    ).length,
+  const roomOf = (exchange: Exchange) =>
+    rooms.find((room) => room.terms?.exchangeIds?.includes(exchange.id) || room.terms?.activeExchangeId === exchange.id);
+
+  const roomEntries: Entry[] = rooms.map((room, index) => {
+    const partner = room.buyer.id === userId ? room.seller : room.buyer;
+    const listing = listings[index]?.data;
+    return {
+      type: "room", key: `room-${room.id}`, room, at: Date.parse(room.createdAt),
+      attention: conversationStatus(room, userId).tone === "attention",
+      text: fold([partner.displayName, listing?.bundle?.title, listing?.book.title].filter(Boolean).join(" ")),
+    };
+  });
+  const exchangeEntries: Entry[] = exchangeItems.map((exchange) => ({
+    type: "exchange", key: `exchange-${exchange.id}`, exchange, room: roomOf(exchange), at: Date.parse(exchange.createdAt),
+    attention: exchangeStatus(exchange, userId).tone === "attention",
+    text: fold([
+      exchangeBookTitle(exchange, userId),
+      exchange.agreement?.recipientBook.book.title,
+      ...(exchange.agreement?.initiatorBooks.map((book) => book.book.title) ?? []),
+      exchange.agreement?.recipientBook.ownerDisplayName,
+      exchange.agreement?.initiatorBooks[0]?.ownerDisplayName,
+    ].filter(Boolean).join(" ")),
+  }));
+  const auctionEntries: Entry[] = auctionItems.map((item) => ({
+    type: "auction", key: `auction-${item.auction.id}`, item, at: Date.parse(item.auction.startAt),
+    attention: auctionStatus(item, auctionTime).tone === "attention",
+    text: fold([item.auction.title, item.auction.pointName, item.auction.sellerName].filter(Boolean).join(" ")),
+  }));
+  const isRoom = (entry: Entry): entry is Extract<Entry, { type: "room" }> => entry.type === "room";
+  const swapRoom = (entry: Entry) =>
+    isRoom(entry) && entry.room.terms?.mode === "Exchange" && !entry.room.terms.exchangeIds?.length && !entry.room.terms.activeExchangeId;
+  const byTab: Record<TransactionTab, Entry[]> = {
+    // Exchanges with a conversation are reached through it; the rest stand alone.
+    all: [...roomEntries, ...exchangeEntries.filter((entry) => entry.type === "exchange" && !entry.room), ...auctionEntries],
+    buy: roomEntries.filter((entry) => isRoom(entry) && entry.room.terms?.mode !== "Exchange"),
+    exchange: [...roomEntries.filter(swapRoom), ...exchangeEntries],
+    auction: auctionEntries,
   };
-  attention.all = attention.buy + attention.exchange + attention.auction;
-  const counts: Record<TransactionTab, number> = {
-    all: rooms.length + exchangeItems.length + auctionItems.length,
-    buy: buyRooms.length,
-    exchange: exchangeItems.length,
-    auction: auctionItems.length,
-  };
+  const attention = Object.fromEntries(
+    TRANSACTION_TABS.map((tab) => [tab, byTab[tab].filter((entry) => entry.attention).length]),
+  ) as Record<TransactionTab, number>;
+
+  const needle = fold(query.trim());
+  const matched = byTab[activeTab]
+    .filter((entry) => !needle || entry.text.includes(needle))
+    .sort((a, b) =>
+      sort === "oldest" ? a.at - b.at
+        : sort === "newest" ? b.at - a.at
+          : Number(b.attention) - Number(a.attention) || b.at - a.at,
+    );
+  const totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const shown = matched.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Which sources this tab reads, for loading and error lines.
+  const sources = [
+    activeTab !== "auction" && { name: "hội thoại", pending: roomsLoading, error: roomsError, retry: refetchRooms },
+    (activeTab === "all" || activeTab === "exchange") && { name: "đổi sách", pending: exchanges.isPending, error: exchanges.isError, retry: () => void exchanges.refetch() },
+    (activeTab === "all" || activeTab === "auction") && { name: "đấu giá", pending: auctions.isPending, error: auctions.isError, retry: () => void auctions.refetch() },
+  ].filter((source): source is { name: string; pending: boolean; error: boolean; retry: () => void } => !!source);
+  const loading = sources.some((source) => source.pending);
+
   const tabId = (tab: TransactionTab) => `txn-tab-${tab}`;
-  const panelId = (tab: TransactionTab) => `txn-panel-${tab}`;
   const goToTab = (tab: TransactionTab) => {
     setActiveTab(tab);
     document.getElementById(tabId(tab))?.focus();
   };
+  const empties: Record<TransactionTab, { art: string; title: string; text: ReactNode; cta: { to: string; label: string } }> = {
+    all: { art: "/illustrations/chat/empty-inbox.svg", title: "Chưa có giao dịch nào", text: <>Mở một cuốn sách để <b>hỏi mua</b>, <b>gửi ý định đổi</b> hoặc tham gia một phiên đấu giá.</>, cta: { to: "/books?data=live", label: "Tìm một cuốn sách" } },
+    buy: { art: "/illustrations/chat/empty-inbox.svg", title: "Chưa có hội thoại mua ngay", text: <>Mở một cuốn sách để <b>hỏi mua</b>; cuộc trao đổi được lưu tại đây.</>, cta: { to: "/books?data=live", label: "Tìm một cuốn sách" } },
+    exchange: { art: "/illustrations/chat/empty-inbox.svg", title: "Chưa có giao dịch đổi sách", text: <>Mở một cuốn sách để <b>gửi đề nghị đổi</b>; đề nghị, khoản cọc và giao nhận hai chiều được theo dõi tại đây.</>, cta: { to: "/books?data=live", label: "Tìm sách để đổi" } },
+    auction: { art: "/illustrations/my-auctions/empty-rack.svg", title: "Chưa có giao dịch đấu giá", text: <>Phiên bạn <b>mở bán</b> hoặc <b>đang trả giá</b> xuất hiện tại đây cùng giá hiện tại và bước tiếp theo.</>, cta: { to: ROUTES.auctions, label: "Xem các phiên đang mở" } },
+  };
+  const empty = empties[activeTab];
 
   return (
     <div className={hub.hub}>
@@ -1334,17 +1280,10 @@ function TransactionHub({
         onKeyDown={(event) => {
           const index = TRANSACTION_TABS.indexOf(activeTab);
           const next =
-            event.key === "ArrowRight"
-              ? TRANSACTION_TABS[(index + 1) % TRANSACTION_TABS.length]
-              : event.key === "ArrowLeft"
-                ? TRANSACTION_TABS[
-                    (index - 1 + TRANSACTION_TABS.length) %
-                      TRANSACTION_TABS.length
-                  ]
-                : event.key === "Home"
-                  ? TRANSACTION_TABS[0]
-                  : event.key === "End"
-                    ? TRANSACTION_TABS[TRANSACTION_TABS.length - 1]
+            event.key === "ArrowRight" ? TRANSACTION_TABS[(index + 1) % TRANSACTION_TABS.length]
+              : event.key === "ArrowLeft" ? TRANSACTION_TABS[(index - 1 + TRANSACTION_TABS.length) % TRANSACTION_TABS.length]
+                : event.key === "Home" ? TRANSACTION_TABS[0]
+                  : event.key === "End" ? TRANSACTION_TABS[TRANSACTION_TABS.length - 1]
                     : undefined;
           if (!next) return;
           event.preventDefault();
@@ -1360,14 +1299,14 @@ function TransactionHub({
               role="tab"
               type="button"
               aria-selected={activeTab === tab}
-              aria-controls={panelId(tab)}
+              aria-controls="txn-panel"
               tabIndex={activeTab === tab ? 0 : -1}
               onClick={() => setActiveTab(tab)}
             >
               <Icon size={16} aria-hidden="true" />
               <span>{TAB_LABELS[tab]}</span>
               <span className={hub.tabCount}>
-                {counts[tab]}<span className={hub.srOnly}> giao dịch</span>
+                {byTab[tab].length}<span className={hub.srOnly}> giao dịch</span>
               </span>
               {attention[tab] > 0 && (
                 <span className={hub.tabAttention}>
@@ -1379,113 +1318,109 @@ function TransactionHub({
         })}
       </nav>
 
-      {TRANSACTION_TABS.map((tab) => (
-        <div
-          key={tab}
-          id={panelId(tab)}
-          role="tabpanel"
-          aria-labelledby={tabId(tab)}
-          hidden={activeTab !== tab}
-          className={hub.panel}
-        >
-          {activeTab !== tab ? null : tab === "all" ? (
-            <>
-              <section className={hub.section} aria-labelledby="txn-sec-talk">
-                <SectionHead
-                  id="txn-sec-talk" icon={MessagesSquare} title="Hội thoại" count={rooms.length}
-                  tip={<>Hội thoại <b>mua ngay</b> và <b>đổi sách</b>: hỏi về sách, thống nhất giá, gửi đề nghị đổi.</>}
-                />
-                <ConversationInbox
-                  rooms={rooms}
-                  loading={roomsLoading}
-                  error={roomsError}
-                  retry={refetchRooms}
-                  userId={userId}
-                />
-              </section>
-              <section className={hub.section} aria-labelledby="txn-sec-auction">
-                <SectionHead
-                  id="txn-sec-auction" icon={Gavel} title="Đấu giá" count={auctionItems.length}
-                  link={{ to: ROUTES.myAuctions, label: "Quản lý phiên" }}
-                />
-                <AuctionList
-                  items={auctionItems}
-                  serverTime={auctionTime}
-                  pending={auctions.isPending}
-                  error={auctions.isError}
-                  onRetry={() => void auctions.refetch()}
-                  limit={4}
-                />
-              </section>
-            </>
-          ) : tab === "buy" ? (
-            <section className={hub.section} aria-labelledby="txn-sec-buy">
-              <SectionHead
-                id="txn-sec-buy" icon={HandCoins} title="Mua ngay" count={buyRooms.length}
-                tip={<>Hỏi về sách, <b>thống nhất giá</b> và tạo đơn. Đơn đã tạo được theo dõi tiếp ở <b>Đơn hàng</b>.</>}
-              />
-              <ConversationInbox
-                rooms={buyRooms}
-                showExchanges={false}
-                loading={roomsLoading}
-                error={roomsError}
-                retry={refetchRooms}
-                userId={userId}
-              />
-            </section>
-          ) : tab === "exchange" ? (
-            <section className={hub.section} aria-labelledby="txn-sec-exchange">
-              <SectionHead
-                id="txn-sec-exchange" icon={ArrowLeftRight} title="Đổi sách" count={exchangeItems.length}
-                tip={<>Đề nghị, <b>khoản cọc</b> và giao nhận hai chiều của từng lần đổi.</>}
-                link={{ to: ROUTES.exchangeMine, label: "Lịch sử đổi sách" }}
-              />
-              {exchangeRooms.length > 0 && (
-                <p className={hub.notice}>
-                  <MessagesSquare size={16} aria-hidden="true" />
-                  <span>
-                    Đang thỏa thuận đổi sách{" "}
-                    {exchangeRooms.map((room, index) => (
-                      <span key={room.id}>
-                        {index > 0 && ", "}
-                        <Link to={ROUTES.chat(room.id)} viewTransition>
-                          với{" "}
-                          {room.buyer.id === userId
-                            ? room.seller.displayName
-                            : room.buyer.displayName}
-                        </Link>
-                      </span>
-                    ))}
-                    . Phiếu đổi sách xuất hiện khi hai bên <b>gửi đề nghị</b>.
-                  </span>
-                </p>
-              )}
-              <ExchangeList
-                userId={userId}
-                items={exchangeItems}
-                rooms={rooms}
-                pending={exchanges.isPending}
-                error={exchanges.isError}
-                onRetry={() => void exchanges.refetch()}
-              />
-            </section>
-          ) : (
-            <section className={hub.section} aria-labelledby="txn-sec-auction-all">
-              <SectionHead
-                id="txn-sec-auction-all" icon={Gavel} title="Đấu giá" count={auctionItems.length}
-                link={{ to: ROUTES.myAuctions, label: "Quản lý phiên" }}
-              />
-              <AuctionList
-                items={auctionItems}
-                serverTime={auctionTime}
-                pending={auctions.isPending}
-                error={auctions.isError}
-                onRetry={() => void auctions.refetch()}
-              />
-            </section>
-          )}
+      <div id="txn-panel" role="tabpanel" aria-labelledby={tabId(activeTab)} className={hub.panel}>
+        {/* Search + sort: both act on the list below and stay in the URL. */}
+        <div className={hub.toolbar} role="search">
+          <label className={hub.search}>
+            <Search size={18} aria-hidden="true" />
+            <span className={hub.srOnly}>Tìm trong giao dịch</span>
+            <input
+              type="search"
+              value={query}
+              placeholder="Tìm theo tên sách, người giao dịch hoặc điểm giao nhận"
+              onChange={(event) => update({ q: event.target.value, page: null })}
+            />
+            {query && (
+              <button type="button" className={hub.clear} onClick={() => update({ q: null, page: null })} aria-label="Xóa tìm kiếm">
+                <X size={16} aria-hidden="true" />
+              </button>
+            )}
+          </label>
+          <div className={hub.sort}>
+            <span id="txn-sort-label" className={hub.sortLabel}>
+              <ArrowDownUp size={15} aria-hidden="true" /> Sắp xếp
+            </span>
+            <SelectMenu
+              id="txn-sort"
+              labelledBy="txn-sort-label"
+              value={sort}
+              options={SORTS}
+              onChange={(value) => update({ sort: value === "attention" ? null : value, page: null })}
+            />
+          </div>
         </div>
-      ))}
+
+        <p className={hub.summary} aria-live="polite">
+          {loading && !matched.length
+            ? "Đang tải giao dịch…"
+            : needle
+              ? <>Tìm thấy <b>{matched.length}</b> giao dịch khớp “{query.trim()}”</>
+              : <><b>{matched.length}</b> giao dịch{totalPages > 1 && <> · trang {page}/{totalPages}</>}</>}
+        </p>
+
+        {sources.filter((source) => source.error).map((source) => (
+          <p key={source.name} className={card.state} role="alert">
+            Chưa tải được giao dịch {source.name}.
+            <button type="button" onClick={source.retry}><RefreshCw size={14} aria-hidden="true" /> Thử lại</button>
+          </p>
+        ))}
+
+        {!loading && !matched.length && (needle ? (
+          <div className={card.empty}>
+            <img src="/illustrations/chat/empty-inbox.svg" alt="" width={160} height={120} />
+            <h3>Không có giao dịch khớp</h3>
+            <p>Thử tên sách khác, tên người giao dịch, hoặc xem ở mục <b>Tất cả</b>.</p>
+            <button type="button" className={card.more} onClick={() => update({ q: null, page: null })}>Xóa tìm kiếm</button>
+          </div>
+        ) : !sources.some((source) => source.error) && (
+          <div className={card.empty}>
+            <img src={empty.art} alt="" width={160} height={120} />
+            <h3>{empty.title}</h3>
+            <p>{empty.text}</p>
+            <Link className={card.go} to={empty.cta.to}>
+              {empty.cta.label} <ArrowUpRight size={15} aria-hidden="true" />
+            </Link>
+          </div>
+        ))}
+
+        {shown.length > 0 && (
+          <ul id="txn-results" className={card.grid} aria-label={`${TAB_LABELS[activeTab]}: danh sách giao dịch`}>
+            {shown.map((entry, index) => (
+              <li key={entry.key}>
+                {entry.type === "room" ? (
+                  <ConversationCard room={entry.room} userId={userId} index={index} />
+                ) : entry.type === "exchange" ? (
+                  entry.room ? (
+                    <ExchangeCard
+                      exchange={entry.exchange}
+                      userId={userId}
+                      index={index}
+                      title={exchangeBookTitle(entry.exchange, userId)}
+                      conversationHref={ROUTES.chat(entry.room.id)}
+                      open={{ to: ROUTES.exchangeDetail(entry.exchange.id), label: "Mở phiếu" }}
+                    />
+                  ) : (
+                    <LegacyCard exchange={entry.exchange} userId={userId} index={index} />
+                  )
+                ) : (
+                  <AuctionCard item={entry.item} serverTime={auctionTime} index={index} />
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <CollectionPager
+          anchorId="txn-panel"
+          itemLabel="giao dịch"
+          label="Phân trang giao dịch"
+          model={{
+            visible: totalPages > 1,
+            busy: false,
+            props: { page, totalPages, totalItems: matched.length, pageSize: PAGE_SIZE, onPageChange: (next) => update({ page: next > 1 ? String(next) : null }) },
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -1600,8 +1535,6 @@ export function ChatPage() {
       data-room-selected={!!roomId}
       data-chat-morph-inbox={(!roomId && transitioning) || undefined}
     >
-      {/* Beside the hub, not inside it: the hub (z-index 1) stacks above it. */}
-      {!roomId && <AccountBackdrop />}
       {!roomId ? (
         <TransactionHub
           userId={auth.user.id}

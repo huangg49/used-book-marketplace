@@ -1,9 +1,8 @@
-import { useLayoutEffect, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, ArrowUpRight, BookOpen, HandCoins, MessagesSquare, RefreshCw } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, BookOpen, HandCoins } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
-import { useTransactionLive } from "../../hooks/useTransactionLive";
 import {
   getPurchaseConversation,
   type PurchaseConversation,
@@ -11,10 +10,9 @@ import {
 import {
   useConversationTransition,
   useInboxPosition,
-  type InboxFilter,
 } from "./conversation-navigation";
 import { getPublicListing } from "../../services/public-listings";
-import { getExchanges, type Exchange } from "../../services/exchange";
+import type { Exchange } from "../../services/exchange";
 import { ListingPhoto } from "../BookCard";
 import { useNearViewport } from "../../hooks/useNearViewport";
 import card from "./TransactionCard.module.css";
@@ -23,7 +21,7 @@ import { ExchangeCard } from "./ExchangeCard";
 import { Facts, NextStep } from "./CardParts";
 import { conversationFacts, conversationNext, conversationRoles, conversationStatus, shortDate } from "./transaction-status";
 
-function ConversationCard({
+export function ConversationCard({
   room,
   userId,
   index,
@@ -103,20 +101,20 @@ function ConversationCard({
             </Link>
           </h3>
           <PartnerChip id={partner.id} name={partner.displayName} role={roles.theirs} />
+          {book.isError && (
+            <div role="alert" className={card.inlineAlert}>
+              <span>{unavailable
+                ? "Bài đăng không còn truy cập được. Bạn vẫn mở được hội thoại."
+                : visibleBook
+                  ? "Chưa cập nhật được thông tin sách; đang hiện lần tải trước."
+                  : "Chưa tải được thông tin sách; hội thoại vẫn mở được."}</span>
+              <button type="button" disabled={book.isFetching} onClick={() => void book.refetch()}>
+                Tải lại thông tin sách
+              </button>
+            </div>
+          )}
         </div>
       </div>
-      {book.isError && (
-        <div role="alert" className={card.callout}>
-          <span>{unavailable
-            ? "Bài đăng không còn truy cập được. Bạn vẫn mở được hội thoại."
-            : visibleBook
-              ? "Chưa cập nhật được thông tin sách; đang hiện lần tải trước."
-              : "Chưa tải được thông tin sách; hội thoại vẫn mở được."}</span>
-          <button type="button" disabled={book.isFetching} onClick={() => void book.refetch()}>
-            Tải lại thông tin sách
-          </button>
-        </div>
-      )}
       <NextStep>{conversationNext(room, userId)}</NextStep>
       <Facts facts={conversationFacts(room)} />
       <div className={card.foot}>
@@ -134,7 +132,7 @@ function ConversationCard({
     </article>
   );
 }
-function LegacyCard({ exchange, userId, index }: { exchange: Exchange; userId: string; index: number }) {
+export function LegacyCard({ exchange, userId, index }: { exchange: Exchange; userId: string; index: number }) {
   const id = exchange.id;
   const transitioning = useConversationTransition(`/exchange/${id}`);
   const position = useInboxPosition();
@@ -165,110 +163,5 @@ function LegacyCard({ exchange, userId, index }: { exchange: Exchange; userId: s
       morphing={transitioning}
       open={{ to: `/exchange/${id}`, label: "Mở phiếu và hội thoại", state: { chatFromInbox: true }, onClick: remember }}
     />
-  );
-}
-export function ConversationInbox({
-  rooms,
-  loading,
-  error,
-  retry,
-  userId,
-  showExchanges = true,
-}: {
-  rooms: PurchaseConversation[];
-  loading: boolean;
-  error: boolean;
-  retry: () => void;
-  userId: string;
-  /** False when the exchange transactions are listed in their own category. */
-  showExchanges?: boolean;
-}) {
-  const position = useInboxPosition();
-  // The chat page invalidates this list on inbox pushes; poll only as a backstop.
-  const live = useTransactionLive("inbox", userId, () => {});
-  const exchanges = useQuery({
-    queryKey: ["conversation-exchanges", userId],
-    queryFn: getExchanges,
-    retry: false,
-    refetchInterval: live ? 30_000 : 5_000,
-    enabled: showExchanges,
-  });
-  const [filter] = useState<InboxFilter>(position.read().filter),
-    [visible, setVisible] = useState(position.read().visible);
-  useLayoutEffect(() => {
-    const rememberScroll = () => {
-      if (window.location.pathname === "/chat")
-        position.save({ scrollY: window.scrollY });
-    };
-    window.addEventListener("scroll", rememberScroll, { passive: true });
-    return () => window.removeEventListener("scroll", rememberScroll);
-  }, [position]);
-  const linked = new Set(rooms.flatMap((r) => r.terms?.exchangeIds ?? []));
-  const legacy = !showExchanges
-    ? []
-    : (exchanges.data?.items.filter(
-      (x) =>
-        !linked.has(x.id) &&
-        (filter === "all" ||
-          (filter === "buyer"
-            ? x.initiatorId === userId
-            : x.recipientId === userId)),
-    ) ?? []);
-  const filtered = rooms.filter(
-    (r) =>
-      filter === "all" ||
-      (filter === "buyer" ? r.buyer.id === userId : r.seller.id === userId),
-  );
-  return (
-    <section className={card.inbox} aria-label="Danh sách hội thoại">
-      {loading && <p className={card.state} role="status">Đang tải hội thoại…</p>}
-      {error && (
-        <p className={card.state} role="alert">
-          Chưa tải được hội thoại mua bán.
-          <button type="button" onClick={retry}><RefreshCw size={14} aria-hidden="true" /> Thử lại</button>
-        </p>
-      )}
-      {showExchanges && exchanges.isError && (
-        <p className={card.state} role="alert">
-          Chưa tải được danh sách đổi sách.
-          <button type="button" onClick={() => void exchanges.refetch()}><RefreshCw size={14} aria-hidden="true" /> Thử lại</button>
-        </p>
-      )}
-      {!loading &&
-        !error &&
-        !filtered.length &&
-        !legacy.length &&
-        (!showExchanges || (!exchanges.isPending && !exchanges.isError)) && (
-          <div className={card.empty}>
-            <img src="/illustrations/chat/empty-inbox.svg" alt="" width={160} height={120} />
-            <h3>Chưa có cuộc trao đổi nào</h3>
-            <p>Mở một cuốn sách để <b>hỏi mua</b> hoặc <b>gửi ý định đổi</b>; cuộc trao đổi được lưu tại đây.</p>
-            <Link className={card.go} to="/books?data=live">
-              <MessagesSquare size={15} aria-hidden="true" /> Tìm một cuốn sách
-            </Link>
-          </div>
-        )}
-      <div className={card.grid}>
-        {filtered.slice(0, visible).map((room, index) => (
-          <ConversationCard key={room.id} room={room} userId={userId} index={index} />
-        ))}
-        {legacy.slice(0, Math.max(0, visible - filtered.length)).map((ex, index) => (
-          <LegacyCard key={ex.id} exchange={ex} userId={userId} index={filtered.length + index} />
-        ))}
-      </div>
-      {filtered.length + legacy.length > visible && (
-        <button
-          type="button"
-          className={card.more}
-          onClick={() => {
-            const next = visible + 12;
-            position.save({ visible: next });
-            setVisible(next);
-          }}
-        >
-          Xem thêm cuộc trao đổi
-        </button>
-      )}
-    </section>
   );
 }
