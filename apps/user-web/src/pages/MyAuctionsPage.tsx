@@ -6,11 +6,12 @@ import { useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowRight, BookOpen, CalendarClock, Check, Clock, TriangleAlert, Gavel, LayoutGrid, MapPin, Plus, RefreshCw, Store, Timer, Wallet, type LucideIcon } from 'lucide-react'
+import { ArrowRight, BookOpen, CalendarClock, Clock, Gavel, LayoutGrid, MapPin, Plus, RefreshCw, Store, Timer, Wallet, type LucideIcon } from 'lucide-react'
 import { AuctionPhoto } from '../components/AuctionGallery'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DemoSkipButton } from '../components/DemoSkipButton'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
+import { WithdrawIntakeDialog } from '../components/WithdrawIntakeDialog'
 import { useSession } from '../hooks/useSession'
 import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
@@ -453,37 +454,19 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
           </div>
         )}
       </div>
-      <ConfirmDialog
+      <WithdrawIntakeDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title="Rút sách khỏi đấu giá?"
-        // "Giữ lại" rather than "Hủy": next to a red withdraw button, "Hủy" reads as the same action.
-        cancelText="Giữ lại"
-        confirmText="Rút sách"
-        isDanger
-        isBusy={busy}
-        error={error}
         onConfirm={() => void withdraw()}
-      >
-        <div className={styles.withdrawBook}>
-          <IntakeCover intake={intake} />
-          <span>
-            <strong>{intake.title}</strong>
-            <span className={styles.place}><MapPin size={13} aria-hidden="true" /> {pointName ?? 'Điểm đã chọn'}</span>
-          </span>
-        </div>
-        <ul className={styles.consequences}>
-          {intake.state === 'AwaitingDropoff' ? (
-            <>
-              <li data-kind="ok"><Check size={16} aria-hidden="true" /><span>Chỗ tại <b>{pointName ?? 'điểm đã chọn'}</b> được trả lại.</span></li>
-              <li data-kind="ok"><Check size={16} aria-hidden="true" /><span>Bài đăng bán <b>không còn ở trạng thái Đang giữ</b>.</span></li>
-            </>
-          ) : (
-            <li data-kind="go"><MapPin size={16} aria-hidden="true" /><span>Sách đang ở <b>{pointName ?? 'điểm đã chọn'}</b>: bạn cần <b>tới điểm để nhận lại sách</b>.</span></li>
-          )}
-          <li data-kind="warn"><TriangleAlert size={16} aria-hidden="true" /><span>Phiếu gửi này <b>không thể khôi phục</b> sau khi rút.</span></li>
-        </ul>
-      </ConfirmDialog>
+        busy={busy}
+        retry={unknown}
+        error={error}
+        title={intake.title}
+        pointName={pointName ?? 'Điểm đã chọn'}
+        stateLabel={INTAKE_STATES[intake.state]}
+        atPoint={intake.state !== 'AwaitingDropoff'}
+        cover={<IntakeCover intake={intake} />}
+      />
       {intake.state === 'Passed' && (
         <ScheduleAuctionDialog
           isOpen={publishing}

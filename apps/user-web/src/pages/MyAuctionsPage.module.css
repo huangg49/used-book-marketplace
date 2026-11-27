@@ -324,19 +324,3 @@
   .intake:hover { translate: 0 -1px; box-shadow: inset 0 1px 0 #ffffffb3, 0 10px 20px -14px rgba(92, 2, 2, .45); }
   .place:hover { border-color: #5c020240; }
 }
-
-/* Withdraw confirmation: which book, then what happens, one line each. */
-.withdrawBook { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 12px; background: linear-gradient(135deg, #fcf6ea, #f7ecd9); }
-.withdrawBook .intakeCover { flex: none; width: 54px; height: 72px; padding: 4px; }
-.withdrawBook .intakeCover > img { max-height: 64px; }
-.withdrawBook > span { display: grid; gap: 6px; min-width: 0; justify-items: start; }
-.withdrawBook strong { color: var(--shop-ink); font-size: .9375rem; line-height: 1.45; overflow-wrap: anywhere; }
-.consequences { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; font-size: .875rem; line-height: 1.55; color: var(--shop-ink); }
-.consequences li { display: flex; align-items: flex-start; gap: 10px; }
-.consequences svg { flex: none; margin-top: 2px; }
-.consequences [data-kind="ok"] svg { color: #254337; }
-.consequences [data-kind="go"] svg { color: var(--shop-wine); }
-.consequences b { color: var(--shop-wine); }
-.consequences [data-kind="warn"] { margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: #912b0e12; color: var(--shop-error); font-weight: 600; }
-.consequences [data-kind="warn"] svg { color: var(--shop-error); }
-.consequences [data-kind="warn"] b { color: inherit; font-weight: 800; }
