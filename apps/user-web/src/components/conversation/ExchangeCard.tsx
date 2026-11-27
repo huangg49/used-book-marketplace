@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { ArrowLeftRight, ArrowUpRight } from "lucide-react";
 import type { Exchange } from "../../services/exchange";
 import { PartnerChip } from "./PartnerChip";
-import { BookTitle, Facts, NextStep } from "./CardParts";
-import { exchangeFacts, exchangeNext, exchangePartner, exchangeStatus, shortDate } from "./transaction-status";
+import { BookTitle, NextStep, StatsRow } from "./CardParts";
+import { exchangeNext, exchangeStats, exchangePartner, exchangeStatus, shortDate } from "./transaction-status";
 import card from "./TransactionCard.module.css";
 
 /**
@@ -51,10 +51,10 @@ export function ExchangeCard({ exchange, userId, index, title, open, conversatio
           <PartnerChip id={partnerId} name={partner} role={mine ? "Chủ sách" : "Người đề nghị đổi"} />
         </div>
       </div>
+      <StatsRow stats={exchangeStats(exchange, userId)} />
       <NextStep>{exchangeNext(exchange)}</NextStep>
-      <Facts facts={exchangeFacts(exchange, userId)} />
       <div className={card.foot}>
-        <span className={card.footNote}><b>{mine ? "Bạn đề nghị" : "Bạn nhận đề nghị"}</b> · <time dateTime={exchange.createdAt}>{shortDate(exchange.createdAt)}</time></span>
+        <span className={card.footNote}>{mine ? "Bạn đề nghị" : "Bạn nhận đề nghị"} · <time dateTime={exchange.createdAt}>{shortDate(exchange.createdAt)}</time></span>
         <span className={card.actions}>
           {conversationHref && (
             <Link className={card.ghost} to={conversationHref} viewTransition>Hội thoại</Link>

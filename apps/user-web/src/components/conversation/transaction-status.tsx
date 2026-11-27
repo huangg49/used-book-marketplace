@@ -5,13 +5,17 @@ import { auctionPhase, type MyAuctionItem } from "../../services/auctions";
 import { formatVnd } from "../../lib/routes";
 
 /**
- * Status, roles and the "next step" line for every card in the /chat hub,
- * all read from fields the API already returns. One place, so the inbox and
- * the hub tabs say the same thing about the same transaction.
+ * Status, roles, the next step and the key figures for every card in the
+ * /chat hub, all read from fields the API already returns. One place, so the
+ * inbox and the hub tabs say the same thing about the same transaction.
+ * Labels are short on purpose: a card shows one status, one key figure and
+ * one next step, nothing repeated.
  */
 export type StatusTone = "attention" | "progress" | "complete" | "closed";
 export type StatusInfo = { label: string; tone: StatusTone };
 export type Fact = { label: string; value: ReactNode };
+/** The card's key figure, plus at most one small fact beside it. */
+export type Stats = { main: Fact; side?: Fact };
 
 export function shortDate(value: string) {
   return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
@@ -19,7 +23,7 @@ export function shortDate(value: string) {
 export function dateTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
-/** Day + time without the year, for deadlines inside a card. */
+/** Time + day without the year, for deadlines inside a card. */
 export function shortDateTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" }).format(new Date(value));
 }
@@ -45,51 +49,49 @@ export function conversationStatus(room: PurchaseConversation, userId: string): 
   const pending = room.terms?.pendingProposal;
   if (pending)
     return pending.proposedById === userId
-      ? { label: "Chờ đối tác phản hồi", tone: "progress" }
+      ? { label: "Chờ phản hồi", tone: "progress" }
       : { label: "Cần bạn phản hồi", tone: "attention" };
   if (room.status === "OrderCreated") return { label: "Đã tạo đơn", tone: "complete" };
   if (room.status === "Expired") return { label: "Hết hạn", tone: "closed" };
   if (room.status === "Cancelled") return { label: "Đã đóng", tone: "closed" };
-  if (room.terms?.mode === "Exchange") return { label: "Đang bàn đổi sách", tone: "progress" };
+  if (room.terms?.mode === "Exchange") return { label: "Đang bàn đổi", tone: "progress" };
   return room.terms?.agreedPrice != null
-    ? { label: "Đã thống nhất giá", tone: "progress" }
+    ? { label: "Đã chốt giá", tone: "progress" }
     : { label: "Đang thương lượng", tone: "progress" };
 }
 
-/** The one line that tells the member what happens next. */
+/** One short line: what happens next. The figures are in the stats row. */
 export function conversationNext(room: PurchaseConversation, userId: string): ReactNode {
   const pending = room.terms?.pendingProposal;
-  const price = (amount: number | null | undefined) => (amount != null ? <> <b>{formatVnd(amount)}</b></> : null);
   if (pending) {
-    const what = pending.kind === "Mode"
-      ? <> chuyển sang <b>{pending.mode === "Exchange" ? "đổi sách" : "thương lượng mua"}</b></>
-      : <> giá{price(pending.amount)}</>;
+    const mode = pending.kind === "Mode";
     return pending.proposedById === userId
-      ? <>Bạn đã đề nghị{what}; chờ đối tác phản hồi.</>
-      : <><b>Đối tác đề nghị</b>{what}; đang chờ bạn.</>;
+      ? mode ? "Chờ đối tác đồng ý đổi hình thức." : "Chờ đối tác trả lời đề nghị giá."
+      : mode ? "Đối tác muốn đổi hình thức, hãy trả lời." : "Đối tác vừa đề nghị giá, hãy trả lời.";
   }
-  if (room.status === "OrderCreated") return <>Đã tạo đơn; theo dõi giao nhận ở <b>Đơn hàng</b>.</>;
-  if (room.status === "Expired") return <>Hội thoại đã hết hạn; tin nhắn cũ vẫn xem được.</>;
-  if (room.status === "Cancelled") return <>Hội thoại đã đóng.</>;
-  if (room.terms?.mode === "Exchange") return <>Nhắn tin rồi <b>gửi đề nghị đổi</b>; phiếu đổi sách tạo khi hai bên đồng ý.</>;
-  if (room.terms?.agreedPrice != null) return <>Đã thống nhất{price(room.terms.agreedPrice)}.</>;
-  return <>Nhắn tin để hỏi về sách và <b>thống nhất giá</b>.</>;
+  if (room.status === "OrderCreated") return "Theo dõi giao nhận ở Đơn hàng.";
+  if (room.status === "Expired") return "Đã hết hạn, vẫn xem được tin cũ.";
+  if (room.status === "Cancelled") return "Hội thoại đã đóng.";
+  if (room.terms?.mode === "Exchange") return "Gửi đề nghị đổi để tạo phiếu.";
+  if (room.terms?.agreedPrice != null) return "Giá đã chốt, tiếp tục trong hội thoại.";
+  return "Nhắn tin để thống nhất giá.";
 }
 
-export function conversationFacts(room: PurchaseConversation): Fact[] {
+/** Key figure: the offer, the agreed price or the listed price. */
+export function conversationStats(room: PurchaseConversation, listedPrice?: number | null): Stats {
+  const pending = room.terms?.pendingProposal;
   const agreed = room.terms?.agreedPrice;
-  return [
-    room.terms?.mode === "Exchange"
-      ? { label: "Hình thức", value: "Đổi sách" }
-      : { label: "Giá thống nhất", value: agreed != null ? formatVnd(agreed) : "Chưa có" },
-    room.status === "Active" && room.expiresAt
-      ? { label: "Mở đến", value: shortDateTime(room.expiresAt) }
-      : room.status === "OrderCreated"
-        ? { label: "Đơn hàng", value: "Đã tạo" }
-        : room.closedAt ?? room.expiresAt
-          ? { label: "Đóng lúc", value: shortDateTime((room.closedAt ?? room.expiresAt)!) }
-          : { label: "Trạng thái", value: "Đã đóng" },
-  ];
+  const main: Fact =
+    pending?.kind === "Price" && pending.amount != null ? { label: "Giá đề nghị", value: formatVnd(pending.amount) }
+      : agreed != null ? { label: "Giá đã chốt", value: formatVnd(agreed) }
+        : room.terms?.mode === "Exchange" ? { label: "Hình thức", value: "Đổi sách" }
+          : listedPrice != null ? { label: "Giá niêm yết", value: formatVnd(listedPrice) }
+            : { label: "Giá", value: "Chưa chốt" };
+  const side: Fact | undefined =
+    room.status === "Active" && room.expiresAt ? { label: "Mở đến", value: shortDateTime(room.expiresAt) }
+      : room.closedAt ? { label: "Đóng lúc", value: shortDateTime(room.closedAt) }
+        : undefined;
+  return { main, side };
 }
 
 // ─── Exchanges ────────────────────────────────────────────────────────────────
@@ -98,64 +100,59 @@ export function exchangeStatus(exchange: Exchange, userId: string): StatusInfo {
   switch (exchange.status) {
     case "Proposed": {
       if (exchange.proposalExpiresAt && Date.parse(exchange.proposalExpiresAt) <= Date.now())
-        return { label: "Đề nghị đã hết hạn", tone: "closed" };
+        return { label: "Đề nghị hết hạn", tone: "closed" };
       return (exchange.lastProposedById ?? exchange.initiatorId) !== userId
         ? { label: "Cần bạn phản hồi", tone: "attention" }
-        : { label: "Chờ đối tác phản hồi", tone: "progress" };
+        : { label: "Chờ phản hồi", tone: "progress" };
     }
     case "AcceptedAwaitingFunding":
       return { label: "Chờ đặt cọc", tone: "attention" };
     case "Preparing":
-      return { label: "Chuẩn bị gửi sách", tone: "progress" };
+      return { label: "Chuẩn bị gửi", tone: "progress" };
     case "InTransit":
       return { label: "Đang giao nhận", tone: "progress" };
     case "Delivered":
       return exchange.initiatorReceivedAt && exchange.recipientReceivedAt
-        ? { label: "Đang kiểm tra sách", tone: "progress" }
-        : { label: "Chờ xác nhận đã nhận", tone: "progress" };
+        ? { label: "Đang kiểm tra", tone: "progress" }
+        : { label: "Chờ xác nhận nhận", tone: "progress" };
     case "Completed":
       return { label: "Hoàn tất", tone: "complete" };
     case "ResolutionPending":
-      return { label: "Đang giải quyết sự cố", tone: "attention" };
+      return { label: "Đang xử lý sự cố", tone: "attention" };
     case "Cancelled":
       if (exchange.cancelReason === "CancelledByUser" && exchange.rejectionReason)
-        return { label: "Đề nghị bị từ chối", tone: "closed" };
+        return { label: "Bị từ chối", tone: "closed" };
       return exchange.cancelReason === "FundingExpired" ||
         exchange.cancelReason === "ProposalExpired" ||
         exchange.cancelReason === "ShippingExpired"
-        ? { label: "Hết hạn xử lý", tone: "closed" }
+        ? { label: "Hết hạn", tone: "closed" }
         : { label: "Đã hủy", tone: "closed" };
   }
 }
 
 export function exchangeNext(exchange: Exchange): ReactNode {
-  const at = (label: string, value?: string | null) => (value ? <>{label} <b>{shortDateTime(value)}</b></> : null);
+  const by = (label: string, value?: string | null) => (value ? `${label} ${shortDateTime(value)}.` : null);
   switch (exchange.status) {
-    case "Proposed": return at("Hạn phản hồi đề nghị", exchange.proposalExpiresAt) ?? <>Đề nghị đổi đang chờ phản hồi.</>;
-    case "AcceptedAwaitingFunding": return at("Đặt cọc trước", exchange.fundingDeadline) ?? <>Hai bên đặt cọc để bắt đầu giao nhận.</>;
-    case "Preparing": return at("Gửi sách trước", exchange.shippingDeadline) ?? <>Chuẩn bị và gửi sách của bạn.</>;
-    case "InTransit": return <>Sách đang trên đường <b>giao nhận hai chiều</b>.</>;
-    case "Delivered": return at("Kiểm tra sách trước", exchange.inspectionDeadline) ?? <>Xác nhận đã nhận và kiểm tra sách.</>;
-    case "Completed": return <>Hai bên đã nhận sách; giao dịch <b>hoàn tất</b>.</>;
-    case "ResolutionPending": return <>Đang giải quyết sự cố; xem chi tiết trong phiếu.</>;
-    case "Cancelled": return <>Giao dịch đã đóng; chi tiết khoản cọc nằm trong phiếu.</>;
+    case "Proposed": return by("Trả lời trước", exchange.proposalExpiresAt) ?? "Đề nghị đổi đang chờ trả lời.";
+    case "AcceptedAwaitingFunding": return by("Đặt cọc trước", exchange.fundingDeadline) ?? "Hai bên đặt cọc để bắt đầu.";
+    case "Preparing": return by("Gửi sách trước", exchange.shippingDeadline) ?? "Chuẩn bị và gửi sách.";
+    case "InTransit": return "Sách đang trên đường giao nhận.";
+    case "Delivered": return by("Kiểm tra sách trước", exchange.inspectionDeadline) ?? "Xác nhận đã nhận sách.";
+    case "Completed": return "Hai bên đã nhận sách.";
+    case "ResolutionPending": return "Xem chi tiết sự cố trong phiếu.";
+    case "Cancelled": return "Giao dịch đã đóng.";
   }
 }
 
-/** Titles of the books on one side of the exchange, from the frozen agreement. */
-function sideTitles(exchange: Exchange, side: "initiator" | "recipient") {
-  const books = side === "initiator" ? exchange.agreement?.initiatorBooks ?? [] : exchange.agreement ? [exchange.agreement.recipientBook] : [];
-  return books.map((book) => book.book.title).filter(Boolean).join(", ");
-}
-
-export function exchangeFacts(exchange: Exchange, userId: string): Fact[] {
-  const mine = sideTitles(exchange, exchange.initiatorId === userId ? "initiator" : "recipient");
+/** Key figure: the top-up; beside it, your deposit. */
+export function exchangeStats(exchange: Exchange, userId: string): Stats {
   const deposit = exchange.initiatorId === userId ? exchange.initiatorDeposit : exchange.recipientDeposit;
-  return [
-    { label: "Bạn đưa", value: mine || "Chưa có bản chụp" },
-    { label: "Tiền bù", value: exchange.diffAmount > 0 ? formatVnd(exchange.diffAmount) : "Không" },
-    { label: "Cọc của bạn", value: formatVnd(deposit) },
-  ];
+  return {
+    main: exchange.diffAmount > 0
+      ? { label: "Tiền bù", value: formatVnd(exchange.diffAmount) }
+      : { label: "Tiền bù", value: "Không" },
+    side: { label: "Cọc của bạn", value: formatVnd(deposit) },
+  };
 }
 
 export function exchangePartner(exchange: Exchange, userId: string) {
@@ -169,14 +166,14 @@ export function exchangePartner(exchange: Exchange, userId: string) {
 // ─── Auctions ─────────────────────────────────────────────────────────────────
 
 const AUCTION_STATE_LABEL: Record<string, string> = {
-  BuyNowPending: "Chờ thanh toán mua ngay",
-  AwaitingWinnerPayment: "Chờ người thắng thanh toán",
+  BuyNowPending: "Chờ thanh toán",
+  AwaitingWinnerPayment: "Chờ thanh toán",
   Sold: "Đã bán",
-  Unsold: "Kết thúc, chưa có người trả giá",
-  OnHold: "Phiên tạm dừng",
-  Cancelled: "Phiên đã hủy",
-  PaymentExpired: "Đã quá hạn thanh toán",
-  SecondChanceOffered: "Đang mời người trả giá cao thứ hai",
+  Unsold: "Không ai trả giá",
+  OnHold: "Tạm dừng",
+  Cancelled: "Đã hủy",
+  PaymentExpired: "Quá hạn thanh toán",
+  SecondChanceOffered: "Mời người thứ hai",
 };
 
 /** Auctions the member sells or bids on, with the phase from the server clock. */
@@ -186,16 +183,16 @@ export function auctionStatus(item: MyAuctionItem, serverTime: string): StatusIn
   const phase = auctionPhase(auction, serverTime);
   if (phase === "Scheduled")
     return auction.openMode != null && auction.state === "Active"
-      ? { label: "Chờ đủ người đăng ký", tone: "progress" }
+      ? { label: "Chờ đủ người", tone: "progress" }
       : { label: "Hẹn mở", tone: "progress" };
   if (phase === "Live") {
-    if (item.role === "Seller") return { label: "Phiên của bạn đang mở", tone: "progress" };
-    if (item.leading) return { label: "Bạn đang dẫn giá", tone: "progress" };
+    if (item.role === "Seller") return { label: "Đang mở", tone: "progress" };
+    if (item.leading) return { label: "Bạn đang dẫn", tone: "progress" };
     return auction.bidderCount > 0
-      ? { label: "Bạn đã bị vượt giá", tone: "attention" }
-      : { label: "Chưa có người trả giá", tone: "progress" };
+      ? { label: "Bị vượt giá", tone: "attention" }
+      : { label: "Chưa ai trả giá", tone: "progress" };
   }
-  if (item.won && auction.state === "Sold") return { label: "Bạn đã thắng phiên", tone: "complete" };
+  if (item.won && auction.state === "Sold") return { label: "Bạn đã thắng", tone: "complete" };
   if (item.role === "Seller" && auction.state === "Sold") return { label: "Đã bán", tone: "complete" };
   return {
     label: AUCTION_STATE_LABEL[auction.state] ?? "Đã kết thúc",
@@ -205,25 +202,23 @@ export function auctionStatus(item: MyAuctionItem, serverTime: string): StatusIn
 
 export function auctionNext(item: MyAuctionItem, serverTime: string): ReactNode {
   const auction = item.auction;
-  if (item.needsPayment && item.paymentDeadline) return <>Thanh toán trước <b>{shortDateTime(item.paymentDeadline)}</b>.</>;
+  if (item.needsPayment && item.paymentDeadline) return `Thanh toán trước ${shortDateTime(item.paymentDeadline)}.`;
   const phase = auctionPhase(auction, serverTime);
-  if (phase === "Scheduled") return <>Phiên mở lúc <b>{shortDateTime(auction.startAt)}</b>.</>;
+  if (phase === "Scheduled") return `Mở lúc ${shortDateTime(auction.startAt)}.`;
   if (phase === "Live") {
-    const end = <b>{shortDateTime(auction.endAt)}</b>;
-    if (item.role === "Seller") return <>Phiên kết thúc lúc {end}.</>;
-    if (item.leading) return <>Bạn đang dẫn; phiên kết thúc lúc {end}.</>;
-    return auction.bidderCount > 0
-      ? <>Có người trả cao hơn; <b>trả giá mới</b> trước {end}.</>
-      : <>Chưa ai trả giá; phiên kết thúc lúc {end}.</>;
+    const end = shortDateTime(auction.endAt);
+    if (item.role !== "Seller" && !item.leading && auction.bidderCount > 0) return `Trả giá mới trước ${end}.`;
+    return `Kết thúc lúc ${end}.`;
   }
-  return <>Phiên đã kết thúc lúc {shortDateTime(auction.endAt)}.</>;
+  return `Đã kết thúc ${shortDateTime(auction.endAt)}.`;
 }
 
-export function auctionFacts(item: MyAuctionItem): Fact[] {
+/** Key figure: the price; beside it, how many people bid. */
+export function auctionStats(item: MyAuctionItem): Stats {
   const auction = item.auction;
-  return [
-    { label: "Bước giá", value: formatVnd(auction.step) },
-    { label: "Người trả giá", value: auction.bidderCount },
-    { label: "Mua ngay", value: auction.buyNowPrice != null ? formatVnd(auction.buyNowPrice) : "Không" },
-  ];
+  const label = auction.currentPrice === null ? "Giá khởi điểm" : auction.state === "Sold" ? "Giá chốt" : "Giá hiện tại";
+  return {
+    main: { label, value: formatVnd(auction.currentPrice ?? auction.startPrice) },
+    side: { label: "Người trả giá", value: auction.bidderCount },
+  };
 }

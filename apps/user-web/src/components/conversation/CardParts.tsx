@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Clock3 } from "lucide-react";
-import type { Fact } from "./transaction-status";
+import type { Stats } from "./transaction-status";
 import card from "./TransactionCard.module.css";
 
 /**
@@ -47,16 +47,20 @@ export function NextStep({ children }: { children: ReactNode }) {
   );
 }
 
-/** Two or three short facts in one row, the same place on every card. */
-export function Facts({ facts }: { facts: Fact[] }) {
+/** The key figure, large, with at most one small fact on the right. */
+export function StatsRow({ stats }: { stats: Stats }) {
   return (
-    <dl className={card.facts}>
-      {facts.map((fact) => (
-        <div key={fact.label}>
-          <dt>{fact.label}</dt>
-          <dd>{fact.value}</dd>
+    <dl className={card.stats}>
+      <div className={card.statMain}>
+        <dt>{stats.main.label}</dt>
+        <dd>{stats.main.value}</dd>
+      </div>
+      {stats.side && (
+        <div className={card.statSide}>
+          <dt>{stats.side.label}</dt>
+          <dd>{stats.side.value}</dd>
         </div>
-      ))}
+      )}
     </dl>
   );
 }

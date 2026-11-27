@@ -29,11 +29,11 @@
 .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 /* Kind: what sort of transaction, in its own colour family. */
 /* Kind: a small icon badge and the word in the kind's colour (no second pill). */
-.kind { --kind-ink: #7c1a17; --kind-grad: linear-gradient(135deg, #a3342a, #5c0202); display: inline-flex; align-items: center; gap: 7px; color: var(--kind-ink); font-size: .74rem; font-weight: 800; letter-spacing: .05em; line-height: 1.5; text-transform: uppercase; }
+.kind { --kind-ink: #7c1a17; --kind-grad: linear-gradient(135deg, #a3342a, #5c0202); display: inline-flex; align-items: center; gap: 7px; color: var(--kind-ink); font-size: .72rem; font-weight: 700; letter-spacing: .06em; line-height: 1.5; text-transform: uppercase; }
 .kind svg { box-sizing: content-box; padding: 4px; border-radius: 7px; background: var(--kind-grad); color: #fffcf5; }
 .kind[data-kind="exchange"] { --kind-ink: #2e6b52; --kind-grad: linear-gradient(135deg, #3f8a69, #254337); }
 .kind[data-kind="auction"] { --kind-ink: #8a5f0c; --kind-grad: linear-gradient(135deg, #d19a2a, #8a5f0c); }
-.status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--tone-bg); color: var(--tone); font-size: .75rem; font-weight: 800; line-height: 1.5; }
+.status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--tone-bg); color: var(--tone); font-size: .75rem; font-weight: 600; line-height: 1.5; }
 .status::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .card[data-tone="attention"] .status::before { animation: blink 1.1s ease-in-out infinite alternate; }
 
@@ -66,7 +66,7 @@
 .card:hover, .card:focus-within { z-index: 2; }
 .who { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--shop-muted); font-size: .85rem; line-height: 1.45; }
 .who svg { flex: none; color: var(--shop-wine); }
-.who b { color: var(--shop-ink); font-weight: 700; }
+.who b { color: var(--shop-ink); font-weight: 600; }
 /* The other member: initial avatar + role + name, a link above the card's own link. */
 .partner { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin-top: 8px; padding: 3px 12px 3px 3px; border-radius: 999px; background: #fff; color: var(--shop-ink); text-decoration: none; box-shadow: inset 0 0 0 1px #5c02021f; transition: box-shadow .2s; }
 a.partner:hover { box-shadow: inset 0 0 0 1px var(--shop-wine), 0 6px 12px -8px rgba(92, 2, 2, .5); }
@@ -76,28 +76,28 @@ a.partner:hover { box-shadow: inset 0 0 0 1px var(--shop-wine), 0 6px 12px -8px 
 .avatar[data-hue="3"] { --av: linear-gradient(150deg, #4f6f9a, #2c3f5e); }
 .avatar[data-hue="4"] { --av: linear-gradient(150deg, #c0623a, #7c2d12); }
 .partnerText { display: grid; min-width: 0; line-height: 1.2; }
-.partnerText small { color: var(--shop-muted); font-size: .68rem; font-weight: 600; }
-.partnerText b { overflow: hidden; font-size: .86rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.partnerText small { color: var(--shop-muted); font-size: .68rem; font-weight: 500; }
+.partnerText b { overflow: hidden; font-size: .86rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .meta { margin: 4px 0 0; color: var(--shop-muted); font-size: .82rem; line-height: 1.45; }
-.price { display: block; margin-top: 6px; color: var(--shop-wine); font: 400 1.35rem/1.15 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
-.price small { display: block; margin-bottom: 2px; color: var(--shop-muted); font: 700 .68rem/1.3 var(--shop-body); letter-spacing: .06em; text-transform: uppercase; }
 
 /* The one thing to know next: a proposal, a deadline, an agreed price. */
-.callout { display: flex; align-items: flex-start; align-self: stretch; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 12px; background: var(--tone-bg); color: var(--tone); font-size: .85rem; font-weight: 600; line-height: 1.45; }
-.callout svg { flex: none; margin-top: 2px; }
-.callout b { font-weight: 800; }
+.callout { display: flex; align-items: flex-start; align-self: start; gap: 7px; margin: 0; color: var(--tone); font-size: .86rem; font-weight: 500; line-height: 1.45; }
+.card[data-tone="attention"] .callout { align-self: stretch; padding: 8px 12px; border-radius: 12px; background: var(--tone-bg); }
+.callout svg { flex: none; margin-top: 3px; }
 .callout button { margin-left: auto; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 
-/* Facts: two or three short label/value pairs, same row on every card. */
-.facts { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; margin: 0; padding: 2px 0 0; }
-.facts > div { min-width: 0; padding: 0 12px; border-left: 1px solid #5c02021c; }
-.facts > div:first-child { padding-left: 0; border-left: 0; }
-.facts dt { color: var(--shop-muted); font-size: .76rem; line-height: 1.4; }
-.facts dd { display: -webkit-box; margin: 1px 0 0; overflow: hidden; color: var(--shop-ink); font-size: .9rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+
+/* Key figure: one large number, at most one small fact on the right. */
+.stats { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0; padding-top: 2px; }
+.stats > div { min-width: 0; }
+.stats dt { color: var(--shop-muted); font-size: .75rem; line-height: 1.4; }
+.stats dd { margin: 0; }
+.statMain dd { color: var(--shop-wine); font: 400 1.45rem/1.15 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.statSide { text-align: right; }
+.statSide dd { color: var(--shop-ink); font-size: .88rem; font-weight: 500; font-variant-numeric: tabular-nums; }
 
 .foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px dashed #5c020224; }
 .footNote { color: var(--shop-muted); font-size: .8rem; line-height: 1.4; }
-.footNote b { color: var(--shop-ink); font-weight: 700; }
 .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
 .go, .ghost { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 10px; font-size: .84rem; font-weight: 700; text-decoration: none; transition: translate .2s cubic-bezier(.2, .7, .2, 1), box-shadow .2s; }
 .go { background: linear-gradient(180deg, #7c1a17, #5c0202); color: #fffcf5; box-shadow: inset 0 1px 0 #ffffff26; }
