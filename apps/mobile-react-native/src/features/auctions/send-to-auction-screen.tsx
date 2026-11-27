@@ -85,8 +85,8 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   });
 
   const listings = useQuery({
-    queryKey: ["my-listings", userId, "auction"],
-    queryFn: () => client.request("/me/listings?channel=Auction&limit=50", draftPage),
+    queryKey: ["my-listings", userId, "auction-eligible"],
+    queryFn: () => client.request("/me/listings?limit=50", draftPage),
     enabled: foreground && !focusId,
     staleTime: 0,
     refetchInterval: foreground && !editingId ? 5_000 : false,

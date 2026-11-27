@@ -658,15 +658,15 @@ export function intakePriceErrors(
 export function auctionEligible(listing: {
   channel: string;
   state: { moderation: string; visibility: string; trade: string; deletedAt: string | null };
-  currentRevision: { content: { mode: string | null } };
+  currentRevision: { content: { mode: string | null; bundle?: unknown | null } };
 }) {
   return (
-    listing.channel === "Auction" &&
+    (listing.channel === "Auction" || listing.channel === "Marketplace") &&
     listing.state.moderation === "Approved" &&
     listing.state.visibility === "Visible" &&
     listing.state.trade === "Available" &&
     !listing.state.deletedAt &&
-    listing.currentRevision.content.mode === "Sale"
+    !listing.currentRevision.content.bundle
   );
 }
 // The seller may withdraw before the session opens (and the server also
