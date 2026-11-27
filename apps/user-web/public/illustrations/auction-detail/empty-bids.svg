@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 130" fill="none" stroke="#5c0202" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Empty bid history: quiet auction lectern with a resting paddle and hourglass waiting for the opening bid. Hand-authored for Lật lại. -->
+  <ellipse cx="100" cy="118" rx="76" ry="6" fill="#5c0202" fill-opacity=".1" stroke="none"/>
+  <!-- Standing lectern -->
+  <path d="M58 64h84l-6 14H64z" fill="#7c1a17"/>
+  <rect x="93" y="78" width="14" height="34" rx="3" fill="#b9814f"/>
+  <path d="M74 112h52" stroke-width="4"/>
+  <!-- Open lot sheet on lectern -->
+  <path d="M68 44h64v20H68z" fill="#fffcf5"/>
+  <path d="M78 52h28M78 58h18" stroke="#b9814f" stroke-width="2"/>
+  <circle cx="118" cy="54" r="5" fill="#f4cb67" stroke-width="2"/>
+  <!-- Small hourglass on the left -->
+  <g transform="translate(26 72)">
+    <path d="M6 4h22M6 40h22" stroke-width="3"/>
+    <path d="M9 4c0 12 8 14 8 18s-8 6-8 18h16c0-12-8-14-8-18s8-6 8-18z" fill="#fffcf5"/>
+    <path d="M12 10h10l-5 8zM12 36h10l-5-7z" fill="#f4cb67" stroke="none"/>
+  </g>
+  <!-- Resting numbered paddle on the right -->
+  <g transform="rotate(14 156 84)">
+    <rect x="151" y="76" width="9" height="36" rx="4" fill="#d9a873"/>
+    <rect x="135" y="34" width="42" height="44" rx="19" fill="#fbf4e8"/>
+    <rect x="140" y="39" width="32" height="34" rx="14" fill="none" stroke="#f4cb67" stroke-width="2.4"/>
+    <path d="M153 50v14M150 53l3-3" stroke-width="2.6"/>
+  </g>
+  <path d="M36 42l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z" fill="#f4cb67" stroke-width="1.8"/>
+  <path d="M166 22l1.3 3.2 3.2 1.3-3.2 1.3-1.3 3.2-1.3-3.2-3.2-1.3 3.2-1.3z" fill="#fffcf5" stroke-width="1.8"/>
+</svg>

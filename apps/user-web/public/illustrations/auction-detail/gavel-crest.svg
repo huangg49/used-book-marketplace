@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140" fill="none" stroke="#5c0202" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Auction detail header crest: gavel on a wooden sound block beside an open ledger and brass bell. Hand-authored for Lật lại. -->
+  <ellipse cx="90" cy="128" rx="74" ry="6" fill="#5c0202" fill-opacity=".11" stroke="none"/>
+  <!-- Open book behind the block -->
+  <path d="M22 96c16-6 36-5 50 4v22c-14-8-34-9-50-4z" fill="#fffcf5"/>
+  <path d="M122 96c-16-6-36-5-50 4v22c14-8 34-9 50-4z" fill="#fbf4e8"/>
+  <path d="M32 104c10-3 22-2 32 3M32 112c10-3 22-2 32 3" stroke="#b9814f" stroke-width="2"/>
+  <path d="M112 104c-10-3-22-2-32 3M112 112c-10-3-22-2-32 3" stroke="#b9814f" stroke-width="2"/>
+  <!-- Sound block -->
+  <rect x="64" y="108" width="66" height="16" rx="5" fill="#b9814f"/>
+  <rect x="70" y="102" width="54" height="8" rx="3" fill="#d9a873"/>
+  <path d="M78 116h38" stroke="#f6e0a8" stroke-width="2"/>
+  <!-- Auctioneer gavel poised above -->
+  <g transform="rotate(-24 98 62)">
+    <rect x="86" y="64" width="11" height="58" rx="5" fill="#b9814f"/>
+    <path d="M86 104h11M86 111h11" stroke-width="2"/>
+    <rect x="62" y="34" width="58" height="32" rx="8" fill="#7c1a17"/>
+    <rect x="56" y="31" width="11" height="38" rx="4" fill="#f4cb67"/>
+    <rect x="115" y="31" width="11" height="38" rx="4" fill="#f4cb67"/>
+    <path d="M74 44h34M74 54h22" stroke="#f6e0a8" stroke-width="2.2"/>
+  </g>
+  <!-- Motion sparks -->
+  <path d="M56 32l-9-5M51 44l-10-1M136 22l8-6M143 35l9 0" stroke="#f4cb67" stroke-width="2.8"/>
+  <!-- Small brass lot seal -->
+  <g transform="translate(132 76)">
+    <circle cx="16" cy="16" r="14" fill="#f4cb67"/>
+    <circle cx="16" cy="16" r="9.5" fill="none" stroke="#5c0202" stroke-width="1.8" stroke-dasharray="2 3"/>
+    <path d="M12 16.5l3 3 5.5-6" stroke-width="2.5"/>
+  </g>
+  <path d="M24 62l1.8 4.4L30 68l-4.2 1.6L24 74l-1.8-4.4L18 68l4.2-1.6z" fill="#f4cb67" stroke-width="2"/>
+</svg>
