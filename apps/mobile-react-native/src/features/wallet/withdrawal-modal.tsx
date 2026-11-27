@@ -7,6 +7,7 @@ import {
   Platform,
   StyleSheet,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
@@ -23,6 +24,7 @@ import {
   AppModal,
   AppText,
   Button,
+  Icon,
   TextField,
   formatVnd,
   space,
@@ -65,6 +67,7 @@ function WithdrawalModalContent({
   onClose,
   onSuccess,
 }: Omit<WithdrawalModalProps, "visible">) {
+  const insets = useSafeAreaInsets();
   const { client } = useSession();
   const queryClient = useQueryClient();
 
@@ -233,7 +236,7 @@ function WithdrawalModalContent({
             if (!busy) onClose();
           }}
         />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.grabber} />
 
           <View style={styles.header}>
@@ -248,12 +251,14 @@ function WithdrawalModalContent({
               </AppText>
             </View>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đóng"
               disabled={busy}
               onPress={onClose}
               hitSlop={8}
-              style={styles.closeBtn}
+              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.72 }]}
             >
-              <AppText kind="bold" color={stitchTokens.subtleGray}>✕</AppText>
+              <Icon name="close" size={18} color={stitchTokens.wineDark} strokeWidth={2.2} />
             </Pressable>
           </View>
 
@@ -317,9 +322,12 @@ function WithdrawalModalContent({
                     {QUICK_AMOUNTS.map((qa) => (
                       <Pressable
                         key={qa}
-                        style={[
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: parsedAmount === qa }}
+                        style={({ pressed }) => [
                           styles.chip,
                           parsedAmount === qa && styles.chipActive,
+                          pressed && { opacity: 0.78 },
                         ]}
                         onPress={() => {
                           clearPending();
@@ -339,9 +347,12 @@ function WithdrawalModalContent({
                       </Pressable>
                     ))}
                     <Pressable
-                      style={[
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: parsedAmount === available }}
+                      style={({ pressed }) => [
                         styles.chip,
                         parsedAmount === available && styles.chipActive,
+                        pressed && { opacity: 0.78 },
                       ]}
                       onPress={() => {
                         clearPending();
@@ -524,25 +535,30 @@ function WithdrawalModalContent({
 
                 <View style={styles.actionsRow}>
                   {!uncertain ? (
-                    <Button
-                      secondary
-                      title="Chỉnh sửa"
-                      disabled={busy}
-                      onPress={() => setStep("entry")}
-                    />
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        wine
+                        secondary
+                        title="Chỉnh sửa"
+                        disabled={busy}
+                        onPress={() => setStep("entry")}
+                      />
+                    </View>
                   ) : null}
-                  <Button
-                    wine
-                    title={
-                      busy
-                        ? "Đang gửi…"
-                        : uncertain
-                          ? "Kiểm tra lại yêu cầu"
-                          : "Xác nhận gửi yêu cầu"
-                    }
-                    busy={busy}
-                    onPress={submitRequest}
-                  />
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      wine
+                      title={
+                        busy
+                          ? "Đang gửi…"
+                          : uncertain
+                            ? "Kiểm tra lại"
+                            : "Xác nhận gửi"
+                      }
+                      busy={busy}
+                      onPress={submitRequest}
+                    />
+                  </View>
                 </View>
               </View>
             )}
@@ -567,7 +583,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: "90%",
-    paddingBottom: Platform.OS === "ios" ? 36 : 24,
   },
   grabber: {
     width: 40,

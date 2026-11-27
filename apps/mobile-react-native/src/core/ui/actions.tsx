@@ -84,22 +84,22 @@ export function ActionRow({
     >
       <View
         style={{
-          backgroundColor: c.successSurface,
+          backgroundColor: stitchTokens.wineAlpha08,
           padding: space.md,
           borderRadius: 8,
         }}
       >
-        <Icon name={icon} />
+        <Icon name={icon} color={stitchTokens.wine} />
       </View>
       <View style={{ flex: 1, gap: space.xs }}>
-        <T kind="bold" color={c.forest}>
+        <T kind="bold" color={stitchTokens.wine}>
           {title}
         </T>
         <T kind="small" color={c.muted}>
           {description}
         </T>
       </View>
-      <Icon name="arrow" size={18} />
+      <Icon name="arrow" size={18} color={stitchTokens.wine} />
     </Pressable>
   );
 }
@@ -130,10 +130,10 @@ export function IconButton({
         s.iconButton,
         focused && s.focus,
         disabled && { opacity: 0.5 },
-        { backgroundColor: pressed ? c.leaf : c.surface },
+        { backgroundColor: pressed ? stitchTokens.wineAlpha08 : c.surface },
       ]}
     >
-      <Icon name={name} filled={selected} />
+      <Icon name={name} filled={selected} color={stitchTokens.wine} />
     </Pressable>
   );
 }
@@ -249,10 +249,10 @@ export function Chip({
   compact?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
-  const activeBg = wine ? "#5C0202" : c.forest;
-  const activeColor = wine ? "#FFFFFF" : c.paper;
-  const inactiveColor = wine ? "#57423E" : c.forest;
-  const inactiveBorder = wine ? "#DEC0BB" : c.border;
+  const activeBg = stitchTokens.wine;
+  const activeColor = stitchTokens.white;
+  const inactiveColor = wine ? stitchTokens.deepCocoa : c.ink;
+  const inactiveBorder = wine ? stitchTokens.peachBorder : c.border;
   return (
     <Pressable
       accessibilityRole="button"

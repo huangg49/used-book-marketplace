@@ -27,6 +27,7 @@ export function Screen({
   background,
   canvasColor,
   headerExtendsToStatusBar = false,
+  statusBarStyle,
 }: React.PropsWithChildren<{
   header?: React.ReactNode;
   footer?: React.ReactNode;
@@ -40,6 +41,7 @@ export function Screen({
   background?: React.ReactNode;
   canvasColor?: string;
   headerExtendsToStatusBar?: boolean;
+  statusBarStyle?: "light" | "dark";
 }>) {
   const inset = useSafeAreaInsets();
   const shelf = appearance === "shelf";
@@ -58,7 +60,7 @@ export function Screen({
       edges={home || detail || edgeToEdgeHeader ? ["bottom", "left", "right"] : undefined}
       style={{ flex: 1, backgroundColor: canvas }}
     >
-      <StatusBar style={home || shelf || edgeToEdgeHeader ? "light" : "dark"} />
+      <StatusBar style={statusBarStyle ?? (home || shelf || edgeToEdgeHeader ? "light" : "dark")} />
       {background ? (
         <View
           pointerEvents="none"

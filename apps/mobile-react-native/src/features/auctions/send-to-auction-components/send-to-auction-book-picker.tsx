@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useQueries } from "@tanstack/react-query";
 import { useSession } from "../../../core/session/session-provider";
 import {
@@ -374,7 +374,10 @@ export function SendToAuctionBookPicker({
       >
         <View style={styles.sheetBody}>
           {showSearch ? (
-            <View style={[styles.searchBox, searchFocused && styles.searchBoxFocused]}>
+            <View
+              {...(Platform.OS === "web" ? { dataSet: { focusSurface: "true" } } : {})}
+              style={[styles.searchBox, searchFocused && styles.searchBoxFocused]}
+            >
               <Icon name="search" size={16} color={stitchTokens.brownMuted} />
               <AppTextInput
                 composite
@@ -393,7 +396,7 @@ export function SendToAuctionBookPicker({
                   accessibilityRole="button"
                   accessibilityLabel="Xóa từ khóa tìm kiếm"
                   onPress={() => setSearchQuery("")}
-                  style={styles.clearBtn}
+                  style={({ pressed }) => [styles.clearBtn, pressed && { opacity: 0.7 }]}
                 >
                   <Icon name="close" size={15} color={stitchTokens.brownMuted} />
                 </Pressable>
@@ -412,7 +415,11 @@ export function SendToAuctionBookPicker({
                 accessibilityRole="button"
                 accessibilityState={{ selected: activeCondition === "all" }}
                 onPress={() => setConditionFilter("all")}
-                style={[styles.filterChip, activeCondition === "all" && styles.filterChipActive]}
+                style={({ pressed }) => [
+                  styles.filterChip,
+                  activeCondition === "all" && styles.filterChipActive,
+                  pressed && { opacity: 0.78 },
+                ]}
               >
                 <AppText
                   kind="bold"

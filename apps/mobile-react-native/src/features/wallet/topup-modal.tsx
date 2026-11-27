@@ -5,6 +5,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
@@ -156,16 +157,34 @@ function TopupInnerContent({
         justifyContent: "flex-end",
       }}
     >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Đóng cửa sổ nạp tiền"
+        style={StyleSheet.absoluteFill}
+        onPress={handleDismiss}
+      />
       <View
         style={{
           backgroundColor: stitchTokens.white,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           maxHeight: "90%",
-          paddingTop: space.md,
+          paddingTop: 10,
           paddingBottom: Math.max(insets.bottom, 20),
         }}
       >
+        {/* Drag Handle */}
+        <View style={{ alignItems: "center", paddingBottom: 8 }}>
+          <View
+            style={{
+              width: 38,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: stitchTokens.cardBorder,
+            }}
+          />
+        </View>
+
         {/* Header */}
         <View
           style={{
@@ -202,12 +221,12 @@ function TopupInnerContent({
                   color={stitchTokens.goldDark}
                   style={{ fontWeight: "700", fontSize: 11 }}
                 >
-                  VNPay Sandbox
+                  Cổng VNPay
                 </AppText>
               </View>
             </View>
             <AppText kind="small" color={stitchTokens.subtleGray}>
-              Mô phỏng thanh toán trực tuyến qua cổng VNPay
+              Nạp tiền trực tuyến qua cổng thanh toán VNPay
             </AppText>
           </View>
 
@@ -216,14 +235,15 @@ function TopupInnerContent({
             accessibilityLabel="Đóng modal nạp tiền"
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={handleDismiss}
-            style={{
+            style={({ pressed }) => ({
               width: 36,
               height: 36,
               borderRadius: 18,
               backgroundColor: stitchTokens.roseWarmSurface,
               alignItems: "center",
               justifyContent: "center",
-            }}
+              opacity: pressed ? 0.72 : 1,
+            })}
           >
             <Icon name="close" size={20} color={stitchTokens.wine} />
           </Pressable>
@@ -316,7 +336,7 @@ function TopupInnerContent({
               </View>
               <AppText kind="small" color={stitchTokens.wineDark}>
                 {lastIntent.state === "Pending" || lastIntent.state === "Processing"
-                  ? "Nếu bạn vừa hoàn thành thanh toán trên VNPay, bấm nút bên dưới để app đối soát và cộng tiền vào ví."
+                  ? "Nếu bạn vừa hoàn thành thanh toán trên VNPay, bấm nút bên dưới để ứng dụng đối soát và cộng tiền vào ví."
                   : "Giao dịch không thành công hoặc đã bị huỷ trên cổng thanh toán."}
               </AppText>
               <Button
@@ -332,15 +352,8 @@ function TopupInnerContent({
           {!lastIntent?.credited && (
             <>
               <View style={{ gap: space.xs }}>
-                <AppText
-                  kind="label"
-                  color={stitchTokens.wineDark}
-                  style={{ fontWeight: "700" }}
-                >
-                  SỐ TIỀN CẦN NẠP (VNĐ)
-                </AppText>
                 <TextField
-                  label="Nhập số tiền nạp"
+                  label="Số tiền cần nạp (VNĐ)"
                   keyboardType="numeric"
                   value={rawAmount}
                   onChangeText={(val) => {
@@ -405,7 +418,7 @@ function TopupInnerContent({
               </View>
 
               <Notice tone="info">
-                Cổng VNPay Sandbox dùng thông tin thẻ ATM / quét QR thử nghiệm của VNPay để hoàn tất nạp tiền mô phỏng mà không tốn tiền thật.
+                Cổng VNPay mô phỏng dùng thông tin thẻ ATM / quét QR thử nghiệm để hoàn tất nạp tiền mà không trừ tiền thật.
               </Notice>
 
               {error ? <Notice tone="error">{error}</Notice> : null}
@@ -416,7 +429,7 @@ function TopupInnerContent({
                 title={
                   busy
                     ? "Đang mở cổng VNPay..."
-                    : `Mở cổng VNPay Sandbox (${formatVnd(parsedAmount)})`
+                    : `Tiếp tục qua VNPay (${formatVnd(parsedAmount)})`
                 }
                 disabled={busy || parsedAmount < 5_000 || parsedAmount > VNPAY_TOPUP_MAX}
                 onPress={() => void handleStartTopup()}

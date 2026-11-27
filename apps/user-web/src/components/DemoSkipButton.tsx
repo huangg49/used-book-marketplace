@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useIntentKey } from '../hooks/useAuctionClock'
+import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
 import { getDemoSkipStatus } from '../services/auctions'
 import styles from './DemoSkipButton.module.css'
@@ -41,7 +41,10 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
       setPendingSignature(null)
       await onDone()
     } catch (caught) {
-      // The key stays so a retry repeats the same intent, never a second skip.
+      if (!commandOutcomeUnknown(caught)) {
+        intent.settle()
+        setPendingSignature(null)
+      }
       setError(commandError(caught))
     } finally {
       setBusy(false)

@@ -1,5 +1,5 @@
 .guide {
-  border-block: 1px solid var(--line);
+  border-block: 1px solid var(--shop-line);
   padding: 20px 0;
   margin-bottom: 24px;
 }
@@ -28,7 +28,7 @@
   padding: 0;
 }
 .groups li {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--shop-line);
   padding-block: 12px;
 }
 .groups a {

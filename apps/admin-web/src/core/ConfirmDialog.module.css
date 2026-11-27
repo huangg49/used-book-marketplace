@@ -1,0 +1,108 @@
+.dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 36px);
+  padding: 0;
+  border: 1px solid var(--shop-line);
+  border-radius: 14px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  box-shadow: 0 22px 54px rgba(40, 25, 20, 0.28);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog[data-danger] {
+  border-top: 4px solid var(--error, #991b1b);
+}
+
+.dialog::backdrop {
+  background: rgba(40, 25, 20, 0.52);
+  backdrop-filter: blur(2px);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+}
+
+.title,
+.titleDanger {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.title {
+  color: var(--shop-ink);
+}
+
+.titleDanger {
+  color: var(--error, #991b1b);
+}
+
+.closeBtn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--shop-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.closeBtn:hover:not(:disabled) {
+  background: var(--shop-shelf);
+  border-color: var(--shop-line);
+  color: var(--shop-wine);
+}
+
+.closeBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.body {
+  padding: 18px 22px;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.description {
+  margin: 0;
+  color: var(--shop-muted);
+}
+
+.errorBox {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #f0c2b8;
+  background: #fdf2ef;
+  color: var(--error, #991b1b);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--shop-line);
+  background: var(--shop-shelf, #f4eddf);
+}

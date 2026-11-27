@@ -76,7 +76,7 @@ export function HomeBanner({ onExplorePress }: HomeBannerProps) {
           {/* Book Image Showcase */}
           <View style={styles.imageContainer}>
             <View style={styles.glowAura} />
-            <Icon name="book" size={64} color={stitchTokens.wineDark} />
+            <Icon name="book" size={64} color={stitchTokens.gold} />
           </View>
         </View>
 

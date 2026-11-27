@@ -76,11 +76,11 @@ export function DecisionForm({
   useEffect(() => {
     registerGuard(
       dirty
-        ? () =>
-            !busy &&
-            window.confirm(
+        ? {
+            busy,
+            message:
               "Đăng xuất sẽ bỏ các ô kiểm tra, lý do và yêu cầu chưa đối chiếu. Tiếp tục đăng xuất?",
-            )
+          }
         : undefined,
     );
     return () => registerGuard(undefined);
@@ -206,12 +206,12 @@ export function DecisionForm({
       setReason("");
       setChecked(new Set());
       setIntent(undefined);
+      dialog.current?.close();
     } catch (cause) {
       setError(cause);
     } finally {
       inFlight.current = false;
       setBusy(false);
-      dialog.current?.close();
     }
   }
   const leavePrompt = (
@@ -240,6 +240,7 @@ export function DecisionForm({
           Ở lại hồ sơ
         </Button>
         <Button
+          variant="danger"
           disabled={busy}
           onClick={() => {
             if (blocker.state === "blocked") blocker.proceed();
@@ -406,15 +407,17 @@ export function DecisionForm({
         onCancel={(event) => {
           if (busy) event.preventDefault();
         }}
-        aria-labelledby="decision-title"
+        aria-labelledby={`${reasonId}-decision-title`}
       >
-        <h3 id="decision-title">
+        <h3 id={`${reasonId}-decision-title`}>
           {choice === "Remove" ? "Gỡ bài đăng" : labels[choice || ""]}?
         </h3>
         <p>
           {removal
             ? "Bài sẽ ngừng công khai. Người đăng không thể tự mở lại; nội dung và lý do được giữ để đối chiếu. Thao tác này không xử lý giao dịch."
-            : "Quyết định sẽ được lưu vào lịch sử của bản gửi đang xem."}
+            : choice === "Reject"
+              ? "Bài đăng sẽ bị từ chối và chuyển về cho người đăng sửa lại theo lý do bên dưới."
+              : "Quyết định sẽ được lưu vào lịch sử của bản gửi đang xem."}
         </p>
         {subject && (
           <div className={styles.decisionSubject}>
@@ -425,6 +428,7 @@ export function DecisionForm({
         {(choice === "Reject" || choice === "Remove") && (
           <blockquote className="prose">{reason.trim()}</blockquote>
         )}
+        {error !== undefined && <ErrorNotice error={error} />}
         <div className="actions">
           <Button
             autoFocus
@@ -433,8 +437,16 @@ export function DecisionForm({
           >
             Quay lại kiểm tra
           </Button>
-          <Button className="primary" busy={busy} onClick={() => void send()}>
-            Xác nhận quyết định
+          <Button
+            variant={choice === "Reject" || choice === "Remove" ? "danger" : "primary"}
+            busy={busy}
+            onClick={() => void send()}
+          >
+            {choice === "Remove"
+              ? "Xác nhận gỡ bài"
+              : choice === "Reject"
+                ? "Xác nhận từ chối"
+                : "Xác nhận quyết định"}
           </Button>
         </div>
       </dialog>

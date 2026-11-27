@@ -16,6 +16,7 @@ import Svg, {
   Stop,
 } from "react-native-svg";
 import { router, useLocalSearchParams } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { memberReputationSchema } from "@used-books/session-client";
@@ -149,6 +150,7 @@ export function ReputationScreen() {
 
   return (
     <View style={styles.screenRoot}>
+      <StatusBar style="light" />
       <ReputationBackdrop />
 
       <ScrollView

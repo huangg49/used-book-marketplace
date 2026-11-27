@@ -28,7 +28,7 @@ import { DriverMilestones, formatDriverTime } from "./driver-milestones";
 import { driverStyles as styles } from "./driver-styles";
 
 const UNAVAILABLE =
-  "Máy chủ chỉ mở Driver Simulator ở môi trường development cho máy local (localhost hoặc Android emulator 10.0.2.2). Với điện thoại thật hoặc host từ xa, bật DEMO_ALLOW_REMOTE_HOST=true trong apps/api/.env rồi khởi động lại API.";
+  "Tính năng mô phỏng vận chuyển hiện chỉ hoạt động ở môi trường thử nghiệm được cấp phép trên máy chủ.";
 
 export function ExchangeDriverScreen({
   exchangeId,
@@ -61,7 +61,7 @@ export function ExchangeDriverScreen({
         exchangeDriverOrderSchema.nullable(),
       );
     },
-    refetchInterval: 8_000,
+    refetchInterval: (q) => (simulatorUnavailable(q.state.error) ? false : 8_000),
     retry: false,
   });
 
@@ -321,6 +321,7 @@ export function ExchangeDriverScreen({
         title={pendingStep ? `${pendingStep.label}?` : ""}
         message={pendingStep && order ? `${pendingStep.event(order)}.` : ""}
         confirmLabel="Ghi nhận mốc giao hàng"
+        busy={busy}
         onCancel={() => !busy && setConfirmStep(null)}
         onConfirm={() => confirmStep && void runStep(confirmStep)}
       />
@@ -329,6 +330,7 @@ export function ExchangeDriverScreen({
         title="Giao nhanh cả hai kiện?"
         message="Simulator ghi nhận cả hai kiện đã giao thành công và mở thời gian kiểm tra sách cho hai bên."
         confirmLabel="Giao cả hai kiện"
+        busy={busy}
         onCancel={() => !busy && setConfirmAll(false)}
         onConfirm={() => void runAll()}
       />

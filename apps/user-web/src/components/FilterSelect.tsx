@@ -58,6 +58,7 @@ export function FilterSelect({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [placement, setPlacement] = useState<CSSProperties>({});
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   if (disabled && open) setOpen(false);
   const expanded = open && !useNative && !disabled;
   const selected =
@@ -74,6 +75,7 @@ export function FilterSelect({
     if (disabled) return;
     const rect = root.current?.getBoundingClientRect();
     if (!rect) return;
+    setPortalTarget(root.current?.closest("dialog") ?? null);
     const below = window.innerHeight - rect.bottom - 16;
     const above = rect.top - 16;
     const upward =
@@ -263,6 +265,9 @@ export function FilterSelect({
                     data-active={active === index || undefined}
                     className={styles.option}
                     onPointerDown={(event) => event.preventDefault()}
+                    onPointerMove={() => {
+                      if (active !== index) setActive(index);
+                    }}
                     onClick={() => choose(option.value)}
                   >
                     <span>{option.label}</span>
@@ -275,7 +280,7 @@ export function FilterSelect({
                   </p>
                 )}
               </div>,
-              document.body,
+              portalTarget ?? document.body,
             )}
         </>
       )}

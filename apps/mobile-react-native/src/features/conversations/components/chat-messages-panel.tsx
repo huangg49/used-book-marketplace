@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -17,6 +18,7 @@ import {
   AppModal,
   AppTextInput,
   Button,
+  ConfirmDialog,
   Icon,
   Notice,
   colors,
@@ -86,6 +88,11 @@ export function ChatMessagesPanel({
   const [termsBusy, setTermsBusy] = useState(false);
   const [termsActionError, setTermsActionError] = useState<string | null>(null);
   const [proposeModalOpen, setProposeModalOpen] = useState(false);
+  const [proposePriceError, setProposePriceError] = useState<string | null>(null);
+  const [confirmPayOpen, setConfirmPayOpen] = useState(false);
+  const [confirmProposal, setConfirmProposal] = useState<
+    null | { id: string; accept: boolean; amount: number }
+  >(null);
   const [proposePriceInput, setProposePriceInput] = useState<string>(
     String(room.terms?.agreedPrice ?? getListingPrice(listing))
   );
@@ -122,6 +129,7 @@ export function ChatMessagesPanel({
         proposalId,
         accept,
       });
+      setConfirmProposal(null);
       sendAutoChatMessage(
         accept
           ? `Tôi đã đồng ý mức giá đề xuất ${room.terms?.pendingProposal?.amount?.toLocaleString("vi-VN")} ₫.`
@@ -140,6 +148,7 @@ export function ChatMessagesPanel({
     if (termsBusy || amount <= 0) return;
     setTermsBusy(true);
     setTermsActionError(null);
+    setProposePriceError(null);
     try {
       await changeConversationTerms(client, room.id, {
         expectedVersion: room.version,
@@ -178,6 +187,7 @@ export function ChatMessagesPanel({
         headers: { "Idempotency-Key": randomUUID() },
         body: JSON.stringify({ expectedVersion: currentOrder.version }),
       });
+      setConfirmPayOpen(false);
       sendAutoChatMessage("Tôi đã hoàn tất thanh toán đơn hàng qua Ví!");
       void queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -425,9 +435,14 @@ export function ChatMessagesPanel({
                     title="Từ chối"
                     secondary
                     busy={termsBusy}
-                    onPress={() =>
-                      handleRespondProposal(room.terms!.pendingProposal!.id, false)
-                    }
+                    onPress={() => {
+                      setTermsActionError(null);
+                      setConfirmProposal({
+                        id: room.terms!.pendingProposal!.id,
+                        accept: false,
+                        amount: room.terms!.pendingProposal!.amount ?? 0,
+                      });
+                    }}
                   />
                 </View>
                 <View style={{ flex: 1.25 }}>
@@ -435,9 +450,14 @@ export function ChatMessagesPanel({
                     title="Đồng ý giá này"
                     wine
                     busy={termsBusy}
-                    onPress={() =>
-                      handleRespondProposal(room.terms!.pendingProposal!.id, true)
-                    }
+                    onPress={() => {
+                      setTermsActionError(null);
+                      setConfirmProposal({
+                        id: room.terms!.pendingProposal!.id,
+                        accept: true,
+                        amount: room.terms!.pendingProposal!.amount ?? 0,
+                      });
+                    }}
                   />
                 </View>
               </View>
@@ -480,7 +500,10 @@ export function ChatMessagesPanel({
                   accessibilityRole="button"
                   accessibilityLabel="Thanh toán đơn hàng ngay"
                   disabled={termsBusy}
-                  onPress={handlePayOrder}
+                  onPress={() => {
+                    setTermsActionError(null);
+                    setConfirmPayOpen(true);
+                  }}
                   style={({ pressed }) => [
                     styles.compactWineCta,
                     (pressed || termsBusy) && styles.compactCtaPressed,
@@ -744,93 +767,163 @@ export function ChatMessagesPanel({
         visible={proposeModalOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setProposeModalOpen(false)}
+        onRequestClose={() => !termsBusy && setProposeModalOpen(false)}
       >
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng hộp thoại đề xuất giá"
+            style={StyleSheet.absoluteFill}
+            onPress={() => !termsBusy && setProposeModalOpen(false)}
+          />
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
                 <Icon name="tag" size={18} color={stitchTokens.wineDark} />
-                <AppText style={styles.modalTitle}>
+                <AppText style={styles.modalTitle} numberOfLines={1}>
                   {isBuyer ? "Đề xuất mức giá bạn muốn mua" : "Đổi giá bán cho người mua"}
                 </AppText>
               </View>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Đóng modal"
+                disabled={termsBusy}
                 onPress={() => setProposeModalOpen(false)}
+                style={({ pressed }) => [
+                  termsBusy && { opacity: 0.4 },
+                  pressed && !termsBusy && { opacity: 0.7 },
+                ]}
               >
                 <Icon name="close" size={20} color={stitchTokens.darkWood} />
               </Pressable>
             </View>
 
-            <AppText style={styles.modalSub}>
-              Giá niêm yết hiện tại:{" "}
-              <AppText style={{ fontWeight: "800", color: stitchTokens.wineDark }}>
-                {getListingPrice(listing).toLocaleString("vi-VN")} ₫
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12 }}
+            >
+              <AppText style={styles.modalSub}>
+                Giá niêm yết hiện tại:{" "}
+                <AppText style={{ fontWeight: "800", color: stitchTokens.wineDark }}>
+                  {getListingPrice(listing).toLocaleString("vi-VN")} ₫
+                </AppText>
+                . Đề xuất này sẽ gửi đến đối tác để họ xác nhận trước khi chốt đơn.
               </AppText>
-              . Đề xuất này sẽ gửi đến đối tác để họ xác nhận trước khi chốt đơn.
-            </AppText>
 
-            <View style={styles.inputSection}>
-              <AppText style={styles.inputLabel}>Mức giá đề xuất mới (VNĐ):</AppText>
-              <AppTextInput
-                accessibilityLabel="Giá sách đề nghị"
-                style={styles.amountInput}
-                keyboardType="numeric"
-                value={proposePriceInput}
-                onChangeText={(val) => setProposePriceInput(val.replace(/\D/g, ""))}
-                placeholder="Ví dụ: 45000"
-                placeholderTextColor={stitchTokens.subtleGray}
-              />
-
-              {/* Nút gợi ý nhanh */}
-              <View style={styles.presetRow}>
-                {(() => {
-                  const basePrice = getListingPrice(listing);
-                  return [
-                    { label: "-5.000 ₫", val: Math.max(10000, basePrice - 5000) },
-                    { label: "-10.000 ₫", val: Math.max(10000, basePrice - 10000) },
-                    { label: "-10%", val: Math.max(10000, Math.round((basePrice * 0.9) / 1000) * 1000) },
-                    { label: "-20%", val: Math.max(10000, Math.round((basePrice * 0.8) / 1000) * 1000) },
-                  ].map((item) => (
-                    <Pressable
-                      key={item.label}
-                      style={styles.presetChip}
-                      onPress={() => setProposePriceInput(String(item.val))}
-                    >
-                      <AppText style={styles.presetChipText}>{item.label}</AppText>
-                    </Pressable>
-                  ));
-                })()}
-              </View>
-            </View>
-
-            <View style={styles.modalActionRow}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Hủy"
-                  secondary
-                  onPress={() => setProposeModalOpen(false)}
-                />
-              </View>
-              <View style={{ flex: 1.5 }}>
-                <Button
-                  title="Gửi đề xuất giá"
-                  wine
-                  busy={termsBusy}
-                  onPress={() => {
-                    const amount = parseInt(proposePriceInput.replace(/\D/g, ""), 10);
-                    if (amount > 0) {
-                      void handleProposePrice(amount);
-                    }
+              <View style={styles.inputSection}>
+                <AppText style={styles.inputLabel}>Mức giá đề xuất mới (VNĐ):</AppText>
+                <AppTextInput
+                  accessibilityLabel="Giá sách đề nghị"
+                  style={styles.amountInput}
+                  keyboardType="numeric"
+                  editable={!termsBusy}
+                  value={proposePriceInput}
+                  onChangeText={(val) => {
+                    setProposePriceError(null);
+                    setProposePriceInput(val.replace(/\D/g, ""));
                   }}
+                  placeholder="Ví dụ: 45000"
+                  placeholderTextColor={stitchTokens.subtleGray}
                 />
+
+                {/* Nút gợi ý nhanh */}
+                <View style={styles.presetRow}>
+                  {(() => {
+                    const basePrice = getListingPrice(listing);
+                    return [
+                      { label: "-5.000 ₫", val: Math.max(10000, basePrice - 5000) },
+                      { label: "-10.000 ₫", val: Math.max(10000, basePrice - 10000) },
+                      { label: "-10%", val: Math.max(10000, Math.round((basePrice * 0.9) / 1000) * 1000) },
+                      { label: "-20%", val: Math.max(10000, Math.round((basePrice * 0.8) / 1000) * 1000) },
+                    ].map((item) => (
+                      <Pressable
+                        key={item.label}
+                        disabled={termsBusy}
+                        style={styles.presetChip}
+                        onPress={() => {
+                          setProposePriceError(null);
+                          setProposePriceInput(String(item.val));
+                        }}
+                      >
+                        <AppText style={styles.presetChipText}>{item.label}</AppText>
+                      </Pressable>
+                    ));
+                  })()}
+                </View>
               </View>
-            </View>
+
+              {proposePriceError ? <Notice tone="error">{proposePriceError}</Notice> : null}
+              {termsActionError ? <Notice tone="error">{termsActionError}</Notice> : null}
+
+              <View style={styles.modalActionRow}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Hủy"
+                    secondary
+                    disabled={termsBusy}
+                    onPress={() => setProposeModalOpen(false)}
+                  />
+                </View>
+                <View style={{ flex: 1.5 }}>
+                  <Button
+                    title="Gửi đề xuất giá"
+                    wine
+                    busy={termsBusy}
+                    onPress={() => {
+                      const amount = parseInt(proposePriceInput.replace(/\D/g, ""), 10);
+                      if (!Number.isFinite(amount) || amount < 1000) {
+                        setProposePriceError("Vui lòng nhập mức giá hợp lệ (tối thiểu 1.000 ₫).");
+                        return;
+                      }
+                      setProposePriceError(null);
+                      void handleProposePrice(amount);
+                    }}
+                  />
+                </View>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </AppModal>
+
+      <ConfirmDialog
+        visible={!!confirmProposal}
+        title={
+          confirmProposal?.accept
+            ? "Đồng ý mức giá đề xuất?"
+            : "Từ chối mức giá đề xuất?"
+        }
+        message={
+          confirmProposal?.accept
+            ? `Bạn xác nhận chốt giá sách ở mức ${confirmProposal.amount.toLocaleString("vi-VN")} ₫ với ${other.displayName}? Giá này sẽ được dùng để tạo đơn hàng.`
+            : `Từ chối đề xuất giá ${confirmProposal?.amount.toLocaleString("vi-VN") ?? "0"} ₫ từ ${other.displayName}. Hai bên có thể tiếp tục thương lượng mức giá khác.`
+        }
+        confirmLabel={confirmProposal?.accept ? "Đồng ý giá này" : "Từ chối"}
+        destructive={confirmProposal?.accept === false}
+        busy={termsBusy}
+        error={termsActionError ?? undefined}
+        onCancel={() => !termsBusy && setConfirmProposal(null)}
+        onConfirm={() => {
+          if (confirmProposal) {
+            void handleRespondProposal(confirmProposal.id, confirmProposal.accept);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        visible={confirmPayOpen}
+        title="Xác nhận thanh toán đơn hàng?"
+        message={`Thanh toán đơn #${(room.orderId ?? "").slice(0, 8).toUpperCase()}${room.terms?.agreedPrice ? ` (giá sách ${room.terms.agreedPrice.toLocaleString("vi-VN")} ₫ + phí giao hàng đã báo giá)` : ""} qua Ví Lật Lại. Tiền được giữ an toàn trong Quỹ bảo chứng cho tới khi bạn nhận sách và hết hạn kiểm tra.`}
+        confirmLabel="Thanh toán ngay"
+        busy={termsBusy}
+        error={termsActionError ?? undefined}
+        onCancel={() => !termsBusy && setConfirmPayOpen(false)}
+        onConfirm={() => void handlePayOrder()}
+      />
 
     </KeyboardAvoidingView>
   );

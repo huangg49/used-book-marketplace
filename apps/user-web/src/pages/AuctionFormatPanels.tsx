@@ -92,6 +92,7 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
     : null
   const available = useAvailable(me)
   const [confirming, setConfirming] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const { busy, error, unknown, run } = useCommand(onChanged)
   const short = !registered && available !== null && deposit > available
@@ -151,7 +152,7 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
         </button>
       ) : registered ? (withdrawable &&
         <button type="button" className={styles.secondaryBlock} disabled={busy}
-          onClick={() => void run('withdraw-registration', (key) => withdrawAuctionRegistration(auction.id, key), () => setNotice('Đã rút đăng ký; tiền cọc đã về lại ví.'))}>
+          onClick={() => setWithdrawing(true)}>
           {busy ? 'Đang rút…' : 'Rút đăng ký và nhận lại tiền cọc'}
         </button>
       ) : (
@@ -165,6 +166,7 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
         title="Đăng ký đấu giá"
         confirmText="Đặt cọc và đăng ký"
         isBusy={busy}
+        error={error}
         onConfirm={() => void run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {
           setConfirming(false)
           setNotice(count + 1 >= need
@@ -172,12 +174,27 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
               ? 'Đã đăng ký. Phiên đủ người và mở theo giờ đã hẹn.'
               : 'Đã đăng ký. Phiên đủ người và mở trả giá sau 10 phút (khung 23:00–07:00 thì lúc 07:00).'
             : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
-        }).finally(() => setConfirming(false))}
+        })}
         stickyFooter
       >
         <TransactionAmount label="Cọc Ví sẽ giữ ngay" value={formatVnd(deposit)} />
+        {available !== undefined && <Shortfall available={available} amount={deposit} />}
         <TransactionNotes notes={auctionRegistrationNotes(need)} />
       </ConfirmDialog>
+      <ConfirmDialog
+        isOpen={withdrawing}
+        onClose={() => !busy && setWithdrawing(false)}
+        title="Rút đăng ký tham gia đấu giá?"
+        description={`Bạn sẽ rời khỏi danh sách tham gia phiên này và nhận lại ngay ${formatVnd(me?.deposit ?? deposit)} tiền cọc về số dư khả dụng của Ví.`}
+        confirmText="Rút đăng ký và nhận lại cọc"
+        isDanger
+        isBusy={busy}
+        error={error}
+        onConfirm={() => void run('withdraw-registration', (key) => withdrawAuctionRegistration(auction.id, key), () => {
+          setWithdrawing(false)
+          setNotice('Đã rút đăng ký; tiền cọc đã về lại ví.')
+        })}
+      />
     </div>
   )
 }
@@ -424,6 +441,7 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
   const [lower, setLower] = useState(canRaise ? need : Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1))
   const [editing, setEditing] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [confirmMin, setConfirmMin] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const ids = useId()
   const { busy, error, unknown, run } = useCommand(onChanged)
@@ -458,7 +476,7 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
               <input id={`${ids}-min`} type="number" inputMode="numeric" min={AUCTION_MIN_BIDDERS_FLOOR} max={maxMin} value={lower} disabled={busy || paused}
                 onChange={(e) => setLower(Math.min(maxMin, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Math.trunc(Number(e.target.value) || AUCTION_MIN_BIDDERS_FLOOR))))} />
               <button type="button" className={styles.secondary} disabled={busy || paused || lower === need}
-                onClick={() => void run(`min:${version}:${lower}`, (key) => setAuctionMinBidders(auction.id, version, lower, key), () => setNotice(lower > need ? `Đã tăng số người tối thiểu lên ${lower}.` : `Đã giảm số người tối thiểu còn ${lower}.`))}>
+                onClick={() => setConfirmMin(true)}>
                 {canRaise ? <Users size={15} aria-hidden="true" /> : <Minus size={15} aria-hidden="true" />}{canRaise ? 'Đổi' : 'Giảm'}
               </button>
             </div>
@@ -483,6 +501,25 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
           latestStartAt: reached ? new Date(Date.parse(openTime) - 60_000).toISOString() : auction.latestStartAt ?? null }}
       />
       <ConfirmDialog
+        isOpen={confirmMin && !paused}
+        onClose={() => !busy && setConfirmMin(false)}
+        title={lower > need ? `Tăng số người tối thiểu lên ${lower}?` : `Giảm số người tối thiểu còn ${lower}?`}
+        description={
+          lower > need
+            ? `Ngưỡng mở phiên sẽ tăng từ ${need} lên ${lower} người đăng ký. Khi đã có người đăng ký, bạn sẽ không thể tăng lại nữa.`
+            : count >= lower
+              ? `Hiện đã có ${count} người đăng ký. Giảm ngưỡng từ ${need} xuống ${lower} sẽ làm phiên đủ người ngay và không thể hoàn tác.`
+              : `Ngưỡng mở phiên sẽ giảm từ ${need} xuống ${lower} người đăng ký. Thao tác giảm không thể tăng lại sau khi đã có người đăng ký.`
+        }
+        confirmText={lower > need ? `Tăng lên ${lower} người` : `Giảm còn ${lower} người`}
+        isBusy={busy}
+        error={error}
+        onConfirm={() => void run(`min:${version}:${lower}`, (key) => setAuctionMinBidders(auction.id, version, lower, key), () => {
+          setConfirmMin(false)
+          setNotice(lower > need ? `Đã tăng số người tối thiểu lên ${lower}.` : `Đã giảm số người tối thiểu còn ${lower}.`)
+        })}
+      />
+      <ConfirmDialog
         isOpen={closing && !paused}
         onClose={() => !busy && setClosing(false)}
         title="Đóng phiên trước giờ mở?"
@@ -490,7 +527,8 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
         confirmText="Đóng phiên"
         isBusy={busy}
         isDanger
-        onConfirm={() => void run(`close:${version}`, (key) => closeAuctionBeforeStart(auction.id, version, key), () => setClosing(false)).finally(() => setClosing(false))}
+        error={error}
+        onConfirm={() => void run(`close:${version}`, (key) => closeAuctionBeforeStart(auction.id, version, key), () => setClosing(false))}
       />
     </div>
   )

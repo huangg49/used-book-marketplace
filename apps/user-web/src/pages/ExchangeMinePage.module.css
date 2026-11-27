@@ -612,6 +612,10 @@
   font-size: 0.875rem;
   border: 0;
   cursor: pointer;
+  transition: background-color 140ms ease;
+}
+.retryBtn:hover {
+  background: #7f1d1d;
 }
 
 /* Pagination */

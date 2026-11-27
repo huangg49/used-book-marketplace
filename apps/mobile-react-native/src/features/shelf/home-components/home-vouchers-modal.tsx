@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "../../../core/ui/text";
-import { AppModal, Button, Icon, StatePanel, stitchTokens } from "../../../core/ui";
+import { AppModal, Icon, StatePanel, stitchTokens } from "../../../core/ui";
 
 export interface HomeVouchersModalProps {
   readonly visible: boolean;
@@ -8,21 +9,57 @@ export interface HomeVouchersModalProps {
 }
 
 export function HomeVouchersModal({ visible, onClose }: HomeVouchersModalProps) {
-  return <AppModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-    <View style={styles.scrim}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Đóng ưu đãi" />
-      <View style={styles.sheetContainer}>
-        <View style={styles.sheetHeader}>
-          <View style={styles.headerLeft}>
-            <Icon name="ticket" size={22} color={stitchTokens.wine} />
-            <AppText kind="bookHeading" style={styles.headerTitle}>Ưu đãi</AppText>
+  const insets = useSafeAreaInsets();
+
+  return (
+    <AppModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.scrim}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Đóng ưu đãi"
+        />
+        <View
+          style={[
+            styles.sheetContainer,
+            { paddingBottom: Math.max(insets.bottom, 20) },
+          ]}
+        >
+          <View style={styles.handleWrap}>
+            <View style={styles.handleBar} />
           </View>
-          <Button title="Đóng" secondary onPress={onClose} />
+          <View style={styles.sheetHeader}>
+            <View style={styles.headerLeft}>
+              <View style={styles.headerIconBox}>
+                <Icon name="ticket" size={18} color={stitchTokens.wine} />
+              </View>
+              <AppText kind="bold" style={styles.headerTitle}>
+                Ưu đãi
+              </AppText>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đóng ưu đãi"
+              onPress={onClose}
+              hitSlop={8}
+              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.72 }]}
+            >
+              <Icon name="close" size={18} color={stitchTokens.wineDark} strokeWidth={2.2} />
+            </Pressable>
+          </View>
+          <View style={styles.body}>
+            <StatePanel
+              wine
+              icon="ticket"
+              title="Chưa có ưu đãi áp dụng"
+              message="Lật lại hiện chưa áp dụng mã giảm giá cho các giao dịch sách."
+            />
+          </View>
         </View>
-        <StatePanel title="Chưa có ưu đãi áp dụng" message="Lật lại chưa hỗ trợ mã giảm giá cho giao dịch hiện tại." />
       </View>
-    </View>
-  </AppModal>;
+    </AppModal>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -35,124 +72,57 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sheetContainer: {
-    backgroundColor: stitchTokens.parchment,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    backgroundColor: stitchTokens.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: "80%",
-    paddingBottom: 24,
+  },
+  handleWrap: {
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  handleBar: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: stitchTokens.cardBorder,
   },
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: stitchTokens.warmBorder,
+    borderColor: stitchTokens.borderParchmentSoft,
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: stitchTokens.wine,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  listContent: {
-    padding: 16,
-    gap: 12,
-  },
-  voucherCard: {
-    flexDirection: "row",
-    backgroundColor: stitchTokens.white,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: stitchTokens.sandWarm,
-    overflow: "hidden",
-    position: "relative",
-    elevation: 2,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  cutoutLeft: {
-    width: 6,
-    backgroundColor: stitchTokens.wine,
-  },
-  voucherBody: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 12,
     gap: 10,
   },
-  voucherInfo: {
-    flex: 1,
-  },
-  codeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  codeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: stitchTokens.wine,
-    backgroundColor: stitchTokens.flashRedBg,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 3,
-  },
-  expiryText: {
-    fontSize: 10,
-    color: stitchTokens.slateStone,
-  },
-  voucherTitle: {
-    fontSize: 13,
-    color: stitchTokens.charcoalBrown,
-    lineHeight: 18,
-  },
-  voucherDesc: {
-    fontSize: 11,
-    color: stitchTokens.stoneMuted,
-    marginTop: 2,
-    lineHeight: 15,
-  },
-  collectBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 6,
+  headerIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
   },
-  btnActive: {
-    backgroundColor: stitchTokens.wine,
+  headerTitle: {
+    fontSize: 17,
+    color: stitchTokens.wineDark,
   },
-  btnCollected: {
-    backgroundColor: stitchTokens.likeNewGreenBg,
-    borderWidth: 1,
-    borderColor: stitchTokens.mintGreen,
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: stitchTokens.pillWarmBg,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  collectBtnText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  btnTextActive: {
-    color: stitchTokens.white,
-  },
-  btnTextCollected: {
-    color: stitchTokens.verifiedGreen,
-  },
-  bottomArea: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
+  body: {
+    padding: 16,
   },
 });

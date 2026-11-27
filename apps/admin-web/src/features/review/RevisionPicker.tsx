@@ -115,7 +115,8 @@ export function RevisionPicker({
         onKeyDown={keyDown}
         onClick={() => (open ? setOpen(false) : show())}
         onBlur={(event) => {
-          if (!root.current?.contains(event.relatedTarget)) setOpen(false);
+          if (event.relatedTarget && !root.current?.contains(event.relatedTarget))
+            setOpen(false);
         }}
       >
         <span>

@@ -267,11 +267,11 @@ export function AccountScreen() {
 
   const logout = async () => {
     if (busy) return;
-    setLogoutConfirmOpen(false);
     setBusy(true);
     setError("");
     try {
       await client.logout();
+      setLogoutConfirmOpen(false);
     } catch (cause) {
       setError(presentError(cause).message);
     } finally {
@@ -569,7 +569,7 @@ export function AccountScreen() {
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <AppText kind="small" style={styles.statLabelDark}>
-                      TẠM GIỮ (ESCROW)
+                      TIỀN ĐANG TẠM GIỮ
                     </AppText>
                     <View style={styles.statIconBoxDark}>
                       <Icon name="shield" size={15} color={stitchTokens.wine} />
@@ -1336,14 +1336,19 @@ export function AccountScreen() {
         visible={logoutConfirmOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setLogoutConfirmOpen(false)}
+        onRequestClose={() => !busy && setLogoutConfirmOpen(false)}
       >
         <View style={styles.logoutModalOverlay}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng hộp thoại đăng xuất"
             style={StyleSheet.absoluteFill}
-            onPress={() => setLogoutConfirmOpen(false)}
+            onPress={() => !busy && setLogoutConfirmOpen(false)}
           />
-          <View style={styles.logoutModalCard}>
+          <View
+            accessibilityViewIsModal
+            style={styles.logoutModalCard}
+          >
             <View style={styles.logoutModalIconWrap}>
               <Icon name="logout" size={22} color={stitchTokens.crimson} strokeWidth={2} />
             </View>
@@ -1357,14 +1362,17 @@ export function AccountScreen() {
               </AppText>{" "}
               sẽ kết thúc trên thiết bị này. Bạn luôn có thể đăng nhập lại bất cứ lúc nào.
             </AppText>
+            {error ? <Notice tone="error">{error}</Notice> : null}
             <View style={styles.logoutModalActions}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Hủy đăng xuất"
+                disabled={busy}
                 onPress={() => setLogoutConfirmOpen(false)}
                 style={({ pressed }) => [
                   styles.logoutModalCancelBtn,
-                  pressed && { opacity: 0.78 },
+                  busy && { opacity: 0.5 },
+                  pressed && !busy && { opacity: 0.78 },
                 ]}
               >
                 <AppText kind="bold" style={styles.logoutModalCancelText}>
@@ -1374,14 +1382,16 @@ export function AccountScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Xác nhận đăng xuất"
+                disabled={busy}
                 onPress={() => void logout()}
                 style={({ pressed }) => [
                   styles.logoutModalConfirmBtn,
-                  pressed && { opacity: 0.85 },
+                  busy && { opacity: 0.65 },
+                  pressed && !busy && { opacity: 0.85 },
                 ]}
               >
                 <AppText kind="bold" style={styles.logoutModalConfirmText}>
-                  Đăng xuất
+                  {busy ? "Đang đăng xuất…" : "Đăng xuất"}
                 </AppText>
               </Pressable>
             </View>

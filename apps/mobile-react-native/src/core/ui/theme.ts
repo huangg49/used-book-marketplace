@@ -15,7 +15,7 @@ export const colorRoles = {
   inputBorder: colors.border,
   divider: colors.rule,
   focus: "#5C0202",
-  scrim: "rgba(20,36,28,.45)",
+  scrim: "rgba(40, 25, 20, 0.45)",
   shelfCanvas: "#F6F8F3",
   shelfEdge: "#B5C3AC",
   navigationBackground: colors.surface,

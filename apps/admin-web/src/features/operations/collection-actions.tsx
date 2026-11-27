@@ -254,11 +254,15 @@ export function CollectionReturn({ item, ...context }: Props) {
         return true;
       }}
       submitLabel="Ghi kết quả nhận lại"
+      confirmDanger={check === "MatchesReport"}
       confirmTitle={
         check === "MatchesReport" ? "Nhận lại sách?" : "Từ chối nhận sách?"
       }
       confirmBody={
         <>
+          <p>
+            <strong>{item.title}</strong> · Người nhận: {item.recipientName} · Đơn #{item.id.slice(0, 8)}
+          </p>
           <p>
             {check === "MatchesReport"
               ? "Đơn sẽ bị hủy, người mua được hoàn toàn bộ số tiền đã trả và người bán được báo đến nhận lại sách. Không hoàn tác được."

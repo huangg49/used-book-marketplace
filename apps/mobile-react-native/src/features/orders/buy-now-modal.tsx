@@ -28,6 +28,7 @@ import {
   AppText,
   Checkbox,
   Button,
+  ConfirmDialog,
   Icon,
   Notice,
   TextField,
@@ -176,6 +177,7 @@ function BuyNowSession({
   const [quoteLoading, setQuoteLoading] = useState(false);
 
   // Order state
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(
     pendingCreation ? null : (initialOrderId ?? null),
   );
@@ -559,6 +561,7 @@ function BuyNowSession({
       void cache.invalidateQueries({ queryKey: ["public-listing"] });
       void cache.invalidateQueries({ queryKey: ["my-orders"] });
       if (!isCurrent(generation)) return;
+      setConfirmCancelOpen(false);
       handleDismiss();
     } catch (err) {
       if (isCurrent(generation)) setError(buyNowError(err));
@@ -1381,7 +1384,10 @@ function BuyNowSession({
                 accessibilityRole="button"
                 accessibilityLabel="Hủy đơn đặt mua"
                 disabled={busy || orderDetails.canCancel === false}
-                onPress={() => void handleCancelOrder()}
+                onPress={() => {
+                  setError("");
+                  setConfirmCancelOpen(true);
+                }}
                 style={({ pressed }) => [
                   styles.cancelOrderLink,
                   (busy || orderDetails.canCancel === false) && { opacity: 0.45 },
@@ -1404,6 +1410,18 @@ function BuyNowSession({
           ) : null}
         </View>
       </KeyboardAvoidingView>
+
+      <ConfirmDialog
+        visible={confirmCancelOpen}
+        title="Hủy đơn đặt mua này?"
+        message={`Đơn #${(createdOrderId ?? "").slice(0, 8).toUpperCase()}${orderDetails ? ` (${formatVnd(orderDetails.amounts.buyerTotal)})` : ""} chưa được thanh toán. Nếu hủy, quyền giữ sách sẽ kết thúc ngay và người khác có thể mua bản sách này.`}
+        confirmLabel="Hủy đơn hàng"
+        destructive
+        busy={busy}
+        error={error || undefined}
+        onCancel={() => !busy && setConfirmCancelOpen(false)}
+        onConfirm={() => void handleCancelOrder()}
+      />
 
       {/* Inline VNPay Topup Modal so user does not lose order progress */}
       <TopupModal

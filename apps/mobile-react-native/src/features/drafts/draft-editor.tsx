@@ -1935,7 +1935,7 @@ export function DraftEditor({
             <Notice tone="info">
               {auction
                 ? "Đăng sách đấu giá miễn phí. Sách sau khi được duyệt sẽ sẵn sàng trong mục Gửi sách đấu giá và không hiển thị trên kệ mua/đổi."
-                : "Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn."}
+                : "Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên trang chủ hoặc chờ kiểm duyệt. Bản nháp, bài bị từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn."}
             </Notice>
           ) : null}
 
@@ -2221,11 +2221,8 @@ export function DraftEditor({
         confirmLabel="Gửi bản sửa"
         busy={busy}
         error={error || undefined}
-        onCancel={() => setReviseConfirm(false)}
-        onConfirm={() => {
-          setReviseConfirm(false);
-          void save(true);
-        }}
+        onCancel={() => !busy && setReviseConfirm(false)}
+        onConfirm={() => void save(true)}
       />
       <ConfirmDialog
         visible={leave}
@@ -2236,6 +2233,7 @@ export function DraftEditor({
             : "Thông tin chưa lưu sẽ bị bỏ. Ảnh chưa gắn vào bài có thể được dọn sau 24 giờ."
         }
         confirmLabel="Rời bài đăng"
+        destructive
         onCancel={() => {
           pendingNavigation.current = null;
           setLeave(false);
@@ -2251,9 +2249,10 @@ export function DraftEditor({
         title="Tải lại bản đã lưu?"
         message="Thay đổi chưa lưu sẽ bị thay bằng nội dung mới nhất trên máy chủ."
         confirmLabel="Tải lại bản đã lưu"
+        destructive
         busy={busy}
         error={error || undefined}
-        onCancel={() => setReloadOpen(false)}
+        onCancel={() => !busy && setReloadOpen(false)}
         onConfirm={() => void reload()}
       />
     </Screen>

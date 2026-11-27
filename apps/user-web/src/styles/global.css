@@ -152,6 +152,27 @@ input::placeholder,textarea::placeholder{color:var(--shop-muted);opacity:1}
     padding: 0.65rem 0.75rem;
   }
 
+  select:not([multiple]):not([size]) {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B1917' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 16px 16px;
+    transition: border-color 160ms ease-out, background-color 160ms ease-out;
+  }
+
+  select:hover:not(:disabled) {
+    border-color: var(--shop-wine);
+  }
+
+  select:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
   /* The brand outline is the focus indicator; do not stack Forms' blue ring. */
   input:focus,
   textarea:focus,
@@ -193,22 +214,26 @@ input::placeholder,textarea::placeholder{color:var(--shop-muted);opacity:1}
 .custom-checkbox {
   appearance: none;
   -webkit-appearance: none;
-  background-color: #c3ecd7; /* Light green background for unchecked */
-  border: 1px solid #a8cfbc;
+  background-color: var(--shop-paper, #fffaf2);
+  border: 1px solid var(--shop-control, #e5c9b8);
   border-radius: 4px;
   width: 16px;
   height: 16px;
   display: inline-block;
   position: relative;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out;
   flex-shrink: 0;
 }
 
+.custom-checkbox:hover:not(:disabled) {
+  border-color: var(--shop-wine, #6b1917);
+}
+
 .custom-checkbox:checked {
-  background-color: #a8cfbc;
-  border-color: #a8cfbc;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='%2300261a' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E");
+  background-color: var(--shop-wine, #6b1917);
+  border-color: var(--shop-wine, #6b1917);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='%23fffaf2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E");
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;

@@ -5,8 +5,9 @@ import { currentUserSchema } from "@used-books/session-client";
 import { canEnterWorkspace, session } from "../../core/session";
 import { queryClient } from "../../core/query-client";
 import { ErrorNotice, Notice } from "../../core/ui";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { PageFrame } from "../../core/page-frame";
-import { LeaveGuard } from "../../core/leave-guard";
+import { LeaveGuard, type LeaveGuardState } from "../../core/leave-guard";
 import { WorkspaceShell } from "./WorkspaceShell";
 
 export default function AuthenticatedWorkspace() {
@@ -21,8 +22,10 @@ function Workspace() {
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [logoutError, setLogoutError] = useState<unknown>();
-  const guard = useRef<(() => boolean) | undefined>(undefined);
-  const registerGuard = useCallback((next: (() => boolean) | undefined) => {
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [logoutGuardMessage, setLogoutGuardMessage] = useState<string | undefined>();
+  const guard = useRef<LeaveGuardState | undefined>(undefined);
+  const registerGuard = useCallback((next: LeaveGuardState | undefined) => {
     guard.current = next;
   }, []);
   const authenticated = state.status === "authenticated";
@@ -32,12 +35,19 @@ function Workspace() {
     queryFn: () => session.request("/auth/me", currentUserSchema),
     refetchInterval: 30_000,
   });
-  async function logout() {
-    if (guard.current && !guard.current()) return;
+  function requestLogout() {
+    if (guard.current?.busy || logoutBusy) return;
+    setLogoutError(undefined);
+    setLogoutGuardMessage(guard.current?.message);
+    setLogoutConfirmOpen(true);
+  }
+  async function confirmLogout() {
+    if (guard.current?.busy || logoutBusy) return;
     setLogoutBusy(true);
     setLogoutError(undefined);
     try {
       await session.logout();
+      setLogoutConfirmOpen(false);
     } catch (cause) {
       setLogoutError(cause);
     } finally {
@@ -55,8 +65,23 @@ function Workspace() {
       profileFailed={profile.isError}
       logoutBusy={logoutBusy}
       logoutError={logoutError}
-      onLogout={() => void logout()}
+      onLogout={requestLogout}
     >
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onClose={() => !logoutBusy && setLogoutConfirmOpen(false)}
+        title="Đăng xuất khỏi hệ thống quản trị?"
+        description={
+          logoutGuardMessage ??
+          "Phiên làm việc hiện tại sẽ kết thúc. Bạn sẽ cần đăng nhập lại để tiếp tục xử lý hồ sơ."
+        }
+        confirmLabel="Đăng xuất"
+        cancelLabel="Ở lại"
+        danger
+        busy={logoutBusy}
+        error={logoutError ? <ErrorNotice error={logoutError} /> : undefined}
+        onConfirm={() => void confirmLogout()}
+      />
       <main id="main" className="workspace" tabIndex={-1}>
         {profile.isLoading && (
           <p role="status">Đang kiểm tra quyền truy cập…</p>

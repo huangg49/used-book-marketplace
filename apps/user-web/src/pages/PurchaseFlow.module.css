@@ -314,6 +314,11 @@ fieldset:disabled .primary {
   text-decoration: underline;
   text-underline-offset: 4px;
   cursor: pointer;
+  transition: color 140ms ease, opacity 140ms ease;
+}
+.textButton:hover:not(:disabled) {
+  color: #7c2320;
+  opacity: 0.88;
 }
 .note {
   display: flex;
@@ -358,6 +363,11 @@ fieldset:disabled .primary {
   border: 1px solid var(--shop-line);
   border-radius: 8px;
   cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.address:hover {
+  border-color: var(--shop-wine);
+  background: #faf5eb;
 }
 .address:has(input:checked) {
   border-color: var(--shop-wine);

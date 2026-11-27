@@ -43,7 +43,7 @@ import { auctionPhase, listMyAuctions, type MyAuctionItem } from "../services/au
 import { AuctionPhoto } from "../components/AuctionGallery";
 
 const configuredBase =
-  import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:3000/api/v1";
+  import.meta.env["VITE_API_BASE_URL"] || "http://localhost:3000/api/v1";
 const socketUrl = configuredBase.startsWith("/")
   ? window.location.origin
   : configuredBase.replace(/\/api\/v1\/?$/, "");
@@ -186,6 +186,7 @@ function ChatRoom({
   useEffect(() => {
     const socket = io(`${socketUrl}/purchase-chat`, {
       auth: (callback) => callback({ token: session.getAccessToken() }),
+      transports: ["websocket", "polling"],
       tryAllTransports: true,
       timeout: 10_000,
     });

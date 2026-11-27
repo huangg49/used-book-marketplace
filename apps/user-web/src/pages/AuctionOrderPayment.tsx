@@ -14,6 +14,7 @@ import {
   type DeliveryChoice, type NewAddressBody, type PointOrder,
 } from '../services/auctions'
 import { serviceAreasQuery } from '../services/service-areas'
+import { getWalletSummary } from '../services/wallet'
 import styles from './AuctionDetailPage.module.css'
 import orderStyles from './AuctionWinnerOrderPage.module.css'
 
@@ -48,6 +49,7 @@ export function AuctionOrderPayment({
   const addressAttempt = useRef<{ key: string; body: NewAddressBody } | null>(null)
   const addresses = useQuery({ queryKey: ['addresses', ownerId], queryFn: getMyAddresses, enabled: deliver, retry: false })
   const areas = useQuery({ ...serviceAreasQuery, enabled: deliver })
+  const wallet = useQuery({ queryKey: ['wallet-summary', ownerId], queryFn: getWalletSummary, enabled: confirming, retry: false, staleTime: 15_000 })
   const usable = (addresses.data?.items ?? []).filter((a) => a.serviceAreaCode === DELIVERY_SERVICE_AREA)
   const chosen = addressId ?? usable.find((a) => a.isDefault)?.id ?? usable[0]?.id ?? null
   const selectedAddress = usable.find((a) => a.id === chosen)
@@ -128,12 +130,13 @@ export function AuctionOrderPayment({
       invalidateMemberWalletViews(queryClient, ownerId)
       intent.settle()
       pendingPayment.current = null
+      setConfirming(false)
     } catch (caught) {
       pending = commandOutcomeUnknown(caught)
       if (!pending) { intent.settle(); pendingPayment.current = null }
       setError(commandError(caught))
     } finally {
-      setUnknown(pending); setBusy(false); setConfirming(false)
+      setUnknown(pending); setBusy(false)
       // Chưa rõ kết quả thì giữ version đang có để lần thử lại gửi đúng khóa và nội dung.
       if (!pending) void onChanged()
     }
@@ -268,6 +271,7 @@ export function AuctionOrderPayment({
         confirmText="Thanh toán"
         onConfirm={() => void pay()}
         isBusy={busy}
+        error={error}
         confirmDisabled={deliver && (!delivery || quote.isError)}
         stickyFooter
       >
@@ -282,6 +286,10 @@ export function AuctionOrderPayment({
           {balance && total !== undefined && (!deliver || !quote.isError) && (
             <div data-total><dt>Tổng thanh toán</dt><dd>{formatVnd(total)}</dd></div>
           )}
+          <div>
+            <dt>Số dư Ví khả dụng</dt>
+            <dd>{wallet.isPending ? 'Đang tải…' : wallet.data ? formatVnd(wallet.data.available) : '—'}</dd>
+          </div>
         </dl>
         <p className={styles.fieldHint}>{o.amounts.commissionBps === 0
           ? 'Đơn này miễn phí dịch vụ.'

@@ -57,12 +57,15 @@ export function AuctionCancel({ item, ...context }: Props) {
         return false;
       }}
       submitLabel="Hủy phiên"
+      confirmDanger
       confirmTitle="Hủy phiên đấu giá?"
       confirmBody={
         <>
           <p>
-            Phiên “{item.title}” sẽ kết thúc ngay, không có người thắng. Không
-            hoàn tác được.
+            <strong>{item.title}</strong> · {item.pointName} · {item.bidderCount} người đã trả giá
+          </p>
+          <p>
+            Phiên sẽ kết thúc ngay, không có người thắng. Toàn bộ tiền cọc và khoản giữ trên Ví của người tham gia sẽ được hoàn lại, sách trả về người bán tại điểm. Không hoàn tác được.
           </p>
           <blockquote className="prose">{trimmed}</blockquote>
         </>
@@ -189,13 +192,19 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
         return false;
       }}
       submitLabel={resume ? "Tiếp tục phiên" : "Hủy phiên"}
+      confirmDanger={!resume}
       confirmTitle={resume ? "Tiếp tục phiên đấu giá?" : "Hủy phiên đấu giá?"}
       confirmBody={
         <>
           <p>
+            <strong>{item.title}</strong> · {item.pointName} · {item.bidderCount} người đã trả giá
+          </p>
+          <p>
             {resume
-              ? `Phiên “${item.title}” tiếp tục với thời gian còn lại lúc tạm dừng. Người bán, người trả giá và người đăng ký được báo kèm lý do dưới đây.`
-              : `Phiên “${item.title}” sẽ kết thúc ngay, không có người thắng. Không hoàn tác được.`}
+              ? ended
+                ? "Phiên đã qua giờ kết thúc nên sẽ chốt ngay cho người dẫn giá hiện tại (hoặc kết thúc không có người mua nếu chưa có lượt giá). Người bán và người tham gia sẽ nhận thông báo kèm lý do dưới đây."
+                : `Phiên “${item.title}” tiếp tục với thời gian còn lại lúc tạm dừng. Người bán, người trả giá và người đăng ký được báo kèm lý do dưới đây.`
+              : `Phiên “${item.title}” sẽ kết thúc ngay, không có người thắng. Toàn bộ tiền cọc và khoản giữ trên Ví sẽ được hoàn lại, sách trả về người bán. Không hoàn tác được.`}
           </p>
           <blockquote className="prose">{trimmed}</blockquote>
         </>

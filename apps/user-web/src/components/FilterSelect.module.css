@@ -22,6 +22,9 @@
     box-shadow 170ms ease-out;
   transition-duration: 170ms !important;
 }
+.root :is(.control, .native):hover:not(:disabled) {
+  border-color: var(--filter-select-focus, var(--shop-wine)) !important;
+}
 .root :is(.control, .native):focus {
   outline: none;
   border-color: var(--filter-select-focus, var(--shop-wine)) !important;

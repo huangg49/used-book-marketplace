@@ -188,6 +188,7 @@ function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () =
   const intent = useIntentKey()
   const pending = useRef<{ version: number; key: string; note: string } | null>(null)
   const [note, setNote] = useState('')
+  const [confirmSend, setConfirmSend] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unknown, setUnknown] = useState(false)
@@ -233,9 +234,34 @@ function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () =
       />
       <span>Mô tả nguồn gốc, dấu riêng hoặc giấy tờ bạn có ({EVIDENCE_MIN_LENGTH}–2.000 ký tự). Chỉ gửi được một lần.</span>
       {error && <p className={styles.urgent} role="alert">{error}</p>}
-      <button type="button" disabled={busy} onClick={() => void send()}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          if (unknown) {
+            void send()
+            return
+          }
+          if (note.trim().length < EVIDENCE_MIN_LENGTH) {
+            setError(`Cần ít nhất ${EVIDENCE_MIN_LENGTH} ký tự để điểm đối chiếu.`)
+            return
+          }
+          setError(null)
+          setConfirmSend(true)
+        }}
+      >
         {unknown ? 'Thử lại gửi bằng chứng' : busy ? 'Đang gửi…' : 'Gửi bằng chứng'}
       </button>
+      <ConfirmDialog
+        isOpen={confirmSend}
+        onClose={() => !busy && setConfirmSend(false)}
+        title="Xác nhận gửi bằng chứng kiểm định?"
+        description="Bằng chứng bổ sung chỉ được gửi một lần duy nhất và không thể chỉnh sửa sau khi gửi. Điểm kiểm định sẽ đối chiếu nội dung này để quyết định duyệt phiên."
+        confirmText="Gửi bằng chứng"
+        isBusy={busy}
+        error={error}
+        onConfirm={() => void send().then(() => setConfirmSend(false))}
+      />
     </div>
   )
 }
@@ -258,6 +284,7 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
     try {
       await withdrawIntake(intake.id, attempt.version, attempt.key)
       intent.settle(); pending.current = null
+      setConfirming(false)
     } catch (caught) {
       stillUnknown = commandOutcomeUnknown(caught)
       if (!stillUnknown) { intent.settle(); pending.current = null }
@@ -265,7 +292,7 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
         ? caught.message || 'Chưa rút được sách khỏi đấu giá.'
         : 'Chưa rõ yêu cầu đã được ghi hay chưa. Hãy thử lại đúng thao tác này.')
     } finally {
-      setUnknown(stillUnknown); setBusy(false); setConfirming(false)
+      setUnknown(stillUnknown); setBusy(false)
       if (!stillUnknown) void onChanged()
     }
   }
@@ -314,13 +341,14 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
       <ConfirmDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title="Rút cuốn sách này khỏi đấu giá?"
+        title={`Rút “${intake.title}” khỏi đấu giá?`}
         description={intake.state === 'AwaitingDropoff'
-          ? 'Chỗ tại điểm được trả lại và bài đăng bán không còn ở trạng thái Đang giữ.'
-          : 'Sách đang ở điểm. Sau khi rút, bạn cần tới điểm để nhận lại sách.'}
-        confirmText="Rút sách"
+          ? `Chỗ tại ${pointName ?? 'điểm đã chọn'} được trả lại và bài đăng bán không còn ở trạng thái Đang giữ. Phiếu gửi này không thể khôi phục.`
+          : `Sách đang ở ${pointName ?? 'điểm đã chọn'}. Sau khi rút, phiếu gửi này không thể khôi phục và bạn cần tới ${pointName ?? 'điểm'} để nhận lại sách.`}
+        confirmText="Rút sách khỏi đấu giá"
         isDanger
         isBusy={busy}
+        error={error}
         onConfirm={() => void withdraw()}
       />
       {intake.state === 'Passed' && (

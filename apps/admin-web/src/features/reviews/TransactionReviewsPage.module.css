@@ -1,6 +1,6 @@
 .record {
   padding-block: 28px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--shop-line);
   max-width: 960px;
   overflow-wrap: anywhere;
 }
@@ -63,7 +63,7 @@
 }
 .revision {
   padding: 16px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--shop-line);
 }
 .record summary {
   min-height: 48px;

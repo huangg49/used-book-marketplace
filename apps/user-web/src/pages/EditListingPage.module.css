@@ -292,6 +292,11 @@
   font-weight: 700;
   padding: 0;
   white-space: nowrap;
+  transition: color 140ms ease, opacity 140ms ease;
+}
+.reloadBtn:hover {
+  color: #5c0202;
+  opacity: 0.88;
 }
 
 /* Form Structure */
@@ -1179,9 +1184,14 @@
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.primaryBtn:hover:not(:disabled) {
+  background: #7c1818;
 }
 
 .secondaryBtn {
+  background: transparent;
   color: #716157;
   border: 1px solid #ebd9c8;
   border-radius: 8px;
@@ -1189,6 +1199,13 @@
   font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.secondaryBtn:hover:not(:disabled) {
+  background: #f4eddf;
+  border-color: #5c0202;
+  color: #5c0202;
 }
 
 .blockedCard {

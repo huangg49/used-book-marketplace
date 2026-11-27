@@ -20,10 +20,13 @@
   min-height: 44px;
   max-width: 100%;
   padding: 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--shop-line);
   border-radius: 4px;
-  background: var(--surface);
-  color: var(--ink);
+  background-color: var(--surface);
+  color: var(--shop-ink);
+}
+.page select {
+  padding-right: 2.25rem;
 }
 .form textarea {
   width: 100%;
@@ -43,7 +46,7 @@
   align-items: start;
   gap: 24px;
   padding: 20px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--shop-line);
 }
 .row h2 {
   font-size: 1.1rem;
@@ -53,7 +56,7 @@
   margin: 8px 0;
 }
 .status {
-  border: 1px solid var(--line);
+  border: 1px solid var(--shop-line);
   padding: 6px 12px;
   border-radius: 4px;
   font-size: 0.875rem;
@@ -66,11 +69,11 @@
   margin-top: 24px;
 }
 .timeline article {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--shop-line);
   padding: 16px 0;
 }
 .timeline article[data-internal="true"] {
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--shop-line);
   padding: 16px;
 }
 .text {
@@ -95,7 +98,7 @@
 .review {
   padding-block: 24px;
   margin-top: 24px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--shop-line);
 }
 @media (max-width: 800px) {
   .columns {

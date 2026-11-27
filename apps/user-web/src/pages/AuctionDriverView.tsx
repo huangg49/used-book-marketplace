@@ -10,8 +10,9 @@ import { useSession } from '../hooks/useSession'
 import { commandError } from '../lib/auction-errors'
 import { ROUTES } from '../lib/routes'
 import {
-  demoDeliverPointOrder, demoStartPointDelivery, getPointDeliveryTracking, reportPointDelivery,
-  type PointDeliveryEvent, type PointDeliveryTracking,
+  demoDeliverPointOrder, demoStartPointDelivery, getMyParticipation, getMyPointOrder,
+  getPointDeliveryTracking, listMyAuctions, reportPointDelivery,
+  type PointDeliveryEvent, type PointDeliveryTracking, type PointOrder,
 } from '../services/auctions'
 import { DriverCompleteAction, DriverParcelCard, DriverParcelRoute, DriverWorkspace } from './DriverWorkspace'
 import styles from './DriverPage.module.css'
@@ -114,12 +115,34 @@ function AuctionDriverSession({
   code, ownerId, loadingSession, onSearch, demoMode,
 }: { code: string; ownerId?: string; loadingSession: boolean; onSearch: (code: string) => void; demoMode: boolean }) {
   const queryClient = useQueryClient()
+  const recentTracked = useQuery({
+    queryKey: ['auction-driver-recent', ownerId],
+    queryFn: async () => {
+      const page = await listMyAuctions('won')
+      const candidates = page.items.filter((item) => item.won).slice(0, 6)
+      const participations = await Promise.allSettled(candidates.map((item) => getMyParticipation(item.auction.id)))
+      const orderIds = participations
+        .filter((res): res is PromiseFulfilledResult<Awaited<ReturnType<typeof getMyParticipation>>> => res.status === 'fulfilled')
+        .map((res) => res.value.orderId)
+        .filter((id): id is string => Boolean(id))
+      const orders = await Promise.allSettled(orderIds.map((id) => getMyPointOrder(id)))
+      return orders
+        .filter((res): res is PromiseFulfilledResult<PointOrder> => res.status === 'fulfilled')
+        .map((res) => res.value)
+        .filter((item) => Boolean(item.delivery?.trackingCode) && ['InTransit', 'Inspection'].includes(item.state))
+    },
+    enabled: !!ownerId,
+    refetchInterval: 4_000,
+    retry: false,
+  })
+  const recentItems = recentTracked.data ?? []
+  const activeCode = code || recentItems[0]?.delivery?.trackingCode || ''
   const tracking = useQuery({
-    queryKey: ['point-order-delivery-tracking', ownerId, code],
-    queryFn: () => getPointDeliveryTracking(code),
-    enabled: !!ownerId && !!code,
+    queryKey: ['point-order-delivery-tracking', ownerId, activeCode],
+    queryFn: () => getPointDeliveryTracking(activeCode),
+    enabled: !!ownerId && !!activeCode,
     staleTime: 0,
-    refetchInterval: (query) => query.state.data?.status === 'InTransit' ? 10_000 : false,
+    refetchInterval: (query) => query.state.data?.status === 'InTransit' ? 4_000 : false,
   })
   const [chosen, setChosen] = useState<Outcome | null>(null)
   const [pending, setPending] = useState<PointDeliveryEvent | null>(null)
@@ -128,7 +151,7 @@ function AuctionDriverSession({
   const [message, setMessage] = useState<{ error: boolean; text: string } | null>(null)
   const busyRef = useRef(false)
   const shipment = tracking.isError ? undefined : tracking.data
-  const demoDriver = demoMode && shipment?.canDemoControl === true
+  const demoDriver = shipment?.canDemoControl === true && (demoMode || shipment.viewer === 'Buyer')
 
   async function runDemo(step: DemoStep) {
     if (busyRef.current || !demoDriver || !shipment?.version) return
@@ -145,6 +168,7 @@ function AuctionDriverSession({
         : 'Đã ghi nhận hãng giao thành công trong mô phỏng. Quay lại đơn để người mua xác nhận đã nhận sách.' })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['point-order', intent.orderId] }),
+        recentTracked.refetch(),
         tracking.refetch(),
       ])
     } catch (error) {
@@ -167,7 +191,7 @@ function AuctionDriverSession({
     let event = pending
     try {
       if (!event) {
-        const current = await getPointDeliveryTracking(code)
+        const current = await getPointDeliveryTracking(activeCode)
         if (!current.canReport) {
           await tracking.refetch()
           setMessage({ error: true, text: 'Vận đơn đã đổi trạng thái. Kiểm tra lại thông tin ở trên.' })
@@ -186,6 +210,7 @@ function AuctionDriverSession({
           : 'Đã ghi nhận giao không thành công. Đơn chuyển quản trị viên xử lý.',
       })
       void queryClient.invalidateQueries({ queryKey: ['point-order', event.orderId] })
+      void recentTracked.refetch()
       await tracking.refetch()
     } catch (error) {
       const unknown = !!event && commandOutcomeUnknown(error)
@@ -203,24 +228,63 @@ function AuctionDriverSession({
     <DriverWorkspace
       mode="auction"
       subtitle={demoDriver ? 'Mô phỏng bưu tá · Đấu giá' : shipment?.viewer === 'Operator' ? 'Điều phối bưu tá · Đấu giá' : 'Theo dõi vận đơn · Đấu giá'}
-      trackingCode={code}
+      trackingCode={activeCode}
       searchLocked={busy || !!pending || !!demoPending}
-      refresh={ownerId && code ? { loading: tracking.isFetching, disabled: busy, run: () => void tracking.refetch() } : undefined}
+      refresh={ownerId ? {
+        loading: tracking.isFetching || recentTracked.isFetching,
+        disabled: busy,
+        run: () => {
+          void recentTracked.refetch()
+          if (activeCode) void tracking.refetch()
+        },
+      } : undefined}
       onSearch={(value) => {
-          if (value.toUpperCase() === code) { if (ownerId && code) void tracking.refetch() }
-          else onSearch(value)
+          if (value.toUpperCase() === activeCode) {
+            void recentTracked.refetch()
+            if (ownerId && activeCode) void tracking.refetch()
+          } else {
+            onSearch(value)
+          }
       }}
     >
+        {ownerId && recentItems.length > 0 && (
+          <div className={styles.chipsSection}>
+            <p className={styles.chipsLabel}>Chọn nhanh đơn đấu giá đang giao</p>
+            <div className={styles.chipsRow}>
+              {recentItems.map((item) => {
+                const itemCode = item.delivery?.trackingCode ?? ''
+                if (!itemCode) return null
+                const isActive = itemCode === activeCode
+                const statusLabel = item.delivery?.deliveredAt || item.state === 'Inspection'
+                  ? '✓ Đã giao'
+                  : item.delivery?.demoOutForDeliveryAt
+                    ? '🛵 Đang giao'
+                    : '📦 Chờ đi giao'
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`${styles.chip} ${isActive ? styles.chipActive : ''}`}
+                    onClick={() => onSearch(itemCode)}
+                  >
+                    <span className={styles.chipCode}>{itemCode}</span>
+                    <span className={styles.chipStatus}>{statusLabel}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
         {!ownerId && !loadingSession ? (
           <section className={styles.auctionShipment}>
             <h2>Đăng nhập để xem vận đơn</h2>
             <p>Vận đơn đấu giá chỉ hiển thị cho người nhận hoặc người vận hành mô phỏng được cấp quyền.</p>
-            <Link className={styles.auctionAction} to={`${ROUTES.login}?returnUrl=${encodeURIComponent(code ? ROUTES.driver(code, demoMode) : '/driver?kind=auction')}`}>Đăng nhập</Link>
+            <Link className={styles.auctionAction} to={`${ROUTES.login}?returnUrl=${encodeURIComponent(activeCode ? ROUTES.driver(activeCode, demoMode) : '/driver?kind=auction&demo=1')}`}>Đăng nhập</Link>
           </section>
-        ) : !code ? (
+        ) : !activeCode ? (
           <div className={styles.emptyBox}>
-            <p className={styles.emptyTitle}>Tra cứu vận đơn đấu giá</p>
-            <p className={styles.emptyDesc}>Nhập mã vận đơn đấu giá (dạng LL-...) vào ô tìm kiếm phía trên hoặc mở trực tiếp từ trang đơn thắng đấu giá.</p>
+            <p className={styles.emptyTitle}>Chưa có đơn đấu giá nào đang giao</p>
+            <p className={styles.emptyDesc}>Khi đơn thắng đấu giá chọn giao tận nơi đã bàn giao hãng, vận đơn sẽ tự hiện tại đây hoặc bạn có thể nhập mã (dạng LL-...) vào ô phía trên.</p>
           </div>
         ) : tracking.isError ? (
           <section className={styles.auctionShipment} role="alert">
@@ -228,7 +292,7 @@ function AuctionDriverSession({
               ? 'Không tìm thấy vận đơn trong tài khoản này' : 'Chưa tải được vận đơn'}</h2>
             <p>Kiểm tra mã vận đơn, tài khoản đăng nhập hoặc thử làm mới.</p>
             {tracking.error instanceof ApiError && tracking.error.status === 404 &&
-              <Link className={styles.auctionBack} to={`${ROUTES.driver(code)}&kind=exchange`}>Tra cứu mã của phiếu trao đổi</Link>}
+              <Link className={styles.auctionBack} to={`${ROUTES.driver(activeCode)}&kind=exchange`}>Tra cứu mã của phiếu trao đổi</Link>}
           </section>
         ) : !shipment ? (
           <p className={styles.loadingBox} role="status">Đang tra cứu vận đơn…</p>

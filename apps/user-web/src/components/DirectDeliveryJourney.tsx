@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useDirectDeliveryAction } from "../hooks/useDirectDeliveryAction";
+import { formatVnd } from "../lib/routes";
 import { type DirectDeliveryAction, type DirectOrder } from "../services/orders";
 import styles from "./DirectDeliveryJourney.module.css";
 
@@ -50,6 +51,7 @@ export function DirectDeliveryJourney({ order, onChanged }: { order: DirectOrder
   const command = useDirectDeliveryAction(order, onChanged);
   const [issue, setIssue] = useState<IssueAction>();
   const [description, setDescription] = useState("");
+  const [ackConfirm, setAckConfirm] = useState(false);
   const [skip, setSkip] = useState(false);
   if (!tracking) return null;
   const inspection = order.state === "Inspection";
@@ -105,9 +107,13 @@ export function DirectDeliveryJourney({ order, onChanged }: { order: DirectOrder
                   type="button"
                   className={styles.primary}
                   disabled={command.busy}
-                  onClick={() => void command.run("Acknowledge")}
+                  onClick={() =>
+                    command.pending === "Acknowledge"
+                      ? void command.run("Acknowledge")
+                      : setAckConfirm(true)
+                  }
                 >
-                  {command.pending ? "Thử lại xác nhận" : "Tôi đã nhận được sách"}
+                  {command.pending === "Acknowledge" ? "Thử lại xác nhận" : "Tôi đã nhận được sách"}
                 </button>
               )}
               {issueActions.length > 0 && (
@@ -153,27 +159,41 @@ export function DirectDeliveryJourney({ order, onChanged }: { order: DirectOrder
           </Link>}
         </>
       )}
-      {command.error && !issue && !skip && <p role="alert" className={styles.error}>{command.error}</p>}
+      {command.error && !issue && !skip && !ackConfirm && <p role="alert" className={styles.error}>{command.error}</p>}
+      <ConfirmDialog
+        isOpen={ackConfirm}
+        onClose={() => !command.busy && setAckConfirm(false)}
+        title="Xác nhận đã nhận được sách?"
+        description={`Xác nhận ghi nhận bạn đã nhận kiện sách. Bạn có 72 giờ để kiểm tra tình trạng sách và báo sự cố trước khi số tiền ${formatVnd(order.amounts.buyerTotal)} được giải ngân cho người bán.`}
+        confirmText={command.pending === "Acknowledge" ? "Thử lại xác nhận" : "Xác nhận đã nhận sách"}
+        isBusy={command.busy}
+        error={command.error}
+        onConfirm={async () => {
+          if (await command.run("Acknowledge")) setAckConfirm(false);
+        }}
+      />
       <ConfirmDialog isOpen={!!issue} onClose={() => !command.busy && setIssue(undefined)}
         title={issue ? issueLabels[issue] : "Báo sự cố"} description="Tiền được giữ trong lúc hồ sơ được xem xét. Bạn có thể bổ sung ảnh hoặc video sau khi gửi báo cáo."
         confirmText={command.pending === issue ? "Thử lại gửi báo cáo" : "Gửi báo cáo"}
         isBusy={command.busy} confirmDisabled={!command.pending && description.trim().length < 10}
+        error={command.error}
         onConfirm={async () => {
           if (issue && await command.run(issue, description.trim())) setIssue(undefined);
         }}>
-        <label className={styles.field}>Mô tả sự cố
+        <label className={styles.field}>Mô tả sự cố (tối thiểu 10 ký tự — hiện có {description.trim().length}/10)
           <textarea value={description} onChange={(event) => setDescription(event.target.value)}
             disabled={!!command.pending} maxLength={1000} rows={4}
-            placeholder="Mô tả điều đã xảy ra để người phụ trách kiểm tra…" />
+            placeholder="Mô tả chi tiết tình trạng sách hoặc sự cố giao nhận (tối thiểu 10 ký tự)…" />
         </label>
-        {command.error && <p role="alert" className={styles.error}>{command.error}</p>}
       </ConfirmDialog>
       <ConfirmDialog isOpen={skip} onClose={() => !command.busy && setSkip(false)}
-        title="Tua qua thời gian kiểm tra?" description="Đơn demo sẽ hoàn tất và tiền đang giữ sẽ được giải ngân vào ví người bán."
-        confirmText={command.pending ? "Thử lại giải ngân" : "Hoàn tất đơn demo"} isBusy={command.busy}
-        onConfirm={async () => { if (await command.run("SkipInspection")) setSkip(false); }}>
-        {command.error && <p role="alert" className={styles.error}>{command.error}</p>}
-      </ConfirmDialog>
+        title="Tua qua thời gian kiểm tra?"
+        description={`Đơn demo sẽ hoàn tất ngay và số tiền đang giữ (${formatVnd(order.amounts.buyerTotal)}) sẽ được giải ngân vào ví người bán.`}
+        confirmText={command.pending ? "Thử lại giải ngân" : "Hoàn tất đơn demo"}
+        isBusy={command.busy}
+        error={command.error}
+        onConfirm={async () => { if (await command.run("SkipInspection")) setSkip(false); }}
+      />
     </section>
   );
 }

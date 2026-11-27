@@ -872,7 +872,11 @@ export function ActionCard(props: Props) {
                       : action === "reject" &&
                           detail.status === "WAITING_YOU_SEND"
                         ? "Bạn có chắc muốn từ chối yêu cầu hủy của đối tác để tiếp tục giao dịch? Hãy nhập lý do để đối tác yên tâm chuẩn bị và gửi sách đúng hạn."
-                        : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
+                        : action === "cancel"
+                          ? "Đề nghị trao đổi này sẽ đóng vĩnh viễn và không thể khôi phục. Chưa có khoản cọc nào bị trừ và các cuốn sách vẫn mở trên kệ."
+                          : action === "reject"
+                            ? "Đề nghị trao đổi từ đối tác sẽ đóng vĩnh viễn và không thể khôi phục. Không có khoản tiền nào bị trừ; sách của bạn vẫn mở trên kệ."
+                            : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
           </p>
         )}
         {action === "dispute" ? (

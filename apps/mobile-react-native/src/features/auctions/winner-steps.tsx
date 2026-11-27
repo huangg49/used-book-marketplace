@@ -3,7 +3,7 @@ import { auctionCheckoutBalance, auctionOrderHoldText, buyerSaleFeeText } from "
 import { router } from "expo-router";
 import { ReviewEntry } from "../reviews/review-entry";
 import { useEffect, useState } from "react";
-import { ScrollView, TouchableOpacity, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -679,6 +679,7 @@ export function WinnerSteps({
 
           {o.state === "Inspection" && (
             <DemoSkipButton
+              intentKey={`${o.id}:${o.version}`}
               label="Hoàn tất kiểm tra ngay · Demo"
               note="Kết thúc thời hạn kiểm tra và giải ngân theo biên bản, như khi hết 72 giờ."
               run={(key) => advanceDemoPointOrder(client, o.id, o.version, key)}
@@ -884,17 +885,16 @@ function Payment({
         {/* 2 Card lựa chọn phương thức song song */}
         <View style={{ flexDirection: "row", gap: space.sm }}>
           {/* Option A: Tự nhận tại điểm */}
-          <TouchableOpacity
+          <Pressable
             accessibilityRole="radio"
             accessibilityState={{ checked: !deliver, disabled: locked }}
-            activeOpacity={0.8}
             disabled={locked}
             onPress={() => {
               setDeliver(false);
               setAddingNew(false);
               setAddressError(null);
             }}
-            style={{
+            style={({ pressed }) => ({
               flex: 1,
               minHeight: 88,
               padding: space.md,
@@ -905,7 +905,8 @@ function Payment({
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-            }}
+              opacity: locked ? 0.55 : pressed ? 0.82 : 1,
+            })}
           >
             <Icon
               name="pin"
@@ -926,16 +927,15 @@ function Payment({
             >
               Miễn phí · Tại quầy
             </AppText>
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Option B: Giao tận nơi */}
-          <TouchableOpacity
+          <Pressable
             accessibilityRole="radio"
             accessibilityState={{ checked: deliver, disabled: locked }}
-            activeOpacity={0.8}
             disabled={locked}
             onPress={() => setDeliver(true)}
-            style={{
+            style={({ pressed }) => ({
               flex: 1,
               minHeight: 88,
               padding: space.md,
@@ -946,7 +946,8 @@ function Payment({
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-            }}
+              opacity: locked ? 0.55 : pressed ? 0.82 : 1,
+            })}
           >
             <Icon
               name="truck"
@@ -971,7 +972,7 @@ function Payment({
                   ? "Miễn phí"
                   : "Lật Lại Express"}
             </AppText>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Nội dung chi tiết theo phương thức */}
@@ -1037,12 +1038,13 @@ function Payment({
                 {items.map((a) => {
                   const isSelected = a.id === chosen;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={a.id}
-                      activeOpacity={0.7}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: isSelected, disabled: locked }}
                       disabled={locked}
                       onPress={() => setAddressId(a.id)}
-                      style={{
+                      style={({ pressed }) => ({
                         flexDirection: "row",
                         alignItems: "flex-start",
                         padding: space.sm + 2,
@@ -1051,7 +1053,8 @@ function Payment({
                         borderColor: isSelected ? stitchTokens.wine : colors.rule,
                         backgroundColor: isSelected ? stitchTokens.wineAlpha05 : colors.paper,
                         gap: space.sm,
-                      }}
+                        opacity: locked ? 0.55 : pressed ? 0.78 : 1,
+                      })}
                     >
                       <View
                         style={{
@@ -1119,22 +1122,22 @@ function Payment({
                             : ""}
                         </AppText>
                       </View>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
             ) : null}
 
             {/* Nút mở Sheet thêm địa chỉ mới */}
-            <TouchableOpacity
+            <Pressable
               accessibilityRole="button"
-              activeOpacity={0.75}
+              accessibilityState={{ disabled: locked }}
               disabled={locked}
               onPress={() => {
                 setAddressError(null);
                 setAddingNew(true);
               }}
-              style={{
+              style={({ pressed }) => ({
                 minHeight: 46,
                 flexDirection: "row",
                 alignItems: "center",
@@ -1148,13 +1151,14 @@ function Payment({
                 backgroundColor: stitchTokens.roseWarmSurface,
                 gap: 6,
                 marginTop: 2,
-              }}
+                opacity: locked ? 0.55 : pressed ? 0.78 : 1,
+              })}
             >
               <Icon name="plus" size={15} color={stitchTokens.wine} />
               <AppText kind="bold" color={stitchTokens.wine} style={{ fontSize: 13 }}>
                 Thêm địa chỉ giao nhận mới
               </AppText>
-            </TouchableOpacity>
+            </Pressable>
 
             <Sheet
               title="Thêm địa chỉ nhận sách"
@@ -1200,11 +1204,8 @@ function Payment({
                 />
 
                 <View style={{ gap: space.xs }}>
-                  <AppText kind="label" color={stitchTokens.brownMuted}>
-                    Chọn Tỉnh/Thành phố nhận sách ({areas.data?.localities.length ?? 63} tỉnh/thành)
-                  </AppText>
                   <TextField
-                    label=""
+                    label={`Tỉnh / Thành phố nhận sách (${areas.data?.localities.length ?? 63} tỉnh/thành)`}
                     value={localitySearch}
                     onChangeText={setLocalitySearch}
                     placeholder="Tìm nhanh tỉnh/thành (VD: Hà Nội, Huế, Cà Mau...)"
@@ -1798,7 +1799,17 @@ function DeliveryPanel({
         {d && (
           <AppText kind="small" color={colors.muted}>
             {d.detail}
-            {d.localityCode ? ` · ${d.localityCode}` : ""}
+            {d.localityCode
+              ? ` · ${
+                  d.localityCode === "DEMO-A" || /^Q\d+$/i.test(d.localityCode)
+                    ? "TP.HCM"
+                    : d.localityCode === "DEMO-B"
+                      ? "Bình Dương"
+                      : d.localityCode === "DEMO-C"
+                        ? "Vũng Tàu"
+                        : d.localityCode
+                }`
+              : ""}
           </AppText>
         )}
         {d?.trackingCode ? (
@@ -1818,14 +1829,14 @@ function DeliveryPanel({
               color={colors.muted}
               style={{ fontSize: 11, marginTop: 2 }}
             >
-              Hãng vận chuyển: Lật Lại Express (Mô phỏng)
+              Đơn vị vận chuyển: Giao Hàng Nhanh / Lật Lại Express
             </AppText>
             <View style={{ marginTop: space.sm }}>
               <Button
                 wine
                 secondary
                 title={
-                  demoEnabled && driverSimulatorEnabled() && order.state === "InTransit"
+                  !demoEnabled && driverSimulatorEnabled() && order.state === "InTransit"
                     ? "Mở Driver Simulator · Demo"
                     : "Theo dõi vận đơn"
                 }

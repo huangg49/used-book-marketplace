@@ -139,7 +139,11 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
         </View>
 
       <BundleManifest bundle={item.bundle}/>
-      {item.bundle ? <AppText>Đầu sách đại diện để phân loại: {book.title}. Danh sách trên xác định các cuốn được giao.</AppText> : null}
+      {item.bundle ? (
+        <AppText kind="small" color={stitchTokens.deepCocoa} style={{ lineHeight: 18 }}>
+          Đầu sách đại diện để phân loại: {book.title}. Danh sách trên xác định các cuốn được giao.
+        </AppText>
+      ) : null}
       {/* Status Line */}
         <View style={styles.statusRow}>
           <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
@@ -151,7 +155,7 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
 
           <View style={styles.verifiedTag}>
             <Icon name="check" size={12} color={stitchTokens.wineDark} />
-            <AppText style={styles.publishedHint}>Đã kiểm duyệt catalog</AppText>
+            <AppText style={styles.publishedHint}>Đã duyệt thư mục sách</AppText>
           </View>
         </View>
 
@@ -174,7 +178,7 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
             <View style={styles.exchangePrefHeader}>
               <Icon name="sync" size={14} color={stitchTokens.wineDark} />
               <AppText style={styles.exchangePrefTitle}>
-                🎯 Tiêu chí đổi sách của chủ sở hữu
+                Tiêu chí đổi sách của chủ sở hữu
               </AppText>
             </View>
             <View style={styles.exchangePrefBody}>
@@ -223,8 +227,9 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
               >
                 <Icon name="search" size={11} color={stitchTokens.wineDark} />
                 <AppText style={styles.searchPrefBtnText}>
-                  Tìm sách khớp mong muốn trên sàn →
+                  Tìm sách khớp mong muốn trên sàn
                 </AppText>
+                <Icon name="chevronRight" size={12} color={stitchTokens.wineDark} />
               </Pressable>
             </View>
           </View>

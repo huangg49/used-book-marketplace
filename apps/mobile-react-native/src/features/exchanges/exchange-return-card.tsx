@@ -152,6 +152,7 @@ export function ExchangeReturnAndDemoCard({
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<ExchangeReturnAction | null>(null);
   const [confirmAckOpen, setConfirmAckOpen] = useState(false);
+  const [confirmDemoOpen, setConfirmDemoOpen] = useState(false);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -273,7 +274,7 @@ export function ExchangeReturnAndDemoCard({
     }
   };
 
-  const runDemoAdvance = async () => {
+  const runDemoAdvance = async (): Promise<boolean> => {
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -306,8 +307,10 @@ export function ExchangeReturnAndDemoCard({
       });
       await queryClient.invalidateQueries({ queryKey: ["wallet"] });
       await onReload();
+      return true;
     } catch (caught) {
       setError(presentError(caught).message);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -729,13 +732,49 @@ export function ExchangeReturnAndDemoCard({
                 : "Qua hạn gửi sách · Demo"
             }
             busy={busy}
-            onPress={() => void runDemoAdvance()}
+            onPress={() => {
+              setError(null);
+              setConfirmDemoOpen(true);
+            }}
           />
         </View>
       ) : null}
 
       {notice ? <Notice tone="success">{notice}</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
+
+      {showDemo && hasDemoAdvance ? (
+        <ConfirmDialog
+          visible={confirmDemoOpen}
+          title={
+            exchange.demoDeadline
+              ? `Tua qua ${demoExchangeDeadlineLabel[exchange.demoDeadline]}?`
+              : "Tua qua hạn gửi sách?"
+          }
+          message={
+            exchange.demoDeadline === "Inspection"
+              ? "Demo sẽ tua qua hạn kiểm tra 72 giờ của cả hai bên, hoàn tất phiếu, hoàn cọc và chuyển tiền bù (nếu có) về Ví ngay."
+              : exchange.demoDeadline === "Proposal"
+                ? "Cảnh báo: Phiếu sẽ hết hạn phản hồi và tự hủy ngay."
+                : exchange.demoDeadline === "Funding"
+                  ? "Cảnh báo: Phiếu sẽ hết hạn đặt cọc, tự hủy và hoàn tiền cho bên đã nộp."
+                  : "Thao tác mô phỏng sẽ đóng mốc thời hạn hiện tại ngay lập tức."
+          }
+          confirmLabel="Xác nhận tua hạn"
+          destructive={
+            exchange.demoDeadline === "Proposal" ||
+            exchange.demoDeadline === "Funding"
+          }
+          busy={busy}
+          error={error ?? undefined}
+          onCancel={() => !busy && setConfirmDemoOpen(false)}
+          onConfirm={() => {
+            void runDemoAdvance().then((ok) => {
+              if (ok) setConfirmDemoOpen(false);
+            });
+          }}
+        />
+      ) : null}
 
       {showResolution ? (
         <ConfirmDialog

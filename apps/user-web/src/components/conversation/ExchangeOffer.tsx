@@ -771,7 +771,7 @@ export function ExchangeOffer({
               ) : addresses.data?.items.length ? (
                 <FilterSelect
                   id={`exchange-address-${room.id}`}
-                  label=""
+                  label="Địa chỉ nhận sách"
                   value={addressId}
                   options={addresses.data.items.map((a) => ({
                     value: a.id,

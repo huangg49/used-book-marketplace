@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Pressable, StatusBar, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StatusBar, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "./icon";
 import { AppText } from "./text";
@@ -36,6 +36,7 @@ export function WineHeader({
     <>
       <StatusBar barStyle="light-content" />
       <View
+        {...(Platform.OS === "web" ? { dataSet: { focusInverse: "true" } } : {})}
         style={[
           styles.header,
           { paddingTop: Math.max(insets.top, 10) + 6 },

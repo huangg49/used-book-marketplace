@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { ActionPanel } from "./action-panel";
 import { reclaimLabels, type Intake } from "./contracts";
 import type { ActionContext } from "./queue-panel";
@@ -36,9 +37,13 @@ export function IntakeReceive({ item, ...context }: Props) {
   const submit = useRef<(() => void) | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [recent] = useState(recentShelves);
+  const [panelBusy, setPanelBusy] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const code = shelf.trim();
   const requestClose = () => {
-    if (shelf && !window.confirm("Mã kệ đang nhập sẽ bị bỏ. Đóng phiếu nhận sách?")) {
+    if (panelBusy) return;
+    if (shelf) {
+      setConfirmDiscard(true);
       return;
     }
     dialog.current?.close();
@@ -68,12 +73,35 @@ export function IntakeReceive({ item, ...context }: Props) {
           <p>Tiếp nhận sách đấu giá · #{item.id.slice(0, 8)}</p>
           <h2 id={`intake-receive-title-${item.id}`}>Nhận “{item.title}”</h2>
         </div>
-        <button className={styles.receiveDialogClose} type="button" onClick={requestClose}>
+        <button
+          className={styles.receiveDialogClose}
+          type="button"
+          disabled={panelBusy}
+          onClick={requestClose}
+        >
           Đóng
         </button>
       </header>
+      <ConfirmDialog
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        title="Đóng phiếu nhận sách?"
+        description="Mã kệ đang nhập sẽ bị bỏ nếu bạn đóng phiếu lúc này."
+        confirmLabel="Đóng và bỏ mã kệ"
+        cancelLabel="Tiếp tục nhập"
+        danger
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          dialog.current?.close();
+          context.onClose?.();
+        }}
+      />
       <ActionPanel
       {...context}
+      onPending={(pending) => {
+        setPanelBusy(pending);
+        context.onPending(pending);
+      }}
       label="Nhận sách đấu giá"
       title="Nhận sách tại quầy."
       intro="Chỉ bấm nhận khi người bán đã giao tận tay cuốn sách. Ghi đúng mã kệ; sau khi nhận, bảng kiểm tra mở ngay bên dưới."

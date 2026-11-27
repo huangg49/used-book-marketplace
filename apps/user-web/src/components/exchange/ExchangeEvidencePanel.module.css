@@ -27,6 +27,10 @@
   cursor: pointer;
   color: inherit;
   font: inherit;
+  transition: color 140ms ease;
+}
+.collapseHeaderBtn:hover {
+  color: var(--shop-wine, #5c0202);
 }
 
 .panelCard:not([data-collapsed="true"]) .collapseHeaderBtn {
@@ -408,6 +412,11 @@
   border-radius: 4px;
   cursor: pointer;
   text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.viewFileBtn:hover {
+  background: var(--shop-shelf, #f4eddf);
+  border-color: var(--shop-wine, #5c0202);
 }
 
 .retryBtn {
@@ -420,6 +429,11 @@
   cursor: pointer;
   font-size: 0.75rem;
   margin-left: 6px;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.retryBtn:hover:not(:disabled) {
+  background: var(--shop-wine, #5c0202);
+  color: #ffffff;
 }
 
 .panelCard[data-compact] {

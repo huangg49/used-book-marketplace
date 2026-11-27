@@ -43,7 +43,11 @@
 .note strong { color: var(--shop-ink); }
 .warning { margin: 0; padding: 10px 12px; border-left: 3px solid var(--shop-wine); border-radius: 6px; background: var(--shop-shelf, #f4eddf); font-size: .875rem; line-height: 1.5; }
 .error { margin: 0; font-size: .875rem; font-weight: 700; color: var(--shop-error); }
+.actions { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
+.cancel { min-height: 52px; padding: 0 18px; border: 1px solid var(--shop-control); border-radius: 10px; background: var(--shop-paper); color: var(--shop-wine); font: inherit; font-weight: 600; cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease; }
+.cancel:hover:not(:disabled) { background: var(--shop-shelf, #f4eddf); border-color: var(--shop-wine); }
+.cancel:disabled { opacity: .6; cursor: not-allowed; }
 .confirm { min-height: 52px; border: 0; border-radius: 10px; background: var(--shop-wine); color: var(--shop-cream); font: inherit; font-weight: 700; font-size: 1rem; letter-spacing: .01em; cursor: pointer; }
 .confirm:not(:disabled):hover { background: #7c2320; }
 .confirm:disabled { opacity: .6; cursor: not-allowed; }
-@media (max-width: 420px) { .heading strong { font-size: 1.15rem; } }
+@media (max-width: 420px) { .heading strong { font-size: 1.15rem; } .actions { grid-template-columns: 1fr; } }

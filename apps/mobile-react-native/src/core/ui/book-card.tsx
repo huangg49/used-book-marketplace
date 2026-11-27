@@ -10,8 +10,9 @@ import {
 import { AppText } from "./text";
 import { Icon } from "./icon";
 import { Button } from "./actions";
+import { AppModal } from "./modal";
 import { formatVnd } from "./format";
-import { colors, space, stitchTokens } from "./theme";
+import { colors, colorRoles, space, stitchTokens } from "./theme";
 
 export interface BookCardItem {
   bundle?: {title: string; items: unknown[]} | null;
@@ -170,6 +171,7 @@ export function BookCard({
   const priceValue = item.salePrice || item.exchangeValue;
 
   return (
+    <>
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Xem sách: ${bookTitle}. Giá: ${formatVnd(priceValue || 0)}`}
@@ -243,7 +245,7 @@ export function BookCard({
           </View>
         ) : null}
 
-        {/* Top-Right 3-Dots Button & Quick Delete Popover for Management */}
+        {/* Top-Right 3-Dots Button & Quick Delete Modal for Management */}
         {variant === "management" && onDelete ? (
           <View style={styles.menuContainer}>
             <Pressable
@@ -251,41 +253,22 @@ export function BookCard({
               accessibilityLabel="Tùy chọn bản nháp"
               onPress={(e) => {
                 e.stopPropagation();
-                setMenuVisible((prev) => !prev);
+                setMenuVisible(true);
               }}
               hitSlop={6}
-              style={[styles.moreButton, menuVisible && styles.moreButtonActive]}
+              style={({ pressed }) => [
+                styles.moreButton,
+                menuVisible && styles.moreButtonActive,
+                pressed && styles.moreButtonPressed,
+              ]}
             >
               <Icon
                 name="dotsVertical"
                 size={16}
-                color={menuVisible ? stitchTokens.wineDark : "#5C0202"}
+                color={menuVisible ? stitchTokens.wineDark : stitchTokens.wine}
                 strokeWidth={2.8}
               />
             </Pressable>
-
-            {menuVisible ? (
-              <View style={styles.menuPopover}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Xóa bài đăng"
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setMenuVisible(false);
-                    onDelete();
-                  }}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    pressed && styles.menuItemPressed,
-                  ]}
-                >
-                  <Icon name="trash" size={14} color="#B71C1C" />
-                  <AppText kind="small" style={styles.menuItemText}>
-                    Xóa
-                  </AppText>
-                </Pressable>
-              </View>
-            ) : null}
           </View>
         ) : null}
 
@@ -389,6 +372,60 @@ export function BookCard({
         </View>
       </View>
     </Pressable>
+
+    {variant === "management" && onDelete ? (
+      <AppModal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <View style={styles.menuModalOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng tùy chọn"
+            style={StyleSheet.absoluteFill}
+            onPress={() => setMenuVisible(false)}
+          />
+          <View style={styles.menuModalCard}>
+            <AppText kind="bold" style={styles.menuModalTitle} numberOfLines={2}>
+              {bookTitle}
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Xóa bài đăng"
+              onPress={() => {
+                setMenuVisible(false);
+                onDelete();
+              }}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
+            >
+              <Icon name="trash" size={16} color={stitchTokens.darkRed} />
+              <AppText kind="bold" style={styles.menuItemText}>
+                Xóa bài đăng
+              </AppText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đóng"
+              onPress={() => setMenuVisible(false)}
+              style={({ pressed }) => [
+                styles.menuCancelItem,
+                pressed && styles.menuCancelPressed,
+              ]}
+            >
+              <AppText kind="body" style={styles.menuCancelText}>
+                Hủy
+              </AppText>
+            </Pressable>
+          </View>
+        </View>
+      </AppModal>
+    ) : null}
+    </>
   );
 }
 
@@ -514,39 +551,72 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.roseWarmSurface,
     borderColor: stitchTokens.wine,
   },
-  menuPopover: {
-    position: "absolute",
-    top: 30,
-    right: 0,
-    backgroundColor: stitchTokens.white,
-    borderRadius: 8,
+  moreButtonPressed: {
+    opacity: 0.72,
+    backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  menuModalOverlay: {
+    flex: 1,
+    backgroundColor: colorRoles.scrim,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  menuModalCard: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: stitchTokens.warmIvory,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
-    minWidth: 84,
-    paddingVertical: 3,
-    paddingHorizontal: 4,
+    padding: 16,
+    gap: 8,
     shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 8,
-    zIndex: 40,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  menuModalTitle: {
+    fontSize: 14,
+    color: stitchTokens.darkWood,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.paperBorder,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    gap: 10,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
   },
   menuItemPressed: {
     backgroundColor: stitchTokens.flashRedBg,
   },
   menuItemText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     color: stitchTokens.darkRed,
+  },
+  menuCancelItem: {
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchTokens.paperBorder,
+    backgroundColor: stitchTokens.parchment,
+  },
+  menuCancelPressed: {
+    opacity: 0.75,
+  },
+  menuCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: stitchTokens.deepCocoa,
   },
   mediaCountBadge: {
     position: "absolute",

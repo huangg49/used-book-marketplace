@@ -103,7 +103,7 @@ export function ScopeFilter({ value, onChange }: {
         aria-controls={open ? `${id}-list` : undefined}
         aria-activedescendant={open ? `${id}-${choices[active].value}` : undefined}
         onClick={() => open ? setOpen(false) : show()} onKeyDown={keyDown}
-        onBlur={event => { if (!root.current?.contains(event.relatedTarget)) setOpen(false); }}>
+        onBlur={event => { if (event.relatedTarget && !root.current?.contains(event.relatedTarget)) setOpen(false); }}>
         <span>{choices[selected].label}</span>
         <ChevronDown size={15} strokeWidth={1.5} aria-hidden="true" />
       </button>

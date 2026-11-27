@@ -188,7 +188,7 @@ export function CategoryNavigation({ onNavigate }: { onNavigate: () => void }) {
       className={styles.root}
       ref={root}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget))
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget))
           setOpenPath(null);
       }}
       onKeyDown={(event) => {

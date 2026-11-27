@@ -36,6 +36,7 @@ export function OrderResponse({
       await sendOrderResponse(session, order.id, action, order.version, () =>
         crypto.randomUUID(),
       );
+      setConfirming(null);
     } catch (e) {
       setError(
         e instanceof Error
@@ -44,7 +45,6 @@ export function OrderResponse({
       );
     } finally {
       setBusy(false);
-      setConfirming(null);
       void onChanged();
       void cache.invalidateQueries({ queryKey: ["work-inbox"] });
     }
@@ -105,16 +105,27 @@ export function OrderResponse({
       )}
       <ConfirmDialog
         isOpen={!!confirming}
-        onClose={() => !busy && setConfirming(null)}
+        onClose={() => {
+          if (busy) return;
+          setConfirming(null);
+          setError("");
+        }}
         title={
           confirming === "accept"
             ? "Xác nhận nhận chuẩn bị sách?"
             : "Từ chối đơn đã thanh toán?"
         }
-        description="Trạng thái và phiên bản sẽ được kiểm tra lại trước khi ghi quyết định."
-        confirmText="Ghi quyết định"
+        description={
+          confirming === "accept"
+            ? "Khi xác nhận, bạn cam kết đóng gói và gửi sách đúng hạn (trong 48 giờ). Sau khi nhận đơn, bạn không thể tự ý hủy."
+            : "Đơn hàng sẽ đóng vĩnh viễn và toàn bộ tiền người mua đã thanh toán sẽ được hoàn về Ví của họ. Thao tác này không thể hoàn tác."
+        }
+        confirmText={
+          confirming === "accept" ? "Xác nhận bán" : "Từ chối và hoàn tiền"
+        }
         isBusy={busy}
         isDanger={confirming === "reject"}
+        error={error || null}
         onConfirm={() => confirming && void act(confirming)}
       />
     </section>

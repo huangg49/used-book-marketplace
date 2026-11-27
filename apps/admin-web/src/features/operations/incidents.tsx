@@ -501,9 +501,14 @@ function IncidentDecide({
         return !issue;
       }}
       submitLabel="Ghi quyết định"
+      confirmDanger={decision === "Compensate"}
       confirmTitle="Ghi quyết định sự cố?"
       confirmBody={
         <>
+          <p>
+            <strong>{item.title}</strong> · {item.pointName}
+            {cap ? ` · Trần bảo vệ ${money(cap)}` : ""}
+          </p>
           <p>
             {decision === "Compensate"
               ? `Duyệt bồi thường ${money(value)} từ quỹ mô phỏng. Nếu quỹ không đủ, phần thiếu được ghi nhận và điểm tạm dừng nhận booking mới. Khoản này chưa được chi vào ví thành viên.`

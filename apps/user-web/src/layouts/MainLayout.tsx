@@ -60,6 +60,7 @@ export default function MainLayout() {
       </main>
       {!isChat && (
         <footer
+          data-focus-inverse
           className={`${styles.footer} ${location.pathname === ROUTES.home || location.pathname === ROUTES.search ? styles.homeFooter : ""}`}
         >
           <div className={styles.footerInner}>

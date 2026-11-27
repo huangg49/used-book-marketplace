@@ -2,7 +2,7 @@ import { useEffect, useState, type PropsWithChildren } from "react";
 import { useFonts, loadAsync } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { colors } from "./theme";
+import { colors, stitchTokens } from "./theme";
 import "./focus-platform";
 
 const fonts = {
@@ -47,19 +47,22 @@ export function BrandProvider({ children }: PropsWithChildren) {
                 .catch(() => {})
                 .finally(() => setRetrying(false));
             }}
-            style={{
-              minHeight: 52,
-              padding: 16,
-              backgroundColor: colors.forest,
-              borderRadius: 8,
-            }}
+            style={({ pressed }) => [
+              {
+                minHeight: 52,
+                padding: 16,
+                backgroundColor: stitchTokens.wine,
+                borderRadius: 8,
+              },
+              pressed && { opacity: 0.8 },
+            ]}
           >
             <Text style={{ color: colors.paper }}>Thử tải lại</Text>
           </Pressable>
         </>
       ) : (
         <ActivityIndicator
-          color={colors.forest}
+          color={stitchTokens.wine}
           accessibilityLabel="Đang tải giao diện Lật lại"
         />
       )}

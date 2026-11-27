@@ -7,10 +7,10 @@ import {
 } from './socket-cors.js';
 
 describe('socket CORS origin allowlist', () => {
-  it('parses configured comma-separated origins and trims whitespace', () => {
+  it('parses configured comma-separated origins and trims whitespace and trailing slashes', () => {
     expect(
       parseCorsOrigins(
-        ' https://latlai.vercel.app , https://admin.latlai.vercel.app ',
+        ' https://latlai.vercel.app/ , https://admin.latlai.vercel.app/// ',
       ),
     ).toEqual([
       'https://latlai.vercel.app',

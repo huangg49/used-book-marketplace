@@ -945,6 +945,7 @@ function dialogCopy(intent: Intent, auction: AuctionSummary, leading: boolean): 
           { label: 'Kết quả', detail: auction.buyNowMode === 'Instant'
             ? 'Bạn thắng ngay và phiên kết thúc.'
             : `Bạn ${leading ? 'giữ vị trí dẫn đầu ở giá mua ngay' : 'dẫn đầu ở giá mua ngay'}. Bạn thắng nếu không ai trả cao hơn trong ${buyNowWindow(leading)}.` },
+          ...hold,
           pay,
           { label: 'Cam kết', detail: 'Lượt mua ngay không thể rút lại.' },
         ],

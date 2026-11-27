@@ -159,7 +159,6 @@ function AccountContent({ id, owner }: { id: string; owner: string }) {
       void cache.invalidateQueries({ queryKey: ["operations-users"] });
     } catch (e) {
       setError(operationErrorText(e));
-      dialog.current?.close();
     } finally {
       setBusy(false);
     }
@@ -413,14 +412,26 @@ function AccountContent({ id, owner }: { id: string; owner: string }) {
             : "Xác nhận mở khóa"}
         </h2>
         <p>
-          {current?.user.displayName} · {current?.user.email}
+          <strong>{current?.user.displayName}</strong> · {current?.user.email}
+          {current?.user.roles?.length ? ` · Vai trò: ${current.user.roles.join(", ")}` : ""}
         </p>
         <blockquote>{confirmation?.body.reason}</blockquote>
+        {confirmation?.locking && "unlockCondition" in confirmation.body && confirmation.body.unlockCondition && (
+          <p>
+            <strong>Điều kiện mở khóa:</strong> {confirmation.body.unlockCondition}
+          </p>
+        )}
+        {confirmation?.locking && "relatedReference" in confirmation.body && confirmation.body.relatedReference && (
+          <p>
+            <strong>Hồ sơ liên quan:</strong> {confirmation.body.relatedReference}
+          </p>
+        )}
         <p>
           {confirmation?.locking
             ? "Chặn giao dịch mới; giữ nghĩa vụ, tiền và lịch sử hiện có."
             : `Khôi phục ${userStatusLabel[confirmation?.body && "restoreStatus" in confirmation.body ? confirmation.body.restoreStatus : legacyStatus].toLowerCase()}.`}
         </p>
+        {error && <Notice tone="error">{error}</Notice>}
         <div className="actions">
           <Button
             autoFocus

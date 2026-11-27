@@ -446,6 +446,7 @@ function Row({
 
         {(open || scheduled) && auction.version != null ? (
           <DemoSkipButton
+            intentKey={`${auction.id}:${auction.version}`}
             label={scheduled ? "Mở phiên ngay · Demo" : "Kết thúc phiên ngay · Demo"}
             run={(key) => advanceDemoAuction(client, auction.id, auction.version!, key)}
             onDone={() => queryClient.invalidateQueries({ queryKey: ["my-auctions"] })}

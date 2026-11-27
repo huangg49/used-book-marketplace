@@ -33,6 +33,8 @@ import {
 import { OrderShipping } from "./OrderShipping";
 import { OrderProgress } from "./OrderProgress";
 import { OrderResponse } from "../components/OrderResponse";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { getWalletSummary } from "../services/wallet";
 import {
   BookOpen,
   ClipboardCheck,
@@ -163,6 +165,14 @@ function AuthenticatedOrderDetails({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [pendingAction, setPendingAction] = useState<"pay" | "cancel">();
+  const [confirmAction, setConfirmAction] = useState<"pay" | "cancel" | null>(null);
+  const wallet = useQuery({
+    queryKey: ["wallet-summary", ownerId],
+    queryFn: getWalletSummary,
+    enabled: confirmAction === "pay",
+    retry: false,
+    staleTime: 15_000,
+  });
   const [demoBusy, setDemoBusy] = useState(false);
   const [demoPending, setDemoPending] = useState(false);
   const demoAttempt = useRef<{ key: string; version: number } | undefined>(undefined);
@@ -535,7 +545,11 @@ function AuthenticatedOrderDetails({
                           type="button"
                           className={styles.primaryActionBtn}
                           disabled={busy || pendingAction === "cancel"}
-                          onClick={() => void act("pay")}
+                          onClick={() =>
+                            pendingAction === "pay"
+                              ? void act("pay")
+                              : setConfirmAction("pay")
+                          }
                         >
                           <CreditCard size={18} aria-hidden="true" />
                           <span>
@@ -553,7 +567,11 @@ function AuthenticatedOrderDetails({
                           type="button"
                           className={styles.secondaryActionBtn}
                           disabled={busy || pendingAction === "pay"}
-                          onClick={() => void act("cancel")}
+                          onClick={() =>
+                            pendingAction === "cancel"
+                              ? void act("cancel")
+                              : setConfirmAction("cancel")
+                          }
                         >
                           <XCircle size={18} aria-hidden="true" />
                           <span>
@@ -565,6 +583,58 @@ function AuthenticatedOrderDetails({
                           </span>
                         </button>
                       )}
+
+                      <ConfirmDialog
+                        isOpen={confirmAction !== null}
+                        onClose={() => !busy && setConfirmAction(null)}
+                        title={
+                          confirmAction === "pay"
+                            ? "Xác nhận thanh toán đơn hàng?"
+                            : "Hủy đơn hàng chưa thanh toán?"
+                        }
+                        description={
+                          confirmAction === "pay"
+                            ? `Ví Lật Lại sẽ giữ ${formatVnd(o.amounts.buyerTotal)} cho “${o.item.bundle?.title || o.item.metadata.title}” đến khi bạn nhận và kiểm tra sách.`
+                            : `Đơn đặt mua “${o.item.bundle?.title || o.item.metadata.title}” sẽ đóng ngay, hết giữ chỗ sách và bài đăng sẽ mở bán lại cho người khác.`
+                        }
+                        confirmText={
+                          confirmAction === "pay"
+                            ? `Thanh toán ${formatVnd(o.amounts.buyerTotal)}`
+                            : "Hủy đơn đặt mua"
+                        }
+                        isDanger={confirmAction === "cancel"}
+                        isBusy={busy}
+                        error={error ?? null}
+                        onConfirm={() => {
+                          if (!confirmAction) return;
+                          void act(confirmAction).then(() => {
+                            if (!attempt.current) setConfirmAction(null);
+                          });
+                        }}
+                      >
+                        {confirmAction === "pay" && (
+                          <dl style={{ display: "grid", gap: 6, margin: 0, fontSize: "0.875rem" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                              <dt style={{ color: "var(--shop-muted)" }}>Giá sách</dt>
+                              <dd style={{ margin: 0, fontWeight: 600 }}>{formatVnd(o.amounts.bookPrice)}</dd>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                              <dt style={{ color: "var(--shop-muted)" }}>Phí vận chuyển</dt>
+                              <dd style={{ margin: 0, fontWeight: 600 }}>{formatVnd(o.amounts.shippingFee)}</dd>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, paddingTop: 6, borderTop: "1px solid var(--shop-line)" }}>
+                              <dt style={{ fontWeight: 700 }}>Tổng thanh toán từ Ví</dt>
+                              <dd style={{ margin: 0, fontWeight: 700, color: "var(--shop-wine)" }}>{formatVnd(o.amounts.buyerTotal)}</dd>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                              <dt style={{ color: "var(--shop-muted)" }}>Số dư Ví khả dụng</dt>
+                              <dd style={{ margin: 0, fontWeight: 600 }}>
+                                {wallet.isPending ? "Đang tải…" : wallet.data ? formatVnd(wallet.data.available) : "—"}
+                              </dd>
+                            </div>
+                          </dl>
+                        )}
+                      </ConfirmDialog>
 
                       <p className={styles.walletHint}>
                         Số dư ví không đủ? <Link to="/wallet">Mở Ví Lật Lại để nạp tiền</Link> rồi quay lại đơn này để thanh toán.

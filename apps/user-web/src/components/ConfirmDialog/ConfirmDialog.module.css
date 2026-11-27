@@ -44,10 +44,16 @@
   gap: 12px;
   margin: 0 0 14px;
 }
+.dialog[data-danger] {
+  border-top: 4px solid #912b0e;
+}
 .title {
   font: 700 1.25rem/1.4 var(--shop-body, sans-serif);
   margin: 0;
   color: var(--shop-ink, #281914);
+}
+.titleDanger {
+  color: #912b0e;
 }
 .closeBtn {
   background: transparent;
@@ -78,6 +84,17 @@
   color: var(--shop-ink);
   box-sizing: border-box;
   width: 100%;
+}
+.errorBanner {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #f0c2b8;
+  background: #fdf2ef;
+  color: #912b0e;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
 }
 .footer {
   display: flex;
@@ -112,6 +129,9 @@
 }
 .btnDanger {
   background: #912b0e;
+}
+.btnDanger:hover:not(:disabled) {
+  background: #732009;
 }
 .btnCancel:disabled,
 .btnConfirm:disabled {

@@ -19,6 +19,7 @@ import {
   StatePanel,
   presentError,
   space,
+  stitchTokens,
 } from "../../core/ui";
 import { publicListing } from "./contracts";
 import {
@@ -157,8 +158,9 @@ export function BookScreen({ id }: { id: string }) {
 
   if (isNotFound) {
     return (
-      <Screen appearance="browse">
+      <Screen canvasColor={stitchTokens.creamBg}>
         <StatePanel
+          wine
           title="Không tìm thấy sách"
           message="Bài đăng không còn hiển thị ở đường dẫn này. Hãy quay lại kệ sách để khám phá cuốn sách khác."
           action={{
@@ -199,7 +201,7 @@ export function BookScreen({ id }: { id: string }) {
     >
       {listingQuery.isPending && (
         <View style={{ paddingTop: 100 }}>
-          <StatePanel loading title="Đang mở thông tin ấn bản sách…" />
+          <StatePanel wine loading title="Đang mở thông tin ấn bản sách…" />
         </View>
       )}
 
@@ -210,6 +212,7 @@ export function BookScreen({ id }: { id: string }) {
             {presentError(listingQuery.error).message}
           </Notice>
           <Button
+            wine
             secondary
             title="Thử tải lại thông tin"
             busy={listingQuery.isFetching}

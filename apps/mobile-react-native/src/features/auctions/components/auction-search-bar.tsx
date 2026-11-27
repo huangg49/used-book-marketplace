@@ -52,7 +52,7 @@ export function AuctionSearchBar({
               accessibilityLabel="Xóa từ khóa tìm kiếm"
               hitSlop={8}
               onPress={() => onSearchChange("")}
-              style={styles.clearBtn}
+              style={({ pressed }) => [styles.clearBtn, pressed && styles.pressed]}
             >
               <Icon name="close" size={15} color={stitchTokens.brownMuted} />
             </Pressable>

@@ -266,9 +266,9 @@ export function DirectShipmentDialog({
               <input
                 type="file"
                 id="packaging-photo"
+                className="sr-only"
                 disabled={busy || retryPending}
                 accept="image/jpeg,image/png,image/webp"
-                style={{ display: "none" }}
                 onChange={(e) => {
                   if (e.target.files?.[0]) {
                     setFile(e.target.files[0]);
@@ -292,7 +292,7 @@ export function DirectShipmentDialog({
                 style={{
                   margin: "2px 0 0",
                   fontSize: "0.75rem",
-                  color: file ? "#156633" : "var(--shop-muted)",
+                  color: file ? "var(--shop-wine)" : "var(--shop-muted)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -376,6 +376,7 @@ export function DirectShipmentDialog({
 
         {error && (
           <div
+            role="alert"
             className={styles.procedureNoticeWarning}
             style={{ margin: 0, padding: "8px 12px" }}
           >
@@ -403,6 +404,7 @@ export function DirectShipmentDialog({
           </button>
           <button
             type="submit"
+            data-focus-inverse
             className={styles.primaryActionBtn}
             disabled={busy || !file || !tracking.trim()}
           >

@@ -1591,6 +1591,13 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: var(--shop-shelf);
+  border-color: var(--shop-wine);
+  color: var(--shop-wine);
 }
 
 .pageBtn:disabled {

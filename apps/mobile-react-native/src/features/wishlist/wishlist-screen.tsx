@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
@@ -16,8 +17,8 @@ import {
   Button,
   Icon,
   Notice,
-  Screen,
   StatePanel,
+  WineHeader,
   formatVnd,
   presentError,
   radius,
@@ -36,6 +37,7 @@ import { conditionLabels } from "../drafts/book-condition";
 type FilterTab = "all" | "listing" | "catalog" | "exchange";
 
 export function WishlistScreen() {
+  const insets = useSafeAreaInsets();
   const { client, state } = useSession();
   const foreground = useForeground();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
@@ -48,38 +50,37 @@ export function WishlistScreen() {
   const saveMutation = useSaveWishlist(client);
   const removeMutation = useRemoveWishlist(client);
 
+  const handleBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/account");
+  };
+
   if (state.status !== "authenticated") {
     return (
-      <Screen
-        appearance="browse"
-        header={
-          <View style={styles.header}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Quay lại"
-              onPress={() => {
-                if (router.canGoBack()) router.back();
-                else router.replace("/account");
-              }}
-              style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-            >
-              <Icon name="back" size={20} color={stitchTokens.wineDark} />
-              <AppText style={styles.backLabel}>Quay lại</AppText>
-            </Pressable>
-            <AppText style={styles.headerTitle}>Sách đã lưu</AppText>
-            <View style={{ width: 40 }} />
-          </View>
-        }
-      >
-        <StatePanel
-          title="Yêu cầu đăng nhập"
-          message="Vui lòng đăng nhập để xem danh sách các đầu sách và bài đăng bạn đã lưu."
-          action={{
-            label: "Đăng nhập ngay",
-            onPress: () => router.push("/account"),
-          }}
+      <View style={styles.root}>
+        <WineHeader
+          title="Sách đã lưu"
+          subtitle="Tủ sách yêu thích của bạn"
+          onBack={handleBack}
+          backLabel="Quay lại"
         />
-      </Screen>
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            { paddingBottom: Math.max(insets.bottom, 20) + 16 },
+          ]}
+        >
+          <StatePanel
+            wine
+            title="Yêu cầu đăng nhập"
+            message="Vui lòng đăng nhập để xem danh sách các đầu sách và bài đăng bạn đã lưu."
+            action={{
+              label: "Đăng nhập ngay",
+              onPress: () => router.push("/account"),
+            }}
+          />
+        </ScrollView>
+      </View>
     );
   }
 
@@ -105,36 +106,20 @@ export function WishlistScreen() {
   };
 
   return (
-    <Screen
-      appearance="browse"
-      header={
-        <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Quay lại"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/account");
-            }}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-          >
-            <Icon name="back" size={20} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Quay lại</AppText>
-          </Pressable>
-
-          <AppText style={styles.headerTitle}>Sách đã lưu</AppText>
-
-          {entries.length > 0 ? (
-            <View style={styles.headerCountBadge}>
-              <AppText style={styles.headerCountText}>{entries.length}</AppText>
-            </View>
-          ) : (
-            <View style={{ width: 40 }} />
-          )}
-        </View>
-      }
-    >
-      <View style={styles.container}>
+    <View style={styles.root}>
+      <WineHeader
+        title="Sách đã lưu"
+        subtitle={entries.length > 0 ? `${entries.length} mục trong danh sách` : "Tủ sách yêu thích của bạn"}
+        onBack={handleBack}
+        backLabel="Quay lại"
+      />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: Math.max(insets.bottom, 20) + 16 },
+        ]}
+      >
         {/* Filter Tabs */}
         {entries.length > 0 && (
           <ScrollView
@@ -174,12 +159,13 @@ export function WishlistScreen() {
         {/* Content States */}
         {denied ? (
           <StatePanel
+            wine
             title="Chưa xem được"
             message={presentError(query.error).message}
             icon="info"
           />
         ) : query.isPending ? (
-          <StatePanel loading title="Đang mở tủ sách đã lưu của bạn…" />
+          <StatePanel wine loading title="Đang mở tủ sách đã lưu của bạn…" />
         ) : query.error ? (
           <View style={{ gap: space.sm, marginVertical: space.md }}>
             <Notice tone="error">
@@ -187,6 +173,7 @@ export function WishlistScreen() {
               {presentError(query.error).message}
             </Notice>
             <Button
+              wine
               title="Tải lại danh sách"
               secondary
               onPress={() => void query.refetch()}
@@ -262,6 +249,7 @@ export function WishlistScreen() {
             {query.hasNextPage ? (
               <View style={{ paddingVertical: space.md, alignItems: "center" }}>
                 <Button
+                  wine
                   title={
                     query.isFetchingNextPage
                       ? "Đang tải thêm…"
@@ -275,8 +263,8 @@ export function WishlistScreen() {
             ) : null}
           </View>
         )}
-      </View>
-    </Screen>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -503,11 +491,14 @@ function WishlistItemCard({
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: stitchTokens.creamBg,
+  },
   container: {
     paddingHorizontal: space.lg,
-    paddingTop: space.sm,
+    paddingTop: space.md,
     gap: space.md,
-    paddingBottom: space.section,
   },
   header: {
     height: 52,

@@ -18,6 +18,8 @@ export interface SendToAuctionModalsProps {
   readonly auctionType?: AuctionFormat;
   readonly minBidders?: number;
   readonly buyNowPrice: number | null;
+  readonly dutchTopPrice?: number | null;
+  readonly dutchIntervalSeconds?: number | null;
   readonly depositAmount?: number | null;
 
   readonly withdrawTarget: MyIntake | null;
@@ -47,6 +49,8 @@ export function SendToAuctionModals({
   auctionType = "English",
   minBidders = 4,
   buyNowPrice,
+  dutchTopPrice,
+  dutchIntervalSeconds,
   depositAmount,
 
   withdrawTarget,
@@ -138,6 +142,24 @@ export function SendToAuctionModals({
               <View style={styles.row}>
                 <AppText kind="small" style={styles.label}>Tiền cọc đăng ký</AppText>
                 <AppText kind="bold" style={styles.value}>{formatVnd(depositAmount)}</AppText>
+              </View>
+            </>
+          ) : null}
+          {auctionType === "Dutch" ? (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.row}>
+                <AppText kind="small" style={styles.label}>Giá khởi điểm (giảm dần)</AppText>
+                <AppText kind="bold" style={styles.valueWine}>
+                  {dutchTopPrice != null ? formatVnd(dutchTopPrice) : "—"}
+                </AppText>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.row}>
+                <AppText kind="small" style={styles.label}>Chu kỳ giảm giá</AppText>
+                <AppText kind="bold" style={styles.value}>
+                  {dutchIntervalSeconds != null ? `Mỗi ${dutchIntervalSeconds} giây` : "—"}
+                </AppText>
               </View>
             </>
           ) : null}

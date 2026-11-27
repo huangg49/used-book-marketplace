@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { money } from "../../core/format";
 import { ActionPanel } from "./action-panel";
 import {
@@ -71,8 +72,13 @@ export function ResolutionDecision({ item, ...context }: Props) {
     return () => element.close();
   }, []);
 
+  const [panelBusy, setPanelBusy] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
   const requestClose = () => {
-    if (dirty && !window.confirm("Thông tin đang nhập sẽ bị bỏ. Đóng phiếu quyết định?")) {
+    if (panelBusy) return;
+    if (dirty) {
+      setConfirmDiscard(true);
       return;
     }
     modal.current?.close();
@@ -94,12 +100,35 @@ export function ResolutionDecision({ item, ...context }: Props) {
           <p className="resolution-dialog-kicker">Đơn tại điểm · / {item.id.slice(0, 8)}</p>
           <h2 id={`resolution-title-${item.id}`}>Quyết định cho “{item.title}”</h2>
         </div>
-        <button className="resolution-dialog-close" type="button" onClick={requestClose}>
+        <button
+          className="resolution-dialog-close"
+          type="button"
+          disabled={panelBusy}
+          onClick={requestClose}
+        >
           Đóng
         </button>
       </div>
+      <ConfirmDialog
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        title="Đóng phiếu quyết định?"
+        description="Quyết định và lý do đang nhập sẽ bị bỏ nếu bạn đóng phiếu lúc này."
+        confirmLabel="Đóng và bỏ dữ liệu"
+        cancelLabel="Tiếp tục xử lý"
+        danger
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          modal.current?.close();
+          context.onClose?.();
+        }}
+      />
       <ActionPanel
         {...context}
+        onPending={(pending) => {
+          setPanelBusy(pending);
+          context.onPending(pending);
+        }}
         label="Quyết định cho đơn tại điểm"
         title="Một quyết định, có lý do."
         intro={`Người mua đã trả ${money(item.buyerTotal)}. Quyết định được lưu lại cùng lý do và không sửa được; người mua và người bán đọc được lý do.`}
@@ -201,11 +230,18 @@ export function ResolutionDecision({ item, ...context }: Props) {
         return true;
         }}
         submitLabel="Ghi quyết định"
+        confirmDanger={decision === "RefundBuyer"}
         confirmTitle={decision ? `${textFor(decision).label}?` : "Ghi quyết định?"}
         confirmBody={
         <>
-          <p>{decision && textFor(decision).effect}</p>
-          {fault && <p>Lỗi: {faultText[fault]}.</p>}
+          <p>
+            <strong>{item.title}</strong> · Đơn #{item.id.slice(0, 8)}
+            {decision === "RefundBuyer" ? ` · Hoàn người mua ${money(item.buyerTotal)}` : ""}
+          </p>
+          <p>
+            {decision && textFor(decision).effect} Quyết định này không thể hoàn tác sau khi ghi.
+          </p>
+          {fault && <p>Lỗi xác định: {faultText[fault]}.</p>}
           <blockquote className="prose">{trimmed}</blockquote>
         </>
         }

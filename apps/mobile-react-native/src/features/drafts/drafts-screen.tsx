@@ -64,6 +64,8 @@ export function DraftsScreen() {
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     version: number;
+    bundleTitle?: string | null;
+    isApproved: boolean;
   } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -270,6 +272,8 @@ export function DraftsScreen() {
             onDelete={manageableListing(listing) ? () => setDeleteTarget({
               id: listing.id,
               version: listing.version,
+              bundleTitle: listing.currentRevision.content.bundle?.title,
+              isApproved: listing.state.moderation === "Approved",
             }) : undefined}
           />
         ))}
@@ -291,9 +295,17 @@ export function DraftsScreen() {
       <HomeNotificationsModal visible={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <ConfirmDialog
         visible={!!deleteTarget}
-        title="Xóa bài đăng"
-        message="Bạn có chắc chắn muốn xóa bài đăng này không? Thao tác này không thể hoàn tác."
-        confirmLabel="Xóa"
+        title={
+          deleteTarget?.bundleTitle
+            ? `Xóa bộ “${deleteTarget.bundleTitle}”?`
+            : "Xóa bài đăng này?"
+        }
+        message={
+          deleteTarget?.isApproved
+            ? "Bài đăng đang hiển thị công khai trên sàn sẽ bị gỡ khỏi tìm kiếm và danh sách yêu thích của người đọc khác. Thao tác này không thể hoàn tác."
+            : "Bản nháp và toàn bộ thông tin đã soạn sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác."
+        }
+        confirmLabel="Xóa bài đăng"
         destructive
         busy={deleteBusy}
         error={deleteError}

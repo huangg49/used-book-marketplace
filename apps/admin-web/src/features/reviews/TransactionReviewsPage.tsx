@@ -16,6 +16,7 @@ import {
 } from "@used-books/session-client";
 import { session, canReview } from "../../core/session";
 import { Button, CursorPagination, Notice } from "../../core/ui";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { ListFeedback } from "../../core/list-feedback";
 import { dateText } from "../../core/format";
 import styles from "./TransactionReviewsPage.module.css";
@@ -279,13 +280,21 @@ function Decision({
   const [decision, setDecision] = useState(""),
     [reason, setReason] = useState(""),
     [version, setVersion] = useState(review.version),
+    [confirmOpen, setConfirmOpen] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const decisionLabels: Record<string, string> = {
+    Hide: "Ẩn đánh giá",
+    Restore: "Khôi phục đánh giá",
+    ApproveReply: "Duyệt phản hồi",
+    HideReply: "Ẩn phản hồi",
+    HoldEvidence: "Giữ làm bằng chứng",
+    ReleaseEvidence: "Gỡ giữ bằng chứng",
+  };
   const running = useRef(false),
     scope = `review-moderation:${owner}:${review.id}`,
     uncertain = pendingReviewIntent(session, scope);
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+  async function executeDecision() {
     if (running.current) return;
     running.current = true;
     setBusy(true);
@@ -301,6 +310,7 @@ function Decision({
       setVersion(saved.version);
       setDecision("");
       setReason("");
+      setConfirmOpen(false);
       onSaved(saved);
       // ListFeedback handles read failures independently of the saved command.
       void refresh().catch(() => {});
@@ -317,6 +327,16 @@ function Decision({
       setBusy(false);
       running.current = false;
     }
+  }
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    if (uncertain) {
+      void executeDecision();
+      return;
+    }
+    if (!decision || reason.trim().length < 3) return;
+    setError("");
+    setConfirmOpen(true);
   }
   return (
     <form
@@ -381,6 +401,19 @@ function Decision({
           </Button>
         </>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => !busy && setConfirmOpen(false)}
+        title={`Xác nhận: ${decisionLabels[decision] ?? decision}?`}
+        description={`Áp dụng cho đánh giá của ${review.authorName}. Quyết định và lý do sẽ được lưu vĩnh viễn vào lịch sử kiểm duyệt.`}
+        confirmLabel={decisionLabels[decision] ?? "Ghi nhận quyết định"}
+        danger={decision === "Hide" || decision === "HideReply" || decision === "ReleaseEvidence"}
+        busy={busy}
+        error={error || undefined}
+        onConfirm={() => void executeDecision()}
+      >
+        <blockquote className="prose">{reason.trim()}</blockquote>
+      </ConfirmDialog>
     </form>
   );
 }

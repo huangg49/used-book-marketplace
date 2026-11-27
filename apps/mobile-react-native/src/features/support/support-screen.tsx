@@ -262,6 +262,7 @@ export function SupportScreen() {
       footerAppearance="navigation"
       background={<SupportBackdrop />}
       canvasColor={stitchTokens.creamBg}
+      statusBarStyle="light"
     >
       <View style={styles.topBar}>
         <Pressable
@@ -341,6 +342,7 @@ export function SupportScreen() {
               {KIND_KEYS.map((k) => (
                 <Chip
                   key={k}
+                  wine
                   title={supportKinds[k]}
                   selected={kind === k}
                   onPress={() => setKind(k)}
@@ -359,6 +361,7 @@ export function SupportScreen() {
               contentContainerStyle={{ gap: 8 }}
             >
               <Chip
+                wine
                 title="Không đính kèm"
                 selected={targetType === ""}
                 onPress={() => {
@@ -369,6 +372,7 @@ export function SupportScreen() {
               {TARGET_KEYS.map((t) => (
                 <Chip
                   key={t}
+                  wine
                   title={supportTargets[t]}
                   selected={targetType === t}
                   onPress={() => {
@@ -393,8 +397,9 @@ export function SupportScreen() {
                       <Pressable
                         key={opt.target.id}
                         accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected }}
                         onPress={() => setTargetId(opt.target.id)}
-                        style={{
+                        style={({ pressed }) => ({
                           padding: space.sm,
                           borderRadius: radius.control,
                           borderWidth: isSelected ? 1.5 : 1,
@@ -405,7 +410,8 @@ export function SupportScreen() {
                             ? stitchTokens.wineAlpha08
                             : stitchTokens.creamBg,
                           gap: 2,
-                        }}
+                          opacity: pressed ? 0.78 : 1,
+                        })}
                       >
                         <AppText kind="bold" color={stitchTokens.wineDark}>
                           {opt.label}
@@ -421,7 +427,7 @@ export function SupportScreen() {
                 </View>
               ) : null}
               <TextField
-                label={`Mã ${supportTargets[targetType]} (UUID)`}
+                label={`Mã ${supportTargets[targetType]}`}
                 value={targetId}
                 onChangeText={setTargetId}
                 placeholder="Nhập hoặc chọn mã ở trên..."
@@ -459,11 +465,12 @@ export function SupportScreen() {
 
       {casesQuery.isPending ? (
         <View style={styles.card}>
-          <StatePanel loading title="Đang tải danh sách phiếu hỗ trợ..." />
+          <StatePanel wine loading title="Đang tải danh sách phiếu hỗ trợ..." />
         </View>
       ) : casesQuery.isError ? (
         <View style={styles.card}>
           <StatePanel
+            wine
             title="Chưa tải được danh sách hỗ trợ"
             message={presentError(casesQuery.error).message}
             action={{
@@ -619,6 +626,7 @@ function SupportCaseDetailView({
         footerAppearance="navigation"
         background={<SupportBackdrop compact />}
         canvasColor={stitchTokens.creamBg}
+        statusBarStyle="light"
       >
         <View style={styles.topBar}>
           <Pressable
@@ -634,7 +642,7 @@ function SupportCaseDetailView({
           </Pressable>
         </View>
         <View style={styles.card}>
-          <StatePanel loading title="Đang tải chi tiết phiếu hỗ trợ..." />
+          <StatePanel wine loading title="Đang tải chi tiết phiếu hỗ trợ..." />
         </View>
       </Screen>
     );
@@ -647,6 +655,7 @@ function SupportCaseDetailView({
         footerAppearance="navigation"
         background={<SupportBackdrop compact />}
         canvasColor={stitchTokens.creamBg}
+        statusBarStyle="light"
       >
         <View style={styles.topBar}>
           <Pressable
@@ -663,6 +672,7 @@ function SupportCaseDetailView({
         </View>
         <View style={styles.card}>
           <StatePanel
+            wine
             title="Không tải được phiếu hỗ trợ"
             message={presentError(detailQuery.error).message}
             action={{

@@ -4,16 +4,17 @@ import * as Crypto from "expo-crypto";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../../core/session/session-provider";
 import { AppText, Notice, colors, radius, space, stitchTokens } from "../../../core/ui";
-import { auctionErrorText, getDemoSkipStatus } from "../auctions-model";
+import { auctionErrorText, getDemoSkipStatus, outcomeUnknown } from "../auctions-model";
 
 type Props = {
   label: string;
   note?: string;
+  intentKey?: string;
   run: (key: string) => Promise<unknown>;
   onDone: () => Promise<unknown>;
 };
 
-export function DemoSkipButton({ label, note, run, onDone }: Props) {
+export function DemoSkipButton({ label, note, intentKey, run, onDone }: Props) {
   const { client, state } = useSession();
   const status = useQuery({
     queryKey: ["demo-skip"],
@@ -38,7 +39,7 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
   };
 
   const skip = async () => {
-    const signature = pendingSignature ?? `${label}:${note ?? ""}`;
+    const signature = pendingSignature ?? `${intentKey ?? ""}:${label}:${note ?? ""}`;
     setPendingSignature(signature);
     setBusy(true);
     setError(null);
@@ -48,6 +49,10 @@ export function DemoSkipButton({ label, note, run, onDone }: Props) {
       setPendingSignature(null);
       await onDone();
     } catch (caught) {
+      if (!outcomeUnknown(caught)) {
+        keyRef.current = null;
+        setPendingSignature(null);
+      }
       setError(auctionErrorText(caught));
     } finally {
       setBusy(false);

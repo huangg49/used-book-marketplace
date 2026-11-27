@@ -1,6 +1,14 @@
 import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import { useSession } from "../../core/session/session-provider";
@@ -31,6 +39,7 @@ export function FulfillmentFields({
   disabled: boolean;
   summary?: boolean;
 }) {
+  const insets = useSafeAreaInsets();
   const { client } = useSession(),
     cache = useQueryClient(),
     active = useForeground();
@@ -163,9 +172,12 @@ export function FulfillmentFields({
           <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 12 }}>
             {selected.detail}
           </AppText>
-          <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 11, marginTop: 2 }}>
-            ⚡ Cam kết giao cho shipper trong 48h khi có đơn · Địa chỉ bảo mật nội bộ
-          </AppText>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+            <Icon name="truck" size={12} color={stitchTokens.slateWarm} />
+            <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 11, flex: 1 }}>
+              Cam kết bàn giao vận chuyển trong 48 giờ khi có đơn · Địa chỉ bảo mật nội bộ
+            </AppText>
+          </View>
         </View>
       </View>
     );
@@ -419,171 +431,236 @@ export function FulfillmentFields({
         transparent
         onRequestClose={() => setCreateOpen(false)}
       >
-        <View
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{
             flex: 1,
             backgroundColor: stitchTokens.modalScrim,
             justifyContent: "flex-end",
           }}
         >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng cửa sổ thêm nơi gửi sách"
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (!createBusy) {
+                setCreateOpen(false);
+                setCreateError("");
+              }
+            }}
+          />
           <View
             style={{
               backgroundColor: stitchTokens.white,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: space.lg,
-              gap: space.md,
-              maxHeight: "85%",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              maxHeight: "88%",
+              paddingBottom: Math.max(insets.bottom, 16),
             }}
           >
+            {/* Drag Handle */}
+            <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 4 }}>
+              <View
+                style={{
+                  width: 38,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: stitchTokens.cardBorder,
+                }}
+              />
+            </View>
+
             <View
               style={{
                 flexDirection: "row",
                 justifyContent: "space-between",
                 alignItems: "center",
+                paddingHorizontal: space.lg,
+                paddingTop: 4,
+                paddingBottom: 12,
+                borderBottomWidth: 1,
+                borderColor: stitchTokens.borderParchmentSoft,
               }}
             >
-              <AppText kind="heading" color={stitchTokens.wineDark} style={{ fontSize: 18 }}>
+              <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 17 }}>
                 Thêm nơi gửi sách
               </AppText>
-              <Button
-                secondary
-                title="Đóng"
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng"
+                disabled={createBusy}
                 onPress={() => {
                   setCreateOpen(false);
                   setCreateError("");
                 }}
-              />
-            </View>
-
-            <AppText kind="small" color={stitchTokens.subtleGray}>
-              Người giao hàng sẽ lấy sách tại đây. Người mua chỉ thấy khu vực luân chuyển, không thấy địa chỉ chi tiết hoặc số điện thoại của bạn.
-            </AppText>
-
-            {createError ? <Notice tone="error">{createError}</Notice> : null}
-
-            <TextField
-              label="Họ tên người gửi *"
-              value={newRecipient}
-              placeholder="Ví dụ: Nguyễn Văn A"
-              onChangeText={setNewRecipient}
-              maxLength={100}
-            />
-
-            <TextField
-              label="Số điện thoại *"
-              value={newPhone}
-              placeholder="10 chữ số (0...)"
-              keyboardType="phone-pad"
-              onChangeText={setNewPhone}
-              maxLength={15}
-            />
-
-            <View style={{ gap: 4 }}>
-              <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 12 }}>
-                Khu vực luân chuyển (TP.HCM) *
-              </AppText>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
-                {localities.map((loc) => {
-                  const isSel = newLocality === loc.code;
-                  return (
-                    <Pressable
-                      key={loc.code}
-                      onPress={() => setNewLocality(loc.code)}
-                      style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 14,
-                        backgroundColor: isSel ? stitchTokens.wine : stitchTokens.parchment,
-                        borderWidth: 1,
-                        borderColor: isSel ? stitchTokens.wine : stitchTokens.peachBorder,
-                      }}
-                    >
-                      <AppText
-                        kind="small"
-                        color={isSel ? stitchTokens.white : stitchTokens.darkWood}
-                        style={{ fontSize: 11, fontWeight: isSel ? "700" : "500" }}
-                      >
-                        {loc.label}
-                      </AppText>
-                    </Pressable>
-                  );
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: stitchTokens.pillWarmBg,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.72 : 1,
                 })}
-              </ScrollView>
+              >
+                <Icon name="close" size={18} color={stitchTokens.wineDark} strokeWidth={2.2} />
+              </Pressable>
             </View>
 
-            <TextField
-              label="Địa chỉ chi tiết *"
-              value={newDetail}
-              placeholder="Số nhà, tên đường, phường..."
-              multiline
-              onChangeText={setNewDetail}
-              maxLength={300}
-            />
-
-            <Button
-              wine
-              title="Lưu & Sử dụng nơi gửi này"
-              busy={createBusy}
-              disabled={createBusy || !newRecipient.trim() || !newPhone.trim() || !newDetail.trim()}
-              onPress={async () => {
-                if (newRecipient.trim().length < 2) {
-                  setCreateError("Họ tên người gửi cần ít nhất 2 ký tự.");
-                  return;
-                }
-                if (!/^0\d{9}$/.test(newPhone.trim())) {
-                  setCreateError("Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.");
-                  return;
-                }
-                if (!newLocality) {
-                  setCreateError("Vui lòng chọn khu vực luân chuyển.");
-                  return;
-                }
-                if (newDetail.trim().length < 5) {
-                  setCreateError("Địa chỉ chi tiết cần ít nhất 5 ký tự.");
-                  return;
-                }
-                setCreateBusy(true);
-                setCreateError("");
-                try {
-                  const receiptData = await client.request(
-                    "/me/addresses",
-                    addressReceipt,
-                    {
-                      method: "POST",
-                      headers: { "Idempotency-Key": Crypto.randomUUID() },
-                      body: JSON.stringify({
-                        expectedBookVersion: book.data?.version ?? 0,
-                        address: {
-                          recipientName: newRecipient.trim(),
-                          phone: newPhone.trim(),
-                          serviceAreaCode: "HCM-DEMO-v1",
-                          localityCode: newLocality,
-                          detail: newDetail.trim(),
-                        },
-                        makeDefault: (book.data?.items.length ?? 0) === 0,
-                      }),
-                    },
-                  );
-                  await cache.invalidateQueries({ queryKey: ["address-book"] });
-                  onChange({
-                    originAddressId: receiptData.addressId,
-                    originAddressVersion: receiptData.version,
-                    method: "DirectDelivery",
-                  });
-                  setCreateOpen(false);
-                  setNewRecipient("");
-                  setNewPhone("");
-                  setNewDetail("");
-                } catch (e) {
-                  setCreateError(photoError(e));
-                } finally {
-                  setCreateBusy(false);
-                }
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: space.lg,
+                paddingTop: space.md,
+                paddingBottom: space.md,
+                gap: space.md,
               }}
-            />
+            >
+              <AppText kind="small" color={stitchTokens.subtleGray} style={{ lineHeight: 18 }}>
+                Đơn vị vận chuyển sẽ lấy sách tại địa chỉ này. Người mua chỉ thấy khu vực, không thấy địa chỉ chi tiết hoặc số điện thoại của bạn.
+              </AppText>
+
+              {createError ? <Notice tone="error">{createError}</Notice> : null}
+
+              <TextField
+                label="Họ tên người gửi *"
+                value={newRecipient}
+                placeholder="Ví dụ: Nguyễn Văn A"
+                onChangeText={setNewRecipient}
+                maxLength={100}
+              />
+
+              <TextField
+                label="Số điện thoại *"
+                value={newPhone}
+                placeholder="10 chữ số (0...)"
+                keyboardType="phone-pad"
+                onChangeText={setNewPhone}
+                maxLength={15}
+              />
+
+              <View style={{ gap: 6 }}>
+                <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 12.5 }}>
+                  Khu vực giao nhận *
+                </AppText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+                  {localities.map((loc) => {
+                    const isSel = newLocality === loc.code;
+                    return (
+                      <Pressable
+                        key={loc.code}
+                        onPress={() => setNewLocality(loc.code)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 999,
+                          backgroundColor: isSel ? stitchTokens.wine : stitchTokens.parchment,
+                          borderWidth: 1,
+                          borderColor: isSel ? stitchTokens.wine : stitchTokens.cardBorder,
+                        }}
+                      >
+                        <AppText
+                          kind="small"
+                          color={isSel ? stitchTokens.white : stitchTokens.darkWood}
+                          style={{ fontSize: 12, fontWeight: isSel ? "700" : "500" }}
+                        >
+                          {loc.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              <TextField
+                label="Địa chỉ chi tiết *"
+                value={newDetail}
+                placeholder="Số nhà, tên đường, phường..."
+                multiline
+                onChangeText={setNewDetail}
+                maxLength={300}
+              />
+
+              <View style={{ flexDirection: "row", gap: space.sm }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    wine
+                    secondary
+                    title="Hủy"
+                    disabled={createBusy}
+                    onPress={() => setCreateOpen(false)}
+                  />
+                </View>
+                <View style={{ flex: 1.6 }}>
+                  <Button
+                    wine
+                    title="Lưu & Dùng nơi gửi này"
+                    busy={createBusy}
+                    disabled={createBusy || !newRecipient.trim() || !newPhone.trim() || !newDetail.trim()}
+                    onPress={async () => {
+                      if (newRecipient.trim().length < 2) {
+                        setCreateError("Họ tên người gửi cần ít nhất 2 ký tự.");
+                        return;
+                      }
+                      if (!/^0\d{9}$/.test(newPhone.trim())) {
+                        setCreateError("Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.");
+                        return;
+                      }
+                      if (!newLocality) {
+                        setCreateError("Vui lòng chọn khu vực giao nhận.");
+                        return;
+                      }
+                      if (newDetail.trim().length < 5) {
+                        setCreateError("Địa chỉ chi tiết cần ít nhất 5 ký tự.");
+                        return;
+                      }
+                      setCreateBusy(true);
+                      setCreateError("");
+                      try {
+                        const receiptData = await client.request(
+                          "/me/addresses",
+                          addressReceipt,
+                          {
+                            method: "POST",
+                            headers: { "Idempotency-Key": Crypto.randomUUID() },
+                            body: JSON.stringify({
+                              expectedBookVersion: book.data?.version ?? 0,
+                              address: {
+                                recipientName: newRecipient.trim(),
+                                phone: newPhone.trim(),
+                                serviceAreaCode: "HCM-DEMO-v1",
+                                localityCode: newLocality,
+                                detail: newDetail.trim(),
+                              },
+                              makeDefault: (book.data?.items.length ?? 0) === 0,
+                            }),
+                          },
+                        );
+                        await cache.invalidateQueries({ queryKey: ["address-book"] });
+                        onChange({
+                          originAddressId: receiptData.addressId,
+                          originAddressVersion: receiptData.version,
+                          method: "DirectDelivery",
+                        });
+                        setCreateOpen(false);
+                        setNewRecipient("");
+                        setNewPhone("");
+                        setNewDetail("");
+                      } catch (e) {
+                        setCreateError(photoError(e));
+                      } finally {
+                        setCreateBusy(false);
+                      }
+                    }}
+                  />
+                </View>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </AppModal>
 
       <Notice tone="info">

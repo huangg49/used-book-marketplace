@@ -408,6 +408,10 @@
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
+  transition: color 140ms ease;
+}
+.clearBtn:hover {
+  color: #5c0202;
 }
 
 /* --------------------------------------------------------------------------
@@ -574,6 +578,10 @@
   font-weight: 700;
   text-decoration: underline;
   cursor: pointer;
+  transition: color 140ms ease;
+}
+.textButton:hover {
+  color: #5c0202;
 }
 
 .limit {

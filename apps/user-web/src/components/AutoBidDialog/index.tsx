@@ -76,9 +76,9 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
   }, [busy, onClose])
 
   return (
-    <dialog ref={ref} className={styles.dialog} aria-labelledby={`${ids}-title`}>
+    <dialog ref={ref} data-lenis-prevent="true" className={styles.dialog} aria-labelledby={`${ids}-title`}>
       <div className={styles.sheet}>
-        <header className={styles.header}>
+        <header className={styles.header} data-focus-inverse>
           <span className={styles.heading}>
             <strong id={`${ids}-title`}><Zap size={20} aria-hidden="true" /> Đặt giá tự động</strong>
             <small>cho {title}</small>
@@ -138,13 +138,13 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
                   {error ?? `Từ ${formatVnd(floor)} trở lên, theo bước ${formatVnd(step)}.`}
                 </p>
               </div>
-              <button type="button" className={styles.continue} disabled={!!error} onClick={() => setStage('confirm')}>
+              <button type="button" data-focus-inverse className={styles.continue} disabled={!!error} onClick={() => setStage('confirm')}>
                 Tiếp tục đặt giá tự động <ArrowRight size={18} aria-hidden="true" />
               </button>
             </div>
             <p className={styles.footnote}>
               <Lock size={14} aria-hidden="true" /> Xác nhận ở bước tiếp theo.<br />
-              Không giữ tiền khi trả giá; chỉ người thắng mới thanh toán.
+              Khi bạn dẫn giá, Ví tạm giữ mức cam kết (gồm cọc đăng ký) và tự động hoàn lại nếu có người trả cao hơn.
             </p>
           </div>
         ) : (
@@ -152,9 +152,8 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
             <section className={styles.how}>
               <h3 ref={confirmationHeading} tabIndex={-1}>Xác nhận mức tối đa {formatVnd(value!)}</h3>
               <p>
-                Khi có người trả cao hơn, hệ thống trả thay bạn cao hơn họ một bước {formatVnd(step)}, không vượt {formatVnd(value!)}. Mức này
-                chỉ có thể nâng lên. Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và tự nhận
-                sách tại {pointName}. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.
+                Khi có người trả cao hơn, hệ thống trả thay bạn cao hơn họ một bước {formatVnd(step)}, không vượt {formatVnd(value!)}. Khi dẫn giá, Ví tạm giữ mức cam kết theo quy định và hoàn lại ngay nếu bị vượt giá. Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và chọn tự nhận
+                sách tại {pointName} hoặc giao tận nơi. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.
               </p>
             </section>
             {submissionError && <p className={styles.error} role="alert">{submissionError} Chọn “Sửa mức” để điều chỉnh; số tiền bạn nhập vẫn được giữ.</p>}
@@ -162,7 +161,7 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
               <button type="button" className={styles.back} onClick={() => setStage('form')} disabled={busy}>
                 <ArrowLeft size={16} aria-hidden="true" /> Sửa mức
               </button>
-              <button type="button" className={styles.confirm} disabled={busy} aria-busy={busy} onClick={() => void onConfirm(value!)}>
+              <button type="button" data-focus-inverse className={styles.confirm} disabled={busy} aria-busy={busy} onClick={() => void onConfirm(value!)}>
                 {busy ? 'Đang đặt…' : `Đặt tối đa ${formatVnd(value!)}`}
               </button>
             </div>

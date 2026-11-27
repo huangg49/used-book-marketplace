@@ -13,7 +13,16 @@ import {
 } from "./exchange-recovery";
 import { ExchangeCounterForm } from "./exchange-counter-form";
 import React, { useCallback, useState, useSyncExternalStore } from "react";
-import { AppState, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  AppState,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { router } from "expo-router";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
@@ -133,6 +142,8 @@ function ExchangeActionsContent({
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
   const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
+  const [confirmFundOpen, setConfirmFundOpen] = useState(false);
+  const [confirmReceiveOpen, setConfirmReceiveOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Rich Dispute Modal State
@@ -276,6 +287,8 @@ function ExchangeActionsContent({
     setShipModalOpen(false);
     setConfirmCancelOpen(false);
     setConfirmRejectOpen(false);
+    setConfirmFundOpen(false);
+    setConfirmReceiveOpen(false);
     setDisputeModalOpen(false);
     setConfirmCompleteOpen(false);
   };
@@ -499,7 +512,10 @@ function ExchangeActionsContent({
   const inspectionPhase = useSyncExternalStore(subscribeInspectionDeadline, readInspectionPhase, readInspectionPhase);
   const inspectionOpen = inspectionPhase === "open";
   const receiveAction = partnerPickedUpAt && !isReceivedByMe ? (
-    <Button title="Xác nhận đã nhận sách" wine busy={isBusy} onPress={() => receiveMutation.mutate()} />
+    <Button title="Xác nhận đã nhận sách" wine busy={isBusy} onPress={() => {
+                setActionError(null);
+                setConfirmReceiveOpen(true);
+              }} />
   ) : null;
   const disputeAction = inspectionOpen ? (
     <Button title="Báo sự cố / Khiếu nại sách" secondary wine busy={isBusy} onPress={() => {
@@ -551,13 +567,13 @@ function ExchangeActionsContent({
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
-        quality: 0.7,
+        quality: 0.45,
         base64: true,
       });
       if (!res.canceled && res.assets?.[0]) {
         const asset = res.assets[0];
-        if ((asset.fileSize ?? 0) > 10 * 1024 * 1024) {
-          setShipFormError("Dung lượng ảnh tối đa là 10MB.");
+        if ((asset.fileSize ?? 0) > 4 * 1024 * 1024 || (asset.base64?.length ?? 0) > 4_000_000) {
+          setShipFormError("Ảnh quá lớn (tối đa ~3MB sau nén). Vui lòng chọn ảnh nhẹ hơn hoặc dùng bộ ảnh mẫu.");
           return;
         }
         const mime = asset.mimeType || "image/jpeg";
@@ -1116,7 +1132,10 @@ function ExchangeActionsContent({
                         disabled={
                           hasInsufficientFunds || walletQuery.isPending || isBusy
                         }
-                        onPress={() => fundMutation.mutate()}
+                        onPress={() => {
+                  setActionError(null);
+                  setConfirmFundOpen(true);
+                }}
                       />
                       <Button
                         title="Hủy trao đổi"
@@ -1862,7 +1881,10 @@ function ExchangeActionsContent({
               <Pressable
                 accessibilityRole="button"
                 disabled={walletQuery.isPending || isBusy}
-                onPress={() => fundMutation.mutate()}
+                onPress={() => {
+                  setActionError(null);
+                  setConfirmFundOpen(true);
+                }}
                 style={({ pressed }) => [
                   styles.dockPrimaryBtn,
                   pressed && styles.dockPressed,
@@ -1972,7 +1994,10 @@ function ExchangeActionsContent({
             <Pressable
               accessibilityRole="button"
               disabled={isBusy}
-              onPress={() => receiveMutation.mutate()}
+              onPress={() => {
+                setActionError(null);
+                setConfirmReceiveOpen(true);
+              }}
               style={({ pressed }) => [
                 styles.dockPrimaryBtn,
                 { flex: 1 },
@@ -2087,11 +2112,14 @@ function ExchangeActionsContent({
             <Pressable
               accessibilityRole="button"
               disabled={isBusy}
-              onPress={() =>
-                canConfirmReceive
-                  ? receiveMutation.mutate()
-                  : setConfirmCompleteOpen(true)
-              }
+              onPress={() => {
+                setActionError(null);
+                if (canConfirmReceive) {
+                  setConfirmReceiveOpen(true);
+                } else {
+                  setConfirmCompleteOpen(true);
+                }
+              }}
               style={({ pressed }) => [
                 styles.dockPrimaryBtn,
                 { flex: 1 },
@@ -2230,7 +2258,10 @@ function ExchangeActionsContent({
           <Pressable
             accessibilityRole="button"
             disabled={isBusy}
-            onPress={() => receiveMutation.mutate()}
+            onPress={() => {
+                setActionError(null);
+                setConfirmReceiveOpen(true);
+              }}
             style={({ pressed }) => [
               styles.dockPrimaryBtn,
               pressed && styles.dockPressed,
@@ -2278,6 +2309,28 @@ function ExchangeActionsContent({
 
       {/* Confirm Dialogs */}
       <ConfirmDialog
+        visible={confirmFundOpen}
+        title="Xác nhận đặt cọc trao đổi?"
+        message={`Hệ thống sẽ tạm giữ ${formatVnd(amountToPay)} từ Ví của bạn (cọc sách ${formatVnd(baseDeposit)}${diffRequired > 0 ? ` + tiền bù ${formatVnd(diffRequired)}` : ""}). Số dư khả dụng hiện tại: ${formatVnd(walletAvailable)}. Tiền cọc được hoàn lại về Ví sau khi hai bên nhận sách và kết thúc 72 giờ kiểm tra không tranh chấp.`}
+        confirmLabel={`Đặt cọc ${formatVnd(amountToPay)}`}
+        busy={fundMutation.isPending}
+        error={actionError ?? undefined}
+        onCancel={() => !fundMutation.isPending && setConfirmFundOpen(false)}
+        onConfirm={() => fundMutation.mutate()}
+      />
+
+      <ConfirmDialog
+        visible={confirmReceiveOpen}
+        title="Xác nhận bạn đã nhận sách?"
+        message={`Xác nhận bạn đã cầm trên tay sách từ ${partnerName}. Thao tác này bắt đầu 72 giờ kiểm tra chất lượng sách; tiền cọc bảo chứng (${formatVnd(amountToPay)}) vẫn được giữ an toàn và chỉ xử lý khi hết hạn kiểm tra của cả hai bên mà không có tranh chấp.`}
+        confirmLabel="Đã nhận sách"
+        busy={receiveMutation.isPending}
+        error={actionError ?? undefined}
+        onCancel={() => !receiveMutation.isPending && setConfirmReceiveOpen(false)}
+        onConfirm={() => receiveMutation.mutate()}
+      />
+
+      <ConfirmDialog
         visible={confirmCancelOpen}
         title={
           exchange.status === "Preparing"
@@ -2291,11 +2344,11 @@ function ExchangeActionsContent({
           exchange.status === "Preparing"
             ? exchange.cancellationRequestedBy ===
               (isInitiator ? "Recipient" : "Initiator")
-              ? "Đối tác đã đề nghị hủy giao dịch này trước khi gửi sách. Bằng việc đồng ý, giao dịch sẽ hủy an toàn và 100% tiền cọc cùng tiền bù của cả hai bên sẽ được hoàn trả về ví. Sách được mở lại trên kệ."
-              : "Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% tiền cọc cho cả hai bên."
+              ? `Đối tác đã đề nghị hủy giao dịch này trước khi gửi sách. Bằng việc đồng ý, giao dịch sẽ hủy an toàn và 100% khoản đã giữ (${formatVnd(amountToPay)}) cùng khoản cọc của đối tác sẽ được hoàn trả về ví. Sách được mở lại trên kệ.`
+              : `Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% khoản đã giữ (${formatVnd(amountToPay)}) về ví.`
             : exchange.status === "AcceptedAwaitingFunding"
-              ? "Bạn có chắc chắn muốn hủy giao dịch trao đổi này? Nếu bạn hoặc đối tác đã đặt cọc, 100% số tiền cọc sẽ được hoàn lại về ví ngay lập tức và sách sẽ được mở lại trên kệ."
-              : "Hủy đề nghị trao đổi sẽ trả lại trạng thái sách về kệ của bạn."
+              ? `Bạn có chắc chắn muốn hủy giao dịch trao đổi này?${isFundedByMe ? ` Khoản ${formatVnd(amountToPay)} bạn đã đặt cọc` : " Nếu đối tác đã đặt cọc, 100% số tiền cọc"} sẽ được hoàn lại về ví ngay lập tức và sách sẽ được mở lại trên kệ.`
+              : "Hủy đề nghị trao đổi sẽ đóng vĩnh viễn lời mời này và giữ nguyên trạng thái sách trên kệ của bạn."
         }
         confirmLabel={
           exchange.status === "Preparing" &&
@@ -2305,11 +2358,10 @@ function ExchangeActionsContent({
             : "Xác nhận hủy"
         }
         destructive
-        onCancel={() => setConfirmCancelOpen(false)}
-        onConfirm={() => {
-          setConfirmCancelOpen(false);
-          cancelMutation.mutate();
-        }}
+        busy={cancelMutation.isPending}
+        error={actionError ?? undefined}
+        onCancel={() => !cancelMutation.isPending && setConfirmCancelOpen(false)}
+        onConfirm={() => cancelMutation.mutate()}
       />
 
       <ConfirmDialog
@@ -2317,19 +2369,21 @@ function ExchangeActionsContent({
         title={
           exchange.status === "Preparing"
             ? "Từ chối yêu cầu hủy?"
-            : "Từ chối đề nghị?"
+            : "Từ chối đề nghị đổi sách?"
         }
         message={
           exchange.status === "Preparing"
             ? "Bạn muốn từ chối yêu cầu hủy của đối tác để tiếp tục giao dịch trao đổi sách? Vui lòng gửi sách trước thời hạn 72 giờ."
-            : "Từ chối đề nghị hoán đổi này từ đối tác."
+            : `Từ chối đề nghị đổi sách này từ ${partnerName}? Lời mời sẽ đóng vĩnh viễn và sách của hai bên giữ nguyên trên kệ.`
         }
         confirmLabel={
-          exchange.status === "Preparing" ? "Từ chối hủy & Tiếp tục" : "Từ chối"
+          exchange.status === "Preparing" ? "Từ chối hủy & Tiếp tục" : "Từ chối đề nghị"
         }
-        onCancel={() => setConfirmRejectOpen(false)}
+        destructive={exchange.status !== "Preparing"}
+        busy={rejectMutation.isPending}
+        error={actionError ?? undefined}
+        onCancel={() => !rejectMutation.isPending && setConfirmRejectOpen(false)}
         onConfirm={() => {
-          setConfirmRejectOpen(false);
           rejectMutation.mutate(
             exchange.status === "Preparing"
               ? "Tôi đã chuẩn bị xong sách và muốn tiếp tục hoàn thành giao dịch này."
@@ -2341,13 +2395,12 @@ function ExchangeActionsContent({
       <ConfirmDialog
         visible={confirmCompleteOpen}
         title="Xác nhận nghiệm thu sách?"
-        message="Thao tác này ghi nhận bạn đã kiểm tra sách. Bạn vẫn có thể báo sự cố trong 72 giờ kể từ lúc nhận. Hệ thống xử lý tiền khi hết hạn kiểm tra của cả hai và không có tranh chấp."
+        message={`Thao tác này ghi nhận bạn hài lòng với sách nhận từ ${partnerName}. Bạn vẫn có thể báo sự cố trong 72 giờ kể từ lúc nhận. Hệ thống hoàn cọc (${formatVnd(baseDeposit)}) và xử lý tiền bù khi hết hạn kiểm tra của cả hai bên mà không có tranh chấp.`}
         confirmLabel="Xác nhận nghiệm thu"
-        onCancel={() => setConfirmCompleteOpen(false)}
-        onConfirm={() => {
-          setConfirmCompleteOpen(false);
-          completeMutation.mutate();
-        }}
+        busy={completeMutation.isPending}
+        error={actionError ?? undefined}
+        onCancel={() => !completeMutation.isPending && setConfirmCompleteOpen(false)}
+        onConfirm={() => completeMutation.mutate()}
       />
 
       {/* Modal: Báo sự cố / Khiếu nại đơn trao đổi */}
@@ -2355,9 +2408,18 @@ function ExchangeActionsContent({
         visible={disputeModalOpen}
         transparent
         animationType="slide"
-        onRequestClose={() => setDisputeModalOpen(false)}
+        onRequestClose={() => !disputeMutation.isPending && setDisputeModalOpen(false)}
       >
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng hộp thoại khiếu nại"
+            style={StyleSheet.absoluteFill}
+            onPress={() => !disputeMutation.isPending && setDisputeModalOpen(false)}
+          />
           <View style={[styles.modalCard, styles.disputeModalCard, { paddingBottom: Math.max(bottomInset, 16) }]}>
             <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
@@ -2379,7 +2441,12 @@ function ExchangeActionsContent({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Đóng modal"
-                style={styles.sheetCloseBtn}
+                disabled={disputeMutation.isPending}
+                style={({ pressed }) => [
+                  styles.sheetCloseBtn,
+                  disputeMutation.isPending && { opacity: 0.4 },
+                  pressed && !disputeMutation.isPending && { opacity: 0.72 },
+                ]}
                 onPress={() => setDisputeModalOpen(false)}
               >
                 <Icon name="close" size={18} color={stitchTokens.darkWood} />
@@ -2401,8 +2468,8 @@ function ExchangeActionsContent({
                   </AppText>
                   <AppText style={styles.disputeNoticeDesc}>
                     Giao dịch sẽ tạm dừng tất toán ngay lập tức. Toàn bộ tiền
-                    cọc bảo chứng và tiền bù được giữ an toàn trên Ledger để Hội
-                    đồng Quản trị thẩm định qua video unboxing và ảnh đối chiếu.
+                    cọc bảo chứng và tiền bù được giữ an toàn trong Quỹ bảo chứng
+                    để đội ngũ Lật Lại đối chiếu bằng chứng đóng gói và nhận sách.
                   </AppText>
                 </View>
               </View>
@@ -2422,10 +2489,13 @@ function ExchangeActionsContent({
                     return (
                       <Pressable
                         key={cat}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected }}
                         onPress={() => setDisputeCategory(cat)}
-                        style={[
+                        style={({ pressed }) => [
                           styles.categoryPill,
                           isSelected && styles.categoryPillActive,
+                          pressed && { opacity: 0.78 },
                         ]}
                       >
                         <AppText
@@ -2452,6 +2522,8 @@ function ExchangeActionsContent({
                       return (
                         <Pressable
                           key={snap.listingId}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked }}
                           onPress={() =>
                             setDisputeBookIds((prev) =>
                               checked
@@ -2459,17 +2531,22 @@ function ExchangeActionsContent({
                                 : [...prev, snap.listingId],
                             )
                           }
-                          style={[
+                          style={({ pressed }) => [
                             styles.sideOptionItem,
                             checked && styles.sideOptionItemActive,
+                            pressed && { opacity: 0.78 },
                           ]}
                         >
                           <View
                             style={[
-                              styles.radioCircle,
-                              checked && styles.radioCircleActive,
+                              styles.checkboxSquare,
+                              checked && styles.checkboxSquareActive,
                             ]}
-                          />
+                          >
+                            {checked ? (
+                              <Icon name="check" size={12} color={stitchTokens.white} strokeWidth={2.6} />
+                            ) : null}
+                          </View>
                           <View style={{ flex: 1 }}>
                             <AppText style={styles.sideOptionTitle} numberOfLines={1}>
                               {snap.book.title}
@@ -2548,7 +2625,7 @@ function ExchangeActionsContent({
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </AppModal>
 
       {/* Modal 1: Đồng ý đổi sách kèm chọn địa chỉ nhận */}
@@ -2556,9 +2633,26 @@ function ExchangeActionsContent({
         visible={acceptModalOpen}
         transparent
         animationType="slide"
-        onRequestClose={() => setAcceptModalOpen(false)}
+        onRequestClose={() => {
+          if (!acceptMutation.isPending && !counterMutation.isPending && !isCreatingAddress) {
+            setAcceptModalOpen(false);
+          }
+        }}
       >
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng hộp thoại đồng ý đổi sách"
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (!acceptMutation.isPending && !counterMutation.isPending && !isCreatingAddress) {
+                setAcceptModalOpen(false);
+              }
+            }}
+          />
           <View style={[styles.modalCard, { paddingBottom: Math.max(bottomInset, 16) }]}>
             <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
@@ -2575,7 +2669,12 @@ function ExchangeActionsContent({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Đóng modal"
-                style={styles.sheetCloseBtn}
+                disabled={acceptMutation.isPending || counterMutation.isPending || isCreatingAddress}
+                style={({ pressed }) => [
+                  styles.sheetCloseBtn,
+                  (acceptMutation.isPending || counterMutation.isPending || isCreatingAddress) && { opacity: 0.4 },
+                  pressed && !(acceptMutation.isPending || counterMutation.isPending || isCreatingAddress) && { opacity: 0.72 },
+                ]}
                 onPress={() => setAcceptModalOpen(false)}
               >
                 <Icon name="close" size={18} color={stitchTokens.darkWood} />
@@ -2767,9 +2866,12 @@ function ExchangeActionsContent({
                     return (
                       <Pressable
                         key={addr.id}
-                        style={[
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected }}
+                        style={({ pressed }) => [
                           styles.sideOptionItem,
                           isSelected && styles.sideOptionItemActive,
+                          pressed && { opacity: 0.78 },
                         ]}
                         onPress={() => setSelectedAcceptAddressId(addr.id)}
                       >
@@ -2778,7 +2880,9 @@ function ExchangeActionsContent({
                             styles.radioCircle,
                             isSelected && styles.radioCircleActive,
                           ]}
-                        />
+                        >
+                          {isSelected ? <View style={styles.radioCircleDot} /> : null}
+                        </View>
                         <View style={{ flex: 1, gap: 2 }}>
                           <View
                             style={{
@@ -2964,8 +3068,9 @@ function ExchangeActionsContent({
                       {(areasQuery.data?.localities?.length
                         ? areasQuery.data.localities
                         : [
-                            { code: "DEMO-A", label: "Quận 1, 3, 5, 10" },
-                            { code: "DEMO-B", label: "Bình Thạnh, Phú Nhuận" },
+                            { code: "DEMO-A", label: "TP.HCM" },
+                            { code: "DEMO-B", label: "Bình Dương" },
+                            { code: "DEMO-C", label: "Vũng Tàu" },
                           ]
                       ).map((loc) => {
                         const isLocSelected =
@@ -3049,7 +3154,7 @@ function ExchangeActionsContent({
               </View>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </AppModal>
 
       {/* Modal 2: Đề xuất sách thay thế */}
@@ -3061,7 +3166,18 @@ function ExchangeActionsContent({
           if (!counterMutation.isPending) setCounterModalOpen(false);
         }}
       >
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng hộp thoại đề xuất sách thay thế"
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (!counterMutation.isPending) setCounterModalOpen(false);
+            }}
+          />
           <View style={[styles.modalCard, { paddingBottom: Math.max(bottomInset, 16) }]}>
             <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
@@ -3074,7 +3190,7 @@ function ExchangeActionsContent({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Đóng modal"
-                style={styles.sheetCloseBtn}
+                style={({ pressed }) => [styles.sheetCloseBtn, pressed && { opacity: 0.72 }]}
                 disabled={counterMutation.isPending}
                 onPress={() => setCounterModalOpen(false)}
               >
@@ -3114,7 +3230,7 @@ function ExchangeActionsContent({
               />
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </AppModal>
 
       {/* Modal 3: Báo gửi sách & Cập nhật vận đơn */}
@@ -3122,9 +3238,18 @@ function ExchangeActionsContent({
         visible={shipModalOpen}
         transparent
         animationType="slide"
-        onRequestClose={() => setShipModalOpen(false)}
+        onRequestClose={() => !shipMutation.isPending && setShipModalOpen(false)}
       >
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng hộp thoại gửi sách"
+            style={StyleSheet.absoluteFill}
+            onPress={() => !shipMutation.isPending && setShipModalOpen(false)}
+          />
           <View style={[styles.modalCard, { paddingBottom: Math.max(bottomInset, 16) }]}>
             <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
@@ -3139,7 +3264,12 @@ function ExchangeActionsContent({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Đóng modal"
-                style={styles.sheetCloseBtn}
+                disabled={shipMutation.isPending}
+                style={({ pressed }) => [
+                  styles.sheetCloseBtn,
+                  shipMutation.isPending && { opacity: 0.4 },
+                  pressed && !shipMutation.isPending && { opacity: 0.72 },
+                ]}
                 onPress={() => setShipModalOpen(false)}
               >
                 <Icon name="close" size={18} color={stitchTokens.darkWood} />
@@ -3206,7 +3336,7 @@ function ExchangeActionsContent({
             </View>
 
             <ScrollView
-              style={{ maxHeight: 380 }}
+              style={{ maxHeight: 460 }}
               contentContainerStyle={{ gap: 10, paddingVertical: 2 }}
               showsVerticalScrollIndicator
               nestedScrollEnabled
@@ -3262,7 +3392,7 @@ function ExchangeActionsContent({
                     </View>
                   )}
 
-                  {/* GHN Open API Integration Box */}
+                  {/* GHN Auto Order Box */}
                   {shipCarrierCode === "GHN" && (
                     <View style={styles.ghnAutoBox}>
                       <View style={styles.ghnAutoHeader}>
@@ -3274,12 +3404,12 @@ function ExchangeActionsContent({
                           }}
                         >
                           <Icon
-                            name="bolt"
+                            name="truck"
                             size={13}
                             color={stitchTokens.exchangeCarrierInk}
                           />
                           <AppText style={styles.ghnBadge}>
-                            TÍCH HỢP GHN OPEN API
+                            TẠO MÃ VẬN ĐƠN GHN
                           </AppText>
                         </View>
                         <Pressable
@@ -3293,7 +3423,7 @@ function ExchangeActionsContent({
                           <AppText style={styles.ghnAutoBtnText}>
                             {isCreatingGhn
                               ? "Đang tạo đơn..."
-                              : "⚡ Tạo đơn GHN & Lấy mã tự động"}
+                              : "Tạo đơn GHN tự động"}
                           </AppText>
                         </Pressable>
                       </View>
@@ -3701,14 +3831,13 @@ function ExchangeActionsContent({
                 >
                   <AppText
                     style={{
-                      fontSize: 11,
-                      fontWeight: "800",
+                      fontSize: 11.5,
+                      fontWeight: "700",
                       color: stitchTokens.wineDark,
                       textAlign: "center",
                     }}
                   >
-                    ⚡ Nạp nhanh chứng cứ đóng gói mẫu (Ảnh sách + Video niêm
-                    phong)
+                    Dùng bộ ảnh & video mẫu (Kiểm thử nhanh)
                   </AppText>
                 </Pressable>
               </View>
@@ -3746,7 +3875,8 @@ function ExchangeActionsContent({
                   </AppText>
                   Mỗi bên chủ động gửi sách của chiều mình. Hệ thống không thu
                   phí giao hàng. Tiền đặt cọc bảo chứng vẫn được Lật Lại giữ an
-                  toàn cho đến khi cả hai bên xác nhận đã nhận sách.
+                  toàn cho đến khi cả hai bên nhận sách và kết thúc 72 giờ kiểm
+                  tra mà không có tranh chấp.
                 </AppText>
               </View>
             </ScrollView>
@@ -3756,6 +3886,7 @@ function ExchangeActionsContent({
                 <Button
                   title="Hủy"
                   secondary
+                  disabled={shipMutation.isPending}
                   onPress={() => setShipModalOpen(false)}
                 />
               </View>
@@ -3769,7 +3900,7 @@ function ExchangeActionsContent({
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </AppModal>
     </>
   );
@@ -4549,13 +4680,34 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.roseParchment,
   },
   radioCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 2,
     borderColor: stitchTokens.borderWarm,
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioCircleActive: {
+    borderColor: stitchTokens.wineDark,
+  },
+  radioCircleDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: stitchTokens.wineDark,
+  },
+  checkboxSquare: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: stitchTokens.borderWarm,
+    backgroundColor: stitchTokens.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxSquareActive: {
     borderColor: stitchTokens.wineDark,
     backgroundColor: stitchTokens.wineDark,
   },

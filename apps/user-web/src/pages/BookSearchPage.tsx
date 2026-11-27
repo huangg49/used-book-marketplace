@@ -773,6 +773,7 @@ export function BookSearchPage() {
           <motion.aside
             ref={sidebar}
             className={styles.sidebar}
+            data-focus-inverse
             aria-label="Bộ lọc sách"
             initial={false}
             animate={{
@@ -1059,6 +1060,7 @@ export function BookSearchPage() {
       <dialog
         ref={dialog}
         data-lenis-prevent
+        data-focus-inverse
         className={styles.filterDialog}
         aria-labelledby="filter-dialog-title"
         onClose={() => setFilterOpen(false)}

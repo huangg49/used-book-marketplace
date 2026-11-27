@@ -675,6 +675,11 @@
     color: var(--shop-wine);
     font-size: 12px;
     font-weight: 700;
+    cursor: pointer;
+    transition: background-color 140ms ease;
+  }
+  .menuButton:hover {
+    background: color-mix(in srgb, var(--shop-wine) 10%, var(--shop-shelf));
   }
   .drawer {
     padding-top: max(16px, env(safe-area-inset-top));

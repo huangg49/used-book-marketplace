@@ -148,9 +148,9 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const heading = target.kind === 'publish' ? 'Đăng phiên đấu giá' : 'Đổi thời gian phiên'
   const locked = busy || !!unknown
   return (
-    <dialog ref={ref} className={styles.dialog} aria-labelledby={`${ids}-title`}>
+    <dialog ref={ref} data-lenis-prevent="true" className={styles.dialog} aria-labelledby={`${ids}-title`}>
       <div className={styles.sheet}>
-        <header className={styles.header}>
+        <header className={styles.header} data-focus-inverse>
           <span className={styles.heading}>
             <strong id={`${ids}-title`}><CalendarClock size={20} aria-hidden="true" /> {heading}</strong>
             <small>{title}</small>
@@ -211,9 +211,14 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
           </p>
           {target.kind === 'publish' && <p className={styles.note}>{auctionSellerFeeText}</p>}
           {error && <p role="alert" className={styles.error}>{error}</p>}
-          <button type="button" className={styles.confirm} disabled={busy || (!unknown && !!fieldError)} onClick={() => void submit()}>
-            {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? (timed ? 'Hẹn giờ mở phiên' : 'Đăng phiên') : 'Lưu thời gian mới'}
-          </button>
+          <div className={styles.actions}>
+            <button type="button" className={styles.cancel} onClick={onClose} disabled={busy}>
+              Hủy
+            </button>
+            <button type="button" data-focus-inverse className={styles.confirm} disabled={busy || (!unknown && !!fieldError)} onClick={() => void submit()}>
+              {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? (timed ? 'Hẹn giờ mở phiên' : 'Đăng phiên') : 'Lưu thời gian mới'}
+            </button>
+          </div>
         </div>
       </div>
     </dialog>

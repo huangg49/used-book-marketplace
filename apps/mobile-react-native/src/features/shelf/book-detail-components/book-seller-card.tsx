@@ -45,8 +45,8 @@ export function BookSellerCard({ sellerName, sellerId }: BookSellerCardProps) {
       <View style={styles.disclaimerBox}>
         <Icon name="info" size={13} color={stitchTokens.wineMid} />
         <AppText style={styles.disclaimerText}>
-          Lật lại kiểm duyệt thông tin catalog; ảnh và tình trạng do người đăng
-          chịu trách nhiệm.
+          Lật lại kiểm duyệt thông tin thư mục sách; ảnh và tình trạng do người
+          đăng chịu trách nhiệm.
         </AppText>
       </View>
     </View>

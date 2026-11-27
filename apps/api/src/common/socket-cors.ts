@@ -5,7 +5,7 @@ export function parseCorsOrigins(raw = process.env.CORS_ORIGINS): string[] {
   const value = raw?.trim() ? raw : DEFAULT_CORS_ORIGINS;
   return value
     .split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean);
 }
 
@@ -15,7 +15,7 @@ export function isAllowedSocketOrigin(
 ): boolean {
   // Native React Native clients and Node integration tests omit Origin.
   if (!origin) return true;
-  return parseCorsOrigins(rawEnv).includes(origin.trim());
+  return parseCorsOrigins(rawEnv).includes(origin.trim().replace(/\/+$/, ''));
 }
 
 export function socketCorsOptions() {

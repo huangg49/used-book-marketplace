@@ -569,7 +569,10 @@ function ActionDialog({
         if (!locked) onClose();
       }}
     >
-      <header className={styles.dialogHead}>
+      <header
+        className={styles.dialogHead}
+        data-focus-inverse={action === "approve" || undefined}
+      >
         <div>
           <h2 id="withdrawal-action-title">{titles[action]}</h2>
           {action === "approve" && (
@@ -613,10 +616,51 @@ function ActionDialog({
         title={
           action === "approve" ? "Thông tin nhận tiền" : "Xác nhận thông tin"
         }
-        confirm={false}
-        dirty={!!reason || !!outcome}
-        confirmTitle={titles[action]}
-        confirmBody={null}
+        confirm={action === "approve" || action === "reject" || action === "event"}
+        confirmDanger={action === "reject"}
+        dirty={!!reason || !!outcome || !!proofFile}
+        confirmTitle={
+          action === "approve"
+            ? `Xác nhận duyệt chi ${vnd(row.amount)}?`
+            : action === "reject"
+              ? `Từ chối yêu cầu rút ${vnd(row.amount)}?`
+              : `${titles[action]}?`
+        }
+        confirmBody={
+          action === "approve" ? (
+            <>
+              <p>
+                <strong>{vnd(row.amount)}</strong> → {row.recipient.bankName} · {row.recipient.accountNumber} ({row.recipient.accountHolder})
+              </p>
+              <p>
+                Chế độ: <strong>{row.processingMode === "Manual" ? "Chuyển khoản thủ công (có chứng từ)" : "Mô phỏng"}</strong>
+                {proofFile ? ` · Tệp chứng từ: ${proofFile.name}` : ""}
+              </p>
+              <p>Khoản giữ sẽ được chốt chi vĩnh viễn trên sổ cái sau khi tải lên chứng từ.</p>
+            </>
+          ) : action === "reject" ? (
+            <>
+              <p>
+                Từ chối yêu cầu rút <strong>{vnd(row.amount)}</strong> của <strong>{row.ownerName}</strong> ({row.recipient.bankName} · {row.recipient.accountNumber}).
+              </p>
+              <p>Toàn bộ khoản giữ <strong>{vnd(row.amount)}</strong> sẽ được hoàn về số dư khả dụng của thành viên.</p>
+              {reason.trim() && <blockquote className="prose">{reason.trim()}</blockquote>}
+            </>
+          ) : action === "event" ? (
+            <>
+              <p>
+                Mã chi <strong>{row.payoutRef}</strong> · {vnd(row.amount)} → {row.recipient.bankName} ({row.recipient.accountNumber} · {row.recipient.accountHolder}).
+              </p>
+              <p>
+                {outcome === "Succeeded"
+                  ? "Chốt chi vĩnh viễn trên sổ cái; không thể hoàn khoản giữ sau bước này."
+                  : outcome === "FailedVerified"
+                    ? "Đánh dấu chi thất bại đã xác minh để mở bước hoàn khoản giữ về Ví thành viên."
+                    : "Giữ trạng thái đối soát; chưa thay đổi số dư trên sổ cái."}
+              </p>
+            </>
+          ) : null
+        }
         submitLabel={action === "approve" ? "Xác nhận" : titles[action]}
         schema={withdrawalReceiptSchema}
         onPending={onPending}
@@ -629,6 +673,22 @@ function ActionDialog({
         })}
         fields={(disabled) => (
           <fieldset className={styles.form} disabled={disabled}>
+            {action !== "approve" && (
+              <dl className={styles.approvalRecipient}>
+                <div className={styles.approvalAccount}>
+                  <dt>Số tài khoản</dt>
+                  <dd>{row.recipient.accountNumber}</dd>
+                </div>
+                <div>
+                  <dt>Ngân hàng</dt>
+                  <dd>{row.recipient.bankName}</dd>
+                </div>
+                <div>
+                  <dt>Chủ tài khoản</dt>
+                  <dd>{row.recipient.accountHolder}</dd>
+                </div>
+              </dl>
+            )}
             {action === "approve" ? (
               <>
                 <dl className={styles.approvalRecipient}>

@@ -33,25 +33,25 @@ const conditionCards = [
   {
     value: "LikeNew",
     tier: "BẬC A",
-    title: "Như Mới (Like New)",
+    title: "Như mới",
     desc: "Gần như nguyên bản, không quăn góc, giấy trắng sáng.",
   },
   {
     value: "Good",
     tier: "BẬC B",
-    title: "Tốt (Good)",
+    title: "Còn tốt",
     desc: "Gáy chắc, ruột sạch, giấy ố ngà tự nhiên theo thời gian.",
   },
   {
     value: "Fair",
     tier: "BẬC C",
-    title: "Khá (Fair)",
+    title: "Khá · Đã dùng",
     desc: "Có nếp gấp đọc, sờn mép bìa, giấy ngả màu rơm.",
   },
   {
     value: "Worn",
     tier: "BẬC D",
-    title: "Cũ nhiều (Worn)",
+    title: "Cũ nhiều",
     desc: "Ấn bản sưu tầm thô mộc, có vết tích thời gian rõ.",
   },
 ] as const;
@@ -90,10 +90,10 @@ export function ConditionFields({
           </AppText>
           <AppText
             kind="small"
-            color={stitchTokens.wine}
-            style={{ fontWeight: "600", textDecorationLine: "underline" }}
+            color={stitchTokens.subtleGray}
+            style={{ fontSize: 11 }}
           >
-            Bảng chuẩn giám định ↗
+            4 bậc tình trạng
           </AppText>
         </View>
 

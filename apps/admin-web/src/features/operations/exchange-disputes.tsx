@@ -870,11 +870,27 @@ function OperationsReturnActions({
                 (!useEvidence || Boolean(evidenceId))
               }
               submitLabel={active.label}
+              confirmDanger={
+                selected === "OrderCompensation" ||
+                selected === "Settle" ||
+                selected === "RejectReturnDispatch"
+              }
               confirmTitle={active.label + "?"}
               confirmBody={
-                <p>
-                  {active.effect} {note}
-                </p>
+                <>
+                  <p>
+                    <strong>Hồ sơ #{item.id.slice(0, 8)}</strong> · Tổng tiền ký quỹ đang giữ:{" "}
+                    <strong>{money(totalDeposit(item))}</strong>
+                  </p>
+                  {evidenceId && (
+                    <p>
+                      <strong>Tệp bằng chứng đối chiếu:</strong>{" "}
+                      {evidence.data?.items.find((entry) => entry.id === evidenceId)?.fileName ?? evidenceId}
+                    </p>
+                  )}
+                  <p>{active.effect}</p>
+                  {note.trim() && <blockquote className="prose">{note.trim()}</blockquote>}
+                </>
               }
               build={() => ({
                 path: "/operations/exchanges/" + item.id + "/return-resolution",
@@ -1586,7 +1602,10 @@ function InspectionDisputeActions({
                 <strong>Phán quyết:</strong> {active.ruling}
               </p>
               {startsReturn ? (
-                <p>Hai bên có 48 giờ để kháng nghị. Tiền vẫn nằm trong ký quỹ trong thời gian trả sách.</p>
+                <p>
+                  Giao dịch #{item.id.slice(0, 8).toUpperCase()} · Tổng ký quỹ{" "}
+                  <strong>{money(totalDeposit(item))}</strong>. Hai bên có 48 giờ để kháng nghị. Tiền vẫn nằm trong ký quỹ trong thời gian trả sách.
+                </p>
               ) : <div className={styles.settlementCard}>
                 <div className={styles.settlementPartyBlock}>
                   <div className={styles.settlementPartyRow}>

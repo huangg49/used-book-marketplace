@@ -4,7 +4,7 @@ import { createLiveWatcher, sessionSocketOptions, type TransactionWatch } from '
 import { session } from '../lib/session'
 import { useSession } from './useSession'
 
-const apiBase = import.meta.env['VITE_API_BASE_URL'] ?? 'http://localhost:3000/api/v1'
+const apiBase = import.meta.env['VITE_API_BASE_URL'] || 'http://localhost:3000/api/v1'
 const origin = apiBase.startsWith('/') ? '' : apiBase.replace(/\/api\/v1\/?$/, '')
 
 // One socket per namespace for the whole tab; screens share watches on it.

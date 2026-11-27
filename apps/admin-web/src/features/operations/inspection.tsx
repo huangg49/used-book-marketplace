@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Link } from "react-router-dom";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { dateText } from "../../core/format";
 import { Notice } from "../../core/ui";
 import { ActionPanel } from "./action-panel";
@@ -128,12 +129,13 @@ export function IntakeInspect({ item, ...context }: Props) {
         ? null
         : outcome;
   const dirty = outcome !== null || note !== "" || checklist !== blank;
+  const [panelBusy, setPanelBusy] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   // Owner request 18/11: inspection opens as a modal, not a row drop-down.
   const requestClose = () => {
-    if (
-      dirty &&
-      !window.confirm("Bảng kiểm đang nhập sẽ bị bỏ. Đóng phiếu kiểm tra?")
-    ) {
+    if (panelBusy) return;
+    if (dirty) {
+      setConfirmDiscard(true);
       return;
     }
     dialog.current?.close();
@@ -165,13 +167,32 @@ export function IntakeInspect({ item, ...context }: Props) {
         <button
           className={styles.receiveDialogClose}
           type="button"
+          disabled={panelBusy}
           onClick={requestClose}
         >
           Đóng
         </button>
       </header>
+      <ConfirmDialog
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        title="Đóng phiếu kiểm tra sách?"
+        description="Bảng kiểm và ghi chú đang nhập sẽ bị bỏ nếu bạn đóng phiếu lúc này."
+        confirmLabel="Đóng phiếu và bỏ dữ liệu"
+        cancelLabel="Tiếp tục kiểm tra"
+        danger
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          dialog.current?.close();
+          context.onClose?.();
+        }}
+      />
     <ActionPanel
       {...context}
+      onPending={(pending) => {
+        setPanelBusy(pending);
+        context.onPending(pending);
+      }}
       label="Kiểm tra tình trạng sách"
       title="Kiểm tra theo bài đã duyệt."
       intro={
@@ -278,9 +299,18 @@ export function IntakeInspect({ item, ...context }: Props) {
         return true;
       }}
       submitLabel="Ghi kết luận kiểm tra"
+      confirmDanger={chosen === "Fail"}
       confirmTitle={`Ghi kết luận ${chosen ? outcomeLabels[chosen] : ""}?`}
       confirmBody={
         <>
+          <p>
+            <strong>{item.title}</strong> · Hồ sơ #{item.id.slice(0, 8)}
+            {item.shelfCode ? ` · Kệ ${item.shelfCode}` : ""}
+          </p>
+          <p>
+            Bảng kiểm: {MATCHES.filter((key) => checklist[key]).length}/{MATCHES.length} tiêu chí khớp
+            {checklist.suspectedCopy ? " · Có dấu hiệu nghi bản sao" : ""}.
+          </p>
           <p>
             {chosen === "Pass"
               ? "Sách sẽ sẵn sàng để mở phiên đấu giá."

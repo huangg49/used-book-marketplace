@@ -101,7 +101,8 @@ export function PaperCombobox({
           onFocus={() => setOpen(true)}
           onKeyDown={keyDown}
           onBlur={(e) => {
-            if (!root.current?.contains(e.relatedTarget)) setOpen(false);
+            if (e.relatedTarget && !root.current?.contains(e.relatedTarget))
+              setOpen(false);
           }}
         />
         {busy && (

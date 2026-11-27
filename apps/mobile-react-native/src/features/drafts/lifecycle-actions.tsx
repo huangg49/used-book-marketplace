@@ -98,6 +98,7 @@ export function LifecycleActions({
     <View style={{ gap: space.sm }}>
       {intent && !choice ? (
         <Button
+          wine
           title="Đối chiếu yêu cầu đang giữ"
           onPress={() => setChoice(intent.action)}
         />
@@ -105,6 +106,7 @@ export function LifecycleActions({
       {message ? <Notice tone="success">{message}</Notice> : null}
       {eligible && value.state.moderation === "Approved" ? (
         <Button
+          wine
           secondary
           title={
             value.state.visibility === "Visible"

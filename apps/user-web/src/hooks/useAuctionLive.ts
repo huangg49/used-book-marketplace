@@ -8,7 +8,7 @@ import { LIVE_SOCKET_OPTIONS, PRIVATE_REFRESH_MS, liveImpact, newerSnapshot, pri
 // reads and are written straight into the query cache; REST stays the source of
 // truth, so every (re)connect resyncs from the watch acknowledgement. Nothing
 // here places a bid or changes business state: commands stay on REST.
-const socketUrl = (import.meta.env['VITE_API_BASE_URL'] ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
+const socketUrl = (import.meta.env['VITE_API_BASE_URL'] || 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
 let shared: Socket | null = null
 let users = 0

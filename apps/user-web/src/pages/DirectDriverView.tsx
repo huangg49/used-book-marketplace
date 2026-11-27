@@ -54,7 +54,7 @@ export function DirectDriverView({ code, onSearch }: { code: string; onSearch: (
         .filter((item) => Boolean(item.deliveryJourney?.trackingCode));
     },
     enabled: !!ownerId,
-    refetchInterval: 10_000,
+    refetchInterval: 4_000,
     retry: false,
   });
 

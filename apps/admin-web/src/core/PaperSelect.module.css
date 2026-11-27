@@ -96,7 +96,7 @@
 }
 .select ul[data-side="top"] {
   top: auto;
-  bottom: calc(100% - 18px);
+  bottom: calc(100% + 7px);
   transform: translateY(4px);
 }
 .select ul[data-open="true"] {
@@ -123,13 +123,13 @@
 .select li + li {
   margin-top: 2px;
 }
-.select li[data-active="true"] {
-  color: var(--shop-wine);
-  background: var(--shop-shelf);
-}
 .select li[aria-selected="true"] {
   color: var(--shop-wine);
   background: color-mix(in srgb, var(--shop-wine) 7%, var(--shop-paper));
+}
+.select li[data-active="true"] {
+  color: var(--shop-wine);
+  background: var(--shop-shelf);
 }
 .optionCopy {
   display: grid;

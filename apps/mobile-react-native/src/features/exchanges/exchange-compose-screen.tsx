@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AppText,
   Button,
+  ConfirmDialog,
   Icon,
   Notice,
   Screen,
@@ -215,6 +216,7 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
   );
   const [initialMessage, setInitialMessage] = useState("");
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
 
   const toggleSelectBook = (id: string) => {
     setSelectedMyListingIds((prev) => {
@@ -526,7 +528,10 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
                 chosenMyListings.length === 0 ||
                 submitProposalMutation.isPending
               }
-              onPress={() => submitProposalMutation.mutate()}
+              onPress={() => {
+                setErrorNotice(null);
+                setConfirmSubmitOpen(true);
+              }}
               style={({ pressed }) => [
                 styles.composeDockBtn,
                 (chosenMyListings.length === 0 ||
@@ -882,6 +887,23 @@ function ExchangeComposeContent({ identity }: { identity: string }) {
           />
         </View>
       </View>
+
+      <ConfirmDialog
+        visible={confirmSubmitOpen}
+        title="Gửi đề nghị đổi sách?"
+        message={`Bạn đề nghị đổi ${chosenMyListings.length} cuốn sách của mình lấy “${targetBook.book.title}” của @${targetBook.seller.displayName}. ${
+          diff > 0
+            ? `Bạn bù thêm ${formatVnd(diff)}.`
+            : diff < 0
+              ? `Đối tác bù thêm ${formatVnd(-diff)}.`
+              : "Hai bên đổi ngang giá."
+        } Dự kiến tạm giữ từ Ví khi hai bên đặt cọc: ${formatVnd(totalMyValue + Math.max(0, diff))}.`}
+        confirmLabel="Gửi đề nghị"
+        busy={submitProposalMutation.isPending}
+        error={errorNotice ?? undefined}
+        onCancel={() => !submitProposalMutation.isPending && setConfirmSubmitOpen(false)}
+        onConfirm={() => submitProposalMutation.mutate()}
+      />
     </Screen>
   );
 }

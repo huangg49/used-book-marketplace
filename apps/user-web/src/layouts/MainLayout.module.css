@@ -354,6 +354,11 @@
   border-radius: 8px;
   background: transparent;
   color: inherit;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.menuButton:hover {
+  background: rgba(255, 248, 236, 0.14);
+  border-color: var(--shop-cream, #fff8ec);
 }
 .mobileNav {
   display: grid;

@@ -59,6 +59,11 @@
 .retryButton {
   border: 1px solid var(--shop-line); border-radius: 8px; min-height: 40px; padding: 6px 14px;
   background: var(--shop-paper); color: var(--shop-wine); font: inherit; cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.retryButton:hover:not(:disabled) {
+  background: var(--shop-shelf);
+  border-color: var(--shop-wine);
 }
 .list {
   list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; flex: 1 1 auto;

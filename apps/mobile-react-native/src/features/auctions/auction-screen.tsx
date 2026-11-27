@@ -562,6 +562,7 @@ function AuctionBody({
 
       {demo && auction.version != null ? (
         <DemoSkipButton
+          intentKey={`${auction.id}:${auction.version}`}
           label={scheduled ? "Mở phiên ngay · Demo" : "Kết thúc phiên ngay · Demo"}
           note={
             scheduled

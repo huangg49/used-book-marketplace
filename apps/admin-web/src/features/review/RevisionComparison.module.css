@@ -57,6 +57,11 @@
     sans-serif;
   text-align: left;
   cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.picker > button:hover:not(:disabled) {
+  border-color: var(--shop-wine);
+  background: var(--shop-shelf);
 }
 .picker > button > span {
   overflow: hidden;
@@ -91,7 +96,7 @@
 }
 .picker ul[data-side="top"] {
   top: auto;
-  bottom: calc(100% - 14px);
+  bottom: calc(100% + 6px);
 }
 .picker li {
   display: flex;

@@ -412,8 +412,8 @@ export function ExchangeEvidenceCard({
 
       {resumeId && (
         <Notice tone="info">
-          Chọn lại đúng tệp gốc; máy chủ đối chiếu mã băm SHA-256 và không ghi
-          đè.
+          Chọn lại đúng tệp gốc để tiếp tục tải lên; hệ thống tự kiểm tra tính
+          toàn vẹn tệp và không ghi đè.
         </Notice>
       )}
 
@@ -450,6 +450,7 @@ export function ExchangeEvidenceCard({
           <View style={{ gap: space.xs }}>
             <Notice tone="error">Chưa tải được danh sách bằng chứng.</Notice>
             <Button
+              wine
               title="Tải lại bằng chứng"
               secondary
               onPress={() => void list.refetch()}
@@ -514,7 +515,7 @@ export function ExchangeEvidenceCard({
                     <Button
                       wine
                       secondary
-                      title={"Xem tệp · " + e.fileName}
+                      title="Xem tệp"
                       onPress={() => void read(e.id)}
                     />
                   ) : (
@@ -523,7 +524,7 @@ export function ExchangeEvidenceCard({
                         wine
                         secondary
                         disabled={!!pending || busy}
-                        title={"Gửi tiếp · " + e.fileName}
+                        title="Gửi tiếp tệp"
                         onPress={() => {
                           setResumeId(e.id);
                           setSelectedAsset(null);

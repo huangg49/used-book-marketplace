@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
+import { lockPageScroll } from '../../lib/page-scroll';
 import styles from './ConfirmDialog.module.css';
 
 interface ConfirmDialogProps {
@@ -13,6 +14,7 @@ interface ConfirmDialogProps {
     isBusy?: boolean;
     confirmDisabled?: boolean;
     isDanger?: boolean;
+    error?: string | null;
     maxWidth?: string;
     stickyFooter?: boolean;
 }
@@ -29,11 +31,17 @@ export function ConfirmDialog({
     isBusy = false,
     confirmDisabled = false,
     isDanger = false,
+    error,
     maxWidth,
     stickyFooter,
 }: ConfirmDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
+    const uid = useId();
+    const titleId = `${uid}-title`;
+    const descId = `${uid}-desc`;
+
+    useEffect(() => (isOpen ? lockPageScroll() : undefined), [isOpen]);
 
     useEffect(() => {
         const dialog = dialogRef.current;
@@ -76,7 +84,14 @@ export function ConfirmDialog({
         };
 
         const handleClick = (e: MouseEvent) => {
-            if (e.target === dialog && !isBusy) {
+            if (e.target !== dialog || isBusy) return;
+            const rect = dialog.getBoundingClientRect();
+            if (
+                e.clientX < rect.left ||
+                e.clientX > rect.right ||
+                e.clientY < rect.top ||
+                e.clientY > rect.bottom
+            ) {
                 onClose();
             }
         };
@@ -96,16 +111,18 @@ export function ConfirmDialog({
         <dialog 
             ref={dialogRef} 
             tabIndex={-1}
+            data-lenis-prevent="true"
             style={maxWidth ? { maxWidth } : undefined}
             className={styles.dialog}
             data-sticky-footer={stickyFooter || undefined}
+            data-danger={isDanger || undefined}
             role={isDanger ? "alertdialog" : "dialog"}
-            aria-labelledby="dialog-title"
-            aria-describedby={description ? "dialog-desc" : undefined}
+            aria-labelledby={titleId}
+            aria-describedby={description ? descId : undefined}
         >
             <div className={styles.content}>
                 <div className={styles.header}>
-                    <h2 id="dialog-title" className={styles.title}>{title}</h2>
+                    <h2 id={titleId} className={`${styles.title} ${isDanger ? styles.titleDanger : ''}`}>{title}</h2>
                     <button
                         type="button"
                         className={styles.closeBtn}
@@ -116,9 +133,15 @@ export function ConfirmDialog({
                         ✕
                     </button>
                 </div>
-                {description && <p id="dialog-desc" className={styles.description}>{description}</p>}
+                {description && <p id={descId} className={styles.description}>{description}</p>}
                 
                 {children && <div className={styles.body}>{children}</div>}
+
+                {error && (
+                    <p role="alert" className={styles.errorBanner}>
+                        {error}
+                    </p>
+                )}
 
                 <div className={styles.footer}>
                     <button 
@@ -131,6 +154,7 @@ export function ConfirmDialog({
                     </button>
                     <button 
                         type="button" 
+                        data-focus-inverse
                         className={`${styles.btnConfirm} ${isDanger ? styles.btnDanger : ''}`} 
                         onClick={onConfirm}
                         disabled={isBusy || confirmDisabled}

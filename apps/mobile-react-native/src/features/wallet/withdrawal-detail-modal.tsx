@@ -5,9 +5,9 @@ import {
   ActivityIndicator,
   Image,
   Linking,
-  Platform,
   StyleSheet,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   withdrawalSchema,
@@ -22,6 +22,7 @@ import {
   AppModal,
   AppText,
   Button,
+  Icon,
   formatVnd,
   space,
   stitchTokens,
@@ -42,6 +43,7 @@ export function WithdrawalDetailModal({
   initialData,
   onClose,
 }: WithdrawalDetailModalProps) {
+  const insets = useSafeAreaInsets();
   const { client, state: sessionState } = useSession();
   const userId = sessionState.status === "authenticated" ? sessionState.user.id : null;
 
@@ -86,7 +88,7 @@ export function WithdrawalDetailModal({
     >
       <View style={styles.backdrop}>
         <Pressable style={styles.dismissArea} onPress={onClose} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.grabber} />
 
           <View style={styles.header}>
@@ -98,8 +100,14 @@ export function WithdrawalDetailModal({
                 Theo dõi tiến độ và chứng từ chuyển khoản
               </AppText>
             </View>
-            <Pressable onPress={onClose} hitSlop={8} style={styles.closeBtn}>
-              <AppText kind="bold" color={stitchTokens.subtleGray}>✕</AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đóng"
+              onPress={onClose}
+              hitSlop={8}
+              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.72 }]}
+            >
+              <Icon name="close" size={18} color={stitchTokens.wineDark} strokeWidth={2.2} />
             </Pressable>
           </View>
 
@@ -119,7 +127,7 @@ export function WithdrawalDetailModal({
                 <AppText kind="small" color={stitchTokens.subtleGray}>
                   Yêu cầu không tồn tại hoặc bạn không có quyền xem.
                 </AppText>
-                <Button secondary title="Thử lại" onPress={() => void detail.refetch()} />
+                <Button wine secondary title="Thử lại" onPress={() => void detail.refetch()} />
               </View>
             ) : null}
 
@@ -239,7 +247,7 @@ export function WithdrawalDetailModal({
                         <AppText kind="small" color={colors.error}>
                           Chưa tải được ảnh chứng từ. Vui lòng thử lại sau.
                         </AppText>
-                        <Button secondary title="Tải lại ảnh" onPress={() => void proof.refetch()} />
+                        <Button wine secondary title="Tải lại ảnh" onPress={() => void proof.refetch()} />
                       </View>
                     ) : null}
 
@@ -262,8 +270,9 @@ export function WithdrawalDetailModal({
                           />
                         </View>
                         <Button
+                          wine
                           secondary
-                          title="Mở ảnh kích thước đầy đủ ↗"
+                          title="Mở ảnh kích thước đầy đủ"
                           onPress={() => void Linking.openURL(proof.data.url)}
                         />
                       </View>
@@ -338,7 +347,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: "90%",
-    paddingBottom: Platform.OS === "ios" ? 36 : 24,
   },
   grabber: {
     width: 40,

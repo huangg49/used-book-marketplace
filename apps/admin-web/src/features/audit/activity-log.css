@@ -176,9 +176,15 @@
   height: 36px;
   border-radius: 8px;
   border: 1px solid var(--shop-line);
-  background: var(--shop-control);
-  color: var(--shop-ink);
+  background: var(--shop-paper);
+  color: var(--shop-wine);
   cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.audit-close:hover {
+  background: var(--shop-shelf);
+  border-color: var(--shop-wine);
 }
 
 .audit-meta,

@@ -244,11 +244,21 @@ export function DirectOrderDriverScreen({
           />
         }
       >
-        {query.isPending && (
+        {state.status === "anonymous" ? (
+          <StatePanel
+            wine
+            title="Cần đăng nhập để mở vận đơn"
+            message="Vận đơn mua bán trực tiếp chỉ hiển thị cho người mua hoặc người bán của đơn hàng."
+            action={{
+              label: "Đăng nhập",
+              onPress: () => router.push("/account"),
+            }}
+          />
+        ) : state.status === "loading" || (ownerId && query.isPending) ? (
           <View style={styles.centerWrap}>
             <StatePanel wine loading title="Đang tải thông tin vận đơn…" />
           </View>
-        )}
+        ) : null}
 
         {query.isError && (
           <StatePanel

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { WebBrandLogo } from "./brand-logo";
@@ -99,6 +99,7 @@ export function TopNavbar({
 
   return (
     <View
+      {...(Platform.OS === "web" ? { dataSet: { focusInverse: "true" } } : {})}
       style={[
         styles.navbarRoot,
         flushWithContent && styles.flushWithContent,

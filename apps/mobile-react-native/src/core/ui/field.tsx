@@ -1,7 +1,7 @@
 import { useId, useState, type Ref } from "react";
 import { Platform, Pressable, TextInput, View, type TextInputProps } from "react-native";
 import { AppText } from "./text";
-import { colors, colorRoles, metrics, radius, space } from "./theme";
+import { colors, colorRoles, metrics, radius, space, stitchTokens } from "./theme";
 import { layout } from "./styles";
 import { Icon } from "./icon";
 import { IconButton } from "./actions";
@@ -232,10 +232,10 @@ export function Checkbox({
           width: 22,
           height: 22,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: checked ? (color ?? stitchTokens.wine) : colors.border,
           borderRadius: radius.small,
           backgroundColor: checked
-            ? color ?? colors.forest
+            ? color ?? stitchTokens.wine
             : colors.surface,
           alignItems: "center",
           justifyContent: "center",

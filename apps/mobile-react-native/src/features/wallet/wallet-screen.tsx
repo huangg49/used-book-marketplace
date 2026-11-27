@@ -309,6 +309,7 @@ export function WalletScreen({
       footerAppearance="navigation"
       background={<WalletBackdrop />}
       canvasColor={stitchTokens.creamBg}
+      statusBarStyle="light"
     >
       {/* Top Bar over Wine Arch */}
       <View style={styles.topBar}>
@@ -363,6 +364,7 @@ export function WalletScreen({
 
       {denied ? (
         <StatePanel
+          wine
           title="Chưa xem được ví"
           message={presentError(deniedError).message}
           icon="info"
@@ -370,7 +372,7 @@ export function WalletScreen({
       ) : (
         <>
           {summary.isPending ? (
-            <StatePanel loading title="Đang tải số dư" />
+            <StatePanel wine loading title="Đang tải số dư" />
           ) : null}
 
           {summary.error ? (
@@ -731,7 +733,7 @@ export function WalletScreen({
                   <View style={styles.filterDateCol}>
                     <TextField
                       label="Từ ngày"
-                      placeholder="YYYY-MM-DD"
+                      placeholder="VD: 2026-11-01"
                       maxLength={10}
                       value={filterDraft.from}
                       onChangeText={(from) =>
@@ -742,7 +744,7 @@ export function WalletScreen({
                   <View style={styles.filterDateCol}>
                     <TextField
                       label="Đến ngày"
-                      placeholder="YYYY-MM-DD"
+                      placeholder="VD: 2026-11-30"
                       maxLength={10}
                       value={filterDraft.to}
                       onChangeText={(to) =>
@@ -786,6 +788,7 @@ export function WalletScreen({
                   </View>
                   <View style={styles.filterBtnFlex}>
                     <Button
+                      wine
                       title="Xóa bộ lọc"
                       secondary
                       onPress={() => {
@@ -800,7 +803,7 @@ export function WalletScreen({
             ) : null}
 
             {history.isPending ? (
-              <StatePanel loading title="Đang tải lịch sử" />
+              <StatePanel wine loading title="Đang tải lịch sử" />
             ) : null}
 
             {history.error && !history.isFetchNextPageError ? (
@@ -810,6 +813,7 @@ export function WalletScreen({
                   {presentError(history.error).message}
                 </Notice>
                 <Button
+                  wine
                   title="Thử lại lịch sử"
                   secondary
                   busy={history.isFetching}
@@ -822,6 +826,7 @@ export function WalletScreen({
 
             {history.data && entries.length === 0 ? (
               <StatePanel
+                wine
                 title="Chưa có khoản ghi nhận"
                 message={
                   typeFilter === "all" && !hasHistoryFilters
@@ -1040,9 +1045,10 @@ export function WalletScreen({
             <SaleFeeBreakdown amounts={saleReceipt.saleSettlement} settled />
           </View>
         ) : history.isPending ? (
-          <StatePanel loading title="Đang tải biên nhận" />
+          <StatePanel wine loading title="Đang tải biên nhận" />
         ) : history.isError ? (
           <StatePanel
+            wine
             title="Chưa tải được biên nhận"
             action={{
               label: "Thử lại",
@@ -1051,6 +1057,7 @@ export function WalletScreen({
           />
         ) : (
           <StatePanel
+            wine
             title="Không tìm thấy biên nhận"
             message="Chỉ các khoản đã ghi vào ví của bạn mới có biên nhận quyết toán."
           />

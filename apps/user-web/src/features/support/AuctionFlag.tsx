@@ -164,11 +164,12 @@ function AuctionFlagDialog({
   return (
     <dialog
       ref={ref}
+      data-lenis-prevent="true"
       className={styles.dialog}
       aria-labelledby={`${ids}-title`}
     >
       <div className={styles.sheet}>
-        <header className={styles.header}>
+        <header className={styles.header} data-focus-inverse>
           <span className={styles.heading}>
             <strong id={`${ids}-title`}>
               <Flag size={20} aria-hidden="true" /> Báo cáo sự cố
@@ -241,14 +242,25 @@ function AuctionFlagDialog({
               {error}
             </p>
           ) : null}
-          <button
-            type="button"
-            className={styles.confirm}
-            disabled={busy}
-            onClick={() => void submit()}
-          >
-            {busy ? "Đang gửi…" : pending ? "Thử lại báo cáo đã gửi" : "Gửi cho Admin"}
-          </button>
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.cancel}
+              onClick={onClose}
+              disabled={busy}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              data-focus-inverse
+              className={styles.confirm}
+              disabled={busy}
+              onClick={() => void submit()}
+            >
+              {busy ? "Đang gửi…" : pending ? "Thử lại báo cáo đã gửi" : "Gửi cho Admin"}
+            </button>
+          </div>
         </div>
       </div>
     </dialog>

@@ -170,6 +170,7 @@ export function ShelfScreen() {
         {hasCriteria && (items.length !== 0 || result.error) && (
           <View style={{ alignSelf: "flex-start", paddingHorizontal: 12 }}>
             <Chip
+              wine
               title="Xóa tìm kiếm và bộ lọc"
               selected={false}
               onPress={() => apply(initialFilters)}
@@ -177,7 +178,7 @@ export function ShelfScreen() {
           </View>
         )}
 
-        {result.isPending && <StatePanel loading title="Đang tải sách…" />}
+        {result.isPending && <StatePanel wine loading title="Đang tải sách…" />}
 
         {result.error && items.length === 0 && (
           <View style={{ paddingHorizontal: 12, gap: 10 }}>
@@ -196,6 +197,7 @@ export function ShelfScreen() {
 
         {!result.isPending && items.length === 0 && !result.error && (
           <StatePanel
+            wine
             icon="book"
             title={
               hasCriteria

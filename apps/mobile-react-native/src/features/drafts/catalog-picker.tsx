@@ -123,7 +123,7 @@ export function BookIdentity({
             color={stitchTokens.roseBrown}
             style={{ fontSize: 10 }}
           >
-            Chưa gán catalog
+            Chưa chọn thư mục sách
           </AppText>
         </View>
       );
@@ -136,6 +136,7 @@ export function BookIdentity({
       <View style={{ gap: space.sm }}>
         <Notice tone="warning">Chưa tải được thông tin đầu sách.</Notice>
         <Button
+          wine
           secondary
           title="Thử tải lại tên sách"
           busy={read.isFetching}
@@ -197,22 +198,21 @@ export function BookIdentity({
     >
       <View
         style={{
-          width: 50,
-          height: 68,
-          borderRadius: 6,
+          width: 48,
+          height: 64,
+          borderRadius: 8,
           backgroundColor: stitchTokens.parchment,
           borderWidth: 1,
           borderColor: stitchTokens.peachBorder,
           alignItems: "center",
           justifyContent: "center",
+          flexShrink: 0,
         }}
       >
-        <AppText kind="title" color={colors.rustText} style={{ fontSize: 20 }}>
-          📖
-        </AppText>
+        <Icon name="book" size={22} color={stitchTokens.wine} />
       </View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <View
             style={{
               backgroundColor: stitchTokens.sageGold,
@@ -226,7 +226,7 @@ export function BookIdentity({
               color={colors.rustText}
               style={{ fontSize: 9, fontWeight: "700" }}
             >
-              ĐÃ KHỚP CATALOG
+              ĐÃ KHỚP THƯ MỤC
             </AppText>
           </View>
           <AppText
@@ -257,7 +257,27 @@ export function BookIdentity({
           {metaText}
         </AppText>
       </View>
-      {onEdit ? <Button secondary title="Đổi sách" onPress={onEdit} /> : null}
+      {onEdit ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Đổi đầu sách khác"
+          onPress={onEdit}
+          style={({ pressed }) => ({
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 999,
+            backgroundColor: stitchTokens.roseParchment,
+            borderWidth: 1,
+            borderColor: stitchTokens.peachBorder,
+            opacity: pressed ? 0.72 : 1,
+            flexShrink: 0,
+          })}
+        >
+          <AppText kind="bold" style={{ fontSize: 11.5, color: stitchTokens.wine }}>
+            Đổi sách
+          </AppText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -458,10 +478,13 @@ export function CatalogPicker({
           {/* Sub-tabs: [ 📖 Tìm sách có sẵn ]   [ ✏️ Tự nhập thông tin ] */}
           <View style={styles.entryChoiceRow}>
             <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: entryMode === "catalog" }}
               onPress={() => setEntryMode("catalog")}
-              style={[
+              style={({ pressed }) => [
                 styles.entryChoiceTab,
                 entryMode === "catalog" && styles.entryChoiceTabActive,
+                pressed && { opacity: 0.78 },
               ]}
             >
               <Icon
@@ -484,10 +507,13 @@ export function CatalogPicker({
             </Pressable>
 
             <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: entryMode === "manual" }}
               onPress={() => setEntryMode("manual")}
-              style={[
+              style={({ pressed }) => [
                 styles.entryChoiceTab,
                 entryMode === "manual" && styles.entryChoiceTabActive,
+                pressed && { opacity: 0.78 },
               ]}
             >
               <Icon
@@ -564,13 +590,15 @@ export function CatalogPicker({
                         loại.
                       </AppText>
                       <Pressable
+                        accessibilityRole="button"
                         onPress={() => setEntryMode("manual")}
-                        style={{
+                        style={({ pressed }) => ({
                           flexDirection: "row",
                           alignItems: "center",
                           gap: 4,
                           marginTop: 4,
-                        }}
+                          opacity: pressed ? 0.72 : 1,
+                        })}
                       >
                         <AppText
                           kind="small"

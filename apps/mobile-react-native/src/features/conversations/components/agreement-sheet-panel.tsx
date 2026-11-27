@@ -6,13 +6,14 @@ import {
   directOrderCommission,
   type SaleSettlementReceipt,
 } from "@used-books/session-client";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AppText,
   AppTextInput,
   Button,
+  ConfirmDialog,
   Icon,
   Notice,
   colors,
@@ -72,6 +73,7 @@ export function AgreementSheetPanel({
   const [error, setError] = useState<string>();
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState<string>();
+  const [confirmPayOpen, setConfirmPayOpen] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [quoteBusy, setQuoteBusy] = useState(false);
   const [quoteError, setQuoteError] = useState<string>();
@@ -213,6 +215,7 @@ export function AgreementSheetPanel({
           body: JSON.stringify({ expectedVersion: currentOrder.version }),
         },
       );
+      setConfirmPayOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
       void queryClient.invalidateQueries({ queryKey: ["wallet"] });
@@ -301,7 +304,10 @@ export function AgreementSheetPanel({
                             ? `Thanh toán ${formatVnd(estimatedBuyerTotal)}`
                             : "Thanh toán ngay qua Ví"
                       }
-                      onPress={() => void handlePayOrder()}
+                      onPress={() => {
+                        setPayError(undefined);
+                        setConfirmPayOpen(true);
+                      }}
                       disabled={payBusy}
                       busy={payBusy}
                     />
@@ -774,8 +780,12 @@ export function AgreementSheetPanel({
                   )}
 
                   <View style={styles.offerInputRow}>
-                    <View style={styles.offerInputBox}>
+                    <View
+                      {...(Platform.OS === "web" ? { dataSet: { focusSurface: "true" } } : {})}
+                      style={styles.offerInputBox}
+                    >
                       <AppTextInput
+                        composite
                         value={proposedPrice}
                         onChangeText={(t) =>
                           setProposedPrice(t.replace(/[^0-9]/g, ""))
@@ -1115,6 +1125,21 @@ export function AgreementSheetPanel({
           )}
         </View>
       ) : null}
+
+      <ConfirmDialog
+        visible={confirmPayOpen}
+        title="Xác nhận thanh toán đơn hàng?"
+        message={`Thanh toán đơn #${(room.orderId ?? "").slice(0, 8).toUpperCase()}${estimatedBuyerTotal != null ? ` · Tổng cộng ${formatVnd(estimatedBuyerTotal)} (sách ${formatVnd(effectiveBookPrice)} + phí giao ${formatVnd(shippingFee ?? 0)})` : agreedPrice != null ? ` · Giá sách ${formatVnd(agreedPrice)} + phí giao hàng đã báo giá` : ""} qua Ví Lật Lại. Tiền được giữ an toàn trong Quỹ bảo chứng cho tới khi hết hạn kiểm tra sách.`}
+        confirmLabel={
+          estimatedBuyerTotal != null
+            ? `Thanh toán ${formatVnd(estimatedBuyerTotal)}`
+            : "Thanh toán ngay"
+        }
+        busy={payBusy}
+        error={payError}
+        onCancel={() => !payBusy && setConfirmPayOpen(false)}
+        onConfirm={() => void handlePayOrder()}
+      />
     </ScrollView>
   );
 }

@@ -585,6 +585,8 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         auctionType={auctionType}
         minBidders={minBidders}
         buyNowPrice={buyNowPrice}
+        dutchTopPrice={digits(dutchTop)}
+        dutchIntervalSeconds={digits(dutchEvery)}
         depositAmount={deposit ?? (startPrice !== null ? auctionDepositFor(startPrice) : null)}
         withdrawTarget={withdrawTarget}
         onCancelWithdraw={() => {

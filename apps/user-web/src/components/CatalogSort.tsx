@@ -127,7 +127,7 @@ export function CatalogSort({
       ref={root}
       onKeyDown={keyboard}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
     >
       <span id={`${id}-label`} className={styles.label}>

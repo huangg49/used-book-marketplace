@@ -205,6 +205,7 @@ export function PriceSuggestionPanel({
             {pricePoints(ready.range).map((amount) => (
               <Chip
                 key={amount}
+                wine
                 title={`Dùng ${formatVnd(amount)}`}
                 selected={current === amount}
                 onPress={() => (disabled ? undefined : pick(amount))}
@@ -214,6 +215,7 @@ export function PriceSuggestionPanel({
 
           {/* Factors collapsible */}
           <Button
+            wine
             secondary
             title={showFactors ? "Thu gọn giải thích khoảng giá" : "Vì sao có khoảng giá này?"}
             onPress={() => setShowFactors((v) => !v)}

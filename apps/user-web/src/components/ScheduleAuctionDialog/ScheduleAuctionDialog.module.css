@@ -15,13 +15,18 @@
 .field { display: grid; gap: 6px; }
 .field label { font-size: .875rem; font-weight: 600; }
 .field input, .field select { min-height: 48px; padding: 0 12px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; }
-.field input:focus, .field select:focus { outline: 2px solid var(--shop-wine); outline-offset: 1px; }
+.field input:focus, .field select:focus { border-color: var(--shop-wine); }
 .summary { margin: 0; font-weight: 600; color: var(--shop-wine); font-variant-numeric: tabular-nums; }
 .error { margin: 0; font-size: .875rem; font-weight: 700; color: var(--shop-error); }
 .note { margin: 0; font-size: .82rem; line-height: 1.5; color: var(--shop-muted); }
+.actions { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
+.cancel { min-height: 52px; padding: 0 18px; border: 1px solid var(--shop-control); border-radius: 12px; background: var(--shop-paper); color: var(--shop-wine); font: inherit; font-weight: 600; cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease; }
+.cancel:hover:not(:disabled) { background: var(--shop-shelf, #f4eddf); border-color: var(--shop-wine); }
+.cancel:disabled { opacity: .6; cursor: not-allowed; }
 .confirm { min-height: 52px; border: 0; border-radius: 12px; background: var(--shop-wine); color: var(--shop-cream); font-weight: 700; font-size: 1rem; cursor: pointer; }
+.confirm:hover:not(:disabled) { background: #7c2320; }
 .confirm:disabled { opacity: .6; cursor: not-allowed; }
-@media (max-width: 420px) { .heading strong { font-size: 1.15rem; } }
+@media (max-width: 420px) { .heading strong { font-size: 1.15rem; } .actions { grid-template-columns: 1fr; } }
 /* Brand the native controls: wine radio dot, wine chevron, wine calendar icon.
    accent-color also tints the browser's own date popup where supported. */
 .dialog { accent-color: var(--shop-wine); color-scheme: light; }
@@ -30,7 +35,7 @@
 .choice input[type="radio"]::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--shop-wine); transform: scale(0); transition: transform 140ms ease-out; }
 .choice input[type="radio"]:checked { border-color: var(--shop-wine); }
 .choice input[type="radio"]:checked::before { transform: scale(1); }
-.choice input[type="radio"]:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 2px; }
+.choice input[type="radio"]:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 0; }
 .choice > label:has(input:checked) { color: var(--shop-wine); font-weight: 600; background: var(--shop-paper); }
 .field input:hover, .field select:hover { border-color: var(--shop-wine); }
 .field input[type="datetime-local"] { font-variant-numeric: tabular-nums; cursor: text; }

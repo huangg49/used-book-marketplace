@@ -314,6 +314,12 @@
   border-radius: 3px;
   color: var(--shop-wine);
   font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.empty button:hover {
+  background: var(--shop-shelf);
+  border-color: var(--shop-wine);
 }
 .srOnly {
   position: absolute;

@@ -263,10 +263,11 @@
   box-shadow: 0 0 0 1px var(--shop-wine) !important;
 }
 
-/* Dropdown popup: xổ thẳng toàn bộ danh sách lựa chọn, không scroll */
+/* Dropdown popup: giữ giới hạn chiều cao và cuộn nội bộ cho danh sách dài */
 .filter-select-col ul {
-  max-height: none !important;
-  overflow: visible !important;
+  max-height: min(360px, 55dvh) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
   border-radius: 8px !important;
   box-shadow: 0 8px 24px rgba(40, 25, 20, 0.12) !important;
   border: 1px solid rgba(217, 203, 189, 0.9) !important;

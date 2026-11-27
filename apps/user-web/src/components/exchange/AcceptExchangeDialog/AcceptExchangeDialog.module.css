@@ -1,4 +1,14 @@
 .overlay {
+    --ink: var(--shop-ink, #281914);
+    --ink-secondary: #4a3728;
+    --ink-muted: var(--shop-muted, #716157);
+    --line: var(--shop-line, #d9cbbd);
+    --paper: var(--shop-paper, #fffcf5);
+    --leather: #7a4b2a;
+    --burgundy: var(--shop-wine, #5c0202);
+    --gold: #c89d54;
+    --gold-strong: #9e7428;
+    --font-serif: var(--shop-display, Georgia, serif);
     position: fixed;
     inset: 0;
     background: rgba(42, 38, 34, 0.7);
@@ -371,15 +381,15 @@
     align-items: center;
     gap: 6px;
     padding: 5px 12px;
-    background: rgba(34, 197, 94, 0.08);
-    border: 1px solid rgba(34, 197, 94, 0.2);
+    background: #f4eddf;
+    border: 1px solid #d9cbbd;
     border-radius: 5px;
     font-size: 12.5px;
-    color: #166534;
+    color: var(--shop-ink, #281914);
     margin-top: 2px;
 }
 .balanceIconOk {
-    color: #16a34a;
+    color: var(--shop-wine, #5c0202);
     flex-shrink: 0;
 }
 
@@ -437,6 +447,10 @@
     cursor: pointer;
     transition: all 0.15s ease;
     text-align: center;
+}
+.payerOptionBtn:hover:not(.payerOptionBtnActive) {
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--shop-wine, #5c0202);
 }
 .payerOptionBtnActive {
     background: #ffffff;
@@ -512,14 +526,14 @@
     align-items: center;
     gap: 6px;
     padding: 6px 8px;
-    background: #f0f7f3;
-    border: 1px solid #cce3d7;
+    background: #f4eddf;
+    border: 1px solid #d9cbbd;
     border-radius: 4px;
     font-size: 11.5px;
-    color: #1e4d3a;
+    color: var(--shop-ink, #281914);
 }
 .evenCompensationIcon {
-    color: #2e7d5a;
+    color: var(--shop-wine, #5c0202);
     flex-shrink: 0;
 }
 

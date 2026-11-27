@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
+import { lockPageScroll } from '../../../lib/page-scroll';
 import { 
     FileSignature, 
     X, 
@@ -70,6 +71,23 @@ export function AcceptExchangeDialog({
 }: AcceptExchangeDialogProps) {
   const [addressMode, setAddressMode] = useState<'existing' | 'new'>('existing');
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+  const [localBusy, setLocalBusy] = useState(false);
+  const titleId = useId();
+  const busy = isBusy || localBusy;
+
+  useEffect(() => (isOpen ? lockPageScroll() : undefined), [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, busy, onClose]);
   
   // New address form fields (viewer)
   const [newRecipientName, setNewRecipientName] = useState('');
@@ -205,7 +223,7 @@ export function AcceptExchangeDialog({
       throw new Error('Số điện thoại nhận hàng phải gồm đúng 10 chữ số (bắt đầu bằng 0).');
     }
     if (!newLocalityCode) {
-      throw new Error('Vui lòng chọn Khu vực / Quận huyện tại TP.HCM.');
+      throw new Error('Vui lòng chọn Khu vực / Quận huyện giao nhận.');
     }
     if (detailTrim.length < 5) {
       throw new Error('Địa chỉ chi tiết phải có ít nhất 5 ký tự (số nhà, tên đường, phường...).');
@@ -224,7 +242,7 @@ export function AcceptExchangeDialog({
             phone: phoneTrim,
             localityCode: newLocalityCode,
             detail: detailTrim,
-            serviceAreaCode: 'HCM-DEMO-v1',
+            serviceAreaCode: areas.data?.code ?? 'HCM-DEMO-v1',
           },
           makeDefault: false,
         }),
@@ -235,7 +253,9 @@ export function AcceptExchangeDialog({
   };
 
   const handleConfirmSubmit = async () => {
+    if (busy) return;
     setError('');
+    setLocalBusy(true);
     try {
       const finalAddressId = await resolveAddressId();
       await onConfirm({
@@ -244,10 +264,13 @@ export function AcceptExchangeDialog({
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi xác nhận đề nghị.');
+    } finally {
+      setLocalBusy(false);
     }
   };
 
   const handleCounterSubmit = async () => {
+    if (busy) return;
     setError('');
     const finalDiff = negotiatedPayer === 'none' ? 0 : negotiatedDiff;
     if (finalDiff < 0) {
@@ -258,6 +281,7 @@ export function AcceptExchangeDialog({
       ? null
       : (negotiatedPayer === 'viewer' ? detail.viewer.id : detail.partner.id);
 
+    setLocalBusy(true);
     try {
       const finalAddressId = await resolveAddressId();
       if (onCounter) {
@@ -274,23 +298,29 @@ export function AcceptExchangeDialog({
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi gửi đề xuất điều chỉnh.');
+    } finally {
+      setLocalBusy(false);
     }
   };
 
   return createPortal(
-    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && !isBusy && onClose()}>
-      <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="accept-contract-title">
+    <div
+      className={styles.overlay}
+      data-lenis-prevent="true"
+      onClick={(e) => e.target === e.currentTarget && !busy && onClose()}
+    >
+      <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerContent}>
             <div className={styles.headerIcon}>
               <FileSignature size={20} />
             </div>
-            <h2 id="accept-contract-title" className={styles.title}>
+            <h2 id={titleId} className={styles.title}>
               Xác nhận hợp đồng trao đổi
             </h2>
           </div>
-          <button type="button" className={styles.closeBtn} onClick={onClose} disabled={isBusy} aria-label="Đóng">
+          <button type="button" className={styles.closeBtn} onClick={onClose} disabled={busy} aria-label="Đóng">
             <X size={20} />
           </button>
         </div>
@@ -637,7 +667,7 @@ export function AcceptExchangeDialog({
                           onChange={(e) => setNewLocalityCode(e.target.value)}
                           className={styles.compactSelect}
                         >
-                          <option value="">-- Chọn Quận / Huyện phục vụ (TP.HCM) --</option>
+                          <option value="">-- Chọn Khu vực / Quận huyện (TP.HCM, Bình Dương, Vũng Tàu) --</option>
                           {areas.data?.localities.map((loc) => (
                             <option key={loc.code} value={loc.code}>
                               {loc.label}
@@ -674,27 +704,29 @@ export function AcceptExchangeDialog({
             type="button"
             className={styles.btnCancel}
             onClick={onClose}
-            disabled={isBusy}
+            disabled={busy}
           >
             Hủy
           </button>
           {isNegotiating ? (
             <button
               type="button"
+              data-focus-inverse
               className={styles.btnConfirmCounter}
               onClick={handleCounterSubmit}
-              disabled={isBusy}
+              disabled={busy}
             >
-              <ArrowLeftRight size={14} /> {isBusy ? 'Đang gửi...' : 'Gửi đề xuất điều chỉnh'}
+              <ArrowLeftRight size={14} /> {busy ? 'Đang gửi...' : 'Gửi đề xuất điều chỉnh'}
             </button>
           ) : (
             <button
               type="button"
+              data-focus-inverse
               className={styles.btnConfirm}
               onClick={handleConfirmSubmit}
-              disabled={isBusy}
+              disabled={busy}
             >
-              <CheckCircle2 size={14} /> {isBusy ? 'Đang xử lý...' : 'Đồng ý & Khóa giao dịch'}
+              <CheckCircle2 size={14} /> {busy ? 'Đang xử lý...' : 'Đồng ý & Khóa giao dịch'}
             </button>
           )}
         </div>

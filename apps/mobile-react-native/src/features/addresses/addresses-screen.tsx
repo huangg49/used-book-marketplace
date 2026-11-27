@@ -258,6 +258,7 @@ export function AddressesScreen() {
     <ActionBar>
       <Button
         key="leave"
+        wine
         title="Quay lại sổ địa chỉ"
         secondary
         disabled={busy}
@@ -265,6 +266,7 @@ export function AddressesScreen() {
       />
       <Button
         key="save"
+        wine
         title="Lưu địa chỉ"
         busy={busy}
         disabled={!!intent || !!readError}
@@ -279,6 +281,7 @@ export function AddressesScreen() {
       footer={footer}
       background={<AddressBackdrop />}
       canvasColor={stitchTokens.creamBg}
+      statusBarStyle="light"
     >
       <View style={styles.topBar}>
         <Pressable
@@ -338,6 +341,7 @@ export function AddressesScreen() {
           </Notice>
           {!intent.stopped ? (
             <Button
+              wine
               title={
                 intent.acknowledged
                   ? "Tải sổ địa chỉ đã lưu"
@@ -348,6 +352,7 @@ export function AddressesScreen() {
             />
           ) : (
             <Button
+              wine
               title="Xem lại dữ liệu đã lưu"
               secondary
               onPress={discard}
@@ -361,6 +366,7 @@ export function AddressesScreen() {
             Chưa tải được thông tin mới nhất. {presentError(readError).message}
           </Notice>
           <Button
+            wine
             title="Tải lại sổ địa chỉ"
             secondary
             busy={book.isFetching || areas.isFetching}
@@ -373,7 +379,7 @@ export function AddressesScreen() {
         </>
       ) : null}
       {book.isPending || areas.isPending ? (
-        <StatePanel loading title="Đang mở sổ địa chỉ" />
+        <StatePanel wine loading title="Đang mở sổ địa chỉ" />
       ) : null}
       {editor ? (
         <>
@@ -399,21 +405,54 @@ export function AddressesScreen() {
               onChangeText={(v) => editValue("phone", v)}
             />
           </Group>
-          <Group title="KHU VỰC">
-            <AppText kind="bold">Vùng phục vụ: TP.HCM</AppText>
-            <AppText kind="small" color={colors.muted}>
-              Chọn khu vực giao nhận phù hợp cho địa chỉ này.
+          <Group title="KHU VỰC GIAO NHẬN">
+            <AppText kind="bold" color={stitchTokens.wineDark}>
+              Vùng phục vụ: TP.HCM · Bình Dương · Vũng Tàu
             </AppText>
-            {areas.data?.localities.map((l) => (
-              <Button
-                key={l.code}
-                secondary
-                selected={editor.value.localityCode === l.code}
-                title={`${editor.value.localityCode === l.code ? "Đã chọn: " : ""}${l.label}`}
-                disabled={locked}
-                onPress={() => editValue("localityCode", l.code)}
-              />
-            ))}
+            <AppText kind="small" color={colors.muted}>
+              Chọn khu vực phù hợp cho địa chỉ nhận hoặc gửi sách.
+            </AppText>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {areas.data?.localities.map((l) => {
+                const isSelected = editor.value.localityCode === l.code;
+                return (
+                  <Pressable
+                    key={l.code}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected, disabled: locked }}
+                    disabled={locked}
+                    onPress={() => editValue("localityCode", l.code)}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      backgroundColor: isSelected
+                        ? stitchTokens.wine
+                        : stitchTokens.parchment,
+                      borderWidth: 1,
+                      borderColor: isSelected
+                        ? stitchTokens.wine
+                        : stitchTokens.cardBorder,
+                      opacity: locked ? 0.5 : pressed ? 0.78 : 1,
+                    })}
+                  >
+                    <AppText
+                      kind="small"
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: isSelected ? "700" : "600",
+                        color: isSelected
+                          ? stitchTokens.white
+                          : stitchTokens.wineDark,
+                        includeFontPadding: false,
+                      }}
+                    >
+                      {l.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
             {errors.localityCode ? (
               <Notice tone="error">{errors.localityCode}</Notice>
             ) : null}
@@ -450,6 +489,7 @@ export function AddressesScreen() {
         <>
           {!book.data.items.length ? (
             <StatePanel
+              wine
               icon="pin"
               title="Chưa có địa chỉ nào"
               message="Lưu nơi gửi hoặc nhận để chuẩn bị cho những lần chuyền sách."
@@ -663,7 +703,11 @@ export function AddressesScreen() {
       <ConfirmDialog
         visible={!!deleting}
         title="Xóa địa chỉ này?"
-        message="Thông tin đã chốt trong giao dịch vẫn được giữ. Nếu xóa địa chỉ mặc định, địa chỉ được lưu sớm nhất còn lại sẽ thay thế."
+        message={
+          deleting
+            ? `Xóa địa chỉ của ${deleting.recipientName} (${deleting.phone}) — ${deleting.detail}.\n\nThông tin đã chốt trong các giao dịch trước vẫn được giữ. Nếu xóa địa chỉ mặc định, địa chỉ lưu sớm nhất còn lại sẽ thay thế.`
+            : "Thông tin đã chốt trong giao dịch vẫn được giữ."
+        }
         confirmLabel={
           intent?.stopped
             ? "Xem lại sổ địa chỉ"

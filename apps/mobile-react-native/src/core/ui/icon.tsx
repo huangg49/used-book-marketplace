@@ -1,5 +1,5 @@
 import Svg, { Path } from "react-native-svg";
-import { colors as c } from "./theme";
+import { stitchTokens } from "./theme";
 const paths = {
   wallet: "M3 5h16v4M3 5v14h18V9H3V5Zm18 6h-6v6h6M17 14h.01",
   search: "M21 21l-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0",
@@ -57,7 +57,7 @@ export type IconName = keyof typeof paths;
 export function Icon({
   name,
   size = 22,
-  color = c.forest,
+  color = stitchTokens.wine,
   filled = false,
   strokeWidth = 1.7,
 }: {

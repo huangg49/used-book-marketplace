@@ -16,7 +16,7 @@ export function ReceiveDialog({ onClose, onConfirm, isBusy, books }: Props) {
 
   return (
     <ConfirmDialog isOpen onClose={onClose} title="Xác nhận đã nhận sách"
-      description="Bạn có 72 giờ để kiểm tra sách và báo sự cố kể từ lúc xác nhận đã nhận."
+      description="Bạn có 72 giờ để kiểm tra sách và báo sự cố kể từ lúc xác nhận. Sau 72 giờ nếu không có tranh chấp, tiền cọc và khoản bù đang giữ trong Ví sẽ tự động hoàn trả và tất toán."
       confirmText="Xác nhận nhận sách" cancelText="Để sau"
       confirmDisabled={!received} isBusy={isBusy} maxWidth="480px"
       onConfirm={async () => {

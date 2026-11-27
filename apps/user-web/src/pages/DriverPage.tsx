@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { exchangeHandoverAnchor } from '../lib/exchange-handover';
 import { ROUTES } from '../lib/routes';
 import { AuctionDriverView } from './AuctionDriverView';
@@ -83,7 +84,11 @@ export function DriverPage() {
     const normalized = code.toUpperCase();
     const demoMode = params.get('demo') === '1';
     return <AuctionDriverView key={`${normalized}:${demoMode}`} code={normalized} demoMode={demoMode}
-      onSearch={(trackingCode) => setParams(trackingCode ? { kind: 'auction', trackingCode } : { kind: 'auction' })} />;
+      onSearch={(trackingCode) => setParams(
+        trackingCode
+          ? { kind: 'auction', trackingCode, ...(demoMode ? { demo: '1' } : {}) }
+          : { kind: 'auction', ...(demoMode ? { demo: '1' } : {}) },
+      )} />;
   }
   return <ExchangeDriverView />;
 }
@@ -98,6 +103,12 @@ function ExchangeDriverView() {
   const [recentOrders, setRecentOrders] = useState<RecentOrderSummary[]>([]);
   const [legSteps, setLegSteps] = useState<Record<string, number>>({});
   const [lastAction, setLastAction] = useState<string>('');
+  const [feedback, setFeedback] = useState<{
+    tone: 'success' | 'warning' | 'error';
+    title: string;
+    body: string;
+  } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<'auto-simulate' | 'report-failure' | null>(null);
   const requestedCode = searchParams.get('trackingCode') || undefined;
   const requestedExchange = searchParams.get('exchangeId') || undefined;
   const legParam = searchParams.get('leg');
@@ -130,9 +141,11 @@ function ExchangeDriverView() {
   }, []);
 
   const fetchActiveOrder = useCallback(
-    async (trackingCode?: string, exchangeId?: string, leg?: 'initiator' | 'recipient') => {
-      setLoading(true);
-      setLoadError(null);
+    async (trackingCode?: string, exchangeId?: string, leg?: 'initiator' | 'recipient', silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setLoadError(null);
+      }
       try {
         const params = new URLSearchParams();
         if (trackingCode) params.set('trackingCode', trackingCode);
@@ -144,6 +157,7 @@ function ExchangeDriverView() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as ShipmentOrderData | null;
         setOrder(data);
+        setLoadError(null);
 
         if (data) {
           if (data.deliveredAt) {
@@ -155,15 +169,17 @@ function ExchangeDriverView() {
           }
         }
       } catch (err) {
-        console.warn('Lỗi tải đơn vận chuyển:', err);
-        setOrder(null);
-        setLoadError(
-          err instanceof Error
-            ? `Không thể kết nối máy chủ mô phỏng (${err.message}).`
-            : 'Không thể tải dữ liệu đơn vận chuyển.',
-        );
+        if (!silent) {
+          console.warn('Lỗi tải đơn vận chuyển:', err);
+          setOrder(null);
+          setLoadError(
+            err instanceof Error
+              ? `Không thể kết nối máy chủ mô phỏng (${err.message}).`
+              : 'Không thể tải dữ liệu đơn vận chuyển.',
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     },
     [],
@@ -173,6 +189,15 @@ function ExchangeDriverView() {
     void fetchActiveOrder(requestedCode, requestedExchange, requestedLeg);
     void fetchRecentOrders();
   }, [fetchActiveOrder, fetchRecentOrders, requestedCode, requestedExchange, requestedLeg]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== 'visible' || submitting || simulatingSpeed) return;
+      void fetchActiveOrder(requestedCode, requestedExchange, requestedLeg, true);
+      void fetchRecentOrders();
+    }, 4_000);
+    return () => window.clearInterval(timer);
+  }, [fetchActiveOrder, fetchRecentOrders, requestedCode, requestedExchange, requestedLeg, submitting, simulatingSpeed]);
 
   const handleSearch = (trackingCode: string) => {
     if (trackingCode === requestedCode) void fetchActiveOrder(requestedCode, requestedExchange, requestedLeg);
@@ -190,13 +215,15 @@ function ExchangeDriverView() {
     void fetchActiveOrder(undefined, order.exchangeId, targetLeg);
   };
 
-  const handleAutoSimulate = async () => {
+  const handleAutoSimulate = () => {
     if (!order?.exchangeId) return;
-    const ok = window.confirm(
-      '⚡ Bạn có muốn TỰ ĐỘNG mô phỏng giao cả 2 kiện hàng đến bước hoàn tất (POD) không?\n\n' +
-      'Thao tác này sẽ tự động mô phỏng giao thành công cả 2 chiều và kích hoạt thời gian kiểm định 72h của sàn.',
-    );
-    if (!ok) return;
+    setConfirmAction('auto-simulate');
+  };
+
+  const runAutoSimulate = async () => {
+    if (!order?.exchangeId) return;
+    setConfirmAction(null);
+    setFeedback(null);
     setSimulatingSpeed(true);
     try {
       const leg1Tracking = order.legs?.[0]?.trackingCode || order.trackingCode;
@@ -241,14 +268,17 @@ function ExchangeDriverView() {
       await fetchActiveOrder(undefined, order.exchangeId);
       await fetchRecentOrders();
 
-      alert(
-        `🎉 TỰ ĐỘNG MÔ PHỎNG THÀNH CÔNG!\n\n` +
-        `• Kiện 1: Đã giao tận tay & ký nhận POD.\n` +
-        `• Kiện 2: Đã giao tận tay & ký nhận POD.\n\n` +
-        `Sàn Lật Lại đã tức thì chuyển sang giai đoạn "KIỂM ĐỊNH & NGHIỆM THU 72H (POL-08)"!`,
-      );
+      setFeedback({
+        tone: 'success',
+        title: 'Tự động mô phỏng giao cả 2 kiện thành công',
+        body: 'Cả 2 kiện đã ký nhận POD. Sàn Lật Lại đã chuyển sang giai đoạn kiểm tra & nghiệm thu 72 giờ.',
+      });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Có lỗi khi tự động chạy mô phỏng');
+      setFeedback({
+        tone: 'error',
+        title: 'Chưa thể tự động mô phỏng',
+        body: err instanceof Error ? err.message : 'Có lỗi khi tự động chạy mô phỏng.',
+      });
     } finally {
       setSimulatingSpeed(false);
     }
@@ -262,6 +292,7 @@ function ExchangeDriverView() {
   ) => {
     if (!order) return;
     setSubmitting(true);
+    setFeedback(null);
     try {
       const res = await fetch(`${API_BASE}/webhooks/carrier`, {
         method: 'POST',
@@ -289,39 +320,49 @@ function ExchangeDriverView() {
         const willBeBothDelivered = otherLeg?.isDelivered === true;
 
         if (willBeBothDelivered) {
-          alert(
-            `🎉 GIAO HÀNG THÀNH CÔNG CHO CẢ 2 BÊN!\n\n` +
-            `Cả 2 kiện hàng đã được giao tận tay và ký nhận POD!\n` +
-            `Sàn Lật Lại đã tự động chuyển sang bước "ĐÃ NHẬN SÁCH" & bắt đầu đếm ngược 72h kiểm định (POL-08)!`,
-          );
+          setFeedback({
+            tone: 'success',
+            title: 'Giao hàng thành công cho cả 2 bên',
+            body: 'Cả 2 kiện hàng đã ký nhận POD. Phiếu trao đổi đã chuyển sang giai đoạn kiểm tra & nghiệm thu 72 giờ.',
+          });
         } else {
-          alert(
-            `✓ GIAO THÀNH CÔNG KIỆN HÀNG!\n\n` +
-            `Mã vận đơn ${order.trackingCode} đã được giao cho ${order.receiver.name}.\n` +
-            `👉 Còn Kiện hàng chiều ngược lại (${otherLeg?.trackingCode || 'Kiện 2'}), hãy chuyển sang tab bên cạnh để tiếp tục giao nhé!`,
-          );
+          setFeedback({
+            tone: 'success',
+            title: `Giao thành công kiện ${order.trackingCode}`,
+            body: `Đã giao cho ${order.receiver.name}. Chuyển sang tab chiều ngược lại (${otherLeg?.trackingCode || 'Kiện 2'}) để tiếp tục giao.`,
+          });
         }
       } else {
-        alert(`✓ ${actionLabel}!\nHành trình đơn hàng trên sàn Lật Lại đã được cập nhật.`);
+        setFeedback({
+          tone: 'success',
+          title: actionLabel,
+          body: 'Hành trình đơn hàng trên sàn Lật Lại đã được cập nhật.',
+        });
       }
 
       void fetchActiveOrder(undefined, order.exchangeId, order.activeLeg);
       void fetchRecentOrders();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      setFeedback({
+        tone: 'error',
+        title: 'Cập nhật trạng thái thất bại',
+        body: err instanceof Error ? err.message : 'Có lỗi xảy ra.',
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleReportFailure = async () => {
+  const handleReportFailure = () => {
     if (!order) return;
-    const ok = window.confirm(
-      `Xác nhận báo giao thất bại cho kiện ${order.trackingCode} (Người nhận ${order.receiver.name} không nghe máy)?`,
-    );
-    if (!ok) return;
+    setConfirmAction('report-failure');
+  };
 
+  const runReportFailure = async () => {
+    if (!order) return;
+    setConfirmAction(null);
     setSubmitting(true);
+    setFeedback(null);
     try {
       const res = await fetch(`${API_BASE}/webhooks/carrier`, {
         method: 'POST',
@@ -334,10 +375,18 @@ function ExchangeDriverView() {
       });
 
       if (!res.ok) throw new Error(`Lỗi cập nhật (${res.status})`);
-      alert(`⚠️ Đã ghi nhận giao hàng thất bại! Hệ thống đã ghi nhật ký và thông báo cho người dùng.`);
+      setFeedback({
+        tone: 'warning',
+        title: 'Đã ghi nhận giao hàng thất bại',
+        body: `Hệ thống đã lưu nhật ký hẹn giao lại cho kiện ${order.trackingCode} và thông báo tới người nhận.`,
+      });
       void fetchActiveOrder(undefined, order.exchangeId, order.activeLeg);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      setFeedback({
+        tone: 'error',
+        title: 'Không thể báo giao thất bại',
+        body: err instanceof Error ? err.message : 'Có lỗi xảy ra.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -359,6 +408,64 @@ function ExchangeDriverView() {
         label: 'Quay lại phiếu trao đổi',
       } : undefined}
     >
+        {feedback && (
+          <div
+            role={feedback.tone === 'error' ? 'alert' : 'status'}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '12px 16px',
+              marginBottom: 14,
+              borderRadius: 10,
+              border: `1px solid ${feedback.tone === 'error' ? '#f0c2b8' : feedback.tone === 'warning' ? '#e7c98b' : '#d9cbbd'}`,
+              background: feedback.tone === 'error' ? '#fdf2ef' : feedback.tone === 'warning' ? '#fff8e8' : '#f4eddf',
+              color: feedback.tone === 'error' ? '#912b0e' : 'var(--shop-ink, #281914)',
+            }}
+          >
+            <div>
+              <strong style={{ display: 'block', fontSize: '0.9rem', marginBottom: 2 }}>{feedback.title}</strong>
+              <span style={{ fontSize: '0.84rem', lineHeight: 1.5 }}>{feedback.body}</span>
+            </div>
+            <button
+              type="button"
+              aria-label="Đóng thông báo"
+              onClick={() => setFeedback(null)}
+              style={{
+                border: 0,
+                background: 'transparent',
+                color: 'inherit',
+                fontWeight: 700,
+                cursor: 'pointer',
+                padding: '2px 6px',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        <ConfirmDialog
+          isOpen={confirmAction !== null}
+          onClose={() => !submitting && !simulatingSpeed && setConfirmAction(null)}
+          title={
+            confirmAction === 'auto-simulate'
+              ? 'Tự động mô phỏng giao cả 2 kiện?'
+              : `Báo giao thất bại kiện ${order?.trackingCode ?? ''}?`
+          }
+          description={
+            confirmAction === 'auto-simulate'
+              ? 'Thao tác này sẽ mô phỏng giao thành công cả 2 chiều đến bước ký nhận POD và kích hoạt ngay thời gian kiểm tra 72 giờ của sàn.'
+              : `Ghi nhận không liên lạc được với người nhận (${order?.receiver.name ?? ''}) và hẹn giao lại vào ca kế tiếp.`
+          }
+          confirmText={confirmAction === 'auto-simulate' ? 'Chạy mô phỏng 2 chiều' : 'Ghi nhận giao thất bại'}
+          isDanger={confirmAction === 'report-failure'}
+          isBusy={submitting || simulatingSpeed}
+          onConfirm={() => {
+            if (confirmAction === 'auto-simulate') void runAutoSimulate();
+            else if (confirmAction === 'report-failure') void runReportFailure();
+          }}
+        />
         {/* Quick Chips: Chọn các đơn gần đây trong DB */}
         <div className={styles.chipsSection}>
           <p className={styles.chipsLabel}>Chọn nhanh đơn hàng</p>

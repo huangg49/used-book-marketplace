@@ -113,7 +113,7 @@ export function BookBottomBar({
               {item.bundle ? "Mua cả bộ" : "Mua ngay"}
             </AppText>
           </Pressable>
-        ) : (
+        ) : !canExchange ? (
           <View style={styles.disabledBtn}>
             <AppText numberOfLines={1} style={styles.disabledText}>
               {item.purchaseAvailability?.status === "InTransaction"
@@ -121,7 +121,7 @@ export function BookBottomBar({
                 : "Không sẵn sàng"}
             </AppText>
           </View>
-        )}
+        ) : null}
       </View>
     </View>
   );

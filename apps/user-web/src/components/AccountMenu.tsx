@@ -21,6 +21,7 @@ import { useSession } from "../hooks/useSession";
 import { useCurrentMemberAvatar } from "../hooks/useCurrentMemberAvatar";
 import { getWalletSummary } from "../services/wallet";
 import { formatVnd, ROUTES } from "../lib/routes";
+import { ConfirmDialog } from "./ConfirmDialog";
 import styles from "./AccountMenu.module.css";
 
 interface AccountMenuProps {
@@ -99,6 +100,7 @@ export function AccountMenu({ displayName }: AccountMenuProps) {
   const trigger = useRef<HTMLButtonElement>(null);
   const focusFirst = useRef(false);
   const [openPath, setOpenPath] = useState<string | null>(null);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const open = openPath === location.key;
   const { busy, error, logout } = useAccountLogout();
 
@@ -116,12 +118,12 @@ export function AccountMenu({ displayName }: AccountMenuProps) {
 
   useEffect(() => {
     if (!open) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     if (focusFirst.current) {
       focusFirst.current = false;
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         root.current?.querySelector<HTMLAnchorElement>("a")?.focus();
       }, 50);
-      return () => clearTimeout(timer);
     }
     const outside = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) {
@@ -134,6 +136,7 @@ export function AccountMenu({ displayName }: AccountMenuProps) {
     document.addEventListener("pointerdown", outside);
     window.addEventListener("resize", narrow);
     return () => {
+      if (timer !== undefined) clearTimeout(timer);
       document.removeEventListener("pointerdown", outside);
       window.removeEventListener("resize", narrow);
     };
@@ -151,7 +154,7 @@ export function AccountMenu({ displayName }: AccountMenuProps) {
       className={styles.root}
       ref={root}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) {
           setOpenPath(null);
         }
       }}
@@ -368,7 +371,10 @@ export function AccountMenu({ displayName }: AccountMenuProps) {
                 type="button"
                 className={styles.logoutBtn}
                 disabled={busy}
-                onClick={() => void logout()}
+                onClick={() => {
+                  handleClose();
+                  setLogoutConfirmOpen(true);
+                }}
               >
                 <LogOut size={14} aria-hidden="true" />
                 <span>{busy ? "Đang thoát…" : "Đăng xuất"}</span>
@@ -383,6 +389,17 @@ export function AccountMenu({ displayName }: AccountMenuProps) {
           </motion.div>
         )}
       </AnimatePresence>
+      <ConfirmDialog
+        isOpen={logoutConfirmOpen}
+        onClose={() => !busy && setLogoutConfirmOpen(false)}
+        title="Đăng xuất khỏi Lật Lại?"
+        description="Phiên đăng nhập hiện tại sẽ kết thúc. Nếu bạn đang soạn thảo bài đăng hoặc biểu mẫu chưa lưu, hãy lưu lại trước khi rời đi."
+        confirmText="Đăng xuất"
+        isDanger
+        isBusy={busy}
+        error={error}
+        onConfirm={() => void logout()}
+      />
     </div>
   );
 }

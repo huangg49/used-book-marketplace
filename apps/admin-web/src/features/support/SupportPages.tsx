@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { z } from "zod";
 import {
   useInfiniteQuery,
@@ -668,18 +669,37 @@ function CloseReportedAuction({
             />
           </label>
           <p className="muted">Ít nhất 10 ký tự. Nêu lý do đóng; không ghi thông tin cá nhân.</p>
-          {confirming ? (
-            <div className={styles.buttons}>
-              <Button variant={freeze ? undefined : "danger"} busy={busy} disabled={blocked || short || !auction.data} onClick={() => void close()}>
-                {freeze ? "Xác nhận tạm dừng" : "Xác nhận đóng phiên"}
-              </Button>
-              <Button disabled={busy} onClick={() => setConfirming(false)}>Thôi</Button>
-            </div>
-          ) : (
-            <Button variant={freeze ? undefined : "danger"} disabled={blocked || short || !auction.data} onClick={() => setConfirming(true)}>
-              {freeze ? "Tạm dừng với lời nhắn" : "Đóng phiên với lời nhắn"}
-            </Button>
-          )}
+          <Button
+            variant={freeze ? undefined : "danger"}
+            disabled={blocked || short || !auction.data}
+            onClick={() => {
+              setError("");
+              setConfirming(true);
+            }}
+          >
+            {freeze ? "Tạm dừng với lời nhắn" : "Đóng phiên với lời nhắn"}
+          </Button>
+          <ConfirmDialog
+            open={confirming}
+            onClose={() => !busy && setConfirming(false)}
+            title={
+              freeze
+                ? `Tạm dừng phiên “${auction.data?.auction.title ?? ""}”?`
+                : `Đóng vĩnh viễn phiên “${auction.data?.auction.title ?? ""}”?`
+            }
+            description={
+              freeze
+                ? "Phiên sẽ tạm dừng tối đa 72 giờ để xem xét; tiền cọc và lượt giá được giữ nguyên, lời nhắn sẽ gửi tới người bán và mọi người tham gia."
+                : "Phiên bị hủy ngay, toàn bộ tiền cọc và khoản giữ được hoàn về Ví, sách trả lại người bán. Thao tác này không thể hoàn tác."
+            }
+            confirmLabel={freeze ? "Xác nhận tạm dừng phiên" : "Xác nhận đóng phiên"}
+            danger={!freeze}
+            busy={busy}
+            error={error || undefined}
+            onConfirm={() => void close()}
+          >
+            <blockquote className="prose">{message.trim()}</blockquote>
+          </ConfirmDialog>
         </div>
       )}
     </section>
@@ -733,10 +753,18 @@ function ModerateReview({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
+    [confirmOpen, setConfirmOpen] = useState(false),
     running = useRef(false);
+  const reviewDecisionLabels: Record<string, string> = {
+    Hide: "Ẩn nội dung vi phạm",
+    Restore: "Khôi phục đánh giá",
+    HoldEvidence: "Giữ làm bằng chứng",
+    ReleaseEvidence: "Gỡ giữ bằng chứng",
+    ApproveReply: "Duyệt phản hồi",
+    HideReply: "Ẩn phản hồi",
+  };
   const pending = pendingReviewIntent(session, scope);
-  async function send(e?: FormEvent) {
-    e?.preventDefault();
+  async function executeModeration() {
     if (running.current) return;
     running.current = true;
     setBusy(true);
@@ -751,6 +779,7 @@ function ModerateReview({
         { expectedVersion: r.version, decision, reason },
         () => crypto.randomUUID(),
       );
+      setConfirmOpen(false);
       setNotice(
         "Đã cập nhật kiểm duyệt. Gửi kết quả xử lý hồ sơ để trả lời người báo cáo.",
       );
@@ -762,6 +791,16 @@ function ModerateReview({
       setBusy(false);
       onPending(pendingReviewIntent(session, scope));
     }
+  }
+  function send(e?: FormEvent) {
+    e?.preventDefault();
+    if (pending) {
+      void executeModeration();
+      return;
+    }
+    if (reason.trim().length < 3) return;
+    setError("");
+    setConfirmOpen(true);
   }
   return (
     <section className={styles.review}>
@@ -823,13 +862,26 @@ function ModerateReview({
           Lý do này được gửi cho các bên liên quan đến đánh giá. Ghi chú điều
           tra riêng chỉ lưu ở phần nội bộ của hồ sơ.
         </p>
-        <Button type="submit" busy={busy} disabled={blocked || pending}>
+        <Button type="submit" busy={busy} disabled={blocked || pending || reason.trim().length < 3}>
           Lưu quyết định kiểm duyệt
         </Button>
         <p className="muted">
           Điểm thấp tự nó không là vi phạm. Không sửa số sao của tác giả.
         </p>
       </form>
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => !busy && setConfirmOpen(false)}
+        title={`Xác nhận: ${reviewDecisionLabels[decision] ?? decision}?`}
+        description={`Áp dụng cho đánh giá của ${r.authorName}. Lý do kiểm duyệt bên dưới sẽ gửi cho các bên liên quan và lưu vĩnh viễn vào lịch sử.`}
+        confirmLabel={reviewDecisionLabels[decision] ?? "Lưu quyết định kiểm duyệt"}
+        danger={decision === "Hide" || decision === "HideReply" || decision === "ReleaseEvidence"}
+        busy={busy}
+        error={error || undefined}
+        onConfirm={() => void executeModeration()}
+      >
+        <blockquote className="prose">{reason.trim()}</blockquote>
+      </ConfirmDialog>
     </section>
   );
 }

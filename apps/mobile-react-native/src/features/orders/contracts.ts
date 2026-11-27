@@ -96,7 +96,7 @@ export const ORDER_STATE_CONFIG: Record<
   },
   Preparing: { label: "Người bán chuẩn bị sách", tone: "warning" },
   InTransit: { label: "Đang giao hàng", tone: "info" },
-  Inspection: { label: "Đang kiểm định sách", tone: "info" },
+  Inspection: { label: "Đang kiểm tra sách (72h)", tone: "info" },
   ResolutionPending: { label: "Đang xác minh", tone: "warning" },
   SettlementPending: { label: "Đang xử lý hoàn tiền", tone: "info" },
   Completed: { label: "Giao dịch thành công", tone: "success" },

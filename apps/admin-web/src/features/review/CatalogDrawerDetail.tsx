@@ -12,6 +12,7 @@ import { dateText } from "../../core/format";
 import { invalidateDashboard } from "../../core/dashboard-cache";
 import { session } from "../../core/session";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { catalog, labels } from "./contracts";
 import { DecisionForm } from "./decision-form";
 import { DecisionRecord } from "./DecisionRecord";
@@ -34,6 +35,7 @@ export function CatalogDrawerDetail({
   const location = useLocation();
   const [reset, setReset] = useState(0);
   const [pendingCommand, setPendingCommand] = useState(false);
+  const [reloadConfirmOpen, setReloadConfirmOpen] = useState(false);
   const [recorded, setRecorded] = useState<RecordedDecision | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -308,22 +310,28 @@ export function CatalogDrawerDetail({
             <Button
               disabled={pendingCommand}
               busy={result.isFetching}
-              onClick={async () => {
-                if (
-                  !window.confirm(
-                    "Tải lại hồ sơ và bỏ lý do chưa gửi? Nếu vừa gửi quyết định, hãy thử lại yêu cầu đó trước.",
-                  )
-                )
-                  return;
-                const fresh = await result.refetch();
-                if (!fresh.error) setReset((previous) => previous + 1);
-              }}
+              onClick={() => setReloadConfirmOpen(true)}
             >
               Tải lại hồ sơ
             </Button>
           </div>
         </details>
       </div>
+
+      <ConfirmDialog
+        open={reloadConfirmOpen}
+        onClose={() => !result.isFetching && setReloadConfirmOpen(false)}
+        title="Tải lại hồ sơ yêu cầu đầu sách?"
+        description="Các lý do chưa gửi sẽ bị xóa để bắt đầu lượt kiểm tra mới. Nếu bạn vừa gửi quyết định, hãy dùng nút tải kết quả trong khung quyết định trước."
+        confirmLabel="Tải lại hồ sơ"
+        danger
+        busy={result.isFetching}
+        onConfirm={async () => {
+          const fresh = await result.refetch();
+          if (!fresh.error) setReset((previous) => previous + 1);
+          setReloadConfirmOpen(false);
+        }}
+      />
 
       <p className={styles.recordFoot}>Mã hồ sơ: {id}</p>
     </div>

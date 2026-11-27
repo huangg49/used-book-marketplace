@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors as c, colorRoles, radius, metrics, space } from "./theme";
+import { colors as c, colorRoles, radius, metrics, space, stitchTokens } from "./theme";
 export const layout = StyleSheet.create({
   focus: { outlineColor: colorRoles.focus, outlineStyle: "solid", outlineWidth: 2, outlineOffset: 0 },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -11,7 +11,7 @@ export const layout = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 20,
     borderRadius: radius.control,
-    backgroundColor: c.forest,
+    backgroundColor: stitchTokens.wine,
     alignItems: "center",
     justifyContent: "center",
   },

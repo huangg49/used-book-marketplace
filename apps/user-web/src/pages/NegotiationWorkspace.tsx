@@ -22,6 +22,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { session } from "../lib/session";
 import { PurchaseDialog } from "../components/PurchaseDialog";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
   PurchaseAddressFields,
   type PurchaseAddressForm,
@@ -298,6 +299,7 @@ export function NegotiationWorkspace({
   const [orderBusy, setOrderBusy] = useState(false);
   const [orderActionError, setOrderActionError] = useState<string>();
   const [pendingAction, setPendingAction] = useState<"pay" | "cancel">();
+  const [confirmOrderAction, setConfirmOrderAction] = useState<"pay" | "cancel" | null>(null);
   const orderAttempt = useRef<
     { action: "pay" | "cancel"; key: string; version: number } | undefined
   >(undefined);
@@ -323,6 +325,7 @@ export function NegotiationWorkspace({
       invalidateMemberWalletViews(queryClient, userId);
       orderAttempt.current = undefined;
       setPendingAction(undefined);
+      setConfirmOrderAction(null);
       await order.refetch();
       for (const key of [
         "direct-orders",
@@ -1099,7 +1102,11 @@ export function NegotiationWorkspace({
                               minHeight: 44,
                             }}
                             disabled={orderBusy || pendingAction === "cancel"}
-                            onClick={() => void handleOrderAct("pay")}
+                            onClick={() =>
+                              pendingAction === "pay"
+                                ? void handleOrderAct("pay")
+                                : setConfirmOrderAction("pay")
+                            }
                           >
                             <CreditCard size={18} aria-hidden="true" />
                             <span>
@@ -1121,7 +1128,11 @@ export function NegotiationWorkspace({
                               minHeight: 38,
                             }}
                             disabled={orderBusy || pendingAction === "pay"}
-                            onClick={() => void handleOrderAct("cancel")}
+                            onClick={() =>
+                              pendingAction === "cancel"
+                                ? void handleOrderAct("cancel")
+                                : setConfirmOrderAction("cancel")
+                            }
                           >
                             <XCircle size={16} aria-hidden="true" />
                             <span>
@@ -1133,6 +1144,49 @@ export function NegotiationWorkspace({
                             </span>
                           </button>
                         )}
+
+                        <ConfirmDialog
+                          isOpen={confirmOrderAction !== null}
+                          onClose={() => !orderBusy && setConfirmOrderAction(null)}
+                          title={
+                            confirmOrderAction === "pay"
+                              ? "Xác nhận thanh toán đơn hàng?"
+                              : "Hủy đơn hàng chưa thanh toán?"
+                          }
+                          description={
+                            confirmOrderAction === "pay"
+                              ? `Ví Lật Lại sẽ giữ ${formatVnd(orderData.amounts.buyerTotal)} cho “${orderData.item.bundle?.title || orderData.item.metadata.title}” đến khi bạn nhận và kiểm tra sách.`
+                              : `Đơn đặt mua “${orderData.item.bundle?.title || orderData.item.metadata.title}” sẽ đóng ngay, hết giữ chỗ sách và bài đăng sẽ mở bán lại.`
+                          }
+                          confirmText={
+                            confirmOrderAction === "pay"
+                              ? `Thanh toán ${formatVnd(orderData.amounts.buyerTotal)}`
+                              : "Hủy đơn đặt mua"
+                          }
+                          isDanger={confirmOrderAction === "cancel"}
+                          isBusy={orderBusy}
+                          error={orderActionError ?? null}
+                          onConfirm={() => {
+                            if (confirmOrderAction) void handleOrderAct(confirmOrderAction);
+                          }}
+                        >
+                          {confirmOrderAction === "pay" && (
+                            <dl style={{ display: "grid", gap: 6, margin: 0, fontSize: "0.875rem" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                                <dt style={{ color: "var(--shop-muted)" }}>Giá sách</dt>
+                                <dd style={{ margin: 0, fontWeight: 600 }}>{formatVnd(orderData.amounts.bookPrice)}</dd>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                                <dt style={{ color: "var(--shop-muted)" }}>Phí vận chuyển</dt>
+                                <dd style={{ margin: 0, fontWeight: 600 }}>{formatVnd(orderData.amounts.shippingFee)}</dd>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, paddingTop: 6, borderTop: "1px solid var(--shop-line)" }}>
+                                <dt style={{ fontWeight: 700 }}>Tổng thanh toán từ Ví</dt>
+                                <dd style={{ margin: 0, fontWeight: 700, color: "var(--shop-wine)" }}>{formatVnd(orderData.amounts.buyerTotal)}</dd>
+                              </div>
+                            </dl>
+                          )}
+                        </ConfirmDialog>
 
                         <p
                           style={{

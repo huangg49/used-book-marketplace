@@ -1,0 +1,37 @@
+# Version control & editor artifacts
+.git
+.gitignore
+.github
+.vscode
+.idea
+.tmp
+*.log
+
+# Dependencies & build outputs (rebuilt inside Docker for Linux)
+**/node_modules
+**/dist
+**/build
+**/.turbo
+**/.expo
+**/coverage
+**/*.tsbuildinfo
+
+# Local secrets & environment files (never bake into image)
+.env
+.env.*
+**/.env
+**/.env.*
+!*.env.example
+!**/.env.example
+
+# Non-API apps & heavy docs/media not needed for @used-books/api image
+apps/user-web
+apps/admin-web
+apps/mobile-react-native
+apps/mobile-flutter
+packages/session-client
+packages/brand
+docs
+qa-data
+scripts
+infra

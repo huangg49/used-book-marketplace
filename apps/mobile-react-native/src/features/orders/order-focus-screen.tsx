@@ -1,6 +1,14 @@
 import { ReviewEntry } from "../reviews/review-entry";
 import { useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { z } from "zod";
@@ -170,7 +178,9 @@ export function OrderFocusScreen({
   const [viewedHistoryStep, setViewedHistoryStep] =
     useState<OrderStepId | null>(null);
   const [paying, setPaying] = useState(false);
-  const [confirming, setConfirming] = useState<Action | "cancel-paid" | null>(null);
+  const [confirming, setConfirming] = useState<
+    Action | "cancel-paid" | "acknowledge" | "skip-inspection" | null
+  >(null);
   const [reportModal, setReportModal] = useState<
     null | { kind: "non-receipt" | "ReportNonReceipt" | "ReportCondition" }
   >(null);
@@ -213,11 +223,11 @@ export function OrderFocusScreen({
           Crypto.randomUUID(),
         );
       }
+      setConfirming(null);
     } catch (e) {
       setError(presentError(e).message);
     } finally {
       setBusy(false);
-      setConfirming(null);
       void changed();
     }
   }
@@ -290,6 +300,7 @@ export function OrderFocusScreen({
       );
       setReportModal(null);
       setReportText("");
+      setConfirming(null);
     } catch (e) {
       setError(presentError(e).message);
     } finally {
@@ -327,6 +338,7 @@ export function OrderFocusScreen({
       );
       setReportModal(null);
       setReportText("");
+      setConfirming(null);
     } catch (e) {
       setError(presentError(e).message);
     } finally {
@@ -378,7 +390,7 @@ export function OrderFocusScreen({
           <StatePanel
             wine
             title="Chưa cập nhật được đơn"
-            message="Kiểm tra kết nối hoặc quyền hiện tại. Chưa thể kết luận đơn đã mất."
+            message="Không thể kết nối để tải trạng thái mới nhất của đơn hàng. Vui lòng thử lại."
             action={{
               label: "Thử lại",
               busy: result.isFetching,
@@ -706,8 +718,15 @@ export function OrderFocusScreen({
                                   title={DELIVERY_JOURNEY_LABELS[action]}
                                   onPress={() => {
                                     if (action === "ReportCondition") {
+                                      setError("");
                                       setReportText("");
                                       setReportModal({ kind: action });
+                                    } else if (action === "Acknowledge") {
+                                      setError("");
+                                      setConfirming("acknowledge");
+                                    } else if (action === "SkipInspection") {
+                                      setError("");
+                                      setConfirming("skip-inspection");
                                     } else {
                                       void advanceJourney(action);
                                     }
@@ -777,7 +796,11 @@ export function OrderFocusScreen({
                       </AppText>
                     )}
 
-                    {order.shippingAddress ? (
+                    {order.shippingAddress &&
+                    !(
+                      order.preparation &&
+                      (order.role === "Seller" || !journey?.trackingCode)
+                    ) ? (
                       <View style={styles.addressSummaryBox}>
                         <AppText style={styles.addressLabelText}>
                           Địa chỉ nhận sách
@@ -1027,60 +1050,156 @@ export function OrderFocusScreen({
         title={
           confirming === "cancel-paid"
             ? "Hủy đơn & yêu cầu hoàn tiền?"
-            : confirming
-              ? labels[confirming] + "?"
-              : ""
+            : confirming === "skip-inspection"
+              ? "Xác nhận hài lòng & hoàn tất đơn?"
+              : confirming === "acknowledge" || confirming === "confirm-receipt"
+                ? "Xác nhận bạn đã nhận sách?"
+                : confirming === "accept"
+                  ? "Xác nhận nhận đơn hàng?"
+                  : confirming === "reject"
+                    ? "Từ chối đơn hàng này?"
+                    : confirming === "cancel"
+                      ? "Hủy đơn hàng chưa thanh toán?"
+                      : ""
         }
         message={
           confirming === "cancel-paid"
-            ? "Người bán chưa xác nhận đơn. Hủy đơn sẽ chuyển sang hoàn tiền về Ví của bạn."
-            : confirming === "confirm-receipt"
-              ? "Xác nhận bạn đã nhận sách. Mở 72 giờ kiểm tra và đánh giá riêng tư; tiền vẫn giữ, không giải ngân."
-              : confirming === "accept"
-                ? "Bạn nhận chuẩn bị sách cho đơn đã được người mua thanh toán."
-                : confirming === "reject"
-                  ? "Từ chối chuyển đơn sang xử lý hoàn tiền theo quy trình."
-                  : "Hủy giữ sách của đơn chưa thanh toán."
+            ? `Người bán chưa xác nhận đơn${order ? ` #${id.slice(0, 8).toUpperCase()}` : ""}. Hủy đơn sẽ đóng giao dịch và hoàn lại ${order ? formatVnd(order.amounts.buyerTotal) : "toàn bộ số tiền đã thanh toán"} về Ví của bạn.`
+            : confirming === "skip-inspection"
+              ? `Bạn xác nhận sách đúng mô tả và kết thúc sớm 72 giờ kiểm tra? Khoản thanh toán (${order ? formatVnd(order.amounts.buyerTotal) : "đơn hàng"}) sẽ được giải ngân cho người bán và không thể mở báo cáo sự cố sau bước này.`
+              : confirming === "acknowledge" || confirming === "confirm-receipt"
+                ? `Xác nhận bạn đã cầm trên tay cuốn sách${order ? ` (${formatVnd(order.amounts.buyerTotal)})` : ""}. Hệ thống mở 72 giờ kiểm tra chất lượng sách; tiền vẫn được giữ an toàn cho đến khi hết hạn kiểm tra và không có khiếu nại.`
+                : confirming === "accept"
+                  ? `Bạn xác nhận nhận chuẩn bị đơn${order ? ` #${id.slice(0, 8).toUpperCase()} (${formatVnd(order.amounts.buyerTotal)})` : ""}. Sau khi nhận, bạn cần đóng gói và đăng ký gửi sách trong vòng 48 giờ và không thể tự hủy đơn.`
+                  : confirming === "reject"
+                    ? `Từ chối đơn${order ? ` #${id.slice(0, 8).toUpperCase()}` : ""} sẽ đóng vĩnh viễn giao dịch và hoàn lại 100% số tiền (${order ? formatVnd(order.amounts.buyerTotal) : "đã thanh toán"}) về Ví người mua.`
+                    : `Hủy đơn${order ? ` #${id.slice(0, 8).toUpperCase()}` : ""} chưa thanh toán sẽ mở lại cuốn sách cho người mua khác.`
         }
-        confirmLabel="Ghi quyết định"
-        onConfirm={() => confirming && void act(confirming)}
+        confirmLabel={
+          confirming === "cancel-paid"
+            ? "Hủy & hoàn tiền"
+            : confirming === "skip-inspection"
+              ? "Xác nhận hoàn tất"
+              : confirming === "acknowledge" || confirming === "confirm-receipt"
+                ? "Đã nhận sách"
+                : confirming === "accept"
+                  ? "Nhận đơn ngay"
+                  : confirming === "reject"
+                    ? "Từ chối đơn"
+                    : "Hủy đơn hàng"
+        }
+        destructive={
+          confirming === "cancel" ||
+          confirming === "cancel-paid" ||
+          confirming === "reject"
+        }
+        busy={busy}
+        error={error || undefined}
+        onConfirm={() => {
+          if (!confirming) return;
+          if (confirming === "acknowledge") {
+            void advanceJourney("Acknowledge");
+          } else if (confirming === "skip-inspection") {
+            void advanceJourney("SkipInspection");
+          } else {
+            void act(confirming);
+          }
+        }}
         onCancel={() => !busy && setConfirming(null)}
       />
 
       <AppModal
         visible={!!reportModal}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => !busy && setReportModal(null)}
       >
-        <View
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{
             flex: 1,
-            backgroundColor: stitchTokens.blackAlpha45,
-            justifyContent: "center",
-            padding: space.lg,
+            backgroundColor: stitchTokens.modalScrim,
+            justifyContent: "flex-end",
           }}
         >
-          <View style={styles.card}>
-            <AppText style={styles.cardHeading}>
-              {reportModal?.kind === "ReportCondition"
-                ? "Báo sách không đúng mô tả"
-                : "Báo chưa nhận được sách"}
-            </AppText>
-            <TextField
-              label="Mô tả sự việc"
-              value={reportText}
-              onChangeText={setReportText}
-              placeholder="Nêu rõ tình trạng giao nhận hoặc vấn đề gặp phải..."
-              multiline
-            />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng biểu mẫu báo sự cố"
+            style={StyleSheet.absoluteFill}
+            onPress={() => !busy && setReportModal(null)}
+          />
+          <View
+            style={{
+              backgroundColor: stitchTokens.white,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingHorizontal: space.lg,
+              paddingTop: 10,
+              paddingBottom: Math.max(insets.bottom, 18),
+              gap: space.md,
+            }}
+          >
+            <View style={{ alignItems: "center", paddingBottom: 2 }}>
+              <View
+                style={{
+                  width: 38,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: stitchTokens.cardBorder,
+                }}
+              />
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <AppText style={[styles.cardHeading, { flex: 1 }]}>
+                {reportModal?.kind === "ReportCondition"
+                  ? "Báo sách không đúng mô tả"
+                  : "Báo sự cố giao nhận"}
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng"
+                disabled={busy}
+                onPress={() => setReportModal(null)}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: stitchTokens.pillWarmBg,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.72 : 1,
+                })}
+              >
+                <Icon name="close" size={18} color={stitchTokens.wineDark} strokeWidth={2.2} />
+              </Pressable>
+            </View>
+            {(() => {
+              const minLen = reportModal?.kind === "non-receipt" ? 20 : 10;
+              return (
+                <TextField
+                  label={`Mô tả sự việc (${reportText.trim().length}/${minLen}+ ký tự)`}
+                  value={reportText}
+                  onChangeText={setReportText}
+                  placeholder={`Nêu rõ tình trạng sách hoặc vấn đề gặp phải (tối thiểu ${minLen} ký tự)...`}
+                  multiline
+                />
+              );
+            })()}
             {Boolean(error) && <Notice tone="error">{error}</Notice>}
             <View style={{ flexDirection: "row", gap: space.sm }}>
               <View style={{ flex: 1 }}>
                 <Button
                   wine
                   secondary
-                  title="Đóng"
+                  title="Hủy"
                   disabled={busy}
                   onPress={() => setReportModal(null)}
                 />
@@ -1095,7 +1214,7 @@ export function OrderFocusScreen({
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </AppModal>
 
       {paying && order && (

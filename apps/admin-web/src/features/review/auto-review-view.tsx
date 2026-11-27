@@ -4,6 +4,7 @@ import { createCommand, runCommand, type Intent } from "../../core/command";
 import { dateText, money } from "../../core/format";
 import { session } from "../../core/session";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import {
   autoReviewHistory,
   labels,
@@ -133,8 +134,9 @@ function ActionForm({
   const [error, setError] = useState<unknown>();
   const [invalid, setInvalid] = useState(false);
   const [intent, setIntent] = useState<Intent>();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const inFlight = useRef(false);
-  async function send() {
+  async function send(confirmed = false) {
     if (inFlight.current) return;
     let active = intent;
     if (!active) {
@@ -142,7 +144,10 @@ function ActionForm({
         setInvalid(true);
         return;
       }
-      if (confirmText && !window.confirm(confirmText)) return;
+      if (confirmText && !confirmed) {
+        setConfirmOpen(true);
+        return;
+      }
       active = build(text.trim());
       setIntent(active);
     }
@@ -153,6 +158,7 @@ function ActionForm({
       await runCommand(active, receipt, session.request.bind(session), reconcile);
       setText("");
       setIntent(undefined);
+      setConfirmOpen(false);
     } catch (cause) {
       setError(cause);
       if (active.stopped) setIntent(undefined);
@@ -180,7 +186,7 @@ function ActionForm({
         </label>
         {invalid && <p role="alert">Cần từ 10 đến 1000 ký tự.</p>}
       </div>
-      {error !== undefined && <ErrorNotice error={error} />}
+      {error !== undefined && !confirmOpen && <ErrorNotice error={error} />}
       <Button
         variant={danger ? "danger" : "default"}
         busy={busy}
@@ -188,6 +194,19 @@ function ActionForm({
       >
         {intent ? "Thử gửi lại" : submitLabel}
       </Button>
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => !busy && setConfirmOpen(false)}
+        title={title}
+        description={confirmText}
+        confirmLabel={submitLabel}
+        danger={danger}
+        busy={busy}
+        error={error !== undefined ? <ErrorNotice error={error} /> : undefined}
+        onConfirm={() => void send(true)}
+      >
+        <blockquote className="prose">{text.trim()}</blockquote>
+      </ConfirmDialog>
     </div>
   );
 }

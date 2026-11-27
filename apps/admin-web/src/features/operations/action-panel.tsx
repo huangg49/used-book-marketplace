@@ -8,6 +8,7 @@ import { session } from "../../core/session";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateDashboard } from "../../core/dashboard-cache";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { commandReceipt, type CommandReceipt } from "./contracts";
 
 export type Outcome = {
@@ -46,6 +47,7 @@ export function ActionPanel<R = CommandReceipt>({
   refusalRecoveryText = "Thao tác chưa được chấp nhận. Tải trạng thái mới nhất để kiểm tra.",
   refusalRecoveryLabel = "Tải kết quả mới nhất",
   confirm = true,
+  confirmDanger = false,
   shortcut,
   submitRef,
 }: {
@@ -73,6 +75,7 @@ export function ActionPanel<R = CommandReceipt>({
   refusalRecoveryLabel?: string;
   // false sends on submit when the button already states the whole action.
   confirm?: boolean;
+  confirmDanger?: boolean;
   shortcut?: Shortcut;
   // Lets a field submit on Enter through the same validate/confirm path.
   submitRef?: { current: (() => void) | null };
@@ -82,7 +85,7 @@ export function ActionPanel<R = CommandReceipt>({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [outcome, setOutcome] = useState<Outcome>();
-  const dialog = useRef<HTMLDialogElement>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const leaveDialog = useRef<HTMLDialogElement>(null);
   const recoveryButton = useRef<HTMLButtonElement>(null);
   const inFlight = useRef(false);
@@ -97,13 +100,12 @@ export function ActionPanel<R = CommandReceipt>({
   useEffect(() => {
     registerGuard(
       guarded
-        ? () =>
-            !busy &&
-            window.confirm(
-              unresolved
-                ? "Thao tác vừa gửi chưa được đối chiếu. Đăng xuất bây giờ có thể bỏ lỡ kết quả. Tiếp tục đăng xuất?"
-                : "Thông tin đang nhập sẽ bị bỏ. Tiếp tục đăng xuất?",
-            )
+        ? {
+            busy,
+            message: unresolved
+              ? "Thao tác vừa gửi chưa được đối chiếu. Đăng xuất bây giờ có thể bỏ lỡ kết quả. Tiếp tục đăng xuất?"
+              : "Thông tin đang nhập sẽ bị bỏ. Tiếp tục đăng xuất?",
+          }
         : undefined,
     );
     return () => registerGuard(undefined);
@@ -153,6 +155,7 @@ export function ActionPanel<R = CommandReceipt>({
         },
       );
       setIntent(undefined);
+      setConfirmOpen(false);
       if (!receipt) {
         // A definite refusal, now reconciled with the latest queue.
         onFinish({
@@ -169,7 +172,6 @@ export function ActionPanel<R = CommandReceipt>({
     } finally {
       inFlight.current = false;
       setBusy(false);
-      dialog.current?.close();
     }
   }
   const locked = busy || !!intent;
@@ -178,8 +180,9 @@ export function ActionPanel<R = CommandReceipt>({
   const shortcutLeads = !!shortcut && !dirty;
   const submit = () => {
     setOutcome(undefined);
+    setError(undefined);
     if (!validate()) return;
-    if (confirm) dialog.current?.showModal();
+    if (confirm) setConfirmOpen(true);
     else void send();
   };
   if (submitRef) submitRef.current = locked ? null : submit;
@@ -189,7 +192,7 @@ export function ActionPanel<R = CommandReceipt>({
       {intro && <p className="muted">{intro}</p>}
       {fields?.(locked)}
       {outcome && <Notice tone={outcome.tone}>{outcome.text}</Notice>}
-      {error !== undefined && (
+      {error !== undefined && !confirmOpen && (
         <ErrorNotice error={error} describe={operationErrorText} />
       )}
       {intent ? (
@@ -219,8 +222,9 @@ export function ActionPanel<R = CommandReceipt>({
               disabled={locked}
               onClick={() => {
                 setOutcome(undefined);
+                setError(undefined);
                 shortcut.apply();
-                dialog.current?.showModal();
+                setConfirmOpen(true);
               }}
             >
               {shortcut.label}
@@ -236,28 +240,23 @@ export function ActionPanel<R = CommandReceipt>({
           </Button>
         </div>
       )}
-      <dialog
-        ref={dialog}
-        onCancel={(event) => {
-          if (busy) event.preventDefault();
-        }}
-        aria-label={confirmTitle}
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => !busy && setConfirmOpen(false)}
+        title={confirmTitle}
+        confirmLabel="Xác nhận"
+        cancelLabel="Quay lại"
+        danger={confirmDanger}
+        busy={busy}
+        error={
+          error !== undefined ? (
+            <ErrorNotice error={error} describe={operationErrorText} />
+          ) : undefined
+        }
+        onConfirm={() => void send(intent)}
       >
-        <h3>{confirmTitle}</h3>
         {confirmBody}
-        <div className="actions">
-          <Button
-            autoFocus
-            disabled={busy}
-            onClick={() => dialog.current?.close()}
-          >
-            Quay lại
-          </Button>
-          <Button className="primary" busy={busy} onClick={() => void send()}>
-            Xác nhận
-          </Button>
-        </div>
-      </dialog>
+      </ConfirmDialog>
       <dialog
         ref={leaveDialog}
         aria-label="Rời thao tác đang mở?"
@@ -282,6 +281,7 @@ export function ActionPanel<R = CommandReceipt>({
             Ở lại
           </Button>
           <Button
+            variant="danger"
             disabled={busy}
             onClick={() => {
               if (blocker.state === "blocked") blocker.proceed();

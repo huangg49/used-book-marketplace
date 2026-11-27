@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -111,6 +112,7 @@ export function ConfirmDialog({
   message,
   children,
   confirmLabel,
+  cancelLabel = "Quay lại",
   onConfirm,
   onCancel,
   busy = false,
@@ -121,13 +123,33 @@ export function ConfirmDialog({
   title: string;
   message?: string;
   confirmLabel: string;
+  cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
   busy?: boolean;
   error?: string;
   destructive?: boolean;
 }>) {
+  const [androidKeyboardInset, setAndroidKeyboardInset] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS !== "android" || !visible) return;
+    const showSub = Keyboard.addListener("keyboardDidShow", (event) => {
+      setAndroidKeyboardInset(event.endCoordinates?.height ?? 0);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setAndroidKeyboardInset(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+      setAndroidKeyboardInset(0);
+    };
+  }, [visible]);
+
   if (!visible) return null;
+
+  const effectiveKeyboardInset = Platform.OS === "android" ? androidKeyboardInset : 0;
 
   return (
     <Modal
@@ -148,10 +170,11 @@ export function ConfirmDialog({
           justifyContent: "center",
           alignItems: "center",
           padding: space.xl,
+          paddingBottom: space.xl + effectiveKeyboardInset,
         }}
       >
         <Pressable
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          style={StyleSheet.absoluteFill}
           accessible={false}
           importantForAccessibility="no"
           focusable={false}
@@ -171,7 +194,7 @@ export function ConfirmDialog({
             padding: space.xl,
             gap: children != null ? space.md : space.lg,
             borderWidth: 1,
-            borderColor: stitchTokens.peachBorder,
+            borderColor: destructive ? stitchTokens.coralRed : stitchTokens.peachBorder,
             shadowColor: stitchTokens.black,
             shadowOffset: { width: 0, height: 10 },
             shadowOpacity: 0.16,
@@ -179,22 +202,41 @@ export function ConfirmDialog({
             elevation: 10,
           }}
         >
-          {/* Header with Title and Close button */}
+          {/* Header with contextual icon badge, Title and Close button */}
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: space.md,
+              gap: space.sm,
             }}
           >
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: destructive
+                  ? stitchTokens.flashRedBg
+                  : stitchTokens.roseParchment,
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Icon
+                name={destructive ? "shield" : "info"}
+                size={18}
+                color={destructive ? stitchTokens.crimson : stitchTokens.wine}
+              />
+            </View>
             <AppText
               kind="heading"
               accessibilityRole="header"
               style={{
                 flex: 1,
-                fontSize: 19,
-                color: stitchTokens.wineDark,
+                fontSize: 18,
+                color: destructive ? stitchTokens.crimson : stitchTokens.wineDark,
                 fontWeight: "800",
               }}
             >
@@ -217,7 +259,7 @@ export function ConfirmDialog({
               style={{
                 fontSize: 15,
                 lineHeight: 22,
-                color: colors.ink,
+                color: stitchTokens.charcoalBrown,
               }}
             >
               {message}
@@ -240,7 +282,7 @@ export function ConfirmDialog({
               onPress={onConfirm}
             />
             <Button
-              title="Quay lại"
+              title={cancelLabel}
               wine
               secondary
               disabled={busy}

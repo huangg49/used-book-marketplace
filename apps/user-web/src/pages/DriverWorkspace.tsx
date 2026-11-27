@@ -9,7 +9,7 @@ export type DriverMode = 'exchange' | 'direct' | 'auction'
 const DRIVER_MODES: Array<{ id: DriverMode; label: string; to: string }> = [
   { id: 'exchange', label: 'Trao đổi', to: '/driver?kind=exchange' },
   { id: 'direct', label: 'Mua ngay', to: '/driver?kind=direct' },
-  { id: 'auction', label: 'Đấu giá', to: '/driver?kind=auction' },
+  { id: 'auction', label: 'Đấu giá', to: '/driver?kind=auction&demo=1' },
 ]
 
 export function DriverWorkspace({

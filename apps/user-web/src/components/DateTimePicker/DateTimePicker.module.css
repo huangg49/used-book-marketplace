@@ -35,7 +35,8 @@
 .column button:disabled { opacity: .3; cursor: not-allowed; }
 
 .footer { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
-.link { border: 0; background: none; color: var(--shop-wine); font: inherit; font-size: .8125rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link { border: 0; background: none; color: var(--shop-wine); font: inherit; font-size: .8125rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; transition: color 140ms ease, opacity 140ms ease; }
+.link:hover:not(:disabled) { color: #7c2320; opacity: .88; }
 .link:disabled { opacity: .4; cursor: not-allowed; }
 .done { min-height: 34px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--shop-wine); color: var(--shop-cream); font: inherit; font-size: .8125rem; font-weight: 700; cursor: pointer; }
 .done:hover { background: #7c2320; }

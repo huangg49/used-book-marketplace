@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -29,6 +31,7 @@ import {
   StatePanel,
   TopNavbar,
   Toast,
+  metrics,
   stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
@@ -73,6 +76,7 @@ const SORTS = [
 
 export function SearchScreen() {
   const insets = useSafeAreaInsets();
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
   const { client, state } = useSession();
   const isAuthenticated = state.status === "authenticated";
   const active = useForeground();
@@ -499,9 +503,13 @@ export function SearchScreen() {
       <View style={styles.searchBody}>
         {/* 1. Sticky Search Bar & Input Controls */}
         <View style={styles.searchBarSection}>
-          <View style={styles.searchBarBox}>
+          <View
+            {...(Platform.OS === "web" ? { dataSet: { focusSurface: "true" } } : {})}
+            style={styles.searchBarBox}
+          >
             <Icon name="search" size={20} color={stitchTokens.wine} />
             <AppTextInput
+              composite
               value={search}
               onChangeText={setSearch}
               placeholder="Tìm tên sách, tác giả, NXB..."
@@ -517,7 +525,7 @@ export function SearchScreen() {
                 accessibilityLabel="Xóa từ khóa"
                 onPress={() => setSearch("")}
                 hitSlop={8}
-                style={styles.clearBtn}
+                style={({ pressed }) => [styles.clearBtn, pressed && { opacity: 0.7 }]}
               >
                 <Icon name="close" size={16} color={stitchTokens.stoneMuted} />
               </Pressable>
@@ -869,8 +877,12 @@ export function SearchScreen() {
                       </Pressable>
                     ) : null}
                   </View>
-                  <View style={styles.seriesInputBox}>
+                  <View
+                    {...(Platform.OS === "web" ? { dataSet: { focusSurface: "true" } } : {})}
+                    style={styles.seriesInputBox}
+                  >
                     <AppTextInput
+                      composite
                       value={selectedSeries}
                       onChangeText={setSelectedSeries}
                       placeholder="Ví dụ: Doraemon, Harry Potter..."
@@ -884,6 +896,7 @@ export function SearchScreen() {
                         accessibilityLabel="Xóa tên bộ sách"
                         onPress={() => setSelectedSeries("")}
                         hitSlop={8}
+                        style={({ pressed }) => [pressed && { opacity: 0.7 }]}
                       >
                         <Icon name="close" size={14} color={stitchTokens.stoneMuted} />
                       </Pressable>
@@ -1392,13 +1405,18 @@ export function SearchScreen() {
         animationType="fade"
         onRequestClose={() => setCategoryModalOpen(false)}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setCategoryModalOpen(false)}
-        >
+        <View style={styles.modalBackdrop}>
           <Pressable
-            style={styles.modalSheet}
-            onPress={(e) => e.stopPropagation()}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng chọn danh mục"
+            style={StyleSheet.absoluteFill}
+            onPress={() => setCategoryModalOpen(false)}
+          />
+          <View
+            style={[
+              styles.modalSheet,
+              { paddingBottom: Math.max(insets.bottom, 20) },
+            ]}
           >
             <View style={styles.modalHeader}>
               <AppText kind="bold" style={styles.modalTitle}>
@@ -1409,6 +1427,7 @@ export function SearchScreen() {
                 accessibilityLabel="Đóng"
                 onPress={() => setCategoryModalOpen(false)}
                 hitSlop={8}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
               >
                 <Icon name="close" size={18} color={stitchTokens.stoneMuted} />
               </Pressable>
@@ -1418,9 +1437,10 @@ export function SearchScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Tất cả danh mục"
                 onPress={() => handleSelectRootCategory("")}
-                style={[
+                style={({ pressed }) => [
                   styles.modalItemRow,
                   !selectedCategoryId && styles.modalItemRowSelected,
+                  pressed && { opacity: 0.75 },
                 ]}
               >
                 <AppText
@@ -1444,9 +1464,10 @@ export function SearchScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={cat.label}
                     onPress={() => handleSelectRootCategory(cat.id)}
-                    style={[
+                    style={({ pressed }) => [
                       styles.modalItemRow,
                       isSelected && styles.modalItemRowSelected,
+                      pressed && { opacity: 0.75 },
                     ]}
                   >
                     <AppText
@@ -1465,8 +1486,8 @@ export function SearchScreen() {
                 );
               })}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </AppModal>
 
       {/* Subcategory Picker Modal */}
@@ -1476,13 +1497,18 @@ export function SearchScreen() {
         animationType="fade"
         onRequestClose={() => setSubcategoryModalOpen(false)}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setSubcategoryModalOpen(false)}
-        >
+        <View style={styles.modalBackdrop}>
           <Pressable
-            style={styles.modalSheet}
-            onPress={(e) => e.stopPropagation()}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng chọn nhóm sách"
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSubcategoryModalOpen(false)}
+          />
+          <View
+            style={[
+              styles.modalSheet,
+              { paddingBottom: Math.max(insets.bottom, 20) },
+            ]}
           >
             <View style={styles.modalHeader}>
               <AppText kind="bold" style={styles.modalTitle}>
@@ -1493,6 +1519,7 @@ export function SearchScreen() {
                 accessibilityLabel="Đóng"
                 onPress={() => setSubcategoryModalOpen(false)}
                 hitSlop={8}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
               >
                 <Icon name="close" size={18} color={stitchTokens.stoneMuted} />
               </Pressable>
@@ -1502,9 +1529,10 @@ export function SearchScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Tất cả ${rootCategory?.label ?? ""}`}
                 onPress={() => handleSelectSubcategory("")}
-                style={[
+                style={({ pressed }) => [
                   styles.modalItemRow,
                   !selectedSubcategoryId && styles.modalItemRowSelected,
+                  pressed && { opacity: 0.75 },
                 ]}
               >
                 <AppText
@@ -1528,9 +1556,10 @@ export function SearchScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={sub.label}
                     onPress={() => handleSelectSubcategory(sub.id)}
-                    style={[
+                    style={({ pressed }) => [
                       styles.modalItemRow,
                       isSelected && styles.modalItemRowSelected,
+                      pressed && { opacity: 0.75 },
                     ]}
                   >
                     <AppText
@@ -1549,8 +1578,8 @@ export function SearchScreen() {
                 );
               })}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </AppModal>
 
       {/* Language Picker Modal */}
@@ -1560,13 +1589,18 @@ export function SearchScreen() {
         animationType="fade"
         onRequestClose={() => setLanguageModalOpen(false)}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setLanguageModalOpen(false)}
-        >
+        <View style={styles.modalBackdrop}>
           <Pressable
-            style={styles.modalSheet}
-            onPress={(e) => e.stopPropagation()}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng chọn ngôn ngữ"
+            style={StyleSheet.absoluteFill}
+            onPress={() => setLanguageModalOpen(false)}
+          />
+          <View
+            style={[
+              styles.modalSheet,
+              { paddingBottom: Math.max(insets.bottom, 20) },
+            ]}
           >
             <View style={styles.modalHeader}>
               <AppText kind="bold" style={styles.modalTitle}>
@@ -1577,6 +1611,7 @@ export function SearchScreen() {
                 accessibilityLabel="Đóng"
                 onPress={() => setLanguageModalOpen(false)}
                 hitSlop={8}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
               >
                 <Icon name="close" size={18} color={stitchTokens.stoneMuted} />
               </Pressable>
@@ -1589,9 +1624,10 @@ export function SearchScreen() {
                   setSelectedLanguage("");
                   setLanguageModalOpen(false);
                 }}
-                style={[
+                style={({ pressed }) => [
                   styles.modalItemRow,
                   !selectedLanguage && styles.modalItemRowSelected,
+                  pressed && { opacity: 0.75 },
                 ]}
               >
                 <AppText
@@ -1618,9 +1654,10 @@ export function SearchScreen() {
                       setSelectedLanguage(opt.id);
                       setLanguageModalOpen(false);
                     }}
-                    style={[
+                    style={({ pressed }) => [
                       styles.modalItemRow,
                       isSelected && styles.modalItemRowSelected,
+                      pressed && { opacity: 0.75 },
                     ]}
                   >
                     <AppText
@@ -1639,8 +1676,8 @@ export function SearchScreen() {
                 );
               })}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </AppModal>
 
       {/* Sort Dropdown Popup Modal */}
@@ -1650,22 +1687,43 @@ export function SearchScreen() {
         animationType="fade"
         onRequestClose={() => setSortDropdownOpen(false)}
       >
-        <Pressable
-          style={styles.sortModalBackdrop}
-          onPress={() => setSortDropdownOpen(false)}
-        >
+        <View style={styles.sortModalBackdrop}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng menu sắp xếp"
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSortDropdownOpen(false)}
+          />
           <View
             style={[
               styles.sortDropdownCard,
-              sortTriggerLayout
-                ? {
-                    top: Math.max(
+              (() => {
+                const cardWidth = 220;
+                const estHeight = SORTS.length * 46 + 16;
+                const left = sortTriggerLayout
+                  ? Math.max(
+                      12,
+                      Math.min(
+                        sortTriggerLayout.x + sortTriggerLayout.width - cardWidth,
+                        winWidth - cardWidth - 12,
+                      ),
+                    )
+                  : Math.max(12, winWidth - cardWidth - 14);
+                const rawTop = sortTriggerLayout
+                  ? Math.max(
                       sortTriggerLayout.y + sortTriggerLayout.height + 4,
                       insets.top + 60,
-                    ),
-                    right: 14,
-                  }
-                : { top: insets.top + 140, right: 14 },
+                    )
+                  : insets.top + 140;
+                const top = Math.min(
+                  rawTop,
+                  Math.max(
+                    insets.top + 60,
+                    winHeight - estHeight - Math.max(insets.bottom, 16),
+                  ),
+                );
+                return { top, left };
+              })(),
             ]}
           >
             {SORTS.map((s, idx) => {
@@ -1679,9 +1737,10 @@ export function SearchScreen() {
                     setSortIndex(idx);
                     setSortDropdownOpen(false);
                   }}
-                  style={[
+                  style={({ pressed }) => [
                     styles.sortDropdownItem,
                     isSelected && styles.sortDropdownItemSelected,
+                    pressed && { opacity: 0.75 },
                   ]}
                 >
                   <AppText
@@ -1704,7 +1763,7 @@ export function SearchScreen() {
               );
             })}
           </View>
-        </Pressable>
+        </View>
       </AppModal>
 
       {/* Notifications Modal */}
@@ -2439,13 +2498,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: stitchTokens.blackAlpha45,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   modalSheet: {
+    width: "100%",
+    maxWidth: metrics.sheet,
     backgroundColor: stitchTokens.ivoryWhite,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     maxHeight: "75%",
-    paddingBottom: 28,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.15,

@@ -29,7 +29,7 @@
 .entry { border: 1px solid var(--shop-wine); border-radius: 6px; overflow: hidden; background: var(--shop-shelf); }
 .field { padding: 12px 12px 8px; display: grid; gap: 6px; }
 .inputWrap { display: flex; align-items: center; gap: 8px; background: var(--shop-paper); border: 1px solid var(--shop-line); border-radius: 6px; padding: 0 14px; }
-.inputWrap:focus-within { border-color: var(--shop-wine); box-shadow: 0 0 0 2px rgba(23, 60, 46, .2); }
+.inputWrap:focus-within { border-color: var(--shop-wine); box-shadow: 0 0 0 2px rgba(92, 2, 2, .18); }
 .inputWrap input { border: 0 !important; background: transparent !important; outline: none !important; min-height: 54px; padding: 10px 0 !important; font-size: 1.2rem !important; font-weight: 600; font-variant-numeric: tabular-nums; }
 .inputWrap span { color: var(--shop-muted); font-weight: 600; }
 .invalid { border-color: var(--shop-error); }

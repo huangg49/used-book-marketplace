@@ -1,4 +1,10 @@
 import { createContext } from "react";
+
+export type LeaveGuardState = {
+  busy?: boolean;
+  message: string;
+};
+
 export const LeaveGuard = createContext<
-  (guard: (() => boolean) | undefined) => void
+  (guard: LeaveGuardState | undefined) => void
 >(() => {});

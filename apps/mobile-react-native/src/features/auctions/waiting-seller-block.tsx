@@ -69,6 +69,7 @@ export function WaitingSellerBlock({
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState<SellerCommand | null>(null);
   const [closing, setClosing] = useState(false);
+  const [confirmMin, setConfirmMin] = useState<null | { kind: "LowerMin" | "RaiseMin"; target: number }>(null);
   const [editing, setEditing] = useState(false);
 
   const progressPct = Math.min(100, Math.round((count / Math.max(1, need)) * 100));
@@ -89,12 +90,13 @@ export function WaitingSellerBlock({
       });
       setPending(null);
       setNotice(DONE[command.kind]);
+      setClosing(false);
+      setConfirmMin(null);
     } catch (caught) {
       setPending(outcomeUnknown(caught) ? command : null);
       setError(auctionErrorText(caught));
     } finally {
       setBusy(false);
-      setClosing(false);
       void refresh();
     }
   };
@@ -229,7 +231,10 @@ export function WaitingSellerBlock({
                 secondary
                 title={`Giảm tối thiểu còn ${targetMin} người`}
                 disabled={busy}
-                onPress={() => run("LowerMin", targetMin)}
+                onPress={() => {
+                  setError(null);
+                  setConfirmMin({ kind: "LowerMin", target: targetMin });
+                }}
               />
             </View>
           ) : reached ? (
@@ -247,7 +252,10 @@ export function WaitingSellerBlock({
                 secondary
                 title={`Tăng tối thiểu lên ${need + 1} người`}
                 disabled={busy}
-                onPress={() => run("RaiseMin", need + 1)}
+                onPress={() => {
+                  setError(null);
+                  setConfirmMin({ kind: "RaiseMin", target: need + 1 });
+                }}
               />
               <AppText kind="small" color={colors.muted} style={styles.helper}>
                 Chưa có ai đăng ký nên còn tăng được số người tối thiểu; khi đã có người đăng ký thì chỉ giảm được.
@@ -262,7 +270,10 @@ export function WaitingSellerBlock({
               secondary
               title="Đóng phiên trước giờ mở"
               disabled={busy}
-              onPress={() => setClosing(true)}
+              onPress={() => {
+                setError(null);
+                setClosing(true);
+              }}
             />
           </View>
         </View>
@@ -287,12 +298,33 @@ export function WaitingSellerBlock({
         onDone={() => void refresh()}
       />
       <ConfirmDialog
+        visible={!!confirmMin}
+        title={
+          confirmMin?.kind === "LowerMin"
+            ? `Giảm tối thiểu xuống ${confirmMin.target} người?`
+            : `Tăng tối thiểu lên ${confirmMin?.target ?? need + 1} người?`
+        }
+        message={
+          confirmMin?.kind === "LowerMin"
+            ? count >= confirmMin.target
+              ? `Hiện đã có ${count} người đăng ký. Khi giảm xuống ${confirmMin.target} người, ngưỡng này sẽ khóa ngay và phiên đủ điều kiện mở (không thể tăng lại).`
+              : `Giảm số người đăng ký tối thiểu từ ${need} xuống ${confirmMin.target} người. Khi đã có người đăng ký, bạn chỉ có thể giảm chứ không tăng lại.`
+            : `Tăng số người đăng ký tối thiểu từ ${need} lên ${confirmMin?.target ?? need + 1} người. Khi có người đăng ký đầu tiên, bạn sẽ không thể tăng thêm nữa.`
+        }
+        confirmLabel={confirmMin?.kind === "LowerMin" ? "Giảm tối thiểu" : "Tăng tối thiểu"}
+        busy={busy}
+        error={error ?? undefined}
+        onCancel={() => !busy && setConfirmMin(null)}
+        onConfirm={() => confirmMin && run(confirmMin.kind, confirmMin.target)}
+      />
+      <ConfirmDialog
         visible={closing}
         title="Đóng phiên trước giờ mở?"
         message={`Phiên bị hủy ngay, ${count} người đăng ký được hoàn cọc và nhận thông báo, sách được trả lại cho bạn tại ${auction.pointName}. Sau khi phiên mở, bạn không đóng được nữa.`}
         confirmLabel="Đóng phiên"
         destructive
         busy={busy}
+        error={error ?? undefined}
         onCancel={() => !busy && setClosing(false)}
         onConfirm={() => run("Close")}
       />

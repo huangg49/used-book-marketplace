@@ -634,7 +634,7 @@ export function StatisticsPage() {
             aria-modal="true"
             aria-labelledby="revenue-detail-title"
           >
-            <header className={styles.modalHeader}>
+            <header className={styles.modalHeader} data-focus-inverse>
               <div>
                 {detailView.kind !== "period" && (
                   <button
