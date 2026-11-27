@@ -292,8 +292,10 @@
    of auction motifs (auction-create/pattern.svg) drifting slowly over the page,
    and the shared ivory grain on top. Only opacity/transform animate. */
 .stage { position: relative; isolation: isolate; overflow-x: clip; }
+/* bottom: -72px runs the room through MainLayout's footer gap (.footer margin-top: 72px),
+   so no plain strip is left between the page and the footer. */
 .backdrop {
-  position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  position: absolute; inset: 0 0 -72px; z-index: -1; overflow: hidden; pointer-events: none;
   background:
     radial-gradient(60% 55% at 0% 38%, rgba(92, 2, 2, .08), transparent 70%),
     radial-gradient(60% 55% at 100% 72%, rgba(92, 2, 2, .07), transparent 70%),
