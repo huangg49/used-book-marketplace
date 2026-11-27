@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PageTitle } from "../../core/PageHeading";
 import styles from "./WorkspaceRecovery.module.css";
 
 export function WorkspaceRecovery({
@@ -26,7 +27,7 @@ export function WorkspaceRecovery({
       <div className={styles.ticket}>
         <div className={styles.code} aria-hidden="true">{code}</div>
         <div className={styles.content}>
-          <h1 id={headingId} ref={heading} tabIndex={-1}>{title}</h1>
+          <PageTitle id={headingId} ref={heading} tabIndex={-1}>{title}</PageTitle>
           <p>{description}</p>
           <div className={styles.actions}>
             <Link to="/dashboard" className={styles.primary} data-focus-inverse>

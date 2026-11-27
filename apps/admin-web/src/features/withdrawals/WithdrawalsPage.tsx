@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -102,15 +103,12 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
     query.error instanceof ApiError && [401, 403].includes(query.error.status);
   return (
     <section className={`${styles.page} ${styles.queuePage}`}>
-      <header className={`page-heading ${styles.queueHeading}`}>
-        <div>
-          <h1>{simulator ? "Kết quả chi mô phỏng" : "Yêu cầu rút tiền"}</h1>
-          <p className="intro">
-            {simulator
+      <PageHeading
+        title={simulator ? "Kết quả chi mô phỏng" : "Yêu cầu rút tiền"}
+        description={simulator
               ? "Ghi nhận kết quả cho đúng mã chi. Kết quả chưa rõ tiếp tục giữ tiền để đối soát."
               : "Đối chiếu thông tin, duyệt từng yêu cầu và theo dõi kết quả chi."}
-          </p>
-        </div>
+      >
         <Button
           className={styles.refresh}
           busy={query.isFetching}
@@ -119,7 +117,7 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
           {!query.isFetching && <RefreshCw size={16} aria-hidden="true" />}
           Cập nhật danh sách
         </Button>
-      </header>
+      </PageHeading>
       {feedback && <Notice tone="success">{feedback}</Notice>}
       <div className={styles.queuePanel}>
         <div className={styles.toolbar}>
@@ -339,9 +337,7 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
       <Link className={styles.back} to={`/withdrawals?${params}`}>
         <ArrowLeft size={16} aria-hidden="true" /> Yêu cầu rút tiền
       </Link>
-      <header className={styles.detailHeading}>
-        <h1>Chi tiết yêu cầu rút tiền</h1>
-      </header>
+      <PageHeading title="Chi tiết yêu cầu rút tiền" />
       {query.isPending && <p role="status">Đang tải yêu cầu…</p>}
       {query.isError && (
         <ErrorNotice error={query.error} retry={() => void query.refetch()} />

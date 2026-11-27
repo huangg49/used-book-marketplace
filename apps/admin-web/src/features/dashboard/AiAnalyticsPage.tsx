@@ -1,3 +1,4 @@
+import { PageHeading, PageTitle } from "../../core/PageHeading";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useOutletContext } from "react-router-dom";
@@ -275,7 +276,7 @@ export function AiAnalyticsPage() {
     return (
       <div className={hubStyles.page}>
         <section className={hubStyles.denied} aria-labelledby="ai-stats-denied">
-          <h1 id="ai-stats-denied">Không có quyền xem thống kê AI & Token</h1>
+          <PageTitle id="ai-stats-denied">Không có quyền xem thống kê AI & Token</PageTitle>
         </section>
       </div>
     );
@@ -299,11 +300,7 @@ export function AiAnalyticsPage() {
 
   return (
     <div className={hubStyles.page}>
-      <header className={hubStyles.header}>
-        <div className={hubStyles.headerTitle}>
-          <h1>AI & Token</h1>
-        </div>
-
+      <PageHeading title="AI & Token">
         <div className={hubStyles.controls}>
           <div
             className={hubStyles.presets}
@@ -363,7 +360,7 @@ export function AiAnalyticsPage() {
             <RefreshCw size={15} aria-hidden="true" />
           </button>
         </div>
-      </header>
+      </PageHeading>
 
       {query.error && (
         <ErrorNotice

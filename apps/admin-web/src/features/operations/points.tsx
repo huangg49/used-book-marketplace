@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
@@ -123,13 +124,10 @@ function PointsContent() {
   return (
     <div className={styles.container}>
       {/* Header & Main Actions */}
-      <header className={styles.pageHeader}>
-        <div className={styles.titleArea}>
-          <h1>Điểm giao nhận.</h1>
-          <p className={styles.intro}>
-            Tạo và sửa điểm mô phỏng, đổi trạng thái và phân công nhân viên. Giờ mở cửa cố định 09:00–18:00 mỗi ngày.
-          </p>
-        </div>
+      <PageHeading
+        title="Điểm giao nhận"
+        description="Tạo và sửa điểm mô phỏng, đổi trạng thái và phân công nhân viên. Giờ mở cửa cố định 09:00–18:00 mỗi ngày."
+      >
         <div className={styles.topActions}>
           <Button
             className={styles.createButton}
@@ -157,7 +155,7 @@ function PointsContent() {
             <span>Cập nhật danh sách</span>
           </Button>
         </div>
-      </header>
+      </PageHeading>
 
       {/* KPI Command Strip */}
       <section className={styles.kpiStrip} aria-label="Tổng quan trạm giao nhận">

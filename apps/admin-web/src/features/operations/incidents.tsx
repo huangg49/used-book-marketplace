@@ -50,77 +50,75 @@ function IncidentsContent({ user }: { user: CurrentUser }) {
     refetchInterval: opening ? false : queueInterval,
   });
   return (
-    <>
-      {admin && <FundSummary refreshKey={result.dataUpdatedAt} />}
-      <OperationsQueue
-        number="06"
-        title="Sự cố tại điểm."
-        intro="Ghi nhận mất, hư hỏng hoặc sách đến không khớp, kể cả khi chưa có đơn. Quản trị viên độc lập với điểm quyết định bồi thường trong giá trị bảo vệ."
-        order="Sự cố chờ quyết định trước, cũ nhất trước; sau đó là các quyết định gần nhất."
-        unit="sự cố"
-        result={result}
-        serverTime={result.data?.serverTime}
-        panel={panel}
-        extra={(context) => (
-          <>
-            <MotionPanel open={opening} className="row-panel">
-              {opening && (
-                <IncidentOpen
-                  {...context}
-                  admin={admin}
-                  onFinish={(outcome) => {
-                    setOpening(false);
-                    context.onFinish(outcome);
-                  }}
-                  onClose={() => setOpening(false)}
-                />
-              )}
-            </MotionPanel>
-            {!opening && (
-              <Button
-                disabled={panel.pending}
-                onClick={() => {
-                  panel.setOpen(undefined);
-                  panel.setNotice(undefined);
-                  setOpening(true);
+    <OperationsQueue
+      number="06"
+      title="Sự cố tại điểm."
+      intro="Ghi nhận mất, hư hỏng hoặc sách đến không khớp, kể cả khi chưa có đơn. Quản trị viên độc lập với điểm quyết định bồi thường trong giá trị bảo vệ."
+      order="Sự cố chờ quyết định trước, cũ nhất trước; sau đó là các quyết định gần nhất."
+      unit="sự cố"
+      result={result}
+      serverTime={result.data?.serverTime}
+      panel={panel}
+      extra={(context) => (
+        <>
+          {admin && <FundSummary refreshKey={result.dataUpdatedAt} />}
+          <MotionPanel open={opening} className="row-panel">
+            {opening && (
+              <IncidentOpen
+                {...context}
+                admin={admin}
+                onFinish={(outcome) => {
+                  setOpening(false);
+                  context.onFinish(outcome);
                 }}
-              >
-                Báo sự cố
-              </Button>
+                onClose={() => setOpening(false)}
+              />
             )}
-          </>
-        )}
-        rows={(result.data?.items ?? []).map((item) => ({
-          id: item.id,
-          status: incidentStateLabels[item.state],
-          meta: [
-            incidentKindLabels[item.kind],
-            item.pointName,
-            `Mở ${dateText(item.openedAt)}`,
-            ...(item.protectedValue !== null
-              ? [`Giá trị bảo vệ ${money(item.protectedValue)}`]
-              : []),
-          ],
-          title: item.title ?? incidentKindLabels[item.kind],
-          detail: <IncidentDetail item={item} />,
-          action:
-            admin && item.state === "Open" && item.openedBy !== user.id
-              ? {
-                  label: "Quyết định",
-                  render: (context) => (
-                    <IncidentDecide item={item} {...context} />
-                  ),
-                }
-              : undefined,
-        }))}
-        empty={{
-          title: "Chưa có sự cố.",
-          body: admin
-            ? "Sự cố do nhân viên điểm hoặc quản trị viên báo sẽ hiện ở đây."
-            : "Chỉ hiện sự cố tại các điểm bạn đang được phân công.",
-        }}
-      />
-    </>
+          </MotionPanel>
+          {!opening && (
+            <Button
+              disabled={panel.pending}
+              onClick={() => {
+                panel.setOpen(undefined);
+                panel.setNotice(undefined);
+                setOpening(true);
+              }}
+            >
+              Báo sự cố
+            </Button>
+          )}
+        </>
+      )}
+      rows={(result.data?.items ?? []).map((item) => ({
+        id: item.id,
+        status: incidentStateLabels[item.state],
+        meta: [
+          incidentKindLabels[item.kind],
+          item.pointName,
+          `Mở ${dateText(item.openedAt)}`,
+          ...(item.protectedValue !== null
+            ? [`Giá trị bảo vệ ${money(item.protectedValue)}`]
+            : []),
+        ],
+        title: item.title ?? incidentKindLabels[item.kind],
+        detail: <IncidentDetail item={item} />,
+        action:
+          admin && item.state === "Open" && item.openedBy !== user.id
+            ? {
+                label: "Quyết định",
+                render: (context) => (
+                  <IncidentDecide item={item} {...context} />
+                ),
+              }
+            : undefined,
+      }))}
+      empty={{
+        title: "Chưa có sự cố.",
+        body: admin
+          ? "Sự cố do nhân viên điểm hoặc quản trị viên báo sẽ hiện ở đây."
+          : "Chỉ hiện sự cố tại các điểm bạn đang được phân công.",
+      }}
+    />
   );
 }
 

@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { z } from "zod";
@@ -41,7 +42,10 @@ function SimulatorForm({ kind, user }: { kind: SimulatorKind; user: CurrentUser 
     }
   };
   return <>
-    <header className="page-heading"><h1>{titles[kind]}</h1><p className="intro">Nhập các mã từ kịch bản mô phỏng đã tạo. Chỉ dành cho tài khoản vận hành thử độc lập với các bên tham gia.</p></header>
+    <PageHeading
+      title={titles[kind]}
+      description="Nhập các mã từ kịch bản mô phỏng đã tạo. Chỉ dành cho tài khoản vận hành thử độc lập với các bên tham gia."
+    />
     <Notice tone="info">{kind === "topups" ? "Chỉ áp dụng yêu cầu nạp mô phỏng đồ án. Sai số tiền, loại tiền hoặc người nhận có thể đưa yêu cầu vào trạng thái cần đối chiếu." : "Thông báo từ LatLaiSimulator. Máy chủ kiểm tra mã đơn, vận đơn, thời điểm và trạng thái hiện tại trước khi ghi nhận."}</Notice>
     {result ? <>
       <Notice tone={result.tone}>{result.text}</Notice>
