@@ -36,7 +36,7 @@
 .results { display: grid; gap: 14px; align-content: start; min-height: 420px; }
 .row {
   --tone: var(--shop-wine); --tone-bg: #5c020212; --tone-wash: #5c02020f; --tone-edge: #5c020259;
-  position: relative; display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(220px, auto); gap: 22px; align-items: center;
+  position: relative; display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(220px, 300px); gap: 22px; align-items: center;
   padding: 20px 24px; border: 1.5px solid transparent; border-radius: 18px; box-shadow: var(--card-shadow);
   background:
     radial-gradient(120% 150% at 0% 0%, var(--tone-wash), transparent 46%) padding-box,
