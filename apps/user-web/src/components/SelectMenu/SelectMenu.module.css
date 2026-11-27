@@ -1,0 +1,39 @@
+/* Same field and panel language as DateTimePicker: control border, wine top
+   edge on the panel, selected = wine fill, active = warm shelf. */
+.root { position: relative; width: 100%; }
+.trigger {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 12px 0 14px;
+  border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink);
+  font: inherit; font-weight: 600; text-align: left; cursor: pointer; transition: border-color 140ms ease-out;
+}
+.trigger:hover:not(:disabled), .trigger[aria-expanded="true"] { border-color: var(--shop-wine); }
+.trigger:disabled { opacity: .6; cursor: not-allowed; }
+.value { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+.chevron { flex: none; color: var(--shop-wine); transition: rotate 180ms ease-out; }
+.trigger[aria-expanded="true"] .chevron { rotate: 180deg; }
+
+.list {
+  position: fixed; inset: auto; z-index: 60; margin: 0; padding: 6px; list-style: none;
+  max-height: min(320px, calc(100dvh - 24px)); overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid var(--shop-line, #d9cbbd); border-top: 3px solid var(--shop-wine); border-radius: 10px;
+  background: var(--shop-paper); color: var(--shop-ink);
+  box-shadow: 0 18px 40px rgba(40, 25, 20, .22), 0 2px 6px rgba(40, 25, 20, .08);
+  scrollbar-width: thin; scrollbar-color: var(--shop-control) transparent;
+  animation: drop 160ms ease-out;
+}
+.list[hidden] { display: none; }
+.option {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 0 12px;
+  border-radius: 7px; font-size: .9375rem; font-weight: 500; font-variant-numeric: tabular-nums; cursor: pointer; user-select: none;
+}
+.option[data-active] { background: var(--shop-shelf, #f4eddf); }
+.option[aria-selected="true"] { background: var(--shop-wine); color: var(--shop-cream, #fffcf5); font-weight: 700; }
+.option[aria-selected="true"][data-active] { background: #7c1a17; }
+.option[aria-selected="true"] svg { color: #f4cb67; }
+.option[data-separated] { position: relative; margin-top: 9px; }
+.option[data-separated]::before { content: ""; position: absolute; left: 6px; right: 6px; top: -5px; border-top: 1px dashed var(--shop-line, #d9cbbd); }
+@keyframes drop { from { opacity: 0; translate: 0 -4px; } }
+@media (forced-colors: active) {
+  .option[data-active] { outline: 2px solid Highlight; }
+  .option[aria-selected="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}

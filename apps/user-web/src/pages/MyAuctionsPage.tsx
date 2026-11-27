@@ -1,32 +1,69 @@
 import { CursorPager } from "../components/Pagination/CursorPager";
 import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { formatDuration } from '../components/DurationInput'
-import { AuctionEmptyArt } from '../components/AuctionEmptyArt'
-import { useRef, useState } from 'react'
+import { InfoTip } from '../components/InfoTip'
+import { useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Info, MapPin, Plus, RefreshCw } from 'lucide-react'
+import { ArrowRight, BookOpen, CalendarClock, Clock, Gavel, LayoutGrid, MapPin, Plus, RefreshCw, Store, Timer, Wallet, type LucideIcon } from 'lucide-react'
 import { AuctionPhoto } from '../components/AuctionGallery'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DemoSkipButton } from '../components/DemoSkipButton'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
+import { WithdrawIntakeDialog } from '../components/WithdrawIntakeDialog'
 import { useSession } from '../hooks/useSession'
 import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
   AUCTION_MAX_SCHEDULE_EDITS, AUCTION_MIN_BIDDERS_FLOOR, EVIDENCE_MIN_LENGTH, auctionPhase, getMyAuctionIntakes, listHandoverPoints, listMyAuctions,
   submitIntakeEvidence, waitingForRegistrants, waitingTime, withdrawIntake, getMyAuctionIntake, advanceDemoAuction, type MyAuctionItem, type MyIntake,
 } from '../services/auctions'
+import { getMyListing, getMyPhoto } from '../services/my-listings'
 import { ROUTES, formatVnd } from '../lib/routes'
 import styles from './MyAuctionsPage.module.css'
 
-const views = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'active', label: 'Đang diễn ra' },
-  { value: 'upcoming', label: 'Sắp mở' },
-  { value: 'payment', label: 'Cần thanh toán' },
-  { value: 'selling', label: 'Phiên của tôi' },
+const views: { value: string; label: string; icon: LucideIcon }[] = [
+  { value: 'all', label: 'Tất cả', icon: LayoutGrid },
+  { value: 'active', label: 'Đang diễn ra', icon: Timer },
+  { value: 'upcoming', label: 'Sắp mở', icon: CalendarClock },
+  { value: 'payment', label: 'Cần thanh toán', icon: Wallet },
+  { value: 'selling', label: 'Phiên của tôi', icon: Store },
 ]
+// Colour family for a row: drives the accent bar, the status pill and the clock.
+type Tone = 'pay' | 'lead' | 'outbid' | 'mine' | 'soon' | 'won' | 'done'
+
+// Falling leaves: [left %, top %, size px, duration s, delay s, colour 0-4].
+// Fixed values so the scene is the same on every render and device. Leaves are
+// spread down the whole page, each falling about one screen while it sways.
+const LEAVES: [number, number, number, number, number, number][] = [
+  [4, -2, 22, 14, 0, 0], [16, 4, 16, 17, -6, 1], [29, -4, 26, 15, -3, 2], [43, 8, 18, 19, -11, 3], [57, -3, 24, 16, -8, 4],
+  [70, 6, 18, 18, -2, 0], [84, -1, 28, 15, -12, 2], [95, 10, 16, 20, -5, 1], [8, 22, 20, 17, -9, 3], [24, 30, 14, 15, -1, 4],
+  [37, 25, 22, 19, -14, 0], [63, 28, 18, 16, -7, 2], [78, 24, 24, 18, -3, 1], [92, 34, 18, 15, -10, 3], [3, 46, 26, 19, -4, 2],
+  [18, 52, 16, 16, -13, 0], [50, 48, 20, 18, -6, 4], [88, 54, 22, 17, -9, 1], [10, 68, 18, 15, -2, 3], [33, 72, 24, 19, -11, 2],
+  [66, 70, 16, 16, -5, 0], [96, 74, 20, 18, -8, 4], [22, 86, 22, 17, -12, 1], [74, 88, 18, 15, -1, 3],
+]
+
+// Full-width auction stage behind the centred page column: drifting wine/gold
+// light, a breathing lamp at the top and autumn leaves falling past the page.
+function AuctionStage({ children }: { children: ReactNode }) {
+  return (
+    <div className={styles.stage}>
+      <div className={styles.backdrop} aria-hidden="true">
+        <span className={styles.bdPattern} />
+        <span className={styles.bdLamp} />
+        {LEAVES.map(([x, y, size, duration, delay, colour], i) => (
+          <span
+            key={i}
+            className={styles.bdLeaf}
+            data-c={colour}
+            style={{ left: `${x}%`, top: `${y}%`, width: size, height: size, animationDuration: `${duration}s`, animationDelay: `${delay}s` }}
+          />
+        ))}
+      </div>
+      {children}
+    </div>
+  )
+}
 const states: Record<string, string> = {
   BuyNowPending: 'Chờ thanh toán mua ngay',
   AwaitingWinnerPayment: 'Chờ người thắng thanh toán',
@@ -78,46 +115,78 @@ function AuctionRow({
         : item.won && a.state === 'Sold'
           ? 'Bạn đã thắng và thanh toán'
           : (states[a.state] ?? 'Đang chốt kết quả')
+  const tone: Tone = payable ? 'pay'
+    : item.needsPayment ? 'done'
+    : scheduled ? 'soon'
+    : item.role === 'Seller' ? (open ? 'mine' : 'done')
+    : open ? (item.leading ? 'lead' : 'outbid')
+    : item.won && a.state === 'Sold' ? 'won' : 'done'
+  const registered = a.registeredCount ?? 0
+  const needed = a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR
   return (
-    <article className={styles.row}>
+    <article className={styles.row} data-tone={tone}>
       <div className={styles.cover}>
         <AuctionPhoto auction={a} interactive={false} />
       </div>
       <div className={styles.info}>
+        <div className={styles.badges}>
+          <span className={styles.role} data-role={item.role}>
+            {item.role === 'Seller' ? <Store size={13} aria-hidden="true" /> : <Gavel size={13} aria-hidden="true" />}
+            {item.role === 'Seller' ? 'Bạn mở phiên' : 'Bạn tham gia'}
+          </span>
+          <span className={`${styles.status} ${payable ? styles.urgent : ''}`}>
+            {open && <i className={styles.live} aria-hidden="true" />}
+            {status}
+          </span>
+        </div>
         <h2>
           <Link to={ROUTES.auctionDetail(a.id)}>{a.title}</Link>
         </h2>
         <p className={styles.place}><MapPin size={13} aria-hidden="true" /> {a.pointName}</p>
-        <span
-          className={`${styles.status} ${payable ? styles.urgent : ''}`}
-        >
-          {status}
-        </span>
         {item.needsPayment && (
-          <p>
-            Hạn thanh toán:{' '}
-            {item.paymentDeadline
-              ? new Date(item.paymentDeadline).toLocaleString('vi-VN')
-              : '—'}{' '}
-            · {deadline > 0 ? `còn ${formatRemaining(deadline)}` : 'Đã hết giờ'}
+          <p className={styles.clock} data-urgent={deadline > 0 || undefined}>
+            <Wallet size={14} aria-hidden="true" />
+            {deadline > 0 ? <>Còn <b>{formatRemaining(deadline)}</b> để thanh toán</> : <b>Đã hết giờ thanh toán</b>}
+            {item.paymentDeadline && <span className={styles.clockAt}>hạn {new Date(item.paymentDeadline).toLocaleString('vi-VN')}</span>}
           </p>
         )}
-        {open && <p>Còn {formatRemaining(remaining)}</p>}
+        {open && (
+          <p className={styles.clock}>
+            <Clock size={14} aria-hidden="true" /> Còn <b>{formatRemaining(remaining)}</b>
+          </p>
+        )}
         {scheduled && waiting && (
-          <p>
-            Đăng ký {a.registeredCount ?? 0}/{a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người
-            · {waiting.label === 'Mở lúc' ? 'mở sau' : 'hạn còn'} {formatRemaining(untilStart)}
+          <div className={styles.registrants}>
+            <p className={styles.clock}>
+              <CalendarClock size={14} aria-hidden="true" />
+              Đăng ký <b>{registered}/{needed}</b> người · {waiting.label === 'Mở lúc' ? 'mở sau' : 'hạn còn'} <b>{formatRemaining(untilStart)}</b>
+            </p>
+            <span className={styles.meter} aria-hidden="true">
+              <span style={{ width: `${Math.min(100, (registered / Math.max(1, needed)) * 100)}%` }} />
+            </span>
+          </div>
+        )}
+        {scheduled && !waiting && (
+          <p className={styles.clock}>
+            <CalendarClock size={14} aria-hidden="true" />
+            Mở sau <b>{formatRemaining(untilStart)}</b>
+            <span className={styles.clockAt}>kéo dài {formatDuration(Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 1000))}</span>
           </p>
         )}
-        {scheduled && !waiting && <p>Mở sau {formatRemaining(untilStart)} · kéo dài {formatDuration(Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 1000))}</p>}
       </div>
       <div className={styles.action}>
-        <span>
+        <span className={styles.priceLabel}>
           {a.currentPrice === null
             ? 'Giá khởi điểm'
             : 'Giá hiện tại / giá chốt'}
+          <InfoTip label={a.currentPrice === null ? 'Giá khởi điểm' : 'Giá hiện tại'}>
+            {a.currentPrice === null
+              ? <>Chưa có lượt trả giá. Lượt đầu tiên phải từ <b>{formatVnd(a.startPrice)}</b>, mỗi bước <b>{formatVnd(a.step)}</b>.</>
+              : <>Giá cao nhất đang được giữ. Khi phiên kết thúc, đây là <b>giá chốt</b> người thắng thanh toán.</>}
+          </InfoTip>
         </span>
-        <strong>{formatVnd(a.currentPrice ?? a.startPrice)}</strong>
+        <strong key={a.currentPrice ?? a.startPrice}>{formatVnd(a.currentPrice ?? a.startPrice)}</strong>
+        <span className={styles.bidders}>{a.bidderCount ? <><b>{a.bidderCount}</b> người trả giá</> : 'Chưa có ai trả giá'}</span>
         <div className={styles.rowButtons}>
         {editable && (
           <button type="button" className={styles.secondaryAction} onClick={() => setEditing(true)}>Đổi thời gian</button>
@@ -221,9 +290,19 @@ function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () =
   }
   return (
     <div className={styles.evidence}>
-      {intake.inspectionNote && <p>Điểm cần: {intake.inspectionNote}</p>}
-      {intake.evidenceDeadline && <p>Hạn bổ sung: {intakeTime(intake.evidenceDeadline)}. Quá hạn, sách sẽ được trả lại cho bạn.</p>}
-      <label htmlFor={`evidence-${intake.id}`}>Bằng chứng của bạn</label>
+      {intake.inspectionNote && <p><b>Điểm cần:</b> {intake.inspectionNote}</p>}
+      {intake.evidenceDeadline && (
+        <p className={styles.evidenceDue}>
+          Hạn bổ sung <b>{intakeTime(intake.evidenceDeadline)}</b>
+          <InfoTip label="Hạn bổ sung">Quá hạn mà chưa gửi, <b>sách sẽ được trả lại</b> cho bạn. Im lặng không bao giờ được tính là đạt.</InfoTip>
+        </p>
+      )}
+      <span className={styles.evidenceLabel}>
+        <label htmlFor={`evidence-${intake.id}`}>Bằng chứng của bạn</label>
+        <InfoTip label="Bằng chứng của bạn">
+          Mô tả nguồn gốc, dấu riêng hoặc giấy tờ bạn có ({EVIDENCE_MIN_LENGTH}–2.000 ký tự). <b>Chỉ gửi được một lần</b>; một nhân viên khác tại điểm sẽ quyết định.
+        </InfoTip>
+      </span>
       <textarea
         id={`evidence-${intake.id}`}
         rows={3}
@@ -232,7 +311,7 @@ function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () =
         disabled={busy || unknown}
         onChange={(event) => { setNote(event.target.value); setError(null) }}
       />
-      <span>Mô tả nguồn gốc, dấu riêng hoặc giấy tờ bạn có ({EVIDENCE_MIN_LENGTH}–2.000 ký tự). Chỉ gửi được một lần.</span>
+      <span className={styles.counter}>{[...trimmed].length}/2.000 ký tự · tối thiểu {EVIDENCE_MIN_LENGTH}</span>
       {error && <p className={styles.urgent} role="alert">{error}</p>}
       <button
         type="button"
@@ -262,6 +341,38 @@ function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () =
         error={error}
         onConfirm={() => void send().then(() => setConfirmSend(false))}
       />
+    </div>
+  )
+}
+
+// The intake carries no photo, so the cover comes from the seller's own listing
+// (the same owner-only reads /auctions/new uses). Any failure falls back to the
+// placeholder; the row never waits on the picture.
+function IntakeCover({ intake }: { intake: MyIntake }) {
+  const auth = useSession()
+  const ownerId = auth.status === 'authenticated' ? auth.user.id : undefined
+  const [failedUrl, setFailedUrl] = useState<string>()
+  const listing = useQuery({
+    queryKey: ['my-listing', ownerId, intake.listingId],
+    queryFn: () => getMyListing(intake.listingId),
+    enabled: !!ownerId,
+    retry: false,
+    staleTime: 5 * 60_000,
+  })
+  const mediaId = listing.data?.currentRevision.content.mediaIds?.[0]
+  const photo = useQuery({
+    queryKey: ['my-photo', ownerId, intake.listingId, listing.data?.currentRevision.id, mediaId],
+    queryFn: () => getMyPhoto(intake.listingId, mediaId!),
+    enabled: !!ownerId && !!mediaId,
+    retry: false,
+    staleTime: 60_000,
+  })
+  const url = photo.data?.url
+  return (
+    <div className={styles.intakeCover}>
+      {url && url !== failedUrl
+        ? <img src={url} alt={`Ảnh bản sách ${intake.title}`} loading="lazy" decoding="async" onError={() => setFailedUrl(url)} />
+        : <span className={styles.coverState}><BookOpen size={20} aria-hidden="true" />{listing.isPending || (mediaId && photo.isPending) ? 'Đang tải…' : 'Chưa có ảnh'}</span>}
     </div>
   )
 }
@@ -297,13 +408,14 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
     }
   }
   return (
-    <li className={styles.intake}>
-      <div>
+    <li className={styles.intake} data-state={intake.state}>
+      <IntakeCover intake={intake} />
+      <div className={styles.intakeMain}>
         <span className={styles.intakeState}>{INTAKE_STATES[intake.state]}</span>
         <h3>{intake.title}</h3>
         <p>
           <span className={styles.place}><MapPin size={13} aria-hidden="true" /> {pointName ?? 'Điểm đã chọn'}</span>
-          {intake.state === 'AwaitingDropoff' && <span className={styles.deadline}>hạn gửi {intakeTime(intake.dropoffDeadline)}</span>}
+          {intake.state === 'AwaitingDropoff' && <span className={styles.deadline}><Clock size={13} aria-hidden="true" /> Hạn gửi <b>{intakeTime(intake.dropoffDeadline)}</b></span>}
         </p>
         {intake.state === 'ReclaimRequired' && intake.reclaimReason && (
           <div className={styles.reclaim}>
@@ -312,17 +424,21 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
           </div>
         )}
         {intake.state === 'NeedsEvidence' && <EvidenceForm intake={intake} onChanged={onChanged} />}
-        {intake.auctionId && <p className={styles.hint}><Info size={13} aria-hidden="true" /> Mở phiên để xem lịch, trạng thái và kết quả đấu giá.</p>}
         {error && <p className={styles.urgent} role="alert">{error}</p>}
       </div>
       <div className={styles.intakeSide}>
-        <span>Khởi điểm</span>
+        <span className={styles.priceLabel}>Khởi điểm</span>
         <strong>{formatVnd(intake.startPrice)}</strong>
         <span className={styles.terms}>
           <span>Bước <b>{formatVnd(intake.step)}</b></span>
           {intake.buyNowPrice !== null && <span>Mua ngay <b>{formatVnd(intake.buyNowPrice)}</b></span>}
         </span>
-        {intake.auctionId && <Link className={styles.viewButton} to={ROUTES.auctionDetail(intake.auctionId)}>Xem phiên đấu giá <ArrowRight size={16} aria-hidden="true" /></Link>}
+        {intake.auctionId && (
+          <span className={styles.viewWithTip}>
+            <Link className={styles.viewButton} to={ROUTES.auctionDetail(intake.auctionId)}>Xem phiên đấu giá <ArrowRight size={16} aria-hidden="true" /></Link>
+            <InfoTip label="Xem phiên đấu giá">Mở phiên để xem <b>lịch</b>, <b>trạng thái</b> và <b>kết quả</b> đấu giá.</InfoTip>
+          </span>
+        )}
         {(intake.state === 'Passed' || cancellable) && (
           <div className={styles.intakeActions}>
             {cancellable && (
@@ -338,18 +454,18 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
           </div>
         )}
       </div>
-      <ConfirmDialog
+      <WithdrawIntakeDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title={`Rút “${intake.title}” khỏi đấu giá?`}
-        description={intake.state === 'AwaitingDropoff'
-          ? `Chỗ tại ${pointName ?? 'điểm đã chọn'} được trả lại và bài đăng bán không còn ở trạng thái Đang giữ. Phiếu gửi này không thể khôi phục.`
-          : `Sách đang ở ${pointName ?? 'điểm đã chọn'}. Sau khi rút, phiếu gửi này không thể khôi phục và bạn cần tới ${pointName ?? 'điểm'} để nhận lại sách.`}
-        confirmText="Rút sách khỏi đấu giá"
-        isDanger
-        isBusy={busy}
-        error={error}
         onConfirm={() => void withdraw()}
+        busy={busy}
+        retry={unknown}
+        error={error}
+        title={intake.title}
+        pointName={pointName ?? 'Điểm đã chọn'}
+        stateLabel={INTAKE_STATES[intake.state]}
+        atPoint={intake.state !== 'AwaitingDropoff'}
+        cover={<IntakeCover intake={intake} />}
       />
       {intake.state === 'Passed' && (
         <ScheduleAuctionDialog
@@ -428,16 +544,20 @@ function SellerIntakes({
     ]);
   return (
     <section className={styles.intakes} aria-labelledby="intakes-title">
+      <img className={styles.intakesArt} src="/illustrations/my-auctions/parcel.svg" width="120" height="120" alt="" aria-hidden="true" loading="lazy" decoding="async" />
       <div className={styles.intakesHead}>
-        <h2 id="intakes-title">{focusId ? 'Lần gửi sách của bạn' : 'Sách chờ đăng phiên'}</h2>
+        <h2 id="intakes-title">
+          {focusId ? 'Lần gửi sách của bạn' : 'Sách chờ đăng phiên'}
+          {!focusId && waiting.length > 0 && <span className={styles.count}>{waiting.length}</span>}
+          <InfoTip label="Sách chờ đăng phiên">
+            Sách bạn đã gửi tới điểm. Điểm <b>nhận và kiểm tra</b> sách; khi sách <b>đạt kiểm tra</b>, bạn đăng phiên và chọn giờ mở.
+          </InfoTip>
+        </h2>
         {focusId && (
           <button type="button" onClick={() => setParams({})}>
             Xem tất cả lần gửi
           </button>
         )}
-        <Link to={ROUTES.auctionCreate()}>
-          <Plus size={15} aria-hidden="true" /> Đưa sách lên đấu giá
-        </Link>
       </div>
       {waiting.length ? (
         <ul>
@@ -454,8 +574,7 @@ function SellerIntakes({
         </ul>
       ) : (
         <p className={styles.intakesEmpty}>
-          Chưa có sách nào đang chờ. Chọn một cuốn đang bán trên kệ để đưa lên
-          đấu giá.
+          Chưa có sách nào đang chờ. Chọn <b>một cuốn đang bán trên kệ</b> để đưa lên đấu giá.
         </p>
       )}
     </section>
@@ -490,18 +609,27 @@ export function MyAuctionsPage() {
   const readDenied = query.error instanceof ApiError && [401, 403].includes(query.error.status)
   const showData = !!query.data && (!query.isError || stale)
   return (
+    <AuctionStage>
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <h1>Đấu giá của tôi</h1>
-          <p>
-            Theo dõi các phiên bạn tham gia hoặc đã mở bán. Giá và trạng thái
-            được làm mới mỗi 8 giây.
-          </p>
+        <div className={styles.headerText}>
+          <p className={styles.kicker}><Gavel size={14} aria-hidden="true" /> Bàn đấu giá của bạn</p>
+          <h1 className={styles.title}>
+            Đấu giá của tôi
+            <InfoTip label="Đấu giá của tôi">
+              Theo dõi các phiên <b>bạn tham gia</b> hoặc <b>đã mở bán</b>. Giá và trạng thái được <b>làm mới mỗi 8 giây</b>.
+            </InfoTip>
+          </h1>
+          <div className={styles.headerActions}>
+            <Link className={styles.primaryLink} to={ROUTES.auctions}>
+              Khám phá phiên mới <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+            <Link className={styles.ghostLink} to={ROUTES.auctionCreate()}>
+              <Plus size={15} aria-hidden="true" /> Đưa sách lên đấu giá
+            </Link>
+          </div>
         </div>
-        <Link to={ROUTES.auctions}>
-          Khám phá phiên mới <ArrowRight size={16} aria-hidden="true" />
-        </Link>
+        <img className={styles.headerArt} src="/illustrations/my-auctions/paddle.svg" width="200" height="160" alt="" aria-hidden="true" decoding="async" />
       </header>
       <nav className={styles.tabs} aria-label="Lọc đấu giá của tôi">
         {views.map((v) => (
@@ -511,6 +639,7 @@ export function MyAuctionsPage() {
             aria-current={view === v.value ? 'page' : undefined}
             onClick={() => select(v.value)}
           >
+            <v.icon size={16} aria-hidden="true" />
             {v.label}
           </button>
         ))}
@@ -531,7 +660,7 @@ export function MyAuctionsPage() {
           <div className={`${styles.empty} ${view === 'selling' ? styles.emptyCompact : ''}`}>
             {/* "Phiên của tôi" already shows the books waiting above with their
                 next step; a second full-size illustration reads as "nothing here". */}
-            {view !== 'selling' && <AuctionEmptyArt variant={view === 'upcoming' ? 'mine' : 'shelf'} />}
+            {view !== 'selling' && <img className={styles.emptyArt} src="/illustrations/my-auctions/empty-rack.svg" width="232" height="150" alt="" aria-hidden="true" decoding="async" />}
             <h2>
               {view === 'payment'
                 ? 'Bạn không có phiên cần thanh toán'
@@ -567,5 +696,6 @@ export function MyAuctionsPage() {
       {!readDenied && <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
         busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang đấu giá của tôi" itemLabel="phiên" anchorId="my-auction-results" />}
     </div>
+    </AuctionStage>
   )
 }

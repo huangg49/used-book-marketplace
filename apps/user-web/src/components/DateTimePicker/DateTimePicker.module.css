@@ -1,4 +1,4 @@
-.picker { display: grid; gap: 8px; --line: var(--shop-line, #d9cbbd); --shelf: var(--shop-shelf, #f4eddf); }
+.picker { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; --line: var(--shop-line, #d9cbbd); --shelf: var(--shop-shelf, #f4eddf); }
 .trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; text-align: left; cursor: pointer; transition: border-color 140ms ease-out; }
 .trigger:hover, .trigger[aria-expanded="true"] { border-color: var(--shop-wine); }
 .trigger:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 1px; }
@@ -7,7 +7,7 @@
 .date { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; }
 .time { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: var(--shop-wine); color: var(--shop-cream); font-weight: 700; font-size: .875rem; font-variant-numeric: tabular-nums; }
 
-.panel { position: fixed; inset: auto; z-index: 60; width: min(380px, calc(100vw - 24px)); margin: 0; padding: 0; color: var(--shop-ink); display: grid; grid-template-columns: 1fr auto; border: 1px solid var(--line); border-top: 3px solid var(--shop-wine); border-radius: 10px; background: var(--shop-paper); box-shadow: 0 18px 40px rgba(40, 25, 20, .22), 0 2px 6px rgba(40, 25, 20, .08); overflow: hidden; animation: drop 160ms ease-out; }
+.panel { position: fixed; inset: auto; z-index: 60; width: min(380px, calc(100vw - 24px)); box-sizing: border-box; margin: 0; padding: 0; color: var(--shop-ink); display: grid; grid-template-columns: 1fr auto; border: 1px solid var(--line); border-top: 3px solid var(--shop-wine); border-radius: 10px; background: var(--shop-paper); box-shadow: 0 18px 40px rgba(40, 25, 20, .22), 0 2px 6px rgba(40, 25, 20, .08); overflow: hidden; animation: drop 160ms ease-out; }
 @keyframes drop { from { opacity: 0; transform: translateY(-4px); } }
 
 .calendar { padding: 12px; }
@@ -48,3 +48,9 @@
 }
 /* Without Popover API support the panel falls back to flowing inline. */
 @supports not selector(:popover-open) { .panel { position: static; width: auto; } }
+/* The panel takes the field's width (set when it opens). On a narrow field the
+   hour/minute columns sit under the calendar instead of squeezing the days. */
+.panel[data-stacked] { grid-template-columns: minmax(0, 1fr); }
+.panel[data-stacked] .clock { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px; border-left: 0; border-top: 1px solid var(--line); }
+.panel[data-stacked] .column { max-height: 108px; }
+.panel { max-height: calc(100dvh - 24px); overflow-y: auto; }

@@ -14,7 +14,8 @@
   position: fixed; inset: auto; z-index: 70; margin: 0; width: max-content; max-width: min(300px, calc(100vw - 24px));
   padding: 10px 12px; border: 1px solid var(--shop-line); border-top: 3px solid var(--shop-wine); border-radius: 8px;
   background: var(--shop-paper); color: var(--shop-ink); box-shadow: 0 12px 28px rgba(40, 25, 20, .18), 0 2px 6px rgba(40, 25, 20, .08);
-  font-size: .8125rem; font-weight: 400; font-style: normal; line-height: 1.65; text-align: left; white-space: normal; letter-spacing: normal; text-transform: none;
+  /* Own font: a tip inside a display-font heading must not inherit Anton. */
+  font-family: var(--shop-body, system-ui, sans-serif); font-size: .8125rem; font-weight: 400; font-style: normal; line-height: 1.65; text-align: left; white-space: normal; letter-spacing: normal; text-transform: none;
   animation: tip-in 140ms ease-out;
 }
 .bubble[hidden] { display: none; }
