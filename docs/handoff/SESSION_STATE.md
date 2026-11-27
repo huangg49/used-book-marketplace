@@ -1,3 +1,38 @@
+# Nâng cấp UI trang Chi tiết Trao đổi Web — 28/11/2026
+
+- Nhánh `feat/exchange-detail-redesign`, nền `9075bdcc` (`origin/main`).
+  Làm mới giao diện `apps/user-web` cho `/exchange/:id` (`ExchangeDetailPage`,
+  `BookConditionDisclosure`, `ExchangeActionDialog`, `ExchangeSupportDialog`,
+  `AcceptExchangeDialog`, `CounterDialog`, `ActionCard`, `ReceiveDialog`,
+  `ShipmentDialog`, `ShippingTrackingCard`, `ExchangeSteps`, `ExchangeHistory`,
+  `ExchangeInspection`, `SettlementCard`, `ExchangeChatDrawer`,
+  `ExchangeReturnPanel`, `ExchangeEvidencePanel`, `BookCover`) kèm minh họa SVG
+  riêng (`public/illustrations/exchange-detail/exchange-crest.svg`). Giữ nền
+  `ReadingBackdrop` theo yêu cầu chủ dự án, giữ nguyên API/OpenAPI, luồng và nút
+  demo sẵn có (`focus.css`, `forced-colors`, quy tắc motion chủ dự án).
+  - Bố cục trang & đối chiếu giá: nút `Gửi phản ánh` đặt trên thanh điều hướng
+    đầu trang và mở modal `ExchangeSupportDialog` tại chỗ (dùng `SelectMenu`,
+    `sendSupportIntent` tới `POST /me/support-cases`); nút chat hiển thị 1 tên +
+    avatar đối tác duy nhất (`Đổi sách với [Avatar + Tên]`); bảng `Nếu hai bên
+    đồng ý` ghim cuộn đầu cột phải phía trên nút hành động (dấu `-`/`+` cho tiền
+    bù); khung `Sách trong phiếu` thêm thanh đối chiếu giá hai bên trên đầu, ghim
+    cuộn làn ngắn hơn, tách từng cuốn thành thẻ trắng có nhãn `Cuốn x / y`, thanh
+    `Giá trị đổi` toàn chiều rộng, thanh `Tổng giá trị đổi` đậm ở cuối làn và mục
+    `Tình trạng sách` có cấu trúc; hai thẻ `Giao nhận hai chiều` căn đỉnh cân mật
+    độ.
+  - Hộp thoại chuẩn hóa: `AcceptExchangeDialog` (2 tầng `50/50`, nhãn tình trạng
+    tiếng Việt, gom cảnh báo bảo chứng vào `InfoTip`), `CounterDialog` (header
+    wine, trục `50/50` bằng đáy, mở/đóng `Thêm lời nhắn` bằng state, xem trước
+    thay đổi), `ExchangeActionDialog` (cảnh báo rust + focus nút an toàn),
+    `SelectMenu` thay `<select>` gốc.
+- PASS `typecheck` user-web, `oxlint` 19 file `.ts`/`.tsx` sửa đổi (`0` error, `2`
+  warning pre-existing `set-state-in-effect`), Vitest user-web `62/62` file
+  (`516/516` ca), `vite build`, `pnpm docs:check`, `git diff --check`. Kiểm trực
+  quan & tương tác live preview Chromium (`1280×900`, `1024×768`, `360×800`, dữ
+  liệu mô phỏng ngoài repo): 7 trạng thái phiếu + 4 hộp thoại + drawer chat,
+  không tràn ngang, không lỗi console. NOT RUN: Playwright E2E/API/Mongo/Socket.IO
+  thật, native RN, Safari/thiết bị thật.
+
 # Nâng cấp UI trang Danh sách & Chi tiết Đấu giá Web — 28/11/2026
 
 - Nhánh `feat/auction-detail-redesign`, nền `0b6fb829` (đã nằm trong `origin/main`).

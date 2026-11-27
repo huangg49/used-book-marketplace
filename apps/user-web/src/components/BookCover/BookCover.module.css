@@ -32,6 +32,15 @@
     line-height: 1.2;
 }
 
+.fallbackLabel {
+    font-family: var(--shop-body, sans-serif);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    color: #fffcf5;
+}
+
 .tag {
     position: absolute;
     top: 8px;

@@ -1,8 +1,10 @@
-import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Clock, ShieldCheck } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, Clock, ShieldCheck } from "lucide-react";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { conditions } from "../../../lib/listing-labels";
 import { formatVnd } from "../../../lib/routes";
 import { BookCover } from "../../BookCover";
+import { InfoTip } from "../../InfoTip";
+import { BookConditionDisclosure } from "../BookConditionDisclosure";
 import styles from "./ExchangeHistory.module.css";
 
 const dateFormat = new Intl.DateTimeFormat("vi-VN", {
@@ -29,36 +31,59 @@ export function ExchangeBookList({ books, hasSnapshot, incoming = false, heading
   const total = hasSnapshot ? bookTotal(books) : undefined;
   return (
     <section className={styles.bookGroup} data-incoming={incoming || undefined}>
-      <header>
-        <h3><Icon size={19} aria-hidden="true" />{heading ?? (incoming ? "Bạn nhận" : "Bạn gửi")}</h3>
-        <p>{books.length} cuốn{total != null && <> <span aria-hidden="true">·</span> {formatVnd(total)}</>}</p>
+      <header className={styles.groupHeader}>
+        <h3><Icon size={18} aria-hidden="true" />{heading ?? (incoming ? "Bạn nhận" : "Bạn gửi")}</h3>
+        <span className={styles.groupCount}>
+          {books.length} cuốn
+        </span>
       </header>
       {books.length ? (
         <ul className={styles.books}>
           {books.map((book, index) => (
             <li key={book.id} className={styles.book}>
+              {books.length > 1 && (
+                <div className={styles.bookIndexBar}>
+                  <span className={styles.bookIndexStamp}>
+                    Cuốn {index + 1} / {books.length}
+                  </span>
+                </div>
+              )}
               <div className={styles.cover} aria-hidden="true">
-                <BookCover title={book.title} coverUrl={book.coverUrl} index={index} />
+                <BookCover title={book.title} coverUrl={book.coverUrl} index={index} fallbackLabel="Chưa có ảnh" />
               </div>
               <div className={styles.bookText}>
                 <strong title={book.title} dir="auto">{book.title}</strong>
                 {book.author && <p className={styles.author} title={book.author} dir="auto">{book.author}</p>}
-                <p className={styles.bookFacts}>
+                <span className={styles.conditionStamp}>
                   {conditions[book.condition as keyof typeof conditions] ?? "Chưa rõ tình trạng"}
-                  {hasSnapshot && book.price != null && <span>{formatVnd(book.price)}</span>}
-                </p>
-                {(book.conditionDetails || book.editionLabel) && (
-                  <details className={styles.condition}>
-                    <summary>Tình trạng đã ghi nhận <ChevronDown size={14} aria-hidden="true" /></summary>
-                    {book.editionLabel && <p>{book.editionLabel}</p>}
-                    {book.conditionDetails && <p>{book.conditionDetails}</p>}
-                  </details>
-                )}
+                </span>
               </div>
+              {hasSnapshot && book.price != null && (
+                <div className={styles.priceStamp}>
+                  <span className={styles.priceLabel}>Giá trị đổi</span>
+                  <strong>{formatVnd(book.price)}</strong>
+                </div>
+              )}
+              <BookConditionDisclosure
+                label="Tình trạng đã ghi nhận"
+                editionLabel={book.editionLabel}
+                conditionDetails={book.conditionDetails}
+                report={book.conditionReport}
+                incoming={incoming}
+              />
             </li>
           ))}
         </ul>
       ) : <p className={styles.empty}>Chưa có thông tin sách.</p>}
+      {total != null && books.length > 1 && (
+        <div className={styles.groupTotalFooter}>
+          <div className={styles.groupTotalMeta}>
+            <span className={styles.groupTotalLabel}>Tổng giá trị đổi</span>
+            <span className={styles.groupTotalSub}>{books.length} cuốn cộng gộp</span>
+          </div>
+          <strong className={styles.groupTotalValue}>{formatVnd(total)}</strong>
+        </div>
+      )}
     </section>
   );
 }
@@ -73,31 +98,33 @@ export function ProposalHistory({ detail }: { detail: ExchangeDetail }) {
       </div>
       {!detail.hasAgreementSnapshot && <p className={styles.note}>Phiếu cũ thiếu bản chụp sách ban đầu.</p>}
       <div className={styles.financialSection}>
-        <h3 className={styles.financialTitle}>
-          <ShieldCheck size={16} aria-hidden="true" /> Cam kết tài chính & Ký quỹ an toàn
-        </h3>
+        <div className={styles.financialHead}>
+          <h3 className={styles.financialTitle}>
+            <ShieldCheck size={16} aria-hidden="true" /> Cam kết tài chính &amp; Ký quỹ
+          </h3>
+          <InfoTip label="Bảo chứng ký quỹ Lật lại">
+            Toàn bộ tiền cọc và tiền bù được giữ an toàn trong tài khoản ký quỹ Lật lại và tự động tất toán sau khi hai bên hoàn tất giao nhận, không phát sinh tranh chấp.
+          </InfoTip>
+        </div>
         <dl className={styles.agreement}>
           <div className={styles.agreementCard}>
             <dt>Cọc của bạn</dt>
             <dd>{amount(detail.viewerDeposit)}</dd>
-            <span className={styles.agreementHint}>Hoàn trả khi hoàn tất trao đổi</span>
+            <span className={styles.agreementHint}>Hoàn trả khi hoàn tất</span>
           </div>
           <div className={styles.agreementCard}>
             <dt>Cọc của đối tác</dt>
             <dd>{amount(detail.partnerDeposit)}</dd>
-            <span className={styles.agreementHint}>Lật Lại đang bảo chứng</span>
+            <span className={styles.agreementHint}>Đang được bảo chứng</span>
           </div>
           <div className={`${styles.agreementCard} ${detail.moneyAmount ? styles.highlightCard : ""}`}>
             <dt>{compensation === "user_pays" ? "Tiền bù bạn trả" : compensation === "other_pays" ? "Tiền bù đối tác trả" : "Tiền bù"}</dt>
             <dd>{compensation === "none" ? "Không có" : amount(detail.moneyAmount)}</dd>
             <span className={styles.agreementHint}>
-              {compensation === "user_pays" ? "Cộng vào đơn đối tác" : compensation === "other_pays" ? "Chuyển vào ví bạn" : "Giá trị hai bên cân bằng"}
+              {compensation === "user_pays" ? "Chuyển cho đối tác khi xong" : compensation === "other_pays" ? "Chuyển vào ví của bạn" : "Ngang giá"}
             </span>
           </div>
         </dl>
-        <p className={styles.escrowNote}>
-          🛡️ Toàn bộ tiền cọc và tiền bù được bảo chứng an toàn trong tài khoản ký quỹ Lật Lại, tự động quyết toán sau khi hai bên hoàn tất giao nhận.
-        </p>
       </div>
     </>
   );
@@ -115,11 +142,11 @@ function FundingSide({ label, fundedAt, deposit, compensation, total, incoming =
   const Icon = date ? Check : Clock;
   return (
     <section className={styles.fundingSide} data-incoming={incoming || undefined}>
-      <header>
+      <header className={styles.groupHeader}>
         <h3>{label}</h3>
-        <p className={styles.fundingStatus} data-funded={Boolean(date) || undefined}>
-          <Icon size={15} aria-hidden="true" />{date ? "Đã ghi nhận nộp" : "Chưa ghi nhận nộp"}
-        </p>
+        <span className={styles.fundingStatus} data-funded={Boolean(date) || undefined}>
+          <Icon size={14} aria-hidden="true" />{date ? "Đã ghi nhận nộp" : "Chưa ghi nhận nộp"}
+        </span>
       </header>
       <div className={styles.fundingMain}>
         <p>{date ? "Tổng đã nộp" : "Tổng theo thỏa thuận"}</p>

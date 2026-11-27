@@ -1,6 +1,8 @@
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { lockPageScroll } from '../../../lib/page-scroll';
+import { SelectMenu } from '../../SelectMenu';
+import { InfoTip } from '../../InfoTip';
 import { 
     FileSignature, 
     X, 
@@ -26,6 +28,7 @@ import { getWalletSummary } from '../../../services/wallet';
 import { serviceAreasQuery } from '../../../services/service-areas';
 import { session } from '../../../lib/session';
 import { BookCover } from '../../BookCover';
+import { conditions } from '../../../lib/listing-labels';
 import { formatVnd } from '../../../lib/routes';
 import styles from './AcceptExchangeDialog.module.css';
 
@@ -73,14 +76,25 @@ export function AcceptExchangeDialog({
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [localBusy, setLocalBusy] = useState(false);
   const titleId = useId();
+  const openerRef = useRef<HTMLElement | null>(null);
   const busy = isBusy || localBusy;
 
   useEffect(() => (isOpen ? lockPageScroll() : undefined), [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
+    openerRef.current = document.activeElement as HTMLElement | null;
+    return () => {
+      if (openerRef.current?.isConnected) {
+        openerRef.current.focus({ preventScroll: true });
+      }
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) {
+      if (e.key === 'Escape' && !e.defaultPrevented && !busy) {
         e.preventDefault();
         onClose();
       }
@@ -203,6 +217,40 @@ export function AcceptExchangeDialog({
   const isBalanceSufficient = availableBalance >= effectiveFundingAmount;
   const missingBalance = Math.max(0, effectiveFundingAmount - availableBalance);
 
+  const initialCompValue = detail.moneyAmount ?? defaultDiffAmount;
+  const effectivePayerForView = isNegotiating
+    ? negotiatedPayer
+    : detail.moneyCompensationType === 'user_pays'
+      ? 'viewer'
+      : detail.moneyCompensationType === 'other_pays'
+        ? 'partner'
+        : 'none';
+  const hasNegotiationChanged =
+    negotiatedPayer !== initialPayer ||
+    (negotiatedPayer !== 'none' && negotiatedDiff !== initialCompValue);
+  const compDelta =
+    (negotiatedPayer === 'none' ? 0 : negotiatedDiff) -
+    (initialPayer === 'none' ? 0 : initialCompValue);
+  const currentCompSummary =
+    initialPayer === 'viewer' && initialCompValue > 0
+      ? `Bạn bù -${formatVnd(initialCompValue)}`
+      : initialPayer === 'partner' && initialCompValue > 0
+        ? `Đối tác bù +${formatVnd(initialCompValue)}`
+        : 'Ngang giá (0 ₫)';
+
+  const lowerValue = Math.min(totalReceivePrice, totalGivePrice);
+  const higherValue = Math.max(totalReceivePrice, totalGivePrice);
+  const cheaperSideIsViewer = totalGivePrice < totalReceivePrice;
+  const cheaperSidePays =
+    effectivePayerForView === 'none'
+      ? 0
+      : (cheaperSideIsViewer && effectivePayerForView === 'viewer') ||
+          (!cheaperSideIsViewer && effectivePayerForView === 'partner')
+        ? currentDiff
+        : 0;
+  const protectedCap = Math.min(higherValue, lowerValue + cheaperSidePays);
+  const showCapNotice = defaultDiffAmount > 0 && protectedCap < higherValue;
+
   const defaultAddr = addresses.data?.items.find((a) => a.isDefault) ?? addresses.data?.items[0];
   const defaultRecipientName = defaultAddr?.recipientName || '';
   const defaultPhone = defaultAddr?.phone || '';
@@ -311,14 +359,20 @@ export function AcceptExchangeDialog({
     >
       <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         {/* Header */}
-        <div className={styles.header}>
+        <div className={styles.header} data-focus-inverse>
           <div className={styles.headerContent}>
-            <div className={styles.headerIcon}>
+            <div className={styles.headerIcon} aria-hidden="true">
               <FileSignature size={20} />
             </div>
-            <h2 id={titleId} className={styles.title}>
-              Xác nhận hợp đồng trao đổi
-            </h2>
+            <div className={styles.headerHeading}>
+              <h2 id={titleId} className={styles.title}>
+                Xác nhận hợp đồng trao đổi
+              </h2>
+              <p className={styles.headerSubtitle}>
+                {receiveBooks[0]?.title ?? giveBooks[0]?.title ?? `Phiếu #${detail.transactionCode}`}
+                {receiveBooks.length + giveBooks.length > 2 ? ` · ${receiveBooks.length + giveBooks.length} cuốn` : ''}
+              </p>
+            </div>
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose} disabled={busy} aria-label="Đóng">
             <X size={20} />
@@ -327,372 +381,422 @@ export function AcceptExchangeDialog({
 
         {/* Body */}
         <div className={styles.body}>
-          <div className={styles.columnsGrid}>
-            {/* Left Column: Sách trao đổi */}
-            <div className={styles.colBooks}>
-              <h3 className={styles.sectionTitle}>
-                <ArrowLeftRight size={14} /> Sách trao đổi
-              </h3>
-              <div className={styles.booksContainer}>
-                {/* Sách nhận */}
-                <div className={styles.bookBox}>
-                  <div className={styles.bookBoxHeader}>
-                    <span className={styles.boxPillReceive}>Bạn nhận ({receiveBooks.length})</span>
-                    <span className={styles.boxTotalValue}>{formatVnd(totalReceivePrice)}</span>
-                  </div>
-                  <div className={styles.bookItemsList}>
-                    {receiveBooks.map((book) => (
-                      <div key={book.id} className={styles.bookItemRow}>
-                        <div className={styles.bookCoverThumb}>
-                          <BookCover title={book.title} coverUrl={book.coverUrl} index={0} />
-                        </div>
-                        <div className={styles.bookItemText}>
-                          <p className={styles.bookItemTitle} title={book.title}>{book.title}</p>
-                          <p className={styles.bookItemAuthor}>{book.author}</p>
-                          <div className={styles.bookItemMeta}>
-                            <span className={styles.conditionBadge}>{book.condition || 'Chưa rõ'}</span>
-                            <span className={styles.priceText}>{formatVnd(book.price || 0)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Sách giao */}
-                <div className={styles.bookBox}>
-                  <div className={styles.bookBoxHeader}>
-                    <span className={styles.boxPillGive}>Bạn giao ({giveBooks.length})</span>
-                    <span className={styles.boxTotalValue}>{formatVnd(totalGivePrice)}</span>
-                  </div>
-                  <div className={styles.bookItemsList}>
-                    {giveBooks.map((book) => (
-                      <div key={book.id} className={styles.bookItemRow}>
-                        <div className={styles.bookCoverThumb}>
-                          <BookCover title={book.title} coverUrl={book.coverUrl} index={0} />
-                        </div>
-                        <div className={styles.bookItemText}>
-                          <p className={styles.bookItemTitle} title={book.title}>{book.title}</p>
-                          <p className={styles.bookItemAuthor}>{book.author}</p>
-                          <div className={styles.bookItemMeta}>
-                            <span className={styles.conditionBadge}>{book.condition || 'Chưa rõ'}</span>
-                            <span className={styles.priceText}>{formatVnd(book.price || 0)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Tài chính & Địa chỉ */}
-            <div className={styles.colTerms}>
-              {/* Tài chính */}
-              <div className={styles.sectionCompact}>
-                <div className={styles.compHeaderRow}>
-                  <h3 className={styles.sectionTitle}>
-                    <Banknote size={14} /> Thỏa thuận tài chính
-                  </h3>
-                  <div className={styles.compHeaderActions}>
-                    <div className={styles.lockedBadge}>
-                      {isAlreadyNegotiated ? (
-                        <>
-                          <Lock size={11} /> Đã thương lượng
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck size={11} /> Theo giá duyệt
-                        </>
-                      )}
-                    </div>
-                    {onCounter && (
-                      <button
-                        type="button"
-                        className={isNegotiating ? styles.headerResetBtn : styles.headerToggleBtn}
-                        onClick={() => {
-                          const nextState = !isNegotiating;
-                          setIsNegotiating(nextState);
-                          if (!nextState) updateNegotiatedDiff(defaultDiffAmount);
-                        }}
-                      >
-                        {isNegotiating ? (
-                          <>
-                            <RotateCcw size={11} /> Mặc định
-                          </>
-                        ) : (
-                          <>
-                            <SlidersHorizontal size={11} /> Thỏa thuận lại
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className={styles.financialBox}>
-                  <div className={styles.financialLine}>
-                    <span className={styles.financialLabel}>Tiền bù:</span>
-                    <span className={styles.financialValue}>{effectiveCompensationNotice}</span>
-                  </div>
-
-                  {isNegotiating && (
-                    <div className={styles.negotiationCard}>
-                      <div className={styles.payerSelectorGroup}>
-                        <button
-                          type="button"
-                          className={`${styles.payerOptionBtn} ${negotiatedPayer === 'viewer' ? styles.payerOptionBtnActive : ''}`}
-                          onClick={() => {
-                            setNegotiatedPayer('viewer');
-                            if (negotiatedDiff === 0) updateNegotiatedDiff(defaultDiffAmount || 10000);
-                          }}
-                        >
-                          <span className={styles.payerOptionIcon}>
-                            <ArrowUpRight size={12} />
-                          </span>
-                          <span>Bạn bù</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className={`${styles.payerOptionBtn} ${negotiatedPayer === 'partner' ? styles.payerOptionBtnActive : ''}`}
-                          onClick={() => {
-                            setNegotiatedPayer('partner');
-                            if (negotiatedDiff === 0) updateNegotiatedDiff(defaultDiffAmount || 10000);
-                          }}
-                        >
-                          <span className={styles.payerOptionIcon}>
-                            <ArrowDownLeft size={12} />
-                          </span>
-                          <span>Đối tác bù</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className={`${styles.payerOptionBtn} ${negotiatedPayer === 'none' ? styles.payerOptionBtnActive : ''}`}
-                          onClick={() => {
-                            setNegotiatedPayer('none');
-                            updateNegotiatedDiff(0);
-                          }}
-                        >
-                          <span className={styles.payerOptionIcon}>
-                            <Scale size={12} />
-                          </span>
-                          <span>Đổi ngang</span>
-                        </button>
-                      </div>
-
-                      {negotiatedPayer === 'none' ? (
-                        <div className={styles.evenCompensationBanner}>
-                          <CheckCircle2 size={13} className={styles.evenCompensationIcon} />
-                          <span>Đổi ngang sách — không phát sinh tiền bù.</span>
-                        </div>
-                      ) : (
-                        <div data-focus-surface className={styles.amountInputWrapper}>
-                          <span className={styles.amountInputPrefix}>
-                            <Coins size={14} />
-                          </span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            className={styles.amountInput}
-                            value={diffInputText}
-                            onChange={(e) => {
-                              const digits = e.target.value.replace(/\D/g, '');
-                              const num = digits ? parseInt(digits, 10) : 0;
-                              setNegotiatedDiff(num);
-                              setDiffInputText(digits === '' ? '' : new Intl.NumberFormat('vi-VN').format(num));
-                            }}
-                            onBlur={() => {
-                              if (negotiatedDiff > 0) {
-                                setDiffInputText(new Intl.NumberFormat('vi-VN').format(negotiatedDiff));
-                              } else {
-                                setDiffInputText('0');
-                              }
-                            }}
-                            placeholder="0"
-                          />
-                          <span className={styles.amountInputSuffix}>đ</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {(() => {
-                    if (defaultDiffAmount <= 0) return null;
-                    const lowerValue = Math.min(totalReceivePrice, totalGivePrice);
-                    const higherValue = Math.max(totalReceivePrice, totalGivePrice);
-                    const cheaperSideIsViewer = totalGivePrice < totalReceivePrice;
-                    const effectivePayer = isNegotiating
-                      ? negotiatedPayer
-                      : detail.moneyCompensationType === 'user_pays'
-                        ? 'viewer'
-                        : detail.moneyCompensationType === 'other_pays'
-                          ? 'partner'
-                          : 'none';
-                    const cheaperSidePays =
-                      effectivePayer === 'none'
-                        ? 0
-                        : (cheaperSideIsViewer && effectivePayer === 'viewer') ||
-                            (!cheaperSideIsViewer && effectivePayer === 'partner')
-                          ? currentDiff
-                          : 0;
-                    const protectedCap = Math.min(higherValue, lowerValue + cheaperSidePays);
-                    if (protectedCap >= higherValue) return null;
-                    return (
-                      <div className={styles.escrowCapWarning} role="status">
-                        <AlertTriangle size={14} aria-hidden="true" />
-                        <span>
-                          <strong>Lưu ý mức bảo chứng tối đa:</strong> Tiền bù đang thấp hơn chênh lệch định giá ({formatVnd(defaultDiffAmount)}). Nếu phát sinh sự cố hư hại hoặc thất lạc, mức bồi thường tối đa từ quỹ ký quỹ của bên gửi sách giá thấp hơn chỉ đạt <strong>{formatVnd(protectedCap)}</strong> (cọc {formatVnd(lowerValue)} + tiền bù {formatVnd(cheaperSidePays)}).
-                        </span>
-                      </div>
-                    );
-                  })()}
-
-                  <div className={styles.financialLine}>
-                    <span className={styles.financialLabel}>Tổng nộp:</span>
-                    <div className={styles.financialValueGroup}>
-                      <span className={styles.highlightAmount}>{formatVnd(effectiveFundingAmount)}</span>
-                      <span className={styles.financialSubtext}>
-                        {effectiveFundingAmount > totalGivePrice
-                          ? `(cọc sách gửi ${formatVnd(totalGivePrice)} + tiền bù ${formatVnd(effectiveFundingAmount - totalGivePrice)}, cọc hoàn lại khi hoàn tất)`
-                          : `(cọc sách gửi ${formatVnd(totalGivePrice)}, hoàn lại khi hoàn tất)`}
-                      </span>
-                    </div>
-                  </div>
-
-                  {wallet.data && (
-                    <div className={isBalanceSufficient ? styles.balanceOkBadge : styles.balanceWarningBadge}>
-                      {isBalanceSufficient ? (
-                        <>
-                          <CheckCircle2 size={14} className={styles.balanceIconOk} />
-                          <span>
-                            Ví: <strong>{formatVnd(availableBalance)}</strong> (Đủ số dư đặt cọc)
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertTriangle size={14} className={styles.balanceIconWarn} />
-                          <span>
-                            Ví: <strong>{formatVnd(availableBalance)}</strong> (Cần nạp thêm {formatVnd(missingBalance)} trong 24h)
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Địa chỉ giao nhận */}
-              <div className={styles.sectionCompact}>
-                <h3 className={styles.sectionTitle}>
-                  <MapPin size={14} /> Địa chỉ giao nhận
-                </h3>
-                <div className={styles.addressBox}>
-                  <div className={styles.partnerAddressRow}>
-                    <span className={styles.addressLabelSmall}>Đối tác nhận:</span>
-                    <span className={styles.partnerAddressText}>
-                      {detail.partnerAddress ? (
-                        <>
-                          <strong>{detail.partnerAddress.recipientName}</strong> · {detail.partnerAddress.phone} · {detail.partnerAddress.detail}
-                        </>
-                      ) : (
-                        'Theo sổ địa chỉ của đối tác'
-                      )}
-                    </span>
-                  </div>
-
-                  <div className={styles.userAddressSection}>
-                    <div className={styles.userAddressHeader}>
-                      <span className={styles.addressLabelSmall}>Bạn nhận tại:</span>
-                      {addresses.data?.items && addresses.data.items.length > 0 && (
-                        <button
-                          type="button"
-                          className={styles.btnNewAddressToggle}
-                          onClick={() => setAddressMode(addressMode === 'existing' ? 'new' : 'existing')}
-                        >
-                          {addressMode === 'existing' ? '+ Thêm mới' : 'Chọn có sẵn'}
-                        </button>
-                      )}
-                    </div>
-
-                    {addressMode === 'existing' ? (
-                      <div className={styles.addressOptionsList}>
-                        {addresses.data?.items?.map((addr) => {
-                          const isSelected = selectedAddressId === addr.id;
-                          return (
-                            <label
-                              key={addr.id}
-                              className={styles.addressOptionCard}
-                              data-selected={isSelected}
-                            >
-                              <input
-                                type="radio"
-                                name="accept-address"
-                                className={styles.addressRadio}
-                                checked={isSelected}
-                                onChange={() => setSelectedAddressId(addr.id)}
-                                disabled={isBusy}
-                              />
-                              <div className={styles.addressOptionDetails}>
-                                <span className={styles.recipientNameText}>{addr.recipientName}</span>
-                                <span className={styles.phoneText}>{addr.phone}</span>
-                                {addr.isDefault && <span className={styles.defaultBadge}>Mặc định</span>}
-                                <div className={styles.addressDetailText}>{addr.detail}</div>
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className={styles.newAddressForm}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                          <input
-                            type="text"
-                            placeholder="Họ tên người nhận"
-                            value={newRecipientName}
-                            onChange={(e) => setNewRecipientName(e.target.value)}
-                            className={styles.compactInput}
-                          />
-                          <input
-                            type="tel"
-                            placeholder="Số điện thoại"
-                            value={newPhone}
-                            onChange={(e) => setNewPhone(e.target.value)}
-                            className={styles.compactInput}
-                          />
-                        </div>
-                        <select
-                          value={newLocalityCode}
-                          onChange={(e) => setNewLocalityCode(e.target.value)}
-                          className={styles.compactSelect}
-                        >
-                          <option value="">-- Chọn Khu vực / Quận huyện (TP.HCM, Bình Dương, Vũng Tàu) --</option>
-                          {areas.data?.localities.map((loc) => (
-                            <option key={loc.code} value={loc.code}>
-                              {loc.label}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="text"
-                          placeholder="Số nhà, tên đường, phường..."
-                          value={newDetail}
-                          onChange={(e) => setNewDetail(e.target.value)}
-                          className={styles.compactInput}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className={styles.timelineBar}>
+            <ol className={styles.timeline} aria-label="Tiến trình xác nhận trao đổi">
+              <li className={styles.timelineStep} data-active="true">
+                <span className={styles.stepNum}>1</span>
+                <span>{isNegotiating ? 'Gửi điều chỉnh' : 'Đồng ý & Khóa'}</span>
+              </li>
+              <li className={styles.timelineArrow} aria-hidden="true">→</li>
+              <li className={styles.timelineStep}>
+                <span className={styles.stepNum}>2</span>
+                <span>{isNegotiating ? 'Đối tác phản hồi' : 'Đặt cọc trong 24h'}</span>
+              </li>
+              <li className={styles.timelineArrow} aria-hidden="true">→</li>
+              <li className={styles.timelineStep} data-result="true">
+                <span className={styles.stepNum}>3</span>
+                <span>Giao nhận sách</span>
+              </li>
+            </ol>
+            <InfoTip label="Quy định sau khi khóa hợp đồng">
+              {isNegotiating
+                ? 'Đề xuất tiền bù cập nhật trực tiếp lên phiếu hiện tại. Sách và tiền vẫn chưa bị khóa cho đến khi hai bên thống nhất.'
+                : 'Trong 24 giờ sau khi đồng ý, cả hai bên nộp cọc từ Ví mô phỏng để mở bước gửi sách. Quá 24 giờ phiếu sẽ tự hủy và hoàn tiền cho bên đã nộp.'}
+            </InfoTip>
           </div>
 
-          <div className={isNegotiating ? styles.noticeBoxCounter : styles.noticeBox}>
-            {isNegotiating
-              ? 'Đề xuất tiền bù mới sẽ cập nhật trực tiếp trên phiếu trao đổi để đối tác xem và phản hồi.'
-              : 'Sau khi khóa hợp đồng, hai bên có 24 giờ để nộp cọc và tiền bù trước khi gửi sách.'}
+          {/* Tier 1: Sách trao đổi (50/50 side-by-side) */}
+          <section className={styles.booksRow} aria-label="Sách trao đổi">
+            {/* Sách nhận */}
+            <div className={styles.bookBox} data-lane="receive">
+              <div className={styles.bookBoxHeader}>
+                <span className={styles.boxPillReceive}>
+                  <ArrowDownLeft size={14} aria-hidden="true" />
+                  Bạn nhận ({receiveBooks.length})
+                </span>
+                <span className={styles.boxTotalValue}>{formatVnd(totalReceivePrice)}</span>
+              </div>
+              <div className={styles.bookItemsList}>
+                {receiveBooks.map((book) => (
+                  <div key={book.id} className={styles.bookItemRow}>
+                    <div className={styles.bookCoverThumb}>
+                      <BookCover title={book.title} coverUrl={book.coverUrl} index={0} fallbackLabel="Chưa có ảnh" />
+                    </div>
+                    <div className={styles.bookItemText}>
+                      <p className={styles.bookItemTitle} title={book.title}>{book.title}</p>
+                      <p className={styles.bookItemAuthor}>{book.author}</p>
+                      <div className={styles.bookItemMeta}>
+                        <span className={styles.conditionBadge}>
+                          {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Chưa rõ'}
+                        </span>
+                        <span className={styles.priceText}>{formatVnd(book.price || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sách giao */}
+            <div className={styles.bookBox} data-lane="give">
+              <div className={styles.bookBoxHeader}>
+                <span className={styles.boxPillGive}>
+                  <ArrowUpRight size={14} aria-hidden="true" />
+                  Bạn giao ({giveBooks.length})
+                </span>
+                <span className={styles.boxTotalValue}>{formatVnd(totalGivePrice)}</span>
+              </div>
+              <div className={styles.bookItemsList}>
+                {giveBooks.map((book) => (
+                  <div key={book.id} className={styles.bookItemRow}>
+                    <div className={styles.bookCoverThumb}>
+                      <BookCover title={book.title} coverUrl={book.coverUrl} index={0} fallbackLabel="Chưa có ảnh" />
+                    </div>
+                    <div className={styles.bookItemText}>
+                      <p className={styles.bookItemTitle} title={book.title}>{book.title}</p>
+                      <p className={styles.bookItemAuthor}>{book.author}</p>
+                      <div className={styles.bookItemMeta}>
+                        <span className={styles.conditionBadge}>
+                          {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Chưa rõ'}
+                        </span>
+                        <span className={styles.priceText}>{formatVnd(book.price || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Tier 2: Tài chính | Địa chỉ giao nhận (50/50 equal-height cards) */}
+          <div className={styles.termsGrid}>
+            {/* Left: Thỏa thuận tài chính */}
+            <section className={styles.financialBox} aria-label="Thỏa thuận tài chính">
+              <div className={styles.panelHead}>
+                <h3 className={styles.sectionTitle}>
+                  <Banknote size={14} aria-hidden="true" /> Thỏa thuận tài chính
+                </h3>
+                <div className={styles.compHeaderActions}>
+                  <span className={styles.lockedBadge}>
+                    {isAlreadyNegotiated ? (
+                      <>
+                        <Lock size={11} aria-hidden="true" /> Đã thương lượng
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={11} aria-hidden="true" /> Giá duyệt
+                      </>
+                    )}
+                  </span>
+                  {onCounter && (
+                    <button
+                      type="button"
+                      className={isNegotiating ? styles.headerResetBtn : styles.headerToggleBtn}
+                      onClick={() => {
+                        const nextState = !isNegotiating;
+                        setIsNegotiating(nextState);
+                        if (!nextState) updateNegotiatedDiff(defaultDiffAmount);
+                      }}
+                    >
+                      {isNegotiating ? (
+                        <>
+                          <RotateCcw size={11} aria-hidden="true" /> Mặc định
+                        </>
+                      ) : (
+                        <>
+                          <SlidersHorizontal size={11} aria-hidden="true" /> Thỏa thuận lại
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <dl className={styles.financeRows}>
+                <div>
+                  <dt>Cọc sách bạn gửi</dt>
+                  <dd>{formatVnd(totalGivePrice)}</dd>
+                </div>
+                <div
+                  className={styles.compLine}
+                  data-direction={
+                    effectivePayerForView === 'viewer' && currentDiff > 0
+                      ? 'out'
+                      : effectivePayerForView === 'partner' && currentDiff > 0
+                        ? 'in'
+                        : 'even'
+                  }
+                >
+                  <dt>
+                    {effectivePayerForView === 'viewer' && currentDiff > 0
+                      ? 'Tiền bù bạn trả'
+                      : effectivePayerForView === 'partner' && currentDiff > 0
+                        ? 'Tiền bù bạn nhận'
+                        : 'Tiền bù chênh lệch'}
+                  </dt>
+                  <dd title={effectiveCompensationNotice}>
+                    {effectivePayerForView === 'viewer' && currentDiff > 0
+                      ? `-${formatVnd(currentDiff)}`
+                      : effectivePayerForView === 'partner' && currentDiff > 0
+                        ? `+${formatVnd(currentDiff)}`
+                        : '0 ₫ (Ngang giá)'}
+                  </dd>
+                </div>
+              </dl>
+
+              {isNegotiating && (
+                <div className={styles.negotiationCard}>
+                  <div className={styles.negotiationMeta}>
+                    <span>Hiện tại: <strong>{currentCompSummary}</strong></span>
+                    {hasNegotiationChanged && (
+                      <span className={styles.deltaChip}>
+                        {negotiatedPayer === 'none'
+                          ? 'Đổi ngang'
+                          : compDelta > 0
+                            ? `+${formatVnd(compDelta)}`
+                            : compDelta < 0
+                              ? `-${formatVnd(Math.abs(compDelta))}`
+                              : 'Đổi bên bù'}
+                      </span>
+                    )}
+                  </div>
+                  <div className={styles.payerSelectorGroup}>
+                    <button
+                      type="button"
+                      className={`${styles.payerOptionBtn} ${negotiatedPayer === 'viewer' ? styles.payerOptionBtnActive : ''}`}
+                      onClick={() => {
+                        setNegotiatedPayer('viewer');
+                        if (negotiatedDiff === 0) updateNegotiatedDiff(defaultDiffAmount || 10000);
+                      }}
+                    >
+                      <span className={styles.payerOptionIcon}>
+                        <ArrowUpRight size={12} />
+                      </span>
+                      <span>Bạn bù</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${styles.payerOptionBtn} ${negotiatedPayer === 'partner' ? styles.payerOptionBtnActive : ''}`}
+                      onClick={() => {
+                        setNegotiatedPayer('partner');
+                        if (negotiatedDiff === 0) updateNegotiatedDiff(defaultDiffAmount || 10000);
+                      }}
+                    >
+                      <span className={styles.payerOptionIcon}>
+                        <ArrowDownLeft size={12} />
+                      </span>
+                      <span>Đối tác bù</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${styles.payerOptionBtn} ${negotiatedPayer === 'none' ? styles.payerOptionBtnActive : ''}`}
+                      onClick={() => {
+                        setNegotiatedPayer('none');
+                        updateNegotiatedDiff(0);
+                      }}
+                    >
+                      <span className={styles.payerOptionIcon}>
+                        <Scale size={12} />
+                      </span>
+                      <span>Đổi ngang</span>
+                    </button>
+                  </div>
+
+                  {negotiatedPayer === 'none' ? (
+                    <div className={styles.evenCompensationBanner}>
+                      <CheckCircle2 size={13} className={styles.evenCompensationIcon} />
+                      <span>Đổi ngang sách — không phát sinh tiền bù.</span>
+                    </div>
+                  ) : (
+                    <div data-focus-surface className={styles.amountInputWrapper}>
+                      <span className={styles.amountInputPrefix}>
+                        <Coins size={14} />
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className={styles.amountInput}
+                        value={diffInputText}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '');
+                          const num = digits ? parseInt(digits, 10) : 0;
+                          setNegotiatedDiff(num);
+                          setDiffInputText(digits === '' ? '' : new Intl.NumberFormat('vi-VN').format(num));
+                        }}
+                        onBlur={() => {
+                          if (negotiatedDiff > 0) {
+                            setDiffInputText(new Intl.NumberFormat('vi-VN').format(negotiatedDiff));
+                          } else {
+                            setDiffInputText('0');
+                          }
+                        }}
+                        placeholder="0"
+                      />
+                      <span className={styles.amountInputSuffix}>đ</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {showCapNotice && (
+                <div className={styles.escrowCapRow} role="status">
+                  <AlertTriangle size={14} aria-hidden="true" />
+                  <span>
+                    Mức bảo chứng tối đa: <strong>{formatVnd(protectedCap)}</strong>
+                  </span>
+                  <InfoTip label="Chi tiết mức bảo chứng tối đa">
+                    Tiền bù đang thấp hơn chênh lệch định giá (<strong>{formatVnd(defaultDiffAmount)}</strong>). Nếu phát sinh sự cố hư hại hoặc thất lạc, mức bồi thường tối đa từ quỹ ký quỹ của bên gửi sách giá thấp hơn đạt <strong>{formatVnd(protectedCap)}</strong> (cọc {formatVnd(lowerValue)} + tiền bù {formatVnd(cheaperSidePays)}).
+                  </InfoTip>
+                </div>
+              )}
+
+              <div className={styles.financeBottom}>
+                <div className={styles.totalFundingBox}>
+                  <div className={styles.totalLabelRow}>
+                    <span>Tổng bạn cần nộp</span>
+                    <InfoTip label="Cách tính tổng tiền cần nộp">
+                      {effectiveFundingAmount > totalGivePrice
+                        ? `Gồm cọc sách gửi ${formatVnd(totalGivePrice)} + tiền bù ${formatVnd(effectiveFundingAmount - totalGivePrice)}. Tiền cọc được hoàn 100% về ví khi hoàn tất.`
+                        : `Gồm cọc sách gửi ${formatVnd(totalGivePrice)}, được hoàn 100% về ví khi hoàn tất trao đổi.`}
+                    </InfoTip>
+                  </div>
+                  <strong className={styles.highlightAmount}>
+                    {formatVnd(effectiveFundingAmount)}
+                  </strong>
+                </div>
+
+                {wallet.data && (
+                  <div className={isBalanceSufficient ? styles.balanceOkBadge : styles.balanceWarningBadge}>
+                    {isBalanceSufficient ? (
+                      <>
+                        <CheckCircle2 size={14} className={styles.balanceIconOk} />
+                        <span>
+                          Ví mô phỏng: <strong>{formatVnd(availableBalance)}</strong> · Đủ số dư
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle size={14} className={styles.balanceIconWarn} />
+                        <span>
+                          Ví mô phỏng: <strong>{formatVnd(availableBalance)}</strong> · Thiếu {formatVnd(missingBalance)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Right: Địa chỉ giao nhận */}
+            <section className={styles.addressBox} aria-label="Địa chỉ giao nhận">
+              <div className={styles.panelHead}>
+                <h3 className={styles.sectionTitle}>
+                  <MapPin size={14} aria-hidden="true" /> Địa chỉ giao nhận
+                </h3>
+                {addresses.data?.items && addresses.data.items.length > 0 && (
+                  <button
+                    type="button"
+                    className={styles.btnNewAddressToggle}
+                    onClick={() => setAddressMode(addressMode === 'existing' ? 'new' : 'existing')}
+                  >
+                    {addressMode === 'existing' ? '+ Thêm mới' : 'Chọn có sẵn'}
+                  </button>
+                )}
+              </div>
+
+              {addressMode === 'existing' ? (
+                <div className={styles.addressOptionsList}>
+                  {addresses.data?.items?.map((addr) => {
+                    const isSelected = selectedAddressId === addr.id;
+                    return (
+                      <label
+                        key={addr.id}
+                        className={styles.addressOptionCard}
+                        data-selected={isSelected}
+                      >
+                        <input
+                          type="radio"
+                          name="accept-address"
+                          className={styles.addressRadio}
+                          checked={isSelected}
+                          onChange={() => setSelectedAddressId(addr.id)}
+                          disabled={isBusy}
+                        />
+                        <div className={styles.addressOptionDetails}>
+                          <div className={styles.addressHeaderLine}>
+                            <span className={styles.recipientNameText}>{addr.recipientName}</span>
+                            <span className={styles.phoneText}>{addr.phone}</span>
+                            {addr.isDefault && <span className={styles.defaultBadge}>Mặc định</span>}
+                          </div>
+                          <div className={styles.addressDetailText}>{addr.detail}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={styles.newAddressForm}>
+                  <div className={styles.addressTwoCol}>
+                    <input
+                      type="text"
+                      placeholder="Họ tên người nhận"
+                      value={newRecipientName}
+                      onChange={(e) => setNewRecipientName(e.target.value)}
+                      className={styles.compactInput}
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Số điện thoại"
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value)}
+                      className={styles.compactInput}
+                    />
+                  </div>
+                  <div className={styles.localityField}>
+                    <span id="accept-locality-label" className={styles.srOnly}>
+                      Khu vực / Quận huyện giao nhận
+                    </span>
+                    <SelectMenu
+                      id="accept-locality"
+                      labelledBy="accept-locality-label"
+                      value={newLocalityCode}
+                      disabled={busy}
+                      options={[
+                        { value: '', label: 'Chọn Quận / Huyện (TP.HCM, Bình Dương, Vũng Tàu)' },
+                        ...(areas.data?.localities.map((loc) => ({
+                          value: loc.code,
+                          label: loc.label,
+                        })) ?? []),
+                      ]}
+                      onChange={setNewLocalityCode}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Số nhà, tên đường, phường..."
+                    value={newDetail}
+                    onChange={(e) => setNewDetail(e.target.value)}
+                    className={styles.compactInput}
+                  />
+                </div>
+              )}
+
+              <div className={styles.partnerAddressStrip}>
+                <span className={styles.addressLabelSmall}>Đối tác nhận tại</span>
+                <p className={styles.partnerAddressText}>
+                  {detail.partnerAddress ? (
+                    <>
+                      <strong>{detail.partnerAddress.recipientName}</strong> · {detail.partnerAddress.phone}
+                      <span className={styles.partnerStreet}>{detail.partnerAddress.detail}</span>
+                    </>
+                  ) : (
+                    'Theo sổ địa chỉ của đối tác'
+                  )}
+                </p>
+              </div>
+            </section>
           </div>
 
           {error && <p className={styles.errorText} role="alert">{error}</p>}
@@ -714,9 +818,9 @@ export function AcceptExchangeDialog({
               data-focus-inverse
               className={styles.btnConfirmCounter}
               onClick={handleCounterSubmit}
-              disabled={busy}
+              disabled={busy || !hasNegotiationChanged}
             >
-              <ArrowLeftRight size={14} /> {busy ? 'Đang gửi...' : 'Gửi đề xuất điều chỉnh'}
+              <ArrowLeftRight size={14} /> {busy ? 'Đang gửi…' : 'Gửi điều chỉnh'}
             </button>
           ) : (
             <button
@@ -726,7 +830,7 @@ export function AcceptExchangeDialog({
               onClick={handleConfirmSubmit}
               disabled={busy}
             >
-              <CheckCircle2 size={14} /> {busy ? 'Đang xử lý...' : 'Đồng ý & Khóa giao dịch'}
+              <CheckCircle2 size={14} /> {busy ? 'Đang xử lý…' : 'Đồng ý & Khóa'}
             </button>
           )}
         </div>

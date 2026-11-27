@@ -2,6 +2,7 @@ import { CheckCircle2, ChevronDown, Clock } from "lucide-react";
 import type { ReactNode } from "react";
 import { formatVnd } from "../../../lib/routes";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
+import { InfoTip } from "../../InfoTip";
 import { ExchangeBookList } from "../ExchangeSteps/ExchangeHistory";
 import styles from "./ExchangeInspection.module.css";
 
@@ -27,11 +28,27 @@ export function ExchangeInspection({ detail, expired, awaitingResult, children }
     <div className={styles.workspace}>
       <section className={styles.panel} aria-labelledby="exchange-inspection-deadline">
         <div className={styles.deadline} data-expired={expired || undefined}>
-          <Clock size={19} aria-hidden="true" />
-          <h3 id="exchange-inspection-deadline">
-            Hạn kiểm tra sách của bạn
-            {ownDeadline ? <InspectionTime value={ownDeadline} /> : <span>Chưa có thông tin hạn</span>}
-          </h3>
+          <span className={styles.clockBadge} aria-hidden="true">
+            <Clock size={18} />
+          </span>
+          <div className={styles.deadlineCopy}>
+            <div className={styles.deadlineHeadRow}>
+              <h3 id="exchange-inspection-deadline">
+                Hạn kiểm tra sách của bạn
+                {ownDeadline ? <InspectionTime value={ownDeadline} /> : <span>Chưa có thông tin hạn</span>}
+              </h3>
+              <InfoTip label="Quy định 72 giờ kiểm tra">
+                <ul>
+                  <li>
+                    Mỗi bên có <strong>72 giờ</strong> kể từ lúc nhận sách để đối chiếu và báo sự cố.
+                  </li>
+                  <li>
+                    Ví đang giữ <strong>{detail.viewerFundingAmount == null ? "khoản đã nộp" : formatVnd(detail.viewerFundingAmount)}</strong> cho đến khi hết hạn kiểm tra của cả hai bên và không có tranh chấp.
+                  </li>
+                </ul>
+              </InfoTip>
+            </div>
+          </div>
         </div>
         <div className={styles.body}>
           {expired ? !awaitingResult && (
@@ -39,14 +56,14 @@ export function ExchangeInspection({ detail, expired, awaitingResult, children }
               Đã hết hạn kiểm tra của bạn.
             </p>
           ) : checked ? (
-            <p className={styles.status} role="status">
+            <p className={styles.status} data-ok="true" role="status">
               <CheckCircle2 size={17} aria-hidden="true" />
               {detail.partnerCompletedAt
                 ? "Cả hai bên đã xác nhận kiểm tra"
                 : "Bạn đã xác nhận kiểm tra"}
             </p>
           ) : detail.partnerCompletedAt ? (
-            <p className={styles.status} role="status">
+            <p className={styles.status} data-ok="true" role="status">
               <CheckCircle2 size={17} aria-hidden="true" />
               Đối tác đã xác nhận kiểm tra
             </p>
@@ -57,7 +74,7 @@ export function ExchangeInspection({ detail, expired, awaitingResult, children }
           <p className={styles.note} role={awaitingResult ? "status" : undefined}>
             {awaitingResult
               ? "Cả hai hạn đã qua. Đang chờ hệ thống tất toán về Ví."
-              : <>Mỗi bên có 72 giờ từ lúc nhận sách và vẫn có thể báo sự cố trong hạn riêng. Ví đang giữ {detail.viewerFundingAmount == null ? "khoản đã nộp" : <strong>{formatVnd(detail.viewerFundingAmount)}</strong>}.{detail.inspectionDeadline && <> Dự kiến xử lý tiền sau <InspectionTime value={detail.inspectionDeadline} /> nếu không có tranh chấp.</>}</>}
+              : <>Mỗi bên có <strong>72 giờ</strong> từ lúc nhận sách. Ví đang giữ {detail.viewerFundingAmount == null ? "khoản đã nộp" : <strong>{formatVnd(detail.viewerFundingAmount)}</strong>}.{detail.inspectionDeadline && <> Dự kiến xử lý tiền sau <strong><InspectionTime value={detail.inspectionDeadline} /></strong> nếu không có tranh chấp.</>}</>}
           </p>
           {(receivedAt || detail.partnerInspectionDeadline) && (
             <details className={styles.times}>

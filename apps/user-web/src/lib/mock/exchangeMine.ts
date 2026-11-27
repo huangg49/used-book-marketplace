@@ -9,12 +9,24 @@ export type ExchangeTab = 'sent' | 'received' | 'active' | 'done';
 export interface ExchangeUser {
     id: string;
     username: string;
+    avatarUrl?: string;
     rating?: number;
+}
+
+export interface ExchangeBookConditionReport {
+    description?: string;
+    pages?: string;
+    coverNote?: string;
+    notes?: string;
+    accessories?: string;
+    hasMissingPages?: boolean;
+    readable?: boolean;
 }
 
 export interface ExchangeBook {
     editionLabel?: string;
     conditionDetails?: string;
+    conditionReport?: ExchangeBookConditionReport;
     id: string;
     title: string;
     author: string;

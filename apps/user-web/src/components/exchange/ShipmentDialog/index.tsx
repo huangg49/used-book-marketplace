@@ -4,7 +4,6 @@ import {
     PackageCheck,
     MapPin,
     Calendar,
-    Building2,
     Camera,
     Video,
     UploadCloud,
@@ -13,6 +12,8 @@ import {
     ShieldCheck,
 } from 'lucide-react';
 import { CARRIERS, type CarrierCode, type ShipmentData, createCarrierShipment } from '../../../services/exchangeShipment';
+import { SelectMenu } from '../../SelectMenu';
+import { InfoTip } from '../../InfoTip';
 import styles from './ShipmentDialog.module.css';
 
 interface ShipmentDialogProps {
@@ -277,25 +278,20 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
                         {selectedMethod === 'carrier' ? (
                             <>
                                 <div className={styles.fieldRow}>
-                                    <label htmlFor="carrierSelect" className={styles.fieldLabel}>
+                                    <span id="carrierSelect-label" className={styles.fieldLabel}>
                                         Đơn vị vận chuyển <span className={styles.required}>*</span>
-                                    </label>
-                                    <div className={styles.inputWrapper}>
-                                        <Building2 size={16} className={styles.inputIcon} />
-                                        <select
-                                            id="carrierSelect"
-                                            className={styles.select}
-                                            value={carrierCode}
-                                            onChange={(e) => setCarrierCode(e.target.value as CarrierCode)}
-                                            disabled={isBusy}
-                                        >
-                                            {CARRIERS.filter(c => c.code !== 'DIRECT' && (simulatorAllowed || c.code !== 'SIMULATOR')).map(carrier => (
-                                                <option key={carrier.code} value={carrier.code}>
-                                                    {carrier.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    </span>
+                                    <SelectMenu
+                                        id="carrierSelect"
+                                        labelledBy="carrierSelect-label"
+                                        value={carrierCode}
+                                        disabled={isBusy}
+                                        options={CARRIERS.filter(c => c.code !== 'DIRECT' && (simulatorAllowed || c.code !== 'SIMULATOR')).map(carrier => ({
+                                            value: carrier.code,
+                                            label: carrier.name,
+                                        }))}
+                                        onChange={(val) => setCarrierCode(val as CarrierCode)}
+                                    />
                                 </div>
 
                                 {carrierCode === 'OTHER' && (
@@ -400,10 +396,10 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
                                     <ShieldCheck size={18} />
                                     <span>Ảnh và video đóng gói</span>
                                     <span className={styles.evidenceSectionBadge}>Bắt buộc</span>
+                                    <InfoTip label="Lý do cần ảnh và video đóng gói">
+                                        Dùng để đối chiếu tình trạng sách và tem vận đơn khi phát sinh sự cố hoặc khiếu nại vận chuyển.
+                                    </InfoTip>
                                 </div>
-                                <p className={styles.evidenceSectionSubtitle}>
-                                    Dùng để đối chiếu khi có báo cáo sự cố.
-                                </p>
                             </div>
 
                             <div className={styles.evidenceGrid}>

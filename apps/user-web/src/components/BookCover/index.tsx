@@ -8,12 +8,14 @@ export interface BookCoverProps {
     tag?: string
     coverUrl?: string
     className?: string
+    fallbackLabel?: string
 }
 
-export function BookCover({ title, index = 0, tag, coverUrl, className = '' }: BookCoverProps) {
+export function BookCover({ title, index = 0, tag, coverUrl, className = '', fallbackLabel }: BookCoverProps) {
     const [failedUrl, setFailedUrl] = useState<string>()
     const imgError = Boolean(coverUrl && failedUrl === coverUrl)
     const coverClass = styles[`cover${index % 4}`] ?? ''
+    const displayFallback = fallbackLabel ?? title
     
     return (
         <div className={`${styles.cover} ${coverClass} ${className}`.trim()}>
@@ -30,8 +32,8 @@ export function BookCover({ title, index = 0, tag, coverUrl, className = '' }: B
             
             {(!coverUrl || imgError) && (
                 <>
-                    <BookOpen size={36} aria-hidden="true" />
-                    <span className={styles.coverTitle}>{title}</span>
+                    <BookOpen size={fallbackLabel ? 22 : 36} aria-hidden="true" />
+                    <span className={fallbackLabel ? styles.fallbackLabel : styles.coverTitle}>{displayFallback}</span>
                 </>
             )}
             
