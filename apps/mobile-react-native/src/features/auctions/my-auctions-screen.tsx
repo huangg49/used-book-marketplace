@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import * as Crypto from "expo-crypto";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
@@ -24,7 +25,9 @@ import { conditions } from "../shelf/contracts";
 import { useAuctionNow } from "./use-auction-now";
 import {
   AUCTION_MIN_BIDDERS_FLOOR,
+  EVIDENCE_MIN_LENGTH,
   advanceDemoAuction,
+  auctionErrorText,
   canReschedule,
   closeReasonText,
   formatRemaining,
@@ -33,6 +36,7 @@ import {
   isScheduled,
   myAuctionsOptions,
   openTimeOf,
+  outcomeUnknown,
   waitingForRegistrants,
   waitingTime,
   type MyAuctionView,
@@ -40,14 +44,33 @@ import {
 import { ScheduleAuctionSheet } from "./components";
 import { AuctionCover } from "./components/auction-cover";
 import { DemoSkipButton } from "./components/demo-skip-button";
-import type { MyAuctionItem } from "./contracts";
+import {
+  SendToAuctionActiveIntakes,
+  SendToAuctionModals,
+} from "./send-to-auction-components";
+import {
+  intakeReceipt,
+  myIntakes,
+  type MyAuctionItem,
+  type MyIntake,
+} from "./contracts";
 
-const VIEWS: { value: MyAuctionView; label: string }[] = [
+export type MyAuctionTab = MyAuctionView | "intakes";
+
+type PendingIntakeCommand = {
+  kind: "withdraw" | "evidence";
+  path: string;
+  body: string;
+  key: string;
+};
+
+const VIEWS: { value: MyAuctionTab; label: string }[] = [
   { value: "all", label: "Tất cả" },
   { value: "active", label: "Đang mở" },
   { value: "upcoming", label: "Sắp mở" },
   { value: "payment", label: "Cần thanh toán" },
   { value: "selling", label: "Sách tôi bán" },
+  { value: "intakes", label: "Hồ sơ đã gửi" },
 ];
 
 const time = (iso: string) =>
@@ -63,17 +86,28 @@ export function MyAuctionsScreen({
   initialView = "all",
 }: {
   userId: string;
-  initialView?: MyAuctionView;
+  initialView?: MyAuctionTab;
 }) {
   const { client } = useSession();
   const foreground = useForeground();
-  const [view, setView] = useState<MyAuctionView>(initialView);
+  const [view, setView] = useState<MyAuctionTab>(initialView);
+  const auctionView: MyAuctionView = view === "intakes" ? "all" : view;
   const result = useInfiniteQuery({
-    ...myAuctionsOptions(client, userId, view),
+    ...myAuctionsOptions(client, userId, auctionView),
+    enabled: foreground && view !== "intakes",
+    refetchInterval: foreground && view !== "intakes" ? 8_000 : false,
+  });
+  const items = result.data?.pages.flatMap((page) => page.items) ?? [];
+
+  const intakes = useQuery({
+    queryKey: ["my-auction-intakes", userId],
+    queryFn: () => client.request("/me/auction-intakes", myIntakes),
     enabled: foreground,
     refetchInterval: foreground ? 8_000 : false,
   });
-  const items = result.data?.pages.flatMap((page) => page.items) ?? [];
+  const activeIntakesCount = (intakes.data?.items ?? []).filter(
+    (i) => i.state !== "Cancelled" && i.state !== "Reclaimed",
+  ).length;
 
   // Dedicated payment queue query so the urgent banner stays accurate regardless of active tab
   const paymentQuery = useInfiniteQuery({
@@ -86,8 +120,79 @@ export function MyAuctionsScreen({
 
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<MyAuctionItem | null>(null);
+  const [publishTarget, setPublishTarget] = useState<MyIntake | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<MyIntake | null>(null);
+  const [evidenceTarget, setEvidenceTarget] = useState<MyIntake | null>(null);
+  const [evidenceMap, setEvidenceMap] = useState<Record<string, string>>({});
+  const [evidenceError, setEvidenceError] = useState<{ id: string; text: string } | null>(null);
+  const [intakePending, setIntakePending] = useState<PendingIntakeCommand | null>(null);
+  const [intakeBusy, setIntakeBusy] = useState(false);
+  const [intakeError, setIntakeError] = useState<string | null>(null);
+  const [intakeModalError, setIntakeModalError] = useState<string | null>(null);
+
   const now = useAuctionNow(result.data?.pages[0]?.serverTime, foreground, 30_000);
   const edited = editing?.auction;
+  const intakeLocked = intakeBusy || Boolean(intakePending);
+
+  const executeIntakeCommand = async (command: PendingIntakeCommand) => {
+    setIntakeBusy(true);
+    setIntakeError(null);
+    setIntakeModalError(null);
+    try {
+      await client.request(command.path, intakeReceipt, {
+        method: "POST",
+        body: command.body,
+        headers: { "Idempotency-Key": command.key },
+      });
+      setIntakePending(null);
+      setWithdrawTarget(null);
+      setEvidenceTarget(null);
+    } catch (caught) {
+      const msg = auctionErrorText(caught);
+      setIntakePending(outcomeUnknown(caught) ? command : null);
+      if (withdrawTarget || evidenceTarget) setIntakeModalError(msg);
+      else setIntakeError(msg);
+    } finally {
+      setIntakeBusy(false);
+      void queryClient.invalidateQueries({ queryKey: ["my-auction-intakes", userId] });
+      void queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
+      void queryClient.invalidateQueries({ queryKey: ["handover-points"] });
+    }
+  };
+
+  const handleConfirmWithdraw = () => {
+    if (!withdrawTarget) return;
+    void executeIntakeCommand({
+      kind: "withdraw",
+      path: `/auction-intakes/${withdrawTarget.id}/cancel`,
+      key: Crypto.randomUUID(),
+      body: JSON.stringify({ expectedVersion: withdrawTarget.version }),
+    });
+  };
+
+  const handleRequestSubmitEvidence = (item: MyIntake, noteText: string) => {
+    if (noteText.trim().length < EVIDENCE_MIN_LENGTH) {
+      setEvidenceError({
+        id: item.id,
+        text: `Mô tả giải trình tối thiểu ${EVIDENCE_MIN_LENGTH} ký tự.`,
+      });
+      return;
+    }
+    setEvidenceError(null);
+    setIntakeModalError(null);
+    setEvidenceTarget(item);
+  };
+
+  const handleConfirmEvidence = () => {
+    if (!evidenceTarget) return;
+    const note = (evidenceMap[evidenceTarget.id] ?? "").trim();
+    void executeIntakeCommand({
+      kind: "evidence",
+      path: `/me/auction-intakes/${evidenceTarget.id}/evidence`,
+      key: Crypto.randomUUID(),
+      body: JSON.stringify({ expectedVersion: evidenceTarget.version, note }),
+    });
+  };
 
   return (
     <Screen
@@ -149,6 +254,12 @@ export function MyAuctionsScreen({
           {VIEWS.map((option) => {
             const isSelected = view === option.value;
             const showPayBadge = option.value === "payment" && paymentCount > 0;
+            const showIntakeBadge = option.value === "intakes" && activeIntakesCount > 0;
+            const label = showPayBadge
+              ? `${option.label} (${paymentCount})`
+              : showIntakeBadge
+                ? `${option.label} (${activeIntakesCount})`
+                : option.label;
             return (
               <Pressable
                 key={option.value}
@@ -168,75 +279,186 @@ export function MyAuctionsScreen({
                     isSelected ? styles.tabTextActive : styles.tabTextInactive,
                   ]}
                 >
-                  {showPayBadge ? `${option.label} (${paymentCount})` : option.label}
+                  {label}
                 </AppText>
               </Pressable>
             );
           })}
         </ScrollView>
 
-        {/* Loading / Error / Empty States */}
-        {result.isPending ? (
-          <StatePanel wine loading title="Đang tải phiên của bạn…" />
-        ) : null}
-
-        {result.error ? (
+        {view === "intakes" ? (
           <View style={styles.stackSm}>
-            <Notice tone="error">{presentError(result.error).message}</Notice>
-            <Button
-              wine
-              secondary
-              title="Thử tải lại"
-              busy={result.isFetching}
-              onPress={() => void result.refetch()}
-            />
-          </View>
-        ) : null}
-
-        {result.isSuccess && items.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIcon}>
-              <Icon name="gavel" size={26} color={stitchTokens.wine} />
-            </View>
-            <AppText kind="bold" style={styles.emptyTitle}>
-              Chưa có phiên nào ở mục này
-            </AppText>
-            <AppText kind="small" style={styles.emptyDesc}>
-              Các phiên bạn trả giá, thắng giải hoặc sách gửi đấu giá sẽ hiển thị tại đây.
-            </AppText>
-            <Button
-              wine
-              title="Khám phá phiên đang mở"
-              onPress={() => router.push("/auctions")}
-            />
-          </View>
-        ) : null}
-
-        {/* Auction Rows */}
-        {items.length > 0 ? (
-          <View style={styles.list}>
-            {items.map((item) => (
-              <Row
-                key={item.auction.id}
-                item={item}
-                now={now}
-                onEdit={() => setEditing(item)}
+            {intakeError ? <Notice tone="error">{intakeError}</Notice> : null}
+            {intakePending ? (
+              <View style={styles.stackSm}>
+                <Notice tone="warning">
+                  Chưa nhận được phản hồi từ máy chủ. Thử lại sẽ giữ nguyên yêu cầu cũ, không tạo trùng.
+                </Notice>
+                <Button
+                  wine
+                  title="Thử lại yêu cầu trước"
+                  busy={intakeBusy}
+                  onPress={() => void executeIntakeCommand(intakePending)}
+                />
+              </View>
+            ) : null}
+            {intakes.error ? (
+              <View style={styles.stackSm}>
+                <Notice tone="error">{presentError(intakes.error).message}</Notice>
+                <Button
+                  wine
+                  secondary
+                  title="Thử tải lại"
+                  busy={intakes.isFetching}
+                  onPress={() => void intakes.refetch()}
+                />
+              </View>
+            ) : (
+              <SendToAuctionActiveIntakes
+                intakes={intakes.data?.items ?? []}
+                isLoading={intakes.isPending}
+                onWithdraw={(item) => {
+                  setIntakeModalError(null);
+                  setWithdrawTarget(item);
+                }}
+                onPublish={(item) => setPublishTarget(item)}
+                onOpenAuction={(id) => router.push({ pathname: "/auction", params: { id } })}
+                onSubmitEvidence={handleRequestSubmitEvidence}
+                evidenceTextMap={evidenceMap}
+                onChangeEvidenceText={(id, text) =>
+                  setEvidenceMap((prev) => ({ ...prev, [id]: text }))
+                }
+                evidenceError={evidenceError}
+                disabled={intakeLocked}
               />
-            ))}
+            )}
           </View>
-        ) : null}
+        ) : (
+          <>
+            {/* Loading / Error / Empty States */}
+            {result.isPending ? (
+              <StatePanel wine loading title="Đang tải phiên của bạn…" />
+            ) : null}
 
-        {/* Pagination directly below list */}
-        {result.hasNextPage ? (
-          <Button
-            wine
-            secondary
-            title="Xem thêm phiên cũ hơn"
-            busy={result.isFetchingNextPage}
-            onPress={() => void result.fetchNextPage()}
-          />
-        ) : null}
+            {result.error ? (
+              <View style={styles.stackSm}>
+                <Notice tone="error">{presentError(result.error).message}</Notice>
+                <Button
+                  wine
+                  secondary
+                  title="Thử tải lại"
+                  busy={result.isFetching}
+                  onPress={() => void result.refetch()}
+                />
+              </View>
+            ) : null}
+
+            {result.isSuccess && items.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <View style={styles.emptyIcon}>
+                  <Icon name="gavel" size={26} color={stitchTokens.wine} />
+                </View>
+                <AppText kind="bold" style={styles.emptyTitle}>
+                  Chưa có phiên nào ở mục này
+                </AppText>
+                <AppText kind="small" style={styles.emptyDesc}>
+                  Các phiên bạn trả giá, thắng giải hoặc sách gửi đấu giá sẽ hiển thị tại đây.
+                </AppText>
+                <Button
+                  wine
+                  title="Khám phá phiên đang mở"
+                  onPress={() => router.push("/auctions")}
+                />
+              </View>
+            ) : null}
+
+            {/* Auction Rows */}
+            {items.length > 0 ? (
+              <View style={styles.list}>
+                {items.map((item) => (
+                  <Row
+                    key={item.auction.id}
+                    item={item}
+                    now={now}
+                    onEdit={() => setEditing(item)}
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            {/* Pagination directly below list */}
+            {result.hasNextPage ? (
+              <Button
+                wine
+                secondary
+                title="Xem thêm phiên cũ hơn"
+                busy={result.isFetchingNextPage}
+                onPress={() => void result.fetchNextPage()}
+              />
+            ) : null}
+          </>
+        )}
       </View>
+
+      <ScheduleAuctionSheet
+        key={publishTarget ? `pub:${publishTarget.id}:${publishTarget.version}` : "pub:none"}
+        visible={!!publishTarget}
+        title={publishTarget?.title ?? ""}
+        target={
+          publishTarget
+            ? {
+                kind: "publish",
+                intakeId: publishTarget.id,
+                version: publishTarget.version,
+              }
+            : null
+        }
+        onClose={() => setPublishTarget(null)}
+        onDone={() => {
+          void queryClient.invalidateQueries({ queryKey: ["my-auction-intakes", userId] });
+          void queryClient.invalidateQueries({ queryKey: ["my-auctions", userId] });
+          void queryClient.invalidateQueries({ queryKey: ["public-auctions"] });
+        }}
+      />
+
+      <SendToAuctionModals
+        confirmSubmitVisible={false}
+        onCancelSubmit={() => {}}
+        onConfirmSubmit={() => {}}
+        isSubmitting={intakeBusy}
+        submitError={null}
+        selectedListing={undefined}
+        selectedPoint={undefined}
+        startPrice={null}
+        step={10000}
+        auctionType="English"
+        minBidders={4}
+        buyNowPrice={null}
+        dutchTopPrice={null}
+        dutchIntervalSeconds={null}
+        depositAmount={null}
+        withdrawTarget={withdrawTarget}
+        onCancelWithdraw={() => {
+          if (!intakeBusy) {
+            setWithdrawTarget(null);
+            setIntakeModalError(null);
+          }
+        }}
+        onConfirmWithdraw={handleConfirmWithdraw}
+        isWithdrawing={intakeBusy}
+        withdrawError={withdrawTarget ? intakeModalError : null}
+        evidenceTarget={evidenceTarget}
+        evidenceNote={evidenceTarget ? (evidenceMap[evidenceTarget.id] ?? "") : ""}
+        onCancelEvidence={() => {
+          if (!intakeBusy) {
+            setEvidenceTarget(null);
+            setIntakeModalError(null);
+          }
+        }}
+        onConfirmEvidence={handleConfirmEvidence}
+        isSubmittingEvidence={intakeBusy}
+        evidenceSubmitError={evidenceTarget ? intakeModalError : null}
+      />
 
       <ScheduleAuctionSheet
         key={edited ? `${edited.id}:${edited.version}` : "none"}

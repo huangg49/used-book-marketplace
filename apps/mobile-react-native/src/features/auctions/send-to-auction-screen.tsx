@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Crypto from "expo-crypto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -39,7 +39,6 @@ import {
   handoverPoints,
   intakeReceipt,
   myIntake,
-  myIntakes,
   type MyIntake,
 } from "./contracts";
 import {
@@ -60,8 +59,6 @@ type PendingCommand = {
   key: string;
 };
 
-type SendTab = "create" | "intakes";
-
 const digits = (text: string) => Number(text.replace(/\D/g, "")) || null;
 
 export function SendToAuctionScreen({ userId }: { userId: string }) {
@@ -70,7 +67,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ intakeId?: string }>();
   const focusId = typeof params.intakeId === "string" ? params.intakeId : undefined;
-  const [activeTab, setActiveTab] = useState<SendTab>("create");
   const [policyOpen, setPolicyOpen] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -85,8 +81,12 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   });
 
   const listings = useQuery({
-    queryKey: ["my-listings", userId, "auction"],
-    queryFn: () => client.request("/me/listings?channel=Auction&limit=50", draftPage),
+    queryKey: ["my-listings", userId, "shelf-for-auction"],
+    queryFn: () =>
+      client.request(
+        "/me/listings?moderation=Approved&visibility=Visible&limit=50",
+        draftPage,
+      ),
     enabled: foreground && !focusId,
     staleTime: 0,
     refetchInterval: foreground && !editingId ? 5_000 : false,
@@ -124,19 +124,9 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
     staleTime: 0,
   });
 
-  const intakes = useQuery({
-    queryKey: ["my-auction-intakes", userId],
-    queryFn: () => client.request("/me/auction-intakes", myIntakes),
-    enabled: foreground && !focusId,
-    refetchInterval: foreground && !editingId ? 5_000 : false,
-  });
-
   const auctionListings = listings.data?.items ?? [];
   const eligibleListings = auctionListings.filter(auctionEligible);
   const openPoints = points.data?.items ?? [];
-  const activeIntakesCount = (intakes.data?.items ?? []).filter(
-    (i) => i.state !== "Cancelled" && i.state !== "Reclaimed",
-  ).length;
 
   // Form state
   const [listingId, setListingId] = useState<string | null>(null);
@@ -225,7 +215,9 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         setBuyNow("");
         setBuyNowOn(false);
         setTouched(false);
-        setActiveTab("intakes");
+        setConfirming(false);
+        router.replace({ pathname: "/my-auctions", params: { view: "intakes" } });
+        return;
       }
       setConfirming(false);
       setWithdrawTarget(null);
@@ -345,10 +337,10 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
     <Button
       wine
       secondary
-      title="Xem tất cả lần gửi"
-      onPress={() => router.replace("/send-to-auction")}
+      title="Xem tất cả hồ sơ đã gửi"
+      onPress={() => router.replace({ pathname: "/my-auctions", params: { view: "intakes" } })}
     />
-  ) : activeTab === "create" ? (
+  ) : (
     <View style={styles.footerDock}>
       {touched && Boolean(formError) ? (
         <View style={styles.footerErrorRow}>
@@ -363,7 +355,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         onPress={handleStartSubmit}
       />
     </View>
-  ) : undefined;
+  );
 
   return (
     <Screen
@@ -390,32 +382,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       }
     >
       <View style={styles.body}>
-        {/* 2-Tab Switcher (replaces cramming form + tracking onto one endless scroll) */}
-        {!focusId ? (
-          <View style={styles.segmentedBar} accessibilityRole="tablist">
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityState={{ selected: activeTab === "create" }}
-              onPress={() => setActiveTab("create")}
-              style={[styles.segmentBtn, activeTab === "create" && styles.segmentBtnActive]}
-            >
-              <AppText kind="bold" style={[styles.segmentText, activeTab === "create" && styles.segmentTextActive]}>
-                Tạo đơn gửi sách
-              </AppText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityState={{ selected: activeTab === "intakes" }}
-              onPress={() => setActiveTab("intakes")}
-              style={[styles.segmentBtn, activeTab === "intakes" && styles.segmentBtnActive]}
-            >
-              <AppText kind="bold" style={[styles.segmentText, activeTab === "intakes" && styles.segmentTextActive]}>
-                {activeIntakesCount > 0 ? `Hồ sơ đã gửi (${activeIntakesCount})` : "Hồ sơ đã gửi"}
-              </AppText>
-            </Pressable>
-          </View>
-        ) : null}
-
         {/* Status Notices (Success / Error / Pending Retry) */}
         <SendToAuctionNotices
           created={created}
@@ -439,11 +405,12 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
           />
         ) : null}
 
-        {/* TAB 1: Create Consignment Form */}
-        {!focusId && activeTab === "create" ? (
+        {/* Create Consignment Form */}
+        {!focusId ? (
           <View style={styles.formStack}>
             <SendToAuctionBookPicker
               eligibleListings={eligibleListings}
+              unfinishedListings={auctionListings.filter((l) => !auctionEligible(l))}
               selectedListingId={listingId}
               onSelectListing={(id) => {
                 setListingId(id);
@@ -515,24 +482,18 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
           </View>
         ) : null}
 
-        {/* TAB 2 or Focus Mode: Submitted Intakes Tracking */}
-        {(focusId ? !focus.error && !!focus.data : activeTab === "intakes") ? (
+        {/* Focus Mode only: single intake tracking from notification deep-link */}
+        {focusId && !focus.error && !!focus.data ? (
           <SendToAuctionActiveIntakes
-            intakes={
-              focusId
-                ? focus.data && !focus.error
-                  ? [focus.data]
-                  : []
-                : (intakes.data?.items ?? [])
-            }
-            isLoading={focusId ? focus.isPending : intakes.isPending}
+            intakes={[focus.data]}
+            isLoading={focus.isPending}
             onWithdraw={(item) => {
               setModalError(null);
               setWithdrawTarget(item);
             }}
             onPublish={(item) => setPublishTarget(item)}
             onOpenAuction={(id) => router.push({ pathname: "/auction", params: { id } })}
-            includeClosed={!!focusId}
+            includeClosed
             onSubmitEvidence={handleRequestSubmitEvidence}
             evidenceTextMap={evidenceMap}
             onChangeEvidenceText={(id, text) =>
@@ -617,34 +578,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
 const styles = StyleSheet.create({
   body: { gap: space.md },
   formStack: { gap: space.md },
-  segmentedBar: {
-    flexDirection: "row",
-    backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
-    padding: 4,
-    gap: 4,
-  },
-  segmentBtn: {
-    flex: 1,
-    minHeight: 42,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 10,
-  },
-  segmentBtnActive: {
-    backgroundColor: stitchTokens.wine,
-  },
-  segmentText: {
-    fontSize: 13,
-    color: stitchTokens.brownMuted,
-    textAlign: "center",
-  },
-  segmentTextActive: {
-    color: stitchTokens.gold,
-  },
   footerDock: { gap: space.xs },
   footerErrorRow: {
     flexDirection: "row",

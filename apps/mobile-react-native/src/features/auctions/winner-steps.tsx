@@ -642,10 +642,6 @@ export function WinnerSteps({
                 "confirm-receipt", "Xác nhận đã nhận sách?",
                 "Thời hạn kiểm tra 72 giờ bắt đầu khi bạn xác nhận.", "Xác nhận đã nhận sách",
               )} />
-              <Button title="Tôi chưa nhận được sách" secondary wine disabled={locked} onPress={() => ask(
-                "report-non-receipt", "Báo chưa nhận được sách?",
-                "Tiền vẫn được giữ trong đơn. Quản trị viên sẽ đối chiếu với bên vận chuyển.", "Gửi báo cáo",
-              )} />
             </View>
           )}
 

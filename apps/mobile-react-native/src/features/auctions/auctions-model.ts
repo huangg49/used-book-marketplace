@@ -386,9 +386,11 @@ export function canReschedule(auction: PublicAuctionSummary, now: number) {
 export function formatRemaining(ms: number) {
   if (ms <= 0) return "Đã hết giờ";
   const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
   const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const sec = String(s % 60).padStart(2, "0");
+  if (d > 0) return `${d} ngày ${h} giờ ${m} phút`;
   return h > 0 ? `${h} giờ ${m} phút` : `${m}:${sec}`;
 }
 
@@ -656,17 +658,16 @@ export function intakePriceErrors(
 // FR-AU01/ADR 0042: only the seller's own approved, visible, still-available
 // Auction listings enter; the server rechecks under the listing lock.
 export function auctionEligible(listing: {
-  channel: string;
+  channel?: string;
   state: { moderation: string; visibility: string; trade: string; deletedAt: string | null };
-  currentRevision: { content: { mode: string | null } };
+  currentRevision: { content: { mode?: string | null; bundle?: unknown } };
 }) {
   return (
-    listing.channel === "Auction" &&
     listing.state.moderation === "Approved" &&
     listing.state.visibility === "Visible" &&
     listing.state.trade === "Available" &&
     !listing.state.deletedAt &&
-    listing.currentRevision.content.mode === "Sale"
+    !listing.currentRevision.content.bundle
   );
 }
 // The seller may withdraw before the session opens (and the server also

@@ -1,17 +1,23 @@
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { useSession } from "../core/session/session-provider";
 import { Screen, StatePanel, stitchTokens } from "../core/ui";
-import { MyAuctionsScreen } from "../features/auctions/my-auctions-screen";
-import type { MyAuctionView } from "../features/auctions/auctions-model";
+import { MyAuctionsScreen, type MyAuctionTab } from "../features/auctions/my-auctions-screen";
 
-const VALID_VIEWS: readonly MyAuctionView[] = ["all", "active", "upcoming", "payment", "selling"];
+const VALID_VIEWS: readonly MyAuctionTab[] = [
+  "all",
+  "active",
+  "upcoming",
+  "payment",
+  "selling",
+  "intakes",
+];
 
 export default function MyAuctionsRoute() {
   const { client, state } = useSession();
   const params = useLocalSearchParams<{ view?: string }>();
-  const initialView: MyAuctionView =
+  const initialView: MyAuctionTab =
     typeof params.view === "string" && (VALID_VIEWS as readonly string[]).includes(params.view)
-      ? (params.view as MyAuctionView)
+      ? (params.view as MyAuctionTab)
       : "all";
 
   if (state.status === "anonymous") return <Redirect href="./account" />;

@@ -567,9 +567,9 @@ export function AccountScreen() {
                     pressed && { opacity: 0.9 },
                   ]}
                 >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <AppText kind="small" style={styles.statLabelDark}>
-                      TIỀN ĐANG TẠM GIỮ
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 6 }}>
+                    <AppText kind="label" style={styles.statLabelDark}>
+                      Tiền đang tạm giữ
                     </AppText>
                     <View style={styles.statIconBoxDark}>
                       <Icon name="shield" size={15} color={stitchTokens.wine} />
@@ -1707,10 +1707,11 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   statLabelDark: {
-    fontSize: 10,
-    fontWeight: "700",
+    flex: 1,
+    flexShrink: 1,
+    fontSize: 11,
+    lineHeight: 15,
     color: stitchTokens.subtleGray,
-    letterSpacing: 0.4,
   },
   statIconBoxDark: {
     width: 26,
