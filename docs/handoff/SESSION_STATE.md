@@ -9,6 +9,9 @@
   thêm chữ 130% ở 390 px. Test trình duyệt tổng dừng ở bước focus mục sidebar
   “Bài đăng sách”. Cùng lỗi tái hiện trên `main` chưa sửa. QA dùng Mongo riêng
   và ảnh kiểm thử. Chưa push hoặc triển khai Vercel.
+- AI & Token dùng cùng kiểu ô Từ/Đến, nút Áp dụng và làm mới như Tài chính.
+  PASS build, 258 unit và browser QA 1440/390/320 px. Khoảng ngày sai bị
+  chặn, áp dụng và làm mới gửi đúng khoảng ngày đã chọn.
 
 # Nhật ký hoạt động Admin — 27/11/2026
 
