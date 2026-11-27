@@ -1,6 +1,8 @@
 import { NegotiationWorkspace } from "./NegotiationWorkspace";
 import { ConversationInbox } from "../components/conversation/ConversationInbox";
-import { PartnerChip } from "../components/conversation/PartnerChip";
+import { ExchangeCard } from "../components/conversation/ExchangeCard";
+import { Facts, NextStep } from "../components/conversation/CardParts";
+import { auctionFacts, auctionNext, auctionStatus, conversationStatus, exchangeStatus } from "../components/conversation/transaction-status";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
 import {
   useConversationTransition,
@@ -19,7 +21,7 @@ import { io, type Socket } from "socket.io-client";
 import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, DEFAULT_SALE_COMMISSION_BPS, chatSendWasRateLimited, clipChatMessage, directOrderCommission, formatSaleFeeRate } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeftRight, ArrowRight, ArrowUp, ArrowUpRight, Clock3, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, ArrowUp, ArrowUpRight, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, type LucideIcon } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
@@ -44,7 +46,7 @@ import { AccountBackdrop } from "../components/AccountBackdrop";
 import { InfoTip } from "../components/InfoTip";
 import exchangeStyles from "./ExchangeDetailPage.module.css";
 import { getExchanges, type Exchange } from "../services/exchange";
-import { auctionPhase, listMyAuctions, type MyAuctionItem } from "../services/auctions";
+import { listMyAuctions, type MyAuctionItem } from "../services/auctions";
 import { AuctionPhoto } from "../components/AuctionGallery";
 
 const configuredBase =
@@ -971,111 +973,6 @@ function eventText(event: ConversationEvent) {
 
 // ─── Trạng thái giao dịch ─────────────────────────────────────────────────────
 
-type StatusTone = "attention" | "progress" | "complete" | "closed";
-type StatusInfo = { label: string; tone: StatusTone };
-
-function shortDate(value: string) {
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-/** Buy Now conversations: negotiation, agreed price and the created order. */
-function buyNowStatus(room: PurchaseConversation, userId: string): StatusInfo {
-  if (room.terms?.pendingProposal)
-    return room.terms.pendingProposal.proposedById === userId
-      ? { label: "Chờ đối tác phản hồi", tone: "progress" }
-      : { label: "Cần bạn phản hồi", tone: "attention" };
-  if (room.status === "OrderCreated")
-    return { label: "Đã tạo đơn", tone: "complete" };
-  if (room.status === "Expired") return { label: "Hết hạn", tone: "closed" };
-  if (room.status === "Cancelled") return { label: "Đã đóng", tone: "closed" };
-  return room.terms?.agreedPrice != null
-    ? { label: "Đã thống nhất giá", tone: "progress" }
-    : { label: "Đang thương lượng", tone: "progress" };
-}
-
-/** Book Exchange: proposal, funding, two-way delivery and inspection. */
-function exchangeStatus(exchange: Exchange, userId: string): StatusInfo {
-  switch (exchange.status) {
-    case "Proposed": {
-      if (
-        exchange.proposalExpiresAt &&
-        Date.parse(exchange.proposalExpiresAt) <= Date.now()
-      )
-        return { label: "Đề nghị đã hết hạn", tone: "closed" };
-      return (exchange.lastProposedById ?? exchange.initiatorId) !== userId
-        ? { label: "Cần bạn phản hồi", tone: "attention" }
-        : { label: "Chờ đối tác phản hồi", tone: "progress" };
-    }
-    case "AcceptedAwaitingFunding":
-      return { label: "Chờ đặt cọc", tone: "attention" };
-    case "Preparing":
-      return { label: "Chuẩn bị gửi sách", tone: "progress" };
-    case "InTransit":
-      return { label: "Đang giao nhận", tone: "progress" };
-    case "Delivered":
-      return exchange.initiatorReceivedAt && exchange.recipientReceivedAt
-        ? { label: "Đang kiểm tra sách", tone: "progress" }
-        : { label: "Chờ xác nhận đã nhận", tone: "progress" };
-    case "Completed":
-      return { label: "Hoàn tất", tone: "complete" };
-    case "ResolutionPending":
-      return { label: "Đang giải quyết sự cố", tone: "attention" };
-    case "Cancelled":
-      if (exchange.cancelReason === "CancelledByUser" && exchange.rejectionReason)
-        return { label: "Đề nghị bị từ chối", tone: "closed" };
-      return exchange.cancelReason === "FundingExpired" ||
-        exchange.cancelReason === "ProposalExpired" ||
-        exchange.cancelReason === "ShippingExpired"
-        ? { label: "Hết hạn xử lý", tone: "closed" }
-        : { label: "Đã hủy", tone: "closed" };
-  }
-}
-
-const AUCTION_STATE_LABEL: Record<string, string> = {
-  BuyNowPending: "Chờ thanh toán mua ngay",
-  AwaitingWinnerPayment: "Chờ người thắng thanh toán",
-  Sold: "Đã bán",
-  Unsold: "Kết thúc, chưa có người trả giá",
-  OnHold: "Phiên tạm dừng",
-  Cancelled: "Phiên đã hủy",
-  PaymentExpired: "Đã quá hạn thanh toán",
-  SecondChanceOffered: "Đang mời người trả giá cao thứ hai",
-};
-
-/** Auctions the member sells or bids on, with the phase from the server clock. */
-function auctionStatus(item: MyAuctionItem, serverTime: string): StatusInfo {
-  const auction = item.auction;
-  if (item.needsPayment) return { label: "Cần thanh toán", tone: "attention" };
-  const phase = auctionPhase(auction, serverTime);
-  if (phase === "Scheduled")
-    return auction.openMode != null && auction.state === "Active"
-      ? { label: "Chờ đủ người đăng ký", tone: "progress" }
-      : { label: "Hẹn mở", tone: "progress" };
-  if (phase === "Live") {
-    if (item.role === "Seller")
-      return { label: "Phiên của bạn đang mở", tone: "progress" };
-    if (item.leading) return { label: "Bạn đang dẫn giá", tone: "progress" };
-    return auction.bidderCount > 0
-      ? { label: "Bạn đã bị vượt giá", tone: "attention" }
-      : { label: "Chưa có người trả giá", tone: "progress" };
-  }
-  if (item.won && auction.state === "Sold")
-    return { label: "Bạn đã thắng phiên", tone: "complete" };
-  if (item.role === "Seller" && auction.state === "Sold")
-    return { label: "Đã bán", tone: "complete" };
-  return {
-    label: AUCTION_STATE_LABEL[auction.state] ?? "Đã kết thúc",
-    tone:
-      auction.state === "Unsold" || auction.state === "Cancelled"
-        ? "closed"
-        : "complete",
-  };
-}
-
 function exchangeBookTitle(exchange: Exchange, userId: string) {
   const received =
     exchange.initiatorId === userId
@@ -1087,97 +984,7 @@ function exchangeBookTitle(exchange: Exchange, userId: string) {
   return titles.length ? titles.join(", ") : "Cuộc trao đổi sách";
 }
 
-function exchangePartner(exchange: Exchange, userId: string) {
-  return (
-    (exchange.initiatorId === userId
-      ? exchange.agreement?.recipientBook.ownerDisplayName
-      : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName) ??
-    "Đối tác trao đổi"
-  );
-}
-
-/** The deadline that matters next for this exchange, if there is one. */
-function exchangeDeadline(exchange: Exchange): { label: string; at: string } | undefined {
-  if (exchange.status === "Proposed" && exchange.proposalExpiresAt)
-    return { label: "Hạn phản hồi", at: dateTime(exchange.proposalExpiresAt) };
-  if (exchange.status === "AcceptedAwaitingFunding" && exchange.fundingDeadline)
-    return { label: "Hạn đặt cọc", at: dateTime(exchange.fundingDeadline) };
-  if (exchange.status === "Preparing" && exchange.shippingDeadline)
-    return { label: "Hạn gửi sách", at: dateTime(exchange.shippingDeadline) };
-  if (exchange.status === "Delivered" && exchange.inspectionDeadline)
-    return { label: "Hạn kiểm tra", at: dateTime(exchange.inspectionDeadline) };
-  return undefined;
-}
-
 // ─── Giao dịch đổi sách ───────────────────────────────────────────────────────
-
-function ExchangeCard({
-  exchange,
-  userId,
-  room,
-  index,
-}: {
-  exchange: Exchange;
-  userId: string;
-  room?: PurchaseConversation;
-  index: number;
-}) {
-  const status = exchangeStatus(exchange, userId);
-  const deadline = exchangeDeadline(exchange);
-  const partner = exchangePartner(exchange, userId);
-  return (
-    <article className={card.card} data-tone={status.tone} style={{ "--i": index } as CSSProperties}>
-      <div className={card.top}>
-        <span className={card.kind} data-kind="exchange">
-          <ArrowLeftRight size={13} aria-hidden="true" /> Đổi sách
-        </span>
-        <span className={card.status}>{status.label}</span>
-      </div>
-      <div className={card.main}>
-        <span className={card.cover} data-swap aria-hidden="true">
-          <ArrowLeftRight size={24} />
-        </span>
-        <div>
-          <h3 className={card.title}>
-            <Link to={ROUTES.exchangeDetail(exchange.id)} viewTransition>
-              {exchangeBookTitle(exchange, userId)}
-            </Link>
-          </h3>
-          <PartnerChip
-            id={exchange.initiatorId === userId ? exchange.recipientId : exchange.initiatorId}
-            name={partner}
-            role="Đối tác đổi sách"
-          />
-          <p className={card.meta}>
-            {exchange.initiatorId === userId ? "Bạn đề xuất" : "Bạn nhận đề nghị"} ·{" "}
-            <time dateTime={exchange.createdAt}>{shortDate(exchange.createdAt)}</time>
-          </p>
-        </div>
-      </div>
-      {deadline && (
-        <p className={card.callout}>
-          <Clock3 size={15} aria-hidden="true" />
-          <span>{deadline.label} <b>{deadline.at}</b></span>
-        </p>
-      )}
-      <div className={card.foot}>
-        <span className={card.footNote}>
-          {exchange.diffAmount > 0 ? <>Bù <b>{formatVnd(exchange.diffAmount)}</b></> : "Không bù tiền"}
-        </span>
-        <span className={card.actions}>
-          {room && (
-            <Link className={card.ghost} to={ROUTES.chat(room.id)} viewTransition aria-label={`Hội thoại với ${partner}`}>
-              Hội thoại
-            </Link>
-          )}
-          <Link className={card.go} to={ROUTES.exchangeDetail(exchange.id)} viewTransition aria-label={`Mở phiếu đổi sách với ${partner}`}>
-            Mở phiếu <ArrowUpRight size={15} aria-hidden="true" />
-          </Link>
-        </span>
-      </div>
-    </article>
-  );
-}
 
 function ListState({ pending, error, what, onRetry }: { pending: boolean; error: boolean; what: string; onRetry: () => void }) {
   if (pending)
@@ -1229,7 +1036,14 @@ function ExchangeList({
         );
         return (
           <div key={exchange.id} role="listitem">
-            <ExchangeCard exchange={exchange} userId={userId} room={room} index={index} />
+            <ExchangeCard
+              exchange={exchange}
+              userId={userId}
+              index={index}
+              title={exchangeBookTitle(exchange, userId)}
+              conversationHref={room ? ROUTES.chat(room.id) : undefined}
+              open={{ to: ROUTES.exchangeDetail(exchange.id), label: "Mở phiếu" }}
+            />
           </div>
         );
       })}
@@ -1283,15 +1097,11 @@ function AuctionCard({
           </strong>
         </div>
       </div>
-      {item.needsPayment && item.paymentDeadline && (
-        <p className={card.callout}>
-          <Clock3 size={15} aria-hidden="true" />
-          <span>Hạn thanh toán <b>{dateTime(item.paymentDeadline)}</b></span>
-        </p>
-      )}
+      <NextStep>{auctionNext(item, serverTime)}</NextStep>
+      <Facts facts={auctionFacts(item)} />
       <div className={card.foot}>
         <span className={card.footNote}>
-          <b>{auction.bidderCount}</b> người trả giá
+          {item.role === "Seller" ? "Phiên của bạn" : "Bạn tham gia"}
         </span>
         <Link className={card.go} to={destination} aria-label={`${winnerOrder ? "Mở đơn đấu giá" : "Xem phiên"}: ${auction.title}`}>
           {winnerOrder ? "Mở đơn" : "Xem phiên"} <ArrowUpRight size={15} aria-hidden="true" />
@@ -1446,7 +1256,7 @@ function TransactionHub({
   const attention: Record<TransactionTab, number> = {
     all: 0,
     buy: buyRooms.filter(
-      (room) => buyNowStatus(room, userId).tone === "attention",
+      (room) => conversationStatus(room, userId).tone === "attention",
     ).length,
     exchange: exchangeItems.filter(
       (exchange) => exchangeStatus(exchange, userId).tone === "attention",

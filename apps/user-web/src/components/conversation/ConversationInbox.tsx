@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, ArrowUpRight, BookOpen, Clock3, HandCoins, MessagesSquare, RefreshCw } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, BookOpen, HandCoins, MessagesSquare, RefreshCw } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
 import { useTransactionLive } from "../../hooks/useTransactionLive";
 import {
@@ -16,28 +16,12 @@ import {
 import { getPublicListing } from "../../services/public-listings";
 import { getExchanges, type Exchange } from "../../services/exchange";
 import { ListingPhoto } from "../BookCard";
-import { formatVnd } from "../../lib/routes";
 import { useNearViewport } from "../../hooks/useNearViewport";
 import card from "./TransactionCard.module.css";
 import { PartnerChip } from "./PartnerChip";
-
-type Tone = "attention" | "progress" | "complete" | "closed";
-/** Where the conversation stands, from the viewer's side. */
-function roomStatus(room: PurchaseConversation, userId: string): { label: string; tone: Tone } {
-  const pending = room.terms?.pendingProposal;
-  if (pending)
-    return pending.proposedById === userId
-      ? { label: "Chờ đối tác phản hồi", tone: "progress" }
-      : { label: "Cần bạn phản hồi", tone: "attention" };
-  if (room.status === "OrderCreated") return { label: "Đã tạo đơn", tone: "complete" };
-  if (room.status === "Expired") return { label: "Hết hạn", tone: "closed" };
-  if (room.status === "Cancelled") return { label: "Đã đóng", tone: "closed" };
-  return room.terms?.agreedPrice != null
-    ? { label: "Đã thống nhất giá", tone: "progress" }
-    : { label: "Đang trao đổi", tone: "progress" };
-}
-const day = (value: string) =>
-  new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+import { ExchangeCard } from "./ExchangeCard";
+import { Facts, NextStep } from "./CardParts";
+import { conversationFacts, conversationNext, conversationRoles, conversationStatus, shortDate } from "./transaction-status";
 
 function ConversationCard({
   room,
@@ -75,18 +59,9 @@ function ConversationCard({
   });
   const unavailable = book.error instanceof ApiError && [403, 404].includes(book.error.status);
   const visibleBook = unavailable ? undefined : book.data;
-  const buyer = room.buyer.id === userId,
-    partner = buyer ? room.seller : room.buyer;
-  const status = roomStatus(room, userId);
-  const pending = room.terms?.pendingProposal;
-  const exchangeMode = room.terms?.mode === "Exchange";
-  const hint = pending
-    ? pending.proposedById === userId
-      ? <>Bạn đã gửi đề nghị{pending.amount != null && <> <b>{formatVnd(pending.amount)}</b></>}; chờ đối tác phản hồi.</>
-      : <><b>Đối tác gửi đề nghị</b>{pending.amount != null && <> giá <b>{formatVnd(pending.amount)}</b></>}; đang chờ bạn.</>
-    : room.terms?.agreedPrice != null
-      ? <>Đã thống nhất <b>{formatVnd(room.terms.agreedPrice)}</b>.</>
-      : null;
+  const roles = conversationRoles(room, userId);
+  const partner = roles.partner;
+  const status = conversationStatus(room, userId);
   return (
     <article
       ref={ref}
@@ -99,9 +74,9 @@ function ConversationCard({
       onFocus={prepare}
     >
       <div className={card.top}>
-        <span className={card.kind} data-kind={exchangeMode ? "exchange" : "buy"}>
-          {exchangeMode ? <ArrowLeftRight size={13} aria-hidden="true" /> : <HandCoins size={13} aria-hidden="true" />}
-          {exchangeMode ? "Đổi sách" : "Mua bán"} · {buyer ? "Bạn mua" : "Bạn bán"}
+        <span className={card.kind} data-kind={roles.exchange ? "exchange" : "buy"}>
+          {roles.exchange ? <ArrowLeftRight size={13} aria-hidden="true" /> : <HandCoins size={13} aria-hidden="true" />}
+          {roles.exchange ? "Đổi sách" : "Mua bán"} · {roles.mine}
         </span>
         <span className={card.status}>{status.label}</span>
       </div>
@@ -127,7 +102,7 @@ function ConversationCard({
                   : unavailable ? "Bài đăng không còn công khai" : "Chưa tải được tên sách")}
             </Link>
           </h3>
-          <PartnerChip id={partner.id} name={partner.displayName} role={buyer ? "Người bán" : "Người mua"} />
+          <PartnerChip id={partner.id} name={partner.displayName} role={roles.theirs} />
         </div>
       </div>
       {book.isError && (
@@ -142,9 +117,10 @@ function ConversationCard({
           </button>
         </div>
       )}
-      {hint && <p className={card.callout}><Clock3 size={15} aria-hidden="true" /><span>{hint}</span></p>}
+      <NextStep>{conversationNext(room, userId)}</NextStep>
+      <Facts facts={conversationFacts(room)} />
       <div className={card.foot}>
-        <span className={card.footNote}>Từ <time dateTime={room.createdAt}>{day(room.createdAt)}</time></span>
+        <span className={card.footNote}>Từ <time dateTime={room.createdAt}>{shortDate(room.createdAt)}</time></span>
         <Link
           className={card.go}
           to={href}
@@ -179,55 +155,16 @@ function LegacyCard({ exchange, userId, index }: { exchange: Exchange; userId: s
     const book = snapshots.find(snapshot => snapshot.listingId === listingId);
     return book?.book.title ?? "Hồ sơ cũ — thiếu bản chụp sách";
   }).join(", ");
-  const partnerName = initiator
-    ? exchange.agreement?.recipientBook.ownerDisplayName
-    : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName;
-  const partner = partnerName ?? "Đối tác trao đổi";
   return (
-    <article
-      className={card.card}
-      data-tone="closed"
-      data-room-id={id}
-      data-chat-morph-card={transitioning || undefined}
-      style={{ "--i": index } as CSSProperties}
-    >
-      <div className={card.top}>
-        <span className={card.kind} data-kind="exchange">
-          <ArrowLeftRight size={13} aria-hidden="true" /> Đổi sách
-        </span>
-        <span className={card.status}>Lịch sử hiện có</span>
-      </div>
-      <div className={card.main}>
-        <div className={card.cover} data-swap>
-          <ArrowLeftRight size={24} aria-hidden="true" />
-        </div>
-        <div>
-          <h3 className={card.title}>
-            <Link
-              to={`/exchange/${id}`}
-              viewTransition
-              state={{ chatFromInbox: true }}
-              onClick={remember}
-            >
-              {title || "Cuộc trao đổi sách"}
-            </Link>
-          </h3>
-          <PartnerChip id={partnerName ? (initiator ? exchange.recipientId : exchange.initiatorId) : undefined} name={partner} role="Đối tác đổi sách" />
-        </div>
-      </div>
-      <div className={card.foot}>
-        <span className={card.footNote}>Từ <time dateTime={exchange.createdAt}>{day(exchange.createdAt)}</time></span>
-        <Link
-          className={card.go}
-          to={`/exchange/${id}`}
-          viewTransition
-          state={{ chatFromInbox: true }}
-          onClick={remember}
-        >
-          Mở phiếu và hội thoại <ArrowUpRight size={15} aria-hidden="true" />
-        </Link>
-      </div>
-    </article>
+    <ExchangeCard
+      exchange={exchange}
+      userId={userId}
+      index={index}
+      title={title || "Cuộc trao đổi sách"}
+      roomId={id}
+      morphing={transitioning}
+      open={{ to: `/exchange/${id}`, label: "Mở phiếu và hội thoại", state: { chatFromInbox: true }, onClick: remember }}
+    />
   );
 }
 export function ConversationInbox({
