@@ -1,7 +1,7 @@
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, BookOpen, MessageCircle } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, BookOpen, Clock3, HandCoins, MessagesSquare, RefreshCw, UserRound } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
 import { useTransactionLive } from "../../hooks/useTransactionLive";
 import {
@@ -18,20 +18,35 @@ import { getExchanges, type Exchange } from "../../services/exchange";
 import { ListingPhoto } from "../BookCard";
 import { formatVnd } from "../../lib/routes";
 import { useNearViewport } from "../../hooks/useNearViewport";
-import styles from "./Conversation.module.css";
+import card from "./TransactionCard.module.css";
 
-const states = {
-  Active: "Đang trao đổi",
-  OrderCreated: "Đã tạo đơn",
-  Expired: "Hết hạn",
-  Cancelled: "Đã đóng",
-};
+type Tone = "attention" | "progress" | "complete" | "closed";
+/** Where the conversation stands, from the viewer's side. */
+function roomStatus(room: PurchaseConversation, userId: string): { label: string; tone: Tone } {
+  const pending = room.terms?.pendingProposal;
+  if (pending)
+    return pending.proposedById === userId
+      ? { label: "Chờ đối tác phản hồi", tone: "progress" }
+      : { label: "Cần bạn phản hồi", tone: "attention" };
+  if (room.status === "OrderCreated") return { label: "Đã tạo đơn", tone: "complete" };
+  if (room.status === "Expired") return { label: "Hết hạn", tone: "closed" };
+  if (room.status === "Cancelled") return { label: "Đã đóng", tone: "closed" };
+  return room.terms?.agreedPrice != null
+    ? { label: "Đã thống nhất giá", tone: "progress" }
+    : { label: "Đang trao đổi", tone: "progress" };
+}
+const day = (value: string) =>
+  new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+
 function ConversationCard({
   room,
   userId,
+  index,
 }: {
   room: PurchaseConversation;
   userId: string;
+  /** Position in the list, for the staggered entrance. */
+  index: number;
 }) {
   const href = `/chat/${room.id}`;
   const transitioning = useConversationTransition(href);
@@ -61,32 +76,44 @@ function ConversationCard({
   const visibleBook = unavailable ? undefined : book.data;
   const buyer = room.buyer.id === userId,
     partner = buyer ? room.seller : room.buyer;
-  const hint = room.terms?.pendingProposal
-    ? room.terms.pendingProposal.proposedById === userId
-      ? "Chờ đối tác phản hồi đề nghị của bạn"
-      : "Có đề nghị đang chờ bạn phản hồi"
+  const status = roomStatus(room, userId);
+  const pending = room.terms?.pendingProposal;
+  const exchangeMode = room.terms?.mode === "Exchange";
+  const hint = pending
+    ? pending.proposedById === userId
+      ? <>Bạn đã gửi đề nghị{pending.amount != null && <> <b>{formatVnd(pending.amount)}</b></>}; chờ đối tác phản hồi.</>
+      : <><b>Đối tác gửi đề nghị</b>{pending.amount != null && <> giá <b>{formatVnd(pending.amount)}</b></>}; đang chờ bạn.</>
     : room.terms?.agreedPrice != null
-      ? `Đã thống nhất ${formatVnd(room.terms.agreedPrice)}`
+      ? <>Đã thống nhất <b>{formatVnd(room.terms.agreedPrice)}</b>.</>
       : null;
   return (
     <article
       ref={ref}
-      className={styles.inboxCard}
+      className={card.card}
+      data-tone={status.tone}
       data-room-id={room.id}
       data-chat-morph-card={transitioning || undefined}
+      style={{ "--i": index } as CSSProperties}
       onPointerEnter={prepare}
       onFocus={prepare}
     >
-      <div className={styles.cardIdentity}>
-        <div className={styles.cardCover} data-conversation-cover>
+      <div className={card.top}>
+        <span className={card.kind} data-kind={exchangeMode ? "exchange" : "buy"}>
+          {exchangeMode ? <ArrowLeftRight size={13} aria-hidden="true" /> : <HandCoins size={13} aria-hidden="true" />}
+          {exchangeMode ? "Đổi sách" : "Mua bán"} · {buyer ? "Bạn mua" : "Bạn bán"}
+        </span>
+        <span className={card.status}>{status.label}</span>
+      </div>
+      <div className={card.main}>
+        <div className={card.cover} data-conversation-cover>
           {visibleBook ? (
             <ListingPhoto book={visibleBook} />
           ) : (
-            <BookOpen size={28} aria-hidden="true" />
+            <BookOpen size={26} aria-hidden="true" />
           )}
         </div>
-        <div className={styles.cardBody}>
-          <h2 data-conversation-title>
+        <div>
+          <h3 className={card.title} data-conversation-title>
             <Link
               to={href}
               viewTransition
@@ -98,46 +125,42 @@ function ConversationCard({
                   ? "Đang tải tên sách…"
                   : unavailable ? "Bài đăng không còn công khai" : "Chưa tải được tên sách")}
             </Link>
-          </h2>
-          <p className={styles.cardPartner}>
-            {buyer ? "Người bán" : "Người mua"} ·{" "}
-            <span>{partner.displayName}</span>
-          </p>
-          <p className={styles.cardMode}>
-            {room.terms?.mode === "Exchange" ? "Đổi sách" : "Mua bán"}
+          </h3>
+          <p className={card.who}>
+            <UserRound size={14} aria-hidden="true" />
+            {buyer ? "Người bán" : "Người mua"} · <b>{partner.displayName}</b>
           </p>
         </div>
       </div>
       {book.isError && (
-        <div role="alert" className={styles.cardHint}>
-          <p>{unavailable
-            ? "Thông tin bài đăng hiện không truy cập được. Bạn vẫn có thể mở hội thoại."
+        <div role="alert" className={card.callout}>
+          <span>{unavailable
+            ? "Bài đăng không còn truy cập được. Bạn vẫn mở được hội thoại."
             : visibleBook
-              ? "Chưa cập nhật được thông tin sách. Tên sách đang hiện là lần tải trước."
-              : "Chưa tải được thông tin sách. Kiểm tra kết nối và thử lại; hội thoại vẫn mở được."}</p>
-          <button className={styles.textButton} type="button" disabled={book.isFetching}
-            onClick={() => void book.refetch()}>
+              ? "Chưa cập nhật được thông tin sách; đang hiện lần tải trước."
+              : "Chưa tải được thông tin sách; hội thoại vẫn mở được."}</span>
+          <button type="button" disabled={book.isFetching} onClick={() => void book.refetch()}>
             Tải lại thông tin sách
           </button>
         </div>
       )}
-      {hint && <p className={styles.cardHint}>{hint}</p>}
-      <div className={styles.cardFooter}>
-        <p className={styles.cardStatus}>{states[room.status]}</p>
+      {hint && <p className={card.callout}><Clock3 size={15} aria-hidden="true" /><span>{hint}</span></p>}
+      <div className={card.foot}>
+        <span className={card.footNote}>Từ <time dateTime={room.createdAt}>{day(room.createdAt)}</time></span>
         <Link
-          className={styles.cardLink}
+          className={card.go}
           to={href}
           viewTransition
           state={{ chatFromInbox: true }}
           onClick={remember}
         >
-          Mở cuộc trao đổi <ArrowUpRight size={16} aria-hidden="true" />
+          Mở cuộc trao đổi <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </div>
     </article>
   );
 }
-function LegacyCard({ exchange, userId }: { exchange: Exchange; userId: string }) {
+function LegacyCard({ exchange, userId, index }: { exchange: Exchange; userId: string; index: number }) {
   const id = exchange.id;
   const transitioning = useConversationTransition(`/exchange/${id}`);
   const position = useInboxPosition();
@@ -164,16 +187,24 @@ function LegacyCard({ exchange, userId }: { exchange: Exchange; userId: string }
   const partner = partnerName ?? "Đối tác trao đổi";
   return (
     <article
-      className={styles.legacyCard}
+      className={card.card}
+      data-tone="closed"
       data-room-id={id}
       data-chat-morph-card={transitioning || undefined}
+      style={{ "--i": index } as CSSProperties}
     >
-      <div className={styles.cardIdentity}>
-        <div className={styles.cardCover}>
-          <BookOpen size={24} aria-hidden="true" />
+      <div className={card.top}>
+        <span className={card.kind} data-kind="exchange">
+          <ArrowLeftRight size={13} aria-hidden="true" /> Đổi sách
+        </span>
+        <span className={card.status}>Lịch sử hiện có</span>
+      </div>
+      <div className={card.main}>
+        <div className={card.cover} data-swap>
+          <ArrowLeftRight size={24} aria-hidden="true" />
         </div>
-        <div className={styles.cardBody}>
-          <h2>
+        <div>
+          <h3 className={card.title}>
             <Link
               to={`/exchange/${id}`}
               viewTransition
@@ -182,23 +213,22 @@ function LegacyCard({ exchange, userId }: { exchange: Exchange; userId: string }
             >
               {title || "Cuộc trao đổi sách"}
             </Link>
-          </h2>
-          <p className={styles.cardPartner}>
-            Với {partner}
+          </h3>
+          <p className={card.who}>
+            <UserRound size={14} aria-hidden="true" /> Với <b>{partner}</b>
           </p>
-          <p className={styles.cardMode}>Đổi sách</p>
         </div>
       </div>
-      <div className={styles.cardFooter}>
-        <p className={styles.cardStatus}>Lịch sử hiện có</p>
+      <div className={card.foot}>
+        <span className={card.footNote}>Từ <time dateTime={exchange.createdAt}>{day(exchange.createdAt)}</time></span>
         <Link
-          className={styles.cardLink}
+          className={card.go}
           to={`/exchange/${id}`}
           viewTransition
           state={{ chatFromInbox: true }}
           onClick={remember}
         >
-          Mở phiếu và hội thoại <ArrowUpRight size={16} aria-hidden="true" />
+          Mở phiếu và hội thoại <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </div>
     </article>
@@ -257,22 +287,18 @@ export function ConversationInbox({
       (filter === "buyer" ? r.buyer.id === userId : r.seller.id === userId),
   );
   return (
-    <section className={styles.inboxContent} aria-label="Danh sách hội thoại">
-      {loading && <p role="status">Đang tải hội thoại…</p>}
+    <section className={card.inbox} aria-label="Danh sách hội thoại">
+      {loading && <p className={card.state} role="status">Đang tải hội thoại…</p>}
       {error && (
-        <p role="alert">
-          Chưa tải được hội thoại mua bán.{" "}
-          <button type="button" onClick={retry}>
-            Thử lại
-          </button>
+        <p className={card.state} role="alert">
+          Chưa tải được hội thoại mua bán.
+          <button type="button" onClick={retry}><RefreshCw size={14} aria-hidden="true" /> Thử lại</button>
         </p>
       )}
       {showExchanges && exchanges.isError && (
-        <p role="alert">
-          Chưa tải được danh sách đổi sách.{" "}
-          <button type="button" onClick={() => void exchanges.refetch()}>
-            Thử lại
-          </button>
+        <p className={card.state} role="alert">
+          Chưa tải được danh sách đổi sách.
+          <button type="button" onClick={() => void exchanges.refetch()}><RefreshCw size={14} aria-hidden="true" /> Thử lại</button>
         </p>
       )}
       {!loading &&
@@ -280,28 +306,27 @@ export function ConversationInbox({
         !filtered.length &&
         !legacy.length &&
         (!showExchanges || (!exchanges.isPending && !exchanges.isError)) && (
-          <div className={styles.empty}>
-            <MessageCircle size={34} aria-hidden="true" />
-            <h2>Chưa có cuộc trao đổi ở đây</h2>
-            <p>
-              Mở một cuốn sách để hỏi mua hoặc gửi ý định đổi. Cuộc trao đổi sẽ
-              được lưu lại tại đây.
-            </p>
-            <Link to="/books?data=live">Tìm một cuốn sách</Link>
+          <div className={card.empty}>
+            <img src="/illustrations/chat/empty-inbox.svg" alt="" width={160} height={120} />
+            <h3>Chưa có cuộc trao đổi nào</h3>
+            <p>Mở một cuốn sách để <b>hỏi mua</b> hoặc <b>gửi ý định đổi</b>; cuộc trao đổi được lưu tại đây.</p>
+            <Link className={card.go} to="/books?data=live">
+              <MessagesSquare size={15} aria-hidden="true" /> Tìm một cuốn sách
+            </Link>
           </div>
         )}
-      <div className={styles.inboxGrid}>
-        {filtered.slice(0, visible).map((room) => (
-          <ConversationCard key={room.id} room={room} userId={userId} />
+      <div className={card.grid}>
+        {filtered.slice(0, visible).map((room, index) => (
+          <ConversationCard key={room.id} room={room} userId={userId} index={index} />
         ))}
-        {legacy.slice(0, Math.max(0, visible - filtered.length)).map((ex) => (
-          <LegacyCard key={ex.id} exchange={ex} userId={userId} />
+        {legacy.slice(0, Math.max(0, visible - filtered.length)).map((ex, index) => (
+          <LegacyCard key={ex.id} exchange={ex} userId={userId} index={filtered.length + index} />
         ))}
       </div>
       {filtered.length + legacy.length > visible && (
         <button
           type="button"
-          className={styles.loadMore}
+          className={card.more}
           onClick={() => {
             const next = visible + 12;
             position.save({ visible: next });

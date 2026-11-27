@@ -11,14 +11,14 @@ import {
   getConversationEvents,
   type ConversationEvent,
 } from "../services/purchase-conversations";
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionLive } from "../hooks/useTransactionLive";
 import { io, type Socket } from "socket.io-client";
 import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, DEFAULT_SALE_COMMISSION_BPS, chatSendWasRateLimited, clipChatMessage, directOrderCommission, formatSaleFeeRate } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeftRight, ArrowUp, ArrowUpRight, Clock3, Gavel, RefreshCw, Send } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, ArrowUp, ArrowUpRight, Clock3, Gavel, HandCoins, LayoutGrid, MapPin, MessagesSquare, RefreshCw, Search, Send, UserRound, type LucideIcon } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
@@ -37,6 +37,10 @@ import { PurchaseDialog } from "../components/PurchaseDialog";
 import { ExchangeChatDrawer } from "../components/exchange/ExchangeChatDrawer";
 import flow from "./PurchaseFlow.module.css";
 import styles from "./ChatPage.module.css";
+import hub from "./ChatHub.module.css";
+import card from "../components/conversation/TransactionCard.module.css";
+import { AccountBackdrop } from "../components/AccountBackdrop";
+import { InfoTip } from "../components/InfoTip";
 import exchangeStyles from "./ExchangeDetailPage.module.css";
 import { getExchanges, type Exchange } from "../services/exchange";
 import { auctionPhase, listMyAuctions, type MyAuctionItem } from "../services/auctions";
@@ -1092,15 +1096,15 @@ function exchangePartner(exchange: Exchange, userId: string) {
 }
 
 /** The deadline that matters next for this exchange, if there is one. */
-function exchangeDeadline(exchange: Exchange) {
+function exchangeDeadline(exchange: Exchange): { label: string; at: string } | undefined {
   if (exchange.status === "Proposed" && exchange.proposalExpiresAt)
-    return `Hạn phản hồi ${dateTime(exchange.proposalExpiresAt)}`;
+    return { label: "Hạn phản hồi", at: dateTime(exchange.proposalExpiresAt) };
   if (exchange.status === "AcceptedAwaitingFunding" && exchange.fundingDeadline)
-    return `Hạn đặt cọc ${dateTime(exchange.fundingDeadline)}`;
+    return { label: "Hạn đặt cọc", at: dateTime(exchange.fundingDeadline) };
   if (exchange.status === "Preparing" && exchange.shippingDeadline)
-    return `Hạn gửi sách ${dateTime(exchange.shippingDeadline)}`;
+    return { label: "Hạn gửi sách", at: dateTime(exchange.shippingDeadline) };
   if (exchange.status === "Delivered" && exchange.inspectionDeadline)
-    return `Hạn kiểm tra ${dateTime(exchange.inspectionDeadline)}`;
+    return { label: "Hạn kiểm tra", at: dateTime(exchange.inspectionDeadline) };
   return undefined;
 }
 
@@ -1110,71 +1114,79 @@ function ExchangeCard({
   exchange,
   userId,
   room,
+  index,
 }: {
   exchange: Exchange;
   userId: string;
   room?: PurchaseConversation;
+  index: number;
 }) {
   const status = exchangeStatus(exchange, userId);
   const deadline = exchangeDeadline(exchange);
+  const partner = exchangePartner(exchange, userId);
   return (
-    <article className={styles.txnCard}>
-      <div className={styles.txnCardHead}>
-        <span className={styles.typeBadge}>Đổi sách</span>
-        <span className={styles.statusBadge} data-tone={status.tone}>
-          {status.label}
+    <article className={card.card} data-tone={status.tone} style={{ "--i": index } as CSSProperties}>
+      <div className={card.top}>
+        <span className={card.kind} data-kind="exchange">
+          <ArrowLeftRight size={13} aria-hidden="true" /> Đổi sách
         </span>
+        <span className={card.status}>{status.label}</span>
       </div>
-      <div className={styles.txnCardIdentity}>
-        <span className={styles.txnCardIcon} aria-hidden="true">
-          <ArrowLeftRight size={22} />
+      <div className={card.main}>
+        <span className={card.cover} data-swap aria-hidden="true">
+          <ArrowLeftRight size={24} />
         </span>
         <div>
-          <h3 className={styles.txnCardTitle}>
+          <h3 className={card.title}>
             <Link to={ROUTES.exchangeDetail(exchange.id)} viewTransition>
               {exchangeBookTitle(exchange, userId)}
             </Link>
           </h3>
-          <p className={styles.txnCardMeta}>
-            Với {exchangePartner(exchange, userId)}
+          <p className={card.who}>
+            <UserRound size={14} aria-hidden="true" /> Với <b>{partner}</b>
           </p>
-          <p className={styles.txnCardMeta}>
-            {exchange.initiatorId === userId ? "Bạn đề xuất" : "Bạn nhận đề nghị"}{" "}
-            ·{" "}
-            <time dateTime={exchange.createdAt}>
-              {shortDate(exchange.createdAt)}
-            </time>
+          <p className={card.meta}>
+            {exchange.initiatorId === userId ? "Bạn đề xuất" : "Bạn nhận đề nghị"} ·{" "}
+            <time dateTime={exchange.createdAt}>{shortDate(exchange.createdAt)}</time>
           </p>
         </div>
       </div>
-      {deadline && <p className={styles.txnCardNote}>{deadline}</p>}
-      <div className={styles.txnCardFoot}>
-        <span className={styles.txnCardFootNote}>
-          {exchange.diffAmount > 0
-            ? `Bù ${formatVnd(exchange.diffAmount)}`
-            : "Không bù tiền"}
+      {deadline && (
+        <p className={card.callout}>
+          <Clock3 size={15} aria-hidden="true" />
+          <span>{deadline.label} <b>{deadline.at}</b></span>
+        </p>
+      )}
+      <div className={card.foot}>
+        <span className={card.footNote}>
+          {exchange.diffAmount > 0 ? <>Bù <b>{formatVnd(exchange.diffAmount)}</b></> : "Không bù tiền"}
         </span>
-        <span className={styles.txnCardActions}>
+        <span className={card.actions}>
           {room && (
-            <Link
-              className={styles.txnLink}
-              to={ROUTES.chat(room.id)}
-              viewTransition
-            >
-              Hội thoại <ArrowUpRight size={14} aria-hidden="true" />
+            <Link className={card.ghost} to={ROUTES.chat(room.id)} viewTransition aria-label={`Hội thoại với ${partner}`}>
+              Hội thoại
             </Link>
           )}
-          <Link
-            className={styles.txnLink}
-            to={ROUTES.exchangeDetail(exchange.id)}
-            viewTransition
-          >
-            Mở phiếu <ArrowUpRight size={14} aria-hidden="true" />
+          <Link className={card.go} to={ROUTES.exchangeDetail(exchange.id)} viewTransition aria-label={`Mở phiếu đổi sách với ${partner}`}>
+            Mở phiếu <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
         </span>
       </div>
     </article>
   );
+}
+
+function ListState({ pending, error, what, onRetry }: { pending: boolean; error: boolean; what: string; onRetry: () => void }) {
+  if (pending)
+    return <p className={card.state} role="status">Đang tải giao dịch {what}…</p>;
+  if (error)
+    return (
+      <p className={card.state} role="alert">
+        Chưa tải được giao dịch {what}.
+        <button type="button" onClick={onRetry}><RefreshCw size={14} aria-hidden="true" /> Thử lại</button>
+      </p>
+    );
+  return null;
 }
 
 function ExchangeList({
@@ -1192,38 +1204,21 @@ function ExchangeList({
   error: boolean;
   onRetry: () => void;
 }) {
-  if (pending)
-    return (
-      <p className={styles.panelState} role="status">
-        Đang tải giao dịch đổi sách…
-      </p>
-    );
-  if (error)
-    return (
-      <div className={styles.panelError} role="alert">
-        <p>Chưa tải được giao dịch đổi sách.</p>
-        <button type="button" className={styles.retryButton} onClick={onRetry}>
-          <RefreshCw size={15} aria-hidden="true" /> Thử lại
-        </button>
-      </div>
-    );
+  if (pending || error) return <ListState pending={pending} error={error} what="đổi sách" onRetry={onRetry} />;
   if (!items.length)
     return (
-      <div className={styles.panelEmpty}>
-        <ArrowLeftRight size={30} aria-hidden="true" />
+      <div className={card.empty}>
+        <img src="/illustrations/chat/empty-inbox.svg" alt="" width={160} height={120} />
         <h3>Chưa có giao dịch đổi sách</h3>
-        <p>
-          Mở một cuốn sách để gửi đề nghị đổi. Đề nghị, khoản cọc và hành trình
-          giao nhận hai chiều sẽ được theo dõi tại đây.
-        </p>
-        <Link className={styles.panelCta} to="/books?data=live">
-          Tìm sách để đổi <ArrowUpRight size={16} aria-hidden="true" />
+        <p>Mở một cuốn sách để <b>gửi đề nghị đổi</b>; đề nghị, khoản cọc và giao nhận hai chiều được theo dõi tại đây.</p>
+        <Link className={card.go} to="/books?data=live">
+          Tìm sách để đổi <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </div>
     );
   return (
-    <div className={styles.txnGrid} role="list">
-      {items.map((exchange) => {
+    <div className={card.grid} role="list">
+      {items.map((exchange, index) => {
         const room = rooms.find(
           (item) =>
             item.terms?.exchangeIds?.includes(exchange.id) ||
@@ -1231,7 +1226,7 @@ function ExchangeList({
         );
         return (
           <div key={exchange.id} role="listitem">
-            <ExchangeCard exchange={exchange} userId={userId} room={room} />
+            <ExchangeCard exchange={exchange} userId={userId} room={room} index={index} />
           </div>
         );
       })}
@@ -1244,9 +1239,11 @@ function ExchangeList({
 function AuctionCard({
   item,
   serverTime,
+  index,
 }: {
   item: MyAuctionItem;
   serverTime: string;
+  index: number;
 }) {
   const auction = item.auction;
   const winnerOrder = item.role === "Bidder" && item.won;
@@ -1259,41 +1256,42 @@ function AuctionCard({
         ? "Giá chốt"
         : "Giá hiện tại";
   return (
-    <article className={styles.txnCard}>
-      <div className={styles.txnCardHead}>
-        <span className={styles.typeBadge}>
-          Đấu giá · {item.role === "Seller" ? "Bạn bán" : "Bạn mua"}
+    <article className={card.card} data-tone={status.tone} style={{ "--i": index } as CSSProperties}>
+      <div className={card.top}>
+        <span className={card.kind} data-kind="auction">
+          <Gavel size={13} aria-hidden="true" /> Đấu giá · {item.role === "Seller" ? "Bạn bán" : "Bạn mua"}
         </span>
-        <span className={styles.statusBadge} data-tone={status.tone}>
-          {status.label}
-        </span>
+        <span className={card.status}>{status.label}</span>
       </div>
-      <div className={styles.txnCardIdentity}>
-        <span className={styles.txnCardCover}>
+      <div className={card.main}>
+        <span className={card.cover}>
           <AuctionPhoto auction={auction} interactive={false} />
         </span>
         <div>
-          <h3 className={styles.txnCardTitle}>
+          <h3 className={card.title}>
             <Link to={destination}>{auction.title}</Link>
           </h3>
-          <p className={styles.txnCardMeta}>{auction.pointName}</p>
-          <p className={styles.txnCardMeta}>
-            {priceLabel}:{" "}
-            <strong>{formatVnd(auction.currentPrice ?? auction.startPrice)}</strong>
+          <p className={card.who}>
+            <MapPin size={14} aria-hidden="true" /> {auction.pointName}
           </p>
+          <strong className={card.price}>
+            <small>{priceLabel}</small>
+            {formatVnd(auction.currentPrice ?? auction.startPrice)}
+          </strong>
         </div>
       </div>
       {item.needsPayment && item.paymentDeadline && (
-        <p className={styles.txnCardNote}>
-          Hạn thanh toán {dateTime(item.paymentDeadline)}
+        <p className={card.callout}>
+          <Clock3 size={15} aria-hidden="true" />
+          <span>Hạn thanh toán <b>{dateTime(item.paymentDeadline)}</b></span>
         </p>
       )}
-      <div className={styles.txnCardFoot}>
-        <span className={styles.txnCardFootNote}>
-          {auction.bidderCount} người trả giá
+      <div className={card.foot}>
+        <span className={card.footNote}>
+          <b>{auction.bidderCount}</b> người trả giá
         </span>
-        <Link className={styles.txnLink} to={destination}>
-          {winnerOrder ? "Mở đơn đấu giá" : "Xem phiên"} <ArrowUpRight size={14} aria-hidden="true" />
+        <Link className={card.go} to={destination} aria-label={`${winnerOrder ? "Mở đơn đấu giá" : "Xem phiên"}: ${auction.title}`}>
+          {winnerOrder ? "Mở đơn" : "Xem phiên"} <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </div>
     </article>
@@ -1315,50 +1313,32 @@ function AuctionList({
   onRetry: () => void;
   limit?: number;
 }) {
-  if (pending)
-    return (
-      <p className={styles.panelState} role="status">
-        Đang tải giao dịch đấu giá…
-      </p>
-    );
-  if (error)
-    return (
-      <div className={styles.panelError} role="alert">
-        <p>Chưa tải được giao dịch đấu giá.</p>
-        <button type="button" className={styles.retryButton} onClick={onRetry}>
-          <RefreshCw size={15} aria-hidden="true" /> Thử lại
-        </button>
-      </div>
-    );
+  if (pending || error) return <ListState pending={pending} error={error} what="đấu giá" onRetry={onRetry} />;
   if (!items.length)
     return (
-      <div className={styles.panelEmpty}>
-        <Gavel size={30} aria-hidden="true" />
+      <div className={card.empty}>
+        <img src="/illustrations/my-auctions/empty-rack.svg" alt="" width={160} height={120} />
         <h3>Chưa có giao dịch đấu giá</h3>
-        <p>
-          Phiên bạn mở bán hoặc đang trả giá sẽ xuất hiện tại đây cùng giá hiện
-          tại và bước tiếp theo.
-        </p>
-        <Link className={styles.panelCta} to={ROUTES.auctions}>
-          Xem các phiên đang mở <ArrowUpRight size={16} aria-hidden="true" />
+        <p>Phiên bạn <b>mở bán</b> hoặc <b>đang trả giá</b> xuất hiện tại đây cùng giá hiện tại và bước tiếp theo.</p>
+        <Link className={card.go} to={ROUTES.auctions}>
+          Xem các phiên đang mở <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </div>
     );
   const visible = limit ? items.slice(0, limit) : items;
   return (
     <>
-      <div className={styles.txnGrid} role="list">
-        {visible.map((item) => (
+      <div className={card.grid} role="list">
+        {visible.map((item, index) => (
           <div key={item.auction.id} role="listitem">
-            <AuctionCard item={item} serverTime={serverTime} />
+            <AuctionCard item={item} serverTime={serverTime} index={index} />
           </div>
         ))}
       </div>
       {items.length > visible.length && (
-        <p className={styles.panelMore}>
+        <p className={hub.more}>
           <Link to={ROUTES.myAuctions}>
-            Xem tất cả {items.length} phiên đấu giá{" "}
-            <ArrowUpRight size={15} aria-hidden="true" />
+            Xem tất cả {items.length} phiên đấu giá <ArrowRight size={15} aria-hidden="true" />
           </Link>
         </p>
       )}
@@ -1378,6 +1358,37 @@ const TAB_LABELS: Record<TransactionTab, string> = {
   exchange: "Đổi sách",
   auction: "Đấu giá",
 };
+const TAB_ICONS: Record<TransactionTab, LucideIcon> = {
+  all: LayoutGrid,
+  buy: HandCoins,
+  exchange: ArrowLeftRight,
+  auction: Gavel,
+};
+
+function SectionHead({ id, icon: Icon, title, count, tip, link }: {
+  id: string;
+  icon: LucideIcon;
+  title: string;
+  count?: number;
+  tip?: ReactNode;
+  link?: { to: string; label: string };
+}) {
+  return (
+    <div className={hub.sectionHead}>
+      <h2 id={id}>
+        <span className={hub.sectionIcon} aria-hidden="true"><Icon size={16} /></span>
+        {title}
+        {count != null && count > 0 && <span className={hub.countBadge}>{count}</span>}
+      </h2>
+      {tip && <InfoTip label={title}>{tip}</InfoTip>}
+      {link && (
+        <Link className={hub.sectionLink} to={link.to}>
+          {link.label} <ArrowUpRight size={15} aria-hidden="true" />
+        </Link>
+      )}
+    </div>
+  );
+}
 
 function TransactionHub({
   userId,
@@ -1450,39 +1461,61 @@ function TransactionHub({
   };
   const tabId = (tab: TransactionTab) => `txn-tab-${tab}`;
   const panelId = (tab: TransactionTab) => `txn-panel-${tab}`;
-  const pendingPart = [
-    attention.buy ? `${attention.buy} mua ngay` : "",
-    attention.exchange ? `${attention.exchange} đổi sách` : "",
-    attention.auction ? `${attention.auction} đấu giá` : "",
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const goToTab = (tab: TransactionTab) => {
+    setActiveTab(tab);
+    document.getElementById(tabId(tab))?.focus();
+  };
 
   return (
-    <div className={styles.hub}>
-      <header className={styles.pageHeading}>
-        <div>
-          <h1>Giao dịch của bạn</h1>
-          <p>
-            Mua ngay, đổi sách và đấu giá — theo dõi trạng thái của từng giao
-            dịch tại một nơi.
-          </p>
+    <div className={hub.hub}>
+      <header className={hub.header}>
+        <div className={hub.headerText}>
+          <p className={hub.kicker}><MessagesSquare size={14} aria-hidden="true" /> Hộp giao dịch</p>
+          <div className={hub.titleRow}>
+            <h1 className={hub.title}>Giao dịch của bạn</h1>
+            <InfoTip label="Giao dịch của bạn">
+              Mua ngay, đổi sách và đấu giá ở <b>một nơi</b>. Mỗi thẻ cho biết trạng thái và <b>bước tiếp theo</b>; thẻ viền vàng đang chờ bạn.
+            </InfoTip>
+          </div>
+          <div className={hub.headerActions}>
+            <Link className={hub.primaryLink} to="/books?data=live">
+              <Search size={17} aria-hidden="true" /> Tìm sách <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+            <Link className={hub.ghostLink} to={ROUTES.myAuctions}>
+              <Gavel size={17} aria-hidden="true" /> Đấu giá của tôi
+            </Link>
+          </div>
         </div>
-        <Link className={styles.browseLink} to="/books?data=live">
-          Tìm sách <ArrowUpRight size={18} aria-hidden="true" />
-        </Link>
+        <img className={hub.art} src="/illustrations/chat/letters.svg" alt="" width={200} height={160} />
       </header>
 
       {attention.all > 0 && (
-        <p className={styles.attentionBanner} role="status">
-          <Clock3 size={16} aria-hidden="true" />
-          {attention.all} giao dịch đang chờ bạn xử lý
-          {pendingPart ? ` (${pendingPart})` : ""}.
-        </p>
+        <section className={hub.attention} aria-labelledby="txn-attention">
+          <span className={hub.attentionCount} aria-hidden="true">{attention.all}</span>
+          <div className={hub.attentionText}>
+            <p id="txn-attention" role="status">
+              <b>{attention.all} giao dịch</b> đang chờ bạn xử lý
+            </p>
+            <div className={hub.attentionChips}>
+              {(["buy", "exchange", "auction"] as const)
+                .filter((tab) => attention[tab] > 0)
+                .map((tab) => {
+                  const Icon = TAB_ICONS[tab];
+                  return (
+                    <button key={tab} type="button" onClick={() => goToTab(tab)}>
+                      <Icon size={14} aria-hidden="true" />
+                      <b>{attention[tab]}</b> {TAB_LABELS[tab].toLowerCase()}
+                      <ArrowRight size={14} aria-hidden="true" />
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        </section>
       )}
 
       <nav
-        className={styles.tabNav}
+        className={hub.tabs}
         role="tablist"
         aria-label="Loại giao dịch"
         onKeyDown={(event) => {
@@ -1502,34 +1535,35 @@ function TransactionHub({
                     : undefined;
           if (!next) return;
           event.preventDefault();
-          setActiveTab(next);
-          document.getElementById(tabId(next))?.focus();
+          goToTab(next);
         }}
       >
-        {TRANSACTION_TABS.map((tab) => (
-          <button
-            key={tab}
-            id={tabId(tab)}
-            role="tab"
-            type="button"
-            className={styles.tabButton}
-            aria-selected={activeTab === tab}
-            aria-controls={panelId(tab)}
-            tabIndex={activeTab === tab ? 0 : -1}
-            onClick={() => setActiveTab(tab)}
-          >
-            <span className={styles.tabLabel}>{TAB_LABELS[tab]}</span>
-            <span className={styles.tabMeta}>
-              {counts[tab] > 0 ? `${counts[tab]} giao dịch` : "Chưa có giao dịch"}
+        {TRANSACTION_TABS.map((tab) => {
+          const Icon = TAB_ICONS[tab];
+          return (
+            <button
+              key={tab}
+              id={tabId(tab)}
+              role="tab"
+              type="button"
+              aria-selected={activeTab === tab}
+              aria-controls={panelId(tab)}
+              tabIndex={activeTab === tab ? 0 : -1}
+              onClick={() => setActiveTab(tab)}
+            >
+              <Icon size={16} aria-hidden="true" />
+              <span>{TAB_LABELS[tab]}</span>
+              <span className={hub.tabCount}>
+                {counts[tab]}<span className={hub.srOnly}> giao dịch</span>
+              </span>
               {attention[tab] > 0 && (
-                <span className={styles.tabAttention}>
-                  {" "}
-                  · {attention[tab]} cần xử lý
+                <span className={hub.tabAttention}>
+                  {attention[tab]}<span className={hub.srOnly}> cần xử lý</span>
                 </span>
               )}
-            </span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </nav>
 
       {TRANSACTION_TABS.map((tab) => (
@@ -1539,14 +1573,15 @@ function TransactionHub({
           role="tabpanel"
           aria-labelledby={tabId(tab)}
           hidden={activeTab !== tab}
-          className={styles.tabPanel}
+          className={hub.panel}
         >
           {activeTab !== tab ? null : tab === "all" ? (
             <>
-              <section
-                className={styles.panelSection}
-                aria-label="Hội thoại mua ngay và đổi sách"
-              >
+              <section className={hub.section} aria-labelledby="txn-sec-talk">
+                <SectionHead
+                  id="txn-sec-talk" icon={MessagesSquare} title="Hội thoại" count={rooms.length}
+                  tip={<>Hội thoại <b>mua ngay</b> và <b>đổi sách</b>: hỏi về sách, thống nhất giá, gửi đề nghị đổi.</>}
+                />
                 <ConversationInbox
                   rooms={rooms}
                   loading={roomsLoading}
@@ -1555,13 +1590,11 @@ function TransactionHub({
                   userId={userId}
                 />
               </section>
-              <section className={styles.panelSection} aria-label="Đấu giá">
-                <div className={styles.sectionHead}>
-                  <h2>Đấu giá</h2>
-                  <Link to={ROUTES.myAuctions}>
-                    Quản lý phiên <ArrowUpRight size={15} aria-hidden="true" />
-                  </Link>
-                </div>
+              <section className={hub.section} aria-labelledby="txn-sec-auction">
+                <SectionHead
+                  id="txn-sec-auction" icon={Gavel} title="Đấu giá" count={auctionItems.length}
+                  link={{ to: ROUTES.myAuctions, label: "Quản lý phiên" }}
+                />
                 <AuctionList
                   items={auctionItems}
                   serverTime={auctionTime}
@@ -1573,11 +1606,11 @@ function TransactionHub({
               </section>
             </>
           ) : tab === "buy" ? (
-            <section aria-label="Giao dịch mua ngay">
-              <p className={styles.panelIntro}>
-                Hội thoại mua ngay: hỏi về sách, thống nhất giá và tạo đơn. Đơn
-                đã tạo được theo dõi tiếp ở phần đơn hàng.
-              </p>
+            <section className={hub.section} aria-labelledby="txn-sec-buy">
+              <SectionHead
+                id="txn-sec-buy" icon={HandCoins} title="Mua ngay" count={buyRooms.length}
+                tip={<>Hỏi về sách, <b>thống nhất giá</b> và tạo đơn. Đơn đã tạo được theo dõi tiếp ở <b>Đơn hàng</b>.</>}
+              />
               <ConversationInbox
                 rooms={buyRooms}
                 showExchanges={false}
@@ -1588,18 +1621,17 @@ function TransactionHub({
               />
             </section>
           ) : tab === "exchange" ? (
-            <section aria-label="Giao dịch đổi sách">
-              <div className={styles.sectionHead}>
-                <h2>Giao dịch đổi sách</h2>
-                <Link to={ROUTES.exchangeMine}>
-                  Lịch sử đổi sách{" "}
-                  <ArrowUpRight size={15} aria-hidden="true" />
-                </Link>
-              </div>
+            <section className={hub.section} aria-labelledby="txn-sec-exchange">
+              <SectionHead
+                id="txn-sec-exchange" icon={ArrowLeftRight} title="Đổi sách" count={exchangeItems.length}
+                tip={<>Đề nghị, <b>khoản cọc</b> và giao nhận hai chiều của từng lần đổi.</>}
+                link={{ to: ROUTES.exchangeMine, label: "Lịch sử đổi sách" }}
+              />
               {exchangeRooms.length > 0 && (
-                <div className={styles.panelNotice}>
-                  <p>
-                    Đang thỏa thuận đổi sách trong hội thoại{" "}
+                <p className={hub.notice}>
+                  <MessagesSquare size={16} aria-hidden="true" />
+                  <span>
+                    Đang thỏa thuận đổi sách{" "}
                     {exchangeRooms.map((room, index) => (
                       <span key={room.id}>
                         {index > 0 && ", "}
@@ -1610,10 +1642,10 @@ function TransactionHub({
                             : room.buyer.displayName}
                         </Link>
                       </span>
-                    ))}{" "}
-                    — phiếu đổi sách xuất hiện khi hai bên gửi đề nghị.
-                  </p>
-                </div>
+                    ))}
+                    . Phiếu đổi sách xuất hiện khi hai bên <b>gửi đề nghị</b>.
+                  </span>
+                </p>
               )}
               <ExchangeList
                 userId={userId}
@@ -1625,13 +1657,11 @@ function TransactionHub({
               />
             </section>
           ) : (
-            <section aria-label="Giao dịch đấu giá">
-              <div className={styles.sectionHead}>
-                <h2>Giao dịch đấu giá</h2>
-                <Link to={ROUTES.myAuctions}>
-                  Quản lý phiên <ArrowUpRight size={15} aria-hidden="true" />
-                </Link>
-              </div>
+            <section className={hub.section} aria-labelledby="txn-sec-auction-all">
+              <SectionHead
+                id="txn-sec-auction-all" icon={Gavel} title="Đấu giá" count={auctionItems.length}
+                link={{ to: ROUTES.myAuctions, label: "Quản lý phiên" }}
+              />
               <AuctionList
                 items={auctionItems}
                 serverTime={auctionTime}
@@ -1757,6 +1787,8 @@ export function ChatPage() {
       data-room-selected={!!roomId}
       data-chat-morph-inbox={(!roomId && transitioning) || undefined}
     >
+      {/* Beside the hub, not inside it: the hub (z-index 1) stacks above it. */}
+      {!roomId && <AccountBackdrop />}
       {!roomId ? (
         <TransactionHub
           userId={auth.user.id}
