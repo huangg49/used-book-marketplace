@@ -1,3 +1,4 @@
+import { PageHeading, PageTitle } from "../../core/PageHeading";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useOutletContext } from "react-router-dom";
@@ -275,7 +276,7 @@ export function AiAnalyticsPage() {
     return (
       <div className={hubStyles.page}>
         <section className={hubStyles.denied} aria-labelledby="ai-stats-denied">
-          <h1 id="ai-stats-denied">Không có quyền xem thống kê AI & Token</h1>
+          <PageTitle id="ai-stats-denied">Không có quyền xem thống kê AI & Token</PageTitle>
         </section>
       </div>
     );
@@ -299,11 +300,7 @@ export function AiAnalyticsPage() {
 
   return (
     <div className={hubStyles.page}>
-      <header className={hubStyles.header}>
-        <div className={hubStyles.headerTitle}>
-          <h1>AI & Token</h1>
-        </div>
-
+      <PageHeading title="AI & Token">
         <div className={hubStyles.controls}>
           <div
             className={hubStyles.presets}
@@ -326,44 +323,50 @@ export function AiAnalyticsPage() {
             className={hubStyles.dateForm}
             onSubmit={(e) => {
               e.preventDefault();
-              if (!canApply) return;
+              if (!canApply || query.isFetching) return;
               setPreset(null);
               setApplied({ from: fromDraft, to: toDraft });
             }}
           >
-            <input
-              type="date"
-              aria-label="Từ ngày"
-              value={fromDraft}
-              onChange={(e) => setFromDraft(e.target.value)}
-            />
-            <span aria-hidden="true">→</span>
-            <input
-              type="date"
-              aria-label="Đến ngày"
-              value={toDraft}
-              onChange={(e) => setToDraft(e.target.value)}
-            />
+            <label className={hubStyles.dateField}>
+              <span>Từ</span>
+              <input
+                type="date"
+                aria-label="Từ ngày"
+                value={fromDraft}
+                max={toDraft}
+                onChange={(e) => setFromDraft(e.target.value)}
+              />
+            </label>
+            <label className={hubStyles.dateField}>
+              <span>Đến</span>
+              <input
+                type="date"
+                aria-label="Đến ngày"
+                value={toDraft}
+                min={fromDraft}
+                onChange={(e) => setToDraft(e.target.value)}
+              />
+            </label>
             <button
               type="submit"
-              className={hubStyles.applyBtn}
-              disabled={!canApply}
+              className={hubStyles.primaryBtn}
+              disabled={!canApply || query.isFetching}
             >
               Áp dụng
             </button>
+            <button
+              type="button"
+              className={hubStyles.iconBtn}
+              onClick={() => void query.refetch()}
+              disabled={query.isFetching}
+              aria-label="Tải lại thống kê AI"
+            >
+              <RefreshCw size={15} aria-hidden="true" />
+            </button>
           </form>
-
-          <button
-            type="button"
-            className={hubStyles.refreshBtn}
-            onClick={() => void query.refetch()}
-            disabled={query.isFetching}
-            aria-label="Tải lại thống kê AI"
-          >
-            <RefreshCw size={15} aria-hidden="true" />
-          </button>
         </div>
-      </header>
+      </PageHeading>
 
       {query.error && (
         <ErrorNotice

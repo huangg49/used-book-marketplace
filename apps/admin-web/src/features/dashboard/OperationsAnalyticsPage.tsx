@@ -1,3 +1,4 @@
+import { PageHeading, PageTitle } from "../../core/PageHeading";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useOutletContext } from "react-router-dom";
@@ -60,7 +61,7 @@ export function OperationsAnalyticsPage() {
     return (
       <div className={styles.page}>
         <section className={styles.denied} aria-labelledby="ops-denied">
-          <h1 id="ops-denied">Không có quyền xem thống kê vận hành</h1>
+          <PageTitle id="ops-denied">Không có quyền xem thống kê vận hành</PageTitle>
         </section>
       </div>
     );
@@ -70,11 +71,7 @@ export function OperationsAnalyticsPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerTitle}>
-          <h1>Giao dịch & Rủi ro</h1>
-        </div>
-
+      <PageHeading title="Giao dịch & Rủi ro">
         <div className={styles.controls}>
           <div className={styles.presets} role="group" aria-label="Chọn nhanh khoảng thời gian">
             {([7, 30, 90] as const).map((days) => (
@@ -132,7 +129,7 @@ export function OperationsAnalyticsPage() {
             </button>
           </form>
         </div>
-      </header>
+      </PageHeading>
 
       {query.isError && (
         <ErrorNotice

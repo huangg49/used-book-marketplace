@@ -22,6 +22,7 @@ import { dateText, money } from "../../core/format";
 import { invalidateDashboard } from "../../core/dashboard-cache";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
 import { ConfirmDialog } from "../../core/ConfirmDialog";
+import { PageTitle } from "../../core/PageHeading";
 import {
   book,
   catalog,
@@ -302,13 +303,13 @@ export function ListingFocusDetail({
                 {labels[status] || status}
               </span>
             </div>
-            <h1 className={styles.heroTitle} ref={heading} tabIndex={-1}>
+            <PageTitle className={styles.heroTitle} ref={heading} tabIndex={-1}>
               <ListingTitle
                 value={value}
                 showAuthor
                 canReadPendingCatalog={canReviewCatalog(user)}
               />
-            </h1>
+            </PageTitle>
           </div>
 
           <dl className={styles.heroFacts} aria-label="Tóm tắt bản sách">

@@ -1,3 +1,4 @@
+import { PageHeading, PageTitle } from "../../core/PageHeading";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useOutletContext } from "react-router-dom";
@@ -274,7 +275,7 @@ export function FinancePage() {
     return (
       <div className={styles.page}>
         <section className={styles.denied} aria-labelledby="finance-denied">
-          <h1 id="finance-denied">Không có quyền xem báo cáo tài chính</h1>
+          <PageTitle id="finance-denied">Không có quyền xem báo cáo tài chính</PageTitle>
           <p className={styles.subtitle}>
             Báo cáo Tài chính & Lợi nhuận chỉ dành cho Quản trị viên (ADMIN).
           </p>
@@ -297,11 +298,7 @@ export function FinancePage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerTitle}>
-          <h1>Tài chính & Lợi nhuận</h1>
-        </div>
-
+      <PageHeading title="Tài chính & Lợi nhuận">
         <div className={styles.controls}>
           <div className={styles.presets} role="group" aria-label="Chọn nhanh khoảng thời gian">
             {([7, 30, 90] as const).map((days) => (
@@ -363,7 +360,7 @@ export function FinancePage() {
             </button>
           </form>
         </div>
-      </header>
+      </PageHeading>
 
       {query.isError && (
         <ErrorNotice

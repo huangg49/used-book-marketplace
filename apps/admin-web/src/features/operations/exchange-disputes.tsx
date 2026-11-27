@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -175,19 +176,15 @@ function ExchangeDisputesContent({ user }: { user: CurrentUser }) {
 
   return (
     <div className={styles.page}>
-      <header className={styles.heading}>
-        <div className="page-heading">
-          <h1>Khiếu nại trao đổi sách</h1>
-          <p className="intro">
-            Đối chiếu giao nhận, bằng chứng và các khoản đang giữ của từng hồ
-            sơ.
-          </p>
-        </div>
+      <PageHeading
+        title="Khiếu nại trao đổi sách"
+        description="Đối chiếu giao nhận, bằng chứng và các khoản đang giữ của từng hồ sơ."
+      >
         <Button busy={result.isFetching} onClick={() => void result.refetch()}>
           {!result.isFetching && <RefreshCw size={16} aria-hidden="true" />}
           Cập nhật danh sách
         </Button>
-      </header>
+      </PageHeading>
 
       {rows && rows.length > 0 && (
         <section className={styles.metricsBar} aria-label="Tổng quan khiếu nại">
@@ -1727,22 +1724,19 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
       <Link to={{ pathname: queuePath, search }} className={styles.backLink}>
         <ArrowLeft size={17} aria-hidden="true" /> Danh sách khiếu nại
       </Link>
-      <header className={styles.heading}>
-        <div className="page-heading">
-          <h1>
-            {item
-              ? disputeParty(item, "initiator").name +
-              " ↔ " +
-              disputeParty(item, "recipient").name
-              : "Hồ sơ khiếu nại trao đổi"}
-          </h1>
-          {item && (
-            <div className={styles.identity}>
-              <strong>Hồ sơ {exchangeCode(item)}</strong>
-              <span className={styles.stage}>{disputeStatus(item)}</span>
-            </div>
-          )}
-        </div>
+      <PageHeading
+        title={
+          item
+            ? `${disputeParty(item, "initiator").name} ↔ ${disputeParty(item, "recipient").name}`
+            : "Hồ sơ khiếu nại trao đổi"
+        }
+        details={item && (
+          <div className={styles.identity}>
+            <strong>Hồ sơ {exchangeCode(item)}</strong>
+            <span className={styles.stage}>{disputeStatus(item)}</span>
+          </div>
+        )}
+      >
         <Button
           busy={result.isFetching}
           disabled={pending}
@@ -1751,7 +1745,7 @@ function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
           {!result.isFetching && <RefreshCw size={16} aria-hidden="true" />}
           Tải lại hồ sơ
         </Button>
-      </header>
+      </PageHeading>
       {outcome && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
           <Notice tone={outcome.tone}>{outcome.text}</Notice>

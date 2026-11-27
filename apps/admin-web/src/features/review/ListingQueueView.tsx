@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { Suspense, useLayoutEffect, useRef } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -194,14 +195,10 @@ export function ListingQueueView({ user }: { user: CurrentUser }) {
 
   return (
     <div className={styles.page}>
-      <header className={styles.queueHeader}>
-        <div>
-          <h1>Bài đăng sách</h1>
-          <p>
-            Quét nhanh hàng chờ, chọn hồ sơ để soi ảnh thật, tình trạng và duyệt
-            trong không gian tập trung.
-          </p>
-        </div>
+      <PageHeading
+        title="Bài đăng sách"
+        description="Quét nhanh hàng chờ, chọn hồ sơ để soi ảnh thật, tình trạng và duyệt trong không gian tập trung."
+      >
         <div className={styles.queueHeaderActions}>
           <button
             type="button"
@@ -224,7 +221,7 @@ export function ListingQueueView({ user }: { user: CurrentUser }) {
             </Link>
           )}
         </div>
-      </header>
+      </PageHeading>
 
       <section className={styles.filterBar} aria-label="Bộ lọc bài đăng sách">
         <div className={styles.statusTabs} role="group" aria-label="Lọc trạng thái">

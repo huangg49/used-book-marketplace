@@ -44,26 +44,6 @@
   top: 1rem;
 }
 
-.page-heading {
-  margin-bottom: 1.25rem;
-}
-
-.page-heading h1 {
-  margin: 0 0 0.4rem;
-  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
-  font-size: clamp(1.625rem, 2.3vw, 2rem);
-  font-weight: 650;
-  line-height: 1.3;
-  text-wrap: balance;
-}
-
-.page-heading .intro {
-  color: var(--shop-muted);
-  font-size: 0.875rem;
-  max-width: 65ch;
-  line-height: 1.65;
-}
-
 /* --------------------------------------------------------------------------
    4. QUEUE & DIRECTORY TOOLBARS
    -------------------------------------------------------------------------- */
@@ -76,7 +56,7 @@
   flex-wrap: wrap;
 }
 
-/* Status line and refresh share one ruled bar above the list. */
+/* The queue status sits below the shared header. */
 .queue-status {
   margin: 0;
   padding: 0.75rem 0;

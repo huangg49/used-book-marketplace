@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
@@ -47,13 +48,10 @@ function ChecksContent() {
   const r = report.data;
   return (
     <div className={styles.page}>
-      <header>
-        <h1>Hậu kiểm AI</h1>
-        <p>
-          Các bài AI đã duyệt cần người xem lại: lấy mẫu ngẫu nhiên hoặc bị đánh
-          dấu khi kiểm tra lại. Cảnh báo không tự gỡ bài.
-        </p>
-      </header>
+      <PageHeading
+        title="Hậu kiểm AI"
+        description="Các bài AI đã duyệt cần người xem lại: lấy mẫu ngẫu nhiên hoặc bị đánh dấu khi kiểm tra lại. Cảnh báo không tự gỡ bài."
+      />
       {report.error && (
         <ErrorNotice
           error={report.error}

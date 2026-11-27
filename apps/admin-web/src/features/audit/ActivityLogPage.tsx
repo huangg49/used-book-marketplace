@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
@@ -71,25 +72,19 @@ function ActivityLogContent({ owner }: { owner: string }) {
 
   return (
     <>
-      <header className="page-heading user-directory-header">
-        <div className="directory-header-row">
-          <div className="directory-header-title-group">
-            <h1>Nhật ký hoạt động</h1>
-            <p className="intro">
-              Tra cứu thao tác của nhân viên và quản trị viên theo người thực hiện, đối tượng,
-              mã yêu cầu và thời gian. Nhật ký chỉ đọc; dữ liệu liên hệ và bí mật đã được ẩn.
-            </p>
-          </div>
-          <Button
-            busy={result.isFetching}
-            onClick={() => void result.refetch()}
-            className={`btn-subtle-refresh ${result.isFetching ? "spinning" : ""}`}
-          >
-            <RotateCw size={14} aria-hidden="true" />
-            Cập nhật nhật ký
-          </Button>
-        </div>
-      </header>
+      <PageHeading
+        title="Nhật ký hoạt động"
+        description="Tra cứu thao tác của nhân viên và quản trị viên theo người thực hiện, đối tượng, mã yêu cầu và thời gian. Nhật ký chỉ đọc; dữ liệu liên hệ và bí mật đã được ẩn."
+      >
+        <Button
+          busy={result.isFetching}
+          onClick={() => void result.refetch()}
+          className={`btn-subtle-refresh ${result.isFetching ? "spinning" : ""}`}
+        >
+          <RotateCw size={14} aria-hidden="true" />
+          Cập nhật nhật ký
+        </Button>
+      </PageHeading>
 
       <AuditFilterForm filters={filters} apply={apply} />
 

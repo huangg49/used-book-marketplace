@@ -1,3 +1,4 @@
+import { PageHeading, PageTitle } from "../../core/PageHeading";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -154,7 +155,7 @@ export function StatisticsPage() {
     return (
       <main className={styles.page}>
         <section className={styles.denied} aria-labelledby="statistics-denied">
-          <h1 id="statistics-denied">Không có quyền xem thống kê</h1>
+          <PageTitle id="statistics-denied">Không có quyền xem thống kê</PageTitle>
           <p>
             {revenue.error instanceof ApiError && revenue.error.status === 401
               ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
@@ -167,10 +168,7 @@ export function StatisticsPage() {
 
   return (
     <main className={styles.page}>
-      <header className={styles.pageHeader}>
-        <div>
-          <h1>Ghi sổ & Điểm nổi bật</h1>
-        </div>
+      <PageHeading title="Ghi sổ & Điểm nổi bật">
         <div className={styles.headerActions}>
           <form
             className={styles.dateForm}
@@ -220,7 +218,7 @@ export function StatisticsPage() {
             <RefreshCw size={16} aria-hidden="true" />
           </button>
         </div>
-      </header>
+      </PageHeading>
 
       <section className={styles.report} aria-labelledby="revenue-report-title">
         <h2 id="revenue-report-title" className={styles.srOnly}>

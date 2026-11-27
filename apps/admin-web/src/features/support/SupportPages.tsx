@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useRef, useState, type FormEvent } from "react";
 import { ConfirmDialog } from "../../core/ConfirmDialog";
 import { z } from "zod";
@@ -100,13 +101,10 @@ function SupportQueue({ owner }: { owner: string }) {
     });
   return (
     <div className={styles.page}>
-      <header className="page-heading">
-        <h1>Trung tâm xử lý</h1>
-        <p className="intro">
-          Tiếp nhận phản ánh, yêu cầu bổ sung và trả lời thành viên. Danh sách
-          loại trừ hồ sơ có liên quan đến chính bạn.
-        </p>
-      </header>
+      <PageHeading
+        title="Trung tâm xử lý"
+        description="Tiếp nhận phản ánh, yêu cầu bổ sung và trả lời thành viên. Danh sách loại trừ hồ sơ có liên quan đến chính bạn."
+      />
       <div className={styles.filters}>
         <label>
           Trạng thái
@@ -356,33 +354,33 @@ function SupportRecord({
       ) : null}
       {data && !denied ? (
         <>
-          <header className="page-heading">
-            <Button
-              busy={query.isFetching}
-              onClick={() => void query.refetch()}
-            >
+          <PageHeading
+            title={data.case.title}
+            description={`${supportKinds[data.case.kind]} · Mã ${id.slice(0, 8).toUpperCase()}`}
+            details={
+              <div className={styles.caseDetails}>
+                <p>
+                  {data.case.reporterName} ·{" "}
+                  {data.case.state === "AwaitingMember"
+                    ? "Chờ thành viên bổ sung"
+                    : supportStates[data.case.state]}{" "}
+                  · Phiên bản {data.case.version}
+                </p>
+                <p>
+                  {data.case.assigneeId
+                    ? data.canManage
+                      ? "Bạn đang phụ trách."
+                      : "Admin khác đang phụ trách; bạn đang xem hồ sơ."
+                    : "Chưa có người phụ trách."}
+                </p>
+                <Related data={data} />
+              </div>
+            }
+          >
+            <Button busy={query.isFetching} onClick={() => void query.refetch()}>
               Cập nhật hồ sơ
             </Button>
-            <p className="muted">
-              {supportKinds[data.case.kind]} · Mã {id.slice(0, 8).toUpperCase()}
-            </p>
-            <h1>{data.case.title}</h1>
-            <p>
-              {data.case.reporterName} ·{" "}
-              {data.case.state === "AwaitingMember"
-                ? "Chờ thành viên bổ sung"
-                : supportStates[data.case.state]}{" "}
-              · Phiên bản {data.case.version}
-            </p>
-            <p>
-              {data.case.assigneeId
-                ? data.canManage
-                  ? "Bạn đang phụ trách."
-                  : "Admin khác đang phụ trách; bạn đang xem hồ sơ."
-                : "Chưa có người phụ trách."}
-            </p>
-            <Related data={data} />
-          </header>
+          </PageHeading>
           {data.case.kind === "TransactionIssue" ? (
             <Notice tone="warning">
               Đây là hồ sơ hỗ trợ. Phản hồi tại đây không giữ/hoàn tiền hoặc

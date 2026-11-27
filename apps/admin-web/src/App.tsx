@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { session } from "./core/session";
 import { LoginPage } from "./features/auth/LoginPage";
+import { PageTitle } from "./core/PageHeading";
 import "./App.css";
 import "./task-surfaces.css";
 
@@ -155,7 +156,7 @@ const router = createBrowserRouter([
     element: <Workspace />,
     errorElement: (
       <main className="workspace">
-        <h1>Chưa mở được trang.</h1>
+        <PageTitle>Chưa mở được trang.</PageTitle>
         <p>Thử tải lại trình duyệt để đăng nhập và kiểm tra hồ sơ.</p>
         <a href="/review/listings">Về bàn kiểm duyệt</a>
       </main>

@@ -1,3 +1,4 @@
+import { PageHeading } from "../../core/PageHeading";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { components } from "@used-books/api-contract";
@@ -73,13 +74,10 @@ export function SimulatorTopup({ userId }: { userId: string }) {
   };
   return (
     <div className={styles.page}>
-      <header className="page-heading">
-        <h1>Nạp tiền mô phỏng</h1>
-        <p className="intro">
-          Chọn người nhận, nhập số tiền và xác nhận. Member có thể dùng số dư để
-          thử mua sách.
-        </p>
-      </header>
+      <PageHeading
+        title="Nạp tiền mô phỏng"
+        description="Chọn người nhận, nhập số tiền và xác nhận. Member có thể dùng số dư để thử mua sách."
+      />
       <Notice tone="info">
         Tiền mô phỏng đồ án, không phải tiền thật. Thao tác này tạo khoản nạp
         riêng và không xử lý giao dịch VNPay đang chờ.

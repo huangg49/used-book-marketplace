@@ -2,8 +2,7 @@
   display: grid;
   gap: 20px;
   min-width: 0;
-  max-width: 1280px;
-  margin: 0 auto;
+  --page-heading-margin: 0rem;
 }
 
 /* Sub-navigation tabs across statistics sections */
@@ -89,37 +88,6 @@
 }
 
 /* Header & Period Controls */
-.header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 16px;
-}
-
-@media (min-width: 820px) {
-  .header {
-    flex-wrap: nowrap;
-  }
-}
-
-.headerTitle {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.headerTitle h1 {
-  margin: 0;
-  color: var(--shop-ink);
-  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
-  font-size: clamp(1.35rem, 1.8vw, 1.7rem);
-  line-height: 1.2;
-  letter-spacing: -0.025em;
-  white-space: nowrap;
-}
-
 .subtitle {
   margin: 0;
   color: var(--shop-muted);
@@ -129,6 +97,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 500px;
+}
+
+.denied .subtitle {
+  margin-top: 0.5rem;
+  white-space: normal;
 }
 
 .simBanner {
@@ -149,13 +122,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
-}
-
-@media (min-width: 820px) {
-  .controls {
-    flex-wrap: nowrap;
-  }
+  min-width: 0;
 }
 
 .presets {
@@ -205,12 +172,6 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-@media (min-width: 820px) {
-  .dateForm {
-    flex-wrap: nowrap;
-  }
 }
 
 .dateField {
@@ -1159,10 +1120,6 @@
   color: var(--shop-ink);
 }
 
-.denied h1 {
-  margin: 0 0 8px;
-  font-size: 1.35rem;
-}
 
 .stale {
   margin: 0;

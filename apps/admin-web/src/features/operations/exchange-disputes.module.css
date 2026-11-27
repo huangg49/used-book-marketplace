@@ -10,9 +10,9 @@
   overflow-wrap: anywhere;
   container-type: inline-size;
   padding-bottom: 2.5rem;
+  --page-heading-margin: 0rem;
 }
 
-.heading,
 .queueHeader {
   display: flex;
   align-items: center;
@@ -21,23 +21,8 @@
   gap: 0.85rem 1rem;
 }
 
-.heading :global(.page-heading) {
-  margin: 0;
-}
 
-.heading :global(.intro) {
-  margin: 0;
-  color: var(--shop-muted);
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
 
-.page h1 {
-  font-size: clamp(1.85rem, 3.2cqi, 2.35rem);
-  line-height: 1.2;
-  color: var(--shop-wine);
-  margin: 0 0 0.35rem;
-}
 
 .page h2 {
   font-size: 1.15rem;

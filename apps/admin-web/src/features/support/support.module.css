@@ -2,6 +2,14 @@
   max-width: 1200px;
   overflow-wrap: anywhere;
 }
+.caseDetails {
+  display: grid;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
+.caseDetails p {
+  margin: 0;
+}
 .filters {
   display: flex;
   flex-wrap: wrap;
