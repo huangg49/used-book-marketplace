@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeftRight, ArrowUpRight } from "lucide-react";
 import type { Exchange } from "../../services/exchange";
 import { PartnerChip } from "./PartnerChip";
-import { Facts, NextStep } from "./CardParts";
+import { BookTitle, Facts, NextStep } from "./CardParts";
 import { exchangeFacts, exchangeNext, exchangePartner, exchangeStatus, shortDate } from "./transaction-status";
 import card from "./TransactionCard.module.css";
 
@@ -38,7 +38,7 @@ export function ExchangeCard({ exchange, userId, index, title, open, conversatio
     >
       <div className={card.top}>
         <span className={card.kind} data-kind="exchange">
-          <ArrowLeftRight size={13} aria-hidden="true" /> Đổi sách · {mine ? "Bạn đề nghị" : "Bạn nhận đề nghị"}
+          <ArrowLeftRight size={13} aria-hidden="true" /> Đổi sách
         </span>
         <span className={card.status}>{status.label}</span>
       </div>
@@ -47,21 +47,19 @@ export function ExchangeCard({ exchange, userId, index, title, open, conversatio
           <ArrowLeftRight size={24} />
         </span>
         <div>
-          <h3 className={card.title}>
-            <Link to={open.to} viewTransition state={open.state} onClick={open.onClick}>{title}</Link>
-          </h3>
+          <BookTitle text={title} />
           <PartnerChip id={partnerId} name={partner} role={mine ? "Chủ sách" : "Người đề nghị đổi"} />
         </div>
       </div>
       <NextStep>{exchangeNext(exchange)}</NextStep>
       <Facts facts={exchangeFacts(exchange, userId)} />
       <div className={card.foot}>
-        <span className={card.footNote}>Từ <time dateTime={exchange.createdAt}>{shortDate(exchange.createdAt)}</time></span>
+        <span className={card.footNote}><b>{mine ? "Bạn đề nghị" : "Bạn nhận đề nghị"}</b> · <time dateTime={exchange.createdAt}>{shortDate(exchange.createdAt)}</time></span>
         <span className={card.actions}>
           {conversationHref && (
             <Link className={card.ghost} to={conversationHref} viewTransition>Hội thoại</Link>
           )}
-          <Link className={card.go} to={open.to} viewTransition state={open.state} onClick={open.onClick}>
+          <Link className={card.go} data-stretch to={open.to} viewTransition state={open.state} onClick={open.onClick}>
             {open.label} <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
         </span>

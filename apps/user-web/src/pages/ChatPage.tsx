@@ -3,8 +3,8 @@ import { ConversationCard, LegacyCard } from "../components/conversation/Convers
 import { SelectMenu } from "../components/SelectMenu";
 import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { ExchangeCard } from "../components/conversation/ExchangeCard";
-import { Facts, NextStep } from "../components/conversation/CardParts";
-import { auctionFacts, auctionNext, auctionStatus, conversationStatus, exchangeStatus } from "../components/conversation/transaction-status";
+import { BookTitle, Facts, NextStep } from "../components/conversation/CardParts";
+import { auctionFacts, auctionNext, auctionStatus, conversationStatus, exchangeStatus, shortDate } from "../components/conversation/transaction-status";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
 import {
   useConversationTransition,
@@ -1010,7 +1010,7 @@ function AuctionCard({
     <article className={card.card} data-tone={status.tone} style={{ "--i": index } as CSSProperties}>
       <div className={card.top}>
         <span className={card.kind} data-kind="auction">
-          <Gavel size={13} aria-hidden="true" /> Đấu giá · {item.role === "Seller" ? "Bạn bán" : "Bạn mua"}
+          <Gavel size={13} aria-hidden="true" /> Đấu giá
         </span>
         <span className={card.status}>{status.label}</span>
       </div>
@@ -1019,9 +1019,7 @@ function AuctionCard({
           <AuctionPhoto auction={auction} interactive={false} />
         </span>
         <div>
-          <h3 className={card.title}>
-            <Link to={destination}>{auction.title}</Link>
-          </h3>
+          <BookTitle text={auction.title} />
           <p className={card.who}>
             <MapPin size={14} aria-hidden="true" /> {auction.pointName}
           </p>
@@ -1035,9 +1033,9 @@ function AuctionCard({
       <Facts facts={auctionFacts(item)} />
       <div className={card.foot}>
         <span className={card.footNote}>
-          {item.role === "Seller" ? "Phiên của bạn" : "Bạn tham gia"}
+          <b>{item.role === "Seller" ? "Bạn bán" : "Bạn mua"}</b> · mở {shortDate(auction.startAt)}
         </span>
-        <Link className={card.go} to={destination} aria-label={`${winnerOrder ? "Mở đơn đấu giá" : "Xem phiên"}: ${auction.title}`}>
+        <Link className={card.go} data-stretch to={destination} aria-label={`${winnerOrder ? "Mở đơn đấu giá" : "Xem phiên"}: ${auction.title}`}>
           {winnerOrder ? "Mở đơn" : "Xem phiên"} <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </div>
@@ -1499,7 +1497,7 @@ export function ChatPage() {
         (element) => element.dataset.roomId === position.read().selectedId,
       );
       card
-        ?.querySelector<HTMLAnchorElement>("a")
+        ?.querySelector<HTMLAnchorElement>("a[data-stretch]")
         ?.focus({ preventScroll: true });
     }
   }, [

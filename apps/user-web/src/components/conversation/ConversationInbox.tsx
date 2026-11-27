@@ -18,7 +18,7 @@ import { useNearViewport } from "../../hooks/useNearViewport";
 import card from "./TransactionCard.module.css";
 import { PartnerChip } from "./PartnerChip";
 import { ExchangeCard } from "./ExchangeCard";
-import { Facts, NextStep } from "./CardParts";
+import { BookTitle, Facts, NextStep } from "./CardParts";
 import { conversationFacts, conversationNext, conversationRoles, conversationStatus, shortDate } from "./transaction-status";
 
 export function ConversationCard({
@@ -74,7 +74,7 @@ export function ConversationCard({
       <div className={card.top}>
         <span className={card.kind} data-kind={roles.exchange ? "exchange" : "buy"}>
           {roles.exchange ? <ArrowLeftRight size={13} aria-hidden="true" /> : <HandCoins size={13} aria-hidden="true" />}
-          {roles.exchange ? "Đổi sách" : "Mua bán"} · {roles.mine}
+          {roles.exchange ? "Đổi sách" : "Mua bán"}
         </span>
         <span className={card.status}>{status.label}</span>
       </div>
@@ -87,19 +87,13 @@ export function ConversationCard({
           )}
         </div>
         <div>
-          <h3 className={card.title} data-conversation-title>
-            <Link
-              to={href}
-              viewTransition
-              state={{ chatFromInbox: true }}
-              onClick={remember}
-            >
-              {visibleBook?.bundle?.title ?? visibleBook?.book.title ??
-                (book.isPending
-                  ? "Đang tải tên sách…"
-                  : unavailable ? "Bài đăng không còn công khai" : "Chưa tải được tên sách")}
-            </Link>
-          </h3>
+          <BookTitle
+            morph
+            text={visibleBook?.bundle?.title ?? visibleBook?.book.title ??
+              (book.isPending
+                ? "Đang tải tên sách…"
+                : unavailable ? "Bài đăng không còn công khai" : "Chưa tải được tên sách")}
+          />
           <PartnerChip id={partner.id} name={partner.displayName} role={roles.theirs} />
           {book.isError && (
             <div role="alert" className={card.inlineAlert}>
@@ -118,9 +112,10 @@ export function ConversationCard({
       <NextStep>{conversationNext(room, userId)}</NextStep>
       <Facts facts={conversationFacts(room)} />
       <div className={card.foot}>
-        <span className={card.footNote}>Từ <time dateTime={room.createdAt}>{shortDate(room.createdAt)}</time></span>
+        <span className={card.footNote}><b>{roles.mine}</b> · <time dateTime={room.createdAt}>{shortDate(room.createdAt)}</time></span>
         <Link
           className={card.go}
+          data-stretch
           to={href}
           viewTransition
           state={{ chatFromInbox: true }}
