@@ -95,6 +95,12 @@ a.partner:hover .partnerName { color: var(--shop-wine); text-decoration-color: c
 .priceLine strong { color: var(--shop-wine); font: 400 1.4rem/1.1 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
 .priceLine span { color: var(--shop-muted); font-size: .78rem; }
 
+/* Countdown beside a deadline under a day away; solid tag once overdue. */
+.due { display: inline-flex; align-items: center; gap: 5px; color: #a3261a; font-size: .8rem; font-weight: 600; white-space: nowrap; }
+.due::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: blink 1.1s ease-in-out infinite alternate; }
+.due[data-late] { padding: 0 8px; border-radius: 6px; background: #a3261a; color: #fffcf5; }
+.due[data-late]::before { display: none; }
+
 /* The small fact under the price: icon, label and a highlighted value. */
 .sideLine { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 6px 0 0; color: var(--shop-muted); font-size: .78rem; line-height: 1.5; }
 .sideLine svg { flex: none; color: var(--tone); }

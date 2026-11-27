@@ -67,7 +67,7 @@ export function Figures({ main, side }: { main?: Fact; side?: Fact }) {
       {side && (
         <p className={card.sideLine}>
           {side.icon && <side.icon size={13} aria-hidden="true" />}
-          {side.label} <span className={card.stamp}>{side.value}</span>
+          {side.label} <span className={card.stamp}>{side.value}</span>{side.note}
         </p>
       )}
     </>

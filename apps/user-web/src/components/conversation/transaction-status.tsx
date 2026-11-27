@@ -15,7 +15,7 @@ import card from "./TransactionCard.module.css";
  */
 export type StatusTone = "attention" | "progress" | "complete" | "closed";
 export type StatusInfo = { label: string; tone: StatusTone };
-export type Fact = { label: string; value: ReactNode; icon?: LucideIcon };
+export type Fact = { label: string; value: ReactNode; icon?: LucideIcon; /** Shown after the value, e.g. a countdown. */ note?: ReactNode };
 /** The card's key figure (under the book) and one small fact (in the footer). */
 export type Stats = { main?: Fact; side?: Fact };
 
@@ -36,6 +36,25 @@ export function shortDateTime(value: string) {
 /** A highlighted time inside a card sentence. */
 function stamp(value: string) {
   return <time className={card.stamp} dateTime={value}>{shortDateTime(value)}</time>;
+}
+
+const DAY = 24 * 3600_000;
+/**
+ * How long is left before a deadline, once it is under a day away; "Đã quá
+ * hạn" once it has passed. Nothing for deadlines further out, so only the
+ * urgent ones draw the eye. `now` is the server clock when the card has it.
+ */
+export function dueNote(value: string, now = Date.now()): ReactNode {
+  const left = Date.parse(value) - now;
+  if (Number.isNaN(left) || left > DAY) return null;
+  if (left <= 0) return <span className={card.due} data-late>Đã quá hạn</span>;
+  const hours = Math.floor(left / 3600_000), minutes = Math.floor((left % 3600_000) / 60_000);
+  const text = hours >= 1 ? `${hours} giờ${minutes ? ` ${minutes} phút` : ""}` : `${Math.max(1, minutes)} phút`;
+  return <span className={card.due}>còn {text}</span>;
+}
+/** A deadline in a sentence: the time chip, then the countdown when it is close. */
+function deadline(value: string, now?: number) {
+  return <>{stamp(value)}{dueNote(value, now) && <> {dueNote(value, now)}</>}</>;
 }
 
 // ─── Conversations (buy now / exchange intent) ────────────────────────────────
@@ -99,7 +118,7 @@ export function conversationStats(room: PurchaseConversation, listedPrice?: numb
           : listedPrice != null ? { label: "giá niêm yết", value: formatVnd(listedPrice) }
             : { label: "giá", value: "Chưa chốt" };
   const side: Fact | undefined =
-    room.status === "Active" && room.expiresAt ? { label: "Mở đến", value: shortDateTime(room.expiresAt), icon: Clock3 }
+    room.status === "Active" && room.expiresAt ? { label: "Mở đến", value: shortDateTime(room.expiresAt), icon: Clock3, note: dueNote(room.expiresAt) }
       : room.closedAt ? { label: "Đóng lúc", value: shortDateTime(room.closedAt), icon: Clock3 }
         : undefined;
   return { main, side };
@@ -142,7 +161,7 @@ export function exchangeStatus(exchange: Exchange, userId: string): StatusInfo {
 }
 
 export function exchangeNext(exchange: Exchange): ReactNode {
-  const by = (label: string, value?: string | null) => (value ? <>{label} {stamp(value)}</> : null);
+  const by = (label: string, value?: string | null) => (value ? <>{label} {deadline(value)}</> : null);
   switch (exchange.status) {
     case "Proposed": return by("Trả lời trước", exchange.proposalExpiresAt) ?? "Đề nghị đổi đang chờ trả lời.";
     case "AcceptedAwaitingFunding": return by("Đặt cọc trước", exchange.fundingDeadline) ?? "Hai bên đặt cọc để bắt đầu.";
@@ -213,13 +232,13 @@ export function auctionStatus(item: MyAuctionItem, serverTime: string): StatusIn
 
 export function auctionNext(item: MyAuctionItem, serverTime: string): ReactNode {
   const auction = item.auction;
-  if (item.needsPayment && item.paymentDeadline) return <>Thanh toán trước {stamp(item.paymentDeadline)}</>;
+  const now = Date.parse(serverTime) || Date.now();
+  if (item.needsPayment && item.paymentDeadline) return <>Thanh toán trước {deadline(item.paymentDeadline, now)}</>;
   const phase = auctionPhase(auction, serverTime);
   if (phase === "Scheduled") return <>Mở lúc {stamp(auction.startAt)}</>;
   if (phase === "Live") {
-    const end = stamp(auction.endAt);
-    if (item.role !== "Seller" && !item.leading && auction.bidderCount > 0) return <>Trả giá mới trước {end}</>;
-    return <>Kết thúc lúc {end}</>;
+    if (item.role !== "Seller" && !item.leading && auction.bidderCount > 0) return <>Trả giá mới trước {deadline(auction.endAt, now)}</>;
+    return <>Kết thúc lúc {stamp(auction.endAt)}</>;
   }
   return <>Đã kết thúc {stamp(auction.endAt)}</>;
 }
