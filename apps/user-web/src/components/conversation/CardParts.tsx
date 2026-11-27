@@ -23,17 +23,21 @@ export function BookTitle({ text, morph }: { text: string; /** Conversation view
     return () => observer.disconnect();
   }, [text, expanded, cut]);
   const toggle = cut || expanded;
+  // The tooltip sits beside the heading, not in it, so the heading's text is
+  // exactly the book name.
   return (
-    <h3 className={card.title} data-conversation-title={morph || undefined} data-expanded={expanded || undefined}>
-      {toggle ? (
-        <button type="button" className={card.titleButton} aria-expanded={expanded} onClick={() => setExpanded((open) => !open)}>
+    <div className={card.titleWrap}>
+      <h3 className={card.title} data-conversation-title={morph || undefined} data-expanded={expanded || undefined}>
+        {toggle ? (
+          <button type="button" className={card.titleButton} aria-expanded={expanded} onClick={() => setExpanded((open) => !open)}>
+            <span ref={textRef} className={card.titleText}>{text}</span>
+          </button>
+        ) : (
           <span ref={textRef} className={card.titleText}>{text}</span>
-        </button>
-      ) : (
-        <span ref={textRef} className={card.titleText}>{text}</span>
-      )}
+        )}
+      </h3>
       {cut && !expanded && <span className={card.titleTip} aria-hidden="true">{text}</span>}
-    </h3>
+    </div>
   );
 }
 

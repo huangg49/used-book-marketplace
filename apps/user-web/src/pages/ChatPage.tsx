@@ -1329,44 +1329,46 @@ function TransactionHub({
       </nav>
 
       <div id="txn-panel" role="tabpanel" aria-labelledby={tabId(activeTab)} className={hub.panel}>
-        {/* Search + sort: both act on the list below and stay in the URL. */}
-        <div className={hub.toolbar} role="search">
-          <label className={hub.search}>
-            <Search size={18} aria-hidden="true" />
-            <span className={hub.srOnly}>Tìm trong giao dịch</span>
-            <input
-              type="search"
-              value={query}
-              placeholder="Tìm theo tên sách, người giao dịch hoặc điểm giao nhận"
-              onChange={(event) => update({ q: event.target.value, page: null })}
-            />
-            {query && (
-              <button type="button" className={hub.clear} onClick={() => update({ q: null, page: null })} aria-label="Xóa tìm kiếm">
-                <X size={16} aria-hidden="true" />
-              </button>
-            )}
-          </label>
-          <div className={hub.sort}>
-            <span id="txn-sort-label" className={hub.sortLabel}>
-              <ArrowDownUp size={15} aria-hidden="true" /> Sắp xếp
-            </span>
-            <SelectMenu
-              id="txn-sort"
-              labelledBy="txn-sort-label"
-              value={sort}
-              options={SORTS}
-              onChange={(value) => update({ sort: value === "attention" ? null : value, page: null })}
-            />
+        {/* Search, sort and the result count in one card; all stay in the URL. */}
+        <div className={hub.filters}>
+          <div className={hub.toolbar} role="search">
+            <label className={hub.search}>
+              <Search size={18} aria-hidden="true" />
+              <span className={hub.srOnly}>Tìm trong giao dịch</span>
+              <input
+                type="search"
+                value={query}
+                placeholder="Tìm sách, người hoặc điểm giao"
+                onChange={(event) => update({ q: event.target.value, page: null })}
+              />
+              {query && (
+                <button type="button" className={hub.clear} onClick={() => update({ q: null, page: null })} aria-label="Xóa tìm kiếm">
+                  <X size={16} aria-hidden="true" />
+                </button>
+              )}
+            </label>
+            <div className={hub.sort}>
+              <span id="txn-sort-label" className={hub.sortLabel}>
+                <ArrowDownUp size={15} aria-hidden="true" /> Sắp xếp
+              </span>
+              <SelectMenu
+                id="txn-sort"
+                labelledBy="txn-sort-label"
+                value={sort}
+                options={SORTS}
+                onChange={(value) => update({ sort: value === "attention" ? null : value, page: null })}
+              />
+            </div>
           </div>
-        </div>
 
-        <p className={hub.summary} aria-live="polite">
-          {loading && !matched.length
-            ? "Đang tải giao dịch…"
-            : needle
-              ? <>Tìm thấy <b>{matched.length}</b> giao dịch khớp “{query.trim()}”</>
-              : <><b>{matched.length}</b> giao dịch{totalPages > 1 && <> · trang {page}/{totalPages}</>}</>}
-        </p>
+          <p className={hub.summary} aria-live="polite">
+            {loading && !matched.length
+              ? "Đang tải giao dịch…"
+              : needle
+                ? <>Tìm thấy <b>{matched.length}</b> giao dịch khớp “{query.trim()}”</>
+                : <><b>{matched.length}</b> giao dịch{totalPages > 1 && <> · trang {page}/{totalPages}</>}</>}
+          </p>
+        </div>
 
         {sources.filter((source) => source.error).map((source) => (
           <p key={source.name} className={card.state} role="alert">

@@ -33,7 +33,7 @@
   max-width: 1200px;
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 28px clamp(16px, 4vw, 40px) 8px;
+  padding: 28px clamp(16px, 4vw, 40px) 48px;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -674,7 +674,7 @@
   .root[data-room-selected="false"] {
     width: 100%;
     margin: 0 auto;
-    padding: 18px 16px 8px;
+    padding: 18px 16px 40px;
   }
   .root[data-room-selected="true"] {
     width: 100%;
