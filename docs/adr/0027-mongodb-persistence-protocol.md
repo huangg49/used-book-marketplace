@@ -73,11 +73,12 @@ Implemented in `apps/api/src/database/mongo/transaction.ts` and exercised by
    keep a unique index on `(principal, operation, key)` as a backstop. Order stays:
    key lock → user/session locks → current authorization → receipt replay/conflict
    → resource locks → decision clock → effect + receipt + audit + outbox.
-5. **Decision clock.** `serverNow` reads `$$NOW` through `$documents` inside the
-   transaction after all locks. `$$NOW` is per statement, not frozen at snapshot
-   start (verified), and a successful lock implies every competitor either
-   committed before our snapshot or aborts. Never use the client clock or a time
-   read before waiting.
+5. **Decision clock.** `serverNow` projects `$$NOW` from one document in the
+   applied migration ledger inside the transaction after all locks. A collection
+   aggregate uses the runtime account's existing read access on Atlas Free.
+   `$$NOW` is per statement, not frozen at snapshot start (verified), and a
+   successful lock implies every competitor either committed before our snapshot
+   or aborts. Never use the client clock or a time read before waiting.
 6. **Unknown commit recovery.** After `CommitOutcomeUnknownError` the client
    retries with the same Idempotency-Key; the receipt decides between replay and
    first execution. If the commit was never applied, the orphaned transaction keeps

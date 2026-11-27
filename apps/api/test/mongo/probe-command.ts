@@ -105,6 +105,13 @@ export class ProbeStore {
     );
     for (const name of ProbeStore.collections)
       if (!existing.has(name)) await this.db.createCollection(name);
+    await this.db
+      .collection<{ _id: string }>('_migrations')
+      .updateOne(
+        { _id: 'probe-schema' },
+        { $setOnInsert: { _id: 'probe-schema' } },
+        { upsert: true },
+      );
     await this.receipts().createIndex(
       { principal: 1, operation: 1, key: 1 },
       { unique: true, name: 'receipt_identity' },
