@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import {
   useInfiniteQuery,
   useMutation,
@@ -13,6 +13,7 @@ import {
   Button,
   Chip,
   ConfirmDialog,
+  Icon,
   Notice,
   Screen,
   StatePanel,
@@ -33,6 +34,9 @@ import { ApiError } from "@used-books/session-client";
 import { useNotifications } from "../notifications/notifications-model";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
 import { useTransactionLive } from "../../core/hooks/use-transaction-live";
+import { myIntakes, type MyIntake } from "../auctions/contracts";
+import { SendToAuctionActiveIntakes } from "../auctions/send-to-auction-components";
+import { ScheduleAuctionSheet } from "../auctions/components";
 
 const filters = [
   { value: "", label: "Tất cả" },
@@ -69,6 +73,7 @@ export function DraftsScreen() {
   } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [publishTarget, setPublishTarget] = useState<MyIntake | null>(null);
   const createKey = useRef<string | null>(null);
 
   const inboxLive = useTransactionLive(
@@ -96,6 +101,13 @@ export function DraftsScreen() {
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     enabled: foreground,
     refetchInterval: foreground ? (inboxLive ? false : 5_000) : false,
+  });
+
+  const auctionIntakes = useQuery({
+    queryKey: ["my-auction-intakes", ownerId],
+    queryFn: () => client.request("/me/auction-intakes", myIntakes),
+    enabled: foreground && !!ownerId,
+    refetchInterval: foreground ? (inboxLive ? false : 8_000) : false,
   });
 
   const detail = useQuery({
@@ -165,6 +177,20 @@ export function DraftsScreen() {
 
   const items = drafts.data?.pages.flatMap((page) => page.items) ?? [];
   const viewingAuction = channel === "Auction";
+  const activeIntakes = (auctionIntakes.data?.items ?? []).filter(
+    (i) => i.state !== "Cancelled" && i.state !== "Reclaimed",
+  );
+  const activeIntakeListingIds = new Set(activeIntakes.map((i) => i.listingId));
+  const visibleItems =
+    viewingAuction && !filter
+      ? items.filter((listing) => !activeIntakeListingIds.has(listing.id))
+      : items;
+  const showAuctionIntakes = viewingAuction && !filter && activeIntakes.length > 0;
+  const isAuctionLoading =
+    viewingAuction && !filter && drafts.isPending && auctionIntakes.isPending;
+  const isEmptyList = viewingAuction && !filter
+    ? drafts.isSuccess && !auctionIntakes.isPending && activeIntakes.length === 0 && visibleItems.length === 0
+    : drafts.isSuccess && visibleItems.length === 0;
 
   return (
     <Screen
@@ -182,11 +208,16 @@ export function DraftsScreen() {
     >
       <View style={styles.content}>
         <View style={styles.intro}>
-          <AppText accessibilityRole="header" kind="heading" color={stitchTokens.wineDark} style={styles.heading}>
-            Bài đăng của tôi
-          </AppText>
+          <View style={styles.introCopy}>
+            <AppText accessibilityRole="header" kind="heading" color={stitchTokens.wineDark} style={styles.heading}>
+              Bài đăng của tôi
+            </AppText>
+            <AppText kind="small" color={stitchTokens.brownMuted}>
+              {viewingAuction ? "Sách đăng ký gửi kiểm định đấu giá" : "Quản lý sách bán và trao đổi"}
+            </AppText>
+          </View>
           <Button
-            title={viewingAuction ? "Gửi sách đấu giá" : "Đăng sách mới"}
+            title={viewingAuction ? "Gửi đấu giá" : "+ Đăng sách"}
             wine
             busy={create.isPending}
             disabled={state.status !== "authenticated" || state.user.status !== "ACTIVE"}
@@ -200,23 +231,43 @@ export function DraftsScreen() {
           />
         </View>
 
-        <View style={styles.channels}>
-          {channels.map((tab) => (
-            <Chip
-              key={tab.value}
-              selected={channel === tab.value}
-              title={tab.label}
-              wine
-              onPress={() => {
-                setChannel(tab.value);
-                setFilter("");
-              }}
-            />
-          ))}
+        <View style={styles.segmentedBar} accessibilityRole="tablist">
+          {channels.map((tab) => {
+            const active = channel === tab.value;
+            return (
+              <Pressable
+                key={tab.value}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                onPress={() => {
+                  setChannel(tab.value);
+                  setFilter("");
+                }}
+                style={({ pressed }) => [
+                  styles.segmentBtn,
+                  active && styles.segmentBtnActive,
+                  pressed && !active && styles.segmentPressed,
+                ]}
+              >
+                <AppText
+                  kind="bold"
+                  style={[styles.segmentText, active && styles.segmentTextActive]}
+                >
+                  {tab.value === "Auction" && activeIntakes.length > 0
+                    ? `${tab.label} (${activeIntakes.length})`
+                    : tab.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
         </View>
-        <AppText kind="annotation" color={stitchTokens.deepCocoa}>
-          Hạn mức chung là 5 bài đang hiển thị hoặc chờ duyệt.
-        </AppText>
+
+        <View style={styles.quotaBanner}>
+          <Icon name="info" size={14} color={stitchTokens.brownMuted} />
+          <AppText kind="small" color={stitchTokens.deepCocoa} style={styles.quotaText}>
+            Hạn mức chung là 5 bài đang hiển thị hoặc chờ duyệt.
+          </AppText>
+        </View>
 
         <ScrollView
           key={channel}
@@ -238,7 +289,9 @@ export function DraftsScreen() {
         </ScrollView>
 
         {create.error ? <Notice tone="error">{photoError(create.error)}</Notice> : null}
-        {drafts.isPending ? <StatePanel wine loading title="Đang tải bài đăng…" /> : null}
+        {(!viewingAuction && drafts.isPending) || isAuctionLoading ? (
+          <StatePanel wine loading title="Đang tải bài đăng…" />
+        ) : null}
         {drafts.error && !drafts.isFetchNextPageError ? (
           <StatePanel
             wine
@@ -247,23 +300,74 @@ export function DraftsScreen() {
             action={{ label: "Thử tải lại", onPress: () => void drafts.refetch() }}
           />
         ) : null}
-        {drafts.isSuccess && items.length === 0 ? (
+        {isEmptyList ? (
           <StatePanel
             wine
-            title={filter ? "Chưa có bài trong mục này" : "Bạn chưa có bài đăng"}
+            title={
+              filter
+                ? "Chưa có bài trong mục này"
+                : viewingAuction
+                  ? "Chưa có bài đấu giá nào"
+                  : "Bạn chưa có bài đăng"
+            }
             message={
               filter
                 ? undefined
                 : viewingAuction
-                  ? "Chọn Gửi sách đấu giá để bắt đầu."
-                  : "Chọn Đăng sách mới để tạo bản nháp đầu tiên."
+                  ? "Chọn sách đã duyệt hoặc tạo bài mới để gửi kiểm định tại điểm TP.HCM."
+                  : "Tạo bản nháp đầu tiên để bán hoặc trao đổi sách trên Lật lại."
             }
             icon="book"
-            action={filter ? { label: "Xem tất cả", onPress: () => setFilter("") } : undefined}
+            action={
+              filter
+                ? { label: "Xem tất cả", onPress: () => setFilter("") }
+                : viewingAuction
+                  ? { label: "Gửi sách đấu giá", onPress: () => router.push("/send-to-auction") }
+                  : {
+                      label: "Đăng sách mới",
+                      onPress: () => {
+                        if (!create.isPending) create.mutate();
+                      },
+                    }
+            }
           />
         ) : null}
 
-        {items.map((listing, index) => (
+        {showAuctionIntakes ? (
+          <View style={styles.auctionSection}>
+            <View style={styles.sectionHeader}>
+              <AppText kind="bold" color={stitchTokens.wineDark} style={styles.sectionTitle}>
+                Sách đang gửi đấu giá ({activeIntakes.length})
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push({ pathname: "/my-auctions", params: { view: "intakes" } })}
+                style={({ pressed }) => [styles.sectionLink, pressed && { opacity: 0.7 }]}
+              >
+                <AppText kind="bold" style={styles.sectionLinkText}>Phiên của tôi</AppText>
+                <Icon name="chevronRight" size={14} color={stitchTokens.wine} />
+              </Pressable>
+            </View>
+            <SendToAuctionActiveIntakes
+              intakes={activeIntakes}
+              isLoading={auctionIntakes.isPending}
+              onPublish={(item) => setPublishTarget(item)}
+              onWithdraw={(item) => router.push({ pathname: "/send-to-auction", params: { intakeId: item.id } })}
+              onOpenAuction={(id) => router.push({ pathname: "/auction", params: { id } })}
+              onSubmitEvidence={(item) => router.push({ pathname: "/send-to-auction", params: { intakeId: item.id } })}
+              evidenceTextMap={{}}
+              onChangeEvidenceText={() => {}}
+            />
+          </View>
+        ) : null}
+
+        {showAuctionIntakes && visibleItems.length > 0 ? (
+          <AppText kind="bold" color={stitchTokens.wineDark} style={styles.sectionTitle}>
+            Bản nháp kênh đấu giá ({visibleItems.length})
+          </AppText>
+        ) : null}
+
+        {visibleItems.map((listing, index) => (
           <DraftListingRow
             key={listing.id}
             listing={listing}
@@ -293,6 +397,26 @@ export function DraftsScreen() {
       </View>
 
       <HomeNotificationsModal visible={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+      <ScheduleAuctionSheet
+        key={publishTarget ? `${publishTarget.id}:${publishTarget.version}` : "none"}
+        visible={!!publishTarget}
+        title={publishTarget?.title ?? ""}
+        target={
+          publishTarget
+            ? {
+                kind: "publish",
+                intakeId: publishTarget.id,
+                version: publishTarget.version,
+              }
+            : null
+        }
+        onClose={() => setPublishTarget(null)}
+        onDone={() => {
+          void cache.invalidateQueries({ queryKey: ["my-auction-intakes", ownerId] });
+          void cache.invalidateQueries({ queryKey: ["my-auctions", ownerId] });
+          void cache.invalidateQueries({ queryKey: ["public-auctions"] });
+        }}
+      />
       <ConfirmDialog
         visible={!!deleteTarget}
         title={
@@ -350,24 +474,90 @@ const styles = StyleSheet.create({
   },
   intro: {
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.sm,
   },
-  heading: {
-    flexGrow: 1,
-    flexShrink: 1,
-    fontSize: 24,
-    lineHeight: 32,
+  introCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  channels: {
+  heading: {
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  segmentedBar: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: space.sm,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 4,
+    gap: 4,
+  },
+  segmentBtn: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  segmentBtnActive: {
+    backgroundColor: stitchTokens.wine,
+  },
+  segmentPressed: {
+    backgroundColor: stitchTokens.parchment,
+  },
+  segmentText: {
+    fontSize: 13.5,
+    color: stitchTokens.brownMuted,
+    textAlign: "center",
+  },
+  segmentTextActive: {
+    color: stitchTokens.gold,
+  },
+  quotaBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: stitchTokens.parchment,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  quotaText: {
+    flex: 1,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   filters: {
     gap: space.xs,
-    paddingVertical: space.xs,
+    paddingVertical: 2,
+  },
+  auctionSection: {
+    gap: space.sm,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.sm,
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  sectionLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: 4,
+  },
+  sectionLinkText: {
+    fontSize: 13,
+    color: stitchTokens.wine,
   },
 });

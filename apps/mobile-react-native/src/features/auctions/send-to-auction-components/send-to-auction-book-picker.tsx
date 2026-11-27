@@ -45,6 +45,7 @@ type ConditionKey = keyof typeof conditions;
 
 export function SendToAuctionBookPicker({
   eligibleListings,
+  unfinishedListings = [],
   selectedListingId,
   onSelectListing,
   onCreateListing,
@@ -238,7 +239,7 @@ export function SendToAuctionBookPicker({
             <AppText kind="small" color={stitchTokens.brownMuted} numberOfLines={1}>
               {eligibleListings.length > 0
                 ? `${eligibleListings.length} sách đã duyệt sẵn sàng`
-                : "Bài đăng kênh đấu giá đã được duyệt"}
+                : "Sách lẻ đã được duyệt và đang mở"}
             </AppText>
           </View>
         </View>
@@ -288,9 +289,11 @@ export function SendToAuctionBookPicker({
       ) : eligibleListings.length === 0 ? (
         <View style={styles.emptyBox}>
           <Icon name="book" size={26} color={stitchTokens.brownMuted} />
-          <AppText kind="bold" style={styles.emptyTitle}>Chưa có sách đấu giá đã duyệt</AppText>
+          <AppText kind="bold" style={styles.emptyTitle}>Chưa có sách đủ điều kiện đấu giá</AppText>
           <AppText kind="small" style={styles.emptyDesc}>
-            Tạo bài đăng ở kênh đấu giá; sau khi được duyệt, sách sẽ xuất hiện tại đây để bạn gửi tới điểm kiểm định.
+            {unfinishedListings.length > 0
+              ? `Tài khoản có ${unfinishedListings.length} sách đã duyệt nhưng đang ở trạng thái Đang giữ/Đã bán hoặc là bộ sách (combo), nên chưa thể gửi đấu giá.`
+              : "Chỉ sách lẻ đã được duyệt, đang hiển thị và còn trống (chưa có đơn/trao đổi/đấu giá) mới hiện tại đây. Bạn có thể tạo sách đấu giá mới bên dưới."}
           </AppText>
           {onCreateListing ? (
             <View style={styles.emptyAction}>
@@ -305,50 +308,16 @@ export function SendToAuctionBookPicker({
             </View>
           ) : null}
         </View>
-      ) : selectedListing ? (
-        // Compact single-slot preview of the chosen book (never expands vertically)
-        renderBookRow(selectedListing, {
-          isSelected: true,
-          mode: "selected-preview",
-          onPress: () => {
-            if (hasMultipleBooks) openPicker();
-          },
-        })
-      ) : !hasMultipleBooks ? (
-        // Exactly 1 eligible book: 1 tap selects directly without an extra sheet hop
-        renderBookRow(eligibleListings[0], {
-          isSelected: false,
-          mode: "inline-single",
-          onPress: () => onSelectListing(eligibleListings[0].id),
-        })
       ) : (
-        // 2+ eligible books & none chosen yet: single-slot picker trigger -> opens Sheet
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Mở danh sách chọn từ ${eligibleListings.length} sách đã duyệt`}
-          disabled={disabled}
-          onPress={openPicker}
-          style={({ pressed }) => [
-            styles.pickerTrigger,
-            disabled && styles.disabled,
-            pressed && styles.pressed,
-          ]}
-        >
-          <View style={styles.pickerTriggerIcon}>
-            <Icon name="book" size={18} color={stitchTokens.wine} />
-          </View>
-          <View style={styles.flexOne}>
-            <AppText kind="bold" style={styles.pickerTriggerTitle}>
-              Chọn từ {eligibleListings.length} sách đã duyệt
-            </AppText>
-            <AppText kind="small" color={stitchTokens.brownMuted} numberOfLines={1}>
-              {showSearch
-                ? "Chạm để chọn hoặc tìm nhanh"
-                : "Chạm để chọn sách muốn gửi"}
-            </AppText>
-          </View>
-          <Icon name="chevronRight" size={18} color={stitchTokens.wine} />
-        </Pressable>
+        <View style={{ gap: 10 }}>
+          {eligibleListings.map((item) =>
+            renderBookRow(item, {
+              isSelected: item.id === selectedListingId,
+              mode: "inline-single",
+              onPress: () => onSelectListing(item.id),
+            }),
+          )}
+        </View>
       )}
 
       {/* Scalable Book Picker Sheet for 2+ books */}
