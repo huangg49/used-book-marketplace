@@ -147,9 +147,11 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
       {notice && <p className={styles.walletLine} role="status">{notice}</p>}
       {error && <p className={styles.walletShort} role="alert">{error}</p>}
       {unknown ? (
-        <button type="button" className={styles.primaryBlock} disabled={busy} onClick={() => void unknown()}>
-          {busy ? 'Đang thử lại…' : 'Thử lại đúng lệnh vừa rồi'}
-        </button>
+        !confirming && !withdrawing && (
+          <button type="button" className={styles.primaryBlock} disabled={busy} onClick={() => void unknown()}>
+            {busy ? 'Đang thử lại…' : 'Thử lại đúng lệnh vừa rồi'}
+          </button>
+        )
       ) : registered ? (withdrawable &&
         <button type="button" className={styles.secondaryBlock} disabled={busy}
           onClick={() => setWithdrawing(true)}>
@@ -164,17 +166,17 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
         title="Đăng ký đấu giá"
-        confirmText="Đặt cọc và đăng ký"
+        confirmText={unknown ? 'Thử lại đúng lệnh vừa rồi' : 'Đặt cọc và đăng ký'}
         isBusy={busy}
         error={error}
-        onConfirm={() => void run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {
+        onConfirm={() => void (unknown ? unknown() : run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {
           setConfirming(false)
           setNotice(count + 1 >= need
             ? auction.openMode === 'Scheduled' || (auction.openMode === 'ScheduledGrace' && Date.parse(openTimeOf(auction)) > serverNow())
               ? 'Đã đăng ký. Phiên đủ người và mở theo giờ đã hẹn.'
               : 'Đã đăng ký. Phiên đủ người và mở trả giá sau 10 phút (khung 23:00–07:00 thì lúc 07:00).'
             : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
-        })}
+        }))}
         stickyFooter
       >
         <TransactionAmount label="Cọc Ví sẽ giữ ngay" value={formatVnd(deposit)} />
@@ -186,14 +188,14 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
         onClose={() => !busy && setWithdrawing(false)}
         title="Rút đăng ký tham gia đấu giá?"
         description={`Bạn sẽ rời khỏi danh sách tham gia phiên này và nhận lại ngay ${formatVnd(me?.deposit ?? deposit)} tiền cọc về số dư khả dụng của Ví.`}
-        confirmText="Rút đăng ký và nhận lại cọc"
+        confirmText={unknown ? 'Thử lại đúng lệnh vừa rồi' : 'Rút đăng ký và nhận lại cọc'}
         isDanger
         isBusy={busy}
         error={error}
-        onConfirm={() => void run('withdraw-registration', (key) => withdrawAuctionRegistration(auction.id, key), () => {
+        onConfirm={() => void (unknown ? unknown() : run('withdraw-registration', (key) => withdrawAuctionRegistration(auction.id, key), () => {
           setWithdrawing(false)
           setNotice('Đã rút đăng ký; tiền cọc đã về lại ví.')
-        })}
+        }))}
       />
     </div>
   )
