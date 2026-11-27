@@ -15,7 +15,7 @@ import card from "./TransactionCard.module.css";
  */
 export type StatusTone = "attention" | "progress" | "complete" | "closed";
 export type StatusInfo = { label: string; tone: StatusTone };
-export type Fact = { label: string; value: ReactNode; icon?: LucideIcon; /** Not an amount: show as plain text. */ muted?: boolean };
+export type Fact = { label: string; value: ReactNode; icon?: LucideIcon };
 /** The card's key figure (under the book) and one small fact (in the footer). */
 export type Stats = { main?: Fact; side?: Fact };
 
@@ -97,7 +97,7 @@ export function conversationStats(room: PurchaseConversation, listedPrice?: numb
       : agreed != null ? { label: "giá đã chốt", value: formatVnd(agreed) }
         : room.terms?.mode === "Exchange" ? undefined
           : listedPrice != null ? { label: "giá niêm yết", value: formatVnd(listedPrice) }
-            : { label: "giá", value: "Chưa chốt giá", muted: true };
+            : { label: "giá", value: "Chưa chốt" };
   const side: Fact | undefined =
     room.status === "Active" && room.expiresAt ? { label: "Mở đến", value: shortDateTime(room.expiresAt), icon: Clock3 }
       : room.closedAt ? { label: "Đóng lúc", value: shortDateTime(room.closedAt), icon: Clock3 }
@@ -161,7 +161,7 @@ export function exchangeStats(exchange: Exchange, userId: string): Stats {
   return {
     main: exchange.diffAmount > 0
       ? { label: "tiền bù", value: formatVnd(exchange.diffAmount) }
-      : { label: "tiền bù", value: "Không bù tiền", muted: true },
+      : { label: "bù tiền", value: "Không" },
     side: { label: "Cọc của bạn", value: formatVnd(deposit), icon: Wallet },
   };
 }

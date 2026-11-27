@@ -93,7 +93,6 @@ a.partner:hover .partnerName { color: var(--shop-wine); text-decoration-color: c
 .priceLine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 10px 0 0; }
 .priceLine strong { color: var(--shop-wine); font: 400 1.4rem/1.1 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
 .priceLine span { color: var(--shop-muted); font-size: .78rem; }
-.priceLine[data-muted] strong { color: var(--shop-muted); font: 500 .88rem/1.4 var(--shop-body); letter-spacing: 0; }
 
 /* The small fact under the price: icon, label and a highlighted value. */
 .sideLine { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 6px 0 0; color: var(--shop-muted); font-size: .78rem; line-height: 1.5; }

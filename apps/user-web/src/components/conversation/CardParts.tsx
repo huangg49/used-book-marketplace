@@ -55,9 +55,9 @@ export function Figures({ main, side }: { main?: Fact; side?: Fact }) {
   return (
     <>
       {main && (
-        <p className={card.priceLine} data-muted={main.muted || undefined}>
+        <p className={card.priceLine}>
           <strong>{main.value}</strong>
-          {!main.muted && <span>{main.label}</span>}
+          <span>{main.label}</span>
         </p>
       )}
       {side && (
