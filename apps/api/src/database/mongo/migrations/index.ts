@@ -23,6 +23,7 @@ import { directOrderIssueEvidenceMigration, directOrderIssueEvidenceSpec } from 
 import { createExchangeProportionalDepositsMigration, withProportionalExchangeDeposits } from './0086-exchange-proportional-deposits.js';
 import { createLegacyFundedExchangeDepositCompatMigration, withLegacyFundedExchangeDepositCompat } from './0087-exchange-legacy-funded-deposit-compat.js';
 import { createExchangeDisputeCompensationMigration, withExchangeDisputeCompensation } from './0088-exchange-dispute-compensation.js';
+import { createExchangePartialCompensationValidatorMigration, withExchangePartialCompensationValidator } from './0096-exchange-partial-compensation-validator.js';
 import { restoreFundedExchangeTermsMigration } from './0089-restore-funded-exchange-terms.js';
 import { createSaleSettlementNotificationMigration, withSaleSettlementNotification } from './0090-sale-settlement-notification.js';
 import { createPurchaseOrderNotificationsMigration, withPurchaseOrderNotifications } from './0091-purchase-order-notifications.js';
@@ -600,7 +601,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
 
 export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals).map(withWithdrawalProofReference), registrationSpec, ...withdrawalProofSpecs].map((spec) =>
   onlinePriceSpecs.some(({ name }) => name === spec.name) ? withOnlinePriceCatalogRevision(spec) : spec,
-).map(withExchangeReturnResolution).map(withExchangeOutboundDeliveryVerification).map(withExchangeDemoArchive).map(withExchangeInspectionVerdict).map(withProportionalExchangeDeposits).map(withLegacyFundedExchangeDepositCompat).map(withExchangeDisputeCompensation).map((spec) =>
+).map(withExchangeReturnResolution).map(withExchangeOutboundDeliveryVerification).map(withExchangeDemoArchive).map(withExchangeInspectionVerdict).map(withProportionalExchangeDeposits).map(withLegacyFundedExchangeDepositCompat).map(withExchangeDisputeCompensation).map(withExchangePartialCompensationValidator).map((spec) =>
   spec.name === 'point_orders' ? demoPointOrderSettlementMigration.definition.collections[0] : spec,
 ).map(withDirectOrderDeliveryJourney).map(withSaleSettlementNotification).map(withPurchaseOrderNotifications).map(withListingOrderIntakeNotifications).map(withSplitShippingPolicies).concat(directDeliveryJourneySpec, directOrderIssueEvidenceSpec);
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
@@ -720,7 +721,8 @@ const exchangeProportionalDepositsMigration = createExchangeProportionalDeposits
 migrations.push(exchangeProportionalDepositsMigration);
 const exchangeLegacyDepositCompatMigration = createLegacyFundedExchangeDepositCompatMigration(exchangeProportionalDepositsMigration.definition.collections[0]);
 migrations.push(exchangeLegacyDepositCompatMigration);
-migrations.push(createExchangeDisputeCompensationMigration(exchangeLegacyDepositCompatMigration.definition.collections[0]));
+const exchangeDisputeCompensationMigration = createExchangeDisputeCompensationMigration(exchangeLegacyDepositCompatMigration.definition.collections[0]);
+migrations.push(exchangeDisputeCompensationMigration);
 migrations.push(restoreFundedExchangeTermsMigration);
 const saleSettlementNotificationMigration = createSaleSettlementNotificationMigration(
   auctionDepositShareMigration.definition.collections.find(spec => spec.name === 'member_notifications')!,
@@ -739,3 +741,8 @@ migrations.push(createSplitShippingPoliciesMigration(
 ));
 migrations.push(auctionDeliveryProvincesMigration);
 migrations.push(vietnam63ProvincesMigration);
+migrations.push(
+  createExchangePartialCompensationValidatorMigration(
+    exchangeDisputeCompensationMigration.definition.collections[0],
+  ),
+);
