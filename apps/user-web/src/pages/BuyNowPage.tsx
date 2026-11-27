@@ -33,8 +33,7 @@ import {
 import { PurchaseDialog } from "../components/PurchaseDialog";
 import { PurchaseAddressFields } from "../components/PurchaseAddressFields";
 import styles from "./PurchaseFlow.module.css";
-import exchangeStyles from "./ExchangeDetailPage.module.css";
-import stepStyles from "../components/exchange/ExchangeSteps/ExchangeSteps.module.css";
+import dealStyles from "./DealSheet.module.css";
 
 const addressSchema = z.object({
   id: z.string().uuid(),
@@ -283,7 +282,7 @@ function BuyNowListing() {
 
   if (auth.status !== "authenticated")
     return (
-      <div className={exchangeStyles.exchangeSheet}>
+      <div className={dealStyles.exchangeSheet}>
         <h1>Mua ngay</h1>
         <p>
           {auth.status === "loading"
@@ -301,13 +300,13 @@ function BuyNowListing() {
     );
   if (book.isPending)
     return (
-      <div className={exchangeStyles.exchangeSheet} role="status">
+      <div className={dealStyles.exchangeSheet} role="status">
         Đang tải sách…
       </div>
     );
   if (!book.data)
     return (
-      <div className={exchangeStyles.exchangeSheet}>
+      <div className={dealStyles.exchangeSheet}>
         <h1>Chưa tải được sách</h1>
         <p role="alert">Sách có thể đã được gỡ hoặc kết nối đang gián đoạn.</p>
         <button onClick={() => void book.refetch()}>Thử lại</button>
@@ -346,23 +345,23 @@ function BuyNowListing() {
 
   return (
     <div
-      className={exchangeStyles.exchangeSheet}
+      className={dealStyles.exchangeSheet}
       aria-labelledby="buy-now-title"
     >
       <nav
-        className={exchangeStyles.handoverNav}
+        className={dealStyles.handoverNav}
         aria-label="Điều hướng phiếu đặt mua"
       >
-        <Link className={exchangeStyles.proposalBack} to={`/books/${listingId}`}>
+        <Link className={dealStyles.proposalBack} to={`/books/${listingId}`}>
           <ArrowLeft size={18} aria-hidden="true" />
           Xem lại bản sách
         </Link>
-        <span className={exchangeStyles.proposalCode}>
+        <span className={dealStyles.proposalCode}>
           Phiếu #{listingId.slice(0, 8).toUpperCase()}
         </span>
       </nav>
 
-      <header className={exchangeStyles.handoverHeader}>
+      <header className={dealStyles.handoverHeader}>
         <div>
           <h1 id="buy-now-title">
             {prepared ? "Xác nhận đơn mua" : "Mua ngay"}
@@ -376,7 +375,7 @@ function BuyNowListing() {
         </div>
         {item.seller.id !== auth.user.id && (
           <Link
-            className={exchangeStyles.chatLink}
+            className={dealStyles.chatLink}
             to={`/chat/start/${item.id}?intent=Negotiation&openChat=1`}
             style={{ gap: 8, textDecoration: "none" }}
           >
@@ -386,7 +385,7 @@ function BuyNowListing() {
         )}
       </header>
 
-      <nav className={stepStyles.steps} aria-label="Các bước mua sách">
+      <nav className={dealStyles.steps} aria-label="Các bước mua sách">
         <ol>
           {BUY_NOW_STEPS.map(({ id, label }, index) => {
             const active = index === currentStepIdx;
@@ -399,13 +398,13 @@ function BuyNowListing() {
                 data-completed={completed || undefined}
               >
                 <span
-                  className={stepStyles.step}
+                  className={dealStyles.step}
                   aria-current={active ? "step" : undefined}
                 >
-                  <span className={stepStyles.marker} aria-hidden="true">
+                  <span className={dealStyles.marker} aria-hidden="true">
                     {completed ? <Check size={15} strokeWidth={2.6} /> : index + 1}
                   </span>
-                  <span className={stepStyles.label}>{label}</span>
+                  <span className={dealStyles.label}>{label}</span>
                 </span>
               </li>
             );
@@ -413,9 +412,9 @@ function BuyNowListing() {
         </ol>
       </nav>
 
-      <div className={exchangeStyles.proposalWorkspace}>
-        <div className={exchangeStyles.proposalControls}>
-          <div className={exchangeStyles.proposalActions}>
+      <div className={dealStyles.proposalWorkspace}>
+        <div className={dealStyles.proposalControls}>
+          <div className={dealStyles.proposalActions}>
             <strong style={{ display: "block", fontSize: "1rem", marginBottom: 6 }}>
               {prepared
                 ? "Đã sẵn sàng xác nhận đơn mua"
@@ -527,37 +526,37 @@ function BuyNowListing() {
             )}
           </div>
 
-          <div className={exchangeStyles.proposalContact}>
+          <div className={dealStyles.proposalContact}>
             <SupportLink type="Listing" id={item.id} />
           </div>
         </div>
 
-        <div className={exchangeStyles.proposalLayout}>
+        <div className={dealStyles.proposalLayout}>
           <section
             aria-labelledby="buy-now-facts"
-            className={exchangeStyles.fundingBooks}
+            className={dealStyles.fundingBooks}
           >
             <h2 id="buy-now-facts">Phiếu đặt mua sách</h2>
 
-            <div className={exchangeStyles.proposalBooks} data-receive="true">
+            <div className={dealStyles.proposalBooks} data-receive="true">
               <h3>
                 <ArrowDownLeft size={18} aria-hidden="true" />
                 Sách bạn nhận
               </h3>
-              <div className={exchangeStyles.proposalBook}>
+              <div className={dealStyles.proposalBook}>
                 <div aria-hidden="true">
                   <div>
                     <ListingPhoto book={item} />
                   </div>
                 </div>
                 <div>
-                  <strong className={exchangeStyles.proposalBookTitle}>
+                  <strong className={dealStyles.proposalBookTitle}>
                     {listingTitle(item)}
                   </strong>
-                  <span className={exchangeStyles.proposalBookAuthor}>
+                  <span className={dealStyles.proposalBookAuthor}>
                     {item.book.authors.join(", ")}
                   </span>
-                  <span className={exchangeStyles.proposalBookPrice}>
+                  <span className={dealStyles.proposalBookPrice}>
                     {formatVnd(item.salePrice ?? 0)}
                   </span>
                   <details>
@@ -579,13 +578,13 @@ function BuyNowListing() {
               </div>
             </div>
 
-            <div className={exchangeStyles.proposalBooks}>
+            <div className={dealStyles.proposalBooks}>
               <h3>
                 <MapPin size={18} aria-hidden="true" />
                 Địa chỉ & Giao nhận
               </h3>
               <div
-                className={exchangeStyles.proposalBook}
+                className={dealStyles.proposalBook}
                 style={{ paddingBlock: 12 }}
               >
                 <div style={{ display: "none" }} aria-hidden="true" />
@@ -631,7 +630,7 @@ function BuyNowListing() {
           </section>
 
           <section
-            className={exchangeStyles.proposalAmounts}
+            className={dealStyles.proposalAmounts}
             aria-label="Tóm tắt đơn mua"
           >
             <h2>Nếu xác nhận đặt mua</h2>
@@ -663,7 +662,7 @@ function BuyNowListing() {
                 </dd>
               </div>
             </dl>
-            <p className={exchangeStyles.proposalAmountNote}>
+            <p className={dealStyles.proposalAmountNote}>
               {prepared
                 ? "Bấm Đặt mua để tạo đơn và chuyển sang bước thanh toán."
                 : "Chưa giữ sách hay trừ tiền."}

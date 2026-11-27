@@ -139,7 +139,7 @@ input::placeholder,textarea::placeholder{color:var(--shop-muted);opacity:1}
     opacity: 0.55;
   }
 
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"])),
   textarea,
   select {
     font: inherit;
@@ -152,7 +152,7 @@ input::placeholder,textarea::placeholder{color:var(--shop-muted);opacity:1}
     padding: 0.65rem 0.75rem;
   }
 
-  select:not([multiple]):not([size]) {
+  select:where(:not([multiple]):not([size])) {
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;

@@ -45,7 +45,7 @@ import styles from "./ChatPage.module.css";
 import hub from "./ChatHub.module.css";
 import card from "../components/conversation/TransactionCard.module.css";
 import { InfoTip } from "../components/InfoTip";
-import exchangeStyles from "./ExchangeDetailPage.module.css";
+import dealStyles from "./DealSheet.module.css";
 import { getExchanges, type Exchange } from "../services/exchange";
 import { listMyAuctions, type MyAuctionItem } from "../services/auctions";
 import { AuctionPhoto } from "../components/AuctionGallery";
@@ -656,22 +656,22 @@ function ChatRoom({
 
   return (
     <section
-      className={exchangeStyles.exchangeSheet}
+      className={dealStyles.exchangeSheet}
       aria-label={`Cuộc trò chuyện với ${other.displayName}`}
     >
       <nav
-        className={exchangeStyles.handoverNav}
+        className={dealStyles.handoverNav}
         aria-label="Điều hướng phiếu giao dịch"
       >
-        <ConversationBackLink className={exchangeStyles.proposalBack} />
-        <span className={exchangeStyles.proposalCode}>
+        <ConversationBackLink className={dealStyles.proposalBack} />
+        <span className={dealStyles.proposalCode}>
           {room.orderId
             ? `Đơn #${room.orderId.slice(0, 8).toUpperCase()}`
             : `Phiếu #${room.id.slice(0, 8).toUpperCase()}`}
         </span>
       </nav>
 
-      <header className={exchangeStyles.handoverHeader}>
+      <header className={dealStyles.handoverHeader}>
         <div>
           <h1>{headerTitle}</h1>
           <p>
@@ -1602,18 +1602,18 @@ function PendingChatRoom({
 }) {
   return (
     <section
-      className={exchangeStyles.exchangeSheet}
+      className={dealStyles.exchangeSheet}
       aria-label="Đang mở phiếu và hội thoại"
     >
-      <div className={exchangeStyles.handoverNav}>
-        <ConversationBackLink className={exchangeStyles.backLink} />
+      <div className={dealStyles.handoverNav}>
+        <ConversationBackLink className={dealStyles.backLink} />
         {preview?.id && (
-          <span className={exchangeStyles.code}>
+          <span className={dealStyles.code}>
             Phiếu #{preview.id.slice(0, 8).toUpperCase()}
           </span>
         )}
       </div>
-      <header className={exchangeStyles.handoverHeader}>
+      <header className={dealStyles.handoverHeader}>
         <div>
           <h1>{pending ? "Đang mở hội thoại…" : "Chưa mở được hội thoại"}</h1>
           <p>
@@ -1635,7 +1635,7 @@ function PendingChatRoom({
         {!pending && (
           <button
             type="button"
-            className={exchangeStyles.secondaryButton}
+            className={dealStyles.secondaryButton}
             onClick={retry}
           >
             Thử lại

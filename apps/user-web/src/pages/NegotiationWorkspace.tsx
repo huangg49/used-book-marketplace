@@ -83,8 +83,7 @@ import { purchaseChatGuidance } from "../lib/purchase-chat-guidance";
 import { ExchangeOffer } from "../components/conversation/ExchangeOffer";
 import { ExchangeDetailPage } from "./ExchangeDetailPage";
 import styles from "./DirectOrders.module.css";
-import exchangeStyles from "./ExchangeDetailPage.module.css";
-import stepStyles from "../components/exchange/ExchangeSteps/ExchangeSteps.module.css";
+import dealStyles from "./DealSheet.module.css";
 import flow from "./PurchaseFlow.module.css";
 import sheetStyles from "../components/conversation/Conversation.module.css";
 
@@ -807,7 +806,7 @@ export function NegotiationWorkspace({
       )}
 
       {/* 5-Step Horizontal Pill Bar (Clickable for past & current steps, matching ExchangeSteps) */}
-      <nav className={stepStyles.steps} aria-label="Các bước mua sách">
+      <nav className={dealStyles.steps} aria-label="Các bước mua sách">
         <ol>
           {NEGOTIATION_STEPS.map(({ id, label }, index) => {
             const isCurrent = index === activeStepIndex;
@@ -824,28 +823,28 @@ export function NegotiationWorkspace({
                 {canSelect ? (
                   <button
                     type="button"
-                    className={stepStyles.step}
+                    className={dealStyles.step}
                     aria-current={isCurrent ? "step" : undefined}
                     aria-pressed={isSelected}
                     onClick={() =>
                       setViewedStepIndex(index === activeStepIndex ? null : index)
                     }
                   >
-                    <span className={stepStyles.marker} aria-hidden="true">
+                    <span className={dealStyles.marker} aria-hidden="true">
                       {isCompleted ? (
                         <Check size={14} strokeWidth={2.8} aria-hidden="true" />
                       ) : (
                         index + 1
                       )}
                     </span>
-                    <span className={stepStyles.label}>{label}</span>
+                    <span className={dealStyles.label}>{label}</span>
                   </button>
                 ) : (
-                  <span className={stepStyles.step}>
-                    <span className={stepStyles.marker} aria-hidden="true">
+                  <span className={dealStyles.step}>
+                    <span className={dealStyles.marker} aria-hidden="true">
                       {index + 1}
                     </span>
-                    <span className={stepStyles.label}>{label}</span>
+                    <span className={dealStyles.label}>{label}</span>
                   </span>
                 )}
               </li>
@@ -857,25 +856,25 @@ export function NegotiationWorkspace({
       {/* Past-Step History Inspection Banner & Summary */}
       {isViewingHistory && selectedStepMeta ? (
         <section
-          className={stepStyles.history}
+          className={dealStyles.history}
           aria-label={`Lịch sử bước ${selectedStepMeta.label}`}
         >
-          <div className={stepStyles.historyHeader}>
-            <div className={stepStyles.historyHeadingGroup}>
-              <span className={stepStyles.archiveBadge}>
+          <div className={dealStyles.historyHeader}>
+            <div className={dealStyles.historyHeadingGroup}>
+              <span className={dealStyles.archiveBadge}>
                 Đang xem lại lịch sử · Bước {selectedStepIndex + 1}/5
               </span>
-              <h2 className={stepStyles.historyTitle}>
+              <h2 className={dealStyles.historyTitle}>
                 {selectedStepMeta.label}
               </h2>
-              <p className={stepStyles.historyNote}>
+              <p className={dealStyles.historyNote}>
                 Dữ liệu đã ghi nhận ở bước này. Trở về bước hiện tại để tiếp tục
                 thao tác.
               </p>
             </div>
             <button
               type="button"
-              className={stepStyles.backButton}
+              className={dealStyles.backButton}
               onClick={() => setViewedStepIndex(null)}
             >
               <span>
@@ -1005,10 +1004,10 @@ export function NegotiationWorkspace({
         </section>
       ) : (
       /* 2-Column Workspace (Matching ExchangeDetailPage) */
-      <div className={`${exchangeStyles.proposalWorkspace} ${styles.negotiationGrid}`}>
+      <div className={`${dealStyles.proposalWorkspace} ${styles.negotiationGrid}`}>
         {/* RIGHT COLUMN TOP: ACTION BOX */}
-        <div className={exchangeStyles.proposalControls}>
-          <div className={exchangeStyles.proposalActions}>
+        <div className={dealStyles.proposalControls}>
+          <div className={dealStyles.proposalActions}>
             {orderData ? (
               <>
                 <div
@@ -2025,10 +2024,10 @@ export function NegotiationWorkspace({
         </div>
 
         {/* LEFT COLUMN (FACTS) + RIGHT COLUMN BOTTOM (AMOUNTS) */}
-        <div className={exchangeStyles.proposalLayout}>
+        <div className={dealStyles.proposalLayout}>
           <section
             aria-labelledby="negotiation-facts"
-            className={`${exchangeStyles.fundingBooks} ${styles.negotiationFactsCol}`}
+            className={`${dealStyles.fundingBooks} ${styles.negotiationFactsCol}`}
           >
             <h2 id="negotiation-facts">
               {orderData ? "Phiếu đặt mua sách" : "Phiếu thương lượng mua sách"}
@@ -2036,7 +2035,7 @@ export function NegotiationWorkspace({
 
             {/* Card 1: Book Card (Portrait 3:4 uncropped cover + clean metadata) */}
             <div
-              className={exchangeStyles.proposalBooks}
+              className={dealStyles.proposalBooks}
               data-receive={isBuyer ? "true" : undefined}
             >
               <h3>
@@ -2056,12 +2055,12 @@ export function NegotiationWorkspace({
                   )}
                 </div>
                 <div className={styles.buyNowBookMeta}>
-                  <h4 className={exchangeStyles.proposalBookTitle}>
+                  <h4 className={dealStyles.proposalBookTitle}>
                     {orderData
                       ? orderData.item.bundle?.title || orderData.item.metadata.title
                       : book?.bundle?.title || book?.book.title || "Đang tải thông tin sách…"}
                   </h4>
-                  <span className={exchangeStyles.proposalBookAuthor}>
+                  <span className={dealStyles.proposalBookAuthor}>
                     {orderData
                       ? `Người bán: ${seller ? "Bạn" : room.seller.displayName}`
                       : book?.book.authors?.join(", ") || "Tác giả"}
@@ -2071,7 +2070,7 @@ export function NegotiationWorkspace({
                     : orderData
                       ? orderData.amounts.bookPrice
                       : book?.salePrice) != null && (
-                    <span className={exchangeStyles.proposalBookPrice}>
+                    <span className={dealStyles.proposalBookPrice}>
                       {formatVnd(
                         (isExchange
                           ? book?.exchangeValue ?? book?.salePrice
@@ -2100,7 +2099,7 @@ export function NegotiationWorkspace({
             </div>
 
             {/* Card 2: Delivery & Listing Info Card (Dedicated clean layout, no CSS summary conflict) */}
-            <div className={`${exchangeStyles.proposalBooks} ${styles.deliveryInfoCard}`}>
+            <div className={`${dealStyles.proposalBooks} ${styles.deliveryInfoCard}`}>
               <h3>
                 <MapPin size={18} aria-hidden="true" />
                 Địa chỉ &amp; Giao nhận
@@ -2232,7 +2231,7 @@ export function NegotiationWorkspace({
           </section>
 
           {isExchange ? (
-            <div className={exchangeStyles.proposalAmounts}>
+            <div className={dealStyles.proposalAmounts}>
               <ExchangeFinanceSummary
                 id={exchangeSummaryId}
                 userId={userId}
@@ -2244,7 +2243,7 @@ export function NegotiationWorkspace({
             </div>
           ) : (
             <section
-              className={exchangeStyles.proposalAmounts}
+              className={dealStyles.proposalAmounts}
               aria-labelledby="negotiation-amounts"
             >
               <h2 id="negotiation-amounts">
@@ -2276,10 +2275,10 @@ export function NegotiationWorkspace({
                   </dd>
                 </div>
               </dl>
-              {saleClosed ? <p className={exchangeStyles.proposalAmountNote}>Đơn đã đóng. Không thu phí dịch vụ.</p> : sellerAmounts ? (
+              {saleClosed ? <p className={dealStyles.proposalAmountNote}>Đơn đã đóng. Không thu phí dịch vụ.</p> : sellerAmounts ? (
                 <SaleFeeBreakdown amounts={sellerAmounts} settled={orderData?.state === "Completed"} />
               ) : isBuyer ? (
-                <p className={exchangeStyles.proposalAmountNote}>{buyerSaleFeeText(orderData?.amounts.commissionBps ?? room.quotePreview?.commissionBps)}</p>
+                <p className={dealStyles.proposalAmountNote}>{buyerSaleFeeText(orderData?.amounts.commissionBps ?? room.quotePreview?.commissionBps)}</p>
               ) : null}
               <p className={styles.paymentFooterNote}>
                 <Clock size={14} aria-hidden="true" />
