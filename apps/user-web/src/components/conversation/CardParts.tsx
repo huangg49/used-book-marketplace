@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Clock3 } from "lucide-react";
-import type { Stats } from "./transaction-status";
+import type { Fact } from "./transaction-status";
 import card from "./TransactionCard.module.css";
 
 /**
@@ -47,20 +47,25 @@ export function NextStep({ children }: { children: ReactNode }) {
   );
 }
 
-/** The key figure, large, with at most one small fact on the right. */
-export function StatsRow({ stats }: { stats: Stats }) {
+/**
+ * The figures under the book: the key amount large with its label, and the
+ * one small fact (a time, a deposit, the bidder count) on a quiet line below.
+ */
+export function Figures({ main, side }: { main?: Fact; side?: Fact }) {
   return (
-    <dl className={card.stats}>
-      <div className={card.statMain}>
-        <dt>{stats.main.label}</dt>
-        <dd>{stats.main.value}</dd>
-      </div>
-      {stats.side && (
-        <div className={card.statSide}>
-          <dt>{stats.side.icon && <stats.side.icon size={13} aria-hidden="true" />}{stats.side.label}</dt>
-          <dd><span className={card.stamp}>{stats.side.value}</span></dd>
-        </div>
+    <>
+      {main && (
+        <p className={card.priceLine} data-muted={main.muted || undefined}>
+          <strong>{main.value}</strong>
+          {!main.muted && <span>{main.label}</span>}
+        </p>
       )}
-    </dl>
+      {side && (
+        <p className={card.sideLine}>
+          {side.icon && <side.icon size={13} aria-hidden="true" />}
+          {side.label} <span className={card.stamp}>{side.value}</span>
+        </p>
+      )}
+    </>
   );
 }

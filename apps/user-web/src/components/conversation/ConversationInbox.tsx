@@ -18,8 +18,8 @@ import { useNearViewport } from "../../hooks/useNearViewport";
 import card from "./TransactionCard.module.css";
 import { PartnerChip } from "./PartnerChip";
 import { ExchangeCard } from "./ExchangeCard";
-import { BookTitle, NextStep, StatsRow } from "./CardParts";
-import { conversationNext, conversationStats, conversationRoles, conversationStatus, shortDate } from "./transaction-status";
+import { BookTitle, Figures, NextStep } from "./CardParts";
+import { conversationNext, conversationStats, conversationRoles, conversationStatus, dayMonth, shortDate } from "./transaction-status";
 
 export function ConversationCard({
   room,
@@ -60,6 +60,7 @@ export function ConversationCard({
   const roles = conversationRoles(room, userId);
   const partner = roles.partner;
   const status = conversationStatus(room, userId);
+  const stats = conversationStats(room, visibleBook?.salePrice);
   return (
     <article
       ref={ref}
@@ -107,12 +108,12 @@ export function ConversationCard({
               </button>
             </div>
           )}
+          <Figures main={stats.main} side={stats.side} />
         </div>
       </div>
-      <StatsRow stats={conversationStats(room, visibleBook?.salePrice)} />
       <NextStep>{conversationNext(room, userId)}</NextStep>
       <div className={card.foot}>
-        <span className={card.footNote}>{roles.mine} · <time dateTime={room.createdAt}>{shortDate(room.createdAt)}</time></span>
+        <span className={card.footNote}>{roles.mine} · <time dateTime={room.createdAt} title={shortDate(room.createdAt)}>{dayMonth(room.createdAt)}</time></span>
         <Link
           className={card.go}
           data-stretch

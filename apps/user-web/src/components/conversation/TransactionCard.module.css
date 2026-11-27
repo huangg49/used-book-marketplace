@@ -4,15 +4,15 @@
    are opaque gradients so the page backdrop never shows through. */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
 .grid > * { min-width: 0; }
-/* Line cards up across a row: each card's five parts (pills, book, next step,
-   facts, footer) share the row's tracks through subgrid, so the same part
-   starts at the same height on every card in the row. */
-.grid > li { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 0; }
+/* Line cards up across a row: each card's four parts (kind + status, book +
+   price, next step, footer) share the row's tracks through subgrid, so the
+   same part starts at the same height on every card in the row. */
+.grid > li { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; }
 .grid > li > .card { grid-row: 1 / -1; grid-template-rows: subgrid; }
 
 .card {
   --tone: #7c1a17; --tone-bg: #5c020212; --tone-wash: rgba(124, 26, 23, .1); --tone-edge: linear-gradient(135deg, #b0461a, #f0c9a0 55%, #7c1a17);
-  position: relative; display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 14px; height: 100%; box-sizing: border-box;
+  position: relative; display: grid; grid-template-rows: auto 1fr auto auto; gap: 14px; height: 100%; box-sizing: border-box;
   padding: 16px 18px 14px; border: 1.5px solid transparent; border-radius: 18px; color: var(--shop-ink);
   background:
     radial-gradient(120% 90% at 100% 0%, var(--tone-wash), transparent 55%) padding-box,
@@ -86,16 +86,6 @@ a.partner:hover .partnerName { color: var(--shop-wine); text-decoration-color: c
 .callout button { margin-left: auto; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 
 
-/* Key figure: one large number, at most one small fact on the right. */
-.stats { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0; padding-top: 2px; }
-.stats > div { min-width: 0; }
-.stats dt { color: var(--shop-muted); font-size: .75rem; line-height: 1.4; }
-.stats dd { margin: 0; }
-.statMain dd { color: var(--shop-wine); font: 400 1.45rem/1.15 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
-.statSide { display: grid; justify-items: end; gap: 2px; text-align: right; }
-.statSide dt { display: inline-flex; align-items: center; gap: 4px; }
-.statSide dt svg { color: var(--tone); }
-.statSide dd { color: var(--shop-ink); font-size: .9rem; }
 /* Highlighted times and small values: a soft, full-height tint behind the text. */
 .stamp { display: inline-block; padding: 0 7px; border-radius: 6px; background: rgba(244, 203, 103, .38); box-shadow: inset 0 0 0 1px rgba(201, 138, 46, .28); font-weight: 600; line-height: 1.55; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* On the amber "needs you" box the highlighter would vanish: use a cream chip. */
@@ -103,8 +93,22 @@ a.partner:hover .partnerName { color: var(--shop-wine); text-decoration-color: c
 .card[data-tone="closed"] .stamp { background: rgba(120, 105, 95, .12); box-shadow: inset 0 0 0 1px rgba(120, 105, 95, .2); }
 .card[data-tone="complete"] .stamp { background: rgba(46, 125, 86, .12); box-shadow: inset 0 0 0 1px rgba(46, 125, 86, .22); }
 
-.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px dashed #5c020224; }
-.footNote { color: var(--shop-muted); font-size: .8rem; line-height: 1.4; }
+/* Key figure under the book: amount in the display face, label after it. */
+.priceLine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 10px 0 0; }
+.priceLine strong { color: var(--shop-wine); font: 400 1.4rem/1.1 var(--shop-display, "Anton", sans-serif); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.priceLine span { color: var(--shop-muted); font-size: .78rem; }
+.priceLine[data-muted] strong { color: var(--shop-muted); font: 500 .88rem/1.4 var(--shop-body); letter-spacing: 0; }
+
+/* The small fact under the price: icon, label and a highlighted value. */
+.sideLine { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 6px 0 0; color: var(--shop-muted); font-size: .78rem; line-height: 1.5; }
+.sideLine svg { flex: none; color: var(--tone); }
+.sideLine .stamp { color: var(--shop-ink); font-size: .8rem; }
+
+/* Footer: meta on the left (wraps), the button pinned right on one line. */
+.foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px dashed #5c020224; }
+.foot > :last-child { justify-self: end; }
+.go, .ghost { white-space: nowrap; }
+.footNote { overflow: hidden; color: var(--shop-muted); font-size: .8rem; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
 .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
 .go, .ghost { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 10px; font-size: .84rem; font-weight: 700; text-decoration: none; transition: translate .2s cubic-bezier(.2, .7, .2, 1), box-shadow .2s; }
 .go { background: linear-gradient(180deg, #7c1a17, #5c0202); color: #fffcf5; box-shadow: inset 0 1px 0 #ffffff26; }

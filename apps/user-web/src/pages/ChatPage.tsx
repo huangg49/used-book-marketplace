@@ -3,8 +3,8 @@ import { ConversationCard, LegacyCard } from "../components/conversation/Convers
 import { SelectMenu } from "../components/SelectMenu";
 import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { ExchangeCard } from "../components/conversation/ExchangeCard";
-import { BookTitle, NextStep, StatsRow } from "../components/conversation/CardParts";
-import { auctionNext, auctionStats, auctionStatus, conversationStatus, exchangeStatus, shortDate } from "../components/conversation/transaction-status";
+import { BookTitle, Figures, NextStep } from "../components/conversation/CardParts";
+import { auctionNext, auctionStats, auctionStatus, conversationStatus, exchangeStatus, dayMonth, shortDate } from "../components/conversation/transaction-status";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
 import {
   useConversationTransition,
@@ -1000,6 +1000,7 @@ function AuctionCard({
   const winnerOrder = item.role === "Bidder" && item.won;
   const destination = winnerOrder ? `${ROUTES.auctionOrder(auction.id)}?from=chat` : ROUTES.auctionDetail(auction.id);
   const status = auctionStatus(item, serverTime);
+  const stats = auctionStats(item);
   return (
     <article className={card.card} data-tone={status.tone} style={{ "--i": index } as CSSProperties}>
       <div className={card.top}>
@@ -1021,13 +1022,13 @@ function AuctionCard({
           <p className={card.who}>
             <MapPin size={14} aria-hidden="true" /> {auction.pointName}
           </p>
+          <Figures main={stats.main} side={stats.side} />
         </div>
       </div>
-      <StatsRow stats={auctionStats(item)} />
       <NextStep>{auctionNext(item, serverTime)}</NextStep>
       <div className={card.foot}>
         <span className={card.footNote}>
-          {item.role === "Seller" ? "Bạn bán" : "Bạn mua"} · mở {shortDate(auction.startAt)}
+          {item.role === "Seller" ? "Bạn bán" : "Bạn mua"} · mở <time dateTime={auction.startAt} title={shortDate(auction.startAt)}>{dayMonth(auction.startAt)}</time>
         </span>
         <Link className={card.go} data-stretch to={destination} aria-label={`${winnerOrder ? "Mở đơn đấu giá" : "Xem phiên"}: ${auction.title}`}>
           {winnerOrder ? "Mở đơn" : "Xem phiên"} <ArrowUpRight size={15} aria-hidden="true" />

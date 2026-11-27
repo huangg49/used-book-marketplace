@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { ArrowLeftRight, ArrowUpRight } from "lucide-react";
 import type { Exchange } from "../../services/exchange";
 import { PartnerChip } from "./PartnerChip";
-import { BookTitle, NextStep, StatsRow } from "./CardParts";
-import { exchangeNext, exchangeStats, exchangePartner, exchangeStatus, shortDate } from "./transaction-status";
+import { BookTitle, Figures, NextStep } from "./CardParts";
+import { exchangeNext, exchangeStats, exchangePartner, exchangeStatus, dayMonth, shortDate } from "./transaction-status";
 import card from "./TransactionCard.module.css";
 
 /**
@@ -28,6 +28,7 @@ export function ExchangeCard({ exchange, userId, index, title, open, conversatio
   const partner = exchangePartner(exchange, userId);
   const partnerId = exchange.agreement ? (exchange.initiatorId === userId ? exchange.recipientId : exchange.initiatorId) : undefined;
   const mine = exchange.initiatorId === userId;
+  const stats = exchangeStats(exchange, userId);
   return (
     <article
       className={card.card}
@@ -49,12 +50,12 @@ export function ExchangeCard({ exchange, userId, index, title, open, conversatio
         <div>
           <BookTitle text={title} />
           <PartnerChip id={partnerId} name={partner} role={mine ? "Chủ sách" : "Người đề nghị đổi"} />
+          <Figures main={stats.main} side={stats.side} />
         </div>
       </div>
-      <StatsRow stats={exchangeStats(exchange, userId)} />
       <NextStep>{exchangeNext(exchange)}</NextStep>
       <div className={card.foot}>
-        <span className={card.footNote}>{mine ? "Bạn đề nghị" : "Bạn nhận đề nghị"} · <time dateTime={exchange.createdAt}>{shortDate(exchange.createdAt)}</time></span>
+        <span className={card.footNote}>{mine ? "Bạn đề nghị" : "Bạn nhận đề nghị"} · <time dateTime={exchange.createdAt} title={shortDate(exchange.createdAt)}>{dayMonth(exchange.createdAt)}</time></span>
         <span className={card.actions}>
           {conversationHref && (
             <Link className={card.ghost} to={conversationHref} viewTransition>Hội thoại</Link>

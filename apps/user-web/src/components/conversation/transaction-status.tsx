@@ -15,15 +15,19 @@ import card from "./TransactionCard.module.css";
  */
 export type StatusTone = "attention" | "progress" | "complete" | "closed";
 export type StatusInfo = { label: string; tone: StatusTone };
-export type Fact = { label: string; value: ReactNode; icon?: LucideIcon };
-/** The card's key figure, plus at most one small fact beside it. */
-export type Stats = { main: Fact; side?: Fact };
+export type Fact = { label: string; value: ReactNode; icon?: LucideIcon; /** Not an amount: show as plain text. */ muted?: boolean };
+/** The card's key figure (under the book) and one small fact (in the footer). */
+export type Stats = { main?: Fact; side?: Fact };
 
 export function shortDate(value: string) {
   return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
 }
 export function dateTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+/** Day and month only, for the card footer (the full date is in its title). */
+export function dayMonth(value: string) {
+  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit" }).format(new Date(value));
 }
 /** Time + day without the year, for deadlines inside a card. */
 export function shortDateTime(value: string) {
@@ -87,12 +91,13 @@ export function conversationNext(room: PurchaseConversation, userId: string): Re
 export function conversationStats(room: PurchaseConversation, listedPrice?: number | null): Stats {
   const pending = room.terms?.pendingProposal;
   const agreed = room.terms?.agreedPrice;
-  const main: Fact =
-    pending?.kind === "Price" && pending.amount != null ? { label: "Giá đề nghị", value: formatVnd(pending.amount) }
-      : agreed != null ? { label: "Giá đã chốt", value: formatVnd(agreed) }
-        : room.terms?.mode === "Exchange" ? { label: "Hình thức", value: "Đổi sách" }
-          : listedPrice != null ? { label: "Giá niêm yết", value: formatVnd(listedPrice) }
-            : { label: "Giá", value: "Chưa chốt" };
+  // A swap conversation has no price to show: the kind already says "Đổi sách".
+  const main: Fact | undefined =
+    pending?.kind === "Price" && pending.amount != null ? { label: "giá đề nghị", value: formatVnd(pending.amount) }
+      : agreed != null ? { label: "giá đã chốt", value: formatVnd(agreed) }
+        : room.terms?.mode === "Exchange" ? undefined
+          : listedPrice != null ? { label: "giá niêm yết", value: formatVnd(listedPrice) }
+            : { label: "giá", value: "Chưa chốt giá", muted: true };
   const side: Fact | undefined =
     room.status === "Active" && room.expiresAt ? { label: "Mở đến", value: shortDateTime(room.expiresAt), icon: Clock3 }
       : room.closedAt ? { label: "Đóng lúc", value: shortDateTime(room.closedAt), icon: Clock3 }
@@ -155,8 +160,8 @@ export function exchangeStats(exchange: Exchange, userId: string): Stats {
   const deposit = exchange.initiatorId === userId ? exchange.initiatorDeposit : exchange.recipientDeposit;
   return {
     main: exchange.diffAmount > 0
-      ? { label: "Tiền bù", value: formatVnd(exchange.diffAmount) }
-      : { label: "Tiền bù", value: "Không" },
+      ? { label: "tiền bù", value: formatVnd(exchange.diffAmount) }
+      : { label: "tiền bù", value: "Không bù tiền", muted: true },
     side: { label: "Cọc của bạn", value: formatVnd(deposit), icon: Wallet },
   };
 }
@@ -222,7 +227,7 @@ export function auctionNext(item: MyAuctionItem, serverTime: string): ReactNode 
 /** Key figure: the price; beside it, how many people bid. */
 export function auctionStats(item: MyAuctionItem): Stats {
   const auction = item.auction;
-  const label = auction.currentPrice === null ? "Giá khởi điểm" : auction.state === "Sold" ? "Giá chốt" : "Giá hiện tại";
+  const label = auction.currentPrice === null ? "giá khởi điểm" : auction.state === "Sold" ? "giá chốt" : "giá hiện tại";
   return {
     main: { label, value: formatVnd(auction.currentPrice ?? auction.startPrice) },
     side: { label: "Người trả giá", value: auction.bidderCount, icon: Users },
