@@ -1,3 +1,32 @@
+# Nâng cấp UI trang Danh sách & Chi tiết Đấu giá Web — 28/11/2026
+
+- Nhánh `feat/auction-detail-redesign`, nền `0b6fb829` (đã nằm trong `origin/main`).
+  Làm mới giao diện `apps/user-web` cho `/auctions` (`AuctionListPage`,
+  `AuctionCard`) và `/auctions/:id` (`AuctionDetailPage`, `AuctionFormatPanels`,
+  `AuctionGallery`, `AuctionActionDialog`, `AutoBidDialog`, `AuctionFlag`) cùng
+  `AuctionPrice` (number ticker lăn chữ số) và minh họa SVG riêng cho hai trang.
+  Giữ nguyên API/OpenAPI, trạng thái/luồng sẵn có (`DemoSkipButton`, focus ring
+  `focus.css`, `forced-colors`, quy tắc motion chủ dự án).
+  - `/auctions/:id`: nền `AccountBackdrop`, thẻ đục viền gradient theo trạng thái,
+    carousel ảnh + lightbox, lịch sử giá dùng avatar + mốc mili-giây có cuộn,
+    đồng hồ đếm ngược tĩnh và bảng trả giá gọn, modal `Báo cáo sự cố` / `Báo cáo
+    nội dung` mở tại chỗ (dùng `SelectMenu`, phân biệt 5 lý do cho người tham gia
+    vs 4 lý do cho người chưa tham gia, không vượt quyền `TransactionIssue`), phân
+    biệt rõ `Mua ngay` (`Chốt ngay` vs `Chờ thách đấu`).
+  - `/auctions`: nền `AccountBackdrop`, header gọn + `InfoTip` + tranh SVG, thanh
+    tìm/lọc/sắp xếp cùng chiều cao `46px`, `SelectMenu` cho điểm nhận sách, thẻ
+    đấu giá có carousel nhiều ảnh, phân biệt rõ `Mua ngay` (`Chốt phiên ngay` vs
+    `Chờ thách đấu 5p` vs `Không có mua ngay`), nhãn archival gọn, nút nhảy nhanh
+    `Đang nhận đăng ký` và nhãn phân trang gọn (`Hiển thị 1–8 trong 9 phiên`).
+- PASS `typecheck` user-web, `oxlint` 9 file `.tsx` sửa đổi (`0` warning/`0`
+  error), Vitest user-web `62/62` file (`516/516` ca, gồm 4 ca `AuctionFlag`),
+  `vite build`, và 6 suite Playwright: `auction-live-fallback` (`7/7`),
+  `auction-photo-visibility` (`6/6`), `auction-stage`, `auction-countdown`,
+  `auction-input`, `auction-filter-route-params` (`42` ca), `git diff --check`.
+  Kiểm trực quan live preview Chromium (`1280×900`, `360×800`, dữ liệu mô phỏng
+  ngoài repo): không tràn ngang, không lỗi console. NOT RUN: API/Mongo/Socket.IO
+  thật, native RN, Safari/thiết bị thật.
+
 # Đồng bộ tiêu đề Admin/Staff — 28/11/2026
 
 - Nhánh `codex/admin-page-headings`, nền `533b6e10`. Dùng `PageHeading` và

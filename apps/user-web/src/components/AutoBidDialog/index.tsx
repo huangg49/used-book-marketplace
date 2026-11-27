@@ -1,10 +1,11 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, CircleCheck, Lock, X, Zap } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Lock, ShieldCheck, TrendingUp, Wallet, X, Zap } from 'lucide-react'
 import { formatVnd } from '../../lib/routes'
 import { AUCTION_MAX_PRICE, AUCTION_PRICE_DIGITS } from '../../services/auctions'
-import styles from './AutoBidDialog.module.css'
 import { lockPageScroll } from '../../lib/page-scroll'
 import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
+import { InfoTip } from '../InfoTip'
+import styles from './AutoBidDialog.module.css'
 
 interface AutoBidDialogProps {
   isOpen: boolean
@@ -35,20 +36,31 @@ function amountError(amount: number | null, floor: number, start: number, step: 
   return null
 }
 
-/** Hộp thoại hai bước: nhập mức tối đa, rồi xác nhận ở màn hình sau. */
+/** Hộp thoại hai bước: nhập mức tối đa, rồi xác nhận theo mốc diễn biến. */
 export function AutoBidDialog(props: AutoBidDialogProps) {
-  const { isOpen, paused = false, onClose, title, pointName, currentPrice, startPrice, step, floor, currentMax, busy, submissionError, onConfirm } = props
+  const {
+    isOpen, paused = false, onClose, title, pointName, currentPrice, startPrice, step,
+    floor, currentMax, busy, submissionError, onConfirm,
+  } = props
   const ref = useRef<HTMLDialogElement>(null)
+  const openerRef = useRef<HTMLElement | null>(null)
   const prepared = useRef(false)
   const confirmationHeading = useRef<HTMLHeadingElement>(null)
   const ids = useId()
   const [value, setValue] = useState<number | null>(floor)
   const [stage, setStage] = useState<'form' | 'confirm'>('form')
   const error = amountError(value, floor, startPrice, step)
-  useEffect(() => isOpen && !paused ? lockPageScroll() : undefined, [isOpen, paused])
+  const unchanged = currentMax !== null && value === currentMax
+  const delta = currentMax !== null && value !== null && value > currentMax ? value - currentMax : null
+  const isEditing = currentMax !== null
+
+  useEffect(() => (isOpen && !paused ? lockPageScroll() : undefined), [isOpen, paused])
+
   useLayoutEffect(() => {
     if (isOpen && !paused && stage === 'confirm') confirmationHeading.current?.focus()
-    else if (isOpen && !paused && stage === 'form' && ref.current?.open) ref.current.querySelector<HTMLInputElement>('input')?.focus()
+    else if (isOpen && !paused && stage === 'form' && ref.current?.open) {
+      ref.current.querySelector<HTMLInputElement>('input')?.focus()
+    }
   }, [isOpen, paused, stage])
 
   useEffect(() => {
@@ -56,9 +68,15 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
     if (!dialog) return
     if (!isOpen) prepared.current = false
     if (isOpen && !paused && !dialog.open) {
+      openerRef.current = document.activeElement as HTMLElement | null
       if (!prepared.current) { setValue(floor); setStage('form'); prepared.current = true }
       dialog.showModal()
-      return playAuctionMotion(dialog, sheetFrames, 220)
+      const stop = playAuctionMotion(dialog, sheetFrames, 220)
+      return () => {
+        stop()
+        if (dialog.open) dialog.close()
+        if (openerRef.current?.isConnected) openerRef.current.focus({ preventScroll: true })
+      }
     }
     if ((!isOpen || paused) && dialog.open) dialog.close()
     // A real reopen starts at the latest floor; role recovery keeps the draft.
@@ -79,46 +97,71 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
     <dialog ref={ref} data-lenis-prevent="true" className={styles.dialog} aria-labelledby={`${ids}-title`}>
       <div className={styles.sheet}>
         <header className={styles.header} data-focus-inverse>
+          <span className={styles.badge} aria-hidden="true"><Zap size={20} /></span>
           <span className={styles.heading}>
-            <strong id={`${ids}-title`}><Zap size={20} aria-hidden="true" /> Đặt giá tự động</strong>
-            <small>cho {title}</small>
+            <strong id={`${ids}-title`}>{isEditing ? 'Nâng mức tự động' : 'Đặt giá tự động'}</strong>
+            <small>{title}</small>
           </span>
           <button type="button" className={styles.close} onClick={onClose} disabled={busy} aria-label="Đóng">
-            <X size={22} aria-hidden="true" />
+            <X size={20} aria-hidden="true" />
           </button>
         </header>
 
         {stage === 'form' ? (
-          <div key="form" className={styles.body}>
-            <section className={styles.how}>
-              <h3>Cách đặt giá tự động hoạt động</h3>
-              <p>
-                Hệ thống trả giá thay bạn đến mức tối đa bạn chọn. Giá chỉ tăng vừa đủ để bạn dẫn, không nhảy thẳng
-                lên mức tối đa.
-              </p>
-              <ul>
-                <li><CircleCheck size={16} aria-hidden="true" /> Giữ vị trí dẫn mà không cần theo dõi liên tục</li>
-                <li><CircleCheck size={16} aria-hidden="true" /> Chỉ trả cao hơn người khác đúng một bước {formatVnd(step)}</li>
-                <li><CircleCheck size={16} aria-hidden="true" /> Chỉ bạn thấy mức tối đa của mình</li>
-                <li><CircleCheck size={16} aria-hidden="true" /> Có thể nâng mức hoặc tắt tự động khi phiên còn mở</li>
-              </ul>
-            </section>
-
-            <div className={styles.tiles}>
-              <div className={styles.tile}>
-                <span>Giá hiện tại</span>
-                <strong>{formatVnd(currentPrice)}</strong>
+          <>
+            <div key="form" className={styles.body}>
+              <div className={styles.sectionHead}>
+                <span>Cách hoạt động</span>
+                <InfoTip label="Quy tắc đặt giá tự động">
+                  <ul>
+                    <li>Hệ thống trả thay bạn cao hơn người khác <strong>đúng 1 bước ({formatVnd(step)})</strong>, không nhảy thẳng lên mức tối đa.</li>
+                    <li><strong>Chỉ bạn thấy</strong> mức tối đa; bạn có thể nâng mức hoặc tắt khi phiên còn mở.</li>
+                    <li>Khi dẫn giá, Ví tạm giữ mức cam kết và <mark>tự hoàn lại ngay</mark> nếu có người trả cao hơn.</li>
+                  </ul>
+                </InfoTip>
               </div>
-              <button type="button" className={`${styles.tile} ${styles.tileAlt}`} onClick={() => setValue(floor)} aria-label={`Dùng mức thấp nhất ${formatVnd(floor)}`}>
-                <span>{currentMax !== null ? 'Nâng từ' : 'Đặt từ'}</span>
-                <strong>{formatVnd(floor)}</strong>
-              </button>
-            </div>
-            {currentMax !== null && <p className={styles.mine}>Mức tối đa hiện tại của bạn: <strong>{formatVnd(currentMax)}</strong></p>}
 
-            <div className={styles.entry}>
+              <ol className={styles.miniFlow} aria-label="Tóm tắt 3 bước đặt giá tự động">
+                <li>
+                  <span className={styles.miniDot} aria-hidden="true"><Zap size={13} /></span>
+                  <span>Chọn mức <b>tối đa</b></span>
+                </li>
+                <li>
+                  <span className={styles.miniDot} aria-hidden="true"><TrendingUp size={13} /></span>
+                  <span>Tự trả <b>+{formatVnd(step)}</b></span>
+                </li>
+                <li data-result="true">
+                  <span className={styles.miniDot} aria-hidden="true"><ShieldCheck size={13} /></span>
+                  <span>Bí mật &amp; tự hoàn</span>
+                </li>
+              </ol>
+
+              <div className={styles.tiles}>
+                <div className={styles.tile}>
+                  <span>Giá hiện tại</span>
+                  <strong>{formatVnd(currentPrice)}</strong>
+                </div>
+                <button
+                  type="button"
+                  className={`${styles.tile} ${styles.tileAlt}`}
+                  onClick={() => setValue(floor)}
+                  aria-label={`Dùng mức thấp nhất ${formatVnd(floor)}`}
+                >
+                  <span>{isEditing ? 'Nâng từ' : 'Đặt từ'}</span>
+                  <strong>{formatVnd(floor)}</strong>
+                </button>
+              </div>
+
               <div className={styles.field}>
-                <label htmlFor={`${ids}-amount`} className="sr-only">Mức tối đa cho đặt giá tự động</label>
+                <div className={styles.fieldTop}>
+                  <label htmlFor={`${ids}-amount`}>Mức tối đa của bạn</label>
+                  {isEditing && (
+                    <span className={styles.currentMeta}>
+                      Hiện tại: <b>{formatVnd(currentMax)}</b>
+                      {delta !== null && <span className={styles.delta}>+{formatVnd(delta)}</span>}
+                    </span>
+                  )}
+                </div>
                 <div data-focus-surface data-focus-invalid={!!error} className={`${styles.inputWrap} ${error ? styles.invalid : ''}`}>
                   <input
                     id={`${ids}-amount`}
@@ -132,40 +175,108 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
                       setValue(digits ? Number(digits) : null)
                     }}
                   />
-                  <span aria-hidden="true">₫</span>
+                  <span className={styles.unit} aria-hidden="true">₫</span>
                 </div>
-                <p id={`${ids}-hint`} className={error ? styles.error : styles.hint}>
-                  {error ?? `Từ ${formatVnd(floor)} trở lên, theo bước ${formatVnd(step)}.`}
+                <p id={`${ids}-hint`} className={error ? styles.errorText : styles.hint}>
+                  {error ?? `Từ ${formatVnd(floor)} trở lên · bước ${formatVnd(step)}`}
                 </p>
               </div>
-              <button type="button" data-focus-inverse className={styles.continue} disabled={!!error} onClick={() => setStage('confirm')}>
-                Tiếp tục đặt giá tự động <ArrowRight size={18} aria-hidden="true" />
-              </button>
             </div>
-            <p className={styles.footnote}>
-              <Lock size={14} aria-hidden="true" /> Xác nhận ở bước tiếp theo.<br />
-              Khi bạn dẫn giá, Ví tạm giữ mức cam kết (gồm cọc đăng ký) và tự động hoàn lại nếu có người trả cao hơn.
-            </p>
-          </div>
-        ) : (
-          <div key="confirm" className={styles.body}>
-            <section className={styles.how}>
-              <h3 ref={confirmationHeading} tabIndex={-1}>Xác nhận mức tối đa {formatVnd(value!)}</h3>
-              <p>
-                Khi có người trả cao hơn, hệ thống trả thay bạn cao hơn họ một bước {formatVnd(step)}, không vượt {formatVnd(value!)}. Khi dẫn giá, Ví tạm giữ mức cam kết theo quy định và hoàn lại ngay nếu bị vượt giá. Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và chọn tự nhận
-                sách tại {pointName} hoặc giao tận nơi. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.
+
+            <footer className={styles.footer}>
+              <p className={styles.footNote}>
+                <Lock size={13} aria-hidden="true" />
+                <span>Xác nhận ở bước sau · Ví chỉ giữ khi bạn dẫn giá</span>
               </p>
-            </section>
-            {submissionError && <p className={styles.error} role="alert">{submissionError} Chọn “Sửa mức” để điều chỉnh; số tiền bạn nhập vẫn được giữ.</p>}
-            <div className={styles.actions}>
-              <button type="button" className={styles.back} onClick={() => setStage('form')} disabled={busy}>
-                <ArrowLeft size={16} aria-hidden="true" /> Sửa mức
-              </button>
-              <button type="button" data-focus-inverse className={styles.confirm} disabled={busy} aria-busy={busy} onClick={() => void onConfirm(value!)}>
-                {busy ? 'Đang đặt…' : `Đặt tối đa ${formatVnd(value!)}`}
-              </button>
+              <div className={styles.actions}>
+                <button type="button" className={styles.back} onClick={onClose} disabled={busy}>
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  data-focus-inverse
+                  className={styles.confirm}
+                  disabled={!!error || unchanged}
+                  onClick={() => setStage('confirm')}
+                >
+                  <span>Tiếp tục</span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+            </footer>
+          </>
+        ) : (
+          <>
+            <div key="confirm" className={styles.body}>
+              <div className={styles.confirmSummary}>
+                <div className={styles.confirmTop}>
+                  <h3 ref={confirmationHeading} tabIndex={-1}>Mức tối đa xác nhận</h3>
+                  {delta !== null && <span className={styles.delta}>+{formatVnd(delta)}</span>}
+                  <InfoTip label="Quy định giữ tiền và thanh toán">
+                    <ul>
+                      <li>Khi dẫn giá, Ví tạm giữ mức cam kết (gồm cọc đăng ký) và hoàn lại ngay nếu bị vượt giá.</li>
+                      <li>Nếu thắng, thanh toán trong <strong>24 giờ</strong> và chọn nhận tại <strong>{pointName}</strong> hoặc giao tận nơi.</li>
+                      <li><mark>Quá hạn thanh toán</mark> sẽ bị ghi nhận vi phạm.</li>
+                    </ul>
+                  </InfoTip>
+                </div>
+                <strong className={styles.confirmAmount}>{formatVnd(value!)}</strong>
+                {isEditing && (
+                  <span className={styles.currentMeta}>Hiện tại: <b>{formatVnd(currentMax)}</b></span>
+                )}
+              </div>
+
+              <ol className={styles.timeline} aria-label="Diễn biến đặt giá tự động">
+                <li className={styles.stop}>
+                  <span className={styles.node} aria-hidden="true"><TrendingUp size={15} /></span>
+                  <div className={styles.stopBody}>
+                    <span className={styles.stopLabel}>Tự trả theo bước</span>
+                    <span className={styles.stopDetail}>Cao hơn đối thủ <b>+{formatVnd(step)}</b>, không vượt <b>{formatVnd(value!)}</b>.</span>
+                  </div>
+                </li>
+                <li className={styles.stop}>
+                  <span className={styles.node} aria-hidden="true"><Wallet size={15} /></span>
+                  <div className={styles.stopBody}>
+                    <span className={styles.stopLabel}>Giữ &amp; hoàn tiền Ví</span>
+                    <span className={styles.stopDetail}>Tạm giữ khi dẫn; <b>hoàn lại ngay</b> nếu bị vượt giá.</span>
+                  </div>
+                </li>
+                <li className={styles.stop} data-result="true">
+                  <span className={styles.node} aria-hidden="true"><CheckCircle2 size={15} /></span>
+                  <div className={styles.stopBody}>
+                    <span className={styles.stopLabel}>Nếu thắng phiên</span>
+                    <span className={styles.stopDetail}>Thanh toán trong <b>24 giờ</b> · nhận tại <b>{pointName}</b> hoặc giao tận nơi.</span>
+                  </div>
+                </li>
+              </ol>
+
+              {submissionError && (
+                <p className={styles.errorBox} role="alert">
+                  {submissionError} Chọn “Sửa mức” để điều chỉnh; số tiền bạn nhập vẫn được giữ.
+                </p>
+              )}
             </div>
-          </div>
+
+            <footer className={styles.footer}>
+              <div className={styles.actions}>
+                <button type="button" className={styles.back} onClick={() => setStage('form')} disabled={busy}>
+                  <ArrowLeft size={16} aria-hidden="true" />
+                  <span>Sửa mức</span>
+                </button>
+                <button
+                  type="button"
+                  data-focus-inverse
+                  className={styles.confirm}
+                  disabled={busy}
+                  aria-busy={busy}
+                  onClick={() => void onConfirm(value!)}
+                >
+                  <span>{busy ? 'Đang đặt…' : 'Xác nhận đặt'}</span>
+                  {!busy && <ArrowRight size={16} aria-hidden="true" />}
+                </button>
+              </div>
+            </footer>
+          </>
         )}
       </div>
     </dialog>

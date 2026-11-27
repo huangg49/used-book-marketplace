@@ -44,4 +44,38 @@ describe("ADR 0078 AuctionFlag", () => {
     expect(html).toContain(`href="/support/${caseId}"`);
     expect(html).not.toContain("Báo cáo sự cố cho Admin");
   });
+  it("opens a modal for non-participant members without TransactionIssue", () => {
+    const cache = new QueryClient();
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <QueryClientProvider client={cache}>
+          <AuctionFlag auction={auction} ownerId={owner} participant={false} />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(html).toContain("Báo cáo nội dung");
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).not.toContain("/support/new");
+    expect(html).toContain("Nghi ngờ trả giá gian lận");
+    expect(html).not.toContain("Tiền cọc, khoản giữ hoặc thanh toán");
+  });
+  it("opens a login prompt modal for unauthenticated visitors", () => {
+    const cache = new QueryClient();
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <QueryClientProvider client={cache}>
+          <AuctionFlag
+            auction={auction}
+            ownerId={null}
+            participant={false}
+            loginReturnUrl="/auctions/11111111-1111-4111-8111-111111111111"
+          />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(html).toContain("Báo cáo nội dung");
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain("Đăng nhập");
+    expect(html).not.toContain("/support/new");
+  });
 });

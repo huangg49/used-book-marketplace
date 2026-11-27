@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 156" fill="none" stroke="#5c0202" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Auction shelf header artwork: curated books, auctioneer gavel, sounding block and brass lot tag. Hand-authored for Lật lại. -->
+  <ellipse cx="110" cy="144" rx="92" ry="7" fill="#5c0202" fill-opacity=".12" stroke="none"/>
+
+  <!-- Warm ambient halo behind the auction stand -->
+  <circle cx="116" cy="78" r="56" fill="#f6e0a8" fill-opacity=".48" stroke="none"/>
+
+  <!-- Stacked vintage books (left) -->
+  <g>
+    <!-- Bottom wine hardcover -->
+    <rect x="20" y="114" width="96" height="24" rx="4" fill="#7c1a17"/>
+    <path d="M107 118h6v16h-6" fill="#fffcf5" stroke-width="2"/>
+    <path d="M34 114v24M94 114v24" stroke="#f4cb67" stroke-width="2.8"/>
+    <path d="M46 126h36" stroke="#f6e0a8" stroke-width="2.4"/>
+
+    <!-- Middle forest-green volume -->
+    <rect x="28" y="92" width="82" height="22" rx="4" fill="#254337"/>
+    <path d="M101 96h6v14h-6" fill="#fffcf5" stroke-width="2"/>
+    <path d="M41 92v22M89 92v22" stroke="#d9a441" stroke-width="2.4"/>
+
+    <!-- Top butter-gold collector book -->
+    <rect x="34" y="72" width="72" height="20" rx="4" fill="#f6e0a8"/>
+    <path d="M98 75.5h5v13h-5" fill="#fffcf5" stroke-width="2"/>
+    <path d="M46 72v20M56 82h26" stroke-width="2.4"/>
+    <!-- Bookmark ribbon draped over spine -->
+    <path d="M62 72v26l5-4 5 4V72" fill="#b0461a" stroke="#5c0202" stroke-width="2"/>
+  </g>
+
+  <!-- Sounding block (right) -->
+  <g>
+    <rect x="132" y="122" width="62" height="16" rx="4" fill="#b9814f"/>
+    <rect x="140" y="113" width="46" height="10" rx="3" fill="#d9a441"/>
+    <path d="M142 130h42" stroke="#5c0202" stroke-opacity=".45" stroke-width="2"/>
+  </g>
+
+  <!-- Raised auctioneer gavel poised to strike -->
+  <g transform="rotate(-26 154 78)">
+    <!-- Handle -->
+    <rect x="149" y="70" width="11" height="58" rx="5" fill="#b9814f"/>
+    <path d="M149 108h11M149 116h11" stroke-width="2"/>
+    <!-- Head -->
+    <rect x="128" y="42" width="54" height="28" rx="6" fill="#7c1a17"/>
+    <rect x="122" y="40" width="10" height="32" rx="4" fill="#f4cb67"/>
+    <rect x="178" y="40" width="10" height="32" rx="4" fill="#f4cb67"/>
+    <path d="M142 42v28M168 42v28" stroke="#f6e0a8" stroke-width="2.2"/>
+  </g>
+
+  <!-- Strike energy lines -->
+  <path d="M126 104l-8-4M130 96l-6-7M196 98l8-5" stroke="#d9a441" stroke-width="2.6"/>
+
+  <!-- Floating auction lot tag (#01) -->
+  <g transform="rotate(-8 62 38)">
+    <path d="M36 22h54v10a5 5 0 0 0 0 10v10H36V42a5 5 0 0 0 0-10z" fill="#fffcf5"/>
+    <path d="M40 26h46v6a4 4 0 0 0 0 10v6H40v-6a4 4 0 0 0 0-10z" fill="#f4cb67" fill-opacity=".35" stroke="none"/>
+    <path d="M51 24v26" stroke-dasharray="2.5 4" stroke-width="2"/>
+    <circle cx="44" cy="37" r="2.6" fill="#5c0202" stroke="none"/>
+    <path d="M60 33h18M60 41h12" stroke-width="2.4"/>
+  </g>
+
+  <!-- Sparkle accents -->
+  <path d="M196 34l2.2 5.5 5.5 2.2-5.5 2.2-2.2 5.5-2.2-5.5-5.5-2.2 5.5-2.2z" fill="#f4cb67" stroke-width="2"/>
+  <path d="M18 58l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z" fill="#fffcf5" stroke-width="2"/>
+  <circle cx="116" cy="24" r="3" fill="#d9a441" stroke="none"/>
+</svg>
