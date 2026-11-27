@@ -1,11 +1,12 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
-import { ArrowRight, BookOpen, Check, EyeOff, Gavel, MapPin, Minus, Plus, Search, ShieldCheck, Store, Tag, X } from 'lucide-react'
+import { ArrowRight, BookOpen, Check, Circle, EyeOff, Flag, Gavel, MapPin, Minus, Plus, ShieldCheck, Store, Tag, Users, Wallet } from 'lucide-react'
 import { useSession } from '../hooks/useSession'
 import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { InfoTip } from '../components/InfoTip'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
 import { editGroupedAmount, formatGroupedAmount } from '../lib/grouped-amount'
 import {
@@ -63,13 +64,8 @@ function ListingPhoto({ item, title }: { item: MyListing; title: string }) {
   return <span className={styles.photoState}><BookOpen size={20} aria-hidden="true" />{photo.isError || url ? 'Chưa tải được ảnh' : mediaId ? 'Đang tải…' : 'Chưa có ảnh'}</span>
 }
 
-// Case- and diacritic-insensitive, so "de men" finds "Dế Mèn".
-const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/gi, 'd').toLowerCase().trim()
-
-function BookOption({ item, checked, disabled, query, onSelect }: { item: MyListing; checked: boolean; disabled: boolean; query: string; onSelect: () => void }) {
+function BookOption({ item, checked, disabled, onSelect }: { item: MyListing; checked: boolean; disabled: boolean; onSelect: () => void }) {
   const { title, author } = useListingIdentity(item)
-  // Filtering here uses the resolved catalog title; the selected book stays visible.
-  if (query && !checked && !fold(`${title} ${author}`).includes(query)) return null
   const c = item.currentRevision.content
   const priceDisplay = c.salePrice != null
     ? formatVnd(c.salePrice)
@@ -107,7 +103,7 @@ function depositChips(startPrice: number) {
 
 function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digits = AUCTION_PRICE_DIGITS, onChange, disabled, error, hint }: {
   id: string; label: string; value: number | null; step: number; min: number; max?: number; digits?: number; disabled: boolean
-  onChange: (v: number | null) => void; error?: string; hint?: string
+  onChange: (v: number | null) => void; error?: string; hint?: ReactNode
 }) {
   const nudge = (dir: 1 | -1) => {
     const base = value ?? min - (dir > 0 ? step : 0)
@@ -137,9 +133,13 @@ function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digi
     }
   }, [shown])
 
+  const describedBy = [error ? `${id}-help` : null, hint ? `${id}-tip` : null].filter(Boolean).join(' ') || undefined
   return (
     <div className={styles.field}>
-      <label htmlFor={id}>{label}</label>
+      <div className={styles.labelRow}>
+        <label htmlFor={id}>{label}</label>
+        {hint && <InfoTip id={`${id}-tip`} label={label}>{hint}</InfoTip>}
+      </div>
       <div data-focus-surface data-focus-invalid={!!error} className={`${styles.money} ${error ? styles.invalid : ''}`}>
         {/* The input grows with its digits so "đ" sits right after the amount. */}
         <label htmlFor={id} className={styles.moneyValue}>
@@ -149,7 +149,7 @@ function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digi
             // Fallback width: separators are narrower than a digit (1ch).
             style={{ width: `${Math.max(shown.replace(/\D/g, '').length, 1) + (shown.match(/\D/g)?.length ?? 0) * 0.4 + 0.15}ch` }}
             value={shown}
-            aria-invalid={!!error} aria-describedby={`${id}-help`}
+            aria-invalid={!!error} aria-describedby={describedBy}
             onFocus={(e) => {
               if (!isAlreadyFocused.current) {
                 isAlreadyFocused.current = true
@@ -191,7 +191,7 @@ function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digi
           <button type="button" onClick={() => nudge(1)} disabled={disabled || (value ?? 0) + step > max} aria-label={`Tăng ${label.toLowerCase()} một bước`}><Plus size={16} aria-hidden="true" /></button>
         </span>
       </div>
-      <p id={`${id}-help`} className={error ? styles.error : styles.hint} role={error ? 'alert' : undefined}>{error ?? hint}</p>
+      {error && <p id={`${id}-help`} className={styles.error} role="alert">{error}</p>}
     </div>
   )
 }
@@ -220,6 +220,66 @@ function Receipt({ intake, point }: { intake: MyIntake; point?: HandoverPoint })
 }
 
 
+// Brings a form field (or a step card's first control) into view from the preview ticket.
+function jumpTo(id: string) {
+  const el = document.getElementById(id)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // In a step card prefer its own choice (selected radio, then any radio, then a field) over the ⓘ button.
+  const pick = (selector: string) => el.querySelector<HTMLElement>(selector)
+  const target = el.matches('input, button, select, textarea')
+    ? el
+    : pick('input[type="radio"]:checked:not([disabled])') ?? pick('input[type="radio"]:not([disabled])')
+      ?? pick('input:not([disabled]):not([type="hidden"])') ?? pick('button:not([disabled])')
+  target?.focus({ preventScroll: true })
+}
+
+function Missing({ target, label = 'Chưa nhập' }: { target: string; label?: string }) {
+  return <button type="button" className={styles.missing} onClick={() => jumpTo(target)}>{label}</button>
+}
+
+// The bid grid as a picture: start price, step ticks, the protection value and buy-now.
+// Decorative: every value is also listed as text in the ticket.
+function PriceLadder({ start, step, buyNow, declared }: { start: number; step: number; buyNow: number | null; declared: number | null }) {
+  const lo = Math.min(start, declared ?? start)
+  const hi = Math.max(start + 10 * step, buyNow ?? 0, declared ?? 0)
+  const at = (v: number) => ((v - lo) / (hi - lo)) * 100
+  const count = Math.floor((hi - start) / step)
+  const stride = Math.max(1, Math.ceil(count / 12))
+  const ticks = Array.from({ length: Math.floor(count / stride) + 1 }, (_, i) => start + i * stride * step)
+  const end = buyNow ?? hi
+  return (
+    <div className={styles.ladder} aria-hidden="true">
+      <div className={styles.ladderTrack}>
+        <span className={`${styles.ladderFill} ${buyNow === null ? styles.ladderOpen : ''}`} style={{ left: `${at(start)}%`, width: `${at(end) - at(start)}%` }} />
+        {ticks.map((v) => <span key={v} className={styles.ladderTick} style={{ left: `${at(v)}%` }} />)}
+        {declared !== null && <span className={styles.ladderGuard} style={{ left: `${at(declared)}%` }} />}
+        <span className={styles.ladderStart} style={{ left: `${at(start)}%` }} />
+        {buyNow !== null && <span className={styles.ladderBuy} style={{ left: `${at(buyNow)}%` }}><Flag size={11} /></span>}
+      </div>
+      <p className={styles.ladderLegend}>
+        <span><span className={styles.dotStart} />Khởi điểm</span>
+        {declared !== null && <span><span className={styles.dotGuard} />Bảo vệ</span>}
+        {buyNow !== null && <span><span className={styles.dotBuy} />Mua ngay</span>}
+        <span className={styles.ladderScale}>1 vạch = {stride > 1 ? `${stride} bước` : formatVnd(step)}</span>
+      </p>
+    </div>
+  )
+}
+
+// Full-width ledger-paper backdrop behind the centred page column.
+function AuctionStage({ children }: { children: ReactNode }) {
+  return (
+    <div className={styles.stage}>
+      <div className={styles.backdrop} aria-hidden="true">
+        <span className={styles.bdPattern} />
+        <span className={styles.bdLamp} />
+      </div>
+      <div className={styles.page}>{children}</div>
+    </div>
+  )
+}
+
 export function CreateAuctionPage() {
   const auth = useSession()
   const location = useLocation()
@@ -239,7 +299,6 @@ export function CreateAuctionPage() {
 
   const eligible = useMemo(() => (listings.data?.pages.flatMap(page => page.items) ?? []).filter(auctionEligible), [listings.data])
   const [listingId, setListingId] = useState(params.get('listing') ?? '')
-  const [bookQuery, setBookQuery] = useState('')
   const [pointChoice, setPointId] = useState('')
   const [presetStep, setPresetStep] = useState<AuctionStep>(10000)
   const [customStepOn, setCustomStepOn] = useState(false)
@@ -260,6 +319,9 @@ export function CreateAuctionPage() {
   const [auctionType] = useState<AuctionType>('English')
   // ADR 0077: how many registered bidders open the auction.
   const [minBidders, setMinBidders] = useState<number>(AUCTION_MIN_BIDDERS_FLOOR)
+  // Digits typed in the "Khác" chip; committed (clamped) on blur so typing "12" is not cut to "4".
+  const [minDraft, setMinDraft] = useState<string | null>(null)
+  const customMin = !MIN_BIDDER_OPTIONS.some((n) => n === minBidders)
   // ADR 0087: null follows the 10% default of the start price.
   const [depositDraft, setDepositDraft] = useState<number | null>(null)
   const [dutchTop, setDutchTop] = useState<number | null>(null)
@@ -326,6 +388,16 @@ export function CreateAuctionPage() {
     depositAmount: depositError,
   }
   const valid = !Object.values(formErrors).some(Boolean)
+  // Preview ticket: what is filled in, and which values are safe to show.
+  const startValid = startPrice !== null && !priceErrors.startPrice
+  const declaredValid = declaredValue !== null && !priceErrors.declaredValue
+  const buyNowValid = english && buyNowOn && buyNowPrice !== null && !formErrors.buyNowPrice
+  const pricesDone = !Object.entries(formErrors).some(([field, message]) => field !== 'listing' && field !== 'point' && message)
+  const progress = [
+    { label: 'Sách', done: !formErrors.listing, target: 'auction-card-1' },
+    { label: 'Điểm gửi', done: !formErrors.point, target: 'auction-card-2' },
+    { label: 'Giá', done: pricesDone, target: 'auction-card-3' },
+  ]
   const locked = busy || unknown || !!acknowledgedId
 
   const buyNowChips = startPrice && !priceErrors.startPrice
@@ -334,9 +406,9 @@ export function CreateAuctionPage() {
 
   if (auth.status === 'anonymous') return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`} replace />
   if (auth.status !== 'authenticated') return <main className={styles.state} role="status">Đang mở bàn đấu giá…</main>
-  if (done) return <div className={styles.page}><Receipt intake={done} point={doneIntakePoint} /></div>
+  if (done) return <AuctionStage><Receipt intake={done} point={doneIntakePoint} /></AuctionStage>
   if (acknowledgedId) return (
-    <div className={styles.page}>
+    <AuctionStage>
       <section className={styles.receipt}>
         <img src="/illustrations/book-journey/auction.webp" width="900" height="600" alt="" aria-hidden="true" decoding="async" />
         <div>
@@ -352,7 +424,7 @@ export function CreateAuctionPage() {
           </div>
         </div>
       </section>
-    </div>
+    </AuctionStage>
   )
 
   async function readReceipt(intakeId: string) {
@@ -420,14 +492,16 @@ export function CreateAuctionPage() {
 
   const loadingBooks = listings.isPending
   return (
-    <div className={styles.page}>
+    <AuctionStage>
       <nav className={styles.crumbs} aria-label="Đường dẫn">
         <Link to={ROUTES.auctions}>Đấu giá</Link><span aria-hidden="true">/</span><span aria-current="page">Mở phiên mới</span>
       </nav>
       <header className={styles.intro}>
         <div>
-          <h1>Đưa một cuốn sách trên kệ lên sàn đấu giá</h1>
-          <p>Chọn sách trực tiếp từ kệ của bạn, đặt giá trị khai báo và giá khởi điểm rồi mang sách tới điểm nhận. Khi gửi yêu cầu, sách sẽ tạm ngừng hiển thị trên kệ mua bán công khai để chuẩn bị mở phiên.</p>
+          <div className={styles.introTitle}>
+            <h1>Đưa một cuốn sách trên kệ lên sàn đấu giá</h1>
+            <InfoTip label="Cách mở phiên đấu giá">Chọn sách trực tiếp từ kệ của bạn, đặt <strong>giá trị khai báo</strong> và <strong>giá khởi điểm</strong> rồi <strong>mang sách tới điểm nhận</strong>. Khi gửi yêu cầu, sách sẽ <mark>tạm ngừng hiển thị trên kệ mua bán công khai</mark> để chuẩn bị mở phiên.</InfoTip>
+          </div>
         </div>
         <img className={styles.art} src="/illustrations/book-journey/auction.webp" width="900" height="600" alt="" aria-hidden="true" decoding="async" />
       </header>
@@ -436,220 +510,270 @@ export function CreateAuctionPage() {
         <div className={styles.compareListing}>
           <p className={styles.compareTag}><Tag size={15} aria-hidden="true" /> Bài đăng trên kệ</p>
           <ul>
-            <li>Giá niêm yết hoặc trao đổi cố định</li>
-            <li>Người mua nhắn tin, hai bên tự hẹn giao sách</li>
-            <li>Hiển thị công khai đến khi có người mua hoặc gửi đấu giá</li>
+            <li>Giá niêm yết hoặc trao đổi <span className={styles.key}>cố định</span></li>
+            <li>Người mua nhắn tin, <span className={styles.key}>hai bên tự hẹn</span> giao sách</li>
+            <li><span className={styles.key}>Hiển thị công khai</span> đến khi có người mua hoặc gửi đấu giá</li>
           </ul>
         </div>
         <ArrowRight className={styles.compareArrow} size={20} aria-hidden="true" />
         <div className={styles.compareAuction}>
           <p className={styles.compareTag}><Gavel size={15} aria-hidden="true" /> Phiên đấu giá</p>
           <ul>
-            <li>Sách tạm ẩn khỏi chợ công khai để giữ chỗ</li>
-            <li>Sách được nhân viên kiểm tra tại điểm trước khi mở phiên</li>
-            <li>Bạn hẹn giờ mở phiên, thời lượng 1–168 giờ</li>
+            <li>Sách <mark className={styles.flag}>tạm ẩn khỏi chợ công khai</mark> để giữ chỗ</li>
+            <li>Sách được <span className={styles.key}>nhân viên kiểm tra tại điểm</span> trước khi mở phiên</li>
+            <li>Bạn hẹn giờ mở phiên, thời lượng <span className={styles.key}>1–168 giờ</span></li>
           </ul>
         </div>
       </section>
 
       <div className={styles.layout}>
         <form className={styles.form} noValidate onSubmit={(e) => { e.preventDefault(); setTouched(true); if (valid && !locked) setConfirming(true) }}>
-          <fieldset className={styles.step} disabled={locked}>
-            <legend><span className={styles.num}>1</span> Chọn sách từ kệ của bạn</legend>
-            <p className={styles.stepHint}>Chọn một cuốn sách đã được duyệt từ kệ của bạn. Sau khi gửi yêu cầu, sách sẽ tạm ngừng hiển thị trên kệ mua bán công khai và chuyển sang trạng thái chờ tiếp nhận tại điểm.</p>
-            <div className={styles.inlineActions}><Link to={ROUTES.sell}>Đăng sách mới lên kệ</Link></div>
-            {loadingBooks && <div className={styles.skeletonList} aria-busy="true" aria-label="Đang tải sách của bạn">{[0, 1].map((i) => <div key={i} />)}</div>}
-            {listings.isError && !listings.isFetchNextPageError && <div className={styles.inlineState} role="alert"><p>Chưa tải được sách trên kệ của bạn.</p><button type="button" onClick={() => void listings.refetch()}>Thử lại</button></div>}
-            {listings.isSuccess && eligible.length === 0 && (
-              <div className={styles.inlineState}>
-                <BookOpen size={28} aria-hidden="true" />
-                <p><strong>Chưa thấy sách đủ điều kiện trong phần kệ đã tải.</strong> Tải tiếp sách cũ hơn nếu còn, hoặc đăng sách mới và chờ duyệt.</p>
-              </div>
-            )}
-            {preselectedMissing && <p className={styles.error} role="alert">Cuốn sách bạn chọn hiện không đưa lên đấu giá được. Hãy chọn một cuốn khác bên dưới.</p>}
-            {eligible.length > 3 && (
-              <div data-focus-surface className={styles.bookSearch}>
-                <Search size={16} aria-hidden="true" />
-                <input type="search" value={bookQuery} disabled={locked} onChange={(e) => setBookQuery(e.target.value)}
-                  placeholder="Tìm theo tên sách hoặc tác giả" aria-label={`Tìm trong ${eligible.length} sách đã tải`} autoComplete="off" />
-                {bookQuery && <button type="button" onClick={() => setBookQuery('')} aria-label="Xóa từ khóa tìm sách"><X size={16} aria-hidden="true" /></button>}
-              </div>
-            )}
-            {eligible.length > 0 && (
-              <div className={styles.bookList} role="radiogroup" aria-label="Sách đủ điều kiện đấu giá">
-                {eligible.map((item) => (
-                  <BookOption key={item.id} item={item} checked={item.id === listingId} disabled={locked} query={fold(bookQuery)}
-                    onSelect={() => {
-                      setListingId(item.id)
-                      if (item.id !== listingId) {
-                        setDeclaredDraft(undefined)
-                        setStartPrice(undefined)
-                        setBuyNowPrice(null)
-                      }
-                    }} />
-                ))}
-              </div>
-            )}
-            {eligible.length > 0 && <p className={styles.noMatch} role="status">Không tìm thấy sách khớp “{bookQuery.trim()}” trong sách đã tải. {listings.hasNextPage ? "Bạn có thể tải tiếp sách cũ hơn." : ""}</p>}
-            {listings.hasNextPage && <div className={styles.inlineState}>
-              <p role={listings.isFetchNextPageError ? 'alert' : 'status'}>{listings.isFetchNextPageError
-                ? 'Chưa tải được sách cũ hơn. Sách đã chọn và giá đang nhập vẫn được giữ.'
-                : `Đã tải ${listings.data?.pages.reduce((sum, page) => sum + page.items.length, 0) ?? 0} sách từ kệ. Bạn có thể tải tiếp để tìm sách cũ hơn.`}</p>
-              <button type="button" disabled={locked || listings.isFetching}
-                onClick={() => void listings.fetchNextPage({ cancelRefetch: false })}>
-                {listings.isFetchingNextPage ? 'Đang tải sách…' : listings.isFetchNextPageError ? 'Thử tải sách cũ hơn' : 'Tải thêm sách từ kệ'}
-              </button>
-            </div>}
-            {touched && formErrors.listing && eligible.length > 0 && <p className={styles.error} role="alert">{formErrors.listing}</p>}
-          </fieldset>
+          <div className={styles.stepCard} id="auction-card-1">
+            <img className={styles.stepArt} src="/illustrations/auction-create/step-books.svg" width="120" height="120" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+            <fieldset className={styles.step} disabled={locked} aria-labelledby="auction-step-1">
+              <legend>
+                <span className={styles.num}>1</span> <span id="auction-step-1">Chọn sách từ kệ của bạn</span>
+                <InfoTip label="Chọn sách từ kệ">Chọn một cuốn sách <strong>đã được duyệt</strong> từ kệ của bạn. Sau khi gửi yêu cầu, sách sẽ <mark>tạm ngừng hiển thị trên kệ mua bán công khai</mark> và chuyển sang trạng thái <strong>chờ tiếp nhận tại điểm</strong>.</InfoTip>
+              </legend>
+              <div className={styles.inlineActions}><Link to={ROUTES.sell}>Đăng sách mới lên kệ</Link></div>
+              {loadingBooks && <div className={styles.skeletonList} aria-busy="true" aria-label="Đang tải sách của bạn">{[0, 1].map((i) => <div key={i} />)}</div>}
+              {listings.isError && !listings.isFetchNextPageError && <div className={styles.inlineState} role="alert"><p>Chưa tải được sách trên kệ của bạn.</p><button type="button" onClick={() => void listings.refetch()}>Thử lại</button></div>}
+              {listings.isSuccess && eligible.length === 0 && (
+                <div className={styles.inlineState}>
+                  <img className={styles.emptyArt} src="/illustrations/auction-create/empty-shelf.svg" width="200" height="120" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+                  <p><strong>Chưa thấy sách đủ điều kiện trong phần kệ đã tải.</strong> Tải tiếp sách cũ hơn nếu còn, hoặc đăng sách mới và chờ duyệt.</p>
+                </div>
+              )}
+              {preselectedMissing && <p className={styles.error} role="alert">Cuốn sách bạn chọn hiện không đưa lên đấu giá được. Hãy chọn một cuốn khác bên dưới.</p>}
+              {eligible.length > 0 && (
+                <div className={styles.bookList} role="radiogroup" aria-label="Sách đủ điều kiện đấu giá">
+                  {eligible.map((item) => (
+                    <BookOption key={item.id} item={item} checked={item.id === listingId} disabled={locked}
+                      onSelect={() => {
+                        setListingId(item.id)
+                        if (item.id !== listingId) {
+                          setDeclaredDraft(undefined)
+                          setStartPrice(undefined)
+                          setBuyNowPrice(null)
+                        }
+                      }} />
+                  ))}
+                </div>
+              )}
+              {listings.hasNextPage && <div className={styles.inlineState}>
+                <p role={listings.isFetchNextPageError ? 'alert' : 'status'}>{listings.isFetchNextPageError
+                  ? 'Chưa tải được sách cũ hơn. Sách đã chọn và giá đang nhập vẫn được giữ.'
+                  : `Đã tải ${listings.data?.pages.reduce((sum, page) => sum + page.items.length, 0) ?? 0} sách từ kệ. Bạn có thể tải tiếp để tìm sách cũ hơn.`}</p>
+                <button type="button" disabled={locked || listings.isFetching}
+                  onClick={() => void listings.fetchNextPage({ cancelRefetch: false })}>
+                  {listings.isFetchingNextPage ? 'Đang tải sách…' : listings.isFetchNextPageError ? 'Thử tải sách cũ hơn' : 'Tải thêm sách từ kệ'}
+                </button>
+              </div>}
+              {touched && formErrors.listing && eligible.length > 0 && <p className={styles.error} role="alert">{formErrors.listing}</p>}
+            </fieldset>
+          </div>
 
-          <fieldset className={styles.step} disabled={locked}>
-            <legend><span className={styles.num}>2</span> Chọn điểm gửi sách</legend>
-            <p className={styles.stepHint}>Bạn tự mang sách tới điểm trong {DROPOFF_HOURS} giờ kể từ khi giữ chỗ. Điểm nhận và kiểm tra là mô phỏng cho đồ án.</p>
-            {points.isPending && <div className={styles.skeletonList} aria-busy="true" aria-label="Đang tải điểm nhận"><div /></div>}
-            {points.isError && <div className={styles.inlineState} role="alert"><p>Chưa tải được điểm nhận sách.</p><button type="button" onClick={() => void points.refetch()}>Thử lại</button></div>}
-            {points.isSuccess && (
-              <div className={styles.points} role="radiogroup" aria-label="Điểm gửi sách">
-                {points.data.items.map((p) => {
-                  const full = p.status !== 'Active' || p.availableSlots < 1
-                  return (
-                    <label key={p.id} className={`${styles.pointOption} ${p.id === pointId ? styles.selected : ''} ${full ? styles.full : ''}`}>
-                      <input type="radio" name="auction-point" checked={p.id === pointId} disabled={locked || full} onChange={() => setPointId(p.id)} />
-                      <MapPin size={18} aria-hidden="true" />
-                      <span><strong>{p.name}</strong><span>{p.displayAddress}</span></span>
-                      <span className={styles.slots}>{p.status === 'Paused' ? 'Tạm ngưng nhận' : p.status === 'Closed' ? 'Đã đóng' : p.availableSlots > 0 ? `Còn ${p.availableSlots} chỗ` : 'Hết chỗ'}</span>
+          <div className={styles.stepCard} id="auction-card-2">
+            <img className={styles.stepArt} src="/illustrations/auction-create/step-dropoff.svg" width="120" height="120" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+            <fieldset className={styles.step} disabled={locked} aria-labelledby="auction-step-2">
+              <legend>
+                <span className={styles.num}>2</span> <span id="auction-step-2">Chọn điểm gửi sách</span>
+                <InfoTip label="Điểm gửi sách">Bạn <strong>tự mang sách</strong> tới điểm <mark>trong {DROPOFF_HOURS} giờ</mark> kể từ khi giữ chỗ. Điểm nhận và kiểm tra là <strong>mô phỏng cho đồ án</strong>.</InfoTip>
+              </legend>
+              {points.isPending && <div className={styles.skeletonList} aria-busy="true" aria-label="Đang tải điểm nhận"><div /></div>}
+              {points.isError && <div className={styles.inlineState} role="alert"><p>Chưa tải được điểm nhận sách.</p><button type="button" onClick={() => void points.refetch()}>Thử lại</button></div>}
+              {points.isSuccess && (
+                <div className={styles.points} role="radiogroup" aria-label="Điểm gửi sách">
+                  {points.data.items.map((p) => {
+                    const full = p.status !== 'Active' || p.availableSlots < 1
+                    return (
+                      <label key={p.id} className={`${styles.pointOption} ${p.id === pointId ? styles.selected : ''} ${full ? styles.full : ''}`}>
+                        <input type="radio" name="auction-point" checked={p.id === pointId} disabled={locked || full} onChange={() => setPointId(p.id)} />
+                        <MapPin size={18} aria-hidden="true" />
+                        <span><strong>{p.name}</strong><span>{p.displayAddress}</span></span>
+                        <span className={styles.slots}>{p.status === 'Paused' ? 'Tạm ngưng nhận' : p.status === 'Closed' ? 'Đã đóng' : p.availableSlots > 0 ? `Còn ${p.availableSlots} chỗ` : 'Hết chỗ'}</span>
+                      </label>
+                    )
+                  })}
+                  {!points.data.items.length && <p className={styles.stepHint}>Chưa có điểm nhận sách nào hoạt động.</p>}
+                </div>
+              )}
+              {touched && formErrors.point && points.isSuccess && <p className={styles.error} role="alert">{formErrors.point}</p>}
+            </fieldset>
+          </div>
+
+          <div className={styles.stepCard} id="auction-card-3">
+            <img className={styles.stepArt} src="/illustrations/auction-create/step-price.svg" width="120" height="120" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+            <fieldset className={styles.step} disabled={locked} aria-labelledby="auction-step-3">
+              <legend>
+                <span className={styles.num}>3</span> <span id="auction-step-3">Đặt giá và giá trị bảo vệ</span>
+                <InfoTip label="Đặt giá">Nhập <strong>giá trị khai báo</strong> để bảo vệ sách khi gửi tại điểm. Giá khởi điểm và mua ngay đi theo lưới <strong><em>giá khởi điểm + n × bước giá</em></strong>, <strong>từ 10.000đ</strong> trở lên.</InfoTip>
+              </legend>
+
+              {/* Step 3 is split into titled panels so each group of fields reads as one unit. */}
+              <section className={styles.panel} aria-labelledby="auction-panel-price">
+                <div className={styles.panelHead}>
+                  <span className={styles.panelIcon} aria-hidden="true"><Tag size={16} /></span>
+                  <h2 id="auction-panel-price">Giá đấu giá</h2>
+                </div>
+                <div className={styles.pair}>
+                  <PriceInput
+                    id="auction-declared-value"
+                    label="Giá trị khai báo (Giá trị bảo vệ)"
+                    value={declaredValue}
+                    step={10000}
+                    min={AUCTION_MIN_PRICE}
+                    disabled={locked}
+                    onChange={setDeclaredDraft}
+                    error={touched || declaredValue !== null ? formErrors.declaredValue : undefined}
+                    hint={<>Dùng để <strong>bảo vệ và bồi thường</strong> sách nếu xảy ra sự cố trong quá trình bàn giao tại điểm.</>}
+                  />
+                  <PriceInput id="auction-start" label={auctionType === 'Dutch' ? 'Giá sàn (thấp nhất)' : 'Giá khởi điểm'} value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
+                    onChange={setStartPrice} error={touched || startPrice !== null ? formErrors.startPrice : undefined}
+                    hint={declaredValue !== null
+                      ? <>Gợi ý theo giá trị khai báo <strong>{formatVnd(declaredValue)}</strong>. Giá khởi điểm hợp lý <strong>thu hút nhiều người trả giá hơn</strong>.</>
+                      : <>Lượt trả giá đầu tiên <strong>bằng đúng giá khởi điểm</strong>.</>} />
+                </div>
+
+                <div className={styles.field}>
+                  <div className={styles.labelRow}>
+                    <span className={styles.label} id="step-label">Bước giá</span>
+                    <InfoTip id="auction-step-tip" label="Bước giá">Mỗi lượt trả giá tăng <strong>ít nhất bằng bước này</strong>. Nếu tự nhập: <strong>bội số của 1.000đ</strong>, từ <strong>1.000đ</strong> đến <strong>10.000.000đ</strong>.</InfoTip>
+                  </div>
+                  <div className={styles.segment} role="radiogroup" aria-labelledby="step-label">
+                    {AUCTION_STEPS.map((s) => (
+                      <label key={s} className={!customStepOn && presetStep === s ? styles.segmentOn : undefined}>
+                        <input type="radio" name="auction-step" checked={!customStepOn && presetStep === s} onChange={() => { setPresetStep(s); setCustomStepOn(false) }} />
+                        {formatVnd(s)}
+                      </label>
+                    ))}
+                    {customStepOn ? (
+                      // The chosen "Tự nhập" chip becomes the step input itself.
+                      <span data-focus-surface data-focus-invalid={!!stepError} className={`${styles.segmentOn} ${styles.stepCustom} ${stepError ? styles.stepCustomInvalid : ''}`}>
+                        <input
+                          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus follows the user's own "Tự nhập" choice
+                          autoFocus inputMode="numeric" autoComplete="off" placeholder="0" disabled={locked}
+                          value={customStep === null ? '' : customStep.toLocaleString('vi-VN')}
+                          aria-label="Bước giá tự nhập" aria-invalid={!!stepError} aria-describedby={stepError ? 'auction-step-help auction-step-tip' : 'auction-step-tip'}
+                          onFocus={(e) => {
+                            const target = e.currentTarget
+                            target.select()
+                            setTimeout(() => target.select(), 0)
+                          }}
+                          onChange={(e) => { const typed = e.target.value.replace(/\D/g, '').slice(0, String(AUCTION_STEP_MAX).length); setCustomStep(typed ? Number(typed) : null) }}
+                        />
+                        <span aria-hidden="true">đ</span>
+                      </span>
+                    ) : (
+                      <label>
+                        <input type="radio" name="auction-step" checked={false} onChange={() => { setCustomStepOn(true); if (customStep === null) setCustomStep(presetStep) }} />
+                        Tự nhập
+                      </label>
+                    )}
+                  </div>
+                  {customStepOn && stepError && <p id="auction-step-help" className={styles.error} role="alert">{stepError}</p>}
+                </div>
+
+                {/* Hình thức đấu giá hidden per owner request */}
+                {auctionType === 'Dutch' && <>
+                  <PriceInput id="auction-dutch-top" label="Giá mở đầu (cao nhất)" value={dutchTop} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
+                    onChange={setDutchTop} error={touched || dutchTop !== null ? formErrors.dutchTopPrice : undefined} hint="Giá bắt đầu cao, giảm một bước giá mỗi lần tới giá sàn." />
+                  <div className={styles.field}>
+                    <label htmlFor="auction-dutch-every">Giảm một bước sau mỗi</label>
+                    <div data-focus-surface data-focus-invalid={!!dutchEveryError} className={`${styles.money} ${dutchEveryError ? styles.invalid : ''}`}>
+                      <label htmlFor="auction-dutch-every" className={styles.moneyValue}>
+                        <input id="auction-dutch-every" inputMode="numeric" autoComplete="off" disabled={locked} value={dutchEvery || ''}
+                          style={{ width: `${Math.max(String(dutchEvery || '').length, 1) + 0.15}ch` }}
+                          aria-invalid={!!dutchEveryError} aria-describedby="auction-dutch-every-help"
+                          onChange={(e) => setDutchEvery(Number(e.target.value.replace(/\D/g, '').slice(0, 4)) || 0)} />
+                        <span className={styles.unit} aria-hidden="true">giây</span>
+                      </label>
+                    </div>
+                    <p id="auction-dutch-every-help" className={dutchEveryError ? styles.error : styles.hint}>{dutchEveryError ?? 'Từ 10 giây đến 1 giờ.'}</p>
+                  </div>
+                </>}
+              </section>
+
+              <section className={styles.panel} aria-labelledby="auction-panel-bidders">
+                <div className={styles.panelHead}>
+                  <span className={styles.panelIcon} aria-hidden="true"><Users size={16} /></span>
+                  <h2 id="auction-panel-bidders">Người đăng ký &amp; tiền cọc</h2>
+                  <InfoTip label="Quy tắc đăng ký và mở phiên">
+                    <ul>
+                      <li><strong>Đăng ký trước:</strong> người mua đặt cọc <mark>{deposit !== null ? formatVnd(deposit) : '10% giá khởi điểm'}</mark> rồi mới được trả giá.</li>
+                      <li><strong>Mở khi đủ người:</strong> phiên mở đúng giờ bạn hẹn khi có đủ <mark>{minBidders} người</mark> (ít nhất {AUCTION_MIN_BIDDERS_FLOOR}); chưa đủ thì chờ thêm <mark>24 giờ</mark>, hết hạn thì hủy và hoàn cọc.</li>
+                      <li><strong>Hẹn giờ:</strong> tối đa <mark>30 ngày</mark> sau khi đăng, đổi được <mark>2 lần</mark>.</li>
+                      <li><strong>Bán được khi:</strong> có <mark>ít nhất hai người trả giá</mark>. Người thắng không thanh toán thì <mark>mất tiền cọc</mark>; nếu sách không bán được, bạn nhận <mark>một nửa số đó</mark>.</li>
+                    </ul>
+                  </InfoTip>
+                </div>
+                <div className={styles.group}>
+                  <span className={styles.label} id="auction-min-label">Số người đăng ký tối thiểu</span>
+                  <div className={styles.chips} role="group" aria-labelledby="auction-min-label">
+                    {MIN_BIDDER_OPTIONS.map((n) => <button type="button" key={n} aria-pressed={minBidders === n} disabled={locked} onClick={() => { setMinDraft(null); setMinBidders(n) }}>{n} người<span>tối thiểu</span></button>)}
+                    {/* One chip: the number is typed straight into it, no inner box. */}
+                    <label data-focus-surface className={`${styles.minCustom} ${customMin ? styles.minCustomOn : ''}`}>
+                      <span>Khác</span>
+                      <input type="text" inputMode="numeric" autoComplete="off" aria-label={`Số người đăng ký tối thiểu, từ ${AUCTION_MIN_BIDDERS_FLOOR} đến ${AUCTION_MIN_BIDDERS_CAP}`} placeholder={String(AUCTION_MIN_BIDDERS_FLOOR)}
+                        value={minDraft ?? (customMin ? String(minBidders) : '')} disabled={locked}
+                        onChange={(e) => {
+                          const typed = e.target.value.replace(/\D/g, '').slice(0, String(AUCTION_MIN_BIDDERS_CAP).length)
+                          setMinDraft(typed)
+                          const n = Number(typed)
+                          if (typed && n >= AUCTION_MIN_BIDDERS_FLOOR && n <= AUCTION_MIN_BIDDERS_CAP) setMinBidders(n)
+                        }}
+                        onBlur={() => {
+                          if (minDraft) setMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Number(minDraft))))
+                          setMinDraft(null)
+                        }} />
+                      <span className={styles.minUnit} aria-hidden="true">người</span>
                     </label>
-                  )
-                })}
-                {!points.data.items.length && <p className={styles.stepHint}>Chưa có điểm nhận sách nào hoạt động.</p>}
-              </div>
-            )}
-            {touched && formErrors.point && points.isSuccess && <p className={styles.error} role="alert">{formErrors.point}</p>}
-          </fieldset>
-
-          <fieldset className={styles.step} disabled={locked}>
-            <legend><span className={styles.num}>3</span> Đặt giá và giá trị bảo vệ</legend>
-            <p className={styles.stepHint}>Nhập giá trị khai báo để bảo vệ sách khi gửi tại điểm. Giá khởi điểm và mua ngay đi theo lưới <em>giá khởi điểm + n × bước giá</em>, từ 10.000đ trở lên.</p>
-
-            <PriceInput
-              id="auction-declared-value"
-              label="Giá trị khai báo (Giá trị bảo vệ)"
-              value={declaredValue}
-              step={10000}
-              min={AUCTION_MIN_PRICE}
-              disabled={locked}
-              onChange={setDeclaredDraft}
-              error={touched || declaredValue !== null ? formErrors.declaredValue : undefined}
-              hint="Dùng để bảo vệ và bồi thường sách nếu xảy ra sự cố trong quá trình bàn giao tại điểm."
-            />
-
-            <div className={styles.field}>
-              <span className={styles.label} id="step-label">Bước giá</span>
-              <div className={styles.segment} role="radiogroup" aria-labelledby="step-label">
-                {AUCTION_STEPS.map((s) => (
-                  <label key={s} className={!customStepOn && presetStep === s ? styles.segmentOn : undefined}>
-                    <input type="radio" name="auction-step" checked={!customStepOn && presetStep === s} onChange={() => { setPresetStep(s); setCustomStepOn(false) }} />
-                    {formatVnd(s)}
-                  </label>
-                ))}
-                {customStepOn ? (
-                  // The chosen "Tự nhập" chip becomes the step input itself.
-                  <span data-focus-surface data-focus-invalid={!!stepError} className={`${styles.segmentOn} ${styles.stepCustom} ${stepError ? styles.stepCustomInvalid : ''}`}>
-                    <input
-                      // eslint-disable-next-line jsx-a11y/no-autofocus -- focus follows the user's own "Tự nhập" choice
-                      autoFocus inputMode="numeric" autoComplete="off" placeholder="0" disabled={locked}
-                      value={customStep === null ? '' : customStep.toLocaleString('vi-VN')}
-                      aria-label="Bước giá tự nhập" aria-invalid={!!stepError} aria-describedby="auction-step-help"
-                      onFocus={(e) => {
-                        const target = e.currentTarget
-                        target.select()
-                        setTimeout(() => target.select(), 0)
-                      }}
-                      onChange={(e) => { const typed = e.target.value.replace(/\D/g, '').slice(0, String(AUCTION_STEP_MAX).length); setCustomStep(typed ? Number(typed) : null) }}
-                    />
-                    <span aria-hidden="true">đ</span>
-                  </span>
-                ) : (
-                  <label>
-                    <input type="radio" name="auction-step" checked={false} onChange={() => { setCustomStepOn(true); if (customStep === null) setCustomStep(presetStep) }} />
-                    Tự nhập
-                  </label>
-                )}
-              </div>
-              {customStepOn && (
-                <p id="auction-step-help" className={stepError ? styles.error : styles.hint} role={stepError ? 'alert' : undefined}>
-                  {stepError ?? 'Bội số của 1.000đ, từ 1.000đ đến 10.000.000đ. Mỗi lượt trả giá tăng ít nhất bằng bước này.'}
-                </p>
-              )}
-            </div>
-            {/* Hình thức đấu giá hidden per owner request */}
-            <div className={styles.group}>
-              <span className={styles.label} id="auction-min-label">Số người đăng ký tối thiểu</span>
-              <div className={styles.chips} role="group" aria-labelledby="auction-min-label">
-                {MIN_BIDDER_OPTIONS.map((n) => <button type="button" key={n} aria-pressed={minBidders === n} disabled={locked} onClick={() => setMinBidders(n)}>{n} người<span>tối thiểu</span></button>)}
-                <label className={styles.minCustom}>
-                  Khác
-                  <input type="number" inputMode="numeric" aria-label="Số người đăng ký tối thiểu" min={AUCTION_MIN_BIDDERS_FLOOR} max={AUCTION_MIN_BIDDERS_CAP} value={minBidders} disabled={locked}
-                    onChange={(e) => setMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Math.trunc(Number(e.target.value) || AUCTION_MIN_BIDDERS_FLOOR))))} />
-                </label>
-              </div>
-              <ul className={styles.rules} aria-label="Quy tắc đăng ký và mở phiên">
-                <li><strong>Đăng ký trước:</strong> người mua đặt cọc {deposit !== null ? formatVnd(deposit) : '10% giá khởi điểm'} rồi mới được trả giá.</li>
-                <li><strong>Mở khi đủ người:</strong> phiên mở đúng giờ bạn hẹn khi có đủ {minBidders} người (ít nhất {AUCTION_MIN_BIDDERS_FLOOR}); chưa đủ thì chờ thêm 24 giờ, hết hạn thì hủy và hoàn cọc.</li>
-                <li><strong>Hẹn giờ:</strong> tối đa 30 ngày sau khi đăng, đổi được 2 lần.</li>
-                <li><strong>Bán được khi:</strong> có ít nhất hai người trả giá. Người thắng không thanh toán thì mất tiền cọc; nếu sách không bán được, bạn nhận một nửa số đó.</li>
-              </ul>
-            </div>
-            <PriceInput id="auction-start" label={auctionType === 'Dutch' ? 'Giá sàn (thấp nhất)' : 'Giá khởi điểm'} value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
-              onChange={setStartPrice} error={touched || startPrice !== null ? formErrors.startPrice : undefined}
-              hint={declaredValue !== null ? `Gợi ý theo giá trị khai báo ${formatVnd(declaredValue)}. Giá khởi điểm hợp lý thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />
-            {startPrice !== null && !formErrors.startPrice && <>
-              <PriceInput id="auction-deposit" label="Tiền cọc đăng ký" value={deposit} step={1000} min={depositDefault!} max={auctionDepositMaxFor(startPrice)} disabled={locked}
-                onChange={(v) => setDepositDraft(v === depositDefault ? null : v)} error={depositError}
-                hint={`Mặc định ${formatVnd(depositDefault!)} (10% giá khởi điểm). Bạn có thể tăng tới ${formatVnd(auctionDepositMaxFor(startPrice))} (một nửa giá khởi điểm) để người đăng ký cân nhắc hơn; cọc cao có thể làm ít người đăng ký hơn. Người không thắng được hoàn cọc.`} />
-              <div className={styles.chips} role="group" aria-label="Gợi ý tiền cọc">
-                {depositChips(startPrice).map((c) => <button type="button" key={c.amount} aria-pressed={deposit === c.amount} disabled={locked}
-                  onClick={() => setDepositDraft(c.amount === depositDefault ? null : c.amount)}>{formatVnd(c.amount)}<span>{c.label}</span></button>)}
-              </div>
-            </>}
-            {auctionType === 'Dutch' && <>
-              <PriceInput id="auction-dutch-top" label="Giá mở đầu (cao nhất)" value={dutchTop} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
-                onChange={setDutchTop} error={touched || dutchTop !== null ? formErrors.dutchTopPrice : undefined} hint="Giá bắt đầu cao, giảm một bước giá mỗi lần tới giá sàn." />
-              <div className={styles.field}>
-                <label htmlFor="auction-dutch-every">Giảm một bước sau mỗi</label>
-                <div data-focus-surface data-focus-invalid={!!dutchEveryError} className={`${styles.money} ${dutchEveryError ? styles.invalid : ''}`}>
-                  <label htmlFor="auction-dutch-every" className={styles.moneyValue}>
-                    <input id="auction-dutch-every" inputMode="numeric" autoComplete="off" disabled={locked} value={dutchEvery || ''}
-                      style={{ width: `${Math.max(String(dutchEvery || '').length, 1) + 0.15}ch` }}
-                      aria-invalid={!!dutchEveryError} aria-describedby="auction-dutch-every-help"
-                      onChange={(e) => setDutchEvery(Number(e.target.value.replace(/\D/g, '').slice(0, 4)) || 0)} />
-                    <span className={styles.unit} aria-hidden="true">giây</span>
-                  </label>
+                  </div>
                 </div>
-                <p id="auction-dutch-every-help" className={dutchEveryError ? styles.error : styles.hint}>{dutchEveryError ?? 'Từ 10 giây đến 1 giờ.'}</p>
-              </div>
-            </>}
-            {english && <label className={styles.toggle}>
-              <input type="checkbox" checked={buyNowOn} disabled={locked} onChange={() => { setBuyNowOn(!buyNowOn); if (!buyNowOn && buyNowPrice === null && buyNowChips[1]) setBuyNowPrice(buyNowChips[1]) }} />
-              <span><strong>Cho phép mua ngay</strong><span>Còn dùng được sau lượt trả giá nếu giá hiện tại thấp hơn giá mua ngay. Lượt trả giá chạm giá mua ngay cũng tính như mua ngay.</span></span>
-            </label>}
-            {english && buyNowOn && <>
-              <PriceInput id="auction-buy-now" label="Giá mua ngay" value={buyNowPrice} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
-                onChange={setBuyNowPrice} error={touched || buyNowPrice !== null ? formErrors.buyNowPrice : undefined} hint="Phải cao hơn giá khởi điểm và nằm trên lưới giá." />
-              <div className={styles.group}>
-                <span className={styles.label} id="auction-buy-now-mode-label">Khi có người mua ngay</span>
-                <div className={styles.chips} role="group" aria-labelledby="auction-buy-now-mode-label">
-                  {BUY_NOW_MODES.map((m) => <button type="button" key={m.value} aria-pressed={buyNowMode === m.value} disabled={locked} onClick={() => setBuyNowMode(m.value)}>{m.label}<span>{m.short}</span></button>)}
+                {startPrice !== null && !formErrors.startPrice ? <>
+                  <div className={styles.pair}>
+                    <PriceInput id="auction-deposit" label="Tiền cọc đăng ký" value={deposit} step={1000} min={depositDefault!} max={auctionDepositMaxFor(startPrice)} disabled={locked}
+                      onChange={(v) => setDepositDraft(v === depositDefault ? null : v)} error={depositError}
+                      hint={<>Mặc định <strong>{formatVnd(depositDefault!)}</strong> (10% giá khởi điểm). Bạn có thể tăng tới <strong>{formatVnd(auctionDepositMaxFor(startPrice))}</strong> (một nửa giá khởi điểm) để người đăng ký cân nhắc hơn; <mark>cọc cao có thể làm ít người đăng ký hơn</mark>. Người không thắng <strong>được hoàn cọc</strong>.</>} />
+                  </div>
+                  <div className={styles.chips} role="group" aria-label="Gợi ý tiền cọc">
+                    {depositChips(startPrice).map((c) => <button type="button" key={c.amount} aria-pressed={deposit === c.amount} disabled={locked}
+                      onClick={() => setDepositDraft(c.amount === depositDefault ? null : c.amount)}>{formatVnd(c.amount)}<span>{c.label}</span></button>)}
+                  </div>
+                </> : <p className={styles.panelNote}>Nhập giá khởi điểm hợp lệ để đặt tiền cọc đăng ký.</p>}
+              </section>
+
+              {english && <section className={`${styles.panel} ${buyNowOn ? '' : styles.panelCollapsed}`} aria-labelledby="auction-panel-buy-now">
+                <div className={styles.panelHead}>
+                  <label className={styles.toggle}>
+                    <input type="checkbox" checked={buyNowOn} disabled={locked} aria-describedby="auction-buy-now-tip" onChange={() => { setBuyNowOn(!buyNowOn); if (!buyNowOn && buyNowPrice === null && buyNowChips[1]) setBuyNowPrice(buyNowChips[1]) }} />
+                    <span><strong id="auction-panel-buy-now">Cho phép mua ngay</strong></span>
+                  </label>
+                  <InfoTip id="auction-buy-now-tip" label="Mua ngay">Còn dùng được sau lượt trả giá nếu giá hiện tại <strong>thấp hơn giá mua ngay</strong>. Lượt trả giá chạm giá mua ngay <mark>cũng tính như mua ngay</mark>.</InfoTip>
                 </div>
-                <p className={styles.stepHint}>{BUY_NOW_MODES.find((m) => m.value === buyNowMode)!.hint}</p>
-              </div>
-              {buyNowChips.length > 0 && (
-                <div className={styles.chips} aria-label="Gợi ý giá mua ngay">
-                  {buyNowChips.map((v, i) => <button type="button" key={v} aria-pressed={buyNowPrice === v} disabled={locked} onClick={() => setBuyNowPrice(v)}>{formatVnd(v)}<span>+{[3, 5, 10][i]} bước</span></button>)}
-                </div>
-              )}
-            </>}
-          </fieldset>
+                {buyNowOn && <>
+                  <div className={styles.pair}>
+                    <PriceInput id="auction-buy-now" label="Giá mua ngay" value={buyNowPrice} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
+                      onChange={setBuyNowPrice} error={touched || buyNowPrice !== null ? formErrors.buyNowPrice : undefined} hint={<>Phải <strong>cao hơn giá khởi điểm</strong> và <strong>nằm trên lưới giá</strong>.</>} />
+                  </div>
+                  {buyNowChips.length > 0 && (
+                    <div className={styles.chips} aria-label="Gợi ý giá mua ngay">
+                      {buyNowChips.map((v, i) => <button type="button" key={v} aria-pressed={buyNowPrice === v} disabled={locked} onClick={() => setBuyNowPrice(v)}>{formatVnd(v)}<span>+{[3, 5, 10][i]} bước</span></button>)}
+                    </div>
+                  )}
+                  <div className={styles.group}>
+                    <div className={styles.labelRow}>
+                      <span className={styles.label} id="auction-buy-now-mode-label">Khi có người mua ngay</span>
+                      <InfoTip label="Khi có người mua ngay">{BUY_NOW_MODES.find((m) => m.value === buyNowMode)!.hint}</InfoTip>
+                    </div>
+                    <div className={styles.chips} role="group" aria-labelledby="auction-buy-now-mode-label">
+                      {BUY_NOW_MODES.map((m) => <button type="button" key={m.value} aria-pressed={buyNowMode === m.value} disabled={locked} onClick={() => setBuyNowMode(m.value)}>{m.label}<span>{m.short}</span></button>)}
+                    </div>
+                  </div>
+                </>}
+              </section>}
+            </fieldset>
+          </div>
 
           {error && <p className={styles.submitError} role="alert">{error}</p>}
           <div className={styles.submitRow}>
@@ -662,34 +786,84 @@ export function CreateAuctionPage() {
         </form>
 
         <aside className={styles.preview} aria-label="Xem trước phiếu đấu giá">
+          {/* Ticket: a stub (book + progress) and a body (prices, flow), joined by a perforation. */}
           <div className={styles.ticket}>
-            <p className={styles.kicker}><Gavel size={15} aria-hidden="true" /> Phiếu đấu giá · xem trước</p>
-            <div className={styles.ticketBook}>
-              <span className={styles.ticketCover}>{listing ? <ListingPhoto item={listing} title={identity.title} /> : <span className={styles.photoState}><BookOpen size={22} aria-hidden="true" />Chọn sách</span>}</span>
-              <div>
-                <strong>{listing ? identity.title : 'Chưa chọn sách'}</strong>
-                {listing && identity.author && <span>{identity.author}</span>}
-                {listing?.currentRevision.content.condition && <span>{conditions[listing.currentRevision.content.condition]} · chờ kiểm tra tại điểm</span>}
+            <div className={styles.ticketStub}>
+              <div className={styles.ticketHead}>
+                <p className={styles.kicker}><Gavel size={15} aria-hidden="true" /> Phiếu đấu giá · {AUCTION_TYPES.find((t) => t.value === auctionType)!.label}</p>
+                <span className={styles.stamp} aria-hidden="true">Xem trước</span>
+              </div>
+              <ol className={styles.progress} aria-label="Tiến độ phiếu đấu giá">
+                {progress.map((p) => (
+                  <li key={p.label}>
+                    <button type="button" data-done={p.done || undefined} onClick={() => jumpTo(p.target)}
+                      aria-label={`${p.label}: ${p.done ? 'đã xong' : 'chưa xong'}. Đi tới bước này`}>
+                      {p.done ? <Check size={13} aria-hidden="true" /> : <Circle size={11} aria-hidden="true" />}{p.label}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              <div className={styles.ticketBook}>
+                <span className={styles.ticketCover}>{listing ? <ListingPhoto item={listing} title={identity.title} /> : <span className={styles.photoState}><BookOpen size={22} aria-hidden="true" />Chọn sách</span>}</span>
+                <div>
+                  <strong>{listing ? identity.title : 'Chưa chọn sách'}</strong>
+                  {listing && identity.author && <span>{identity.author}</span>}
+                  {listing?.currentRevision.content.condition && <span>{conditions[listing.currentRevision.content.condition]} · chờ kiểm tra tại điểm</span>}
+                </div>
               </div>
             </div>
-            <dl className={styles.ticketPrices}>
-              <div className={styles.ticketMain}><dt>Giá khởi điểm</dt><dd>{startPrice && !priceErrors.startPrice ? formatVnd(startPrice) : '—'}</dd></div>
-              <div><dt>Bước giá</dt><dd>+{formatVnd(step)}</dd></div>
-              <div><dt>Mua ngay</dt><dd>{buyNowOn && buyNowPrice && !formErrors.buyNowPrice ? `${formatVnd(buyNowPrice)} · ${buyNowMode === 'Instant' ? 'kết thúc ngay' : 'chờ thách đấu'}` : 'Không đặt'}</dd></div>
-              <div><dt>Giá trị bảo vệ</dt><dd>{declaredValue !== null && !priceErrors.declaredValue ? formatVnd(declaredValue) : '—'}</dd></div>
-              <div><dt>Tiền cọc đăng ký</dt><dd>{deposit !== null ? formatVnd(deposit) : '—'}</dd></div>
-              <div><dt>Hình thức</dt><dd>{AUCTION_TYPES.find((t) => t.value === auctionType)!.label}</dd></div>
-              <div><dt>Mở khi đủ</dt><dd>{minBidders} người</dd></div>
-            </dl>
-            <p className={styles.protect}>Giá trị bảo vệ bồi thường khi sách mất hoặc hỏng lúc điểm đang giữ. Khi giữ chỗ, sách sẽ ngừng hiển thị trên kệ mua bán công khai.</p>
-            <ol className={styles.timeline}>
-              <li className={styles.timelineNow}><Store size={15} aria-hidden="true" /><span><strong>Gửi sách trong {DROPOFF_HOURS} giờ</strong>{point ? point.name : 'Tại điểm bạn chọn'}</span></li>
-              <li><Check size={15} aria-hidden="true" /><span><strong>Nhân viên kiểm tra</strong>Sách khớp mô tả mới được mở phiên</span></li>
-              <li><Gavel size={15} aria-hidden="true" /><span><strong>Bạn hẹn giờ mở phiên</strong>Sau khi sách đạt kiểm tra; phiên mở khi đủ người đăng ký, thời lượng 1–168 giờ</span></li>
-              <li><ArrowRight size={15} aria-hidden="true" /><span><strong>Người thắng thanh toán</strong>Trong 24 giờ, rồi nhận sách tại điểm</span></li>
-            </ol>
+
+            <div className={styles.ticketBody}>
+              <div className={styles.hero}>
+                <span>Giá khởi điểm</span>
+                {startValid ? <strong key={startPrice}>{formatVnd(startPrice!)}</strong> : <Missing target="auction-start" />}
+              </div>
+              {startValid && <PriceLadder start={startPrice!} step={step} buyNow={buyNowValid ? buyNowPrice : null} declared={declaredValid ? declaredValue : null} />}
+
+              <div className={styles.factGroups}>
+                <div className={styles.factGroup}>
+                  <p className={styles.factHead}>Giá</p>
+                  <dl>
+                    <div><dt>Bước giá</dt><dd>+{formatVnd(step)}</dd></div>
+                    <div><dt>Mua ngay</dt><dd>{buyNowValid ? <>{formatVnd(buyNowPrice!)}<small>{buyNowMode === 'Instant' ? 'kết thúc ngay' : 'chờ thách đấu'}</small></> : buyNowOn ? <Missing target="auction-buy-now" /> : 'Không đặt'}</dd></div>
+                  </dl>
+                </div>
+                <div className={styles.factGroup}>
+                  <p className={styles.factHead}>Bảo vệ &amp; cọc</p>
+                  <dl>
+                    <div><dt className={styles.ticketTerm}>Giá trị bảo vệ <InfoTip label="Giá trị bảo vệ">Giá trị bảo vệ <strong>bồi thường khi sách mất hoặc hỏng</strong> lúc điểm đang giữ. Khi giữ chỗ, sách sẽ <mark>ngừng hiển thị trên kệ mua bán công khai</mark>.</InfoTip></dt><dd>{declaredValid ? formatVnd(declaredValue!) : <Missing target="auction-declared-value" />}</dd></div>
+                    <div><dt>Tiền cọc đăng ký</dt><dd>{deposit !== null && !depositError ? formatVnd(deposit) : <Missing target={startValid ? 'auction-deposit' : 'auction-start'} />}</dd></div>
+                  </dl>
+                </div>
+                <div className={styles.factGroup}>
+                  <p className={styles.factHead}>Mở phiên</p>
+                  <dl>
+                    <div><dt>Mở khi đủ</dt><dd>{minBidders} người</dd></div>
+                    <div><dt>Điểm gửi sách</dt><dd>{point && !formErrors.point ? point.name : <Missing target="auction-card-2" label="Chưa chọn" />}</dd></div>
+                  </dl>
+                </div>
+              </div>
+
+              <div className={styles.flowHead}>
+                <span>Sau khi giữ chỗ</span>
+                <InfoTip label="Các bước sau khi giữ chỗ">
+                  <ul>
+                    <li><strong>Gửi sách trong {DROPOFF_HOURS} giờ</strong> tại {point ? point.name : 'điểm bạn chọn'}.</li>
+                    <li><strong>Nhân viên kiểm tra:</strong> sách <mark>khớp mô tả</mark> mới được mở phiên.</li>
+                    <li><strong>Bạn hẹn giờ mở phiên</strong> sau khi sách đạt kiểm tra; phiên mở khi <mark>đủ người đăng ký</mark>, thời lượng <strong>1–168 giờ</strong>.</li>
+                    <li><strong>Người thắng thanh toán</strong> <mark>trong 24 giờ</mark>, rồi nhận sách tại điểm.</li>
+                  </ul>
+                </InfoTip>
+              </div>
+              <ol className={styles.flow}>
+                <li className={styles.flowNow}><span className={styles.flowIcon}><Store size={15} aria-hidden="true" /></span><span>Gửi sách</span><strong>{DROPOFF_HOURS} giờ</strong></li>
+                <li><span className={styles.flowIcon}><ShieldCheck size={15} aria-hidden="true" /></span><span>Kiểm tra</span><strong>tại điểm</strong></li>
+                <li><span className={styles.flowIcon}><Gavel size={15} aria-hidden="true" /></span><span>Mở phiên</span><strong>1–168 giờ</strong></li>
+                <li><span className={styles.flowIcon}><Wallet size={15} aria-hidden="true" /></span><span>Thanh toán</span><strong>24 giờ</strong></li>
+              </ol>
+            </div>
           </div>
-          <p className={styles.demo}>Mỗi người bán có tối đa hai phiên chưa kết thúc. Điểm giao nhận và tiền trong ví được mô phỏng cho đồ án.</p>
+          <p className={styles.demo}>Mỗi người bán có <span className={styles.key}>tối đa hai phiên</span> chưa kết thúc. Điểm giao nhận và tiền trong ví được <span className={styles.key}>mô phỏng cho đồ án</span>.</p>
         </aside>
       </div>
 
@@ -718,6 +892,6 @@ export function CreateAuctionPage() {
           </ol>
         </div>
       </ConfirmDialog>
-    </div>
+    </AuctionStage>
   )
 }
