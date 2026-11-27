@@ -9,8 +9,10 @@
 .crumbs a { color: var(--shop-wine); text-underline-offset: 4px; min-height: 44px; display: inline-flex; align-items: center; }
 
 .intro { display: grid; grid-template-columns: minmax(0, 1fr) clamp(160px, 22vw, 260px); align-items: center; gap: 32px; padding: 0 0 20px; }
-.intro h1 { color: var(--shop-wine); font: 400 clamp(2rem, 3.3vw, 2.75rem)/1.25 var(--shop-display); margin: 0 0 12px; }
-.intro p { color: var(--shop-muted); font-size: .9375rem; line-height: 1.85; max-width: 62ch; margin: 0; }
+.intro h1 { color: var(--shop-wine); font: 400 clamp(2rem, 3.3vw, 2.75rem)/1.25 var(--shop-display); margin: 0; }
+/* Explanations live in InfoTip toggletips beside each title/label. */
+.introTitle { display: flex; align-items: center; gap: 8px; }
+.introTitle > :last-child { flex: none; }
 .art { display: block; width: 100%; height: auto; pointer-events: none; }
 
 /* Listing vs auction: the listing side stays quiet paper; the auction side is the gold sheet. */
@@ -25,8 +27,10 @@
 .compareArrow { align-self: center; color: var(--shop-wine); }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 40px; align-items: start; }
-.form { display: grid; gap: 28px; min-width: 0; }
-.step { border: 0; margin: 0; padding: 0 0 28px; border-bottom: 1px solid var(--shop-line); min-width: 0; display: grid; gap: 14px; }
+.form { display: grid; gap: 20px; min-width: 0; }
+.step { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 16px; }
+/* Each numbered step is a white card lifted off the ledger-paper backdrop. */
+.stepCard { min-width: 0; padding: 22px 24px 24px; border: 1px solid #5c02021c; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px rgba(40, 25, 20, .05), 0 14px 32px -22px rgba(92, 2, 2, .35); }
 .step legend { display: flex; align-items: center; gap: 12px; padding: 0; margin-bottom: 4px; font-size: 1.25rem; font-weight: 700; line-height: 1.5; }
 .num { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--shop-wine); color: var(--shop-cream); font: 400 1rem/1 var(--shop-display); }
 .stepHint { margin: 0; font-size: .8125rem; line-height: 1.85; color: var(--shop-muted); max-width: 70ch; }
@@ -81,11 +85,10 @@
 .full .slots { color: var(--shop-muted); }
 
 .field { display: grid; gap: 8px; max-width: 420px; }
-/* A labelled choice group (chips) with its explanation underneath. */
+/* A labelled choice group (chips); its explanation sits in the label's InfoTip. */
 .group { display: grid; gap: 8px; }
-.rules { display: grid; gap: 6px; margin: 4px 0 0; padding: 12px 16px; list-style: none; border-left: 3px solid var(--shop-wine); border-radius: 0 8px 8px 0; background: var(--auction-paper-soft, #fbf3e0); font-size: .8125rem; line-height: 1.65; color: var(--shop-ink); max-width: 70ch; }
-.rules strong { color: var(--shop-wine); font-weight: 700; }
-.field > label, .label { font-size: .85rem; font-weight: 700; }
+.labelRow { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.field > label, .labelRow > label:not(.toggle), .label { font-size: .85rem; font-weight: 700; }
 /* Options size to their labels and wrap as whole chips instead of squeezing text. */
 .segment { display: flex; flex-wrap: wrap; width: 100%; max-width: 560px; padding: 4px; border-radius: 8px; background: var(--shop-shelf); gap: 4px; }
 .segment label { position: relative; min-height: 40px; flex: 1 0 auto; min-width: 0; white-space: nowrap; display: grid; place-items: center; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: .875rem; color: var(--shop-muted); cursor: pointer; font-variant-numeric: tabular-nums; }
@@ -161,11 +164,11 @@
 .ticketPrices dd { margin: 0; font-weight: 700; font-size: .9375rem; font-variant-numeric: tabular-nums; }
 .ticketMain { grid-column: 1 / -1; }
 .ticketMain dd { font: 400 2rem/1.2 var(--shop-display); color: var(--shop-wine); }
-.protect { margin: 12px 0 0; font-size: .75rem; line-height: 1.7; color: var(--shop-muted); }
+.ticketTerm { display: flex; align-items: center; gap: 2px; }
 .timeline { list-style: none; margin: 18px 0 0; padding: 16px 0 0; border-top: 1px solid #5c020226; display: grid; gap: 12px; }
 .timeline li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; font-size: .75rem; color: var(--shop-muted); line-height: 1.6; }
 .timeline li > svg { box-sizing: content-box; padding: 6px; border-radius: 50%; background: #fffcf599; color: var(--shop-wine); }
-.timeline span { display: grid; }
+.timeline li > span { display: grid; }
 .timeline strong { font-size: .8125rem; color: var(--shop-ink); }
 .timelineNow > svg { background: var(--shop-wine) !important; color: var(--shop-cream) !important; }
 .demo { margin: 0; font-size: .75rem; line-height: 1.8; color: var(--shop-muted); }
@@ -212,5 +215,54 @@
   .submitRow .primary { width: 100%; }
 }
 /* ADR 0079: any minimum from 4 up, next to the quick choices. */
-.minCustom { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px 0 14px; border: 1px solid var(--shop-line); border-radius: 8px; background: var(--shop-paper); font-weight: 700; font-size: .875rem; color: var(--shop-ink); }
-.minCustom input { width: 72px; min-height: 36px; padding: 0 8px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; font-variant-numeric: tabular-nums; }
+.minCustom { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--shop-line); border-radius: 8px; background: var(--shop-paper); font-weight: 700; font-size: .875rem; color: var(--shop-ink); cursor: text; transition: border-color .15s, background-color .15s; }
+.minCustom:hover { border-color: var(--shop-control); }
+.minCustomOn { border-color: var(--shop-wine); background: var(--auction-paper-soft); }
+/* The chip is the field: the number sits inline with no box of its own. */
+.minCustom input:not([type="checkbox"]):not([type="radio"]) { width: 3ch; min-height: 0; height: auto; padding: 0 0 1px; border: 0; border-bottom: 1.5px dashed var(--shop-control); border-radius: 0; box-shadow: none; background: transparent; color: var(--shop-wine); font: inherit; text-align: center; font-variant-numeric: tabular-nums; }
+.minCustom input::placeholder { color: var(--shop-line); }
+.minUnit { font-weight: 400; color: var(--shop-muted); }
+
+/* Emphasis for key facts on the page (matches InfoTip): .key = wine bold, .flag = highlighter for consequences. */
+.key { color: var(--shop-wine); font-weight: 700; }
+.compareListing .key { color: var(--shop-ink); }
+.flag { color: var(--shop-ink); font-weight: 700; background: linear-gradient(transparent 55%, rgba(246, 139, 81, .38) 55%); padding: 0 1px; }
+@media (forced-colors: active) { .flag { color: MarkText; background: Mark; forced-color-adjust: none; } }
+
+/* Step 3 panels: each titled group of fields is its own card. */
+.panel { display: grid; gap: 18px; min-width: 0; padding: 18px 20px 20px; border: 1px solid #ecdfcc; border-radius: 14px; background: #fcf7ee; }
+.panelHead { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px dashed var(--shop-line); }
+.panelHead h2 { margin: 0; font-size: 1rem; font-weight: 700; line-height: 1.4; color: var(--shop-ink); }
+.panelHead .toggle { padding: 0; }
+.panelIcon { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #5c020214; color: var(--shop-wine); }
+.panelCollapsed .panelHead { padding-bottom: 0; border-bottom: 0; }
+.panelNote { margin: 0; font-size: .8125rem; color: var(--shop-muted); }
+.pair { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 16px; align-items: start; }
+.pair > .field { max-width: none; }
+.panel .segment { max-width: none; }
+@media (max-width: 760px) { .panel { padding: 16px 14px 18px; } .stepCard { padding: 18px 16px 20px; border-radius: 16px; } }
+
+/* Page backdrop: warm ledger paper. A butter-gold glow sits behind the auction
+   art, faint wine-ruled lines fade out under the header, and the shared ivory
+   grain (login-art) ties it to the Auth paper. Static: no motion to manage. */
+.stage { position: relative; isolation: isolate; overflow-x: clip; }
+.backdrop {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(56rem 26rem at 86% -4rem, rgba(246, 224, 168, .8), transparent 70%),
+    radial-gradient(38rem 30rem at -8% 48%, rgba(92, 2, 2, .07), transparent 70%),
+    radial-gradient(48rem 24rem at 108% 100%, rgba(244, 203, 103, .22), transparent 70%),
+    #f8f1e3;
+}
+.backdrop::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(to bottom, transparent 0 35px, rgba(92, 2, 2, .06) 35px 36px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 240px, transparent 720px);
+  mask-image: linear-gradient(to bottom, #000 0, #000 240px, transparent 720px);
+}
+.backdrop::after {
+  content: ""; position: absolute; inset: 0;
+  background: url("/login-art/ivory-paper.webp") repeat; background-size: 512px;
+  mix-blend-mode: multiply; opacity: .5;
+}
+@media (forced-colors: active) { .backdrop { display: none; } }
