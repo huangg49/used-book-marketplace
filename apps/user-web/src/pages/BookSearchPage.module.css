@@ -1240,11 +1240,6 @@
   color: #6b1917;
 }
 
-.sidebar .extraBudget {
-  border-color: rgb(255 245 232 / 24%);
-  background: rgb(255 245 232 / 7%);
-}
-
 .sidebar .reset {
   color: #fff5e8;
 }
@@ -1255,19 +1250,6 @@
 
 .sidebar .groupClear {
   color: #ffe7d5;
-}
-
-.sidebar .pricePresets button {
-  border-color: rgb(255 245 232 / 30%);
-  background: rgb(255 245 232 / 10%);
-  color: #fff5e8;
-}
-
-.sidebar .pricePresets button:hover,
-.sidebar .pricePresets button[aria-pressed="true"] {
-  border-color: #fff0dc;
-  background: #fff0dc;
-  color: #6b1917;
 }
 
 .sidebar .apply {
@@ -1327,7 +1309,7 @@
 .sidebar .filterForm .filterGroup,
 .sidebar .classification {
   padding-bottom: 16px;
-  border-bottom: 1px solid #eee3d5;
+  border-bottom: 1px solid rgb(255 245 232 / 20%);
 }
 
 /* The language control already has its own border; don't add a second line directly below it. */
@@ -1347,13 +1329,6 @@
   background: #fffdf8;
 }
 
-.sidebar .pricePresets button {
-  border: 1px solid #eadcc9;
-  border-radius: 999px;
-  background: #f7eddf;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
-}
-
 .sidebar .conditionChoices label {
   padding: 0 10px;
   border-radius: 9px;
@@ -1364,45 +1339,93 @@
   background: #f4e7d7;
 }
 
+/* Price ranges in the wine sidebar read as ordinary filter groups:
+   cream heading, chevron disclosure and a divider, no separate light card. */
 .sidebar .extraBudget {
-  padding: 0 12px 10px;
-  border: 1px solid #eadcc9;
-  border-radius: 12px;
-  background: rgb(255 253 248 / 78%);
+  padding: 0 0 16px;
+  border: 0;
+  border-bottom: 1px solid rgb(255 245 232 / 20%);
+  border-radius: 0;
+  background: transparent;
 }
 
-.sidebar .extraBudget summary,
+.sidebar .extraBudget summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  list-style: none;
+  color: #fff5e8;
+}
+
+.sidebar .extraBudget summary::-webkit-details-marker {
+  display: none;
+}
+
+.sidebar .extraBudget summary::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 180ms ease;
+}
+
+.sidebar .extraBudget[open] summary {
+  margin-bottom: 8px;
+}
+
+.sidebar .extraBudget[open] summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+.sidebar .priceFields label>span {
+  color: #8B0000;
+}
+
+.sidebar .pricePresets button {
+  border: 1px solid rgb(255 245 232 / 30%);
+  border-radius: 999px;
+  background: rgb(255 245 232 / 10%);
+  color: #fff5e8;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.sidebar .pricePresets button:hover,
+.sidebar .pricePresets button[aria-pressed="true"] {
+  border-color: #fff0dc;
+  background: #fff0dc;
+  color: #6b1917;
+}
+
+.sidebar .priceFilter legend small {
+  color: #f0d9cd;
+  font-weight: 600;
+}
+
+/* Light mobile dialog keeps its wine-on-cream price controls. */
 .filterDialog .extraBudget summary {
   color: var(--shop-wine);
 }
 
-.sidebar .extraBudget[open] summary,
 .filterDialog .extraBudget[open] summary {
   border-bottom: 1px solid #eadcc9;
   padding-bottom: 8px;
   margin-bottom: 10px;
 }
 
-/* Highlight price-filter text and quick price options. */
-.sidebar .priceFilter legend,
 .filterDialog .priceFilter legend,
-.sidebar .priceFilter>.presetLabel,
-.filterDialog .priceFilter>.presetLabel {
+.filterDialog .priceFields label>span,
+.filterDialog .pricePresets button,
+.filterDialog .filterHint,
+.filterDialog .priceFilter .groupClear {
   color: #8B0000 !important;
 }
 
-.sidebar .priceFields label>span,
-.filterDialog .priceFields label>span {
-  color: #8B0000 !important;
-}
-
-.sidebar .pricePresets button,
-.filterDialog .pricePresets button {
-  color: #8B0000 !important;
-}
-
-.sidebar .pricePresets button:hover,
-.sidebar .pricePresets button[aria-pressed="true"],
 .filterDialog .pricePresets button:hover,
 .filterDialog .pricePresets button[aria-pressed="true"] {
   background: #8B0000 !important;
@@ -1410,37 +1433,18 @@
   color: #ffffff !important;
 }
 
-.sidebar .filterHint,
-.filterDialog .filterHint {
-  color: #8B0000 !important;
-}
-
-.sidebar .priceFilter legend small,
-.filterDialog .priceFilter legend small,
-.sidebar .extraBudget legend small,
-.filterDialog .extraBudget legend small {
+.filterDialog .priceFilter legend small {
   color: #8B0000 !important;
   font-weight: 600;
 }
 
-.sidebar .priceFilter .groupClear,
-.filterDialog .priceFilter .groupClear,
-.sidebar .extraBudget .groupClear,
-.filterDialog .extraBudget .groupClear {
-  color: #8B0000 !important;
-}
-
-.sidebar .priceFilter .groupClear:hover,
-.filterDialog .priceFilter .groupClear:hover,
-.sidebar .extraBudget .groupClear:hover,
-.filterDialog .extraBudget .groupClear:hover {
+.filterDialog .priceFilter .groupClear:hover {
   color: #a81c19 !important;
 }
 
 .sidebar .filterFooter {
   margin-top: 2px;
   padding-top: 16px;
-  border-top: 1px solid #e8dccb;
 }
 
 .sidebar .filterActions {
@@ -1457,10 +1461,6 @@
   min-height: 40px;
   border-radius: 9px;
   text-decoration: none;
-}
-
-.sidebar .reset:hover {
-  background: #f4e8d9;
 }
 
 .filterDialog .filterBody {
