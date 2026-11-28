@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { ActivityIndicator, View, StyleSheet, Pressable } from "react-native";
 import * as Crypto from "expo-crypto";
 import {
   autofillLabels,
@@ -78,6 +78,7 @@ function reviewFields(fields: Fields, edits: Edits): Fields {
 export function PhotoAutofillPanel({
   listingId,
   photos,
+  uploading,
   disabled,
   onAddPhoto,
   onUseField,
@@ -86,6 +87,7 @@ export function PhotoAutofillPanel({
 }: {
   listingId: string;
   photos: Media[];
+  uploading?: { current: number; total: number } | null;
   disabled: boolean;
   onAddPhoto: () => void;
   onUseField: (field: AutofillField, fields: Fields) => void;
@@ -95,6 +97,9 @@ export function PhotoAutofillPanel({
   const { client } = useSession();
   const [ask] = useState(() => createAssistRequest(client, Crypto.randomUUID));
   const ready = photos.filter((p) => p.status === "Ready");
+  const processingCount = photos.filter(
+    (p) => p.status === "Processing" || p.status === "Pending",
+  ).length;
   const [picked, setPicked] = useState<string[] | null>(null);
   const ids = (picked ?? ready.slice(0, 3).map((p) => p.id)).filter((id) =>
     ready.some((p) => p.id === id),
@@ -411,6 +416,35 @@ export function PhotoAutofillPanel({
             </View>
           ) : null}
 
+          {/* Live Upload / Processing Status Banner (always visible even when Photo 1 is already Ready) */}
+          {uploading || processingCount > 0 ? (
+            <View
+              accessibilityLiveRegion="polite"
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                backgroundColor: stitchTokens.warmIvory,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: stitchTokens.goldAccent,
+              }}
+            >
+              <ActivityIndicator size="small" color={stitchTokens.wine} />
+              <AppText
+                kind="small"
+                color={stitchTokens.wineDark}
+                style={{ flex: 1, fontSize: 11.5, fontWeight: "700", lineHeight: 16 }}
+              >
+                {uploading
+                  ? `Đang tải ảnh ${uploading.current}/${uploading.total} lên máy chủ…`
+                  : `Đã nhận ${processingCount} ảnh — đang xử lý (sẽ tự hiện sau vài giây)…`}
+              </AppText>
+            </View>
+          ) : null}
+
           {/* Photo Picker Checkboxes */}
           {ready.length ? (
             <View style={{ gap: 8 }}>
@@ -483,9 +517,11 @@ export function PhotoAutofillPanel({
             >
               <Icon name="camera" size={18} color={stitchTokens.roseBrown} />
               <AppText kind="small" color={stitchTokens.roseBrown} style={{ flex: 1, fontSize: 11, lineHeight: 16 }}>
-                {photos.some((p) => p.status === "Processing" || p.status === "Pending")
-                  ? "Ảnh đang được xử lý. Chờ ảnh sẵn sàng rồi bấm đọc."
-                  : "Chưa có ảnh sẵn sàng. Vui lòng tải ảnh bản sách để AI đọc thông tin."}
+                {uploading
+                  ? "Đang tải ảnh bạn vừa chọn…"
+                  : processingCount > 0
+                    ? "Ảnh đang được xử lý. Sẽ tự hiện ngay khi sẵn sàng."
+                    : "Chưa có ảnh sẵn sàng. Chọn 1–3 ảnh (bìa trước, bìa sau, trang bản quyền) để AI đọc."}
               </AppText>
             </View>
           )}
@@ -526,7 +562,11 @@ export function PhotoAutofillPanel({
             >
               <Icon name="plus" size={14} color={stitchTokens.wineDark} />
               <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 12 }}>
-                Thêm ảnh để đọc
+                {uploading
+                  ? `Đang tải ${uploading.current}/${uploading.total}…`
+                  : ready.length === 0
+                    ? "Chọn ảnh (tối đa 3)"
+                    : "Thêm ảnh để đọc"}
               </AppText>
             </Pressable>
 

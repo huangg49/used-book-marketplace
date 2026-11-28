@@ -378,13 +378,68 @@ export function ConditionFields({
 
       {/* Detailed Description Fields */}
       <View style={{ gap: space.md }}>
-        <AppText
-          kind="label"
-          color={stitchTokens.wine}
-          style={{ fontWeight: "700", letterSpacing: 0.5 }}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
         >
-          CHI TIẾT ẤN BẢN & MÔ TẢ
-        </AppText>
+          <AppText
+            kind="label"
+            color={stitchTokens.wine}
+            style={{ fontWeight: "700", letterSpacing: 0.5 }}
+          >
+            CHI TIẾT ẤN BẢN & MÔ TẢ
+          </AppText>
+          {!disabled ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Điền nhanh mẫu sách nguyên vẹn cho các mục còn trống"
+              onPress={() => {
+                onChange({
+                  ...form,
+                  readable: form.readable ?? true,
+                  hasMissingPages: form.hasMissingPages ?? false,
+                  missingEssentialContent: form.missingEssentialContent ?? false,
+                  pages: form.pages.trim()
+                    ? form.pages
+                    : "Đủ trang, giấy sạch, không rách hay bong trang.",
+                  coverNote: form.coverNote.trim()
+                    ? form.coverNote
+                    : "Bìa và gáy sách còn chắc chắn, không rách gãy.",
+                  notes: form.notes.trim() ? form.notes : "Không có",
+                  accessories: form.accessories.trim() ? form.accessories : "Không có",
+                });
+              }}
+              style={({ pressed }) => [
+                {
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  backgroundColor: stitchTokens.roseParchment,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.peachBorder,
+                },
+                pressed && { opacity: 0.78 },
+              ]}
+            >
+              <Icon name="bolt" size={12} color={stitchTokens.wine} />
+              <AppText
+                kind="bold"
+                color={stitchTokens.wineDark}
+                style={{ fontSize: 11, lineHeight: 14, includeFontPadding: false }}
+              >
+                Điền nhanh sách tốt
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
 
         {[
           {
@@ -451,10 +506,20 @@ export function ConditionFields({
                 </AppText>
                 <AppText
                   kind="small"
-                  color={stitchTokens.subtleGray}
-                  style={{ flexShrink: 0, fontSize: 11, paddingTop: 1 }}
+                  color={
+                    key === "description"
+                      ? charCount >= 30
+                        ? stitchTokens.likeNewGreen
+                        : colors.rustText
+                      : stitchTokens.subtleGray
+                  }
+                  style={{ flexShrink: 0, fontSize: 11, fontWeight: key === "description" ? "700" : "400", paddingTop: 1 }}
                 >
-                  {`${charCount}/${max}`}
+                  {key === "description"
+                    ? charCount >= 30
+                      ? `✓ ${charCount}/${max}`
+                      : `${charCount}/30+ ký tự`
+                    : `${charCount}/${max}`}
                 </AppText>
               </View>
 

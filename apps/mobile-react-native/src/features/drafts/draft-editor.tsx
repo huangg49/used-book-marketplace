@@ -159,6 +159,14 @@ export function DraftEditor({
   const [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
+    [uploadProgress, setUploadProgress] = useState<{
+      current: number;
+      total: number;
+    } | null>(null),
+    [stepBlocked, setStepBlocked] = useState<{
+      step: number;
+      missing: string[];
+    } | null>(null),
     [leave, setLeave] = useState(false),
     [reloadOpen, setReloadOpen] = useState(false),
     [retryAvailable, setRetryAvailable] = useState(false),
@@ -188,6 +196,7 @@ export function DraftEditor({
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const go = (value: number) => {
+    setStepBlocked(null);
     setStep(value);
     scroll.current?.scrollTo({ y: 0, animated: false });
   };
@@ -296,8 +305,11 @@ export function DraftEditor({
     },
     enabled: foreground,
     refetchInterval: (q) =>
-      foreground && q.state.data?.some((m) => m.status === "Processing")
-        ? 4000
+      foreground &&
+      q.state.data?.some(
+        (m) => m.status === "Processing" || m.status === "Pending",
+      )
+        ? 1500
         : false,
   });
 
@@ -533,6 +545,7 @@ export function DraftEditor({
     retry = false,
     replaceIndex?: number,
     asCover?: boolean,
+    maxPick?: number,
   ) => {
     if (busyRef.current || !editable || uncertain || lifecyclePending) return;
     busyRef.current = true;
@@ -540,52 +553,110 @@ export function DraftEditor({
     setError("");
     setMessage("");
     try {
+      const canPickMultiple =
+        !retry && !asCover && replaceIndex === undefined;
+      const remainingSlots = Math.max(
+        1,
+        Math.min(maxPick ?? 8, 8 - form.mediaIds.length),
+      );
       if (!retry) {
         const picked = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ["images"],
           allowsEditing: false,
           quality: 1,
-          allowsMultipleSelection: false,
+          allowsMultipleSelection: canPickMultiple && remainingSlots > 1,
+          ...(canPickMultiple && remainingSlots > 1
+            ? { selectionLimit: remainingSlots }
+            : {}),
         });
-        if (picked.canceled) return;
-        const asset = picked.assets[0];
-        if ((asset.fileSize ?? 0) > 10_000_000) {
-          setError("Ảnh quá lớn. Chọn ảnh không quá 10 MB.");
-          return;
-        }
-        const bytes = await photoBytes(asset.uri);
-        if (bytes.length === 0 || bytes.length > 10_000_000) {
-          setError("Chọn ảnh có dung lượng từ 1 byte đến 10 MB.");
-          return;
-        }
-        const mime = asset.mimeType;
-        if (
-          !mime ||
-          !["image/jpeg", "image/png", "image/webp"].includes(mime)
-        ) {
-          setError(
-            "Chọn ảnh JPEG, PNG hoặc WebP. Ảnh HEIC cần được xuất sang JPEG trước.",
+        if (picked.canceled || !picked.assets.length) return;
+        const selectedAssets = canPickMultiple
+          ? picked.assets.slice(0, remainingSlots)
+          : [picked.assets[0]!];
+
+        let uploadedCount = 0;
+        for (let i = 0; i < selectedAssets.length; i++) {
+          const asset = selectedAssets[i]!;
+          setUploadProgress({ current: i + 1, total: selectedAssets.length });
+          if ((asset.fileSize ?? 0) > 10_000_000) {
+            setError("Ảnh quá lớn. Chọn ảnh không quá 10 MB.");
+            return;
+          }
+          const bytes = await photoBytes(asset.uri);
+          if (bytes.length === 0 || bytes.length > 10_000_000) {
+            setError("Chọn ảnh có dung lượng từ 1 byte đến 10 MB.");
+            return;
+          }
+          const mime = asset.mimeType;
+          if (
+            !mime ||
+            !["image/jpeg", "image/png", "image/webp"].includes(mime)
+          ) {
+            setError(
+              "Chọn ảnh JPEG, PNG hoặc WebP. Ảnh HEIC cần được xuất sang JPEG trước.",
+            );
+            return;
+          }
+          const hash = await Crypto.digest(
+            Crypto.CryptoDigestAlgorithm.SHA256,
+            bytes,
           );
-          return;
+          attempt.current = {
+            listingId: base.id,
+            expectedVersion: base.version,
+            mimeType: mime,
+            bytes,
+            sha256: Array.from(new Uint8Array(hash), (b) =>
+              b.toString(16).padStart(2, "0"),
+            ).join(""),
+            createKey: Crypto.randomUUID(),
+            uploadKey: Crypto.randomUUID(),
+            finalizeKey: Crypto.randomUUID(),
+          };
+          const m = await uploadPhoto(client, attempt.current);
+          uploadedCount++;
+          setForm((f) => {
+            if (asCover) {
+              const rest = f.mediaIds.length > 0 ? f.mediaIds.slice(1) : [];
+              return {
+                ...f,
+                mediaIds: [m.id, ...rest.filter((id) => id !== m.id)].slice(0, 8),
+              };
+            }
+            if (
+              replaceIndex !== undefined &&
+              replaceIndex >= 0 &&
+              replaceIndex < f.mediaIds.length
+            ) {
+              return {
+                ...f,
+                mediaIds: f.mediaIds.map((id, idx) =>
+                  idx === replaceIndex ? m.id : id,
+                ),
+              };
+            }
+            return {
+              ...f,
+              mediaIds:
+                f.mediaIds.includes(m.id) || f.mediaIds.length >= 8
+                  ? f.mediaIds
+                  : [...f.mediaIds, m.id],
+            };
+          });
+          attempt.current = null;
+          void photos.refetch();
         }
-        const hash = await Crypto.digest(
-          Crypto.CryptoDigestAlgorithm.SHA256,
-          bytes,
-        );
-        attempt.current = {
-          listingId: base.id,
-          expectedVersion: base.version,
-          mimeType: mime,
-          bytes,
-          sha256: Array.from(new Uint8Array(hash), (b) =>
-            b.toString(16).padStart(2, "0"),
-          ).join(""),
-          createKey: Crypto.randomUUID(),
-          uploadKey: Crypto.randomUUID(),
-          finalizeKey: Crypto.randomUUID(),
-        };
+        if (uploadedCount > 0) {
+          setMessage(
+            approvedEdit
+              ? `Đã tải ${uploadedCount} ảnh lên. Gửi bản sửa để lưu lựa chọn ảnh mới.`
+              : `Đã tải ${uploadedCount} ảnh lên và đang xử lý (tự hiện sau vài giây).`,
+          );
+        }
+        return;
       }
       if (!attempt.current) return;
+      setUploadProgress({ current: 1, total: 1 });
       const m = await uploadPhoto(client, attempt.current);
       setForm((f) => {
         if (asCover) {
@@ -624,6 +695,7 @@ export function DraftEditor({
     } catch (e) {
       setError(photoError(e));
     } finally {
+      setUploadProgress(null);
       setRetryAvailable(!!attempt.current);
       await photos.refetch();
       busyRef.current = false;
@@ -669,9 +741,68 @@ export function DraftEditor({
   const draftSavedAtQuota =
     quotaReached && !approvedEdit && intent.current?.savedVersion !== undefined;
 
+  const fieldLabels: Partial<Record<keyof Errors, string>> = {
+    bundle: "Thông tin bộ sách",
+    bookId: "Đầu sách",
+    mediaIds: "Ảnh bản sách (ít nhất 1 ảnh đã xử lý xong)",
+    condition: "Bậc tình trạng sách",
+    readable: "Sách còn đọc rõ",
+    hasMissingPages: "Có thiếu trang hay không",
+    missingEssentialContent: "Nội dung trọng yếu",
+    pages: "Ruột sách & trang thiếu",
+    coverNote: "Bìa & gáy sách",
+    notes: "Ghi chú & đánh dấu",
+    accessories: "Phụ kiện đi kèm",
+    description: "Mô tả chung (≥ 30 ký tự)",
+    mode: "Hình thức bán/đổi",
+    salePrice: "Giá bán",
+    exchangeValue: "Giá trị đổi",
+    ownershipDeclared: "Cam kết quyền đăng",
+  };
+  const liveStepErrors = validateForm(form, photoList, declared, true);
+  const missingFieldsForStep = (s: number) =>
+    (stepFields[s] ?? []).filter((k) => Boolean(liveStepErrors[k]));
+  const firstIncompletePrevStep = (() => {
+    if (!editable || isApprovedView) return null;
+    for (let i = 0; i < step; i++) {
+      const missing = missingFieldsForStep(i);
+      if (missing.length > 0) {
+        return {
+          index: i,
+          firstField: missing[0]!,
+          labels: missing.map((k) => fieldLabels[k] ?? k),
+        };
+      }
+    }
+    return null;
+  })();
+
+  const handleNextStep = () => {
+    if (step >= 4) return;
+    if (editable) {
+      const missing = missingFieldsForStep(step);
+      if (missing.length > 0) {
+        const flagged: Errors = {};
+        for (const k of missing) flagged[k] = liveStepErrors[k];
+        setCheck((prev) => ({
+          errors: { ...prev.errors, ...flagged },
+          submit: true,
+        }));
+        setStepBlocked({
+          step,
+          missing: missing.map((k) => fieldLabels[k] ?? k),
+        });
+        setJump({ field: missing[0]! });
+        return;
+      }
+    }
+    go(step + 1);
+  };
+
+  const nextShortNames = ["Thông tin", "Ảnh sách", "Tình trạng", "Bán/Đổi", "Kiểm tra"];
   const nextStepTitle =
     step < 4
-      ? "Tiếp theo"
+      ? `Tiếp: ${nextShortNames[step + 1] ?? "Tiếp theo"}`
       : approvedEdit
         ? "Gửi bản sửa để duyệt lại"
         : "Lưu và gửi duyệt";
@@ -707,7 +838,7 @@ export function DraftEditor({
             title={nextStepTitle}
             disabled={navLocked}
             wine
-            onPress={() => go(step + 1)}
+            onPress={handleNextStep}
           />
         ) : hasPrimary && step === 4 ? (
           <Button
@@ -782,6 +913,76 @@ export function DraftEditor({
             disabled={navLocked}
             onSelect={go}
           />
+        ) : null}
+
+        {/* Clear inline reminder when current step blocks Next or a previous step lacks a green tick */}
+        {stepBlocked && stepBlocked.step === step && missingFieldsForStep(step).length > 0 ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              backgroundColor: stitchTokens.roseParchment,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: stitchTokens.peachBorder,
+              padding: 12,
+              gap: 6,
+            }}
+          >
+            <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 12.5 }}>
+              {`Bước ${step + 1} còn thiếu ${missingFieldsForStep(step).length} mục để hoàn thành:`}
+            </AppText>
+            <AppText kind="small" color={stitchTokens.deepCocoa} style={{ fontSize: 12, lineHeight: 17 }}>
+              {`• ${missingFieldsForStep(step).map((k) => fieldLabels[k] ?? k).join("\n• ")}`}
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => go(step + 1)}
+              style={{ alignSelf: "flex-end", paddingVertical: 2 }}
+            >
+              <AppText kind="bold" color={stitchTokens.wine} style={{ fontSize: 11.5 }}>
+                Vẫn xem bước sau →
+              </AppText>
+            </Pressable>
+          </View>
+        ) : firstIncompletePrevStep ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              const target = firstIncompletePrevStep;
+              const flagged: Errors = {};
+              for (const k of missingFieldsForStep(target.index)) {
+                flagged[k] = liveStepErrors[k];
+              }
+              setCheck((prev) => ({
+                errors: { ...prev.errors, ...flagged },
+                submit: true,
+              }));
+              go(target.index);
+              setJump({ field: target.firstField });
+            }}
+            style={({ pressed }) => [
+              {
+                backgroundColor: stitchTokens.warmIvory,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: stitchTokens.goldAccent,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              },
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            <Icon name="info" size={16} color={stitchTokens.wine} />
+            <AppText kind="small" color={stitchTokens.wineDark} style={{ flex: 1, fontSize: 12, lineHeight: 17 }}>
+              <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 12 }}>
+                {`Bước ${firstIncompletePrevStep.index + 1} chưa xong: `}
+              </AppText>
+              {`còn thiếu ${firstIncompletePrevStep.labels.slice(0, 2).join(", ")}${firstIncompletePrevStep.labels.length > 2 ? ` (+${firstIncompletePrevStep.labels.length - 2})` : ""}. Chạm để điền ngay →`}
+            </AppText>
+          </Pressable>
         ) : null}
 
         {/* Step Indicator & Headings */}
@@ -1186,7 +1387,16 @@ export function DraftEditor({
           ) : (
             <>
               <CatalogPicker
-                assistPhotos={form.bundle ? undefined : { listingId: base.id, photos: photoList.filter(p => form.mediaIds.includes(p.id)), add: () => void send(false) }}
+                assistPhotos={
+                  form.bundle
+                    ? undefined
+                    : {
+                        listingId: base.id,
+                        photos: photoList.filter((p) => form.mediaIds.includes(p.id)),
+                        uploading: uploadProgress,
+                        add: () => void send(false, undefined, undefined, 3),
+                      }
+                }
                 selected={form.bookId}
                 onDirtyChange={setCatalogDirty}
                 disabled={locked}
@@ -1246,6 +1456,11 @@ export function DraftEditor({
                   onPress: () => void photos.refetch(),
                 }}
               />
+            ) : null}
+            {uploadProgress ? (
+              <Notice tone="info">
+                {`Đang tải ảnh ${uploadProgress.current}/${uploadProgress.total} lên máy chủ…`}
+              </Notice>
             ) : null}
             {errors.mediaIds ? (
               <Notice tone="error">{errors.mediaIds}</Notice>

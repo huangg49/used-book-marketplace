@@ -298,7 +298,12 @@ export function CatalogPicker({
   onDirtyChange,
   assistPhotos,
 }: {
-  assistPhotos?: { listingId: string; photos: Media[]; add: () => void };
+  assistPhotos?: {
+    listingId: string;
+    photos: Media[];
+    uploading?: { current: number; total: number } | null;
+    add: () => void;
+  };
   selected: string | null;
   disabled: boolean;
   onSelect: (id: string) => void;
@@ -454,6 +459,7 @@ export function CatalogPicker({
         <PhotoAutofillPanel
           listingId={assistPhotos.listingId}
           photos={assistPhotos.photos}
+          uploading={assistPhotos.uploading}
           disabled={disabled || busy || retryPending}
           onAddPhoto={assistPhotos.add}
           currentValue={(field) => form[field]}

@@ -49,6 +49,55 @@ import {
   useExchangeRecovery,
 } from "./exchange-recovery";
 
+function CollapsibleDetailSection({
+  title,
+  subtitle,
+  icon = "book",
+  defaultExpanded = false,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  icon?: "book" | "wallet" | "info";
+  defaultExpanded?: boolean;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  return (
+    <View style={styles.accordionCard}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={title}
+        onPress={() => setExpanded((prev) => !prev)}
+        style={({ pressed }) => [styles.accordionHeader, pressed && styles.pressed]}
+      >
+        <View style={styles.accordionHeaderLeft}>
+          <View style={styles.accordionIconPill}>
+            <Icon name={icon} size={14} color={stitchTokens.wine} />
+          </View>
+          <View style={styles.accordionTextCol}>
+            <AppText style={styles.accordionTitle} numberOfLines={1}>
+              {title}
+            </AppText>
+            {subtitle ? (
+              <AppText style={styles.accordionSubtitle} numberOfLines={1}>
+                {subtitle}
+              </AppText>
+            ) : null}
+          </View>
+        </View>
+        <Icon
+          name={expanded ? "chevronUp" : "chevronDown"}
+          size={16}
+          color={stitchTokens.subtleGray}
+        />
+      </Pressable>
+      {expanded ? <View style={styles.accordionBody}>{children}</View> : null}
+    </View>
+  );
+}
+
 export function ExchangeDetailScreen() {
   const params = useLocalSearchParams<{ id?: string; tab?: string }>();
   const id = typeof params.id === "string" ? params.id : "";
@@ -442,8 +491,15 @@ export function ExchangeDetailScreen() {
                         }
                       />
 
-                      {/* Tier 3: Compact Dispute Reference & Escrow Summary */}
-                      {actionsBody}
+                      {/* Tier 3: Collapsible Dispute Reference & Escrow Summary so action stays above the fold */}
+                      <CollapsibleDetailSection
+                        title="Chi tiết cọc & thông tin giao dịch"
+                        subtitle="Xem lại khoản giữ tiền và trạng thái phiếu"
+                        icon="wallet"
+                        defaultExpanded={false}
+                      >
+                        {actionsBody}
+                      </CollapsibleDetailSection>
 
                       {/* Utility Footer: Demo Time-Advance (when enabled) */}
                       <ExchangeReturnAndDemoCard
@@ -466,13 +522,20 @@ export function ExchangeDetailScreen() {
 
                       {exchange.status === "Delivered" &&
                       receiveBooks.length > 0 ? (
-                        <ExchangeBookGroup
-                          title="Sách bạn đã nhận"
+                        <CollapsibleDetailSection
+                          title={`Sách bạn đã nhận (${receiveBooks.length} cuốn)`}
                           subtitle={`Đối chiếu tình trạng gốc từ ${partnerName}`}
-                          books={receiveBooks}
-                          exchangeId={exchange.id}
-                          incoming
-                        />
+                          icon="book"
+                          defaultExpanded={false}
+                        >
+                          <ExchangeBookGroup
+                            title="Sách bạn đã nhận"
+                            subtitle={`Đối chiếu tình trạng gốc từ ${partnerName}`}
+                            books={receiveBooks}
+                            exchangeId={exchange.id}
+                            incoming
+                          />
+                        </CollapsibleDetailSection>
                       ) : null}
 
                       <ExchangeReturnAndDemoCard
@@ -556,6 +619,55 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
+  },
+  accordionCard: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: stitchTokens.wineAlpha05,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  accordionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  accordionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+  },
+  accordionIconPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseParchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  accordionTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  accordionTitle: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: stitchTokens.darkWood,
+  },
+  accordionSubtitle: {
+    fontSize: 11.5,
+    color: stitchTokens.subtleGray,
+  },
+  accordionBody: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.surfaceSoft,
   },
   partnerInitial: {
     fontSize: 13.5,
