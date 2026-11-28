@@ -12,13 +12,14 @@ import {
   useInboxPosition,
 } from "./conversation-navigation";
 import { getPublicListing } from "../../services/public-listings";
+import { orderBookPhotoOptions, orderDetailsOptions } from "../../services/orders";
 import type { Exchange } from "../../services/exchange";
 import { ListingPhoto } from "../BookCard";
 import { useNearViewport } from "../../hooks/useNearViewport";
 import card from "./TransactionCard.module.css";
 import { PartnerChip } from "./PartnerChip";
 import { ExchangeCard } from "./ExchangeCard";
-import { BookTitle, Figures, NextStep } from "./CardParts";
+import { BookTitle, Figures, NextStep, TransactionBookPhoto } from "./CardParts";
 import { conversationNext, conversationStats, conversationRoles, conversationStatus, dayMonth, shortDate } from "./transaction-status";
 
 export function ConversationCard({
@@ -51,12 +52,25 @@ export function ConversationCard({
   const book = useQuery({
     queryKey: ["public-listing", room.listingId],
     queryFn: () => getPublicListing(room.listingId),
-    enabled: active || engaged,
+    enabled: !room.orderId && (active || engaged),
     retry: false,
     staleTime: 60000,
   });
-  const unavailable = book.error instanceof ApiError && [403, 404].includes(book.error.status);
-  const visibleBook = unavailable ? undefined : book.data;
+  const order = useQuery({
+    ...orderDetailsOptions(userId, room.orderId),
+    enabled: Boolean(room.orderId && (active || engaged)),
+  });
+  const read = room.orderId ? order : book;
+  const unavailable = read.error instanceof ApiError && [403, 404].includes(read.error.status);
+  const visibleBook = room.orderId || unavailable ? undefined : book.data;
+  const item = room.orderId && !unavailable ? order.data?.item : undefined;
+  const title = item?.bundle?.title ?? item?.metadata.title ?? visibleBook?.bundle?.title ?? visibleBook?.book.title;
+  const unavailableTitle = room.orderId ? "Không xem được thông tin đơn hàng" : "Bài đăng không còn công khai";
+  const unavailableMessage = room.orderId
+    ? "Thông tin đơn hàng không còn truy cập được. Bạn vẫn mở được hội thoại."
+    : "Bài đăng không còn truy cập được. Bạn vẫn mở được hội thoại.";
+  const photoOptions = orderBookPhotoOptions(userId, room.orderId, item?.mediaIds?.[0]);
+  const photo = useQuery({ ...photoOptions, enabled: active && photoOptions.enabled });
   const roles = conversationRoles(room, userId);
   const partner = roles.partner;
   const status = conversationStatus(room, userId);
@@ -84,26 +98,29 @@ export function ConversationCard({
           {visibleBook?.photos.length ? (
             <ListingPhoto book={visibleBook} />
           ) : (
-            <img src="/illustrations/chat/no-cover.svg" alt="" width={64} height={88} />
+            <TransactionBookPhoto
+              photo={photo.isError || unavailable ? undefined : photo.data}
+              fallback="/illustrations/chat/no-cover.svg"
+            />
           )}
         </div>
         <div>
           <BookTitle
             morph
-            text={visibleBook?.bundle?.title ?? visibleBook?.book.title ??
-              (book.isPending
+            text={title ??
+              (read.isPending
                 ? "Đang tải tên sách…"
-                : unavailable ? "Bài đăng không còn công khai" : "Chưa tải được tên sách")}
+                : unavailable ? unavailableTitle : "Chưa tải được tên sách")}
           />
           <PartnerChip id={partner.id} name={partner.displayName} role={roles.theirs} />
-          {book.isError && (
+          {read.isError && (
             <div role="alert" className={card.inlineAlert}>
               <span>{unavailable
-                ? "Bài đăng không còn truy cập được. Bạn vẫn mở được hội thoại."
-                : visibleBook
+                ? unavailableMessage
+                : title
                   ? "Chưa cập nhật được thông tin sách; đang hiện lần tải trước."
                   : "Chưa tải được thông tin sách; hội thoại vẫn mở được."}</span>
-              <button type="button" disabled={book.isFetching} onClick={() => void book.refetch()}>
+              <button type="button" disabled={read.isFetching} onClick={() => void read.refetch()}>
                 Tải lại thông tin sách
               </button>
             </div>

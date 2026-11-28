@@ -49,6 +49,7 @@ try {
     if (coverProbe) await page.clock.install();
     page.on('pageerror', error => errors.push(error.message));
     let details = 0, photos = 0, failList = false;
+    let firstExchangePhotoReads = 0;
     let coverMode = 'bad', failedImages = 0, releaseImage;
     const imageGate = coverProbe ? new Promise(resolve => { releaseImage = resolve; }) : Promise.resolve();
     await context.route('**/*', async route => {
@@ -65,6 +66,7 @@ try {
       if (row) { details++; return route.fulfill({ json: row }); }
       if (p.includes('/books/') && p.includes('/photos/')) {
         photos++;
+        if (p.startsWith('/api/v1/exchanges/' + rows[0].id + '/')) firstExchangePhotoReads++;
         if (coverProbe) return coverMode === 'unavailable'
           ? route.fulfill({ status: 503, json: { code: 'QA_UNAVAILABLE' } })
           : route.fulfill({ json: { url: origin + '/qa-cover/' + coverMode + '.svg',
@@ -97,18 +99,23 @@ try {
     await expect(old).toContainText('Hồ sơ cũ — thiếu bản chụp sách');
     await expect(old).toContainText('Đối tác trao đổi');
     if (baseline) { await expect.poll(() => details).toBe(12); await expect.poll(() => photos).toBe(33); }
-    else { assert.equal(details, 0); assert.equal(photos, 0); }
+    else {
+      assert.equal(details, 0);
+      await expect.poll(() => firstExchangePhotoReads).toBe(1);
+      assert(photos > 0 && photos <= 11, 'Each visible card signs at most one image');
+    }
     const initial = { details, photos };
     await first.getByRole('link', { name: 'Mở phiếu và hội thoại', exact: true }).click();
     await expect(page.locator('#exchange-actions')).toBeVisible();
-    await expect(page.getByRole('heading', { name: title.split(', ')[0], exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Sách trong phiếu' })
+      .getByText(title.split(', ')[0], { exact: true })).toBeVisible();
     await expect.poll(() => details, { timeout: 8000 }).toBeGreaterThan(initial.details);
     await expect.poll(() => photos, { timeout: 8000 }).toBeGreaterThan(initial.photos);
     let photoPolling;
     if (photoProbe) {
       await expect.poll(() => details, { timeout: 13000 }).toBeGreaterThanOrEqual(initial.details + 3);
-      await expect.poll(() => photos).toBe(photoBaseline ? 9 : 3);
-      photoPolling = { detailReads: details - initial.details, signedPhotoReads: photos - initial.photos };
+      await expect.poll(() => firstExchangePhotoReads).toBe(photoBaseline ? 9 : 3);
+      photoPolling = { detailReads: details - initial.details, signedPhotoReads: firstExchangePhotoReads };
     }
     let coverRecovery;
     if (coverProbe) {
@@ -161,12 +168,12 @@ try {
     await expect(first.getByRole('heading')).toHaveText(title);
     // A list outage keeps the already read previews and exposes its retry.
     failList = true;
-    await expect(page.getByText('Chưa tải được danh sách đổi sách.', { exact: false })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText('Chưa tải được giao dịch đổi sách.', { exact: false })).toBeVisible({ timeout: 13000 });
     await expect(first.getByRole('heading')).toHaveText(title);
     await page.screenshot({ path: path.join(out, `inbox-${width}-${owner}${baseline ? '-before' : ''}.png`) });
     failList = false;
-    await page.getByRole('alert').filter({ hasText: 'Chưa tải được danh sách đổi sách.' }).getByRole('button', { name: 'Thử lại' }).click();
-    await expect(page.getByText('Chưa tải được danh sách đổi sách.', { exact: false })).toHaveCount(0);
+    await page.getByRole('alert').filter({ hasText: 'Chưa tải được giao dịch đổi sách.' }).getByRole('button', { name: 'Thử lại' }).click();
+    await expect(page.getByText('Chưa tải được giao dịch đổi sách.', { exact: false })).toHaveCount(0);
     assert.deepEqual(errors, []);
     checks.push({ width, owner, initial, photoPolling, coverRecovery, detailEntry: true, back: true, listErrorRetry: true });
     await context.close();

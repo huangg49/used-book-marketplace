@@ -53,7 +53,7 @@ try{
    await card.getByRole('button',{name:'Tải lại thông tin sách',exact:true}).click();await expect(heading).toHaveText('Sách hội thoại QA');await expect(card.getByRole('alert')).toHaveCount(0);
   }
   await card.getByRole('link',{name:'Mở cuộc trao đổi',exact:true}).click();await expect(page).toHaveURL(origin+'/chat/'+room.id);
-  await expect(page.getByRole('heading',{name:'Thỏa thuận giao dịch',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Phiếu thương lượng mua sách',exact:true})).toBeVisible();
   assert.deepEqual(errors,[]);checks.push({width,mode,readStateAccurate:!baseline,conversationStillOpens:true,reads});await context.close();
  }
  await writeFile(path.join(out,baseline?'before.json':'after.json'),JSON.stringify({checks},null,2));console.log(JSON.stringify({baseline,checks}));

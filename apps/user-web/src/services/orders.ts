@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { queryOptions, skipToken } from "@tanstack/react-query";
 import { saleFeeAmountsSchema } from "@used-books/session-client";
 import { session } from "../lib/session";
 import { bundleSchema } from "../lib/book-bundle";
 import type { components } from "@used-books/api-contract";
+import { transactionPhotoOptions } from "./transaction-photos";
 
 const paymentOrderSchema = z.object({
   id: z.string().uuid(),
@@ -153,6 +155,7 @@ const orderDetails = paymentOrderSchema.extend({
   item: z.object({
     bundle: bundleSchema.nullable().optional(),
     listingId: z.string().uuid(),
+    mediaIds: z.array(z.uuid()).optional(),
     metadata: z.object({ title: z.string() }),
     condition: z.string(),
     description: z.string(),
@@ -163,6 +166,25 @@ const orderDetails = paymentOrderSchema.extend({
 export type DirectOrder = z.infer<typeof orderDetails>;
 export function getOrder(orderId: string) {
   return session.request(`/me/orders/${orderId}`, orderDetails);
+}
+
+export function orderDetailsOptions(userId: string, orderId: string | null) {
+  return queryOptions({
+    queryKey: ["direct-order", userId, orderId] as const,
+    queryFn: orderId ? () => getOrder(orderId) : skipToken,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+export function orderBookPhotoOptions(userId: string, orderId: string | null, mediaId?: string) {
+  return {
+    ...transactionPhotoOptions(
+      ["direct-order-book-photo", userId, orderId, mediaId],
+      `/me/orders/${orderId}/media/${mediaId}/read`,
+    ),
+    enabled: Boolean(orderId && mediaId),
+  };
 }
 export function getDirectOrderByTrackingCode(code: string) {
   return session.request(`/me/direct-order-tracking/${encodeURIComponent(code)}`, orderDetails);

@@ -33,7 +33,8 @@ import {
   type PurchaseMessage,
   type PurchaseConversation,
 } from "../services/purchase-conversations";
-import { getPublicListing } from "../services/public-listings";
+import { getPublicListing, type PublicListing } from "../services/public-listings";
+import { orderDetailsOptions, type DirectOrder } from "../services/orders";
 import { createSellerOrder } from "../services/purchase-conversations";
 
 import { purchaseChatGuidance } from "../lib/purchase-chat-guidance";
@@ -1135,16 +1136,23 @@ function TransactionHub({
     retry: false,
     refetchInterval: 20000,
   });
-  // Book titles for searching conversations: the same reads the cards make,
-  // only while a search is typed.
-  const listings = useQueries({
-    queries: rooms.map((room) => ({
-      queryKey: ["public-listing", room.listingId],
-      queryFn: () => getPublicListing(room.listingId),
-      enabled: query.trim().length > 0,
-      retry: false,
-      staleTime: 60000,
-    })),
+  // Search shares the cards' book reads, including the frozen title after order creation.
+  const bookTitles = useQueries({
+    queries: rooms.map((room) => {
+      const enabled = query.trim().length > 0;
+      return room.orderId ? {
+        ...orderDetailsOptions(userId, room.orderId),
+        enabled,
+        select: (order: DirectOrder) => [order.item.bundle?.title, order.item.metadata.title].filter(Boolean).join(" "),
+      } : {
+        queryKey: ["public-listing", room.listingId],
+        queryFn: () => getPublicListing(room.listingId),
+        enabled,
+        retry: false,
+        staleTime: 60_000,
+        select: (listing: PublicListing) => [listing.bundle?.title, listing.book.title].filter(Boolean).join(" "),
+      };
+    }),
   });
 
   const exchangeItems = exchanges.data?.items ?? [];
@@ -1155,11 +1163,12 @@ function TransactionHub({
 
   const roomEntries: Entry[] = rooms.map((room, index) => {
     const partner = room.buyer.id === userId ? room.seller : room.buyer;
-    const listing = listings[index]?.data;
+    const read = bookTitles[index];
+    const unavailable = read?.error instanceof ApiError && [403, 404].includes(read.error.status);
     return {
       type: "room", key: `room-${room.id}`, room, at: Date.parse(room.createdAt),
       attention: conversationStatus(room, userId).tone === "attention",
-      text: fold([partner.displayName, listing?.bundle?.title, listing?.book.title].filter(Boolean).join(" ")),
+      text: fold([partner.displayName, unavailable ? undefined : read?.data].filter(Boolean).join(" ")),
     };
   });
   const exchangeEntries: Entry[] = exchangeItems.map((exchange) => ({

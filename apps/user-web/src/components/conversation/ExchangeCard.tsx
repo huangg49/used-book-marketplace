@@ -1,9 +1,11 @@
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeftRight, ArrowUpRight } from "lucide-react";
-import type { Exchange } from "../../services/exchange";
+import { useQuery } from "@tanstack/react-query";
+import { exchangeBookPhotoOptions, type Exchange } from "../../services/exchange";
+import { useNearViewport } from "../../hooks/useNearViewport";
 import { PartnerChip } from "./PartnerChip";
-import { BookTitle, Figures, NextStep } from "./CardParts";
+import { BookTitle, Figures, NextStep, TransactionBookPhoto } from "./CardParts";
 import { exchangeNext, exchangeStats, exchangePartner, exchangeStatus, dayMonth, shortDate } from "./transaction-status";
 import card from "./TransactionCard.module.css";
 
@@ -29,8 +31,13 @@ export function ExchangeCard({ exchange, userId, index, title, open, conversatio
   const partnerId = exchange.agreement ? (exchange.initiatorId === userId ? exchange.recipientId : exchange.initiatorId) : undefined;
   const mine = exchange.initiatorId === userId;
   const stats = exchangeStats(exchange, userId);
+  const snapshot = mine ? exchange.agreement?.recipientBook : exchange.agreement?.initiatorBooks[0];
+  const { active, ref } = useNearViewport<HTMLElement>();
+  const photoOptions = exchangeBookPhotoOptions(userId, exchange.id, snapshot);
+  const photo = useQuery({ ...photoOptions, enabled: active && photoOptions.enabled });
   return (
     <article
+      ref={ref}
       className={card.card}
       data-tone={status.tone}
       data-room-id={roomId}
@@ -45,7 +52,10 @@ export function ExchangeCard({ exchange, userId, index, title, open, conversatio
       </div>
       <div className={card.main}>
         <span className={card.cover} aria-hidden="true">
-          <img src="/illustrations/chat/swap-cover.svg" alt="" width={64} height={88} />
+          <TransactionBookPhoto
+            photo={photo.isError ? undefined : photo.data}
+            fallback="/illustrations/chat/swap-cover.svg"
+          />
         </span>
         <div>
           <BookTitle text={title} />

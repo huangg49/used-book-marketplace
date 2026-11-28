@@ -1,3 +1,18 @@
+# Ảnh sách trong hộp giao dịch Web — 28/11/2026
+
+- Nhánh `codex/chat-transaction-book-covers`, nền `ecd27817`. Thẻ mua bán
+  đã có đơn trên `/chat` lấy tên và ảnh từ bản chụp trong đơn, kể cả khi bài
+  đăng đã rời kệ. Tìm theo tên sách dùng cùng dữ liệu. Thẻ đổi sách lấy ảnh
+  cuốn đầu tiên người dùng nhận theo phiếu đổi. Hội thoại chưa có đơn tiếp tục
+  dùng bài đăng công khai.
+- URL ảnh được cấp qua API riêng của đơn hoặc phiếu đổi, cache theo tài khoản
+  và thời hạn của URL. Giữ ảnh minh họa khi ảnh thiếu hoặc không tải được.
+- PASS Member Web lint, typecheck, build, 525 unit test. Browser với API mô
+  phỏng kiểm người mua 320 px, người bán 1440 px, ảnh sau khi sách rời kệ,
+  tìm theo tên, từ chối truy cập đơn, URL hết hạn và ảnh lỗi. Kiểm thêm mở
+  phiếu đổi, trở về danh sách và thử lại khi API bài đăng hoặc phiếu đổi lỗi.
+  Chưa kiểm phiên đăng nhập Member trên production.
+
 # Nâng cấp UI trang Chi tiết Trao đổi Web — 28/11/2026
 
 - Nhánh `feat/exchange-detail-redesign`, nền `9075bdcc` (`origin/main`).

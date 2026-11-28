@@ -1,7 +1,29 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Clock3 } from "lucide-react";
+import { signedMediaRemainingMs } from "@used-books/session-client";
 import type { Fact } from "./transaction-status";
 import card from "./TransactionCard.module.css";
+
+export function TransactionBookPhoto({ photo, fallback }: {
+  photo?: { url: string; expiresAt?: string };
+  fallback: string;
+}) {
+  const [failedUrl, setFailedUrl] = useState<string>();
+  const url = photo && (!photo.expiresAt || signedMediaRemainingMs(photo.expiresAt)) ? photo.url : undefined;
+
+  return (
+    <img
+      key={url}
+      src={url && url !== failedUrl ? url : fallback}
+      alt=""
+      width={64}
+      height={88}
+      loading="lazy"
+      decoding="async"
+      onError={url && url !== failedUrl ? () => setFailedUrl(url) : undefined}
+    />
+  );
+}
 
 /**
  * A book name on one line with "…". When it is cut off, hovering shows the

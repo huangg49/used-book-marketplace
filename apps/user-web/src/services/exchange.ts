@@ -9,9 +9,6 @@ import {
   retryExchangeCommand,
   sendExchangeCommand,
   sendExchangeProposal,
-  PUBLIC_MEDIA_GC_MS,
-  signedMediaRemainingMs,
-  signedMediaStaleTime,
   type ExchangeCommand,
 } from "@used-books/session-client";
 import { z } from "zod";
@@ -23,6 +20,7 @@ import {
 import { session } from "./api";
 import { queryClient } from "../lib/session";
 import { invalidateMemberWalletViews } from "../lib/wallet-cache";
+import { transactionPhotoOptions } from "./transaction-photos";
 import type {
   ExchangeTab,
   ExchangeItem,
@@ -271,6 +269,21 @@ export function exchangeIdentity() {
   return exchangeCommandIdentity(session);
 }
 
+export function exchangeBookPhotoOptions(
+  userId: string,
+  exchangeId: string,
+  snapshot: ExchangeBookSnapshot | undefined,
+) {
+  const mediaId = snapshot?.mediaIds[0];
+  return {
+    ...transactionPhotoOptions(
+      ["exchange-book-photo", userId, exchangeId, snapshot?.listingId, snapshot?.revisionId, mediaId],
+      `/exchanges/${exchangeId}/books/${snapshot?.listingId}/photos/${mediaId}`,
+    ),
+    enabled: Boolean(mediaId),
+  };
+}
+
 export async function exchangeBook(
   id: string,
   fallbackPrice?: number,
@@ -281,23 +294,9 @@ export async function exchangeBook(
     let coverUrl: string | undefined;
     if (exchangeId && snapshot.mediaIds[0]) {
       try {
-        const ownerId = exchangeActor().id;
-        const mediaId = snapshot.mediaIds[0];
-        const photo = await queryClient.fetchQuery({
-          queryKey: ["exchange-book-photo", ownerId, exchangeId, id, snapshot.revisionId, mediaId],
-          queryFn: async () => {
-            const result = await session.request(
-              `/exchanges/${exchangeId}/books/${id}/photos/${mediaId}`,
-              z.object({ url: z.string().url(), expiresAt: z.iso.datetime({ offset: true }).optional() }),
-            );
-            if (result.expiresAt && !signedMediaRemainingMs(result.expiresAt))
-              throw new Error("The exchange image link expired before it arrived.");
-            return result;
-          },
-          staleTime: query => signedMediaStaleTime(query.state.data?.expiresAt, query.state.dataUpdatedAt),
-          gcTime: PUBLIC_MEDIA_GC_MS,
-          retry: false,
-        });
+        const photo = await queryClient.fetchQuery(
+          exchangeBookPhotoOptions(exchangeActor().id, exchangeId, snapshot),
+        );
         coverUrl = photo.url;
       } catch {
         /* Photo failure does not replace frozen agreement facts. */

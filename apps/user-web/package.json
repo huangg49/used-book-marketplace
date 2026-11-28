@@ -92,6 +92,7 @@
     "test:listing-photo-identity:browser": "node tests/listing-photo-identity.mjs",
     "test:order-list-read-access:browser": "node tests/order-list-read-access.mjs",
     "test:chat-listing-read-recovery:browser": "node tests/chat-listing-read-recovery.mjs",
+    "test:chat-transaction-covers:browser": "node tests/chat-transaction-covers.mjs",
     "test:work-inbox-read-access:browser": "node tests/work-inbox-read-access.mjs",
     "test:work-inbox-sparse-pages:browser": "node tests/work-inbox-sparse-pages.mjs",
     "test:exchange-route-params:browser": "node tests/exchange-route-params.mjs",
