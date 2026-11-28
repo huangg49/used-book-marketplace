@@ -1,4 +1,4 @@
-import { ApiError, clearAiPriceAttribution, findPriceReference, isStale, listingSellerFeeText, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
+import { ApiError, DEFAULT_SALE_COMMISSION_BPS, clearAiPriceAttribution, findPriceReference, isStale, listingSellerFeeText, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
 import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
@@ -22,19 +22,17 @@ import {
   ClipboardCheck,
   Clock,
   BookOpen,
-  FileImage,
   ImagePlus,
   Images,
   Info,
   MapPin,
-  PencilLine,
   ShieldCheck,
-  SlidersHorizontal,
   Tag,
   X,
 } from "lucide-react";
 import { Header } from "../layouts/MainLayout";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { InfoTip } from "../components/InfoTip";
 import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
 import { lockPageScroll } from "../lib/page-scroll";
 import galleryStyles from "../components/ListingGallery.module.css";
@@ -908,6 +906,25 @@ export function SellBookPage() {
       "Điều người đọc tiếp theo nên biết (ít nhất 30 ký tự).",
     ],
   ] as const;
+  // Quick phrases only insert editable text; the seller still owns the wording.
+  const conditionPhrases: Partial<Record<(typeof textFields)[number][0], string[]>> = {
+    pages: ["Giấy ngả vàng", "Chữ in rõ", "Có nếp gấp vài trang", "Không rách trang"],
+    coverNote: ["Bìa còn đẹp", "Mép bìa sờn nhẹ", "Gáy chắc", "Có vết ố nhẹ"],
+    notes: ["Không có", "Bút chì vài trang", "Có highlight", "Có chữ ký tên"],
+    accessories: ["Không có", "Có bìa áo", "Có bookmark"],
+  };
+  const phraseParts = (value: string) =>
+    value.split(/[,;\n]/).map((part) => part.trim()).filter(Boolean);
+  const togglePhrase = (key: (typeof textFields)[number][0], phrase: string) =>
+    setFormData((previous) => {
+      const parts = phraseParts(previous[key]);
+      const has = parts.some((part) => part.toLocaleLowerCase("vi-VN") === phrase.toLocaleLowerCase("vi-VN"));
+      let next: string[];
+      if (has) next = parts.filter((part) => part.toLocaleLowerCase("vi-VN") !== phrase.toLocaleLowerCase("vi-VN"));
+      else if (phrase === "Không có") next = [phrase];
+      else next = [...parts.filter((part) => part !== "Không có"), phrase];
+      return { ...previous, [key]: next.join(", ") };
+    });
   const questions = [
     ["readable", "Nội dung có đọc rõ không?"],
     ["hasMissingPages", "Sách có thiếu trang không?"],
@@ -1148,6 +1165,9 @@ export function SellBookPage() {
     Worn: "Rõ dấu thời gian, đủ chữ",
   };
   const supportPhotoGuides = ["Bìa sau", "Gáy sách", "Trang ruột", "Vết lỗi nếu có"];
+  // Decorative empty-slot drawings for each suggested angle (public/illustrations/sell-photos).
+  const supportPhotoArt = ["back-cover", "spine", "inner-pages", "flaw"];
+  const supportPhotoCount = Math.max(0, imageFiles.length - Number(hasCoverPhoto));
   function reviewEdit(target: number) {
     return (
       <button
@@ -1722,26 +1742,16 @@ export function SellBookPage() {
                 aria-label="Tiến độ điền thông tin sách"
               >
                 <div className={styles.stepProgressMetaRow}>
-                  <span className={styles.stepProgressCurrent}>
-                    <span className={styles.stepProgressCurrentStep}>
-                      Bước {step}/5 · {steps[step - 1]}
-                    </span>
-                    <span className={styles.stepProgressSummary}>
-                      {formProgressPercent === 100
-                        ? "Đã sẵn sàng gửi duyệt"
-                        : "Tiến độ hoàn thiện"}
-                    </span>
+                  <span className={styles.stepProgressSummary}>
+                    {formProgressPercent === 100
+                      ? "Đã sẵn sàng gửi duyệt"
+                      : <>Đã đủ <strong>{validFieldsCount}/{totalFieldsCount}</strong> mục</>}
                   </span>
-                  <span className={styles.stepProgressStats}>
-                    <span>
-                      Đã đủ <strong>{validFieldsCount}/{totalFieldsCount}</strong> mục
-                    </span>
-                    <span
-                      className={styles.stepProgressPercent}
-                      data-complete={formProgressPercent === 100}
-                    >
-                      {formProgressPercent}%
-                    </span>
+                  <span
+                    className={styles.stepProgressPercent}
+                    data-complete={formProgressPercent === 100}
+                  >
+                    {formProgressPercent}%
                   </span>
                 </div>
                 <div
@@ -1780,27 +1790,14 @@ export function SellBookPage() {
               </details>
               <div className={styles.formArea}>
                 <div ref={stepBody} className={styles.stepBody}>
-                  <div className={styles.slipHeader}>
-                    <div className={styles.slipMeta}>
-                      <span className={styles.slipStepBadge}>Bước {step} / 5</span>
-                      <span className={styles.slipChannel}>
-                        {auction
-                          ? "Đấu giá qua điểm giao nhận"
-                          : bundle
-                            ? "Đăng bán nguyên bộ"
-                            : "Phiếu thông tin sách"}
-                      </span>
-                    </div>
-                    <span className={styles.slipStatus}>
-                      {hasAttempt ? "Đang khóa để thử gửi lại" : "Bản nháp"}
-                    </span>
+                  <div className={styles.stepTitleRow}>
+                    <h2 ref={heading} tabIndex={-1}>
+                      {steps[step - 1]}
+                    </h2>
+                    {stepHelp[step - 1] && (
+                      <InfoTip label={steps[step - 1]}>{stepHelp[step - 1]}</InfoTip>
+                    )}
                   </div>
-                  <h2 ref={heading} tabIndex={-1}>
-                    {steps[step - 1]}
-                  </h2>
-                  {stepHelp[step - 1] && (
-                    <p className={styles.stepHelp}>{stepHelp[step - 1]}</p>
-                  )}
                   <form
                     onBlurCapture={(event) => {
                       const target = event.target;
@@ -1832,7 +1829,7 @@ export function SellBookPage() {
                           {!auction && <>
                             <div className={styles.bookType}>
                               <div className={styles.bookTypeLead}>
-                                <span id="sell-book-type">Bạn đăng</span>
+                                <span id="sell-book-type" className={styles.bookTypeLabel}>Bạn đăng</span>
                                 <div className={styles.typeChoice} role="group" aria-labelledby="sell-book-type">
                                   <button type="button" aria-pressed={!bundle} onClick={() => {
                                     if (!bundle) return;
@@ -1841,7 +1838,7 @@ export function SellBookPage() {
                                     setBundle(null);
                                     setOwnershipDeclared(false);
                                     if (singleTerms.current) setFormData(previous => ({ ...previous, ...singleTerms.current! }));
-                                  }}>Sách lẻ</button>
+                                  }}><span>Sách lẻ</span><small>Một cuốn</small></button>
                                   <button type="button" aria-pressed={!!bundle} onClick={() => {
                                     if (bundle) return;
                                     singleTerms.current = { mode: formData.mode, salePrice: formData.salePrice, exchangeValue: formData.exchangeValue, condition: formData.condition };
@@ -1850,12 +1847,9 @@ export function SellBookPage() {
                                     setBundle(restored);
                                     setOwnershipDeclared(false);
                                     setFormData(previous => ({ ...previous, mode: 'Sale', salePrice: bundlePrice.current, exchangeValue: '', condition: bundleCondition(restored) }));
-                                  }}>Bộ sách</button>
+                                  }}><span>Bộ sách</span><small>2–50 cuốn, bán nguyên bộ</small></button>
                                 </div>
                               </div>
-                              <span className={styles.bookTypeHint}>
-                                {bundle ? "Bán trọn bộ cùng lúc trong một bài đăng" : "Đăng 1 cuốn lẻ hoặc chuyển sang bộ nhiều cuốn"}
-                              </span>
                             </div>
                             {bundle && <BundleEditor value={bundle} error={shownError('bundle')} onChange={next => {
                               setBundle(next);
@@ -1863,45 +1857,8 @@ export function SellBookPage() {
                               setFormData(previous => ({ ...previous, condition: bundleCondition(next), mode: 'Sale', exchangeValue: '' }));
                             }} />}
                           </>}
-                          {!selectedBook && !bundle && (
-                            <PhotoAutofill
-                              onUseCover={file => addSelectedImages([file], "cover")}
-                              currentValue={field => field === "title" ? formData.title : field === "authors" ? formData.author : field === "language" ? language : String(autofillFacts[field] ?? "")}
-                              attempt={draftAttempt}
-                              channel={auction ? "Auction" : undefined}
-                              disabled={submitting || hasAttempt}
-                              onUseField={applyAutofillField}
-                              onPickBook={(match) => chooseBook(match.book)}
-                            />
-                          )}
                           {bundle && !selectedBook && (
                             <h3 className={styles.bookEntryHeading}>Đầu sách đại diện</h3>
-                          )}
-                          {!selectedBook && (
-                            <div
-                              className={styles.entryChoice}
-                              role="group"
-                              aria-label="Cách điền thông tin sách"
-                            >
-                              <button
-                                type="button"
-                                aria-pressed={entryMode === "catalog"}
-                                aria-controls="sell-book-entry"
-                                onClick={() => setEntryMode("catalog")}
-                              >
-                                <BookOpen size={18} aria-hidden="true" />
-                                Tìm sách có sẵn
-                              </button>
-                              <button
-                                type="button"
-                                aria-pressed={entryMode === "manual"}
-                                aria-controls="sell-book-entry"
-                                onClick={() => setEntryMode("manual")}
-                              >
-                                <PencilLine size={18} aria-hidden="true" />
-                                Tự nhập thông tin
-                              </button>
-                            </div>
                           )}
                           <div
                             id="sell-book-entry"
@@ -1916,17 +1873,21 @@ export function SellBookPage() {
                                   feedbackMessage={fieldFeedback("sell-catalog-search")}
                                   onSelect={chooseBook}
                                 />
-                                <button
-                                  className={styles.textAction}
-                                  type="button"
-                                  onClick={() => {
-                                    setEntryMode("manual");
-                                    focusAfterRender("manual-title");
-                                  }}
-                                >
-                                  Không thấy sách? Tự nhập theo bìa{" "}
-                                  <ArrowRight size={16} aria-hidden="true" />
-                                </button>
+                                <p className={styles.entryFallback}>
+                                  <span>Không thấy sách trong danh mục?</span>
+                                  <button
+                                    className={styles.textAction}
+                                    type="button"
+                                    aria-controls="sell-book-entry"
+                                    onClick={() => {
+                                      setEntryMode("manual");
+                                      focusAfterRender("manual-title");
+                                    }}
+                                  >
+                                    Tự nhập thông tin{" "}
+                                    <ArrowRight size={16} aria-hidden="true" />
+                                  </button>
+                                </p>
                               </div>
                             )}
                             {selectedBook && (
@@ -1975,10 +1936,22 @@ export function SellBookPage() {
                             )}
                             {!selectedBook && entryMode === "manual" && (
                               <>
+                                <button
+                                  className={`${styles.textAction} ${styles.entryBack}`}
+                                  type="button"
+                                  aria-controls="sell-book-entry"
+                                  onClick={() => {
+                                    setEntryMode("catalog");
+                                    focusAfterRender("catalog-search");
+                                  }}
+                                >
+                                  <ArrowLeft size={16} aria-hidden="true" />
+                                  Tìm sách có sẵn
+                                </button>
                                 <div className={styles.bookIdentity}>
                                   <div className={styles.subSectionBar}>
                                     <strong>Thông tin trên bìa</strong>
-                                    <span>Ghi tên sách và tác giả như trên bìa.</span>
+                                    <InfoTip label="Thông tin trên bìa">Ghi tên sách và tác giả như trên bìa.</InfoTip>
                                   </div>
                                   {(
                                     [
@@ -2088,6 +2061,17 @@ export function SellBookPage() {
                               </>
                             )}
                           </div>
+                          {!selectedBook && !bundle && (
+                            <PhotoAutofill
+                              onUseCover={file => addSelectedImages([file], "cover")}
+                              currentValue={field => field === "title" ? formData.title : field === "authors" ? formData.author : field === "language" ? language : String(autofillFacts[field] ?? "")}
+                              attempt={draftAttempt}
+                              channel={auction ? "Auction" : undefined}
+                              disabled={submitting || hasAttempt}
+                              onUseField={applyAutofillField}
+                              onPickBook={(match) => chooseBook(match.book)}
+                            />
+                          )}
                       </div>
                       {step === 2 && (
                         <>
@@ -2103,7 +2087,7 @@ export function SellBookPage() {
                             >
                               <div className={styles.photoPaneHead}>
                                 <h3 className={styles.photoLabel}>Ảnh bìa</h3>
-                                <span className={styles.photoPaneMeta}>Khung dọc 3:4</span>
+                                <span className={styles.photoPaneMeta}>Bắt buộc · ảnh dọc</span>
                               </div>
                               {hasCoverPhoto && coverCropMeta ? (
                                 <div className={styles.coverCropContainer}>
@@ -2408,7 +2392,15 @@ export function SellBookPage() {
                                   onClick={() => coverInput.current?.click()}
                                   {...feedbackProps("images", "image-help")}
                                 >
-                                  <ImagePlus size={28} aria-hidden="true" />
+                                  <img
+                                    className={styles.uploadArt}
+                                    src="/illustrations/sell-photos/cover-empty.svg"
+                                    alt=""
+                                    aria-hidden="true"
+                                    width={160}
+                                    height={140}
+                                    draggable={false}
+                                  />
                                   <strong>Chọn ảnh bìa</strong>
                                   <span>Chụp rõ mặt bìa trước</span>
                                 </button>
@@ -2435,7 +2427,7 @@ export function SellBookPage() {
                               <div className={styles.photoPaneHead}>
                                 <h3 className={styles.photoLabel}>Ảnh phụ</h3>
                                 <span className={styles.photoPaneMeta}>
-                                  {Math.max(0, imageFiles.length - Number(hasCoverPhoto))}/7 ảnh
+                                  Tùy chọn · tối đa 7 ảnh
                                 </span>
                               </div>
                               <div className={styles.supportGrid}>
@@ -2499,29 +2491,47 @@ export function SellBookPage() {
                                   }
                                   onClick={() => supportInput.current?.click()}
                                 >
-                                  <ImagePlus size={26} aria-hidden="true" />
+                                  {supportPhotoArt[supportPhotoCount] ? (
+                                    <img
+                                      className={styles.slotArt}
+                                      src={`/illustrations/sell-photos/${supportPhotoArt[supportPhotoCount]}.svg`}
+                                      alt=""
+                                      aria-hidden="true"
+                                      width={64}
+                                      height={64}
+                                      draggable={false}
+                                    />
+                                  ) : (
+                                    <ImagePlus size={24} aria-hidden="true" />
+                                  )}
                                   <strong>Thêm ảnh phụ</strong>
-                                  <span>Chọn nhiều ảnh cùng lúc</span>
+                                  <span>
+                                    {supportPhotoGuides[supportPhotoCount] ?? "Chọn nhiều ảnh cùng lúc"}
+                                  </span>
                                 </button>
-                              </div>
-                              <div className={styles.shotGuide} aria-label="Gợi ý góc chụp ảnh phụ">
-                                <span className={styles.shotGuideLabel}>Gợi ý góc chụp:</span>
-                                <div className={styles.shotGuideChips}>
-                                  {supportPhotoGuides.map((guide, guideIndex) => {
-                                    const covered =
-                                      imageFiles.length - Number(hasCoverPhoto) > guideIndex;
-                                    return (
-                                      <span
-                                        key={guide}
-                                        className={styles.shotGuideChip}
-                                        data-covered={covered}
-                                      >
-                                        {covered && <Check size={12} aria-hidden="true" />}
-                                        {guide}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
+                                {/* The remaining suggested angles are real drop targets, not hint chips. */}
+                                {supportPhotoGuides.slice(supportPhotoCount + 1).map((guide, offset) => (
+                                  <button
+                                    key={guide}
+                                    type="button"
+                                    className={`${styles.upload} ${styles.guideSlot}`}
+                                    aria-label={`Thêm ảnh: ${guide.toLowerCase()}`}
+                                    aria-describedby="image-help"
+                                    disabled={hasAttempt || submitting}
+                                    onClick={() => supportInput.current?.click()}
+                                  >
+                                    <img
+                                      className={styles.slotArt}
+                                      src={`/illustrations/sell-photos/${supportPhotoArt[supportPhotoCount + 1 + offset]}.svg`}
+                                      alt=""
+                                      aria-hidden="true"
+                                      width={64}
+                                      height={64}
+                                      draggable={false}
+                                    />
+                                    <span>{guide}</span>
+                                  </button>
+                                ))}
                               </div>
                               <input
                                 ref={supportInput}
@@ -2560,29 +2570,15 @@ export function SellBookPage() {
                             </div>
                           </div>
                           {fieldFeedback("images")}
-                          <div id="image-help" className={styles.photoSpecStrip}>
-                            <div className={styles.photoSpecItem}>
-                              <Images size={16} aria-hidden="true" />
-                              <div>
-                                <strong>{imageFiles.length}/8 ảnh</strong>
-                                <span>Chọn nhiều ảnh cùng lúc</span>
-                              </div>
-                            </div>
-                            <div className={styles.photoSpecItem}>
-                              <FileImage size={16} aria-hidden="true" />
-                              <div>
-                                <strong>JPEG, PNG, WebP</strong>
-                                <span>Tối đa 10 MB mỗi ảnh</span>
-                              </div>
-                            </div>
-                            <div className={styles.photoSpecItem}>
-                              <SlidersHorizontal size={16} aria-hidden="true" />
-                              <div>
-                                <strong>Bấm ảnh để thay</strong>
-                                <span>Nút × để xóa · tải lên khi gửi duyệt</span>
-                              </div>
-                            </div>
-                          </div>
+                          <p id="image-help" className={styles.photoSpecLine}>
+                            <strong>{imageFiles.length}/8 ảnh</strong>
+                            <span>JPEG, PNG hoặc WebP, tối đa 10 MB mỗi ảnh</span>
+                            <span>
+                              {imageFiles.length
+                                ? "Bấm ảnh để thay, nút × để xóa"
+                                : "Chọn nhiều ảnh cùng lúc được"}
+                            </span>
+                          </p>
                         </>
                       )}
                       {step === 3 && (
@@ -2659,22 +2655,20 @@ export function SellBookPage() {
                               const descCount = key === "description" ? formData.description.trim().length : 0;
                               return (
                                 <div className={styles.field} key={key}>
-                                  {key === "description" ? (
-                                    <div className={styles.fieldLabelRow}>
+                                  <div className={styles.fieldLabelRow}>
+                                    <span className={styles.fieldLabelLead}>
                                       <label htmlFor={key}>{label}</label>
+                                      <InfoTip id={`${key}-hint`} label={label}>{hint}</InfoTip>
+                                    </span>
+                                    {key === "description" && (
                                       <span
                                         className={styles.charCounter}
                                         data-ready={descCount >= 30}
                                       >
                                         {descCount}/30 ký tự tối thiểu
                                       </span>
-                                    </div>
-                                  ) : (
-                                    <label htmlFor={key}>{label}</label>
-                                  )}
-                                  <p id={`${key}-hint`} className={styles.help}>
-                                    {hint}
-                                  </p>
+                                    )}
+                                  </div>
                                   <textarea
                                     id={key}
                                     rows={key === "description" ? 4 : 2}
@@ -2688,6 +2682,27 @@ export function SellBookPage() {
                                     }
                                     {...feedbackProps(key, `${key}-hint`)}
                                   />
+                                  {conditionPhrases[key] && (
+                                    <div
+                                      className={styles.phraseChips}
+                                      role="group"
+                                      aria-label={`Cụm từ gợi ý cho ${label}`}
+                                    >
+                                      {conditionPhrases[key]!.map((phrase) => (
+                                        <button
+                                          key={phrase}
+                                          type="button"
+                                          className={styles.phraseChip}
+                                          aria-pressed={phraseParts(formData[key]).some(
+                                            (part) => part.toLocaleLowerCase("vi-VN") === phrase.toLocaleLowerCase("vi-VN"),
+                                          )}
+                                          onClick={() => togglePhrase(key, phrase)}
+                                        >
+                                          {phrase}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
                                   {fieldFeedback(key)}
                                 </div>
                               );
@@ -2802,9 +2817,22 @@ export function SellBookPage() {
                           )}
 
                           {formData.mode !== "Exchange" && (
-                            <section className={styles.tradeSection} aria-label={salePriceLabel}>
+                            <section className={styles.tradeSection} data-price-assist={!auction && !bundle} aria-label={salePriceLabel}>
+                              <div className={styles.priceColumn}>
                               {tradeAmount("salePrice", salePriceLabel)}
+                              {!auction && validPrice(formData.salePrice) && (
+                                <p className={styles.payoutEstimate} aria-live="polite">
+                                  Ước tính bạn nhận{" "}
+                                  <strong>
+                                    {formatVnd(
+                                      Number(formData.salePrice) -
+                                        Math.round((Number(formData.salePrice) * DEFAULT_SALE_COMMISSION_BPS) / 10000),
+                                    )}
+                                  </strong>
+                                </p>
+                              )}
                               {!auction && <p className={styles.help}>{listingSellerFeeText}</p>}
+                              </div>
                               {auction ? (
                                 <p className={styles.help}>Mức bồi thường tối đa nếu sách hư hỏng hoặc thất lạc tại điểm giao nhận. Giá khởi điểm đặt khi gửi đấu giá.</p>
                               ) : bundle ? (
@@ -2879,7 +2907,7 @@ export function SellBookPage() {
                                   <MapPin size={19} aria-hidden="true" />
                                   <h3 id="sell-origin-title">Nơi gửi sách</h3>
                                   <span className={styles.tradeOriginStatus} data-ready={originReady}>
-                                    {originReady ? "Đã chọn" : "Cần chọn"}
+                                    {originReady ? "Đã chọn" : "Bắt buộc"}
                                   </span>
                                 </div>
                                 <div className={styles.tradeOriginBody}>
@@ -3437,7 +3465,7 @@ export function SellBookPage() {
                         )}
                       </div>
                     )}
-                    <details className={styles.postingLimit}>
+                    {step === 1 && <details className={styles.postingLimit}>
                       <summary>
                         <Info size={15} aria-hidden="true" className={styles.postingLimitIcon} />
                         <span>Giới hạn đăng bài</span>
@@ -3445,7 +3473,7 @@ export function SellBookPage() {
                         <ChevronDown size={15} aria-hidden="true" className={styles.postingLimitChevron} />
                       </summary>
                       <p className={styles.help}>{postingLimit}</p>
-                    </details>
+                    </details>}
                     {hasAttempt && (
                       <p role="status" className={styles.help}>
                         Thông tin đã khóa cho lần gửi này để giữ đúng dữ liệu
@@ -3467,7 +3495,7 @@ export function SellBookPage() {
                           Bản nháp chưa tự lưu.
                         </span>
                       )}
-                      {step === 4 && <span className={styles.tradeNext}>Tiếp theo · Kiểm tra bài đăng</span>}
+                      {step < 5 && <span className={styles.tradeNext}>Tiếp theo · {steps[step]}</span>}
                       <button
                         type="submit"
                         className={styles.primary}

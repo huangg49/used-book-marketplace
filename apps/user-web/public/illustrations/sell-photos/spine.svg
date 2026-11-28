@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#5c0202" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Suggested angle: a book standing on its spine side. Hand-authored for Lật lại. -->
+  <ellipse cx="32" cy="58" rx="16" ry="3" fill="#5c0202" fill-opacity=".1" stroke="none"/>
+  <rect x="24" y="6" width="16" height="48" rx="3" fill="#7c1a17"/>
+  <path d="M24 13h16M24 47h16" stroke="#f4cb67" stroke-width="2.5"/>
+  <path d="M29 22v16" stroke="#fffcf5" stroke-width="2.5"/>
+  <path d="M34 24v12" stroke="#f6e0a8" stroke-width="2"/>
+  <path d="M46 14l1.2 3 3 1.2-3 1.2L46 22.4l-1.2-3-3-1.2 3-1.2z" fill="#f4cb67" stroke-width="1.6"/>
+</svg>

@@ -1,3 +1,28 @@
+# Làm gọn luồng đăng sách Web — 28/11/2026
+
+- Nhánh `refactor/web-sell-wizard-flow`, nền `3466008d` (`origin/main`). Làm lại
+  giao diện bước 1–4 của `/sell` (`SellBookPage`) theo critique Impeccable
+  (`.impeccable/critique/2026-11-28T03-22-37Z__…sellbookpage-tsx.md`, 26/40).
+  Không đổi API/OpenAPI, state, retry/idempotency hay điều kiện chuyển bước.
+  - Khung: bỏ hàng `Bước x / 5 · Phiếu thông tin sách · Bản nháp`; tiêu đề bước
+    Anton đỏ rượu có gạch vàng, lời dẫn bước và gợi ý ô nhập chuyển vào
+    `InfoTip` (giữ `id` cho `aria-describedby`); `Giới hạn đăng bài` chỉ ở bước 1;
+    gợi ý `Tiếp theo · <bước>` cạnh `Tiếp tục`.
+  - Bước 1: hai thẻ `Sách lẻ`/`Bộ sách` có mô tả; tìm danh mục trước, `Tự nhập
+    thông tin` là đường lùi, `Tìm sách có sẵn` quay lại; `PhotoAutofill` giữ
+    mount ở cả hai chế độ (nút `Dùng` chuyển sang tự nhập).
+  - Bước 2: gợi ý góc chụp thành ô tải ảnh; minh họa SVG mới
+    `public/illustrations/sell-photos/` cho ô trống; quy định tệp thành một dòng.
+  - Bước 3: chip cụm từ chèn chữ sửa được dưới từng ô; hai cột ô nhập thẳng
+    hàng; nút `Có/Không` căn giữa, dấu chọn đi cùng nhãn.
+  - Bước 4: giá và `Gợi ý giá` cạnh nhau, `Ước tính bạn nhận` từ
+    `DEFAULT_SALE_COMMISSION_BPS` (ghi là ước tính), `Nơi gửi sách` báo `Bắt buộc`.
+- PASS typecheck, oxlint (không cảnh báo mới), Vitest user-web 525/525, build,
+  `docs:check`, `git diff --check`. Kiểm live preview (API demo, tài khoản chủ dự
+  án tự đăng nhập, không gửi duyệt) 1280 px và 579 px. Harness trình duyệt luồng
+  đăng sách với API mô phỏng: kết quả ghi trong PR. NOT RUN `tests/integration.mjs`
+  (cần Mongo `*_test`), native RN, Safari.
+
 # Ảnh sách trong hộp giao dịch Web — 28/11/2026
 
 - Nhánh `codex/chat-transaction-book-covers`, nền `ecd27817`. Thẻ mua bán
