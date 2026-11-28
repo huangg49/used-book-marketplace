@@ -1,6 +1,11 @@
 .card {
   --card-condition-ink: #3b281f;
   --card-height: auto;
+  /* Headline slot metrics: title lines and the smaller author/detail lines. */
+  --card-title-size: 1.05rem;
+  --card-title-line: calc(var(--card-title-size) * 1.4);
+  --card-sub-size: 0.8125rem;
+  --card-sub-line: calc(var(--card-sub-size) * 1.45);
   box-sizing: border-box;
   min-height: 420px;
   height: 100%;
@@ -29,6 +34,9 @@
 }
 
 .card.compact {
+  --card-title-size: 0.9375rem;
+  --card-title-line: calc(var(--card-title-size) * 1.35);
+  --card-sub-size: 0.78125rem;
   padding: 9px;
   min-height: 380px;
   border-radius: 14px;
@@ -43,16 +51,6 @@
   gap: 6px;
 }
 
-.card.compact .titleWrap {
-  height: 2.6em;
-  min-height: 2.6em;
-  max-height: 2.6em;
-}
-
-.card.compact .titleLink {
-  font-size: 0.9375rem;
-  line-height: 1.35;
-}
 
 .card.compact .condition {
   font-size: 0.65rem;
@@ -309,16 +307,52 @@
   padding: 10px 2px 2px;
 }
 
-/* Title Slot: Standardized 2-line height for all cards */
-.titleWrap {
+/* Headline slot: two title lines plus one author line, the same height on
+   every card. A one-line title leaves room for the category/language line, so
+   the slot is filled instead of showing a blank band under short titles. The
+   clipped detail line starts exactly at the slot's bottom edge. */
+.headline {
   position: relative;
+  min-width: 0;
+  flex: none;
+}
+
+.headlineText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: calc(var(--card-title-line) * 2 + var(--card-sub-line));
+  overflow: hidden;
+}
+
+.titleWrap {
   margin: 0;
   min-width: 0;
-  height: 2.8em;
-  min-height: 2.8em;
-  max-height: 2.8em;
+  flex: none;
   display: flex;
   align-items: flex-start;
+}
+
+.byline,
+.detailLine {
+  flex: none;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--card-sub-size);
+  line-height: var(--card-sub-line);
+}
+
+.byline {
+  color: var(--shop-ink-soft, #5a4a40);
+  font-weight: 500;
+}
+
+.detailLine {
+  color: var(--shop-muted, #716157);
+  font-weight: 400;
 }
 
 .titleLink {
@@ -328,9 +362,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: var(--shop-body, "Be Vietnam Pro", sans-serif);
-  font-size: 1.05rem;
+  font-size: var(--card-title-size);
   font-weight: 700;
-  line-height: 1.4;
+  line-height: var(--card-title-line);
   letter-spacing: -0.015em;
   color: var(--shop-ink, #281914);
   text-decoration: none;
@@ -380,7 +414,7 @@
   border-color: rgba(217, 203, 189, 0.95) transparent transparent transparent;
 }
 
-.titleWrap:hover .titleTooltip {
+.headline:has(.titleWrap:hover) .titleTooltip {
   opacity: 1;
   transform: translateY(0);
 }
@@ -395,7 +429,7 @@
 
 .information {
   min-height: 0;
-  height: 24px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -427,6 +461,43 @@
 .author svg {
   flex-shrink: 0;
   color: rgba(113, 97, 87, 0.75);
+}
+
+.seller {
+  gap: 7px;
+}
+
+.sellerName {
+  color: var(--shop-ink, #281914);
+  font-weight: 600;
+}
+
+/* Seller monogram: initial on a stable per-member colour (no public photo). */
+.sellerAvatar {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--av, linear-gradient(150deg, #a3342a, #5c0202));
+  color: #fffcf5;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--shop-paper, #fffdf8), 0 0 0 3px var(--av-ring, #5c020233);
+}
+
+.sellerAvatar[data-hue="1"] { --av: linear-gradient(150deg, #3f8a69, #254337); --av-ring: #25433740; }
+.sellerAvatar[data-hue="2"] { --av: linear-gradient(150deg, #d19a2a, #8a5f0c); --av-ring: #8a5f0c40; }
+.sellerAvatar[data-hue="3"] { --av: linear-gradient(150deg, #4f6f9a, #2c3f5e); --av-ring: #2c3f5e40; }
+.sellerAvatar[data-hue="4"] { --av: linear-gradient(150deg, #c0623a, #7c2d12); --av-ring: #7c2d1240; }
+
+@media (forced-colors: active) {
+  .sellerAvatar {
+    border: 1px solid CanvasText;
+    forced-color-adjust: none;
+  }
 }
 
 .location {
@@ -691,13 +762,8 @@
     padding: 7px;
     border-radius: 12px;
   }
-  .titleWrap {
-    height: 2.6em;
-    min-height: 2.6em;
-    max-height: 2.6em;
-  }
-  .titleLink {
-    font-size: 0.9375rem;
+  .card {
+    --card-title-size: 0.9375rem;
   }
   .wishlist {
     width: 32px;

@@ -1144,6 +1144,12 @@
 
 /* Refined book-filter panel: warm paper, clear sections, and calmer controls. */
 .sidebar {
+  /* Never taller than the space under the sticky header: the header and the
+     Apply/Reset footer stay put while the filter groups scroll inside. */
+  --sidebar-top: 92px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--sidebar-top) - 20px);
   width: 264px;
   box-sizing: border-box;
   padding: 20px 18px 18px;
@@ -1707,4 +1713,49 @@
 
 .filterDialog .filterForm legend {
   color: #4d1714;
+}
+
+/* Viewport-capped sidebar: header and footer fixed, groups scroll. */
+.sidebar .sidebarHeader {
+  flex: none;
+}
+
+.sidebar .filterForm {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0;
+}
+
+.sidebar .filterBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Room for the flush focus border so scrolling never clips it. */
+  margin-inline: -6px;
+  padding: 3px 6px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 245 232 / 34%) transparent;
+  scrollbar-gutter: stable;
+}
+
+.sidebar .filterBody::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar .filterBody::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(255 245 232 / 34%);
+}
+
+.sidebar .filterFooter {
+  flex: none;
+  margin-top: 0;
+  padding-top: 14px;
+}
+
+@media (min-width: 901px) and (max-width: 1000px) {
+  .sidebar {
+    --sidebar-top: 88px;
+  }
 }

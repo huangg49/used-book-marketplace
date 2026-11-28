@@ -222,7 +222,7 @@ function FilterForm({
   }
   return (
     <form className={styles.filterForm} onSubmit={submit} noValidate>
-      <div className={styles.filterBody}>
+      <div className={styles.filterBody} data-lenis-prevent="true">
         <div className={styles.classification}>
           <CatalogClassificationFields
             id={id}
