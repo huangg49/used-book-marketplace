@@ -1,7 +1,8 @@
 import { listingTitle } from "../lib/book-bundle";
 import { useState } from "react";
 import { Link, useLocation, useViewTransitionState } from "react-router-dom";
-import { BookOpen, ChevronRight, MapPin, UserRound } from "lucide-react";
+import { BookOpen, ChevronRight, MapPin } from "lucide-react";
+import { categoryFor, languageLabel } from "@used-books/api-contract/catalog-taxonomy";
 import { WishlistButton } from "./WishlistButton";
 import { CardFitText } from "./CardFitText";
 import { ROUTES, formatVnd } from "../lib/routes";
@@ -13,6 +14,21 @@ import { useNearViewport } from "../hooks/useNearViewport";
 import { BookCover } from "./BookCover";
 import { prefetchBookDetail } from "../lib/book-detail-prefetch";
 import "./BookTransition.css";
+
+/**
+ * Members cannot read each other's profile photos (the avatar read is
+ * owner/staff only), so the seller avatar is the name's initial on a colour
+ * picked from the member id, matching the partner chip in conversations.
+ */
+export function SellerAvatar({ id, name }: { id: string; name: string }) {
+  const initial = Array.from(name.trim())[0]?.toLocaleUpperCase("vi-VN") || "?";
+  const hue = [...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % 5;
+  return (
+    <span className={styles.sellerAvatar} data-hue={hue} aria-hidden="true">
+      {initial}
+    </span>
+  );
+}
 
 export function ListingPhoto({
   book,
@@ -115,6 +131,14 @@ export function BookCard({ book, compact = false }: BookCardProps) {
   const isSaleAndExchange = book.salePrice !== null && book.exchangeValue !== null;
   const isSaleOnly = book.salePrice !== null && book.exchangeValue === null;
   const isExchangeOnly = book.salePrice === null && book.exchangeValue !== null;
+  const authors = book.book.authors.filter(Boolean).join(", ");
+  // Some listings store the taxonomy id ("history.geography"); show its label.
+  const category =
+    categoryFor(book.book.categoryId || book.book.category)?.label ||
+    book.book.category;
+  const detail = [category, languageLabel(book.book.language)]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <article
@@ -159,27 +183,46 @@ export function BookCard({ book, compact = false }: BookCardProps) {
         )}
       </div>
       <div className={styles.meta}>
-        <h3 className={styles.titleWrap}>
-          <Link
-            to={detailUrl}
-            viewTransition
-            state={returnState}
-            title={title}
-            className={styles.titleLink}
-          >
-            {title}
-          </Link>
+        {/* Title, author and category share one fixed slot: a one-line title
+            lets the extra detail line show instead of leaving a blank gap. */}
+        <div className={styles.headline}>
+          <div className={styles.headlineText}>
+            <h3 className={styles.titleWrap}>
+              <Link
+                to={detailUrl}
+                viewTransition
+                state={returnState}
+                title={title}
+                className={styles.titleLink}
+              >
+                {title}
+              </Link>
+            </h3>
+            {authors && (
+              <p className={styles.byline} title={authors}>
+                <span className="sr-only">Tác giả: </span>
+                {authors}
+              </p>
+            )}
+            {detail && (
+              <p className={styles.detailLine} title={detail}>
+                {detail}
+              </p>
+            )}
+          </div>
           {title.length > 28 && (
             <span className={styles.titleTooltip} role="tooltip" aria-hidden="true">
               {title}
             </span>
           )}
-        </h3>
+        </div>
         <div className={styles.information}>
           <p className={styles.seller} title={"Người đăng: " + book.seller.displayName}>
-            <UserRound size={13} aria-hidden="true" />
+            <SellerAvatar id={book.seller.id} name={book.seller.displayName} />
             <span className="sr-only">Người đăng: </span>
-            <span className={styles.ellipsis}>{book.seller.displayName}</span>
+            <span className={`${styles.sellerName} ${styles.ellipsis}`}>
+              {book.seller.displayName}
+            </span>
           </p>
           <p className={styles.location} title={"Khu vực: " + locationLabel}>
             <MapPin size={13} aria-hidden="true" />
