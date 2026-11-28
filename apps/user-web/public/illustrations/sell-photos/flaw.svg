@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#5c0202" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Suggested angle: a page with a folded corner and a small stain, inside a focus ring. Hand-authored for Lật lại. -->
+  <ellipse cx="30" cy="58" rx="16" ry="3" fill="#5c0202" fill-opacity=".1" stroke="none"/>
+  <path d="M16 8h20l10 10v34a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z" fill="#fffcf5"/>
+  <path d="M36 8v10h10" fill="#f6e0a8"/>
+  <path d="M20 24h16M20 30h12M20 36h8" stroke-width="1.8"/>
+  <circle cx="34" cy="42" r="5" fill="#b9814f" fill-opacity=".45" stroke="none"/>
+  <circle cx="40" cy="44" r="10" stroke="#7c1a17" stroke-width="2.2"/>
+  <path d="M47.5 51.5L54 58" stroke="#7c1a17" stroke-width="3"/>
+</svg>

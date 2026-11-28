@@ -100,7 +100,7 @@ try{
    await next.click();
    await expect(search).toBeFocused();
    await expect(search).toHaveAccessibleDescription('Chọn một kết quả hoặc chuyển sang Tự nhập thông tin.');
-   await page.getByRole('button', { name: 'Không thấy sách? Tự nhập theo bìa' }).click();
+   await manual.click();
    await expect(title).toBeFocused();
    await title.fill('Tên đầu sách QA');
    await next.click();
@@ -143,7 +143,8 @@ try{
    await expect(page.getByLabel('Tên bộ sách', { exact: true })).toHaveValue('Bộ QA');
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
    assert.equal(await form.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
-   assert.equal(await manual.getAttribute('aria-pressed'), 'true');
+   // Entry mode stays manual across the single/set toggle (the back-to-search link only exists in manual mode).
+   await expect(page.getByRole('button', { name: 'Tìm sách có sẵn', exact: true })).toBeVisible();
    assert.deepEqual(errors, []);
    assert.ok(Object.values(counts).every(count => count === 0));
    checks.push({ width, mode, inlineErrors: true, draftPreserved: true, fitsViewport: true });

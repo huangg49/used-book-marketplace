@@ -95,7 +95,7 @@ try {
     assert.equal(shelfReads, 1);
     await page.locator('main').getByRole('link', { name: 'Đăng sách', exact: true }).click();
     const step = name => page.getByRole('navigation', { name: 'Các bước đăng sách', exact: true }).getByRole('button', { name });
-    await page.getByRole('button', { name: 'Không thấy sách? Tự nhập theo bìa', exact: true }).click();
+    await page.getByRole('button', { name: 'Tự nhập thông tin', exact: true }).click();
     const titleInput = page.getByLabel('Tên sách', { exact: true });
     if (outcome === 'autofill') {
       const panel = page.locator('section[aria-labelledby="photo-autofill-title"]');

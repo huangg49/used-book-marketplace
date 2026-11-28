@@ -123,33 +123,9 @@
   font-size: 0.8125rem;
   line-height: 1.4;
 }
-.stepProgressCurrent {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--shop-ink);
-  font-weight: 600;
-}
-.stepProgressCurrentStep {
-  display: none;
-  color: var(--shop-wine);
-  font-weight: 700;
-}
 .stepProgressSummary {
   color: var(--shop-muted);
   font-weight: 600;
-}
-.stepProgressStats {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--shop-muted);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-.stepProgressStats strong {
-  color: var(--shop-ink);
-  font-weight: 700;
 }
 .stepProgressPercent {
   display: inline-flex;
@@ -283,44 +259,6 @@
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(40, 25, 20, 0.04);
 }
-.slipHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding-bottom: 14px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--shop-line);
-}
-.slipMeta {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-}
-.slipStepBadge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 9px;
-  border-radius: 6px;
-  background: var(--shop-shelf);
-  border: 1px solid var(--shop-line);
-  color: var(--shop-wine);
-  font-size: 0.75rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.slipChannel {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--shop-muted);
-}
-.slipStatus {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--shop-muted);
-}
 .bookType {
   display: flex;
   align-items: center;
@@ -340,11 +278,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 12px;
-}
-.bookTypeHint {
-  font-size: 0.8125rem;
-  font-weight: 400;
-  color: var(--shop-muted);
 }
 
 .typeChoice {
@@ -522,28 +455,6 @@
   margin-top: 2px;
 }
 
-.entryChoice {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  border-bottom: 1px solid var(--shop-line);
-}
-.entryChoice button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 8px 0 12px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--shop-muted);
-  font: 700 0.875rem/1.5 var(--shop-body);
-}
-.entryChoice button[aria-pressed="true"] {
-  color: var(--shop-wine);
-  border-bottom-color: var(--shop-wine);
-}
 .bookEntry {
   display: grid;
   gap: 20px;
@@ -667,19 +578,6 @@
   line-height: 1.6;
 }
 @media (max-width: 760px) {
-  .slipHeader {
-    padding-bottom: 12px;
-    margin-bottom: 16px;
-  }
-  .entryChoice {
-    gap: 4px 16px;
-  }
-  .entryChoice button {
-    font-size: 0.8125rem;
-  }
-  .entryChoice svg {
-    display: none;
-  }
   .selectedFacts {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -810,76 +708,6 @@
   font-weight: 600;
   color: var(--shop-muted);
   font-variant-numeric: tabular-nums;
-}
-.shotGuide {
-  margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid var(--shop-line);
-  display: grid;
-  gap: 8px;
-}
-.shotGuideLabel {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--shop-muted);
-}
-.shotGuideChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.shotGuideChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 6px;
-  background: var(--shop-shelf);
-  border: 1px solid var(--shop-line);
-  color: var(--shop-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.shotGuideChip[data-covered="true"] {
-  background: var(--shop-success-bg);
-  border-color: var(--shop-success-line);
-  color: var(--shop-success);
-}
-.photoSpecStrip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: var(--shop-shelf);
-  border: 1px solid var(--shop-line);
-}
-.photoSpecItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-}
-.photoSpecItem svg {
-  flex: none;
-  margin-top: 2px;
-  color: var(--shop-wine);
-}
-.photoSpecItem > div {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.photoSpecItem strong {
-  font-size: 0.8125rem;
-  line-height: 1.35;
-  color: var(--shop-ink);
-  font-variant-numeric: tabular-nums;
-}
-.photoSpecItem span {
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: var(--shop-muted);
 }
 .coverCropContainer {
   display: flex;
@@ -2077,10 +1905,7 @@
   .stepProgress {
     padding: 9px 12px 11px;
   }
-  .stepProgressCurrentStep {
-    display: inline;
-  }
-  .stepProgressSummary {
+    .stepProgressSummary {
     display: none;
   }
   .steps ol {
@@ -2176,12 +2001,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-.stepHelp {
-  margin: 4px 0 24px;
-  color: var(--shop-muted);
-  font-size: 0.875rem;
-  line-height: 1.65;
 }
 .emptyPhoto {
   display: grid;
@@ -2593,7 +2412,6 @@
   .reviewFacts,
   .reviewBookFacts,
   .reviewChecks,
-  .photoSpecStrip,
   .confirmNotices {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2623,10 +2441,7 @@
   .stepBody {
     min-height: 0;
   }
-  .stepHelp {
-    margin-bottom: 18px;
-  }
-  .activeStep {
+    .activeStep {
     inset: 5px auto 5px 5px;
     width: calc((100% - 10px) / 5);
   }
@@ -2638,4 +2453,356 @@
   .compactPreview .previewPhoto {
     height: 180px;
   }
+}
+
+/* Step 1 — two labelled listing types instead of a segmented switch with a
+   detached hint; search first, typing in manually as the fallback. */
+.bookType {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.bookTypeLead {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+.bookTypeLabel {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+}
+.typeChoice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.typeChoice button {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 1px solid var(--shop-line);
+  border-radius: 10px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  text-align: left;
+}
+.typeChoice button > span {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+.typeChoice button > small {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--shop-muted);
+}
+.typeChoice button:hover:not([aria-pressed="true"]) {
+  border-color: var(--shop-control);
+}
+/* Selected type is filled wine, matching the selected trade-mode card in step 4. */
+.typeChoice button[aria-pressed="true"] {
+  border-color: var(--shop-wine);
+  background: var(--shop-wine);
+  color: var(--shop-paper);
+  box-shadow: none;
+}
+.typeChoice button[aria-pressed="true"] > small {
+  color: rgb(255 252 245 / 82%);
+}
+.typeChoice button[aria-pressed="true"]:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--shop-paper);
+}
+.entryFallback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
+  margin: 0;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.entryBack {
+  justify-self: start;
+  text-decoration: none;
+}
+@media (max-width: 600px) {
+  .tradeNext {
+    display: none;
+  }
+}
+
+/* Step 2 — one photo surface: both panes on paper, the suggested angles are
+   empty slots in the grid, and the file rules are one quiet line. */
+.coverPhotos {
+  background: var(--shop-paper);
+}
+.supportGrid {
+  grid-template-columns: repeat(auto-fill, minmax(min(120px, 100%), 1fr));
+  gap: 10px;
+  margin-bottom: 0;
+}
+.supportGrid .upload {
+  height: calc(var(--photo-height) * 0.72);
+  gap: 6px;
+  padding: 12px;
+}
+.guideSlot {
+  background: transparent;
+  border-color: var(--shop-line);
+  color: var(--shop-muted);
+}
+.guideSlot > span {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+}
+.guideSlot:hover {
+  color: var(--shop-wine);
+}
+.photoSpecLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 2px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.photoSpecLine > * + *::before {
+  content: "·";
+  margin: 0 8px;
+  color: var(--shop-line);
+}
+.photoSpecLine strong {
+  color: var(--shop-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Step 3 — quick phrases insert editable text into the condition notes. */
+.phraseChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 6px;
+}
+.phraseChip {
+  min-height: 32px;
+  padding: 4px 11px;
+  border: 1px solid var(--shop-line);
+  border-radius: 999px;
+  background: var(--shop-paper);
+  color: var(--shop-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+.phraseChip:hover:not(:disabled) {
+  border-color: var(--shop-control);
+  color: var(--shop-ink);
+}
+.phraseChip[aria-pressed="true"] {
+  border-color: var(--shop-wine);
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+}
+.phraseChip:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 0;
+}
+/* Step 4 — the price, its estimated payout and the suggestion sit side by side. */
+.tradeSection[data-price-assist="true"] {
+  grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px 24px;
+}
+.priceColumn {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.priceColumn .tradeAmount {
+  width: 100%;
+}
+.payoutEstimate {
+  margin: 0;
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+}
+.payoutEstimate strong {
+  color: var(--shop-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 760px) {
+  .tradeSection[data-price-assist="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Required pickup address reads as a form row, not as another info panel. */
+.tradeOrigin {
+  background: var(--shop-paper);
+}
+.tradeOriginStatus[data-ready="false"] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--shop-error);
+}
+
+/* Empty photo slots carry the hand-drawn sell-photos set: the cover slot
+   stretches to the pane so no blank band sits under it. */
+.coverPhotos > .upload {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: var(--photo-height);
+  gap: 6px;
+}
+.uploadArt {
+  width: 136px;
+  height: auto;
+  aspect-ratio: 160 / 140;
+  margin-bottom: 4px;
+  pointer-events: none;
+  user-select: none;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slotArt {
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  user-select: none;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.guideSlot .slotArt {
+  opacity: 0.78;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms ease;
+}
+.upload:hover :is(.uploadArt, .slotArt),
+.upload:focus-visible :is(.uploadArt, .slotArt) {
+  transform: translateY(-3px) rotate(-3deg);
+  opacity: 1;
+}
+@media (max-width: 600px) {
+  .uploadArt {
+    width: 112px;
+  }
+}
+
+/* Step titles: Anton in wine with a gold highlighter stroke (a text
+   decoration painted under the glyphs); the step intro lives in an InfoTip. */
+.stepTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+.stepTitleRow > h2 {
+  margin: 0;
+  font: 400 clamp(1.625rem, 2.2vw, 1.875rem) / 1.15 var(--shop-display);
+  letter-spacing: 0.01em;
+  color: var(--shop-wine);
+  text-decoration-line: underline;
+  text-decoration-color: rgb(244 203 103 / 72%);
+  text-decoration-thickness: 0.34em;
+  text-underline-offset: -0.16em;
+  text-decoration-skip-ink: none;
+}
+/* The heading only receives programmatic focus (tabIndex -1) so screen
+   readers announce the new step; it is not a control, so no ring. */
+.stepTitleRow > h2:focus,
+.stepTitleRow > h2:focus-visible {
+  outline: none;
+  /* The brand ring (@layer latlai-focus, !important) reads this variable;
+     a layered !important can't be beaten from here, so clear its colour. */
+  --latlai-focus-color: transparent;
+}
+.stepTitleRow + form {
+  margin-top: 0;
+}
+
+/* Section titles inside a step: wine text with a thin gold underline. */
+.photoLabel,
+.conditionPickerHead label,
+.tradeModes legend,
+.tradeAmount > label,
+.tradeOriginHeading h3,
+.questionsHead h3,
+.classification legend,
+.bookEntryHeading,
+.subSectionBar strong,
+.bookTypeLabel,
+.catalogEntry > div > label,
+.stepBody .catalogEntry label {
+  color: var(--shop-wine);
+  text-decoration-line: underline;
+  text-decoration-color: var(--shop-yellow);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 5px;
+  text-decoration-skip-ink: auto;
+}
+
+/* Field labels with an InfoTip beside them. */
+.fieldLabelLead {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.fieldLabelLead > label {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+  transition: color 170ms ease-out;
+}
+.field:focus-within .fieldLabelLead > label {
+  color: var(--shop-wine);
+}
+.fieldLabelRow {
+  align-items: center;
+  min-height: 28px;
+}
+.subSectionBar {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+}
+.subSectionBar [role="tooltip"] {
+  color: var(--shop-ink);
+}
+
+/* Condition notes: equal label rows put the two boxes on one line; the
+   phrase chips sit under each box, where uneven wrapping can't shift it. */
+.conditionFields {
+  align-items: start;
+}
+.conditionFields .phraseChips {
+  margin: 8px 0 0;
+}
+
+/* Yes/No answers: the check takes no space until chosen, so unselected
+   labels sit truly centred; once chosen, check and label centre together
+   as one group instead of the icon crowding the label from the edge. */
+.radioOptions {
+  width: 224px;
+}
+.radioOptions .choiceFace {
+  min-height: 44px;
+  gap: 6px;
+  padding-inline: 12px;
+}
+.radioOptions .choiceFace svg {
+  display: none;
+}
+.radioOptions .choice input:checked + .choiceFace svg {
+  display: block;
 }

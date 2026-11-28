@@ -297,8 +297,8 @@ try {
   await button("Gửi duyệt").click();
   await p.getByRole("alert").waitFor();
   await step(/Thông tin sách/).click();
-  if (await button("Không thấy sách? Tự nhập theo bìa").count())
-    await button("Không thấy sách? Tự nhập theo bìa").click();
+  if (await button("Tự nhập thông tin").count())
+    await button("Tự nhập thông tin").click();
   await p
     .getByLabel("Tên sách", { exact: true })
     .fill("QA — Một cuốn sách cũ qua nhiều người đọc với tên dài");
