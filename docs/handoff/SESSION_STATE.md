@@ -17,6 +17,9 @@
     hàng; nút `Có/Không` căn giữa, dấu chọn đi cùng nhãn.
   - Bước 4: giá và `Gợi ý giá` cạnh nhau, `Ước tính bạn nhận` từ
     `DEFAULT_SALE_COMMISSION_BPS` (ghi là ước tính), `Nơi gửi sách` báo `Bắt buộc`.
+  - Bước 5: danh sách `Còn n mục cần bổ sung` (đọc `stepError`, nút `Sửa` về
+    bước), mỗi bước một hàng thu gọn có tóm tắt một dòng và nhãn `Đủ/Thiếu`;
+    giữ nút `Chỉnh sửa …` luôn hiện (harness `integration` dùng tên này).
 - PASS typecheck, oxlint (không cảnh báo mới), Vitest user-web 525/525, build,
   `docs:check`, `git diff --check`. Kiểm live preview (API demo, tài khoản chủ dự
   án tự đăng nhập, không gửi duyệt) 1280 px và 579 px. Harness trình duyệt luồng

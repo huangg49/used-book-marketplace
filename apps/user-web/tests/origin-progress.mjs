@@ -48,7 +48,7 @@ try{
    const assist=page.getByRole('region',{name:'Gợi ý giá bán',exact:true});
    const originSection=page.getByRole('region',{name:'Nơi gửi sách',exact:true});
    const exchange=page.getByLabel('Giá trị đổi (VNĐ)',{exact:true});
-   await expect(assist.getByRole('button',{name:'Lưu đầu sách và kiểm tra giá'})).toBeDisabled();
+   await expect(assist.getByRole('button',{name:'Xem gợi ý giá bán'})).toBeDisabled();
    await expect(originSection.getByText('Bắt buộc',{exact:true})).toBeVisible();
    await choose('Bán hoặc đổi');await exchange.fill('80000');
    const criteria=page.locator('summary').filter({hasText:'Sách bạn muốn đổi lấy'});

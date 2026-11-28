@@ -132,6 +132,8 @@ export function SellBookPage() {
   const [language, setLanguage] = useState("vi");
   const [selectedBook, setSelectedBook] = useState<PickedBook | null>(null);
   const [entryMode, setEntryMode] = useState<"catalog" | "manual">("catalog");
+  // Review rows start collapsed (the checklist above says what is missing); the seller opens them.
+  const [reviewOpen, setReviewOpen] = useState<Record<number, boolean>>({});
   const [step, setStep] = useState(1);
   const stepBody = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -1181,6 +1183,53 @@ export function SellBookPage() {
       </button>
     );
   }
+  /** Specific, read-only "what is missing" text for the review checklist. */
+  function reviewIssue(forStep: number) {
+    if (forStep !== 4) return stepError(forStep);
+    if (formData.mode !== "Exchange" && !validPrice(formData.salePrice))
+      return auction ? "Nhập giá trị khai báo hợp lệ." : bundle ? "Nhập giá cả bộ hợp lệ." : "Nhập giá bán hợp lệ.";
+    if (formData.mode !== "Sale" && !validPrice(formData.exchangeValue)) return "Nhập giá trị đổi hợp lệ.";
+    if (needsOrigin && !hasValidOriginAddress()) return "Chọn nơi gửi sách.";
+    return undefined;
+  }
+  function reviewRow(
+    target: number,
+    id: string,
+    icon: React.ReactNode,
+    title: string,
+    summary: string,
+    body: React.ReactNode,
+  ) {
+    const issue = reviewIssue(target);
+    const open = reviewOpen[target] ?? false;
+    return (
+      <section className={styles.reviewSection} aria-labelledby={id} data-open={open}>
+        <div className={styles.reviewHeading}>
+          <h3 id={id}>
+            <button
+              type="button"
+              className={styles.reviewToggle}
+              aria-expanded={open}
+              aria-controls={`${id}-body`}
+              onClick={() => setReviewOpen((previous) => ({ ...previous, [target]: !open }))}
+            >
+              <span className={styles.reviewIcon} aria-hidden="true">{icon}</span>
+              <span className={styles.reviewTitleText}>{title}</span>
+              <span className={styles.reviewSummaryText}>{summary}</span>
+              <span className={styles.reviewStatus} data-ready={!issue}>
+                {issue ? "Thiếu" : "Đủ"}
+              </span>
+              <ChevronDown size={16} aria-hidden="true" className={styles.reviewChevron} />
+            </button>
+          </h3>
+          {reviewEdit(target)}
+        </div>
+        <div id={`${id}-body`} className={styles.reviewBody} hidden={!open}>
+          {body}
+        </div>
+      </section>
+    );
+  }
   function completeStep(value: number) {
     return value < 5
       ? !stepError(value)
@@ -1831,15 +1880,15 @@ export function SellBookPage() {
                               <div className={styles.bookTypeLead}>
                                 <span id="sell-book-type" className={styles.bookTypeLabel}>Bạn đăng</span>
                                 <div className={styles.typeChoice} role="group" aria-labelledby="sell-book-type">
-                                  <button type="button" aria-pressed={!bundle} onClick={() => {
+                                  <button type="button" aria-pressed={!bundle} aria-labelledby="sell-type-single" aria-describedby="sell-type-single-hint" onClick={() => {
                                     if (!bundle) return;
                                     bundleDraft.current = bundle;
                                     bundlePrice.current = formData.salePrice;
                                     setBundle(null);
                                     setOwnershipDeclared(false);
                                     if (singleTerms.current) setFormData(previous => ({ ...previous, ...singleTerms.current! }));
-                                  }}><span>Sách lẻ</span><small>Một cuốn</small></button>
-                                  <button type="button" aria-pressed={!!bundle} onClick={() => {
+                                  }}><span id="sell-type-single">Sách lẻ</span><small id="sell-type-single-hint">Một cuốn</small></button>
+                                  <button type="button" aria-pressed={!!bundle} aria-labelledby="sell-type-bundle" aria-describedby="sell-type-bundle-hint" onClick={() => {
                                     if (bundle) return;
                                     singleTerms.current = { mode: formData.mode, salePrice: formData.salePrice, exchangeValue: formData.exchangeValue, condition: formData.condition };
                                     const restored = bundleDraft.current || { title: '', wholeOnly: true as const, exclusiveOwnershipDeclared: true as const,
@@ -1847,7 +1896,7 @@ export function SellBookPage() {
                                     setBundle(restored);
                                     setOwnershipDeclared(false);
                                     setFormData(previous => ({ ...previous, mode: 'Sale', salePrice: bundlePrice.current, exchangeValue: '', condition: bundleCondition(restored) }));
-                                  }}><span>Bộ sách</span><small>2–50 cuốn, bán nguyên bộ</small></button>
+                                  }}><span id="sell-type-bundle">Bộ sách</span><small id="sell-type-bundle-hint">2–50 cuốn, bán nguyên bộ</small></button>
                                 </div>
                               </div>
                             </div>
@@ -3144,14 +3193,45 @@ export function SellBookPage() {
                             </div>
                           </div>
                           <BundleManifest bundle={bundle} />
-                          <section className={styles.reviewSection} aria-labelledby="sell-review-book">
-                            <div className={styles.reviewHeading}>
-                              <h3 id="sell-review-book">
-                                <BookOpen size={16} aria-hidden="true" />
-                                Thông tin đầu sách
-                              </h3>
-                              {reviewEdit(1)}
-                            </div>
+                          {(() => {
+                            const missing = [1, 2, 3, 4]
+                              .map((target) => ({ target, issue: reviewIssue(target) }))
+                              .filter((item) => item.issue);
+                            return missing.length ? (
+                              <section className={styles.reviewReadiness} data-ready="false" aria-labelledby="sell-review-missing">
+                                <h3 id="sell-review-missing">
+                                  <CircleAlert size={17} aria-hidden="true" />
+                                  Còn {missing.length} mục cần bổ sung
+                                </h3>
+                                <ul>
+                                  {missing.map(({ target, issue }) => (
+                                    <li key={target}>
+                                      <span>
+                                        <strong>{steps[target - 1]}</strong>
+                                        {issue}
+                                      </span>
+                                      <button type="button" className={styles.reviewFix} onClick={() => changeStep(target)}>
+                                        Sửa<span className="sr-only"> {steps[target - 1].toLowerCase()}</span>
+                                        <ArrowRight size={14} aria-hidden="true" />
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </section>
+                            ) : (
+                              <p className={styles.reviewReadiness} data-ready="true" role="status">
+                                <Check size={17} aria-hidden="true" />
+                                Đã đủ thông tin. Mở từng mục để đọc lại, rồi xác nhận quyền sở hữu bên dưới.
+                              </p>
+                            );
+                          })()}
+                          {reviewRow(
+                            1,
+                            "sell-review-book",
+                            <BookOpen size={16} />,
+                            "Thông tin đầu sách",
+                            [bundle?.title || formData.title || "Chưa nhập tên sách", formData.author].filter(Boolean).join(" · "),
+                            <>
                             <dl className={`${styles.reviewFacts} ${styles.reviewBookFacts}`}>
                               {[
                                 ["Tên sách", formData.title],
@@ -3200,15 +3280,15 @@ export function SellBookPage() {
                                 </div>
                               ))}
                             </dl>
-                          </section>
-                          <section className={styles.reviewSection} aria-labelledby="sell-review-photos">
-                            <div className={styles.reviewHeading}>
-                              <h3 id="sell-review-photos">
-                                <Images size={16} aria-hidden="true" />
-                                Ảnh bản sách <span className={styles.reviewCount}>{imageFiles.length}/8</span>
-                              </h3>
-                              {reviewEdit(2)}
-                            </div>
+                            </>,
+                          )}
+                          {reviewRow(
+                            2,
+                            "sell-review-photos",
+                            <Images size={16} />,
+                            "Ảnh bản sách",
+                            `${imageFiles.length}/8 ảnh · ${hasCoverPhoto ? "có ảnh bìa" : "chưa có ảnh bìa"}`,
+                            <>
                             {formData.images.length > 0 ? (
                               <div className={styles.reviewPhotos}>
                                 {formData.images.map((url, index) => (
@@ -3226,15 +3306,15 @@ export function SellBookPage() {
                             ) : (
                               <p className={styles.help}>Chưa có ảnh bản sách.</p>
                             )}
-                          </section>
-                          <section className={styles.reviewSection} aria-labelledby="sell-review-condition">
-                            <div className={styles.reviewHeading}>
-                              <h3 id="sell-review-condition">
-                                <ClipboardCheck size={16} aria-hidden="true" />
-                                Tình trạng bản sách
-                              </h3>
-                              {reviewEdit(3)}
-                            </div>
+                            </>,
+                          )}
+                          {reviewRow(
+                            3,
+                            "sell-review-condition",
+                            <ClipboardCheck size={16} />,
+                            "Tình trạng bản sách",
+                            `${conditions[formData.condition as keyof typeof conditions]} · đã trả lời ${questions.filter(([key]) => formData[key] !== null).length}/${questions.length} câu`,
+                            <>
                             <dl className={styles.reviewFacts}>
                               <div className={styles.reviewFullWidth}>
                                 <dt>Mức độ đã qua sử dụng</dt>
@@ -3267,15 +3347,19 @@ export function SellBookPage() {
                                 </div>
                               ))}
                             </dl>
-                          </section>
-                          <section className={styles.reviewSection} aria-labelledby="sell-review-trade">
-                            <div className={styles.reviewHeading}>
-                              <h3 id="sell-review-trade">
-                                <Tag size={16} aria-hidden="true" />
-                                {auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Bán hoặc đổi"}
-                              </h3>
-                              {reviewEdit(4)}
-                            </div>
+                            </>,
+                          )}
+                          {reviewRow(
+                            4,
+                            "sell-review-trade",
+                            <Tag size={16} />,
+                            auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Bán hoặc đổi",
+                            [
+                              auction ? "Đấu giá" : formData.mode === "Sale" ? "Bán sách" : formData.mode === "Exchange" ? "Đổi sách" : "Bán hoặc đổi",
+                              formData.mode !== "Exchange" && validPrice(formData.salePrice) ? formatVnd(Number(formData.salePrice)) : null,
+                              formData.mode !== "Sale" && validPrice(formData.exchangeValue) ? `đổi ~${formatVnd(Number(formData.exchangeValue))}` : null,
+                            ].filter(Boolean).join(" · "),
+                            <>
                             <dl className={styles.reviewFacts}>
                               <div>
                                 <dt>Hình thức</dt>
@@ -3342,7 +3426,8 @@ export function SellBookPage() {
                                 giao nhận; người mua chỉ thấy khu vực luân chuyển.
                               </p>
                             )}
-                          </section>
+                            </>,
+                          )}
                           <section className={styles.reviewConfirmation} aria-labelledby="sell-review-confirm">
                             <h3 id="sell-review-confirm">Trước khi gửi duyệt</h3>
                             <div
